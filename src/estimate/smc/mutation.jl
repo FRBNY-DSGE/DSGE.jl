@@ -43,8 +43,6 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
     # draw initial step probability
     # conditions for testing purposes
     #step_prob = rand()
-    step_prob = stepprobs[1]
-    mix_draw  = mixr[1]
     mm = 1 # RECA
 
     para = p.value
@@ -54,7 +52,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
 
     # Previous posterior needs to be updated (due to tempering)
     post = post_init + (ϕ_n - ϕ_n1) * like
-    accept = false
+    accept = 0.0 #false
 
     for step in 1:n_steps
 
@@ -113,21 +111,18 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             η        = exp(post_new - post_old)
 
             if step_prob < η # accept
-                para   = para_new
-                like   = like_new
-                post   = post_new + para_new_density # Have to add it back so as to not accumulate
-                like_prev = like_old_data            # para_new_density throughout the iterations
-                accept += length(block_a) #true
+                para      = para_new
+                like      = like_new
+                post      = post_new + para_new_density # Have to add it back so as to not accumulate
+                like_prev = like_old_data               # para_new_density throughout the iterations
+                accept   += length(block_a) #true
             end
-#            print(para)
-#            print(step_pr[mm])
 #            @assert like == step_lik[mm]
             mm += 1
-
             # draw again for the next step
             #step_prob = rand()
         end
     end
-    update_mutation_FORTRAN!(p, para, like, post, like_prev, accept/(length(d_subset.μ))
+    update_mutation_FORTRAN!(p, para, like, post, like_prev, accept / 41.0) # RECA: hardcoded
     return p
 end

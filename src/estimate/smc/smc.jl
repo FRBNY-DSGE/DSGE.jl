@@ -41,7 +41,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     # RECA
-    fortran_path = "/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
+    fort_file    = "smc-sw-new-mix-npart-12000-nintmh-1-nphi-500-prior-b1-trial1-phibend/"
+    fortran_path = "/home/rcerxs30/SLICOT-2018-12-19/dsge-smc/fortran/" * fort_file
+    #"/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
     fortESS      = vec(readdlm(fortran_path * "ESS.txt"))
     stepprobs    = vec(readdlm(fortran_path * "stepprobs.txt"))
 
@@ -73,25 +75,24 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
     ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
     ϕ_prop = 0.                     # respective while loop conditions
-    use_fixed_schedule = get_setting(m, :adaptive_tempering_target_smc)==0.0#get_setting(m, :use_fixed_schedule)
+    use_fixed_schedule = get_setting(m, :adaptive_tempering_target_smc) == 0.0 #get_setting(m, :use_fixed_schedule)
     λ = get_setting(m, :λ)
     n_Φ = get_setting(m, :n_Φ)
     tempering_target = get_setting(m, :adaptive_tempering_target_smc)
 
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
-    threshold_ratio = get_setting(m, :resampling_threshold)
-    threshold = threshold_ratio * n_parts
+    threshold_ratio   = get_setting(m, :resampling_threshold)
+    threshold         = threshold_ratio * n_parts
 
     # Step 3 (Mutation) settings
-    c = get_setting(m, :step_size_smc)
+    c      = get_setting(m, :step_size_smc)
     target = accept = get_setting(m, :target_accept)
-    α = get_setting(m, :mixture_proportion)
+    α      = get_setting(m, :mixture_proportion)
 
-    # RECA
     fixed_para_inds = find([θ.fixed for θ in m.parameters])
-    free_para_inds = find([!θ.fixed for θ in m.parameters])
-    n_free_para = length(free_para_inds)
+    free_para_inds  = find([!θ.fixed for θ in m.parameters])
+    n_free_para     = length(free_para_inds)
 
     ########################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -123,10 +124,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        # RECA
         initial_draw!(m, data, cloud, fortran_path, parallel = parallel,
                       use_chand_recursion = use_chand_recursion,
-                      verbose = verbose)
+                      verbose = verbose) # RECA edited this
 
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
     end
@@ -177,8 +177,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         if use_fixed_schedule
             ϕ_n = cloud.tempering_schedule[i]
         else
-            ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop,
-                                                                     ϕ_n1, tempering_target, resampled_last_period)
+            ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule,
+                                                                     i, j, ϕ_prop, ϕ_n1,
+                                                                     tempering_target,
+                                                                     resampled_last_period)
         end
 
         ########################################################################################
@@ -190,13 +192,16 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # Update weights
         update_weights!(cloud, incremental_weights)
-
         mult_weights = get_weights(cloud)
 
         # Normalize weights
         normalize_weights!(cloud)
-
         normalized_weights = get_weights(cloud)
+
+        # RECA
+        fort_wtsim = vec(readdlm(fortran_path * convert_string(i) * "cor_weights.txt"))
+        @show i, sum(abs.(normalized_weights - fort_wtsim))
+        @show i, sum(abs.(sort(normalized_weights) - sort(fort_wtsim)))
 
         push!(z_matrix, sum(mult_weights))
         w_matrix = hcat(w_matrix, incremental_weights)
@@ -240,12 +245,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
-        R = weighted_cov(cloud)
+        R     = weighted_cov(cloud)
 
         mu       = vec(readdlm(fortran_path * convert_string(i) * "mean.txt"))
         fort_var = readdlm(fortran_path * convert_string(i) * "var.txt")
+        fort_c   = readdlm(fortran_path * convert_string(i) * "scale.txt")
         #@show θ_bar mu
+        @show c, fort_c[1]
+        @show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
         @show sum(abs.(θ_bar-mu))
+        @show findmax(abs.(θ_bar-mu))
+        @show abs.(θ_bar-mu)
         @show θ_bar ≈ mu
         @show sum(abs.(R-fort_var))
         @show R ≈ fort_var
@@ -260,13 +270,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # New way of generating blocks
         # blocks_free = generate_free_blocks(n_free_para, n_blocks)
         # blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
-        blocks_all   = generate_all_blocks(n_free_para, n_blocks, fortran_path, i) # RECA: sort of confusing fn names
+        blocks_all   = generate_all_blocks(n_free_para, n_blocks, fortran_path, i) # RECA: fn names
         blocks_free  = generate_free_blocks(blocks_all, free_para_inds) # RECA
 
         # RECA: mixr gives which distribution we ought draw from
-        mixr = readdlm(fortran_path * convert_string(i) * "mixr.txt")
-        eps  = readdlm(fortran_path * convert_string(i) * "eps.txt")
-        step_pr = readdlm(fortran_path * convert_string(i) * "step_pr.txt")
+        mixr     = readdlm(fortran_path * convert_string(i) * "mixr.txt")
+        eps      = readdlm(fortran_path * convert_string(i) * "eps.txt")
+        step_pr  = readdlm(fortran_path * convert_string(i) * "step_pr.txt")
         step_lik = readdlm(fortran_path * convert_string(i) * "step_lik.txt")
         fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
         fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
@@ -292,9 +302,18 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          mu = mu)
             end
         else
-            new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
-                                      ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
-                                      verbose = verbose, mixr = mixr[j,:]) for j = 1:n_parts]
+            #new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
+            #                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
+            #                          verbose = verbose, mixr = mixr[j,:]) for j = 1:n_parts]
+            new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                                      c = c, α = α, old_data = old_data,
+                                      use_chand_recursion = use_chand_recursion, verbose = verbose,
+                                      # RECA'S TESTING VARIABLES:
+                                      mixr = mixr[j,:],
+                                      eps = eps[(j-1) * n_steps + 1:j * n_steps, :],
+                                      stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps],
+                                      step_pr = step_pr[j,:], step_lik = step_lik[j,:],
+                                      mu = mu) for j=1:n_parts]
         end
 
         cloud.particles = new_particles
@@ -303,10 +322,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
         ### Reca: Testing Against FORTRAN
         ########################################################################################
-        @show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
         #@assert get_vals(cloud)    ≈ transpose(fortpara)
         #@assert get_logpost(cloud) ≈ transpose(fortpost)
         @show sum(abs.(get_vals(cloud) - transpose(fortpara)))
+        @show findmax(abs.(get_vals(cloud) - transpose(fortpara)))
         @show sum(abs.(get_loglh(cloud) - vec(fortlik)))
         @show findmin(get_loglh(cloud)), findmin(vec(fortlik))
         @show findmin(get_vals(cloud)), findmin(transpose(fortpara))

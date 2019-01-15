@@ -168,8 +168,12 @@ USED FOR FORTRAN TESTING.
 Return a Vector{Vector{Int64}} where each internal Vector{Int64} contains a subset of the range 1:n_free_para of randomly permuted indices. This is used to index out random blocks of free parameters from the covariance matrix for the mutation step.
 """
 function generate_all_blocks(n_free_para::Int64, n_blocks::Int64, path::String, i::Int64)
-    break_points = [0, 13, 25, 36] # this is from the FORTRAN code
-    # fort_inds    = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
+    if n_blocks == 3
+        break_points = [0, 13, 25, 36] # this is from the FORTRAN code
+    else #n_blocks == 1
+        break_points = [0, 36]
+    end
+        # fort_inds    = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
     # my_map       = parameter_map()
     # inds         = [my_map[x] for x in fort_inds]
     inds = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
