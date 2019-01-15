@@ -92,13 +92,15 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
     d_mix_old  = MixtureModel(MvNormal[d_old, d_diag_old, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     # RECA
-    #θ_new = rand(d_mix_old)
+    # θ_new = rand(d_mix_old)
     if mixr < α # 'scale' (cc) has been "baked into RNG"
-        θ_new = θ_old + d_prop.Σ * eps
-    elseif mixr < α + (1.0 - α) / 2.0
-        θ_new = θ_old + 3.0 * sqrt.(diagm(diag(d_prop.Σ))) * eps # THIS IS V DIF FROM FORTRAN.
+        θ_new = θ_old + d_prop.Σ.mat * eps
+
+    elseif mixr < (α + (1.0 - α) / 2.0)
+        θ_new = θ_old + 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # THIS IS V DIF FROM FORTRAN.
+
     else
-        θ_new = d_prop.μ + d_prop.Σ * eps
+        θ_new = d_prop.μ + d_prop.Σ.mat * eps
     end
 
     # Create mixture distribution conditional on the new parameter value, θ_new
