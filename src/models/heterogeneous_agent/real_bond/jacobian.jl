@@ -39,29 +39,8 @@ function jacobian(m::RealBond)
     ns = get_setting(m, :ns)
 
     # Mollifiers
-    function mollifier(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
-        # mollifier function
-        In = 0.443993816237631
-        if z<ehi && z>elo
-            temp = -1.0 + 2.0*(z-elo)/(ehi-elo)
-            out = (2.0/(ehi-elo))*exp(-1.0/(1.0-temp*temp))/In
-        else
-            out = 0.0
-        end
-        return out
-    end
-    function dmollifier(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
-        In = 0.443993816237631
-        if x<ehi && x>elo
-            temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
-            out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
-        else
-            out = 0.0
-        end
-        return out
-    end
-    qfunction(x) = mollifier(x,ehi,elo)
-    qp(x) = dmollifier(x,ehi,elo)
+    qfunction(x) = mollifier_realbond(x,ehi,elo)
+    qp(x) = dmollifier_realbond(x,ehi,elo)
 
     # Jacobian stuff
     chipW = (1+ν)./(ν./(aborrow + χss - xgrid_total) + γ./χss)
