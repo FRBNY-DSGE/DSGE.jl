@@ -1,6 +1,9 @@
 function steadystate!(m::RealBond;
                       βlo::Float64 = 0.4/m[:R],
                       βhi::Float64 = 1./m[:R],
+                      # Temporary for quicker speeding up/debugging
+                      # βlo::Float64 = 0.941423,
+                      # βhi::Float64 = 0.941432,
                       excess::Float64 = 5000.,
                       tol::Float64 = 1e-5,
                       maxit::Int64 = 100)
@@ -39,18 +42,7 @@ function steadystate!(m::RealBond;
     β = (βlo + βhi)/2.0
 
     # Define the mollifier
-    function mollifier(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
-        # mollifier function
-        In = 0.443993816237631
-        if z<ehi && z>elo
-            temp = -1.0 + 2.0*(z-elo)/(ehi-elo)
-            out = (2.0/(ehi-elo))*exp(-1.0/(1.0-temp*temp))/In
-        else
-            out = 0.0
-        end
-        return out
-    end
-    qfunction(x) = mollifier(x, ehi, elo)
+    qfunction(x) = mollifier_realbond(x, ehi, elo)
 
     # compute constrained consumption and labor supply once and for all
     χss = zeros(nx*ns)
@@ -70,99 +62,22 @@ function steadystate!(m::RealBond;
         end
     end
 
-    ###############################################
-    # Define policy function
-    function policy(β::AbstractFloat,
-                    R::AbstractFloat,
-                    γ::AbstractFloat,
-                    ν::AbstractFloat,
-                    sigs::AbstractFloat,
-                    ehi::AbstractFloat,
-                    elo::AbstractFloat,
-                    xgrid_total::Vector{Float64},
-                    sgrid_total::Vector{Float64},
-                    xwts::Vector{Float64},
-                    swts::Vector{Float64},
-                    l_in::Vector{Float64},
-                    g::Vector{Float64},
-                    χss::Vector{Float64};
-                    damp::Float64 = 0.4,
-                    dist::Float64 = 1.,
-                    tol::Float64 = 1e-4,
-                    maxit::Int64 = 500)
-        # outputs: [c,ap,l_out,tr]
-
-        nx      = length(xwts)
-        ns      = length(swts)
-        n       = ns*nx
-        c       = zeros(n)      # consumption
-        η       = zeros(n)      # hours
-        ap      = zeros(n)      # savings
-        counter = 1
-        l_out   = copy(l_in)    # initialize l_out
-        tr      = zeros(n,n)    # transition matrix mapping todays dist of w to w'
-        qxg     = zeros(n,n)    # auxilary variable to compute LHS of euler
-        qfunction(x) = mollifier(x,ehi,elo)
-
-        while dist > tol && counter < maxit
-            # compute c(w) given guess for l_in = β*R*E[u'(c_{t+1})]
-            c  = min.(l_in.^(-1.0/γ), χss)
-            η  = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
-            ap = R*(xgrid_total+sgrid_total.*η - c)
-            for ix in 1:nx
-                for iss in 1:ns
-                    sumn=0.0
-                    for ixp in 1:nx
-                        for isp in 1:ns
-                            # This is the parameterized expectations algorithm approximation of the
-                            # conditional expectation within the Euler equation
-                           sumn += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*g[isp]*xwts[ixp]*swts[isp]*(c[nx*(isp-1)+ixp]^(-γ) )
-                        end
-                    end
-                    l_out[ix+nx*(iss-1)] = β*R*sumn
-                end
-            end
-            dist = maximum(abs.(l_out-l_in))
-            # if counter%1==0
-            #     println(dist)
-            # end
-            l_in = damp*l_out + (1.0-damp)*l_in
-            counter += 1
-        end
-        if counter == maxit
-            warn("Euler iteration did not converge")
-        end
-        # c  = min.(l_in.^(-1.0/γ),χss)
-        # η  = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
-        # ap = R*(xgrid_total+sgrid_total.*η - c)
-
-        for ix in 1:nx
-            for ixp in 1:nx
-                for iss in 1:ns
-                    for isp in 1:ns
-                        tr[ixp+nx*(isp-1),ix+nx*(iss-1)] += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*g[isp]
-                    end
-                end
-            end
-        end
-
-        return c, η, ap, l_out, tr
-    end
-    ###############################################
-
     # guess for the W function W(w) = β R E u'(c_{t+1})
     βguess = 0.8
+
+    # MDχ: This l_in doesn't seem to be used, since it gets immediately overwritten by
+    # l_in from policy, unless the while loop condition is never entered
     l_in_const = βguess*R*sum((qfunction.(abar - xgrid_total).*χss.^(-γ)).*(kron((swts.*ggrid),xwts)))
     l_in = l_in_const*ones(nx*ns)
 
     while abs(excess) > tol && count < maxit # clearing markets
         l_in_guess = ones(n)
-        # println(excess)
         β = (βlo + βhi)/2.0
-        # println([βlo β βhi])
-        (c, η, ap, l_in, KF) = policy(β, R.value, γ.value, ν.value, sigs.value,
-                                      ehi, elo, xgrid_total, sgrid_total,
-                                      xwts, swts, l_in_guess, ggrid, χss)
+
+        (c, η, ap, l_in, KF) = policy_realbond(β, R.value, γ.value, ν.value, sigs.value,
+                                               ehi, elo, xgrid_total, sgrid_total,
+                                               xwts, swts, l_in_guess, ggrid, χss)
+
         # sspolicy returns the consumption and hours decision rules, a prime
         # decision rule, l_in = updated β R u'(c_{t+1}),
         # KF is the Kolmogorov foward operator
@@ -210,3 +125,103 @@ function steadystate!(m::RealBond;
     nothing
 end
 
+function policy_realbond(β::AbstractFloat,
+                         R::AbstractFloat,
+                         γ::AbstractFloat,
+                         ν::AbstractFloat,
+                         sigs::AbstractFloat,
+                         ehi::AbstractFloat,
+                         elo::AbstractFloat,
+                         xgrid_total::Vector{Float64},
+                         sgrid_total::Vector{Float64},
+                         xwts::Vector{Float64},
+                         swts::Vector{Float64},
+                         l_in::Vector{Float64},
+                         g::Vector{Float64},
+                         χss::Vector{Float64};
+                         damp::Float64 = 0.4,
+                         dist::Float64 = 1.,
+                         tol::Float64 = 1e-4,
+                         maxit::Int64 = 500)
+    # outputs: [c,ap,l_out,tr]
+
+    nx      = length(xwts)
+    ns      = length(swts)
+    n       = ns*nx
+    c       = zeros(n)      # consumption
+    η       = zeros(n)      # hours
+    ap      = zeros(n)      # savings
+    counter = 1
+    l_in    = ones(n)
+    l_out   = copy(l_in)    # initialize l_out
+    tr      = zeros(n,n)    # transition matrix mapping todays dist of w to w'
+    qxg     = zeros(n,n)    # auxilary variable to compute LHS of euler
+    qfunction(x) = mollifier_realbond(x,ehi,elo)
+
+    while dist > tol && counter < maxit
+        # compute c(w) given guess for l_in = β*R*E[u'(c_{t+1})]
+        c  = min.(l_in.^(-1.0/γ), χss)
+        η  = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
+        ap = R*(xgrid_total+sgrid_total.*η - c)
+        for ix in 1:nx
+            for iss in 1:ns
+                sumn=0.0
+                for ixp in 1:nx
+                    for isp in 1:ns
+                        # This is the parameterized expectations algorithm approximation of the
+                        # conditional expectation within the Euler equation
+                       sumn += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*g[isp]*xwts[ixp]*swts[isp]*(c[nx*(isp-1)+ixp]^(-γ) )
+                    end
+                end
+                l_out[ix+nx*(iss-1)] = β*R*sumn
+            end
+        end
+        dist = maximum(abs.(l_out-l_in))
+        # if counter%1==0
+        #     println(dist)
+        # end
+        l_in = damp*l_out + (1.0-damp)*l_in
+        counter += 1
+    end
+    if counter == maxit
+        warn("Euler iteration did not converge")
+    end
+    # c  = min.(l_in.^(-1.0/γ),χss)
+    # η  = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
+    # ap = R*(xgrid_total+sgrid_total.*η - c)
+
+    for ix in 1:nx
+        for ixp in 1:nx
+            for iss in 1:ns
+                for isp in 1:ns
+                    tr[ixp+nx*(isp-1),ix+nx*(iss-1)] += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*g[isp]
+                end
+            end
+        end
+    end
+
+    return c, η, ap, l_out, tr
+end
+
+function mollifier_realbond(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
+    # mollifier function
+    In = 0.443993816237631
+    if z<ehi && z>elo
+        temp = -1.0 + 2.0*(z-elo)/(ehi-elo)
+        out = (2.0/(ehi-elo))*exp(-1.0/(1.0-temp*temp))/In
+    else
+        out = 0.0
+    end
+    return out
+end
+
+function dmollifier_realbond(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
+    In = 0.443993816237631
+    if x<ehi && x>elo
+        temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
+        out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier_realbond(x, ehi, elo)
+    else
+        out = 0.0
+    end
+    return out
+end
