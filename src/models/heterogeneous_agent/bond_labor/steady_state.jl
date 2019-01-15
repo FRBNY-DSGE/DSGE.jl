@@ -38,7 +38,7 @@ function steadystate!(m::BondLabor;
     μ = zeros(n)
     β = (βlo + βhi)/2.0
 
-    qfunction(x) = mollifier(x, ehi, elo)
+    qfunction(x) = mollifier_bondlabor(x, ehi, elo)
 
     ##################################
     # compute constrained consumption and labor supply once and for all
@@ -69,9 +69,10 @@ function steadystate!(m::BondLabor;
         l_in_guess = ones(n)
         # println(excess)
         β = (βlo + βhi)/2.0
-        (c, η, ap, l_in, KF) = policy(β, R.value, γ.value, ν.value, sigs.value,
-                                      ehi, elo, xgrid_total, sgrid_total,
-                                      xwts, swts, l_in_guess, ggrid, χss)
+        (c, η, ap, l_in, KF) = policy_bondlabor(β, R.value, γ.value, ν.value, sigs.value,
+                                                ehi, elo, xgrid_total, sgrid_total,
+                                                xwts, swts, l_in_guess, ggrid, χss)
+
         # sspolicy returns the consumption and hours decision rules, a prime
         # decision rule, l_in = updated β R u'(c_{t+1}),
         # KF is the Kolmogorov foward operator
@@ -119,24 +120,24 @@ function steadystate!(m::BondLabor;
     nothing
 end
 
-function policy(β::AbstractFloat,
-                R::AbstractFloat,
-                γ::AbstractFloat,
-                ν::AbstractFloat,
-                sigs::AbstractFloat,
-                ehi::AbstractFloat,
-                elo::AbstractFloat,
-                xgrid_total::Vector{Float64},
-                sgrid_total::Vector{Float64},
-                xwts::Vector{Float64},
-                swts::Vector{Float64},
-                l_in::Vector{Float64},
-                g::Vector{Float64},
-                χss::Vector{Float64};
-                damp::Float64 = 0.05,
-                dist::Float64 = 1.,
-                tol::Float64 = 1e-4,
-                maxit::Int64 = 500)
+function policy_bondlabor(β::AbstractFloat,
+                          R::AbstractFloat,
+                          γ::AbstractFloat,
+                          ν::AbstractFloat,
+                          sigs::AbstractFloat,
+                          ehi::AbstractFloat,
+                          elo::AbstractFloat,
+                          xgrid_total::Vector{Float64},
+                          sgrid_total::Vector{Float64},
+                          xwts::Vector{Float64},
+                          swts::Vector{Float64},
+                          l_in::Vector{Float64},
+                          g::Vector{Float64},
+                          χss::Vector{Float64};
+                          damp::Float64 = 0.05,
+                          dist::Float64 = 1.,
+                          tol::Float64 = 1e-4,
+                          maxit::Int64 = 500)
     # outputs: [c,ap,l_out,tr]
 
     nx      = length(xwts)
@@ -149,7 +150,7 @@ function policy(β::AbstractFloat,
     l_out    = copy(l_in)    # initialize l_out
     tr      = zeros(n,n)   # transition matrix mapping todays dist of w to w'
     qxg     = zeros(n,n)   # auxilary variable to compute LHS of euler
-    qfunction(x) = mollifier(x,ehi,elo)
+    qfunction(x) = mollifier_bondlabor(x,ehi,elo)
 
     while dist > tol && counter < maxit
         # compute c(w) given guess for l_in = β*R*E[u'(c_{t+1})]
@@ -196,7 +197,7 @@ function policy(β::AbstractFloat,
     return c, η, ap, l_out, tr
 end
 
-function mollifier(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
+function mollifier_bondlabor(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
     # mollifier function
     In = 0.443993816237631
     if z<ehi && z>elo
@@ -208,11 +209,11 @@ function mollifier(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
     return out
 end
 
-function dmollifier(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
+function dmollifier_bondlabor(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
     In = 0.443993816237631
     if x < ehi && x > elo
         temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
-        dy  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
+        dy  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier_bondlabor(x, ehi, elo)
     else
         dy = 0.0
     end

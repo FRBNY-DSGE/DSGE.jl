@@ -56,8 +56,8 @@ function jacobian(m::BondLabor)
     ELREE = zeros(nx*ns)
 
     # Mollifier convenience functions
-    qfunction(x) = mollifier(x,ehi,elo)
-    qp(x) = dmollifier(x,ehi,elo)
+    qfunction(x) = mollifier_bondlabor(x,ehi,elo)
+    qp(x) = dmollifier_bondlabor(x,ehi,elo)
 
     # EE jacobian terms
     for ix in 1:nx
