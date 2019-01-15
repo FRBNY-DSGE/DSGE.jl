@@ -145,7 +145,7 @@ function jacobian(m::RealBond)
                     sumRRP += -Ξ[i,ip]*chipR[ip]*unc[ip]
                     sumWWP += -Ξ[i,ip]*chipW[ip]*unc[ip]
                     sumTTP += -Ξ[i,ip]*chipX[ip]*unc[ip]
-                    sumELL += ξ[i,ip]*R*unc[i]*((1/ν) + sgrid[is]*η[i]/(ν*c[i]))
+                    sumELL += ξ[i,ip]*R*unc[i]*((1/ν) + sgrid[is]*η[i]/(ν*c[i]))*ell[i]^(-(1/γ) - 1)
                     sumWW += ξ[i,ip]*R*unc[i]*(1.0+1.0/ν)*sgrid[is]*η[i]
                     sumTT += ξ[i,ip]*R*unc[i]
                     sumξ += ξ[i,ip]
