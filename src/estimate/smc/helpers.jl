@@ -81,8 +81,13 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 """
 function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Distribution;
                                                  cc::T = 1.0, α::T = 1., mixr::T = 0.,
-                                                 eps::Vector{T} = Vector{T}(0), mu::Vector{T} = Vector{T}(0))
+                                                 eps::Vector{T} = Vector{T}(0), mu::Vector{T} = Vector{T}(0),
+                                                 bvar::Matrix{T} = Matrix{T}(0,0))
     @assert 0 <= α <= 1
+
+    @test mu ≈ d_prop.μ
+    #@test_matrix_approx_eq d_prop.Σ.mat bvar
+
     mixr = 1
     d_bar = MvNormal(d_prop.μ, cc*d_prop.Σ)
 
@@ -94,13 +99,16 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
     # RECA
     # θ_new = rand(d_mix_old)
     if mixr < α # 'scale' (cc) has been "baked into RNG"
-        θ_new = θ_old + d_prop.Σ.mat * eps
+        @show "NOT IN ELSE - 1"
+        θ_new = θ_old + chol(d_prop.Σ.mat) * eps
 
     elseif mixr < (α + (1.0 - α) / 2.0)
+        @show "NOT IN ELSE - 2"
         θ_new = θ_old + 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # THIS IS V DIF FROM FORTRAN.
-
     else
-        θ_new = d_prop.μ + d_prop.Σ.mat * eps
+        @show bvar' * eps
+        θ_new = d_prop.μ + bvar' * eps
+        #θ_new = d_prop.μ + chol(d_prop.Σ.mat) * eps
     end
 
     # Create mixture distribution conditional on the new parameter value, θ_new
