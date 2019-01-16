@@ -6,22 +6,22 @@ function jacobian(m::RealBond)
     eq   = m.equilibrium_conditions
 
     # Load in parameters, steady-state parameters, and grids
-    γ     = m[:γ]
-    abar  = m[:abar]
-    R     = m[:R]
-    ν     = m[:ν]
+    γ     = m[:γ].value
+    abar  = m[:abar].value
+    R     = m[:R].value
+    ν     = m[:ν].value
     ρz    = m[:ρ_z].value
     ρmon  = m[:ρmon].value
     κ     = m[:κ].value
     phipi = m[:phipi].value
     aborrow = abar/R
 
-    ell    = m[:lstar].value
+    ell  = m[:lstar].value
     c    = m[:cstar].value
     μ    = m[:μstar].value
     η    = m[:ηstar].value
-    β    = m[:βstar].value
     χss  = m[:χstar].value
+    β    = m[:βstar].value
 
     xgrid = m.grids[:xgrid].points
     xwts  = m.grids[:xgrid].weights
@@ -47,58 +47,112 @@ function jacobian(m::RealBond)
     chipR = (1/(R*R))*(ν*abar./(aborrow + χss - xgrid_total))./(ν./(aborrow + χss - xgrid_total) + γ./χss)
     chipX = (ν*χss)./(ν*χss + γ*(aborrow + χss - xgrid_total))
 
-    # we will always order things XP YP X Y
-    # convention is that capital letters generally refer to indices
-    MUP  = 1:nx*ns
-    ZP   = nx*ns+1
-    MONP = nx*ns+2 # monetary policy shock
-    ELLP = nx*ns+3:2*nx*ns+2
-    RRP  = 2*nx*ns+3
-    IIP  = 2*nx*ns+4 # nominal rates
-    WWP  = 2*nx*ns+5 # wages
-    PIP  = 2*nx*ns+6 # inflation
-    TTP  = 2*nx*ns+7 # transfers
-    MU   = 2*nx*ns+8:3*nx*ns+7
-    Z    = 3*nx*ns+8
-    MON  = 3*nx*ns+9
-    ELL  = 3*nx*ns+10:4*nx*ns+9
-    RR   = 4*nx*ns+10
-    II   = 4*nx*ns+11
-    WW   = 4*nx*ns+12
-    PI   = 4*nx*ns+13
-    TT   = 4*nx*ns+14
-
-    # create objects needed for solve.jl
-    funops = 1:2 # which operators output a function
-    F1 = 1:nx*ns             # euler eqn
-    F2 = nx*ns+1:2*nx*ns     # KF
-    F3 = 2*nx*ns+1:2*nx*ns+1 # mkt ckr
-    F4 = 2*nx*ns+2:2*nx*ns+2 # z
-    F5 = 2*nx*ns+3:2*nx*ns+3 # phillips
-    F6 = 2*nx*ns+4:2*nx*ns+4 # taylor
-    F7 = 2*nx*ns+5:2*nx*ns+5 # fisher
-    F8 = 2*nx*ns+6:2*nx*ns+6 # transfers
-    F9 = 2*nx*ns+7:2*nx*ns+7 # monetary policy
-
     # Create auxiliary variables
     # c = min.(ell.^(-1.0/γ),χss) # Consumption Decision Rule
     # η = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
 
     # EE
+    dF1_dELLP, dF1_dRRP, dF1_dWWP, dF1_dTTP, dF1_dELL, dF1_dWW, dF1_dRR, dF1_dTT, unc, a =
+    euler_equation_realbond(nx, ns, qp, qfunction, xgrid, sgrid, ggrid, sgrid_total, xwts, swts,
+                            chipR, chipW, chipX, R, γ, β, ν,
+                            c, η, ell, χss)
+
+    # KF
+    dF2_dMU, dF2_dELL, dF2_dRR, dF2_dWW, dF2_dTT =
+    kolmogorov_fwd_realbond(nx, ns, qfunction, qp, xgrid, sgrid, ggrid, xwts, swts,
+                            unc, a, R, ν, γ, μ, η, c)
+
+    # MKT clearing
+    dF3_dMU, dF3_dELL, dF3_dWW, dF3_dRR, dF3_dTT, GDP =
+    market_clearing_realbond(nx, ns, xgrid, sgrid, xwts, swts,
+                             η, c, μ, ell, γ, ν, chipW, chipR, chipX, unc)
+
+    # Make the Jacobian
+    JJ = zeros(2*nx*ns+7,4*nx*ns+14)
+
+    # Euler equation
+    JJ[eq[:eq_euler], endo[:l′_t]]  = dF1_dELLP
+    JJ[eq[:eq_euler], endo[:R′_t]]  = dF1_dRRP
+    JJ[eq[:eq_euler], endo[:w′_t]]  = dF1_dWWP
+    JJ[eq[:eq_euler], endo[:t′_t]]  = dF1_dTTP
+    JJ[eq[:eq_euler], endo[:l_t]]   = dF1_dELL
+    JJ[eq[:eq_euler], endo[:R_t]]   = dF1_dRR
+    JJ[eq[:eq_euler], endo[:w_t]]   = dF1_dWW
+    JJ[eq[:eq_euler], endo[:t_t]]   = dF1_dTT
+
+    # KF
+    JJ[eq[:eq_kolmogorov_fwd], endo[:μ′_t]] = -eye(nx*ns)
+    JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t]]  = dF2_dMU
+    JJ[eq[:eq_kolmogorov_fwd], endo[:l_t]]  = dF2_dELL
+    JJ[eq[:eq_kolmogorov_fwd], endo[:w_t]]  = dF2_dWW
+    JJ[eq[:eq_kolmogorov_fwd], endo[:R_t]]  = dF2_dRR
+    JJ[eq[:eq_kolmogorov_fwd], endo[:t_t]]  = dF2_dTT
+
+    # mkt ckr
+    JJ[eq[:eq_market_clearing], endo[:μ_t]]  = dF3_dMU
+    JJ[eq[:eq_market_clearing], endo[:z_t]]  = GDP
+    JJ[eq[:eq_market_clearing], endo[:l_t]]  = dF3_dELL
+    JJ[eq[:eq_market_clearing], endo[:w_t]]  = dF3_dWW
+    JJ[eq[:eq_market_clearing], endo[:R_t]]  = dF3_dRR
+    JJ[eq[:eq_market_clearing], endo[:t_t]]  = dF3_dTT
+
+    # TFP
+    JJ[eq[:eq_TFP], endo[:z′_t]]  = 1.0
+    JJ[eq[:eq_TFP], endo[:z_t]]   = -ρz
+
+    # Phillips
+    JJ[eq[:eq_phillips], endo[:π′_t]] = -1.0/R
+    JJ[eq[:eq_phillips], endo[:z_t]]  = κ
+    JJ[eq[:eq_phillips], endo[:w_t]]  = -κ
+    JJ[eq[:eq_phillips], endo[:π_t]]  = 1.0
+
+    # taylor
+    JJ[eq[:eq_taylor], endo[:i_t]]   = 1.0
+    JJ[eq[:eq_taylor], endo[:π_t]]   = -phipi*R
+    JJ[eq[:eq_taylor], endo[:mon_t]] = -1.0
+
+    # fisher
+    JJ[eq[:eq_fisher], endo[:i_t]]  = 1.0
+    JJ[eq[:eq_fisher], endo[:π′_t]]  = -R
+    JJ[eq[:eq_fisher], endo[:R_t]]  = -1.0
+
+    # transfers
+    JJ[eq[:eq_transfers], endo[:t_t]]  = 1.0
+    JJ[eq[:eq_transfers], endo[:z_t]]   = -GDP
+    JJ[eq[:eq_transfers], endo[:w_t]]  = GDP
+
+    # MP
+    JJ[eq[:eq_monetary_policy], endo[:mon′_t]] = 1.0
+    JJ[eq[:eq_monetary_policy], endo[:mon_t]]  = -ρmon
+
+    if !m.testing && get_setting(m, :normalize_distr_variables)
+        JJ = normalize(m, JJ)
+    end
+
+    return JJ
+end
+
+function euler_equation_realbond(nx::Int, ns::Int,
+                                 qp::Function, qfunction::Function,
+                                 xgrid::Vector{Float64}, sgrid::Vector{Float64},
+                                 ggrid::Vector{Float64}, sgrid_total::Vector{Float64},
+                                 xwts::Vector{Float64}, swts::Vector{Float64},
+                                 chipR::Vector{Float64}, chipW::Vector{Float64}, chipX::Vector{Float64},
+                                 R::Float64, γ::Float64, β::Float64, ν::Float64,
+                                 c::Vector{Float64}, η::Vector{Float64}, ell::Vector{Float64}, χss::Vector{Float64})
     ξ   = zeros(nx*ns,nx*ns)
-    Γ   = zeros(nx*ns,1)
-    ellRHS = zeros(nx*ns,1)
+    Γ   = zeros(nx*ns)
     Ξ   = zeros(nx*ns,nx*ns)
     dF1_dELLP = zeros(nx*ns,nx*ns)
-    dF1_dRRP  = zeros(nx*ns,1)
-    dF1_dWWP  = zeros(nx*ns,1)
-    dF1_dTTP  = zeros(nx*ns,1)
+    dF1_dRRP  = zeros(nx*ns)
+    dF1_dWWP  = zeros(nx*ns)
+    dF1_dTTP  = zeros(nx*ns)
     dF1_dELL  = zeros(nx*ns,nx*ns)
-    dF1_dWW   = zeros(nx*ns,1)
-    dF1_dRR   = zeros(nx*ns,1)
-    dF1_dTT   = zeros(nx*ns,1)
-    unc = zeros(nx*ns,1)
-    a   = zeros(nx*ns,1)
+    dF1_dWW   = zeros(nx*ns)
+    dF1_dRR   = zeros(nx*ns)
+    dF1_dTT   = zeros(nx*ns)
+    unc = zeros(nx*ns)
+    a   = zeros(nx*ns)
 
     # EE jacobian terms
     for ix=1:nx
@@ -140,30 +194,38 @@ function jacobian(m::RealBond)
             dF1_dTT[i] = sumξ*R*unc[i]
         end
     end
+    return dF1_dELLP, dF1_dRRP, dF1_dWWP, dF1_dTTP, dF1_dELL, dF1_dWW, dF1_dRR, dF1_dTT, unc, a
+end
 
-    #KF
+function kolmogorov_fwd_realbond(nx::Int, ns::Int,
+                                 qfunction::Function, qp::Function,
+                                 xgrid::Vector{Float64}, sgrid::Vector{Float64},
+                                 ggrid::Vector{Float64}, xwts::Vector{Float64}, swts::Vector{Float64},
+                                 unc::Vector{Float64}, a::Vector{Float64},
+                                 R::Float64, ν::Float64, γ::Float64,
+                                 μ::Vector{Float64}, η::Vector{Float64}, c::Vector{Float64})
     dF2_dMU   = zeros(nx*ns,nx*ns)
-    dF2_dELL = zeros(nx*ns,nx*ns)
-    dF2_dRR = zeros(nx*ns,1)
-    dF2_dWW = zeros(nx*ns,1)
-    dF2_dTT = zeros(nx*ns,1)
+    dF2_dELL  = zeros(nx*ns,nx*ns)
+    dF2_dRR = zeros(nx*ns)
+    dF2_dWW = zeros(nx*ns)
+    dF2_dTT = zeros(nx*ns)
 
-    #KF jacobian terms
-    for ixp=1:nx
-        for isp =1:ns
+    # KF jacobian terms
+    for ixp = 1:nx
+        for isp = 1:ns
             ip = ixp + nx*(isp-1)
             sumRR = 0.0
             sumWW = 0.0
             sumTT = 0.0
-            for ix=1:nx
+            for ix = 1:nx
                 for is = 1:ns
                     i = ix + nx*(is-1)
                     mf = R*(sgrid[is]*η[i]+xgrid[ix] - c[i]) - xgrid[ixp]
                     dF2_dMU[ip,i]  = qfunction(mf)*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]
                     dF2_dELL[ip,i] = qp(mf)*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]*μ[ix]*ggrid[isp]*R*unc[i]*((1/γ) + sgrid[is]*η[i]/(ν*c[i]))
-                    sumRR +=qp(mf)*μ[ix]*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]*unc[i]*a[i]/R
-                    sumWW +=qp(mf)*μ[ix]*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]*unc[i]*R*(1+(1/ν))*sgrid[is]*η[i]
-                    sumTT +=qp(mf)*μ[ix]*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]*unc[i]*R
+                    sumRR += qp(mf)*μ[ix]*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]*unc[i]*a[i]/R
+                    sumWW += qp(mf)*μ[ix]*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]*unc[i]*R*(1+(1/ν))*sgrid[is]*η[i]
+                    sumTT += qp(mf)*μ[ix]*ggrid[isp]*xwts[ix]*swts[is]*swts[isp]*unc[i]*R
                 end
             end
             dF2_dRR[ip] = sumRR
@@ -171,10 +233,20 @@ function jacobian(m::RealBond)
             dF2_dTT[ip] = sumTT
         end
     end
+    return dF2_dMU, dF2_dELL, dF2_dRR, dF2_dWW, dF2_dTT
+end
 
+function market_clearing_realbond(nx::Int, ns::Int,
+                                  xgrid::Vector{Float64}, sgrid::Vector{Float64},
+                                  xwts::Vector{Float64}, swts::Vector{Float64},
+                                  η::Vector{Float64}, c::Vector{Float64},
+                                  μ::Vector{Float64}, ell::Vector{Float64},
+                                  γ::Float64, ν::Float64,
+                                  chipW::Vector{Float64}, chipR::Vector{Float64},
+                                  chipX::Vector{Float64}, unc::Vector{Float64})
     # MKT clearing
-    dF3_dMU  = zeros(1,nx*ns)
-    dF3_dELL = zeros(1,nx*ns)
+    dF3_dMU  = zeros(nx*ns)
+    dF3_dELL = zeros(nx*ns)
     dF3_dWW  = 0.0
     dF3_dRR  = 0.0
     dF3_dTT  = 0.0
@@ -192,69 +264,7 @@ function jacobian(m::RealBond)
         end
     end
 
-    # Make the Jacobian
-    JJ = zeros(2*nx*ns+7,4*nx*ns+14)
-
-    # Euler equation
-    JJ[F1,ELLP] = dF1_dELLP
-    JJ[F1,RRP]  = dF1_dRRP
-    JJ[F1,WWP]  = dF1_dWWP
-    JJ[F1,TTP]  = dF1_dTTP
-    JJ[F1,ELL]  = dF1_dELL
-    JJ[F1,RR]   = dF1_dRR
-    JJ[F1,WW]   = dF1_dWW
-    JJ[F1,TT]   = dF1_dTT
-
-    # KF
-    JJ[F2,MUP] = -eye(nx*ns)
-    JJ[F2,MU]  = dF2_dMU
-    JJ[F2,ELL] = dF2_dELL
-    JJ[F2,WW]  = dF2_dWW
-    JJ[F2,RR]  = dF2_dRR
-    JJ[F2,TT]  = dF2_dTT
-
-    # mkt ckr
-    JJ[F3,MU]  = dF3_dMU
-    JJ[F3,Z]   = GDP
-    JJ[F3,ELL] = dF3_dELL
-    JJ[F3,WW]  = dF3_dWW
-    JJ[F3,RR]  = dF3_dRR
-    JJ[F3,TT]  = dF3_dTT
-
-    # TFP
-    JJ[F4,ZP]  = 1.0
-    JJ[F4,Z]   = -ρz
-
-    # Phillips
-    JJ[F5,PIP] = -1.0/R
-    JJ[F5,Z]   = κ
-    JJ[F5,WW]  = -κ
-    JJ[F5,PI]  = 1.0
-
-    # taylor
-    JJ[F6,II]  = 1.0
-    JJ[F6,PI]  = -phipi*R
-    JJ[F6,MON] = -1.0
-
-    # fisher
-    JJ[F7,II]  = 1.0
-    JJ[F7,PIP] = -R
-    JJ[F7,RR]  = -1.0
-
-    # transfers
-    JJ[F8,TT]  = 1.0
-    JJ[F8,Z]   = -GDP
-    JJ[F8,WW]  = GDP
-
-    # MP
-    JJ[F9,MONP] = 1.0
-    JJ[F9,MON]  = -ρmon
-
-    if !m.testing && get_setting(m, :normalize_distr_variables)
-        JJ = normalize(m, JJ)
-    end
-
-    return JJ
+    return dF3_dMU, dF3_dELL, dF3_dWW, dF3_dRR, dF3_dTT, GDP
 end
 
 function normalize(m::RealBond, JJ::Matrix{Float64})
