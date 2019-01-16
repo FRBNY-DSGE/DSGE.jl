@@ -36,7 +36,10 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   stepprobs = Vector{Float64}(size(blocks_all,1), 0),
                   step_pr = Matrix{Float64}(size(1, 1), 0),
                   step_lik = Matrix{Float64}(size(1, 1), 0),
-                  mu = Vector{Float64}(size(41,1), 0)) # RECA: need to add n_mh if want > 1
+                  step_p1 = Matrix{Float64}(size(1, 1), 0),
+                  alp = Matrix{Float64}(size(1, 1), 0),
+                  mu = Vector{Float64}(size(41,1), 0), # RECA: need to add n_mh if want > 1
+                  bvar = Matrix{Float64}(0, 0)) # RECA: need to add n_mh if want > 1
 
     n_steps = get_setting(m, :n_mh_steps_smc)
 
@@ -55,6 +58,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
     accept = 0.0 #false
 
     for step in 1:n_steps
+        @show size(eps)
 
         eps_step = eps[step, :]
 
@@ -70,15 +74,21 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
             # RECA
-            eps_block = eps_step[block_a]
+            eps_block = eps_step[block_f]
 
             para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
                                                                                   d_subset;
                                                                                   mixr = mix_draw, # RECA
                                                                                   eps = eps_block, # RECA
-                                                                                  cc = c, α = α, mu=mu[block_a])
-            para_new = copy(para)
+                                                                                  cc = c, α = α, mu=mu[block_a],
+                                                                                  bvar=bvar)
+            @show para_draw, para_new_density, para_old_density
+
+            para_new = deepcopy(para)
             para_new[block_a] = para_draw
+
+            @show para_new ≈ step_p1, para_new - step_p1
+            @show sum(abs.(para_new - step_p1))
 
             like_new = -Inf
             post_new = -Inf
@@ -110,6 +120,10 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             post_old = post - para_old_density
             η        = exp(post_new - post_old)
 
+            @show η ≈ alp[1], η, alp[1]
+            @show post
+            @show para_old_density
+
             if step_prob < η # accept
                 para      = para_new
                 like      = like_new
@@ -120,6 +134,9 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
 #            @assert like == step_lik[mm]
             mm += 1
             # draw again for the next step
+            @show step_pr - para_new[block_a], sum(abs.(step_pr - para_new[block_a]))
+            @show like-step_lik
+
             #step_prob = rand()
         end
     end

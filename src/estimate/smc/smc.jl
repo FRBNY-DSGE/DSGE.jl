@@ -252,7 +252,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         fort_c   = readdlm(fortran_path * convert_string(i) * "scale.txt")
         #@show θ_bar mu
         @show c, fort_c[1]
-        @show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
+        #@show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
         @show sum(abs.(θ_bar-mu))
         @show findmax(abs.(θ_bar-mu))
         @show abs.(θ_bar-mu)
@@ -262,7 +262,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric
         # (not off due to numerical error) and values haven't changed
-        R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
+        R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]') / 2
+
+        # Confirm these babies are the same
+        @show sum(abs.(R_fr-fort_var[free_para_inds, free_para_inds]))
+        @show R_fr ≈ fort_var[free_para_inds, free_para_inds]
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
         d = MvNormal(θ_bar[free_para_inds], R_fr)
@@ -278,9 +282,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         eps      = readdlm(fortran_path * convert_string(i) * "eps.txt")
         step_pr  = readdlm(fortran_path * convert_string(i) * "step_pr.txt")
         step_lik = readdlm(fortran_path * convert_string(i) * "step_lik.txt")
+        step_p1  = readdlm(fortran_path * convert_string(i) * "step_p1.txt")
+        alp      = readdlm(fortran_path * convert_string(i) * "step_alp.txt")
         fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
         fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
         fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
+        bvar     = readdlm(fortran_path * convert_string(i) * "bvar.txt")
+
 
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
@@ -299,7 +307,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          eps = eps[(j-1) * n_steps + 1:j * n_steps, :],
                          stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps],
                          step_pr = step_pr[j,:], step_lik = step_lik[j,:],
-                         mu = mu)
+                         step_p1 = step_p1[j,:], alp = alp[j,:], mu = mu, bvar=bvar)
             end
         else
             #new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
@@ -312,8 +320,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                                       mixr = mixr[j,:],
                                       eps = eps[(j-1) * n_steps + 1:j * n_steps, :],
                                       stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps],
-                                      step_pr = step_pr[j,:], step_lik = step_lik[j,:],
-                                      mu = mu) for j=1:n_parts]
+                                      step_p1 = step_p1[j,:], alp = alp[j,:], mu = mu, bvar=bvar) for j=1:n_parts]
         end
 
         cloud.particles = new_particles
