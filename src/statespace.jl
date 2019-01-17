@@ -152,14 +152,31 @@ compute_system(m; apply_altpolicy = false)
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
-                        verbose::Symbol = :high) where T <: AbstractFloat
+function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false,
+                                          verbose::Symbol = :high,
+                                          solution_method::Symbol = get_setting(m, :solution_method))
     # Solve model
-    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy) #, verbose = verbose)
-    transition_equation = Transition(TTT, RRR, CCC)
+    if solution_method == :gensys
+        TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+        transition_equation = Transition(TTT, RRR, CCC)
 
-    # Solve measurement equation
-    measurement_equation = measurement(m, TTT, RRR, CCC)
+        # Solve measurement equation
+        measurement_equation = measurement(m, TTT, RRR, CCC)
+    elseif solution_method == :klein
+        # Unpacking the method from solve to hang on to TTT_jump
+        TTT_jump, TTT_state = klein(m)
+
+        # Transition
+        TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+        CCC = zeros(n_model_states(m))
+
+        transition_equation = Transition(TTT, RRR, CCC)
+
+        # Measurement (needs the additional TTT_jump argument)
+        measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC)
+    else
+        throw("solution_method provided does not exist.")
+    end
 
     type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
     if hasmethod(pseudo_measurement, type_tuple)

@@ -19,6 +19,7 @@ Cov(ϵ_t, u_t) = 0
 ```
 """
 function measurement(m::BondLabor{T}, TTT::Matrix{T},
+                     TTT_jump::Matrix{T},
                      RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
     endo      = m.endogenous_states_unnormalized
     exo       = m.exogenous_shocks
@@ -83,12 +84,7 @@ function measurement(m::BondLabor{T}, TTT::Matrix{T},
     GDPfn[1, endo[:R′_t]] = GDPR
 
     Qx, Qy, _, _ = compose_normalization_matrices(m)
-    # Re-compute the TTT_jump matrix
-    # Kind of slow.. but a little more convenient than carrying around TTT_state from solve
-    # Refactor this to be better
-    TTT_jump_mul_state = TTT[n_backward_looking_states(m)+1:end, 1:n_backward_looking_states(m)]
-    TTT_state = TTT[1:n_backward_looking_states(m), 1:n_backward_looking_states(m)]
-    gx2  = Qy'*(TTT_jump_mul_state*inv(TTT_state))*Qx
+    gx2  = Qy'*TTT_jump*Qx
 
     # now we need to create GDP as a function of the normalized states
     ZZ_states = (1/GDP)*GDPfn*[eye(nx*ns+1); gx2]*Qx' # this is for log GDP
