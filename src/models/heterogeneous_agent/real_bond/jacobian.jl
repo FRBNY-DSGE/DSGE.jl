@@ -43,9 +43,7 @@ function jacobian(m::RealBond)
     qp(x) = dmollifier_realbond(x,ehi,elo)
 
     # Jacobian stuff
-    chipW = (1+ν)./(ν./(aborrow + χss - xgrid_total) + γ./χss)
-    chipR = (1/(R*R))*(ν*abar./(aborrow + χss - xgrid_total))./(ν./(aborrow + χss - xgrid_total) + γ./χss)
-    chipX = (ν*χss)./(ν*χss + γ*(aborrow + χss - xgrid_total))
+    chipW, chipR, chipX = construct_chip_realbond(xgrid_total, γ, ν, aborrow, abar, R, χss)
 
     # Create auxiliary variables
     # c = min.(ell.^(-1.0/γ),χss) # Consumption Decision Rule
@@ -130,6 +128,17 @@ function jacobian(m::RealBond)
     end
 
     return JJ
+end
+
+function construct_chip_realbond(xgrid_total::Vector{Float64},
+                                 γ::Float64, ν::Float64, aborrow::Float64,
+                                 abar::Float64, R::Float64,
+                                 χss::Vector{Float64})
+    chipW = (1.0+ν)./(ν./(aborrow + χss - xgrid_total) + γ./χss)
+    chipR = (1.0/(R^2))*(ν*abar./(aborrow + χss - xgrid_total))./(ν./(aborrow + χss - xgrid_total) + γ./χss)
+    chipX = (ν*χss)./(ν*χss + γ*(aborrow + χss - xgrid_total))
+
+    return chipW, chipR, chipX
 end
 
 function euler_equation_realbond(nx::Int, ns::Int,
