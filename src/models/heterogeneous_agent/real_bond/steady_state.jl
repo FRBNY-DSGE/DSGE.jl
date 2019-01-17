@@ -125,25 +125,16 @@ function steadystate!(m::RealBond;
     nothing
 end
 
-function policy_realbond(β::AbstractFloat,
-                         R::AbstractFloat,
-                         γ::AbstractFloat,
-                         ν::AbstractFloat,
-                         sigs::AbstractFloat,
-                         ehi::AbstractFloat,
-                         elo::AbstractFloat,
-                         xgrid_total::Vector{Float64},
-                         sgrid_total::Vector{Float64},
-                         xwts::Vector{Float64},
-                         swts::Vector{Float64},
-                         l_in::Vector{Float64},
-                         g::Vector{Float64},
+function policy_realbond(β::AbstractFloat, R::AbstractFloat,
+                         γ::AbstractFloat, ν::AbstractFloat,
+                         sigs::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat,
+                         xgrid_total::Vector{Float64}, sgrid_total::Vector{Float64},
+                         xwts::Vector{Float64}, swts::Vector{Float64},
+                         l_in::Vector{Float64}, ggrid::Vector{Float64},
                          χss::Vector{Float64};
-                         damp::Float64 = 0.4,
-                         dist::Float64 = 1.,
-                         tol::Float64 = 1e-4,
-                         maxit::Int64 = 500)
-    # outputs: [c,ap,l_out,tr]
+                         damp::Float64 = 0.4, dist::Float64 = 1.,
+                         tol::Float64 = 1e-4, maxit::Int64 = 500)
+    # outputs: [c, η, ap, l_out, tr]
 
     nx      = length(xwts)
     ns      = length(swts)
@@ -154,53 +145,81 @@ function policy_realbond(β::AbstractFloat,
     counter = 1
     l_in    = ones(n)
     l_out   = copy(l_in)    # initialize l_out
-    tr      = zeros(n,n)    # transition matrix mapping todays dist of w to w'
-    qxg     = zeros(n,n)    # auxilary variable to compute LHS of euler
     qfunction(x) = mollifier_realbond(x,ehi,elo)
 
     while dist > tol && counter < maxit
         # compute c(w) given guess for l_in = β*R*E[u'(c_{t+1})]
-        c  = min.(l_in.^(-1.0/γ), χss)
+
+        for i in 1:n
+            c[i]  = min(l_in[i]^(-1.0/γ), χss[i])
+        end
+
         η  = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
         ap = R*(xgrid_total+sgrid_total.*η - c)
-        for ix in 1:nx
-            for iss in 1:ns
-                sumn=0.0
-                for ixp in 1:nx
-                    for isp in 1:ns
-                        # This is the parameterized expectations algorithm approximation of the
-                        # conditional expectation within the Euler equation
-                       sumn += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*g[isp]*xwts[ixp]*swts[isp]*(c[nx*(isp-1)+ixp]^(-γ) )
-                    end
-                end
-                l_out[ix+nx*(iss-1)] = β*R*sumn
-            end
-        end
-        dist = maximum(abs.(l_out-l_in))
+
+        l_out = parameterized_expectations_realbond(nx, ns, qfunction, xgrid_total, ggrid, xwts, swts, ap, c, γ, β, R)
+
+        dist = norm(l_out - l_in, Inf)
+
         # if counter%1==0
         #     println(dist)
         # end
         l_in = damp*l_out + (1.0-damp)*l_in
         counter += 1
     end
+
     if counter == maxit
         warn("Euler iteration did not converge")
     end
+
     # c  = min.(l_in.^(-1.0/γ),χss)
     # η  = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
     # ap = R*(xgrid_total+sgrid_total.*η - c)
 
+    tr = kolmogorov_fwd_policy_realbond(nx, ns, qfunction, xgrid_total, ggrid, ap)
+
+    return c, η, ap, l_out, tr
+end
+
+function parameterized_expectations_realbond(nx::Int, ns::Int,
+                                             qfunction::Function,
+                                             xgrid_total::Vector{Float64}, ggrid::Vector{Float64},
+                                             xwts::Vector{Float64}, swts::Vector{Float64},
+                                             ap::Vector{Float64}, c::Vector{Float64},
+                                             γ::Float64, β::Float64, R::Float64)
+    l_out   = ones(ns*nx)    # initialize l_out
+    for ix in 1:nx
+        for iss in 1:ns
+            sumn = 0.0
+            for ixp in 1:nx
+                for isp in 1:ns
+                    # This is the parameterized expectations algorithm approximation of the
+                    # conditional expectation within the Euler equation
+                   sumn += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*ggrid[isp]*xwts[ixp]*swts[isp]*(c[nx*(isp-1)+ixp]^(-γ))
+                end
+            end
+            l_out[ix+nx*(iss-1)] = β*R*sumn
+        end
+    end
+
+    return l_out
+end
+
+function kolmogorov_fwd_policy_realbond(nx::Int, ns::Int,
+                                        qfunction::Function,
+                                        xgrid_total::Vector{Float64}, ggrid::Vector{Float64},
+                                        ap::Vector{Float64})
+    tr = zeros(ns*nx,ns*nx)    # transition matrix (KFE) mapping todays dist of w to w' (i.e. μ to μ′)
     for ix in 1:nx
         for ixp in 1:nx
             for iss in 1:ns
                 for isp in 1:ns
-                    tr[ixp+nx*(isp-1),ix+nx*(iss-1)] += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*g[isp]
+                    tr[ixp+nx*(isp-1),ix+nx*(iss-1)] += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*ggrid[isp]
                 end
             end
         end
     end
-
-    return c, η, ap, l_out, tr
+    return tr
 end
 
 function mollifier_realbond(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
