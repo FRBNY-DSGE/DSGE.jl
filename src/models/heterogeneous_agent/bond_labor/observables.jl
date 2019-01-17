@@ -1,5 +1,3 @@
-import DSGE: nominal_to_real, hpfilter, logleveltopct_annualized, Observable
-
 function init_observable_mappings!(m::BondLabor)
 
     observables = OrderedDict{Symbol,Observable}()
