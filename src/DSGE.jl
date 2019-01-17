@@ -319,6 +319,7 @@ module DSGE
     include("models/heterogeneous_agent/real_bond/jacobian.jl")
     include("models/heterogeneous_agent/real_bond/shock_loading.jl")
     include("models/heterogeneous_agent/real_bond/observables.jl")
+    include("models/heterogeneous_agent/real_bond/measurement.jl")
 
     # Continuous Time Heterogenous Agent Models
     include("solve/solve_hank.jl")

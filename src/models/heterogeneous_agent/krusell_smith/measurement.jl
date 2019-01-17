@@ -20,8 +20,9 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::KrusellSmith{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                                       CCC::Vector{T})
+function measurement{T<:AbstractFloat}(m::KrusellSmith{T},
+                                       TTT::Matrix{T}, TTT_jump::Matrix{T},
+                                       RRR::Matrix{T}, CCC::Vector{T})
     endo      = m.endogenous_states
     exo       = m.exogenous_shocks
     obs       = m.observables
