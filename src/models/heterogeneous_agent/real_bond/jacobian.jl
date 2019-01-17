@@ -6,37 +6,37 @@ function jacobian(m::RealBond)
     eq   = m.equilibrium_conditions
 
     # Load in parameters, steady-state parameters, and grids
-    γ     = m[:γ].value
-    abar  = m[:abar].value
-    R     = m[:R].value
-    ν     = m[:ν].value
-    ρz    = m[:ρ_z].value
-    ρmon  = m[:ρmon].value
-    κ     = m[:κ].value
-    phipi = m[:phipi].value
-    aborrow = abar/R
+    γ::Float64     = m[:γ].value
+    abar::Float64  = m[:abar].value
+    R::Float64     = m[:R].value
+    ν::Float64     = m[:ν].value
+    ρz::Float64    = m[:ρ_z].value
+    ρmon::Float64  = m[:ρmon].value
+    κ::Float64     = m[:κ].value
+    phipi::Float64 = m[:phipi].value
+    aborrow::Float64 = abar/R
 
-    ell  = m[:lstar].value
-    c    = m[:cstar].value
-    μ    = m[:μstar].value
-    η    = m[:ηstar].value
-    χss  = m[:χstar].value
-    β    = m[:βstar].value
+    ell::Vector{Float64}  = m[:lstar].value
+    c::Vector{Float64}    = m[:cstar].value
+    μ::Vector{Float64}    = m[:μstar].value
+    η::Vector{Float64}    = m[:ηstar].value
+    χss::Vector{Float64}  = m[:χstar].value
+    β::Float64            = m[:βstar].value
 
-    xgrid = m.grids[:xgrid].points
-    xwts  = m.grids[:xgrid].weights
-    sgrid = m.grids[:sgrid].points
-    swts  = m.grids[:sgrid].weights
-    ggrid = m.grids[:ggrid]
-    xgrid_total = m.grids[:xgrid_total]
-    sgrid_total = m.grids[:sgrid_total]
-    weights_total = m.grids[:weights_total]
+    xgrid::Vector{Float64} = m.grids[:xgrid].points
+    xwts::Vector{Float64}  = m.grids[:xgrid].weights
+    sgrid::Vector{Float64} = m.grids[:sgrid].points
+    swts::Vector{Float64}  = m.grids[:sgrid].weights
+    ggrid::Vector{Float64} = m.grids[:ggrid]
+    xgrid_total::Vector{Float64} = m.grids[:xgrid_total]
+    sgrid_total::Vector{Float64} = m.grids[:sgrid_total]
+    weights_total::Vector{Float64} = m.grids[:weights_total]
 
-    elo = get_setting(m, :elo)
-    ehi = get_setting(m, :ehi)
+    elo::Float64 = get_setting(m, :elo)
+    ehi::Float64 = get_setting(m, :ehi)
 
-    nx = get_setting(m, :nx)
-    ns = get_setting(m, :ns)
+    nx::Int = get_setting(m, :nx)
+    ns::Int = get_setting(m, :ns)
 
     # Mollifiers
     qfunction(x) = mollifier_realbond(x,ehi,elo)
@@ -288,23 +288,21 @@ function normalize(m::RealBond, JJ::Matrix{Float64})
 end
 
 function compose_normalization_matrices(m::RealBond)
-    nx = get_setting(m, :nx)
-    ns = get_setting(m, :ns)
+    nx::Int = get_setting(m, :nx)
+    ns::Int = get_setting(m, :ns)
 
     # Create PPP matrix
     P1 = kron(eye(ns),ones(nx,1))
-    Ptemp = eye(nx)
-    Ptemp = Ptemp[:,2:end]
-    P2 = kron(eye(ns),Ptemp)
-    P = [P1 P2]
+    P2 = kron(eye(ns), eye(nx)[:, 2:end])
+    P  = hcat(P1, P2)
 
     (Q,R) = qr(P)
 
-    S         = Q[:,ns+1:end]'
+    S         = Q[:, ns+1:end]'
     Qleft     = cat([1 2],eye(nx*ns),S,[1],[1],[1],[1],[1],[1],[1])
     Qx        = cat([1 2],S,[1],[1])
     Qy        = cat([1 2],eye(nx*ns),[1],[1],[1],[1],[1])
-	Qright    = cat([1,2],Qx',Qy',Qx',Qy')
+    Qright    = cat([1,2],Qx',Qy',Qx',Qy')
 
     return Qx, Qy, Qleft, Qright
 end
