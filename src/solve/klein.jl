@@ -12,12 +12,11 @@ function klein(m::AbstractModel)
     # NK is number of predetermined variables
     NK = get_setting(m, :n_predetermined_variables)
     # n is number of variables (predet + non-predet)
-	n = size(Jac1,1)
+	n = size(Jac1, 1)
 
     # A and B matrices
-    A = Matrix{Float64}(size(Jac1,2), n)
-	A::Matrix{Float64} = Jac1[:,1:n]
-	B = -Jac1[:,n+1:2*n]
+	A::Matrix{Float64} = Jac1[:, 1:n]
+	B = -Jac1[:, n+1:2*n]
 
     # Apply generlaized Schur decomposition
     # A ≈ QZ[:Q]*QZ[:S]*QZ[:Z]'
@@ -62,19 +61,19 @@ function klein(m::AbstractModel)
     gx_coef = Matrix{Float64}(n-NK, NK)
 	gx_coef = -U22'*pinv(U22*U22')*U21
 
-    #  Solve for h_x (in a more numerically stable way)
+    # Solve for h_x (in a more numerically stable way)
 	S11invT11 = S11\T11;
 	Ustuff = (U11 + U12*gx_coef);
 	invterm = pinv(eye(NK)+gx_coef'*gx_coef);
-    #hx_coef = Array{Float64, 2}(NK, NK)
+    # hx_coef = Array{Float64, 2}(NK, NK)
 	hx_coef = invterm*Ustuff'*S11invT11*Ustuff;
 
 	# Ensure that hx and S11invT11 should have same eigenvalues
-	#(eigst,valst) = eig(S11invT11);
-	#(eighx,valhx) = eig(hx_coef);
+	# (eigst,valst) = eig(S11invT11);
+	# (eighx,valhx) = eig(hx_coef);
 	eigst = eigvals(S11invT11)
     eighx = eigvals(hx_coef)
-    if abs.(maximum(abs.(eighx))-maximum(abs.(eigst)))>1e-4
+    if abs(norm(eighx, Inf) - norm(eigst, Inf)) > 1e-4
 		warn("max abs eigenvalue of S11invT11 and hx are different!")
 	end
 
