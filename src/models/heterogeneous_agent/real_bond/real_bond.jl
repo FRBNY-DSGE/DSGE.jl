@@ -218,8 +218,8 @@ function RealBond(subspec::String="ss0";
         m <= custom_setting
     end
 
-    # # Set observable transformations
-    # init_observable_mappings!(m)
+    # Set observable transformations
+    init_observable_mappings!(m)
 
     # Initialize parameters
     init_parameters!(m)
