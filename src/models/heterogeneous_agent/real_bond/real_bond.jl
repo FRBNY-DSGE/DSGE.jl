@@ -264,8 +264,11 @@ function init_parameters!(m::RealBond)
     m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
-    m <= parameter(:κ, 1.0, fixed = true, description = "κ: The slope of the Phillips curve")
     m <= parameter(:ρmon, 0., fixed = true, description = "ρmon: Persistence of monetary policy shock")
+    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=true,
+                   description="σ_mon: The standard deviation of the monetary policy shock.",
+                   tex_label="\\sigma_{mon}")
+    m <= parameter(:κ, 1.0, fixed = true, description = "κ: The slope of the Phillips curve")
     m <= parameter(:phipi, 1.5, fixed = true, description = "phipi: The slope of the taylor rule")
     m <= parameter(:μ_s, 0., fixed = true, description = "μ_s: Mu of log normal in income")
     m <= parameter(:σ_s, 0.1, fixed = true,
@@ -351,6 +354,9 @@ function model_settings!(m::RealBond)
 
     # Solution method
     m <= Setting(:solution_method, :klein)
+
+    # Likelihood method
+    m <= Setting(:use_chand_recursion, true)
 
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks, 0,
