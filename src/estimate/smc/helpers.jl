@@ -85,35 +85,32 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
                                                  bvar::Matrix{T} = Matrix{T}(0,0))
     @assert 0 <= α <= 1
 
-    @test mu ≈ d_prop.μ
+    @assert mu ≈ d_prop.μ
     #@test_matrix_approx_eq d_prop.Σ.mat bvar
 
     mixr = 1
-    d_bar = MvNormal(d_prop.μ, cc*d_prop.Σ)
+    d_bar = MvNormal(d_prop.μ, cc^2 * d_prop.Σ)
 
     # Create mixture distribution conditional on the previous parameter value, θ_old
-    d_old      = MvNormal(θ_old, cc*d_prop.Σ)
-    d_diag_old = MvNormal(θ_old, diagm(diag(cc*d_prop.Σ)))
+    d_old      = MvNormal(θ_old, cc^2 * d_prop.Σ)
+    d_diag_old = MvNormal(θ_old, diagm(diag(cc^2 * d_prop.Σ)))
     d_mix_old  = MixtureModel(MvNormal[d_old, d_diag_old, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     # RECA
     # θ_new = rand(d_mix_old)
     if mixr < α # 'scale' (cc) has been "baked into RNG"
-        @show "NOT IN ELSE - 1"
-        θ_new = θ_old + chol(d_prop.Σ.mat) * eps
+        θ_new = θ_old + chol(d_prop.Σ.mat) * eps #TRANSPOSE
 
     elseif mixr < (α + (1.0 - α) / 2.0)
-        @show "NOT IN ELSE - 2"
         θ_new = θ_old + 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # THIS IS V DIF FROM FORTRAN.
     else
-        @show bvar' * eps
-        θ_new = d_prop.μ + bvar' * eps
+        θ_new = d_prop.μ + bvar * eps
         #θ_new = d_prop.μ + chol(d_prop.Σ.mat) * eps
     end
 
     # Create mixture distribution conditional on the new parameter value, θ_new
-    d_new      = MvNormal(θ_new, cc*d_prop.Σ)
-    d_diag_new = MvNormal(θ_new, diagm(diag(cc*d_prop.Σ)))
+    d_new      = MvNormal(θ_new, cc^2 * d_prop.Σ)
+    d_diag_new = MvNormal(θ_new, diagm(diag(cc^2 * d_prop.Σ)))
     d_mix_new  = MixtureModel(MvNormal[d_new, d_diag_new, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     # To clarify, this is not just the density of θ_new/θ_old using a given mixture
