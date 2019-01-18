@@ -2,10 +2,13 @@ using DSGE
 using Base.Test, BenchmarkTools
 using JLD
 
+import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_states
+
 # What do you want to do?
 check_steady_state = true
 check_jacobian = true
 check_solution = true
+check_measurement = true
 
 path = dirname(@__FILE__)
 
@@ -150,5 +153,25 @@ if check_solution
     @testset "Check solve outputs" begin
         @test saved_gx  ≈ gx
         @test saved_hx  ≈ hx
+    end
+end
+
+# Measurement
+if check_measurement
+    TTT_jump, TTT_state = klein(m)
+
+    # Transition
+    TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+    CCC = zeros(n_model_states(m))
+
+    transition_equation = Transition(TTT, RRR, CCC)
+
+    # Measurement (needs the additional TTT_jump argument)
+    measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC)
+
+    @load "$path/reference/measurement_equation.jld" obsmat
+
+    @testset "Check measurement equation" begin
+        @test obsmat ≈ measurement_equation[:ZZ][:, 1:n_backward_looking_states(m)]
     end
 end
