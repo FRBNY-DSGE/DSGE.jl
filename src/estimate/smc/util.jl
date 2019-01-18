@@ -176,7 +176,7 @@ function generate_all_blocks(n_free_para::Int64, n_blocks::Int64, path::String, 
         # fort_inds    = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
     # my_map       = parameter_map()
     # inds         = [my_map[x] for x in fort_inds]
-    inds = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
+    inds = readdlm(path * convert_string(i) * "blocksim.txt")[1,:]#[1:n_free_para]
     inds = [Int(x) for x in inds]
     fortran_list = [inds[break_points[j]+1:break_points[j+1]] for j=1:n_blocks]
     return fortran_list

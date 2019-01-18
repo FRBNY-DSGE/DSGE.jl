@@ -44,8 +44,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     fort_file    = "smc-sw-new-mix-npart-12000-nintmh-1-nphi-500-prior-b1-trial1-phibend/"
     fortran_path = "/home/rcerxs30/SLICOT-2018-12-19/dsge-smc/fortran/" * fort_file
     #"/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
-    fortESS      = vec(readdlm(fortran_path * "ESS.txt"))
-    stepprobs    = vec(readdlm(fortran_path * "stepprobs.txt"))
+    #fortESS      = vec(readdlm(fortran_path * "ESS.txt"))
+    stepprobs    = vec(readdlm(fortran_path * "stepprobstemp.txt"))
 
     # General
     parallel = get_setting(m, :use_parallel_workers)
@@ -190,6 +190,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
         incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
 
+        @show size(incremental_weights)
         # Update weights
         update_weights!(cloud, incremental_weights)
         mult_weights = get_weights(cloud)
@@ -285,20 +286,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         step_p1  = readdlm(fortran_path * convert_string(i) * "step_p1.txt")
         alp      = readdlm(fortran_path * convert_string(i) * "step_alp.txt")
         fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
+        para_init = readdlm(fortran_path * "001parasim.txt")
         fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
         fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
         bvar     = readdlm(fortran_path * convert_string(i) * "bvar.txt")
 
+        @test_matrix_approx_eq get_vals(cloud) transpose(para_init)
 
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
                 # RECA: Testing against FORTRAN
                 # code below returns the same ESS value, very comparable logMDD
-                # begin
-                #     p = cloud.particles[j]
-                #     update_mutation!(p, fortpara[j,:], fortlik[j], fortpost[j], 0.0, true)
-                #     p
-                # end
                 mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                          c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose,
@@ -307,20 +305,20 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          eps = eps[(j-1) * n_steps + 1:j * n_steps, :],
                          stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps],
                          step_pr = step_pr[j,:], step_lik = step_lik[j,:],
-                         step_p1 = step_p1[j,:], alp = alp[j,:], mu = mu, bvar=bvar)
+                         step_p1 = step_p1[j,:], alp = alp[j,:], mu = mu, bvar = bvar)
             end
         else
-            #new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
-            #                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
-            #                          verbose = verbose, mixr = mixr[j,:]) for j = 1:n_parts]
-            new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                      c = c, α = α, old_data = old_data,
+            new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
+                                      ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                                       use_chand_recursion = use_chand_recursion, verbose = verbose,
                                       # RECA'S TESTING VARIABLES:
+                                      pnum = j,
                                       mixr = mixr[j,:],
                                       eps = eps[(j-1) * n_steps + 1:j * n_steps, :],
                                       stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps],
-                                      step_p1 = step_p1[j,:], alp = alp[j,:], mu = mu, bvar=bvar) for j=1:n_parts]
+                                      step_pr = step_pr[j,:], step_lik = step_lik[j,:],
+                                      step_p1 = step_p1[j,:], alp = alp[j,:],
+                                      mu = mu, bvar = bvar) for j=1:n_parts]
         end
 
         cloud.particles = new_particles
