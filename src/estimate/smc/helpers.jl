@@ -80,37 +80,37 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 
 """
 function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Distribution;
-                                                 cc::T = 1.0, α::T = 1., mixr::T = 0.,
+                                                 c::T = 1.0, α::T = 1., mixr::T = 0.,
                                                  eps::Vector{T} = Vector{T}(0), mu::Vector{T} = Vector{T}(0),
-                                                 bvar::Matrix{T} = Matrix{T}(0,0))
+                                                 bvar::Matrix{T} = Matrix{T}(0,0), pnum::Int64 = 0)
     @assert 0 <= α <= 1
+    for i=1:length(mu) @assert ((abs.(mu - d_prop.μ) ./ mu) .< 1e-5)[i] end
 
-    @assert mu ≈ d_prop.μ
-    #@test_matrix_approx_eq d_prop.Σ.mat bvar
-
-    mixr = 1
-    d_bar = MvNormal(d_prop.μ, cc^2 * d_prop.Σ)
+    # MIXR ON
+    # mixr = 1
+    d_bar = MvNormal(d_prop.μ, c^2 * d_prop.Σ)
 
     # Create mixture distribution conditional on the previous parameter value, θ_old
-    d_old      = MvNormal(θ_old, cc^2 * d_prop.Σ)
-    d_diag_old = MvNormal(θ_old, diagm(diag(cc^2 * d_prop.Σ)))
+    d_old      = MvNormal(θ_old, c^2 * d_prop.Σ)
+    d_diag_old = MvNormal(θ_old, diagm(diag(c^2 * d_prop.Σ)))
     d_mix_old  = MixtureModel(MvNormal[d_old, d_diag_old, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     # RECA
     # θ_new = rand(d_mix_old)
-    if mixr < α # 'scale' (cc) has been "baked into RNG"
-        θ_new = θ_old + chol(d_prop.Σ.mat) * eps #TRANSPOSE
+    if mixr < α # 'scale' (c) has been "baked into RNG"
+        θ_new = θ_old + bvar * eps
+        #θ_new = θ_old + chol(d_prop.Σ.mat) * eps
 
     elseif mixr < (α + (1.0 - α) / 2.0)
-        θ_new = θ_old + 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # THIS IS V DIF FROM FORTRAN.
+        θ_new = θ_old + 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # RECA: FORTRAN PUTS 3 HERE
     else
         θ_new = d_prop.μ + bvar * eps
         #θ_new = d_prop.μ + chol(d_prop.Σ.mat) * eps
     end
 
     # Create mixture distribution conditional on the new parameter value, θ_new
-    d_new      = MvNormal(θ_new, cc^2 * d_prop.Σ)
-    d_diag_new = MvNormal(θ_new, diagm(diag(cc^2 * d_prop.Σ)))
+    d_new      = MvNormal(θ_new, c^2 * d_prop.Σ)
+    d_diag_new = MvNormal(θ_new, diagm(diag(c^2 * d_prop.Σ)))
     d_mix_new  = MixtureModel(MvNormal[d_new, d_diag_new, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     # To clarify, this is not just the density of θ_new/θ_old using a given mixture

@@ -55,10 +55,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
     like_prev = p.old_loglh # The likelihood evaluated at the old data (for time tempering)
 
     # Previous posterior needs to be updated (due to tempering)
-    post = post_init + (ϕ_n - ϕ_n1) * like
+    post = post_init #+ (ϕ_n - ϕ_n1) * like
     accept = 0.0 #false
-
-    #println("***************************************************** "*string(pnum))
 
     for step in 1:n_steps
         eps_step = eps[step, :]
@@ -72,53 +70,60 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             para_subset = para[block_a]
             d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
-            # RECA
-            eps_block = eps_step[block_a]
+            eps_block = eps_step[block_a] # RECA
             para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
                                                                                   d_subset;
                                                                                   mixr = mix_draw, # RECA
                                                                                   eps = eps_block, # RECA
-                                                                                  cc=c, α=α, mu=mu[block_a],
-                                                                                  bvar = bvar)
+                                                                                  c=c, α=α, mu=mu[block_a],
+                                                                                  bvar = bvar, pnum=pnum)
             para_new = deepcopy(para)
             para_new[block_a] = para_draw
-            @assert para_new ≈ step_p1
+
+            for kk = 1:length(para_new)
+                if !(abs.(para_new[kk] - step_p1[kk]) / step_p1[kk] < 1e-3)
+                    @show pnum, kk, abs.(para_new[kk] - step_p1[kk]) / step_p1[kk]
+                end
+                @assert abs.(para_new[kk] - step_p1[kk]) / step_p1[kk] < 1e-3
+            end
+            #@assert para_new ≈ step_p1
 
             ##### BEGINING OF NONSENSE #######
-            p0 = para
+            p0   = para
             lik0 = like
-            pr0 = post_init
-            function make_sym(mat::Matrix{Float64})
-                return (mat + mat') / 2
-            end
-            q0 = α * exp(logpdf(MvNormal(para_draw, c^2*d_subset.Σ.mat), para_subset)) #make_sym(bvar'*bvar)), para_subset))
-            q1 = α * exp(logpdf(MvNormal(para_subset, c^2*d_subset.Σ.mat), para_draw))  #make_sym(bvar'*bvar)), para_draw))
+            pr0  = post_init
 
-            #@show "1. ", α, q0, q1
+            q0 = α * exp(logpdf(MvNormal(para_draw,   c^2 * d_subset.Σ.mat), para_subset))
+            q1 = α * exp(logpdf(MvNormal(para_subset, c^2 * d_subset.Σ.mat), para_draw))
+
+            if (pnum == 11453) @show "1. ", α, q0, q1 end
 
             ind_pdf = 1.
             for i=1:length(block_a)
                 sigi = sqrt(d_subset.Σ.mat[i,i])
-                #@show "2.5 ", i, para_subset[i], para_draw[i]
+
+                if (pnum == 11453) @show "2.5 ", i, para_subset[i], para_draw[i] end
+
                 zstat = (para_subset[i] - para_draw[i]) / sigi
                 ind_pdf = ind_pdf / (sigi * sqrt(2. * 3.1415)) * exp(-0.5 * zstat ^ 2)
-                #@show "2. ", i, sigi, zstat, ind_pdf
+
+                if (pnum == 11453) @show "2. ", i, sigi, zstat, ind_pdf end
             end
 
-            q0 = q0 + (1. - α)/2. * ind_pdf
-            q1 = q1 + (1. - α)/2. * ind_pdf
+            q0 = q0 + (1. - α) / 2. * ind_pdf
+            q1 = q1 + (1. - α) / 2. * ind_pdf
 
-            #@show "3. ", q0, q1
+            if (pnum == 11453) @show "3. ", q0, q1 end
 
-            q0 = q0 + (1. - α)/2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset))  #make_sym(bvar'*bvar)), para_subset))
-            q1 = q1 + (1. - α)/2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw)) #make_sym(bvar'*bvar)), para_draw))
+            q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset))
+            q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw))
 
-            #@show "4. ", q0, q1
+            if (pnum == 11453) @show "4. ", q0, q1 end
 
             q0 = log(q0)
             q1 = log(q1)
 
-            #@show "5. ", q0, q1
+            if (pnum == 11453) @show "5. ", q0, q1 end
 
             lik1 = -Inf
             pr1  = -Inf
@@ -128,29 +133,30 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 pr1 = prior(m)
                 lik1 = likelihood(m, data; sampler=true, use_chand_recursion=use_chand_recursion, verbose=verbose)
             catch
-                #@show "SETTING TO -INF"
                 pr1 = lik1 = -Inf
             end
             if (q0 == Inf && q1 == Inf)
                 q0 = 0.
                 #q1 = 0.
             end
-            #@show "6. ", pr1, lik1
+            if (pnum == 11453) @show "6. ", pr1, lik1 end
 
-            #@show ϕ_n, lik1, lik0, pr1, pr0, q0, q1
-            #@show ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1
-            #@show ϕ_n * (lik1 - lik0)
-            #@show pr1, pr0, pr1 - pr0
-            #@show q0, q1, q0 - q1
+            if (pnum == 11453) @show ϕ_n, lik1, lik0, pr1, pr0, q0, q1 end
+            if (pnum == 11453) @show ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1 end
+            if (pnum == 11453) @show ϕ_n * (lik1 - lik0) end
+            if (pnum == 11453) @show pr1, pr0, pr1 - pr0 end
+            if (pnum == 11453) @show q0, q1, q0 - q1 end
+
             my_alp = exp(ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1)
 
             if my_alp > 1.0
                 my_alp = 1.0
+            elseif isnan(my_alp)
+                my_alp = 0.0
             end
             #@show "7. ", my_alp, alp[1]
 
-            ##### END OF NONSENSE, REAL CODE BELOW #######
-#=
+#=###################### END OF NONSENSE, REAL CODE BELOW #######
             like_new = -Inf
             post_new = -Inf
             like_old_data = -Inf
@@ -203,10 +209,15 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
 
             if !(like_new == -Inf && lik1 == -Inf) @assert abs(like_new - lik1) < 1e-4 end
             if !(post_new == -Inf && pr1 == -Inf) @assert abs(post_new + para_new_density - pr1) < 10 end
-=#
-################################# REAL CODE ABOVE #########
-            @show pnum
-            @assert abs(alp[1] - my_alp) < 1e-4
+=################################# REAL CODE ABOVE #########
+            #if (pnum % 100 == 0) @show pnum end
+
+            if !(abs(alp[1] - my_alp) < 1e-4)
+                @show pnum, alp[1], my_alp
+                #@show q1, q0, lik1, lik0, pr1, pr0
+            end
+
+            @assert abs(alp[1] - my_alp) < 1e-2
 
             if step_prob < my_alp
                 para = para_new
@@ -216,16 +227,17 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             end
 
             #@show "8. ", para, like, post
-
             mm += 1
             # draw again for the next step
-            @assert step_pr ≈ para
-            @assert like ≈ step_lik[1]
-
-
             #step_prob = rand()
+            @assert step_pr ≈ para
+            if !(abs(like - step_lik[1]) / abs(like) < 5e-3)
+                @show pnum, abs(like - step_lik[1]) / abs(like), like, step_lik[1]
+            end
+            @assert abs(like - step_lik[1]) / abs(like) < 5e-3
         end
     end
-    update_mutation_FORTRAN!(p, para, like, post, like_prev, accept / 41.0) # RECA: hardcoded
+    if (pnum % 1000 == 0) @show pnum end
+    update_mutation_FORTRAN!(p, para, like, post, like_prev, accept / 36.0) # RECA: hardcoded
     return p
 end
