@@ -41,7 +41,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     # RECA
-    fort_file    = "smc-sw-new-mix-npart-12000-nintmh-1-nphi-500-prior-b1-trial1-phibend/"
+    fort_file    = "smc-sw-new-mix-npart-12000-nintmh-1-nphi-500-prior-b1-trial1-phibend-jan22/"#FRIDAYFULL-MIXRON/"
     fortran_path = "/home/rcerxs30/SLICOT-2018-12-19/dsge-smc/fortran/" * fort_file
     #"/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
     #fortESS      = vec(readdlm(fortran_path * "ESS.txt"))
@@ -242,32 +242,30 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
 
         # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH step
-        c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
+        c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1. + exp(16.*(cloud.accept - target))))
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
         R     = weighted_cov(cloud)
 
+        # RECA: Testing for validity of run
         mu       = vec(readdlm(fortran_path * convert_string(i) * "mean.txt"))
         fort_var = readdlm(fortran_path * convert_string(i) * "var.txt")
-        fort_c   = readdlm(fortran_path * convert_string(i) * "scale.txt")
-        #@show θ_bar mu
-        @show c, fort_c[1]
+        fort_c   = readdlm(fortran_path * convert_string(i) * "scale.txt")[1]
+
+        if !(c ≈ fort_c) @show c, fort_c end
+        @assert c ≈ fort_c
+        if !(θ_bar ≈ mu) @show θ_bar, mu end
+        @assert θ_bar ≈ mu
+        @test_matrix_approx_eq R fort_var
         #@show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
-        @show sum(abs.(θ_bar-mu))
-        @show findmax(abs.(θ_bar-mu))
-        @show abs.(θ_bar-mu)
-        @show θ_bar ≈ mu
-        @show sum(abs.(R-fort_var))
-        @show R ≈ fort_var
 
         # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric
         # (not off due to numerical error) and values haven't changed
         R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]') / 2
 
         # Confirm these babies are the same
-        @show sum(abs.(R_fr-fort_var[free_para_inds, free_para_inds]))
-        @show R_fr ≈ fort_var[free_para_inds, free_para_inds]
+        @test_matrix_approx_eq R_fr fort_var[free_para_inds, free_para_inds]
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
         d = MvNormal(θ_bar[free_para_inds], R_fr)
@@ -286,12 +284,12 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         step_p1  = readdlm(fortran_path * convert_string(i) * "step_p1.txt")
         alp      = readdlm(fortran_path * convert_string(i) * "step_alp.txt")
         fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
-        para_init = readdlm(fortran_path * "001parasim.txt")
+        para_cur = readdlm(fortran_path * convert_string(i-1) * "parasim.txt")
         fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
         fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
         bvar     = readdlm(fortran_path * convert_string(i) * "bvar.txt")
 
-        @test_matrix_approx_eq get_vals(cloud) transpose(para_init)
+        @test_matrix_approx_eq get_vals(cloud) transpose(para_cur)
 
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
@@ -327,15 +325,14 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
         ### Reca: Testing Against FORTRAN
         ########################################################################################
-        #@assert get_vals(cloud)    ≈ transpose(fortpara)
-        #@assert get_logpost(cloud) ≈ transpose(fortpost)
-        @show sum(abs.(get_vals(cloud) - transpose(fortpara)))
-        @show findmax(abs.(get_vals(cloud) - transpose(fortpara)))
-        @show sum(abs.(get_loglh(cloud) - vec(fortlik)))
-        @show findmin(get_loglh(cloud)), findmin(vec(fortlik))
-        @show findmin(get_vals(cloud)), findmin(transpose(fortpara))
-        #@show mean(get_vals(cloud), 2), mean(transpose(fortpara), 2)
-        @show mean(get_loglh(cloud)), mean(fortlik)
+        for kk=1:length(vec(fortlik))
+            if !((abs(get_loglh(cloud)[kk] - vec(fortlik)[kk]) / abs(vec(fortlik)[kk])) < 1e-3)
+                @show kk, abs(get_loglh(cloud)[kk] - vec(fortlik)[kk]) / abs(vec(fortlik)[kk]), vec(fortlik)[kk], get_loglh(cloud)[kk]
+            end
+#            sleep(0.5)
+            @assert (abs(get_loglh(cloud)[kk] - vec(fortlik)[kk]) / abs(vec(fortlik)[kk])) < 1e-2
+        end
+        @test_matrix_approx_eq get_vals(cloud) transpose(fortpara)
 
         ########################################################################################
         ### Timekeeping and Output Generation
