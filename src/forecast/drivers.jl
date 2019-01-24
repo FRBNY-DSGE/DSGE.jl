@@ -314,6 +314,8 @@ function forecast_one(m::AbstractModel{Float64},
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                  param, df, verbose = verbose,
+                                                                 use_filtered_shocks_in_shockdec =
+                                                                 use_filtered_shocks_in_shockdec,
                                                                  shock_name = shock_name,
                                                                  shock_var_name = shock_var_name,
                                                                  shock_var_value = shock_var_value),
@@ -406,9 +408,12 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 ```
 """
 function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_type::Symbol,
-                           output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame;
-                           verbose::Symbol = :low, shock_name::Symbol = :none,
-                           shock_var_name::Symbol = :none, shock_var_value::Float64 = 0.0)
+                           output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low,
+                           use_filtered_shocks_in_shockdec::Bool = false,
+                           shock_name::Symbol = :none,
+                           shock_var_name::Symbol = :none,
+                           shock_var_value::Float64 = 0.0
+                           )
 
     ### Setup
 
@@ -569,7 +574,14 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
 
     if !isempty(shockdecs_to_compute)
-        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, histshocks)
+
+        histshocks_shockdec = if use_filtered_shocks_in_shockdec
+            filter_shocks(m, df, system, cond_type = cond_type)
+        else
+            histshocks
+        end
+
+        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
@@ -610,15 +622,14 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     irfs_to_compute = intersect(output_vars, irf_vars)
 
     if !isempty(irfs_to_compute)
-
-        if shock_name == :none && shock_var_name == :none && shock_var_value == 0.
+        if shock_name!=:none
+            irfstates, irfobs, irfpseudo = impulse_responses(m, system, impulse_response_horizons(m),
+                                                             shock_name,
+                                                             shock_var_name,
+                                                             shock_var_value)
+        else
             irfstates, irfobs, irfpseudo = impulse_responses(m, system)
-        else # Compute a targeted IRF that moves `shock_var_name` by `shock_var_value` using `shock_name`
-            horizon = impulse_response_horizons(m)
-            irfstates, irfobs, irfpseudo = impulse_responses(m, system, horizon, shock_name,
-                                                             shock_var_name, shock_var_value)
         end
-
         forecast_output[:irfstates] = irfstates
         forecast_output[:irfobs] = irfobs
         forecast_output[:irfpseudo] = irfpseudo
