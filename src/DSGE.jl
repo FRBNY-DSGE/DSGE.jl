@@ -14,6 +14,7 @@ module DSGE
     import Calculus
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
+    import StateSpaceRoutines: augment_states_with_shocks
 
     export
         # distributions_ext.jl
@@ -87,7 +88,7 @@ module DSGE
 
         # estimate/
         simulated_annealing, combined_optimizer, lbfgs,
-        filter, likelihood, posterior, posterior!,
+        filter, filter_shocks, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
         compute_moments, find_density_bands, mutation, resample, smc,
