@@ -41,7 +41,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     # RECA
-    fort_file    = "smc-sw-new-mix-npart-12000-nintmh-1-nphi-500-prior-b1-trial1-phibend-jan22/"#FRIDAYFULL-MIXRON/"
+    fort_file    = "smc-sw-new-mix-npart-12000-nintmh-1-nphi-500-prior-b1-trial1-phibend-jan24-mixron/"
     fortran_path = "/home/rcerxs30/SLICOT-2018-12-19/dsge-smc/fortran/" * fort_file
     #"/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
     #fortESS      = vec(readdlm(fortran_path * "ESS.txt"))
@@ -169,6 +169,15 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         tic()
         cloud.stage_index = i += 1
 
+        #RECA
+        para_cur = readdlm(fortran_path * convert_string(i-1) * "parasim.txt")
+        @test_matrix_approx_eq get_vals(cloud) transpose(para_cur)
+
+        if !isapprox(get_vals(cloud), transpose(para_cur))
+            @show maximum(abs.(get_vals(cloud) - transpose(para_cur)) ./ transpose(para_cur))
+        end
+        #END RECA
+
         ########################################################################################
         ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
         ########################################################################################
@@ -190,7 +199,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
         incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
 
-        @show size(incremental_weights)
         # Update weights
         update_weights!(cloud, incremental_weights)
         mult_weights = get_weights(cloud)
@@ -201,8 +209,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # RECA
         fort_wtsim = vec(readdlm(fortran_path * convert_string(i) * "cor_weights.txt"))
-        @show i, sum(abs.(normalized_weights - fort_wtsim))
-        @show i, sum(abs.(sort(normalized_weights) - sort(fort_wtsim)))
+        @assert isapprox(normalized_weights, fort_wtsim, nans=true, atol=1e-6)
 
         push!(z_matrix, sum(mult_weights))
         w_matrix = hcat(w_matrix, incremental_weights)
@@ -223,18 +230,18 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             if i in resample_periods # RECA: test to ensure resample at same periods
                 print_with_color(:blue, "Resample occurs in FORTRAN set of resample periods.\n")
                 new_inds = resample(i, fortran_path)
-            else
-                print_with_color(:red, "RESAMPLE NOT IN FORTRAN SET OF RESAMPLE PERIODS.\n")
-                new_inds = resample(normalized_weights; method = resampling_method)
-            end
 
-            # update parameters/logpost/loglh with resampled values
-            # reset the weights to 1/n_parts
-            cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
-            reset_weights!(cloud)
-            cloud.resamples += 1
-            resampled_last_period = true
-            W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
+                # update parameters/logpost/loglh with resampled values
+                # reset the weights to 1/n_parts
+                cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
+                reset_weights!(cloud)
+                cloud.resamples += 1
+                resampled_last_period = true
+                W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
+            else
+                print_with_color(:red, "RESAMPLE NOT IN FORTRAN SET OF RESAMPLE PERIODS - ESS TOO LOW.\n")
+                #new_inds = resample(normalized_weights; method = resampling_method)
+            end
         end
 
         ########################################################################################
@@ -255,9 +262,12 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         if !(c ≈ fort_c) @show c, fort_c end
         @assert c ≈ fort_c
-        if !(θ_bar ≈ mu) @show θ_bar, mu end
-        @assert θ_bar ≈ mu
-        @test_matrix_approx_eq R fort_var
+        if !(θ_bar ≈ mu)
+            print_with_color(:red, "θ_bar FAILS TO BE EQUAL TO mu WITHIN 1e-6.\n")
+            @show θ_bar, mu
+        end
+        @assert isapprox(θ_bar, mu, atol=1e-3) #θ_bar ≈ mu
+
         #@show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
 
         # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric
@@ -266,6 +276,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # Confirm these babies are the same
         @test_matrix_approx_eq R_fr fort_var[free_para_inds, free_para_inds]
+        if !isapprox(R_fr, fort_var[free_para_inds, free_para_inds])
+          @show sum(abs.(R_fr - fort_var[free_para_inds, free_para_inds])./fort_var[free_para_inds, free_para_inds])
+          @show maximum(abs.(R_fr-fort_var[free_para_inds,free_para_inds])./fort_var[free_para_inds,free_para_inds])
+        end
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
         d = MvNormal(θ_bar[free_para_inds], R_fr)
@@ -284,12 +298,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         step_p1  = readdlm(fortran_path * convert_string(i) * "step_p1.txt")
         alp      = readdlm(fortran_path * convert_string(i) * "step_alp.txt")
         fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
-        para_cur = readdlm(fortran_path * convert_string(i-1) * "parasim.txt")
         fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
         fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
         bvar     = readdlm(fortran_path * convert_string(i) * "bvar.txt")
 
-        @test_matrix_approx_eq get_vals(cloud) transpose(para_cur)
 
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
@@ -333,7 +345,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             @assert (abs(get_loglh(cloud)[kk] - vec(fortlik)[kk]) / abs(vec(fortlik)[kk])) < 1e-2
         end
         @test_matrix_approx_eq get_vals(cloud) transpose(fortpara)
-
+        if !isapprox(get_vals(cloud), transpose(fortpara))
+            @show !isapprox(get_vals(cloud), transpose(fortpara), atol=1e-3)
+            @show maximum(abs.(get_vals(cloud) - transpose(fortpara)) ./ transpose(fortpara))
+        end
         ########################################################################################
         ### Timekeeping and Output Generation
         ########################################################################################

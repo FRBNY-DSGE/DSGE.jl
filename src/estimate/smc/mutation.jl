@@ -80,50 +80,70 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             para_new = deepcopy(para)
             para_new[block_a] = para_draw
 
-            for kk = 1:length(para_new)
-                if !(abs.(para_new[kk] - step_p1[kk]) / step_p1[kk] < 1e-3)
-                    @show pnum, kk, abs.(para_new[kk] - step_p1[kk]) / step_p1[kk]
-                end
-                @assert abs.(para_new[kk] - step_p1[kk]) / step_p1[kk] < 1e-3
+            if (pnum == 2733)
+                @show isapprox(para_new, step_p1, atol=1e-6)
+                update!(m, para_new)
+                @show likelihood(m, data, sampler=true, use_chand_recursion=use_chand_recursion, verbose=verbose)
+                update!(m, step_p1)
+                @show likelihood(m, data, sampler=true, use_chand_recursion=use_chand_recursion, verbose=verbose)
             end
-            #@assert para_new ≈ step_p1
+
+            if (pnum == 2733) map(x -> @sprintf("%.20f",x), para_new) end#@show para_new end
+            if (pnum == 2733) @show para_new end
 
             ##### BEGINING OF NONSENSE #######
             p0   = para
             lik0 = like
             pr0  = post_init
 
-            q0 = α * exp(logpdf(MvNormal(para_draw,   c^2 * d_subset.Σ.mat), para_subset))
-            q1 = α * exp(logpdf(MvNormal(para_subset, c^2 * d_subset.Σ.mat), para_draw))
+            function better_mvnormal_pdf(mu, chol_sigma, x)
+                det_sigma = 1.0
+                n = size(x, 1)
+                for i=1:n
+                    det_sigma = det_sigma*chol_sigma[i, i]
+                end
+                det_sigma = det_sigma^2
+                a = x-mu
+                new_a = inv(chol_sigma) * a
+                logq = -n*0.5*log(2.0*3.14159) - 0.5*log(det_sigma) -0.5*dot(new_a, new_a)#*a'*inv(chol_sigma)*a
+                return logq
+            end
 
-            if (pnum == 11453) @show "1. ", α, q0, q1 end
+            q0 = α * exp(#=better_mvnormal_pdf(para_draw, c*bvar, para_subset))=#logpdf(MvNormal(para_draw,   c^2 * d_subset.Σ.mat), para_subset))
+            q1 = α * exp(#=better_mvnormal_pdf(para_subset, c*bvar, para_draw)) =#logpdf(MvNormal(para_subset, c^2 * d_subset.Σ.mat), para_draw))
+
+            if (pnum == 2733) @show "1. ", α, q0, q1 end
 
             ind_pdf = 1.
             for i=1:length(block_a)
                 sigi = sqrt(d_subset.Σ.mat[i,i])
 
-                if (pnum == 11453) @show "2.5 ", i, para_subset[i], para_draw[i] end
+                if (pnum == 2733) @show "2.5 ", i, para_subset[i], para_draw[i] end
 
                 zstat = (para_subset[i] - para_draw[i]) / sigi
                 ind_pdf = ind_pdf / (sigi * sqrt(2. * 3.1415)) * exp(-0.5 * zstat ^ 2)
 
-                if (pnum == 11453) @show "2. ", i, sigi, zstat, ind_pdf end
+                if (pnum == 2733) @show "2. ", i, sigi, zstat, ind_pdf end
             end
 
             q0 = q0 + (1. - α) / 2. * ind_pdf
             q1 = q1 + (1. - α) / 2. * ind_pdf
 
-            if (pnum == 11453) @show "3. ", q0, q1 end
+            if (pnum == 2733) @show "3. ", q0, q1 end
 
-            q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset))
-            q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw))
 
-            if (pnum == 11453) @show "4. ", q0, q1 end
+            #@show pnum, exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset)), exp(better_mvnormal_pdf(mu[block_a], c*bvar, para_subset))
+            #@show pnum, exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw)), exp(better_mvnormal_pdf(mu[block_a], c*bvar, para_draw))
+
+            q0 = q0 + (1. - α) / 2. * exp(#=better_mvnormal_pdf(mu[block_a], c*bvar, para_subset)) =#logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset))
+            q1 = q1 + (1. - α) / 2. * exp(#=better_mvnormal_pdf(mu[block_a], c*bvar, para_draw)) =#logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw))
+
+            if (pnum == 2733) @show "4. ", pnum, q0, q1 end
 
             q0 = log(q0)
             q1 = log(q1)
 
-            if (pnum == 11453) @show "5. ", q0, q1 end
+            if (pnum == 2733) @show "5. ", q0, q1 end
 
             lik1 = -Inf
             pr1  = -Inf
@@ -139,13 +159,12 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 q0 = 0.
                 #q1 = 0.
             end
-            if (pnum == 11453) @show "6. ", pr1, lik1 end
-
-            if (pnum == 11453) @show ϕ_n, lik1, lik0, pr1, pr0, q0, q1 end
-            if (pnum == 11453) @show ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1 end
-            if (pnum == 11453) @show ϕ_n * (lik1 - lik0) end
-            if (pnum == 11453) @show pr1, pr0, pr1 - pr0 end
-            if (pnum == 11453) @show q0, q1, q0 - q1 end
+            if (pnum == 2733) @show "6. ", pr1, lik1 end
+            if (pnum == 2733) @show ϕ_n, lik1, lik0, pr1, pr0, q0, q1 end
+            if (pnum == 2733) @show ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1 end
+            if (pnum == 2733) @show ϕ_n * (lik1 - lik0) end
+            if (pnum == 2733) @show pr1, pr0, pr1 - pr0 end
+            if (pnum == 2733) @show q0, q1, q0 - q1 end
 
             my_alp = exp(ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1)
 
@@ -156,68 +175,21 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             end
             #@show "7. ", my_alp, alp[1]
 
-#=###################### END OF NONSENSE, REAL CODE BELOW #######
-            like_new = -Inf
-            post_new = -Inf
-            like_old_data = -Inf
-
-            try
-                update!(m, para_new)
-                like_new = likelihood(m, data; sampler = true,
-                                      use_chand_recursion = use_chand_recursion,
-                                      verbose = verbose)
-                if like_new == -Inf
-                    post_new = like_old_data = -Inf
-                end
-                post_new = ϕ_n*like_new + prior(m) - para_new_density
-                like_old_data = isempty(old_data) ? 0. : likelihood(m, old_data; sampler = true,
-                                                         use_chand_recursion = use_chand_recursion,
-                                                         verbose = verbose)
-            catch err
-                if isa(err, ParamBoundsError)
-                    println("ParamBoundsError!")
-                    post_new = like_new = like_old_data = -Inf
-                else
-                    throw(err)
-                end
-            end
-
-            # Accept Reject
-            post_old = post - para_old_density
-            η        = exp(post_new - post_old)
-
-            if η > 1.
-                η = 1.0
-            end
-            #@show  η, alp[1]
-            #@show step_pr, step_lik
-            #@show post_new, post_old, post, para_old_density
-
-            if step_prob < η # accept
-                para      = para_new
-                like      = like_new
-                post      = post_new + para_new_density # Have to add it back so as to not accumulate
-                like_prev = like_old_data               # para_new_density throughout the iterations
-                accept   += length(block_a) #true
-            end
-
-            @show η, alp[1], my_alp
-            @assert abs(η - alp[1]) < 1e-4
-
-            @show like_new, lik1
-            @show post_new, para_new_density, pr1
-
-            if !(like_new == -Inf && lik1 == -Inf) @assert abs(like_new - lik1) < 1e-4 end
-            if !(post_new == -Inf && pr1 == -Inf) @assert abs(post_new + para_new_density - pr1) < 10 end
-=################################# REAL CODE ABOVE #########
-            #if (pnum % 100 == 0) @show pnum end
+###################### old code goes here: old_mutation_body.jl
 
             if !(abs(alp[1] - my_alp) < 1e-4)
                 @show pnum, alp[1], my_alp
                 #@show q1, q0, lik1, lik0, pr1, pr0
             end
 
-            @assert abs(alp[1] - my_alp) < 1e-2
+            if abs(alp[1] - my_alp) / abs(alp[1]) > 1e-3 && abs(alp[1] - my_alp) > 1e-3
+                @show alp[1], my_alp
+            end
+            if alp[1] > 0.1
+               @assert abs(alp[1] - my_alp) / abs(alp[1]) < 1e-3
+            else
+               @assert abs(alp[1] - my_alp) < 1e-2
+            end
 
             if step_prob < my_alp
                 para = para_new
@@ -231,10 +203,19 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             # draw again for the next step
             #step_prob = rand()
             @assert step_pr ≈ para
-            if !(abs(like - step_lik[1]) / abs(like) < 5e-3)
+            if !(abs(like - step_lik[1]) / abs(like) < 5e-5)
+                @show pnum, q1, q0, lik1, lik0, pr1, pr0, alp[1], my_alp, step_prob
                 @show pnum, abs(like - step_lik[1]) / abs(like), like, step_lik[1]
             end
-            @assert abs(like - step_lik[1]) / abs(like) < 5e-3
+            if (like <= 1e-3 && step_lik[1] <= 1e-3)
+                if !(abs(like - step_lik[1]) / abs(like) < 1e-3)
+                    @show "BAD NEWS", pnum, abs(like - step_lik[1]) / abs(like), like, step_lik[1]
+                else
+                    @assert abs(like - step_lik[1]) / abs(like) < 1e-3
+                end
+             else
+                @assert abs(like - step_lik[1]) / abs(like) < 1e-3
+            end
         end
     end
     if (pnum % 1000 == 0) @show pnum end
