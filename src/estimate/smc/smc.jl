@@ -199,6 +199,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
         incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
 
+        @show size(incremental_weights)
         # Update weights
         update_weights!(cloud, incremental_weights)
         mult_weights = get_weights(cloud)
@@ -302,7 +303,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
         bvar     = readdlm(fortran_path * convert_string(i) * "bvar.txt")
 
-
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
                 # RECA: Testing against FORTRAN
@@ -318,6 +318,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          step_p1 = step_p1[j,:], alp = alp[j,:], mu = mu, bvar = bvar)
             end
         else
+
             new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
                                       ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                                       use_chand_recursion = use_chand_recursion, verbose = verbose,
