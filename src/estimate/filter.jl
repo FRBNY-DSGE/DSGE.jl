@@ -79,10 +79,10 @@ function filter(m::AbstractModel, data::AbstractArray, system::System{S},
 end
 
 function filter_shocks{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
-                       s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
-                       start_date::Date = date_presample_start(m), include_presample::Bool = true)
+                       s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0); cond_type::Symbol = :none,
+                       start_date::Date = date_presample_start(m), include_presample::Bool = false)
 
-    data = df_to_matrix(m, df)
+    data = df_to_matrix(m, df, cond_type = cond_type)
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
