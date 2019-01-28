@@ -382,7 +382,8 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     sort!(cols, by = x -> m.observables[x])
     df1 = df1[cols]
 
-    return permutedims(convert(Matrix{Union{Missing, Float64}}, df1))
+    return permutedims(Float64.(collect(Missings.replace(convert(Matrix{Union{Missing, Float64}}, df1), NaN))))
+    #return permutedims(convert(Matrix{Union{Missing, Float64}}, df1))
 end
 
 """
