@@ -175,7 +175,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                             output_var::Symbol, var_name::Symbol, df::DataFrame;
                             forecast_string::String = "",
                             pop_growth::AbstractVector{Float64} = Float64[],
-                            shock_name::Nullable{Symbol} = Nullable{Symbol}(),
+                            shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false,
                             compute_shockdec_bands::Bool = false)
@@ -196,8 +196,8 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-    data = class == :obs ? missing2nan(df[var_name]) : fill(NaN, size(df, 1))
 
+    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
