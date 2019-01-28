@@ -480,7 +480,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
                 # If we want to draw s_T but haven't run the smoother, draw from
                 # N(s_{T|T}, P_{T|T}) directly
                 U, singular_values, _ = svd(kal[:P_T])
-                dist = DegenerateMvNormal(kal[:s_T], U*diagm(sqrt(singular_values)))
+                dist = DegenerateMvNormal(kal[:s_T], U*Matrix(Diagonal(sqrt.(singular_values))))
                 rand(dist)
             else
                 # If we don't want to draw s_T, simply use the mean s_{T|T}
