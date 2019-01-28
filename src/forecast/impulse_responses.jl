@@ -33,6 +33,7 @@ end
 
 function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int;
                                              flip_shocks::Bool = false)
+
     # Setup
     nshocks      = size(system[:RRR], 2)
     nstates      = size(system[:TTT], 1)
@@ -61,4 +62,112 @@ function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int;
     end
 
     return states, obs, pseudo
+end
+
+# Method for specifying the subset of shocks, and the size of each shock
+function impulse_responses{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+                                             horizon::Int, shock_names::Vector{Symbol},
+                                             shock_values::Vector{Float64})
+
+    # Must provide a name and value for each shock
+    @assert length(shock_names) == length(shock_values)
+
+    # Setup
+    exo          = m.exogenous_shocks
+    nshocks      = size(system[:RRR], 2)
+    nstates      = size(system[:TTT], 1)
+    nobs         = size(system[:ZZ], 1)
+    npseudo      = size(system[:ZZ_pseudo], 1)
+
+    states = zeros(S, nstates, horizon, nshocks)
+    obs    = zeros(S, nobs,    horizon, nshocks)
+    pseudo = zeros(S, npseudo, horizon, nshocks)
+
+    # Set constant system matrices to 0
+    system = zero_system_constants(system)
+
+    s_0 = zeros(S, nstates)
+
+    for (i, shock) in enumerate(shock_names)
+        # Isolate single shock
+        shocks = zeros(S, nshocks, horizon)
+        shocks[exo[shock], 1] = shock_values[i]
+
+        # Iterate state space forward
+        states[:, :, exo[shock]], obs[:, :, exo[shock]], pseudo[:, :, exo[shock]], _ = forecast(system, s_0, shocks)
+    end
+
+    return states, obs, pseudo
+end
+
+# Method for picking a specific shock and the size of the desired shift in the state or
+# observed variable using that shock. (Omitting the feature to do pseudo-observables
+# now, for simplicity)
+function impulse_responses{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+                                             horizon::Int, shock_name::Symbol,
+                                             var_name::Symbol, var_value::Float64)
+
+
+    # Setup
+    var_names, var_class =
+    if var_name in keys(m.endogenous_states)
+        m.endogenous_states, :states
+    elseif var_name in keys(m.observables)
+        m.observables, :obs
+    end
+    exo          = m.exogenous_shocks
+    nshocks      = size(system[:RRR], 2)
+    nstates      = size(system[:TTT], 1)
+    nobs         = size(system[:ZZ], 1)
+    npseudo      = size(system[:ZZ_pseudo], 1)
+
+    states = zeros(S, nstates, horizon, nshocks)
+    obs    = zeros(S, nobs,    horizon, nshocks)
+    pseudo = zeros(S, npseudo, horizon, nshocks)
+
+    # Set constant system matrices to 0
+    system = zero_system_constants(system)
+
+    s_0 = zeros(S, nstates)
+
+    # Isolate single shock
+    shocks = zeros(S, nshocks, horizon)
+    if var_class == :states
+        shocks[exo[shock_name], 1] = obtain_shock_from_desired_state_value(var_value,
+                                                                      var_names[var_name],
+                                                                      exo[shock_name],
+                                                                      system[:RRR])
+    else # == :obs
+        shocks[exo[shock_name], 1] = obtain_shock_from_desired_obs_value(var_value,
+                                                                    var_names[var_name],
+                                                                    exo[shock_name],
+                                                                    system[:ZZ],
+                                                                    system[:RRR])
+    end
+
+    # Iterate state space forward
+    states[:, :, exo[shock_name]], obs[:, :, exo[shock_name]], pseudo[:, :, exo[shock_name]], _ = forecast(system, s_0, shocks)
+
+    return states, obs, pseudo
+end
+
+# Given a desired value, x, for some state s^i_1, back out the necessary value of
+# ϵ^j_1 needed s.t. s^i_1 = x.
+# E.g. if I want the impulse response of output (s^i_1) to be 50 basis points
+# based on a shock to productivity (ϵ^j_1), how large does that shock
+# to productivity need to be?
+# The answer is ϵ^j_1 = x/R_{i,j}
+function obtain_shock_from_desired_state_value(state_value::Float64, state_ind::Int,
+                                               shock_ind::Int, RRR::Matrix{Float64})
+    return state_value/RRR[state_ind, shock_ind]
+end
+
+# Similar principle to the function for states
+# The answer is ϵ^j_1 = x/{Σ_{k=1}^n Z_{i, k} R_{k, j}},
+# where n is the total number of states, i is the index of the observable of interest
+# y^i_1, and j is the index of the shock of interest, ϵ^j_1
+function obtain_shock_from_desired_obs_value(obs_value::Float64, obs_ind::Int,
+                                             shock_ind::Int, ZZ::Matrix{Float64},
+                                             RRR::Matrix{Float64})
+    return obs_value/dot(ZZ[obs_ind, :], RRR[:, shock_ind])
 end
