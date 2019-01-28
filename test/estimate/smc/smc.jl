@@ -48,25 +48,25 @@ cloud_fields = fieldnames(typeof(test_cloud))
     @test @test_matrix_approx_eq DSGE.get_loglh(test_cloud) DSGE.get_loglh(saved_cloud)
     @test length(test_cloud.particles) == length(saved_cloud.particles)
     @test test_cloud.tempering_schedule == saved_cloud.tempering_schedule
-    @test test_cloud.ESS == saved_cloud.ESS
-    @test test_cloud.stage_index == saved_cloud.stage_index
-    @test test_cloud.n_Φ == saved_cloud.n_Φ
-    @test test_cloud.resamples == saved_cloud.resamples
-    @test test_cloud.c == saved_cloud.c
-    @test test_cloud.accept == saved_cloud.accept
+    @test test_cloud.ESS ≈ saved_cloud.ESS
+    @test test_cloud.stage_index ≈ saved_cloud.stage_index
+    @test test_cloud.n_Φ ≈ saved_cloud.n_Φ
+    @test test_cloud.resamples ≈ saved_cloud.resamples
+    @test test_cloud.c ≈ saved_cloud.c
+    @test test_cloud.accept ≈ saved_cloud.accept
 end
 
 test_particle = test_cloud.particles[1]
 saved_particle = saved_cloud.particles[1]
 particle_fields = fieldnames(typeof(test_particle))
 @testset "Individual Particle Fields Post-SMC" begin
-    @test test_particle.weight == saved_particle.weight
+    @test test_particle.weight ≈ saved_particle.weight
     @test test_particle.keys == saved_particle.keys
-    @test test_particle.value == saved_particle.value
-    @test test_particle.loglh == saved_particle.loglh
-    @test test_particle.logpost == saved_particle.logpost
-    @test test_particle.old_loglh == saved_particle.old_loglh
-    @test test_particle.accept == saved_particle.accept
+    @test all(isapprox.(test_particle.value, saved_particle.value, atol = 1e-4))
+    @test test_particle.loglh ≈ saved_particle.loglh
+    @test test_particle.logpost ≈ saved_particle.logpost
+    @test test_particle.old_loglh ≈ saved_particle.old_loglh
+    @test test_particle.accept ≈ saved_particle.accept
 end
 
 @testset "Weight Matrices" begin
