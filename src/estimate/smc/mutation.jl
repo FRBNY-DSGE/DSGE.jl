@@ -40,10 +40,9 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   step_p1 = Matrix{Float64}(size(1, 1), 0),
                   alp = Matrix{Float64}(size(1, 1), 0),
                   mu = Vector{Float64}(size(41,1), 0), # RECA: need to add n_mh if want > 1
-                  bvar = Matrix{Float64}(0, 0)) # RECA: need to add n_mh if want > 1
+                  block_vars = Vector{Matrix{Float64}}(0, 0)) # RECA: need to add n_mh if want > 1
 
     n_steps = get_setting(m, :n_mh_steps_smc)
-
     # draw initial step probability
     # conditions for testing purposes
     #step_prob = rand()
@@ -63,108 +62,89 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
         for (block_f, block_a) in zip(blocks_free, blocks_all)
             step_prob = stepprobs[mm]
             mix_draw  = mixr[mm]
+            bvar = block_vars[mm]
 
             # Index out the parameters corresponding to a given random block
             # And also create a distribution centered at the weighted mean
             # and with Σ corresponding to the same random block
             para_subset = para[block_a]
             d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
-
             eps_block = eps_step[block_a] # RECA
+
             para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
                                                                                   d_subset;
                                                                                   mixr = mix_draw, # RECA
                                                                                   eps = eps_block, # RECA
                                                                                   c=c, α=α, mu=mu[block_a],
-                                                                                  bvar = bvar, pnum=pnum)
+                                                                                  bvar=bvar, pnum=pnum)
             para_new = deepcopy(para)
             para_new[block_a] = para_draw
 
-            if (pnum == 2733)
-                @show isapprox(para_new, step_p1, atol=1e-6)
-                update!(m, para_new)
-                @show likelihood(m, data, sampler=true, use_chand_recursion=use_chand_recursion, verbose=verbose)
-                update!(m, step_p1)
-                @show likelihood(m, data, sampler=true, use_chand_recursion=use_chand_recursion, verbose=verbose)
-            end
-
-            if (pnum == 2733) map(x -> @sprintf("%.20f",x), para_new) end#@show para_new end
-            if (pnum == 2733) @show para_new end
-
             ##### BEGINING OF NONSENSE #######
-            p0   = para
             lik0 = like
-            pr0  = post_init
+            pr0  = post
 
-            function better_mvnormal_pdf(mu, chol_sigma, x)
-                det_sigma = 1.0
-                n = size(x, 1)
-                for i=1:n
-                    det_sigma = det_sigma*chol_sigma[i, i]
-                end
-                det_sigma = det_sigma^2
-                a = x-mu
-                new_a = inv(chol_sigma) * a
-                logq = -n*0.5*log(2.0*3.14159) - 0.5*log(det_sigma) -0.5*dot(new_a, new_a)#*a'*inv(chol_sigma)*a
-                return logq
-            end
+            q0 = α * exp(logpdf(MvNormal(para_draw,   c^2 * d_subset.Σ.mat), para_subset))
+            q1 = α * exp(logpdf(MvNormal(para_subset, c^2 * d_subset.Σ.mat), para_draw))
 
-            q0 = α * exp(#=better_mvnormal_pdf(para_draw, c*bvar, para_subset))=#logpdf(MvNormal(para_draw,   c^2 * d_subset.Σ.mat), para_subset))
-            q1 = α * exp(#=better_mvnormal_pdf(para_subset, c*bvar, para_draw)) =#logpdf(MvNormal(para_subset, c^2 * d_subset.Σ.mat), para_draw))
-
-            if (pnum == 2733) @show "1. ", α, q0, q1 end
+            if (pnum ==  12001) @show "1. ", α, q0, q1 end
 
             ind_pdf = 1.
             for i=1:length(block_a)
                 sigi = sqrt(d_subset.Σ.mat[i,i])
 
-                if (pnum == 2733) @show "2.5 ", i, para_subset[i], para_draw[i] end
+                if (pnum ==  12001) @show "2.5 ", i, para_subset[i], para_draw[i] end
 
                 zstat = (para_subset[i] - para_draw[i]) / sigi
                 ind_pdf = ind_pdf / (sigi * sqrt(2. * 3.1415)) * exp(-0.5 * zstat ^ 2)
 
-                if (pnum == 2733) @show "2. ", i, sigi, zstat, ind_pdf end
+                if (pnum ==  12001) @show "2. ", i, sigi, zstat, ind_pdf end
             end
 
             q0 = q0 + (1. - α) / 2. * ind_pdf
             q1 = q1 + (1. - α) / 2. * ind_pdf
 
-            if (pnum == 2733) @show "3. ", q0, q1 end
+            if (pnum ==  12001) @show "3. ", q0, q1 end
 
+            q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset))
+            q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw))
 
-            #@show pnum, exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset)), exp(better_mvnormal_pdf(mu[block_a], c*bvar, para_subset))
-            #@show pnum, exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw)), exp(better_mvnormal_pdf(mu[block_a], c*bvar, para_draw))
-
-            q0 = q0 + (1. - α) / 2. * exp(#=better_mvnormal_pdf(mu[block_a], c*bvar, para_subset)) =#logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_subset))
-            q1 = q1 + (1. - α) / 2. * exp(#=better_mvnormal_pdf(mu[block_a], c*bvar, para_draw)) =#logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat), para_draw))
-
-            if (pnum == 2733) @show "4. ", pnum, q0, q1 end
+            if (pnum ==  12001) @show "4. ", pnum, q0, q1 end
 
             q0 = log(q0)
             q1 = log(q1)
 
-            if (pnum == 2733) @show "5. ", q0, q1 end
+            if (pnum ==  12001) @show "5. ", q0, q1 end
 
             lik1 = -Inf
             pr1  = -Inf
 
+            n_para = length(para)
+            if (pnum == 12001)
+                @show "TEST", "BLOCKING BELOW"
+                p1 = readdlm("/home/rcerxs30/SLICOT-2018-12-19/dsge-smc/fortran/smc-sw-new-mix-npart-12000-nintmh-1-nphi-500-prior-b3-trial1-phibend-jan28-mixron-blocking-FIX/002step_p1.txt")
+                fort_para = vec(p1[(mm-1)*n_steps*n_para + (step-1)*n_para + 1:(mm-1)*n_steps*n_para + step*n_para])
+                update!(m, fort_para)
+                @show likelihood(m, data)
+            end
             try
                 update!(m, para_new)
                 pr1 = prior(m)
-                lik1 = likelihood(m, data; sampler=true, use_chand_recursion=use_chand_recursion, verbose=verbose)
+                lik1 = likelihood(m, data; sampler=false, use_chand_recursion=false, verbose=verbose)
+                if (pnum == 12001) @show lik1 end
+                if (pnum == 12001) @show isapprox(fort_para, para_new, atol=1e-4) end
             catch
                 pr1 = lik1 = -Inf
             end
             if (q0 == Inf && q1 == Inf)
                 q0 = 0.
-                #q1 = 0.
             end
-            if (pnum == 2733) @show "6. ", pr1, lik1 end
-            if (pnum == 2733) @show ϕ_n, lik1, lik0, pr1, pr0, q0, q1 end
-            if (pnum == 2733) @show ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1 end
-            if (pnum == 2733) @show ϕ_n * (lik1 - lik0) end
-            if (pnum == 2733) @show pr1, pr0, pr1 - pr0 end
-            if (pnum == 2733) @show q0, q1, q0 - q1 end
+            if (pnum ==  12001) @show "6. ", pr1, lik1 end
+            if (pnum ==  12001) @show ϕ_n, lik1, lik0, pr1, pr0, q0, q1 end
+            if (pnum ==  12001) @show ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1 end
+            if (pnum ==  12001) @show ϕ_n * (lik1 - lik0) end
+            if (pnum ==  12001) @show pr1, pr0, pr1 - pr0 end
+            if (pnum ==  12001) @show q0, q1, q0 - q1 end
 
             my_alp = exp(ϕ_n * (lik1 - lik0) + pr1 - pr0 + q0 - q1)
 
@@ -174,48 +154,68 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 my_alp = 0.0
             end
             #@show "7. ", my_alp, alp[1]
-
+            #@show pnum, mm, my_alp, alp[mm], pr0
 ###################### old code goes here: old_mutation_body.jl
-
-            if !(abs(alp[1] - my_alp) < 1e-4)
-                @show pnum, alp[1], my_alp
-                #@show q1, q0, lik1, lik0, pr1, pr0
+            if !(abs(alp[mm] - my_alp) < 1e-3)
+                @show pnum, mm, alp[mm], my_alp
+                @show q1, q0, lik1, lik0, pr1, pr0, step_lik[mm]
             end
 
-            if abs(alp[1] - my_alp) / abs(alp[1]) > 1e-3 && abs(alp[1] - my_alp) > 1e-3
-                @show alp[1], my_alp
+            if abs(alp[mm] - my_alp) / abs(alp[mm]) > 1e-3 && abs(alp[mm] - my_alp) > 1e-3
+                @show pnum, mm, alp[mm], my_alp
             end
-            if alp[1] > 0.1
-               @assert abs(alp[1] - my_alp) / abs(alp[1]) < 1e-3
+            if alp[mm] > 0.1
+               #@assert abs(alp[mm] - my_alp) / abs(alp[mm]) < 5e-2
+                if !(abs(alp[mm] - my_alp) / abs(alp[mm]) < 5e-2)
+                    print_with_color(:red, "Assert Fails abs(alp[mm] - my_alp) / abs(alp[mm]) < 5e-2.\n")
+                    #@show pnum
+                    #error()
+                end
             else
-               @assert abs(alp[1] - my_alp) < 1e-2
+               #@assert abs(alp[mm] - my_alp) < 1.5e-2
+                if !(abs(alp[mm] - my_alp) < 1.5e-2)
+                    print_with_color(:red, "Assert Fails abs(alp[mm] - my_alp) < 1.5e-2.\n")
+                end
             end
 
-            if step_prob < my_alp
+            if step_prob < alp[mm]#my_alp# JUST ALP running in top pane
                 para = para_new
-                like = lik1
+                like = lik1 # BOTH ALP and resetting lik in middle pane
                 post = pr1
                 accept += length(block_a)
             end
 
             #@show "8. ", para, like, post
-            mm += 1
+
             # draw again for the next step
             #step_prob = rand()
-            @assert step_pr ≈ para
-            if !(abs(like - step_lik[1]) / abs(like) < 5e-5)
-                @show pnum, q1, q0, lik1, lik0, pr1, pr0, alp[1], my_alp, step_prob
-                @show pnum, abs(like - step_lik[1]) / abs(like), like, step_lik[1]
+
+            if !isapprox(step_pr[(mm-1)*n_steps*n_para + (step-1)*n_para + 1:(mm-1)*n_steps*n_para + step*n_para], para, atol=1e-3)
+                @show step_pr[(mm-1)*n_steps*n_para + (step-1)*n_para + 1:(mm-1)*n_steps*n_para + step*n_para], para
+                @show abs.(step_pr[(mm-1)*n_steps*n_para + (step-1)*n_para + 1:(mm-1)*n_steps*n_para + step*n_para] - para)
+                print_with_color(:red, "Assert Fails on ("*string(pnum)*", "*string(mm)*"): step_pr ≈ para.\n")
+                #@assert step_pr ≈ para
             end
-            if (like <= 1e-3 && step_lik[1] <= 1e-3)
-                if !(abs(like - step_lik[1]) / abs(like) < 1e-3)
-                    @show "BAD NEWS", pnum, abs(like - step_lik[1]) / abs(like), like, step_lik[1]
+
+            #if !(abs(like - step_lik[mm]) / abs(like) < 1e-3)
+            #    @show pnum, q1, q0, lik1, lik0, pr1, pr0, alp[mm], my_alp, step_prob
+            #    @show pnum, abs(like - step_lik[mm]) / abs(like), like, step_lik[mm]
+            #end
+            if (like <= 1e-3 && step_lik[mm] <= 1e-3)
+                if !(abs(like - step_lik[mm]) / abs(like) < 1e-3)
+                    @show "BAD NEWS", pnum, abs(like - step_lik[mm]) / abs(like), like, step_lik[mm], alp[mm], my_alp, step_prob
                 else
-                    @assert abs(like - step_lik[1]) / abs(like) < 1e-3
+                    if !(abs(like - step_lik[mm]) / abs(like) < 1e-3)
+                        print_with_color(:red, "Assert Fails abs(like - step_lik[mm]) / abs(like) < 1e-3.\n")
+                    end
                 end
-             else
-                @assert abs(like - step_lik[1]) / abs(like) < 1e-3
+            else
+                if !(abs(like - step_lik[mm]) / abs(like) < 1e-3)
+                    print_with_color(:red, "Assert Fails abs(like - step_lik[mm]) / abs(like) < 1e-3.\n")
+                end
             end
+            #like = step_lik[mm]
+            mm += 1
         end
     end
     if (pnum % 1000 == 0) @show pnum end
