@@ -84,7 +84,11 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
                                                  eps::Vector{T} = Vector{T}(0), mu::Vector{T} = Vector{T}(0),
                                                  bvar::Matrix{T} = Matrix{T}(0,0), pnum::Int64 = 0)
     @assert 0 <= α <= 1
-    for i=1:length(mu) @assert ((abs.(mu - d_prop.μ) ./ mu) .< 1e-5)[i] end
+    for i=1:length(mu)
+        if !((abs(mu[i] - d_prop.μ[i]) / mu[i]) < 1e-3)
+            print_with_color(:blue, i,", ",mu[i],", ",d_prop.μ[i],", ",((abs(mu[i] - d_prop.μ[i]) / mu[i]) < 1e-5), "\n")
+        end
+    end
 
     # MIXR ON
     #mixr = 1
@@ -99,26 +103,10 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
     # θ_new = rand(d_mix_old)
     if mixr < α # 'scale' (c) has been "baked into RNG"
         θ_new = θ_old + bvar * eps
-        if (pnum==2733)
-            @show "In 1. θ_old, matmul"
-            @show θ_old
-            @show bvar * eps
-        end
         #θ_new = θ_old + chol(d_prop.Σ.mat) * eps
     elseif mixr < (α + (1.0 - α) / 2.0)
-        #@show pnum, 2
-        if (pnum==2733)
-            @show "In 2. θ_old, matmul"
-            @show θ_old
-            @show 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps
-            @show 3.0 * (diagm(sqrt.(diag(d_prop.Σ))))
-            @show diag(d_prop.Σ)
-        end
-        #for i=1:length(eps)
-        #    @show i, 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # RECA: FORTRAN PUTS 3 HERE
         θ_new = θ_old + 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # RECA: FORTRAN PUTS 3 HERE
     else
-        #@show pnum, 3
         θ_new = d_prop.μ + bvar * eps
         #θ_new = d_prop.μ + chol(d_prop.Σ.mat) * eps
     end
