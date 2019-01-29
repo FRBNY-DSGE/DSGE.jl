@@ -84,53 +84,35 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
                                                  eps::Vector{T} = Vector{T}(0), mu::Vector{T} = Vector{T}(0),
                                                  bvar::Matrix{T} = Matrix{T}(0,0), pnum::Int64 = 0)
     @assert 0 <= α <= 1
-    for i=1:length(mu)
-        if !((abs(mu[i] - d_prop.μ[i]) / mu[i]) < 1e-3)
-            print_with_color(:blue, i,", ",mu[i],", ",d_prop.μ[i],", ",((abs(mu[i] - d_prop.μ[i]) / mu[i]) < 1e-5), "\n")
-        end
-    end
-
-    # MIXR ON
-    #mixr = 1
     d_bar = MvNormal(d_prop.μ, c^2 * d_prop.Σ)
 
     # Create mixture distribution conditional on the previous parameter value, θ_old
     d_old      = MvNormal(θ_old, c^2 * d_prop.Σ)
-    d_diag_old = MvNormal(θ_old, diagm(diag(c^2 * d_prop.Σ)))
+    d_diag_old = MvNormal(θ_old, diagm(diag(c^2 * d_prop.Σ))) # FORTRAN: multiplies by 3
     d_mix_old  = MixtureModel(MvNormal[d_old, d_diag_old, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
-    # RECA
-    # θ_new = rand(d_mix_old)
-    if mixr < α # 'scale' (c) has been "baked into RNG"
-        θ_new = θ_old + bvar * eps
-        #θ_new = θ_old + chol(d_prop.Σ.mat) * eps
-    elseif mixr < (α + (1.0 - α) / 2.0)
-        θ_new = θ_old + 3.0 * (diagm(sqrt.(diag(d_prop.Σ)))) * eps # RECA: FORTRAN PUTS 3 HERE
-    else
-        θ_new = d_prop.μ + bvar * eps
-        #θ_new = d_prop.μ + chol(d_prop.Σ.mat) * eps
-    end
+    θ_new = rand(d_mix_old)
 
     # Create mixture distribution conditional on the new parameter value, θ_new
     d_new      = MvNormal(θ_new, c^2 * d_prop.Σ)
     d_diag_new = MvNormal(θ_new, diagm(diag(c^2 * d_prop.Σ)))
     d_mix_new  = MixtureModel(MvNormal[d_new, d_diag_new, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
-    # To clarify, this is not just the density of θ_new/θ_old using a given mixture
-    # density function, but rather, the density of θ_new | θ_old and the density of
-    # θ_old | θ_new taken with respect to their respective mixture densities
-    new_mixture_density = logpdf(d_mix_old, θ_new)
-    old_mixture_density = logpdf(d_mix_new, θ_old)
+    # The density of θ_new | θ_old and the density of θ_old | θ_new
+    # taken with respect to their respective mixture densities
+    new_mix_density = logpdf(d_mix_old, θ_new)
+    old_mix_density = logpdf(d_mix_new, θ_old)
 
-    return θ_new, new_mixture_density, old_mixture_density
+    return θ_new, new_mix_density, old_mix_density
 end
 
 function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
                                        ϕ_n::T, ϕ_n1::T;
                                        old_loglh::Vector{T} = zeros(length(loglh)))
-    incremental_weights = exp.((ϕ_n1 - ϕ_n) * old_loglh + (ϕ_n - ϕ_n1) * loglh)
-    new_weights         = current_weights .* incremental_weights
-    normalized_weights  = new_weights / sum(new_weights)
-    ESS                 = 1 / sum(normalized_weights .^ 2)
+
+    inc_weights  = exp.((ϕ_n1 - ϕ_n) * old_loglh + (ϕ_n - ϕ_n1) * loglh)
+    new_weights  = current_weights .* inc_weights
+    norm_weights = new_weights / sum(new_weights)
+    ESS          = 1 / sum(norm_weights .^ 2)
     return ESS
 end
