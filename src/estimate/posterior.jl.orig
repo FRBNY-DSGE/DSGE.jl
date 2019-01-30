@@ -41,11 +41,7 @@ function posterior(m::AbstractModel{T},
     catch_errors = catch_errors | sampler
     like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
     post = ϕ_smc*like + prior(m)
-    if sampler
-        return post
-    else
-        return post
-    end
+    return post
 end
 
 """
@@ -116,12 +112,13 @@ filter over the main sample all at once.
   the zero-lower-bound period are returned in a dictionary.
 - `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
 """
-function likelihood(m::AbstractModel,
-                    data::AbstractMatrix;
-                    sampler::Bool = false,
-                    catch_errors::Bool = false,
-                    use_chand_recursion = get_setting(m, :use_chand_recursion),
-                    verbose::Symbol = :high) where {T<:AbstractFloat}
+function likelihood{T<:AbstractFloat}(m::AbstractModel,
+                                      data::Matrix{T};
+                                      sampler::Bool = false,
+                                      catch_errors::Bool = false,
+                                      use_chand_recursion::Bool = false,
+                                      tol::Float64 = 0.0,
+                                      verbose::Symbol = :high)
     catch_errors = catch_errors | sampler
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
@@ -147,12 +144,22 @@ function likelihood(m::AbstractModel,
 
     # Return total log-likelihood, excluding the presample
     try
+<<<<<<< HEAD
         if use_chand_recursion == false
             kal = filter(m, data, system; outputs = [:loglh], include_presample = false)
             return kal[:total_loglh]
         else
             chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
                             system[:QQ], system[:ZZ], system[:DD], system[:EE]; Nt0 = n_presample_periods(m))[1]
+=======
+        if use_chand_recursion==false
+            kal = filter(m, data, system; outputs = [:loglh], include_presample = false, tol = tol)
+            return kal[:total_loglh]
+        else
+            return chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
+                                   system[:QQ], system[:ZZ], system[:DD], system[:EE];
+                                   allout = false, Nt0 = n_presample_periods(m), tol = tol)[1]
+>>>>>>> Make filter and posterior compatible with fast Kalman and Chandrasekhar functionality in StateSpaceRoutines.jl (stop updating once Kalman filter converges)
         end
     catch err
         if catch_errors && isa(err, DomainError)

@@ -74,6 +74,5 @@ function filter(m::AbstractModel, data::AbstractArray, system::System{S},
     out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs, QQs,
                         ZZs, DDs, EEs, s_0, P_0; outputs = outputs, Nt0 = Nt0)
 
-
     return Kalman(out...)
 end
