@@ -76,21 +76,22 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             q0 = q0 + (1. - α) / 2. * ind_pdf
             q1 = q1 + (1. - α) / 2. * ind_pdf
 
-            q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat),
-                                                 para_subset))
-            q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(mu[block_a], c^2 * d_subset.Σ.mat),
+            q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
+                                                 para_subset)) # subset or mean?
+            q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
                                                  para_draw))
             q0 = log(q0)
             q1 = log(q1)
 
             like_new  = -Inf
             prior_new = -Inf
+            like_old_data = -Inf
 
             try
                 update!(m, para_new)
                 prior_new = prior(m)
-                like_new = likelihood(m, data; sampler=false,
-                                      use_chand_recursion=false, verbose=verbose)
+                like_new = likelihood(m, data; sampler = true,
+                                      use_chand_recursion = use_chand_recursion, verbose = verbose)
                 if like_new == -Inf
                     prior_new = like_old_data = -Inf
                 end

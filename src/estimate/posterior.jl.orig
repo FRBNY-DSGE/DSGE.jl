@@ -159,7 +159,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
             return chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
                                    system[:QQ], system[:ZZ], system[:DD], system[:EE];
                                    allout = false, Nt0 = n_presample_periods(m), tol = tol)[1]
->>>>>>> Make filter and posterior compatible with fast Kalman and Chandrasekhar functionality in StateSpaceRoutines.jl (stop updating once Kalman filter converges)
+>>>>>>> Make filter and posterior accomodate fast Kalman filter
         end
     catch err
         if catch_errors && isa(err, DomainError)
