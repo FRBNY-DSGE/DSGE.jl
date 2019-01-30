@@ -35,21 +35,21 @@ where `S<:AbstractFloat`.
 
 - `kal::Kalman`: see `?Kalman`
 """
-function filter(m::AbstractModel, df::DataFrame, system::System{S},
-    s_0::Vector{S} = Vector{S}(), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
+function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
+    s_0::Vector{S} = Vector{S}(), P_0::Matrix{S} = Matrix{S}(0, 0);
     cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true,
-    outputs::Vector{Symbol} = [:loglh, :pred, :filt]) where {S<:AbstractFloat}
+    outputs::Vector{Symbol} = [:loglh, :pred, :filt], tol::Float64 = 0.0)
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
     filter(m, data, system, s_0, P_0; start_date = start_date,
-           include_presample = include_presample, outputs = outputs)
+           include_presample = include_presample, outputs = outputs, tol = tol)
 end
 
-function filter(m::AbstractModel, data::AbstractArray, system::System{S},
-    s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
+function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System,
+    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
     start_date::Date = date_presample_start(m), include_presample::Bool = true,
-    outputs::Vector{Symbol} = [:loglh, :pred, :filt]) where {S<:AbstractFloat}
+    outputs::Vector{Symbol} = [:loglh, :pred, :filt], tol::Float64 = 0.0)
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
