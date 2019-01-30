@@ -49,7 +49,7 @@ We constrain Julia to use the complex version of the `schurfact` routine regardl
 types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses the complex version
 of the Schur decomposition, even if the inputs are real numbers.
 """
-function gensys(Γ0, Γ1, c, Ψ, Π, args...) #; verbose::Symbol = :high)
+function gensys(Γ0::Array{Float64, 2}, Γ1::Array{Float64, 2}, c::Array{Float64, 1}, Ψ::Array{Float64, 2}, Π::Array{Float64, 2}, args...; verbose::Symbol = :high)
     F = try
         schur!(complex(Γ0), complex(Γ1))
     catch ex
@@ -71,15 +71,15 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...) #; verbose::Symbol = :high)
             rethrow(ex)
         end
     end
-    gensys(F, c, Ψ, Π, args...) #; verbose = verbose)
+    gensys(F, c, Ψ, Π, args...; verbose = verbose)
 end
 
-function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
-    gensys(F, c, Ψ, Π, new_div(F))
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π; verbose::Symbol = :low)
+    gensys(F, c, Ψ, Π, new_div(F), verbose = verbose)
 end
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol = :low)
     eu = [0, 0]
     ϵ = 1e-6  # small number to check convergence
     nunstab = 0
