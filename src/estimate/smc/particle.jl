@@ -78,6 +78,10 @@ function get_loglh(c::ParticleCloud)
     return map(p -> p.loglh, c.particles)
 end
 
+function cloud_isempty(c::ParticleCloud)
+    return isempty(c.particles)
+end
+
 function get_old_loglh(c::ParticleCloud)
     return map(p -> p.old_loglh, c.particles)
 end
