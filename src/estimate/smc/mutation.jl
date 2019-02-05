@@ -77,14 +77,14 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             q1 = q1 + (1. - α) / 2. * ind_pdf
 
             q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
-                                                 para_subset)) # subset or mean?
+                                                 para_subset))
             q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
                                                  para_draw))
             q0 = log(q0)
             q1 = log(q1)
 
-            like_new  = -Inf
-            prior_new = -Inf
+            like_new      = -Inf
+            prior_new     = -Inf
             like_old_data = -Inf
 
             try
@@ -119,7 +119,6 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 like_prev = like_old_data
                 accept   += length(block_a)
             end
-
             # Draw again for next step
             step_prob = rand()
         end

@@ -13,7 +13,7 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
     n_Φ = length(proposed_fixed_schedule)
 
     if resampled_last_period
-        # The ESS_bar should be reset to target an evenly weighted particle population
+        # The ESS_bar is reset to target an evenly weighted particle population
         ESS_bar = tempering_target*length(cloud)
         resampled_last_period = false
     else
@@ -21,8 +21,8 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
     end
 
     # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
-    optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
-                                         old_loglh = get_old_loglh(cloud)) - ESS_bar
+    optimal_ϕ_function(ϕ) = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
+                                        old_loglh = get_old_loglh(cloud)) - ESS_bar
 
     # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
     # Do so by iterating through a proposed_fixed_schedule and finding the first
@@ -33,9 +33,9 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
     end
 
     # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
-    # When ϕ_prop != 1. then there are still ϕ increments strictly below 1 that
+    # When ϕ_prop != 1.0, there are still ϕ increments strictly below 1 that
     # give the optimal ϕ step, ϕ_n.
-    # When ϕ_prop == 1. but optimal_ϕ_function(ϕ_prop) < 0 then there still exists
+    # When ϕ_prop == 1.0 but optimal_ϕ_function(ϕ_prop) < 0, there still exists
     # an optimal ϕ step, ϕ_n, that does not equal 1.
     # Thus the interval [optimal_ϕ_function(ϕ_n1), optimal_ϕ_function(ϕ_prop)] always
     # contains a 0 by construction.
@@ -116,14 +116,12 @@ end
 """
 ```
 function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
-                                       ϕ_n::T, ϕ_n1::T;
-                                       old_loglh::Vector{T} = zeros(length(loglh)))
+                                       ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh)))
 ```
 Compute ESS given log likelihood, current weights, ϕ_n, ϕ_{n-1}, and old log likelihood.
 """
 function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
-                                       ϕ_n::T, ϕ_n1::T;
-                                       old_loglh::Vector{T} = zeros(length(loglh)))
+                                       ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh)))
     inc_weights  = exp.((ϕ_n1 - ϕ_n) * old_loglh + (ϕ_n - ϕ_n1) * loglh)
     new_weights  = current_weights .* inc_weights
     norm_weights = new_weights / sum(new_weights)
