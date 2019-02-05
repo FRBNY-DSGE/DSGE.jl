@@ -33,8 +33,8 @@ SMC is broken up into three main steps:
 - `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level for the ESS.
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix{Float64};
-             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
+function smc(m::AbstractModel, data::Matrix;
+             verbose::Symbol = :low, old_data::Matrix = ones(0,0),
              old_cloud::ParticleCloud = ParticleCloud(m, 0))
     ########################################################################################
     ### Setting Parameters
@@ -49,7 +49,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
     if use_chand_recursion
-        if any(ismissing.(data)) || any(ismissing.(old_data))
+        if any(ismissing.(data)) || any(ismissing.(old_data)) || any(isnan.(data)) || any(isnan.(old_data))
             error("Cannot use Chandrasekhar recursions with missing data")
         end
         # Ensure concretely-typed data matrix for Chandrasekhar recursion
@@ -104,10 +104,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 
     if tempered_update
-        if isempty(old_cloud)
+        if cloud_isempty(old_cloud)
             # Load the previous ParticleCloud as the starting point for time tempering
-            loadpath = rawpath(m, "estimate", "smc_cloud.jld")
-            #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
+            loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
+            #loadpath = rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)])
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
             cloud = load(loadpath, "cloud")
