@@ -120,7 +120,7 @@ function likelihood(m::AbstractModel,
                     data::AbstractMatrix;
                     sampler::Bool = false,
                     catch_errors::Bool = false,
-                    use_chand_recursion = false,
+                    use_chand_recursion = get_setting(m, :use_chand_recursion),
                     verbose::Symbol = :high) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
 
@@ -152,8 +152,7 @@ function likelihood(m::AbstractModel,
             return kal[:total_loglh]
         else
             chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
-                            system[:QQ], system[:ZZ], system[:DD], system[:EE];
-                            allout = false, Nt0 = n_presample_periods(m))[1]
+                            system[:QQ], system[:ZZ], system[:DD], system[:EE]; Nt0 = n_presample_periods(m))[1]
         end
     catch err
         if catch_errors && isa(err, DomainError)
