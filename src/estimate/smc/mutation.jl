@@ -80,8 +80,8 @@ function mutation(m::AbstractModel, data::T, p::Particle, d::Distribution,
             catch err
                 if isa(err, ParamBoundsError)
                     post_new = like_new = like_old_data = -Inf
-                #elseif isa(err, SPDError)
-                #    post_new = like_new = like_old_data = -Inf
+                elseif isa(err, PosDefException)
+                    post_new = like_new = like_old_data = -Inf
                 else
                     throw(err)
                 end

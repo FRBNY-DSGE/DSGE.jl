@@ -30,10 +30,10 @@ function initial_draw!(m::AbstractModel, data::AbstractMatrix, c::ParticleCloud;
                 catch err
                     if isa(err, ParamBoundsError)
                         draw_loglh = draw_logpost = -Inf
-                    #elseif isa(err, SPDError)
-                    #    draw_loglh = draw_logpost = -Inf
+                    elseif isa(err, PosDefException)
+                        draw_loglh = draw_logpost = -Inf
                     else
-                     #   draw_loglh = draw_logpost = -Inf
+                        #draw_loglh = draw_logpost = -Inf
                         throw(err)
                     end
                 end
