@@ -89,10 +89,7 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 
 """
 function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Distribution;
-                                                 c::T = 1.0, α::T = 1., mixr::T = 0.,
-                                                 eps::Vector{T} = Vector{T}(0),
-                                                 mu::Vector{T} = Vector{T}(0),
-                                                 bvar::Matrix{T} = Matrix{T}(0,0), pnum::Int64 = 0)
+                                                 c::T = 1.0, α::T = 1.0)
     @assert 0 <= α <= 1
     d_bar = MvNormal(d_prop.μ, c^2 * d_prop.Σ)
 
