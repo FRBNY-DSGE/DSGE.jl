@@ -35,7 +35,7 @@ SMC is broken up into three main steps:
 """
 function smc(m::AbstractModel, data::Matrix{Float64};
              verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
-             old_cloud::ParticleCloud = ParticleCloud(m, 0))
+             old_cloud::ParticleCloud = ParticleCloud(m, 0), run_test = false)
     ########################################################################################
     ### Setting Parameters
     ########################################################################################
@@ -257,6 +257,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
+        end
+
+        if run_test && (i == 3)
+            break
         end
     end
 

@@ -124,6 +124,6 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             step_prob = rand()
         end
     end
-    update_mutation_FORTRAN!(p, para, like, post, like_prev, accept / n_free_para)
+    update_mutation!(p, para, like, post, like_prev, accept / n_free_para)
     return p
 end

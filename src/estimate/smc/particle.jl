@@ -147,21 +147,8 @@ function update_mutation!(p::Particle, para::Array{Float64,1},
 end
 
 
-function update_mutation_FORTRAN!(p::Particle, para::Array{Float64,1},
+function update_mutation!(p::Particle, para::Array{Float64,1},
                           like::Float64, post::Float64, old_like::Float64, accept::Float64)
-    p.value = para
-    p.loglh = like
-    p.logpost = post
-    p.old_loglh = old_like
-    p.accept = accept
-end
-
-
-# RECA
-function update_mutation!(para_path::String,  p::Particle, para::Array{Float64,1},
-                          like::Float64, post::Float64, old_like::Float64, accept::Bool)
-    out = readdlm(para_path)
-
     p.value = para
     p.loglh = like
     p.logpost = post

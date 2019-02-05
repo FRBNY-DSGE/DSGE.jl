@@ -1,3 +1,12 @@
+"""
+```
+function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
+                          i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
+                          tempering_target::Float64, resampled_last_period::Bool)
+```
+
+Solves for next Φ. Returns ϕ_n, resampled_last_period, j, ϕ_prop.
+"""
 function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
                           i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
                           tempering_target::Float64, resampled_last_period::Bool)
@@ -81,7 +90,8 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 """
 function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Distribution;
                                                  c::T = 1.0, α::T = 1., mixr::T = 0.,
-                                                 eps::Vector{T} = Vector{T}(0), mu::Vector{T} = Vector{T}(0),
+                                                 eps::Vector{T} = Vector{T}(0),
+                                                 mu::Vector{T} = Vector{T}(0),
                                                  bvar::Matrix{T} = Matrix{T}(0,0), pnum::Int64 = 0)
     @assert 0 <= α <= 1
     d_bar = MvNormal(d_prop.μ, c^2 * d_prop.Σ)
@@ -106,10 +116,17 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
     return θ_new, new_mix_density, old_mix_density
 end
 
+"""
+```
 function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
                                        ϕ_n::T, ϕ_n1::T;
                                        old_loglh::Vector{T} = zeros(length(loglh)))
-
+```
+Compute ESS given log likelihood, current weights, ϕ_n, ϕ_{n-1}, and old log likelihood.
+"""
+function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
+                                       ϕ_n::T, ϕ_n1::T;
+                                       old_loglh::Vector{T} = zeros(length(loglh)))
     inc_weights  = exp.((ϕ_n1 - ϕ_n) * old_loglh + (ϕ_n - ϕ_n1) * loglh)
     new_weights  = current_weights .* inc_weights
     norm_weights = new_weights / sum(new_weights)

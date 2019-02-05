@@ -53,7 +53,7 @@ function stack_values(particles::Vector{Particle}, field::Symbol)
     return stacked_values
 end
 
-srand(42)
+@everywhere srand(42)
 
 new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                  c = c, α = α, old_data = old_data) for j = 1:n_parts]
