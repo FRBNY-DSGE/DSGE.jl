@@ -116,6 +116,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
 
     # Load full distribution
     elseif input_type == :full
+
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
@@ -236,9 +237,13 @@ None. Output is saved to files returned by
 `get_forecast_output_files(m, input_type, cond_type, output_vars)`.
 """
 function forecast_one(m::AbstractModel{Float64},
-    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-    df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-    forecast_string::String = "", verbose::Symbol = :low)
+                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                      df::DataFrame = DataFrame(), subset_inds::Range{Int64} = 1:0,
+                      forecast_string::String = "", verbose::Symbol = :low,
+                      use_filtered_shocks_in_shockdec::Bool = false,
+                      shock_name::Symbol = :none,
+                      shock_var_name::Symbol = :none,
+                      shock_var_value::Float64 = 0.0)
 
     ### Common Setup
 
@@ -273,10 +278,14 @@ function forecast_one(m::AbstractModel{Float64},
                                    verbose = verbose)
         end
 
+        write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                               forecast_output; df = df, block_number = Nullable{Int64}(),
+                               verbose = verbose)
 
         total_forecast_time     = elapsed_time
         total_forecast_time_min = total_forecast_time/60
         println(verbose, :low, "\nTotal time to forecast: $total_forecast_time_min minutes")
+
 
     ### Multiple-Draw Forecasts
 
