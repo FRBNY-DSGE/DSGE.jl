@@ -277,7 +277,7 @@ function smc(m::AbstractModel, data::Matrix;
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld2", true, true, true, IOStream), "w") do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), true, true, true, IOStream) do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
