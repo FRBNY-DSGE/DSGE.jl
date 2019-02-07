@@ -330,7 +330,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
         if in(:scenarios, fieldnames(scen)) #length(scen.scenarios)>1
             scen_draws, transform = read_scenario_output(m, m904, scen, class, product, var_name)
         else
-            if scen.key==:bor8 || scen.key==:bor9
+            if scen.key==:bor8 || scen.key==:bor9 || scen.key==:bor8_02 || scen.key==:bor9_02
                 # Recursively read in scenario draws
                 scen_draws, transform = read_scenario_output(m904, scen, class, product, var_name)
             else
