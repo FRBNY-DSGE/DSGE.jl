@@ -1,5 +1,5 @@
-using Base.Test
-@everywhere using DSGE, JLD
+using Test, Printf, DSGE
+#@everywhere using DSGE, JLD
 
 my_tests = [
             "core",
