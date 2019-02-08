@@ -10,7 +10,7 @@ path = dirname(@__FILE__)
 
 m = AnSchorfheide()
 
-saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
+save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, saveroot)
 
 data = h5read("reference/smc.h5", "data")
@@ -94,7 +94,7 @@ end
 ######################################################################
 m = SmetsWoutersOrig()
 
-saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
+save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, saveroot)
 
 data = readdlm("reference/YY.txt")
@@ -177,7 +177,7 @@ end
 ######################################################################
 m = SmetsWoutersOrig()
 
-saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
+save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, saveroot)
 
 data = readdlm("reference/YY.txt")
