@@ -52,7 +52,7 @@ end
 m = SmetsWoutersOrig()
 
 save = normpath(joinpath(dirname(@__FILE__),"save"))
-m <= Setting(:saveroot, saveroot)
+m <= Setting(:saveroot, save)
 
 data = readdlm("reference/YY.txt")
 data = data'
