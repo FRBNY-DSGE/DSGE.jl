@@ -2,7 +2,7 @@ using Test, Printf, DSGE
 #@everywhere using DSGE, JLD
 
 my_tests = [
-            "core",
+           #= "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
@@ -18,7 +18,7 @@ my_tests = [
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
-            "estimate/csminwel",
+            "estimate/csminwel",=#
             "estimate/optimize",
             "estimate/metropolis_hastings",
             #"estimate/smc/smc",
