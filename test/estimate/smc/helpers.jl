@@ -150,5 +150,5 @@ close(file)
 test_ESS = DSGE.compute_ESS(loglh, current_weights, ϕ_n, ϕ_n1)
 ####################################################################
 @testset "Compute ESS" begin
-    @test test_ESS == saved_ESS
+    @test test_ESS ≈ saved_ESS
 end

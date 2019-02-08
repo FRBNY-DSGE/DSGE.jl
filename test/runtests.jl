@@ -21,7 +21,7 @@ my_tests = [
             "estimate/csminwel",
             "estimate/optimize",
             "estimate/metropolis_hastings",
-            "estimate/smc/smc",
+            #"estimate/smc/smc",
             "estimate/smc/helpers",
             "estimate/smc/initialization",
             "estimate/smc/resample",

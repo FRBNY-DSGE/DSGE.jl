@@ -7,8 +7,8 @@ path = dirname(@__FILE__)
 
 m = AnSchorfheide()
 
-saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
-m <= Setting(:saveroot, saveroot)
+save = normpath(joinpath(dirname(@__FILE__),"save"))
+m <= Setting(:saveroot, save)
 
 data = h5read("reference/smc.h5", "data")
 
@@ -51,7 +51,7 @@ end
 ###################################################################
 m = SmetsWoutersOrig()
 
-saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
+save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, saveroot)
 
 data = readdlm("reference/YY.txt")
@@ -78,13 +78,14 @@ test_init_cloud = ParticleCloud(m, get_setting(m, :n_particles))
 @everywhere srand(42)
 DSGE.initial_draw!(m, data, test_init_cloud)
 
-#= JLD.jldopen("reference/initial_draw.jld", "w") do file
+
+#=JLD.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
 end
-JLD2.jldopen("reference/initial_draw_sw.jld2", "w") do file
+JLD2.jldopen("reference/initial_draw_sw.jld2", true, true, true, IOStream) do file
     write(file, "cloud", test_init_cloud)
-end
-=#
+end=#
+
 saved_init_cloud = load("reference/initial_draw_sw.jld2", "cloud")
 
 @testset "Initial draw" begin
