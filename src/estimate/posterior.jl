@@ -150,7 +150,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
         else
             return chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
                                    system[:QQ], system[:ZZ], system[:DD], system[:EE];
-                                   allout = false, Nt0 = n_presample_periods(m))[1] #, tol = tol
+                                   allout = false, Nt0 = n_presample_periods(m)) #, tol = tol
         end
     catch err
         if catch_errors && isa(err, DomainError)
