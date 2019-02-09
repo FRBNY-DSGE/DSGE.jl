@@ -1,4 +1,4 @@
-using Test, Printf, DSGE
+using Test, Printf, DSGE, JLD2, FileIO, LinearAlgebra, Distributions, PDMats, HDF5
 #@everywhere using DSGE, JLD
 
 my_tests = [
@@ -18,11 +18,11 @@ my_tests = [
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
-            "estimate/csminwel",=#
+            "estimate/csminwel",
             "estimate/optimize",
             "estimate/metropolis_hastings",
             #"estimate/smc/smc",
-            "estimate/smc/helpers",
+            "estimate/smc/helpers",=#
             "estimate/smc/initialization",
             "estimate/smc/resample",
             "estimate/smc/util",

@@ -1,7 +1,7 @@
 # To be removed after running this test individually in the REPL successfully
-using DSGE, Distributions
-using HDF5, JLD, JLD2
-import Base.Test: @test, @testset
+#using DSGE, Distributions
+#using HDF5, JLD, JLD2
+#import Base.Test: @test, @testset
 
 writing_output = false
 
@@ -85,6 +85,7 @@ for (block_f, block_a) in zip(blocks_free, blocks_all)
     end
 end
 =#
+
 file = JLD2.jldopen("reference/mvnormal_inputs.jld2")
 para_subset = read(file, "para_subset")
 d_subset    = read(file, "d_subset")
