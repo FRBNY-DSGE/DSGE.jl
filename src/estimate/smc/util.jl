@@ -132,11 +132,7 @@ function generate_all_blocks(blocks_free::Vector{Vector{Int64}}, free_para_inds:
         for (j, b) in enumerate(block)
             blocks_all[i][j] = ind_mappings[b]
         end
-        return blocks_all
     end
-
-    blocks_all = block_map(blocks_free, ind_mappings)
-
     return blocks_all
 end
 
