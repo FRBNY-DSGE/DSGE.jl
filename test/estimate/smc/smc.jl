@@ -98,7 +98,7 @@ save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, save)
 
 data = readdlm("reference/YY.txt")
-data = data'
+data = Matrix{Float64}(data')
 
 m <= Setting(:n_particles, 12000)
 m <= Setting(:n_Φ, 500)
@@ -181,7 +181,7 @@ save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, save)
 
 data = readdlm("reference/YY.txt")
-data = data'
+data = Matrix{Float64}(data')
 
 m <= Setting(:n_particles, 12000)
 m <= Setting(:n_Φ, 500)
