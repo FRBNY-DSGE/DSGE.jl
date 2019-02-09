@@ -22,12 +22,12 @@ my_tests = [
             "estimate/optimize",
             "estimate/metropolis_hastings",
             #"estimate/smc/smc",
-            "estimate/smc/helpers",=#
+            "estimate/smc/helpers",
             "estimate/smc/initialization",
             "estimate/smc/resample",
             "estimate/smc/util",
             "estimate/smc/mutation",
-            "data/misc",
+            "data/misc", =#
             "data/load_data",
             "forecast/smooth",
             "forecast/forecast",

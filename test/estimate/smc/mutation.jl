@@ -29,7 +29,7 @@ m <= Setting(:use_fixed_schedule, true)
 
 n_parts = get_setting(m, :n_particles)
 
-file = JLD.jldopen("reference/mutation_inputs.jld", "r")
+file = JLD2.jldopen("reference/mutation_inputs.jld2", "r")
 old_particles = read(file, "particles")
 d = read(file, "d")
 blocks_free = read(file, "blocks_free")
@@ -63,9 +63,9 @@ new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all,
 end
 JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
     write(file, "particles", new_particles)
-end=#
+end =#
 
-saved_particles = load("reference/mutation_outputs.jld", "particles")
+saved_particles = load("reference/mutation_outputs.jld2", "particles")
 
 particle_fields = fieldnames(new_particles[1])
 @testset "Individual Particle Fields Post-Mutation" begin

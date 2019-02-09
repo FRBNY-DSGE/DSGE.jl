@@ -16,9 +16,9 @@ test_poly_resample = resample(weights, method = :polyalgo)
     file["poly"] = test_poly_resample
 end=#
 
-saved_sys_resample = load("reference/resample.jld", "sys")
-saved_multi_resample = load("reference/resample.jld", "multi")
-saved_poly_resample = load("reference/resample.jld", "poly")
+saved_sys_resample = load("reference/resample.jld2", "sys")
+saved_multi_resample = load("reference/resample.jld2", "multi")
+saved_poly_resample = load("reference/resample.jld2", "poly")
 
 ####################################################################
 @testset "Resampling methods" begin
