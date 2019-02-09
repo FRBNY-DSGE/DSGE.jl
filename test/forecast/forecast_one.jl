@@ -49,7 +49,7 @@ for cond_type in [:none, :semi, :full]
 end
 
 # Read expected output
-exp_out = jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
+exp_out = JLD2.jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
     read(file, "exp_out")
 end
 
@@ -87,13 +87,13 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
 @testset "Test full-distribution blocking" begin
     for input_type in [:mode, :full]
         output_files = get_forecast_output_files(m, input_type, :none, output_vars)
-        jldopen(output_files[:trendobs], "r") do file
+        JLD2.jldopen(output_files[:trendobs], "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :trend, :obs_gdp)) == 2
         end
-        jldopen(output_files[:forecastobs], "r") do file
+        JLD2.jldopen(output_files[:forecastobs], "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :forecast, :obs_gdp)) == 2
         end
-        jldopen(output_files[:irfobs], "r") do file
+        JLD2.jldopen(output_files[:irfobs], "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
         end
     end
