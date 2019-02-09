@@ -142,7 +142,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                     end
                 end
 
-                if isinf(draw_loglh)
+                if any(isinf.(draw_loglh))
                     draw = vec(rand(m.parameters, 1))
                 else
                     success = true
