@@ -32,13 +32,13 @@ test_init_cloud = ParticleCloud(m, get_setting(m, :n_particles))
 @everywhere srand(42)
 DSGE.initial_draw!(m, data, test_init_cloud)
 
-#= JLD.jldopen("reference/initial_draw.jld", "w") do file
+#=JLD.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
-end
+end =#
 JLD2.jldopen("reference/initial_draw.jld2", "w") do file
     write(file, "cloud", test_init_cloud)
 end
-=#
+
 saved_init_cloud = load("reference/initial_draw.jld2", "cloud")
 
 @testset "Initial draw" begin
@@ -49,13 +49,14 @@ end
 ###################################################################
 # Smets Wouters
 ###################################################################
+using DSGEModels
 m = SmetsWoutersOrig()
 
 save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, save)
 
 data = readdlm("reference/YY.txt")
-data = data'
+data = Matrix{Float64}(data')
 
 m <= Setting(:n_particles, 12000)
 m <= Setting(:n_Φ, 500)
@@ -84,7 +85,7 @@ DSGE.initial_draw!(m, data, test_init_cloud)
 end
 JLD2.jldopen("reference/initial_draw_sw.jld2", true, true, true, IOStream) do file
     write(file, "cloud", test_init_cloud)
-end=#
+end =#
 
 saved_init_cloud = load("reference/initial_draw_sw.jld2", "cloud")
 

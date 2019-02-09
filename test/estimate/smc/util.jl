@@ -15,8 +15,8 @@ n_blocks = 3
 test_blocks_free = DSGE.generate_free_blocks(n_free_para, n_blocks)
 test_blocks_all  = DSGE.generate_all_blocks(test_blocks_free, free_para_inds)
 
-saved_blocks_free = load("reference/util.jld", "blocks_free")
-saved_blocks_all  = load("reference/util.jld", "blocks_all")
+saved_blocks_free = load("reference/util.jld2", "blocks_free")
+saved_blocks_all  = load("reference/util.jld2", "blocks_all")
 
 @testset "Mutation block generation" begin
     @test test_blocks_free == saved_blocks_free
