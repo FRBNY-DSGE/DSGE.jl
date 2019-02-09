@@ -1,4 +1,4 @@
-using Test, Printf, DSGE, JLD2, FileIO, LinearAlgebra, Distributions, PDMats, HDF5
+using Test, Printf, DSGE, JLD, JLD2, FileIO, LinearAlgebra, Distributions, PDMats, HDF5, OrderedCollections, DataFrames
 #@everywhere using DSGE, JLD
 
 my_tests = [
@@ -27,7 +27,7 @@ my_tests = [
             "estimate/smc/resample",
             "estimate/smc/util",
             "estimate/smc/mutation",
-            "data/misc", =#
+            "data/misc",
             "data/load_data",
             "forecast/smooth",
             "forecast/forecast",
@@ -40,7 +40,7 @@ my_tests = [
             "scenarios/scenario",
             "scenarios/forecast",
             "scenarios/switching",
-            "scenarios/drivers",
+            "scenarios/drivers",=#
             "decomp/decompose_forecast",
             "plot/plot"
             ]

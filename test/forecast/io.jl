@@ -40,46 +40,46 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
 
     # write_forecast_metadata
     for var in output_vars
-        jldopen(dict[var], "w") do file
+        JLD2.jldopen(dict[var], "w") do file
             DSGE.write_forecast_metadata(m, file, var)
         end
     end
-    jldopen(dict[:histstates], "r") do file
+    JLD2.jldopen(dict[:histstates], "r") do file
         dates = read(file, "date_indices")
         @test dates[date_mainsample_start(m)] == 1
         @test dates[date_mainsample_end(m)] == length(dates)
         @test read(file, "state_indices") == merge(m.endogenous_states, m.endogenous_states_augmented)
         @test all(x -> x == Symbol("identity"), values(read(file, "state_revtransforms")))
     end
-    jldopen(dict[:histobs], "r") do file
+   JLD2. jldopen(dict[:histobs], "r") do file
         @test read(file, "observable_indices") == m.observables
         @test !all(x -> x == Symbol("identity"), values(read(file, "observable_revtransforms")))
     end
-    jldopen(dict[:histpseudo], "r") do file
+   JLD2.jldopen(dict[:histpseudo], "r") do file
         @test read(file, "pseudoobservable_indices") == m.pseudo_observables
         @test !all(x -> x == Symbol("identity"), values(read(file, "pseudoobservable_revtransforms")))
     end
-    jldopen(dict[:histshocks], "r") do file
+    JLD2.jldopen(dict[:histshocks], "r") do file
         @test read(file, "shock_indices") == m.exogenous_shocks
         @test all(x -> x == Symbol("identity"), values(read(file, "shock_revtransforms")))
     end
-    jldopen(dict[:histshocks], "r") do file
+    JLD2.jldopen(dict[:histshocks], "r") do file
         @test read(file, "shock_indices") == m.exogenous_shocks
         @test all(x -> x == Symbol("identity"), values(read(file, "shock_revtransforms")))
     end
-    jldopen(dict[:forecastobs], "r") do file
+    JLD2.jldopen(dict[:forecastobs], "r") do file
         dates = read(file, "date_indices")
         @test dates[date_forecast_start(m)] == 1
         @test dates[date_forecast_end(m)] == length(dates)
     end
     for class in [:shockdec, :dettrend, :trend]
-        jldopen(dict[Symbol(class, "obs")], "r") do file
+        JLD2.jldopen(dict[Symbol(class, "obs")], "r") do file
             dates = read(file, "date_indices")
             @test dates[date_mainsample_start(m)] == 1
             @test dates[date_forecast_end(m)] == length(dates)
         end
     end
-    jldopen(dict[:irfobs], "r") do file
+    JLD2.jldopen(dict[:irfobs], "r") do file
         @test !haskey(file, "date_indices")
         @test all(x -> x == Symbol("identity"), values(read(file, "observable_revtransforms")))
     end
