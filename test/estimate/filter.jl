@@ -7,12 +7,12 @@ path = dirname(@__FILE__)
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
-df, system, z0, P0 = jldopen("$path/../reference/forecast_args.jld2", "r") do file
+df, system, z0, P0 = JLD2.jldopen("$path/../reference/forecast_args.jld2", "r") do file
     read(file, "df"), read(file, "system"), read(file, "z0"), read(file, "P0")
 end
 
 # Read expected output
-exp_kal = jldopen("$path/../reference/filter_out.jld2", "r") do file
+exp_kal = JLD2.jldopen("$path/../reference/filter_out.jld2", "r") do file
     read(file, "exp_kal")
 end
 df2 = DataFrame()
