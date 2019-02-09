@@ -20,7 +20,7 @@ tempering_target        = read(file, "tempering_target")
 resampled_last_period   = read(file, "resampled_last_period")
 close(file)
 
-@everywhere srand(42)
+@everywhere Random.seed!(42)
 test_ϕ_n, test_resampled_last_period, test_j, test_ϕ_prop = DSGE.solve_adaptive_ϕ(cloud, proposed_fixed_schedule,
                                                                              i, j, ϕ_prop, ϕ_n1, tempering_target,
                                                                              resampled_last_period)

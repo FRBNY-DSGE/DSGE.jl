@@ -29,7 +29,7 @@ m <= Setting(:use_fixed_schedule, true)
 
 ####################################################################
 test_init_cloud = ParticleCloud(m, get_setting(m, :n_particles))
-@everywhere srand(42)
+@everywhere Random.seed!(42)
 DSGE.initial_draw!(m, data, test_init_cloud)
 
 #=JLD.jldopen("reference/initial_draw.jld", "w") do file
@@ -76,7 +76,7 @@ m <= Setting(:use_chand_recursion, true)
 
 ####################################################################
 test_init_cloud = ParticleCloud(m, get_setting(m, :n_particles))
-@everywhere srand(42)
+@everywhere Random.seed!(42)
 DSGE.initial_draw!(m, data, test_init_cloud)
 
 

@@ -3,7 +3,7 @@ using DSGE
 using HDF5, JLD
 import Base.Test: @test, @testset
 
-@everywhere srand(42)
+@everywhere Random.seed!(42)
 weights = rand(400)
 weights = weights/sum(weights)
 test_sys_resample = resample(weights, method = :systematic)
