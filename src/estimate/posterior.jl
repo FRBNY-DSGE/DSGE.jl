@@ -145,12 +145,12 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     # Return total log-likelihood, excluding the presample
     try
         if use_chand_recursion==false
-            kal = filter(m, data, system; outputs = [:loglh], include_presample = false, tol = tol)
+            kal = filter(m, data, system; outputs = [:loglh], include_presample = false)#, tol = tol)
             return kal[:total_loglh]
         else
             return chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
                                    system[:QQ], system[:ZZ], system[:DD], system[:EE];
-                                   allout = false, Nt0 = n_presample_periods(m), tol = tol)[1]
+                                   allout = false, Nt0 = n_presample_periods(m))[1] #, tol = tol
         end
     catch err
         if catch_errors && isa(err, DomainError)
