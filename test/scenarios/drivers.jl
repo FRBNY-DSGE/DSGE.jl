@@ -60,6 +60,7 @@ simulate_switching(m, alldef, verbose = :none)
 default_draws = JLD2.jldopen(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs]) do file
     read(file, "arr")
 end
+@show default_draws
 
 actual = JLD2.jldopen(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs]) do file
     read(file, "arr")

@@ -88,21 +88,21 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 - `old mixture_density::T`: The mixture density conditional on θ_new evaluated at `θ_old` to be used in calculating the MH move probability
 
 """
-function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Distribution;
-                                                 c::T = 1.0, α::T = 1.0)
+function mvnormal_mixture_draw(θ_old::Vector{T}, d_prop::Distribution;
+                                                 c::T = 1.0, α::T = 1.0) where T<:AbstractFloat
     @assert 0 <= α <= 1
     d_bar = MvNormal(d_prop.μ, c^2 * d_prop.Σ)
 
     # Create mixture distribution conditional on the previous parameter value, θ_old
     d_old      = MvNormal(θ_old, c^2 * d_prop.Σ)
-    d_diag_old = MvNormal(θ_old, diagm(diag(c^2 * d_prop.Σ))) # FORTRAN: multiplies by 3
+    d_diag_old = MvNormal(θ_old, diagm(0 => diag(c^2 * d_prop.Σ))) # FORTRAN: multiplies by 3
     d_mix_old  = MixtureModel(MvNormal[d_old, d_diag_old, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     θ_new = rand(d_mix_old)
 
     # Create mixture distribution conditional on the new parameter value, θ_new
     d_new      = MvNormal(θ_new, c^2 * d_prop.Σ)
-    d_diag_new = MvNormal(θ_new, diagm(diag(c^2 * d_prop.Σ)))
+    d_diag_new = MvNormal(θ_new, diagm(0 => diag(c^2 * d_prop.Σ)))
     d_mix_new  = MixtureModel(MvNormal[d_new, d_diag_new, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     # The density of θ_new | θ_old and the density of θ_old | θ_new
@@ -120,8 +120,8 @@ function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector
 ```
 Compute ESS given log likelihood, current weights, ϕ_n, ϕ_{n-1}, and old log likelihood.
 """
-function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
-                                       ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh)))
+function compute_ESS(loglh::Vector{T}, current_weights::Vector{T},
+                                       ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh))) where T<:AbstractFloat
     inc_weights  = exp.((ϕ_n1 - ϕ_n) * old_loglh + (ϕ_n - ϕ_n1) * loglh)
     new_weights  = current_weights .* inc_weights
     norm_weights = new_weights / sum(new_weights)

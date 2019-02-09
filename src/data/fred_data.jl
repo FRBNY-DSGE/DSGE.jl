@@ -83,7 +83,7 @@ function load_fred_data(m::AbstractModel;
                                                        observation_end=string(end_date),
                                                        vintage_dates=string(vint_date))
             catch err
-                if :msg in fieldnames(err)
+                if :msg in fieldnames(typeof(err))
                     @warn err.msg
                 else
                     show(err)
@@ -96,7 +96,7 @@ function load_fred_data(m::AbstractModel;
                                                            observation_start=string(start_date),
                                                            observation_end=string(end_date))
                 catch err
-                    if :msg in fieldnames(err)
+                    if :msg in fieldnames(typeof(err))
                         @warn err.msg
                     else
                         show(err)
