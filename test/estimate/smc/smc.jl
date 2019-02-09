@@ -31,7 +31,7 @@ m <= Setting(:resampling_threshold, .5)
 m <= Setting(:smc_iteration, 0)
 m <= Setting(:use_chand_recursion, true)
 
-@everywhere srand(42)
+@everywhere Random.seed!(42)
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
 
 test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
@@ -116,7 +116,7 @@ m <= Setting(:resampling_threshold, .5)
 m <= Setting(:smc_iteration, 0)
 m <= Setting(:use_chand_recursion, true)
 
-@everywhere srand(42)
+@everywhere Random.seed!(42)
 smc(m, data, verbose = :none, run_test = true)
 
 test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
@@ -199,7 +199,7 @@ m <= Setting(:resampling_threshold, .5)
 m <= Setting(:smc_iteration, 0)
 m <= Setting(:use_chand_recursion, true)
 
-@everywhere srand(42)
+@everywhere Random.seed!(42)
 smc(m, data, verbose = :none, run_test = true)
 
 test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))

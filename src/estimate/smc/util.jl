@@ -74,7 +74,7 @@ Function ensures type conformity of the return arguments.
 """
 function vector_reshape(args...)
     n_args = length(args)
-    return_arg = Vector{Matrix{Float64}}(n_args)
+    return_arg = Vector{Matrix{Float64}}(undef, n_args)
     for i in 1:n_args
         arg = typeof(args[i]) <: Vector ? args[i] : [args[i]]
         return_arg[i] = reshape(arg, length(arg), 1)
@@ -95,7 +95,7 @@ function generate_free_blocks(n_free_para::Int64, n_blocks::Int64)
     subset_length     = cld(n_free_para, n_blocks) # ceiling division
     last_block_length = n_free_para - subset_length*(n_blocks - 1)
 
-    blocks_free = Vector{Vector{Int64}}(n_blocks)
+    blocks_free = Vector{Vector{Int64}}(undef, n_blocks)
     for i in 1:n_blocks
         if i < n_blocks
             blocks_free[i] = rand_inds[((i-1)*subset_length + 1):(i*subset_length)]

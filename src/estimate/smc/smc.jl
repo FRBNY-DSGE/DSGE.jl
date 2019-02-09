@@ -34,7 +34,7 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix{Float64};
-             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
+             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud = ParticleCloud(m, 0), run_test = false)
     ########################################################################################
     ### Setting Parameters
@@ -83,8 +83,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     target = accept = get_setting(m, :target_accept)
     α      = get_setting(m, :mixture_proportion)
 
-    fixed_para_inds = find([θ.fixed for θ in m.parameters])
-    free_para_inds  = find([!θ.fixed for θ in m.parameters])
+    fixed_para_inds = findall([θ.fixed for θ in m.parameters])
+    free_para_inds  = findall([!θ.fixed for θ in m.parameters])
     n_free_para     = length(free_para_inds)
 
     ########################################################################################
@@ -125,9 +125,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # Fixed schedule for construction of ϕ_prop
     if use_fixed_schedule
-        cloud.tempering_schedule = ((collect(1:n_Φ)-1) / (n_Φ-1)) .^ λ
+        cloud.tempering_schedule = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
     else
-        proposed_fixed_schedule  = ((collect(1:n_Φ)-1) / (n_Φ-1)) .^ λ
+        proposed_fixed_schedule  = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
     end
 
     # Instantiate incremental and normalized weight matrices to be used for logMDD calculation
@@ -155,7 +155,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     while ϕ_n < 1.
 
-        tic()
+        start_time = time_ns()
         cloud.stage_index = i += 1
 
         ########################################################################################
@@ -217,7 +217,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
 
         # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH step
-        c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1. + exp(16.*(cloud.accept - target))))
+        c = c*(0.95 + 0.10*exp(16 .*(cloud.accept - target))/(1. + exp(16 .*(cloud.accept - target))))
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
@@ -235,16 +235,16 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
         if parallel
-            new_particles = @parallel (vcat) for j in 1:n_parts
-                mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+            new_particles = @distributed (vcat) for k in 1:n_parts
+                mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                          c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose)
             end
         else
-            new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
+            new_particles = [mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
                                       ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                                       use_chand_recursion = use_chand_recursion,
-                                      verbose = verbose) for j=1:n_parts]
+                                      verbose = verbose) for k=1:n_parts]
         end
 
         cloud.particles = new_particles
@@ -253,7 +253,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
         ### Timekeeping and Output Generation
         ########################################################################################
-        cloud.total_sampling_time += toq()
+        cloud.total_sampling_time += start_time - time_ns()
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)

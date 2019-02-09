@@ -112,13 +112,13 @@ filter over the main sample all at once.
   the zero-lower-bound period are returned in a dictionary.
 - `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
 """
-function likelihood{T<:AbstractFloat}(m::AbstractModel,
+function likelihood(m::AbstractModel,
                                       data::Matrix{T};
                                       sampler::Bool = false,
                                       catch_errors::Bool = false,
                                       use_chand_recursion::Bool = false,
                                       tol::Float64 = 0.0,
-                                      verbose::Symbol = :high)
+                                      verbose::Symbol = :high) where T<:AbstractFloat
     catch_errors = catch_errors | sampler
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds

@@ -14,7 +14,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
     loglh   = zeros(n_parts)
     logpost = zeros(n_parts)
     if parallel
-        draws, loglh, logpost = @sync @parallel (vector_reduce) for i in 1:n_parts
+        draws, loglh, logpost = @sync @distributed (vector_reduce) for i in 1:n_parts
             draw         = vec(rand(m.parameters, 1))
             draw_loglh   = 0.
             draw_logpost = 0.
@@ -46,8 +46,8 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             end
             vector_reshape(draw, draw_loglh, draw_logpost)
         end
-        loglh = squeeze(loglh, 1)
-        logpost = squeeze(logpost, 1)
+        loglh = dropdims(loglh, dims = 1)
+        logpost = dropdims(logpost, dims = 1)
     else
         draws = rand(m.parameters, n_parts)
         for i in 1:n_parts
@@ -103,7 +103,7 @@ function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::Par
     logpost = zeros(n_parts)
 
     if parallel
-        loglh, logpost = @sync @parallel (scalar_reduce) for i in 1:n_parts
+        loglh, logpost = @sync @distributed (scalar_reduce) for i in 1:n_parts
             update!(m, draws[:, i])
             draw_loglh = likelihood(m, data, verbose = verbose)
             draw_logpost = prior(m)
