@@ -2,7 +2,7 @@ using Test, Printf, DSGE, JLD, JLD2, FileIO, LinearAlgebra, Distributions, PDMat
 #@everywhere using DSGE, JLD
 
 my_tests = [
-           #= "core",
+            "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
@@ -40,7 +40,7 @@ my_tests = [
             "scenarios/scenario",
             "scenarios/forecast",
             "scenarios/switching",
-            "scenarios/drivers",=#
+            "scenarios/drivers",
             "decomp/decompose_forecast",
             "plot/plot"
             ]
