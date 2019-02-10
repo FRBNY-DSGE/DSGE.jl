@@ -24,8 +24,8 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
     end
 
     if calculation_method == :incremental_weights
-        #file = load(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(get_setting(m,:tempering_target))]))
-        file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+        #file = load(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(get_setting(m,:tempering_target))]))
+        file = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"))
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
@@ -35,8 +35,8 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
         free_para_inds = find(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
-            #cloud = load(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(get_setting(m, :tempering_target))]), "cloud")
-            cloud = load(rawpath(m, "estimate", "smc_cloud.jld"), "cloud")
+            #cloud = load(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(get_setting(m, :tempering_target))]), "cloud")
+            cloud = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 
@@ -87,8 +87,8 @@ function tt2string(time_temper::Symbol)
 end
 
 function marginal_data_density(m::AbstractModel)
-    #file = load(rawpath(m, "estimate")*"/smc_cloud_adpt=$(get_setting(m, :adaptive_tempering_target_smc))_iter=$(get_setting(m, :smc_iteration))_ttemp=$(tt2string(get_setting(m, :time_tempered)))_vint=$(get_setting(m, :data_vintage))"*".jld")
-    file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+    #file = load(rawpath(m, "estimate")*"/smc_cloud_adpt=$(get_setting(m, :adaptive_tempering_target_smc))_iter=$(get_setting(m, :smc_iteration))_ttemp=$(tt2string(get_setting(m, :time_tempered)))_vint=$(get_setting(m, :data_vintage))"*".jld2")
+    file = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"))
     cloud, w, W = file["cloud"], file["w"], file["W"]
     w_W = w[:, 2:end] .* W[:, 1:end-1]
 
@@ -272,8 +272,8 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
     end
 
     if calculation_method == :incremental_weights
-        #file = load(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(get_setting(m, :tempering_target))]))
-        file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+        #file = load(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(get_setting(m, :tempering_target))]))
+        file = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"))
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
@@ -283,7 +283,7 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
         free_para_inds = find(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
-            cloud = load(rawpath(m, "estimate", "smc_cloud.jld"), "cloud")
+            cloud = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 
@@ -322,4 +322,3 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
     end
 
 end
-

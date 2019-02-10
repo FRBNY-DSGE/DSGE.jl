@@ -102,8 +102,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if tempered_update
         if isempty(old_cloud)
             # Load the previous ParticleCloud as the starting point for time tempering
-            loadpath = rawpath(m, "estimate", "smc_cloud.jld")
-            #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
+            loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
+            #loadpath = rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)])
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
             cloud = load(loadpath, "cloud")
@@ -277,8 +277,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        #jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
+        #jld2open(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)]), "w") do file
+        JLD2.open(rawpath(m, "estimate", "smc_cloud.jld2"), true, true, true, IOStream) do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
