@@ -101,6 +101,10 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             catch err
                 if isa(err, ParamBoundsError)
                     prior_new = like_new = like_old_data = -Inf
+                elseif isa(err, PosDefException)
+                    prior_new = -Inf
+                    like_new = -Inf
+                    like_old_data = -Inf
                 else
                     throw(err)
                 end

@@ -33,6 +33,9 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                 catch err
                     if isa(err, ParamBoundsError)
                         draw_loglh = draw_logpost = -Inf
+                    elseif isa(err, PosDefException)
+                        draw_loglh = -Inf
+                        draw_logpost = -Inf
                     else
                         throw(err)
                     end
@@ -65,6 +68,9 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                 catch err
                     if isa(err, ParamBoundsError)
                         loglh[i] = logpost[i] = -Inf
+                    elseif isa(err, PosDefException)
+                        logpost[i] = -Inf
+                        loglh[i] = -Inf
                     else
                         throw(err)
                     end
