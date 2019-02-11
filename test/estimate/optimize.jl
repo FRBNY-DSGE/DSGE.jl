@@ -12,6 +12,7 @@ file = "$path/../reference/optimize.h5"
 #=params_test = h5read(file, "params")
 data_test = h5read(file, "data")=#
 
+file = "$path/../reference/optimize.h5"
 x0 = h5read(file, "params")
 data = h5read(file, "data")'
 minimizer = h5read(file, "minimizer")
