@@ -253,7 +253,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
         ### Timekeeping and Output Generation
         ########################################################################################
-        cloud.total_sampling_time += start_time - time_ns()
+        cloud.total_sampling_time += (start_time - time_ns())/6e10
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
@@ -278,7 +278,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         end
         close(simfile)
         #jld2open(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)]), "w") do file
-        JLD2.open(rawpath(m, "estimate", "smc_cloud.jld2"), true, true, true, IOStream) do file
+        JLD2.jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), true, true, true, IOStream) do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
