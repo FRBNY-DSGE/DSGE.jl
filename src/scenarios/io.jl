@@ -203,6 +203,8 @@ read_scenario_output(m, agg::ScenarioAggregate, class, product, var_name)
 
 Given either `scen` or `agg`, read in and return all draws of and the
 appropriate reverse transform for `var_name`.
+
+The third function that takes in two models is used for when we have scenarios from two different models.
 """
 function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Symbol, product::Symbol,
                               var_name::Symbol)
@@ -305,6 +307,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
     return fcast_series, transform, scen_dates
 end
 
+
 function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
@@ -330,6 +333,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
         if in(:scenarios, fieldnames(scen)) #length(scen.scenarios)>1
             scen_draws, transform = read_scenario_output(m, m904, scen, class, product, var_name)
         else
+            # If BOR8 or BOR9 (switching or non-switching), read GDP Deflator instead of core PCE
             if scen.key==:bor8 || scen.key==:bor9 || scen.key==:bor8_02 || scen.key==:bor9_02
                 # Recursively read in scenario draws
                 scen_draws, transform = read_scenario_output(m904, scen, class, product, var_name)
