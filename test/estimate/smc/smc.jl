@@ -34,7 +34,7 @@ m <= Setting(:use_chand_recursion, true)
 @everywhere Random.seed!(42)
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
 
-test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]
@@ -119,7 +119,7 @@ m <= Setting(:use_chand_recursion, true)
 @everywhere Random.seed!(42)
 smc(m, data, verbose = :none, run_test = true)
 
-test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]
@@ -202,7 +202,7 @@ m <= Setting(:use_chand_recursion, true)
 @everywhere Random.seed!(42)
 smc(m, data, verbose = :none, run_test = true)
 
-test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]
