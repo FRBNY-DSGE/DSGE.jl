@@ -14,7 +14,7 @@ file = "$path/../reference/optimize.h5"
 data_test = h5read(file, "data")=#
 
 x0 = h5read(file, "params")
-data = h5read(file, "data")'
+data = Matrix{Float64}(h5read(file, "data")')
 minimizer = h5read(file, "minimizer")
 minimum = h5read(file, "minimum")
 H_expected = h5read(file, "H")
@@ -28,13 +28,13 @@ x0 = Float64[p.value for p in m.parameters]
 out, H = optimize!(m, data; iterations=n_iterations)
 
 # Re-generate test file
-#= h5open("$path/../reference/optimize.h5", "w") do file
+#=h5open("$path/../reference/optimize.h5", "w") do file
     file["params"] = params_test
     file["data"] = data_test
     file["minimizer"] = out.minimizer
     file["minimum"] = out.minimum
     file["H"] = H
-end =#
+end=#
 
 @testset "Check optimize minimizers are the same" begin
     @test @test_matrix_approx_eq minimizer out.minimizer
