@@ -159,7 +159,7 @@ function init_stage_print(cloud::ParticleCloud;
         μ = weighted_mean(cloud)
         σ = weighted_std(cloud)
         for n=1:length(cloud.particles[1])
-            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
+            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], digits = 5)), $(round(σ[n], digits = 5))")
 	    end
     end
 end
@@ -175,11 +175,11 @@ function end_stage_print(cloud::ParticleCloud;
     println("--------------------------")
     if use_fixed_schedule
         println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
-        println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
-        println("estimated time remaining: $(round(expected_time_remaining_minutes, 4)) minutes")
+        println("time elapsed: $(round(total_sampling_time_minutes, digits = 4)) minutes")
+        println("estimated time remaining: $(round(expected_time_remaining_minutes, digits = 4)) minutes")
     else
         println("Iteration = $(cloud.stage_index)")
-        println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
+        println("time elapsed: $(round(total_sampling_time_minutes, digits = 4)) minutes")
     end
     println("--------------------------")
         println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
@@ -192,7 +192,7 @@ function end_stage_print(cloud::ParticleCloud;
         μ = weighted_mean(cloud)
         σ = weighted_std(cloud)
         for n=1:length(cloud.particles[1])
-            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
+            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], digits = 5)), $(round(σ[n], digits = 5))")
         end
     end
 end

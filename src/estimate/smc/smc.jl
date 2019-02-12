@@ -253,7 +253,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
         ### Timekeeping and Output Generation
         ########################################################################################
-        cloud.total_sampling_time += (start_time - time_ns())/6e10
+        total_time = Float64((time_ns()-start_time)*1e-9)
+        @show total_time
+        cloud.total_sampling_time += total_time
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
