@@ -33,10 +33,9 @@ SMC is broken up into three main steps:
 - `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level for the ESS.
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix{Float64};
-             verbose::Symbol = :low,
+function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-             old_cloud::ParticleCloud = ParticleCloud(m, 0), run_test = false)
+             old_cloud::ParticleCloud = ParticleCloud(m, 0), run_test::Bool = false)
     ########################################################################################
     ### Setting Parameters
     ########################################################################################

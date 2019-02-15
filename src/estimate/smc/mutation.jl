@@ -28,7 +28,7 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distribution,
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
                   ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
-                  old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
+                  old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                   use_chand_recursion::Bool = false,
                   verbose::Symbol = :low)
 
