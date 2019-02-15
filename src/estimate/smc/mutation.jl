@@ -29,8 +29,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
                   ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
                   old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-                  use_chand_recursion::Bool = false,
-                  verbose::Symbol = :low)
+                  use_chand_recursion::Bool = false, verbose::Symbol = :low)
 
     n_steps     = get_setting(m, :n_mh_steps_smc)
     n_free_para = length([!θ.fixed for θ in m.parameters])
