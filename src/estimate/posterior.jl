@@ -37,7 +37,7 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 function posterior(m::AbstractModel{T},
                    data::AbstractArray;
                    sampler::Bool = false, ϕ_smc::Float64 = 1.,
-                                     catch_errors::Bool = false) where {T<:AbstractFloat}
+                   catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
     like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
     post = ϕ_smc*like + prior(m)
@@ -67,11 +67,11 @@ Evaluates the log posterior density at `parameters`.
     likelihood when calculating the posterior. It is used primarily in SMC.
 """
 function posterior!(m::AbstractModel{T},
-                                      parameters::Vector{T},
-                                      data::AbstractArray;
-                                      sampler::Bool = false,
-                                      ϕ_smc::Float64 = 1.,
-                                      catch_errors::Bool = false) where {T<:AbstractFloat}
+                    parameters::Vector{T},
+                    data::AbstractArray;
+                    sampler::Bool = false,
+                    ϕ_smc::Float64 = 1.,
+                    catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
     if sampler
         try
