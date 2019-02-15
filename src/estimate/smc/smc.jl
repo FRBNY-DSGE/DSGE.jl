@@ -254,7 +254,6 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
         ### Timekeeping and Output Generation
         ########################################################################################
         total_time = Float64((time_ns()-start_time)*1e-9)
-        @show total_time
         cloud.total_sampling_time += total_time
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]

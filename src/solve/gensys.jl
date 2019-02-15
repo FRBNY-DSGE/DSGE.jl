@@ -49,7 +49,7 @@ We constrain Julia to use the complex version of the `schurfact` routine regardl
 types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses the complex version
 of the Schur decomposition, even if the inputs are real numbers.
 """
-function gensys(Γ0::Array{Float64, 2}, Γ1::Array{Float64, 2}, c::Array{Float64, 1}, Ψ::Array{Float64, 2}, Π::Array{Float64, 2}, args...; verbose::Symbol = :high)
+function gensys(Γ0::Array{Float64, 2}, Γ1::Array{Float64, 2}, c::Array{Float64, 1}, Ψ::Array{Float64, 2}, Π::Array{Float64, 2}, div::Float64 = 0.0; verbose::Symbol = :high)
     F = try
         schur!(complex(Γ0), complex(Γ1))
     catch ex
@@ -60,18 +60,22 @@ function gensys(Γ0::Array{Float64, 2}, Γ1::Array{Float64, 2}, c::Array{Float64
             G1 = Array{Float64, 2}(undef,0,0)
             C = Array{Float64, 1}(undef,0)
             impact = Array{Float64, 2}(undef,0,0)
-            fmat = Array{Complex{Float64}, 2}(undef,0,0)
-            fwt = Array{Complex{Float64}, 2}(undef,0,0)
-            ywt = Vector{Complex{Float64}}(undef,0)
-            gev = Vector{Complex{Float64}}(undef,0)
-            loose = Array{Float64, 2}(undef,0,0)
+            #fmat = Array{Complex{Float64}, 2}(undef,0,0)
+            #fwt = Array{Complex{Float64}, 2}(undef,0,0)
+            #ywt = Vector{Complex{Float64}}(undef,0)
+            #gev = Vector{Complex{Float64}}(undef,0)
+            #loose = Array{Float64, 2}(undef,0,0)
 
-            return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+            return G1, C, impact, eu #G1, C, impact, fmat, fwt, ywt, gev, eu, loose
         else
             rethrow(ex)
         end
     end
-    gensys(F, c, Ψ, Π, args...; verbose = verbose)
+    if div == 0.0
+        gensys(F, c, Ψ, Π; verbose = verbose)
+    else
+        gensys(F, c, Ψ, Π, div; verbose = verbose)
+    end
 end
 
 function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Array{Float64, 2}, Π::Array{Float64, 2}; verbose::Symbol = :low)
@@ -107,13 +111,13 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Arr
         G1     = Array{Float64, 2}(undef,0, 0)
         C      = Array{Float64, 1}(undef,0)
         impact = Array{Float64, 2}(undef,0)
-        fmat   = Array{Complex{Float64}, 2}(undef,0,0)
-        fwt    = Array{Complex{Float64}, 2}(undef,0,0)
-        ywt    = Vector{Complex{Float64}}(undef,0)
-        gev    = Vector{Complex{Float64}}(undef,0)
-        loose  = Array{Float64, 2}(undef,0,0)
+        #fmat   = Array{Complex{Float64}, 2}(undef,0,0)
+        #fwt    = Array{Complex{Float64}, 2}(undef,0,0)
+        #ywt    = Vector{Complex{Float64}}(undef,0)
+        #gev    = Vector{Complex{Float64}}(undef,0)
+        #loose  = Array{Float64, 2}(undef,0,0)
 
-        return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+        return G1, C, impact, eu #G1, C, impact, fmat, fwt, ywt, gev, eu, loose
     end
 
     FS = ordschur!(F, select)
@@ -199,20 +203,20 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Arr
     Ausix  = a[usix,usix]
     C      = G0I * vcat(tmat * (adjoint(qt) * c), (Ausix - Busix) \ (adjoint(qt2) * c))
     impact = G0I * vcat(tmat * (adjoint(qt) * Ψ), zeros(nunstab, size(Ψ, 2)))
-    fmat   = Busix \ Ausix
-    fwt    = -Busix \ (adjoint(qt2) * Ψ)
-    ywt    = G0I[:, usix]
+    #fmat   = Busix \ Ausix
+    #fwt    = -Busix \ (adjoint(qt2) * Ψ)
+    #ywt    = G0I[:, usix]
 
-    loose  = G0I * vcat(etawt1 * (eye(neta) - (veta * adjoint(veta))), zeros(nunstab, neta))
+    #loose  = G0I * vcat(etawt1 * (eye(neta) - (veta * adjoint(veta))), zeros(nunstab, neta))
 
     G1     = real(z * (G1 * adjoint(z)))
     C      = real(z * C)
     impact = real(z * impact)
-    loose  = real(z * loose)
+    #loose  = real(z * loose)
 
-    ywt = z * ywt
+    #ywt = z * ywt
 
-    return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+    return G1, C, impact, eu #G1, C, impact, fmat, fwt, ywt, gev, eu, loose
 end
 
 
