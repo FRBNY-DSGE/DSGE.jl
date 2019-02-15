@@ -34,7 +34,8 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix{Float64};
-             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
+             verbose::Symbol = :low,
+             old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud = ParticleCloud(m, 0), run_test = false)
     ########################################################################################
     ### Setting Parameters
@@ -103,7 +104,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         if isempty(old_cloud)
             # Load the previous ParticleCloud as the starting point for time tempering
             loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
-            #loadpath = rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)])
+            #loadpath = rawpath(m,"estimate","smc_cloud.jld2",["adpt="*string(tempering_target)])
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
             cloud = load(loadpath, "cloud")
@@ -200,7 +201,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # If this assertion does not hold then there are likely too few particles
         @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
 
-        # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
+        # Resample if degeneracy/effective sample size metric falls below the accepted threshold
         if (cloud.ESS[i] < threshold)
             new_inds = resample(normalized_weights; method = resampling_method)
             # update parameters/logpost/loglh with resampled values
