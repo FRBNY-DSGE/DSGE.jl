@@ -12,11 +12,11 @@ mutable struct Transition{T<:AbstractFloat}
     RRR::Matrix{T}
     CCC::Vector{T}
 end
-function Transition(TTT::Matrix{T}, RRR::Matrix{T}) where T <: AbstractFloat
+function Transition(TTT::Matrix{T}, RRR::Matrix{T}) where T<:AbstractFloat
     CCC = zeros(eltype(TTT), size(TTT, 1))
     Transition{T}(TTT, RRR, CCC)
 end
-function Transition(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where T <: AbstractFloat
+function Transition(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where T<:AbstractFloat
     Transition{T}(TTT, RRR, collect(CCC))
 end
 function Base.getindex(eq::Transition, d::Symbol)
@@ -112,7 +112,7 @@ mutable struct System{T<:AbstractFloat}
     pseudo_measurement::PseudoMeasurement{T}
 end
 
-function System(transition::Transition{T}, measurement::Measurement{T}) where T <: AbstractFloat
+function System(transition::Transition{T}, measurement::Measurement{T}) where T<:AbstractFloat
     # Initialize empty pseudo-measurement equation
     _n_states = size(transition.TTT, 1)
     _n_pseudo = 0
@@ -152,9 +152,9 @@ compute_system(m; apply_altpolicy = false)
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false,
-                                          verbose::Symbol = :high,
-                                          solution_method::Symbol = get_setting(m, :solution_method))
+function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
+                        verbose::Symbol = :high,
+                        solution_method::Symbol = get_setting(m, :solution_method)) where T<:AbstractFloat
     # Solve model
     if solution_method == :gensys
         TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
@@ -204,7 +204,7 @@ compute_system_function(system::System{S}) where S<:AbstractFloat
 - `F_ϵ::Distributions.MvNormal`: shock distribution
 - `F_u::Distributions.MvNormal`: measurement error distribution
 """
-function compute_system_function(system::System{S}) where S <: AbstractFloat
+function compute_system_function(system::System{S}) where S<:AbstractFloat
     # Unpack system
     TTT    = system[:TTT]
     RRR    = system[:RRR]
@@ -227,7 +227,7 @@ function compute_system_function(system::System{S}) where S <: AbstractFloat
     return Φ, Ψ, F_ϵ, F_u
 end
 
-function zero_system_constants(system::System{S}) where S <: AbstractFloat
+function zero_system_constants(system::System{S}) where S<:AbstractFloat
     system = copy(system)
 
     system.transition.CCC = zeros(size(system[:CCC]))

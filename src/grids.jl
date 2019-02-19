@@ -26,7 +26,7 @@ end
 # Lower bound, upper bound, and number of points
 function uniform_quadrature(lower_bound::T, upper_bound::T, n_points::Int;
                             scale::T = 1) where {T<:Real}
-    grid = collect(range(lower_bound, step=upper_bound, length=n_points))
+    grid = collect(range(lower_bound, stop = upper_bound, length = n_points))
     weights = fill(scale/n_points, n_points)
     return grid, weights
 end

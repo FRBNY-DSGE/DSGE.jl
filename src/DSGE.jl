@@ -1,10 +1,12 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
+
     using BasisMatrices, BenchmarkTools, CSV, DataFrames, Dates
     using Distributed, Distributions, FFTW, FileIO, ForwardDiff, FredData, HDF5, JLD2
     using LinearAlgebra, Missings, Nullables, Optim, OrderedCollections, Printf, Random, RecipesBase
     using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots, Test
+    using ColorTypes
     using DataStructures
     using QuantEcon: solve_discrete_lyapunov
     using DifferentialEquations: ODEProblem, Tsit5, Euler
@@ -137,7 +139,7 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, KrusellSmith,
-        BondLabor, RealBond, eqcond, measurement, pseudo_measurement, shock_groupings,
+        BondLabor, RealBond, eqcond, measurement, pseudo_measurement, shock_groupings, Grid,
 
         #### Continuous time
         # models
@@ -174,10 +176,6 @@ module DSGE
     include("util.jl")
     include("grids.jl")
     include("chebyshev.jl")
-
-    include("benchmark/util.jl")
-    include("benchmark/benchmark.jl")
-    include("benchmark/io.jl")
 
     include("benchmark/util.jl")
     include("benchmark/benchmark.jl")
