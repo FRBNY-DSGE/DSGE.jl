@@ -1,9 +1,6 @@
 function steadystate!(m::RealBond;
                       βlo::Float64 = 0.4/m[:R],
-                      βhi::Float64 = 1./m[:R],
-                      # Temporary for quicker speeding up/debugging
-                      # βlo::Float64 = 0.941423,
-                      # βhi::Float64 = 0.941432,
+                      βhi::Float64 = 1 ./m[:R],
                       excess::Float64 = 5000.,
                       tol::Float64 = 1e-5,
                       maxit::Int64 = 100)
@@ -67,7 +64,7 @@ function steadystate!(m::RealBond;
 
     # MDχ: This l_in doesn't seem to be used, since it gets immediately overwritten by
     # l_in from policy, unless the while loop condition is never entered
-    l_in_const = βguess*R*sum((qfunction.(abar - xgrid_total).*χss.^(-γ)).*(kron((swts.*ggrid),xwts)))
+    l_in_const = βguess*R*sum((qfunction.(abar .- xgrid_total).*χss.^(-γ)).*(kron((swts.*ggrid),xwts)))
     l_in = l_in_const*ones(nx*ns)
 
     while abs(excess) > tol && count < maxit # clearing markets
@@ -87,7 +84,7 @@ function steadystate!(m::RealBond;
         LPMKF = xwts[1]*swts[1]*KF
 
         # find eigenvalue closest to 1
-        (Dee,Vee) = eig(LPMKF)
+        (Dee,Vee) = eigen(LPMKF)
         if abs(Dee[1]-1)>2e-1 # that's the tolerance we are allowing
             warn("your eigenvalue is ", Dee[1], " which is too far from 1, something is wrong")
         end

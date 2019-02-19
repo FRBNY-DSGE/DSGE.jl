@@ -69,7 +69,7 @@ equilibrium conditions.
   user. See `load_data` and `Observable` for further details.
 
 """
-type RealBond{T} <: AbstractModel{T}
+mutable struct RealBond{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
 
@@ -323,7 +323,7 @@ function init_grids!(m::RealBond)
     # Skill grid
     lsgrid, sprob, sscale = tauchen86(m[:μ_s].value, m[:σ_s].value, ns, λ)
     swts = (sscale/ns)*ones(ns)
-    sgrid = exp.(lsgrid) + ehi
+    sgrid = exp.(lsgrid) .+ ehi
     grids[:sgrid] = Grid(sgrid, swts, sscale)
 
     # Density of skill across skill grid
