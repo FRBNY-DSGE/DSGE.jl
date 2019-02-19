@@ -1,6 +1,6 @@
 using DSGE
-using Base.Test, BenchmarkTools
-using JLD
+using Test, BenchmarkTools
+using JLD2
 
 import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_states
 
@@ -19,7 +19,7 @@ if check_steady_state
     steadystate!(m)
     # @btime steadystate!(m)
 
-    file = jldopen("$path/reference/steady_state.jld", "r")
+    file = jldopen("$path/reference/steady_state.jld2", "r")
     saved_ell  = read(file, "ell")
     saved_c    = read(file, "c")
     saved_η    = read(file, "eta")
@@ -44,7 +44,7 @@ if check_jacobian
     JJ = DSGE.jacobian(m)
     # @btime JJ = DSGE.jacobian(m)
 
-    file = jldopen("$path/reference/jacobian.jld", "r")
+    file = jldopen("$path/reference/jacobian.jld2", "r")
     saved_JJ  = read(file, "JJ")
 
     MUP = read(file, "MUP")
@@ -145,7 +145,7 @@ if check_solution
     gx, hx = klein(m)
     # @btime klein(m)
 
-    file = jldopen("$path/reference/solve.jld", "r")
+    file = jldopen("$path/reference/solve.jld2", "r")
     saved_gx   = read(file, "gx")
     saved_hx   = read(file, "hx")
     close(file)
@@ -169,7 +169,7 @@ if check_measurement
     # Measurement (needs the additional TTT_jump argument)
     measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC)
 
-    @load "$path/reference/measurement_equation.jld" obsmat
+    @load "$path/reference/measurement_equation.jld2" obsmat
 
     @testset "Check measurement equation" begin
         @test obsmat ≈ measurement_equation[:ZZ][:, 1:n_backward_looking_states(m)]

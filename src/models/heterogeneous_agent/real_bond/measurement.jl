@@ -18,9 +18,9 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::RealBond{T}, TTT::Matrix{T},
-                                       TTT_jump::Matrix{T},
-                                       RRR::Matrix{T}, CCC::Vector{T})
+function measurement(m::RealBond{T}, TTT::Matrix{T},
+                     TTT_jump::Matrix{T},
+                     RRR::Matrix{T}, CCC::Vector{T}) where T<:AbstractFloat
     endo      = m.endogenous_states_unnormalized
     exo       = m.exogenous_shocks
     obs       = m.observables
@@ -72,11 +72,11 @@ function measurement{T<:AbstractFloat}(m::RealBond{T}, TTT::Matrix{T},
     # simply because these indices happen to work here also
     # this does not mean that GDP is a function of date t+1 variables
     GDPfn[1, endo[:μ′_t]]  = dGDP_dMU
-    GDPfn[1, endo[:z′_t]]  = GDP
+    GDPfn[1, endo[:z′_t]]  .= GDP
     GDPfn[1, endo[:l′_t]]  = dGDP_dELL
-    GDPfn[1, endo[:R′_t]]  = dGDP_dRR
-    GDPfn[1, endo[:w′_t]]  = dGDP_dWW
-    GDPfn[1, endo[:t′_t]]  = dGDP_dTT
+    GDPfn[1, endo[:R′_t]]  .= dGDP_dRR
+    GDPfn[1, endo[:w′_t]]  .= dGDP_dWW
+    GDPfn[1, endo[:t′_t]]  .= dGDP_dTT
 
     ########################################
     Qx, Qy, _, _ = compose_normalization_matrices(m)
@@ -86,7 +86,7 @@ function measurement{T<:AbstractFloat}(m::RealBond{T}, TTT::Matrix{T},
     ZZ_states = (1/GDP)*GDPfn*[eye(nx*ns+2); gx2]*Qx' # this is for log GDP
                                                       # to use the level of gdp, remove (1/GDP)
 
-    ZZ = Matrix{Float64}(_n_observables, _n_model_states)
+    ZZ = Matrix{Float64}(undef, _n_observables, _n_model_states)
     ZZ[1:_n_states] = ZZ_states
     ZZ[_n_states+1:end] = zeros(_n_jumps)
 
