@@ -8,18 +8,12 @@ path = dirname(@__FILE__)
 m = KrusellSmith()
 
 ### Steady State
-file = jldopen("$path/reference/steady_state.jld2", "r")
-saved_l = read(file, "saved_l")
-saved_c = read(file, "saved_c")
-saved_μ = read(file, "saved_mu")
-saved_K = read(file, "saved_K")
-saved_KF = read(file, "saved_KF")
-close(file)
+@load "$path/reference/steady_state.jld2" saved_l saved_c saved_mu saved_K saved_KF
 
 @testset "Steady State" begin
     @test saved_l ≈ m[:lstar].value
     @test saved_c ≈ m[:cstar].value
-    @test saved_μ ≈ m[:μstar].value
+    @test saved_mu ≈ m[:μstar].value
     @test saved_K ≈ m[:Kstar].value
     @test @test_matrix_approx_eq saved_KF m[:KFstar].value
 end
@@ -27,8 +21,7 @@ end
 ### Jacobian
 m.testing = true
 JJ       = jacobian(m)
-saved_JJ = load("$path/reference/jacobian.jld2", "saved_JJ")
-nw       = load("$path/reference/jacobian.jld2", "nw")
+@load "$path/reference/jacobian.jld2" saved_JJ nw
 
 # we will always order things XP YP X Y
 # convention is that capital letters generally refer to indices
@@ -101,13 +94,11 @@ end
 ### Klein
 m.testing = false
 TTT_jump, TTT_state = klein(m)
-
-saved_gx = load("$path/reference/klein.jld2", "gx")
-saved_hx = load("$path/reference/klein.jld2", "hx")
+@load "$path/reference/klein.jld2" gx hx
 
 @testset "Solve" begin
-    @test @test_matrix_approx_eq saved_gx TTT_jump
-    @test @test_matrix_approx_eq saved_hx TTT_state
+    @test @test_matrix_approx_eq gx TTT_jump
+    @test @test_matrix_approx_eq hx TTT_state
 end
 
 ### Filtering
@@ -187,10 +178,11 @@ end
 
 # Testing the filter inputs against the outputs
 EE_zero = zeros(1, 1)
-reference_output = load("$path/reference/filter_inputs_output.jld2")
-test = kalman_filter(reference_output["y"], TTT, RRR, CCC, QQ, ZZ,
+# reference_output = JLD2.load("$path/reference/filter_inputs_output.jld2")
+@load "$path/reference/filter_inputs_output.jld2" y loglik
+test = kalman_filter(y, TTT, RRR, CCC, QQ, ZZ,
                      DD, EE_zero, s_0, P_0)
 
 @testset "Check Filter Output" begin
-    @test test[1] ≈ reference_output["loglik"]
+    @test test[1] ≈ loglik
 end

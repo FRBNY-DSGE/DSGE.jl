@@ -31,12 +31,12 @@ function jacobian(m::KrusellSmith)
 
     # These matrices (from the Euler equation) correspond to the matrices in the PDF documentation on Dropbox
     # (note that Γ is Λ removing the Σ_i^nx, and the ω^x_i terms from the summation.
-    ξ = Array{Float64, 2}(nw, nw) #zeros(nw, nw)
-    Γ = Array{Float64, 2}(nw, nw) #zeros(nw, nw)
+    ξ = Array{Float64, 2}(undef, nw, nw) #zeros(nw, nw)
+    Γ = Array{Float64, 2}(undef, nw, nw) #zeros(nw, nw)
 
     # These matrices (from the KF equation) corresp. to the lyx document on dropbox, script A and ζ
-    AA = Array{Float64,2}(nw, nw)
-    ζ = Array{Float64, 2}(nw, nw)
+    AA = Array{Float64,2}(undef, nw, nw)
+    ζ = Array{Float64, 2}(undef, nw, nw)
 
     # i_w is the ith entry in the nw discretization of x
     # i_wp is i_w' the grid of potential future x's
@@ -85,16 +85,16 @@ function jacobian(m::KrusellSmith)
     JJ[eq[:eq_euler], endo[:K′_t]]  = term1_EE*dRdK + term2_EE*dWdK
     JJ[eq[:eq_euler], endo[:z′_t]] = term1_EE*dRdZ + term2_EE*dWdZ
 
-    JJ[eq[:eq_euler], endo[:l′_t]] = m[:β]*m[:Rstar]*Γ*diagm((wgrid.weights.*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ]))
-                                   .*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points))./m[:cstar].value)
+    JJ[eq[:eq_euler], endo[:l′_t]] = m[:β]*m[:Rstar]*Γ*Matrix(Diagonal(((wgrid.weights.*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ]))
+                                                                         .*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points))./m[:cstar].value)))
 
-    JJ[eq[:eq_euler], endo[:l_t]]  = -(eye(nw) + diagm((m[:β]/m[:γ])*(m[:Rstar]*m[:Rstar]/m[:Wstar])*(ξ*wgrid.weights)
-                                   .*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ])).*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points)) )
+    JJ[eq[:eq_euler], endo[:l_t]]  = -(eye(nw) + Matrix(Diagonal((m[:β]/m[:γ])*(m[:Rstar]*m[:Rstar]/m[:Wstar])*(ξ*wgrid.weights)
+                                                                 .*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ])).*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points))))
 
     # KF Equation
-    JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t1]]   = AA'*diagm(wgrid.weights)
+    JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t1]]   = AA'*Matrix(Diagonal(wgrid.weights))
 
-    JJ[eq[:eq_kolmogorov_fwd], endo[:l_t1]] = (-(m[:Rstar]/m[:Wstar])*(1.0/m[:γ])*ζ') * diagm( m[:μstar].value.*wgrid.weights.*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ])) .*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points))
+    JJ[eq[:eq_kolmogorov_fwd], endo[:l_t1]] = (-(m[:Rstar]/m[:Wstar])*(1.0/m[:γ])*ζ') * Matrix(Diagonal( m[:μstar].value.*wgrid.weights.*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ])) .*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points)))
 
     term1_KF::Array{Float64,1} = -(1.0/m[:Wstar])*(ζ'.*repeat((wgrid.points-m[:cstar].value)',nw,1))*(m[:μstar].value.*wgrid.weights)
     term2_KF::Array{Float64,1} = -(μRHS/m[:Wstar] + (1.0/(m[:Wstar]*m[:Wstar]))*(ζ'.*(repeat(wgrid.points,1,nw) - m[:Rstar]*repeat( (wgrid.points-m[:cstar].value)',nw,1)))*(m[:μstar].value.*wgrid.weights))
@@ -115,17 +115,17 @@ function jacobian(m::KrusellSmith)
     JJ[eq[:eq_l], endo[:l_t]]  = -eye(nw)
 
     # LOM K
-    JJ[eq[:eq_K_law_of_motion], endo[:l_t]]  = -(1.0/m[:γ])*m[:μstar].value'*(diagm(wgrid.weights.*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ]))
-                                               .*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points)))
+    JJ[eq[:eq_K_law_of_motion], endo[:l_t]]  = -(1.0/m[:γ])*m[:μstar].value'*(Matrix(Diagonal(wgrid.weights.*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ]))
+                                                                                              .*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points))))
 
-    JJ[eq[:eq_K_law_of_motion], endo[:μ_t]]  = -(wgrid.points-m[:cstar].value)'*diagm(wgrid.weights)
+    JJ[eq[:eq_K_law_of_motion], endo[:μ_t]]  .= -(wgrid.points-m[:cstar].value)'*Matrix(Diagonal(wgrid.weights))
 
-    JJ[eq[:eq_K_law_of_motion], endo[:K′_t]]  = 1.0
+    JJ[eq[:eq_K_law_of_motion], endo[:K′_t]]  .= 1.0
 
     # TFP
-    JJ[eq[:eq_TFP], endo[:z′_t]]   = 1.0
+    JJ[eq[:eq_TFP], endo[:z′_t]]   .= 1.0
 
-    JJ[eq[:eq_TFP], endo[:z_t]]    = -m[:ρ_z]
+    JJ[eq[:eq_TFP], endo[:z_t]]    .= -m[:ρ_z]
 
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
@@ -140,10 +140,10 @@ function normalize(m::KrusellSmith, JJ::Matrix{Float64})
     P = eye(nw)
     P[:,1] = ones(nw)
 
-    Q = Matrix{Float64}(nw, nw)
+    Q = Matrix{Float64}(undef, nw, nw)
     Q::Matrix{Float64}, _ = qr(P)
 
-    S = Matrix{Float64}(nw, nw-1)
+    S = Matrix{Float64}(undef, nw, nw-1)
     S::Matrix{Float64} = Q[:, 2:end]'
 
     Qf = zeros(4*nw, 4*nw+2)
@@ -151,15 +151,14 @@ function normalize(m::KrusellSmith, JJ::Matrix{Float64})
     Qf[nw+1:2*nw-1, nw+1:2*nw] = S
     Qf[2*nw:3*nw-2, 2*nw+1:3*nw] = S
     Qf[3*nw-1:4*nw, 3*nw+1:4*nw+2] = eye(nw+2)
-    #Qf = cat([1 2],eye(nw),S,S,eye(nw),[1],[1])
 
     # Qx and Qy are for normalizing any variables that represent distributions
     # the S component is for normalizing a distribution, the other identity portions
     # are for non-distributional variables
     # The distribution in the states, x, is the lagged μ
     # The distribution in the jumps, y, is the current μ
-    Qx = cat([1 2], S, eye(nw), [1], [1])   # 161 x 162
-    Qy = cat([1 2], S, eye(nw))             # 159 x 160
+    Qx = cat(S, eye(nw), [1], [1], dims = [1 2])   # 161 x 162
+    Qy = cat(S, eye(nw), dims = [1 2])             # 159 x 160
 
     m <= Setting(:n_predetermined_variables, size(Qx, 1))
 
@@ -167,16 +166,7 @@ function normalize(m::KrusellSmith, JJ::Matrix{Float64})
     # pre/postmultiply the jacobians from step 2 by an appropriate
     # matrix so things integrate to 1
 
-    # Qright = zeros(8*nw+4, 8*nw)
-    # Qright[1:nw, 1:nw-1] = S'
-    # Qright[nw+1:2*nw+2, nw:2*nw+1] = eye(nw+2)
-    # Qright[2*nw+3:3*nw+2, 2*nw+2:3*nw] = S'
-    # Qright[3*nw+3:4*nw+2, 3*nw+1:4*nw] = eye(nw)
-    # Qright[4*nw+3:5*nw+2, 4*nw+1:5*nw-1] = S'
-    # Qright[5*nw+3:6*nw+4, 5*nw:6*nw+1] = eye(nw+2)
-    # Qright[6*nw+5:7*nw+4, 6*nw+2:7*nw] = S'
-    # Qright[7*nw+5:8*nw+4, 7*nw+1:8*nw] = eye(nw)
-    Qright = cat([1,2],Qx',Qy',Qx',Qy')
+    Qright = cat(Qx',Qy',Qx',Qy', dims = [1 2])
     Jac1 = Qf*JJ*Qright
 
     return Jac1
