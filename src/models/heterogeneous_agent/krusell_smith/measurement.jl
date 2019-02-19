@@ -21,8 +21,8 @@ Cov(ϵ_t, u_t) = 0
 ```
 """
 function measurement(m::KrusellSmith{T},
-                     TTT::Matrix{T}, TTT_jump::Matrix{T},
-                     RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
+                     TTT::Matrix{T}, RRR::Matrix{T},
+                     CCC::Vector{T}) where {T<:AbstractFloat}
     endo      = m.endogenous_states
     exo       = m.exogenous_shocks
     obs       = m.observables
@@ -38,8 +38,8 @@ function measurement(m::KrusellSmith{T},
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     # Output in log levels
-    ZZ[obs[:obs_gdp], endo[:z′_t]]   = (m[:Kstar]^m[:α])*(m[:Lstar]^(1.0-m[:α]))
-    ZZ[obs[:obs_gdp], endo[:K′_t]]   = (m[:α]/m[:Kstar])*(m[:Kstar]^m[:α])*(m[:Lstar]^(1.0-m[:α]))
+    ZZ[obs[:obs_gdp], endo[:z′_t]]   .= (m[:Kstar]^m[:α])*(m[:Lstar]^(1.0-m[:α]))
+    ZZ[obs[:obs_gdp], endo[:K′_t]]   .= (m[:α]/m[:Kstar])*(m[:Kstar]^m[:α])*(m[:Lstar]^(1.0-m[:α]))
 
     # Measurement error
     EE[obs[:obs_gdp], obs[:obs_gdp]] = m[:e_y]
