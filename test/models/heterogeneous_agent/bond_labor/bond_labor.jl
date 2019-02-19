@@ -94,10 +94,7 @@ m.testing = false      # So the Jacobian will be normalized within the klein sol
 gx, hx = klein(m)
 @btime klein(m)
 
-file = jldopen("$path/reference/solve.jld2", "r")
-saved_gx   = read(file, "gx")
-saved_hx   = read(file, "hx")
-close(file)
+@load "$path/reference/solve.jld2" saved_gx saved_hx
 
 @testset "Check solve outputs" begin
     @test saved_gx  ≈ gx

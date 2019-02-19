@@ -305,7 +305,7 @@ function init_grids!(m::BondLabor)
     # Skill grid
     lsgrid, sprob, sscale = tauchen86(m[:μ_s].value, m[:σ_s].value, ns, λ)
     swts = (sscale/ns)*ones(ns)
-    sgrid = exp.(lsgrid) + ehi
+    sgrid = exp.(lsgrid) .+ ehi
     grids[:sgrid] = Grid(sgrid, swts, sscale)
 
     # Density of skill across skill grid
