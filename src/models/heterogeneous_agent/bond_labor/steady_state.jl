@@ -82,7 +82,7 @@ function steadystate!(m::BondLabor;
         LPMKF = xwts[1]*swts[1]*KF
 
         # find eigenvalue closest to 1
-        (Dee,Vee) = eig(LPMKF)
+        (Dee, Vee) = eigen(LPMKF)
         if abs(Dee[1]-1)>2e-1 # that's the tolerance we are allowing
             warn("your eigenvalue is ", Dee[1], " which is too far from 1, something is wrong")
         end

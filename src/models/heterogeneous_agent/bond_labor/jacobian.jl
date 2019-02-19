@@ -40,8 +40,8 @@ function jacobian(m::BondLabor)
     # c = min.(l.^(-1.0/γ),χss) # Consumption Decision Rule
     # η = (sgrid_total.^(1.0/ν)).*(c.^(-γ/ν))
     aborrow  = abar/R
-    chipW = (1+ν)./( ν./( aborrow + χss - xgrid_total) + γ./χss  )
-    chipR = (1/(R*R))*(  ν*abar./(aborrow + χss - xgrid_total) )./( ν./( aborrow + χss - xgrid_total) + γ./χss  )
+    chipW = (1+ν)./( ν./( aborrow .+ χss - xgrid_total) + γ./χss  )
+    chipR = (1/(R*R))*(  ν*abar./(aborrow .+ χss - xgrid_total) )./( ν./( aborrow .+ χss - xgrid_total) + γ./χss  )
 
     # EE
     ξ   = zeros(nx*ns,nx*ns)
@@ -164,18 +164,18 @@ function jacobian(m::BondLabor)
     JJ[eq[:eq_kolmogorov_fwd], endo[:R_t]]   = RKF
 
     # mkt ckr
-    JJ[eq[:eq_market_clearing], endo[:μ_t]]  = μMKT
+    JJ[eq[:eq_market_clearing], endo[:μ_t]]  =  μMKT
 
-    JJ[eq[:eq_market_clearing], endo[:z_t]]   = WMKT
+    JJ[eq[:eq_market_clearing], endo[:z_t]]  .= WMKT
 
-    JJ[eq[:eq_market_clearing], endo[:l_t]] = LMKT
+    JJ[eq[:eq_market_clearing], endo[:l_t]]  =  LMKT
 
-    JJ[eq[:eq_market_clearing], endo[:R_t]]   = RMKT
+    JJ[eq[:eq_market_clearing], endo[:R_t]]  .= RMKT
 
     # TFP
-    JJ[eq[:eq_TFP], endo[:z′_t]]  = -1
+    JJ[eq[:eq_TFP], endo[:z′_t]]  .= -1
 
-    JJ[eq[:eq_TFP], endo[:z_t]]   = ρ_z
+    JJ[eq[:eq_TFP], endo[:z_t]]   .= ρ_z
 
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
@@ -209,10 +209,10 @@ function compose_normalization_matrices(m::BondLabor)
     (Q,R) = qr(P)
 
     S         = Q[:,ns+1:end]'
-    Qleft     = cat([1 2],S,[1],eye(nx*ns),[1])
-    Qx        = cat([1 2],S,[1])
-    Qy        = cat([1 2],eye(nx*ns),[1])
-	Qright    = cat([1,2],Qx',Qy',Qx',Qy')
+    Qleft     = cat(S,[1],eye(nx*ns),[1], dims = [1 2])
+    Qx        = cat(S,[1], dims = [1 2])
+    Qy        = cat(eye(nx*ns),[1], dims = [1 2])
+    Qright    = cat(Qx',Qy',Qx',Qy', dims = [1 2])
 
     return Qx, Qy, Qleft, Qright
 end
