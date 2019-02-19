@@ -297,9 +297,8 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
 
     if !m.testing || run_test
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5"), "w")
-        #simfile = h5open(rawpath(m, "estimate", "smcsave.h5",
-        #                         ["adpt="*string(tempering_target)]),"w")
-        particle_store = d_create(simfile, "smcparams", datatype(Float32),
+        #simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
+        particle_store = d_create(simfile, "smcparams", datatype(Float64),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value

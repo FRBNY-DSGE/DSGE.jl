@@ -308,7 +308,7 @@ function metropolis_hastings(propdist::Distribution,
     # Open HDF5 file for saving parameter draws
     simfile = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
-    parasim = d_create(simfile, "mhparams", datatype(Float32),
+    parasim = d_create(simfile, "mhparams", datatype(Float64),
                        dataspace(n_saved_obs,n_params),
                        "chunk", (n_sim,n_params))
 
@@ -373,7 +373,7 @@ function metropolis_hastings(propdist::Distribution,
 
         # Write parameters to file if we're past n_burn blocks
         if block > n_burn
-            parasim[block_start:block_end, :] = map(Float32, mhparams)
+            parasim[block_start:block_end, :] = map(Float64, mhparams)
         end
 
         # Calculate time to complete this block, average block time, and
