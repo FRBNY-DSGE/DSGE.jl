@@ -21,12 +21,12 @@ function klein(m::AbstractModel)
     # Apply generlaized Schur decomposition
     # A ≈ QZ[:Q]*QZ[:S]*QZ[:Z]'
     # B ≈ QZ[:Q]*QZ[:T]*QZ[:Z]'
-	QZ = schurfact(A,B)
+	QZ = schur(A,B)
 
     # Reorder so that stable comes first
-    alpha::Vector{complex(promote_type(eltype(A), eltype(B)))} = QZ.alpha
-    beta::Vector{complex(promote_type(eltype(A), eltype(B)))} = QZ.beta
-	eigs = real(QZ.beta ./ QZ.alpha)
+    alpha::Vector{complex(promote_type(eltype(A), eltype(B)))} = QZ.α
+    beta::Vector{complex(promote_type(eltype(A), eltype(B)))} = QZ.β
+	eigs = real(QZ.β ./ QZ.α)
 	eigselect::AbstractArray{Bool} = abs.(eigs) .< 1 # returns false for NaN gen. eigenvalue which is correct here bc they are > 1
 	ordschur!(QZ, eigselect)
 
@@ -38,16 +38,16 @@ function klein(m::AbstractModel)
 	    warn("No local equilibrium exists")
 	end
 
-	U::Matrix{Float64}= QZ[:Z]'
-	T::Matrix{Float64} = QZ[:T]
-	S::Matrix{Float64} = QZ[:S]
+	U::Matrix{Float64} = QZ.Z'
+	T::Matrix{Float64} = QZ.T
+	S::Matrix{Float64} = QZ.S
 
-    U11 = Matrix{Float64}(NK, NK)
-    U12 = Matrix{Float64}(NK, NK-2)
-    U21 = Matrix{Float64}(NK-2, NK)
-    U22 = Matrix{Float64}(NK-2, NK-2)
-    S11 = Matrix{Float64}(NK, NK)
-    T11 = Matrix{Float64}(NK, NK)
+    U11 = Matrix{Float64}(undef, NK, NK)
+    U12 = Matrix{Float64}(undef, NK, NK-2)
+    U21 = Matrix{Float64}(undef, NK-2, NK)
+    U22 = Matrix{Float64}(undef, NK-2, NK-2)
+    S11 = Matrix{Float64}(undef, NK, NK)
+    T11 = Matrix{Float64}(undef, NK, NK)
 
     U11 = U[1:NK,1:NK]
 	U12 = U[1:NK,NK+1:end]
@@ -58,7 +58,7 @@ function klein(m::AbstractModel)
 	T11 = T[1:NK,1:NK]
 
     # Find minimum norm solution to U₂₁ + U₂₂*g_x = 0 (more numerically stable than -U₂₂⁻¹*U₂₁)
-    gx_coef = Matrix{Float64}(n-NK, NK)
+    gx_coef = Matrix{Float64}(undef, n-NK, NK)
 	gx_coef = -U22'*pinv(U22*U22')*U21
 
     # Solve for h_x (in a more numerically stable way)
@@ -95,13 +95,13 @@ function klein_transition_matrices(m::AbstractModel,
     TTT[1:n_backward_looking_states(m), 1:n_backward_looking_states(m)] = TTT_state
 
     # Loading mapping time t jumps to time t+1 states
-    TTT[1:n_backward_looking_states(m), n_backward_looking_states(m)+1:end] = 0.
+    TTT[1:n_backward_looking_states(m), n_backward_looking_states(m)+1:end] .= 0.
 
     # Loading mapping time t states to time t+1 jumps
     TTT[n_backward_looking_states(m)+1:end, 1:n_backward_looking_states(m)] = TTT_jump*TTT_state
 
     # Loading mapping time t jumps to time t+1 jumps
-    TTT[n_backward_looking_states(m)+1:end, n_backward_looking_states(m)+1:end] = 0.
+    TTT[n_backward_looking_states(m)+1:end, n_backward_looking_states(m)+1:end] .= 0.
 
     RRR = shock_loading(m, TTT_jump)
 

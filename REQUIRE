@@ -2,6 +2,7 @@ julia 0.7
 BasisMatrices
 BenchmarkTools
 Calculus
+ColorTypes
 CSV
 DataFrames
 OrderedCollections

@@ -34,12 +34,12 @@ end
 # with a ′, we need a way of calculating the indices in the Jacobian corresponding
 # to the t indexed variables.
 function reindex_unprimed_model_states(inds::UnitRange, n_model_states::Int64)
-    return inds + n_model_states
+    return inds .+ n_model_states
 end
 
 # Returns a model state variable symbol without the prime
 function unprime(state::Symbol)
-    return Symbol(replace(string(state), "′", ""))
+    return Symbol(replace(string(state), "′" => ""))
 end
 
 ######################################################################################
@@ -49,7 +49,7 @@ function normalize_model_state_indices!(m::AbstractModel)
 
     endo                     = m.endogenous_states
     model_state_keys         = endo.keys
-    normalized_model_state_inds = findin(model_state_keys, normalized_model_states)
+    normalized_model_state_inds = findall((in)(normalized_model_states), model_state_keys)
     state_inds                  = get_setting(m, :state_indices)
     jump_inds                   = get_setting(m, :jump_indices)
     state_normalization_factor  = get_setting(m, :backward_looking_states_normalization_factor)
