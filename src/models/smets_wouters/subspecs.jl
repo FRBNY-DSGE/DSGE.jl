@@ -173,8 +173,8 @@ ss6!(m::SmetsWouters)
 Initializes subspec 6 of `SmetsWouters`. 'Diffuse prior' a la Herbst and Schorfheide 2014 (even though SW implementations are different, still want to use diffuse prior on our version)
 
 """
-function ss5!(m::SmetsWouters)
-    m <= parameter(:α, 0.24, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=false,
+function ss6!(m::SmetsWouters)
+    m <= parameter(:α, 0.24, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.15), fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
                    tex_label="\\alpha")
 
@@ -227,26 +227,26 @@ function ss5!(m::SmetsWouters)
     m <= parameter(:β, 0.7420, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.25, 0.3), fixed=false, scaling = x -> 1/(1 + x/100),
                    description="β: Discount rate.",
                    tex_label="\\beta ")
-    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.25), fixed=false,
+    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.75), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
 
-    m <= parameter(:ψ2, 0.0893, (-0.5, 0.5), (-0.5, 0.5), Untransformed(), Normal(0.12, 0.05), fixed=false,
+    m <= parameter(:ψ2, 0.0893, (-0.5, 0.5), (-0.5, 0.5), Untransformed(), Normal(0.12, 0.15), fixed=false,
                    description="ψ₂: Weight on output gap in monetary policy rule.",
                    tex_label="\\psi_2")
 
-    m <= parameter(:ψ3, 0.2239, (-0.5, 0.5), (-0.5, 0.5), Untransformed(), Normal(0.12, 0.05), fixed=false,
+    m <= parameter(:ψ3, 0.2239, (-0.5, 0.5), (-0.5, 0.5), Untransformed(), Normal(0.12, 0.15), fixed=false,
                    description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
                    tex_label="\\psi_3")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.3), fixed=false, scaling = x -> 1 + x/100,
                    description="π_star: The steady-state rate of inflation.",
                    tex_label="\\pi_*")
 
-    m <= parameter(:σ_c, 1.2312, (1e-5, 10.), (1e-5, 10.), Exponential(), Normal(1.5, 0.37), fixed=false,
+    m <= parameter(:σ_c, 1.2312, (1e-5, 10.), (1e-5, 10.), Exponential(), Normal(1.5, 1.11), fixed=false,
                    tex_label="\\sigma_{c}")
 
-    m <= parameter(:ρ, .8258, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+    m <= parameter(:ρ, .8258, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
 
@@ -259,7 +259,7 @@ m <= parameter(:ϵ_w, 10.000, fixed=true,
                tex_label="\\epsilon_{w}")
 
 # exogenous processes - level
-m <= parameter(:γ, 0.3982, (-5.0, 5.0), (-5., 5.), Untransformed(), Normal(0.4, 0.1), fixed=false, scaling = x -> x/100,
+m <= parameter(:γ, 0.3982, (-5.0, 5.0), (-5., 5.), Untransformed(), Normal(0.4, 0.3), fixed=false, scaling = x -> x/100,
                description="γ: The log of the steady-state growth rate of technology.",
                tex_label="\\gamma")
 # keep the mean same as normal prior, multiply stdev by 3 since HS paper multiplies by 3 (even though theirs is demeaned)
