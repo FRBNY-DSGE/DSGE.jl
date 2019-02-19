@@ -260,7 +260,7 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
             end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
         end
 
-        if run_test && (i == 3)
+        if run_test && (i == 2)
             break
         end
     end
@@ -269,7 +269,7 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
     ### Saving data
     ########################################################################################
 
-    if !m.testing
+    if !m.testing || run_test
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5"), "w")
         #simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),

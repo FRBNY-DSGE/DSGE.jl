@@ -17,7 +17,8 @@ For calculating the log marginal data density for a given posterior sample.
 - `parallel::Bool`
 """
 function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(0, 0);
-                               estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
+                               estimation_method::Symbol = :smc,
+                               calculation_method = :incremental_weights,
                                parallel::Bool = false)
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation the MDD with incremental weights if the estimation method is :smc")
@@ -178,7 +179,9 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     return mean(densfac - log.(mean_invlike))
 end
 
-function marginal_data_density_weighted(params::Matrix{Float64}, logpost::Vector{Float64}, free_para_inds::Vector{Int64}, cloud)
+function marginal_data_density_weighted(params::Matrix{Float64},
+                                        logpost::Vector{Float64},
+                                        free_para_inds::Vector{Int64}, cloud)
     # From margdensim.m
     n_draws = size(params, 2)
     n_free_para = length(free_para_inds)
