@@ -90,7 +90,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 update!(m, para_new)
                 prior_new = prior(m)
                 like_new = likelihood(m, data; sampler = true,
-                                      use_chand_recursion = use_chand_recursion, verbose = verbose)
+                                      use_chand_recursion = use_chand_recursion,
+                                      verbose = verbose)
                 if like_new == -Inf
                     prior_new = like_old_data = -Inf
                 end
