@@ -104,7 +104,7 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
     end
     if weighted
         params_mean = vec(mean(params, Weights(weights), 2))
-        params_std = vec(std(params, Weights(weights), 2))
+        params_std = vec(std(params, Weights(weights), 2, corrected = false))
     else
         params_mean = vec(mean(params, 2))
         params_std  = vec(std(params, 2))
