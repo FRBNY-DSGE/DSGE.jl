@@ -1,7 +1,7 @@
 # To be removed after running this test individually in the REPL successfully
 #@everywhere using DSGE, DSGEModels
-#@everywhere using HDF5, JLD, JLD2
-#@everywhere import Base.Test: @test, @testset
+#@everywhere using HDF5, JLD, JLD2, Random, DelimitedFiles
+#@everywhere import Test: @test, @testset
 
 path = dirname(@__FILE__)
 

@@ -1,7 +1,7 @@
 # To be removed after running this test individually in the REPL successfully
-#using DSGE, Distributions
+#using DSGE, Distributions, DelimitedFiles, Random, PDMats
 #using HDF5, JLD, JLD2
-#import Base.Test: @test, @testset
+#import Test: @test, @testset
 
 writing_output = false
 

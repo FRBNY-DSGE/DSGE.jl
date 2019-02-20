@@ -3,8 +3,8 @@ addprocs_frbny(10)     # There must be exactly 10 workers for these tests to pas
 writing_output = false # Set to 'true' when re-writing output files.
 
 @everywhere using DSGE, DSGEModels
-@everywhere using HDF5, JLD, JLD2
-import Base.Test: @test, @testset
+@everywhere using DelimitedFiles, HDF5, JLD, JLD2, Random
+import Test: @test, @testset
 
 path = dirname(@__FILE__)
 
@@ -56,7 +56,7 @@ saved_W      = saved_file["W"]
 
 
 ####################################################################
-cloud_fields = fieldnames(test_cloud)
+cloud_fields = fieldnames(typeof(test_cloud))
 @testset "ParticleCloud Fields: AnSchorf" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_cloud) DSGE.get_vals(saved_cloud)
     @test @test_matrix_approx_eq DSGE.get_loglh(test_cloud) DSGE.get_loglh(saved_cloud)
@@ -72,7 +72,7 @@ end
 
 test_particle = test_cloud.particles[1]
 saved_particle = saved_cloud.particles[1]
-particle_fields = fieldnames(test_particle)
+particle_fields = fieldnames(typeof(test_particle))
 @testset "Individual Particle Fields Post-SMC: AnSchorf" begin
     @test test_particle.weight == saved_particle.weight
     @test test_particle.keys == saved_particle.keys
@@ -140,7 +140,7 @@ saved_w      = saved_file["w"]
 saved_W      = saved_file["W"]
 
 #####################################################################
-cloud_fields = fieldnames(test_cloud)
+cloud_fields = fieldnames(typeof(test_cloud))
 @testset "ParticleCloud Fields: SW, No Blocking" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_cloud) DSGE.get_vals(saved_cloud)
     @test @test_matrix_approx_eq DSGE.get_loglh(test_cloud) DSGE.get_loglh(saved_cloud)
@@ -156,7 +156,7 @@ end
 
 test_particle = test_cloud.particles[1]
 saved_particle = saved_cloud.particles[1]
-particle_fields = fieldnames(test_particle)
+particle_fields = fieldnames(typeof(test_particle))
 @testset "Individual Particle Fields Post-SMC: SW, No Blocking" begin
     @test test_particle.weight == saved_particle.weight
     @test test_particle.keys == saved_particle.keys
@@ -222,7 +222,7 @@ saved_cloud  = saved_file["cloud"]
 saved_w      = saved_file["w"]
 saved_W      = saved_file["W"]
 ####################################################################
-cloud_fields = fieldnames(test_cloud)
+cloud_fields = fieldnames(typeof(test_cloud))
 @testset "ParticleCloud Fields: SW, Blocks=3" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_cloud) DSGE.get_vals(saved_cloud)
     @test @test_matrix_approx_eq DSGE.get_loglh(test_cloud) DSGE.get_loglh(saved_cloud)
@@ -238,7 +238,7 @@ end
 
 test_particle = test_cloud.particles[1]
 saved_particle = saved_cloud.particles[1]
-particle_fields = fieldnames(test_particle)
+particle_fields = fieldnames(typeof(test_particle))
 @testset "Individual Particle Fields Post-SMC: SW, Blocks=3" begin
     @test test_particle.weight == saved_particle.weight
     @test test_particle.keys == saved_particle.keys
