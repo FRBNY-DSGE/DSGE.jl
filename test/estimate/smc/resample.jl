@@ -1,7 +1,7 @@
 # To be removed after running this test individually in the REPL successfully
-using DSGE
-using HDF5, JLD
-import Base.Test: @test, @testset
+#using DSGE
+#using HDF5, JLD2, Random
+#import Test: @test, @testset
 
 @everywhere Random.seed!(42)
 weights = rand(400)

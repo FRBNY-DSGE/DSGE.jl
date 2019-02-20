@@ -286,7 +286,7 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
                             use_fixed_schedule = use_fixed_schedule)
         end
 
-        if run_test && (i == 2)
+        if run_test && (i == 3)
             break
         end
     end

@@ -1,7 +1,7 @@
 # To be removed after running this test individually in the REPL successfully
-using DSGE
-using HDF5, JLD, JLD2
-import Base.Test: @test, @testset
+#using DSGE
+#using HDF5, JLD, JLD2, Random, Distributions, PDMats
+#import Test: @test, @testset
 
 path = dirname(@__FILE__)
 
@@ -44,7 +44,7 @@ close(file)
 function stack_values(particles::Vector{Particle}, field::Symbol)
     n_parts = length(particles)
     init_field_value = getfield(particles[1], field)
-    stacked_values = Vector{typeof(init_field_value)}(n_parts)
+    stacked_values = Vector{typeof(init_field_value)}(undef, n_parts)
 
     for (i, particle) in enumerate(particles)
         stacked_values[i] = getfield(particle, field)
@@ -67,7 +67,7 @@ end =#
 
 saved_particles = load("reference/mutation_outputs.jld2", "particles")
 
-particle_fields = fieldnames(new_particles[1])
+particle_fields = fieldnames(typeof(new_particles[1]))
 @testset "Individual Particle Fields Post-Mutation" begin
     @test stack_values(new_particles, :weight) == stack_values(saved_particles, :weight)
     @test stack_values(new_particles, :keys) == stack_values(saved_particles, :keys)
