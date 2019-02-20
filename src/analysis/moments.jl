@@ -20,7 +20,7 @@ function load_posterior_moments(m::AbstractModel;
                                 cloud::ParticleCloud = ParticleCloud(m, 0),
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
-                                excl_list::Vector{Symbol} = Vector{Symbol}(0),
+                                excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
                                 weighted::Bool = true)
     parameters = m.parameters
 
@@ -38,7 +38,7 @@ function load_posterior_moments(m::AbstractModel;
     if include_fixed
         free_indices   = 1:n_parameters(m)
     else
-        free_indices   = find(x -> x.fixed == false, parameters)
+        free_indices   = findall(x -> x.fixed == false, parameters)
         parameters = parameters[free_indices]
         params = params[free_indices, :]
     end
@@ -58,16 +58,16 @@ function load_posterior_moments(m::AbstractModel,
                                 clouds::Vector{ParticleCloud};
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
-                                excl_list::Vector{Symbol} = Vector{Symbol}(0),
+                                excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
                                 weighted::Bool = true)
     n_params = n_parameters(m)
     n_particles = length(clouds[1])
     n_clouds = length(clouds)
     n_free_params = length(Base.filter(x -> x.fixed == false, m.parameters))
 
-    p_mean = Array{Float64}(n_free_params, n_clouds)
-    p_lb = Array{Float64}(n_free_params, n_clouds)
-    p_ub = Array{Float64}(n_free_params, n_clouds)
+    p_mean = Array{Float64}(undef, n_free_params, n_clouds)
+    p_lb = Array{Float64}(undef, n_free_params, n_clouds)
+    p_ub = Array{Float64}(undef, n_free_params, n_clouds)
 
     for (i, c) in enumerate(clouds)
         df_i = load_posterior_moments(m; weighted = weighted, cloud = c, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
@@ -76,7 +76,7 @@ function load_posterior_moments(m::AbstractModel,
         p_ub[:, i] = df_i[:post_ub]
     end
     param = load_posterior_moments(m; cloud = clouds[1], load_bands = true, include_fixed = false)[:param]
-    df = DataFrame(param = param, post_mean = squeeze(mean(p_mean,2),2), post_std = squeeze(std(p_mean,2),2), post_lb = squeeze(mean(p_lb,2),2), post_ub = squeeze(mean(p_ub,2),2))
+    df = DataFrame(param = param, post_mean = dropdims(mean(p_mean, dims = 2), dims = 2), post_std = dropdims(std(p_mean, dims = 2),dims = 2), post_lb = dropdims(mean(p_lb, dims = 2), dims = 2), post_ub = dropdims(mean(p_ub, dims = 2), dims = 2))
 
     return df
 
@@ -116,7 +116,7 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
     df[:post_std]  = params_std
 
     if load_bands
-        post_lb = Vector{Float64}(length(params_mean))
+        post_lb = Vector{Float64}(undef, length(params_mean))
         post_ub = similar(post_lb)
         for i in 1:length(params_mean)
             post_lb[i] = quantile(params[i, :], Weights(weights), .05)
@@ -137,11 +137,11 @@ function calculate_excluded_indices(m::AbstractModel, excl_list::Vector{Symbol};
     # If fixed parameters are excluded, the indices need to be calculated
     # with respect to only the free parameters
     if include_fixed
-        return find(x -> x in excl_list, [parameters[i].key for i in 1:length(parameters)])
+        return findall(x -> x in excl_list, [parameters[i].key for i in 1:length(parameters)])
     else
         # Remove the fixed parameters
         Base.filter!(x -> x.fixed == false, parameters)
-        return find(x -> x in excl_list, [parameters[i].key for i in 1:length(parameters)])
+        return findall(x -> x in excl_list, [parameters[i].key for i in 1:length(parameters)])
     end
 end
 
@@ -155,7 +155,7 @@ moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
 
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior
 mean, and bands in various LaTeX tables. These tables will be saved in `outdir`
-if it is nonempty, or else in `tablespath(m, \\"estimate\\")`.
+if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 
 ### Inputs
 
@@ -203,7 +203,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     if use_mode
         post_mode = h5read(get_forecast_input_file(m, :mode), "params")
     end
-    post_means = vec(mean(params, dims=1))
+    post_means = vec(mean(params, dims = 1))
 
     # Save posterior means
     basename = "paramsmean"

@@ -202,7 +202,7 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
 
     df_baseline = load_posterior_moments(m_baseline, clouds_baseline, load_bands = true,
                                          include_fixed = include_fixed, excl_list = excl_list)
-    df_comparisons = Vector{DataFrame}(length(clouds_comparisons))
+    df_comparisons = Vector{DataFrame}(undef, length(clouds_comparisons))
     for i=1:length(clouds_comparisons)
         df_comparisons[i] = load_posterior_moments(m_comparison, clouds_comparisons[i], load_bands = true,
                                          include_fixed = include_fixed, excl_list = excl_list)
