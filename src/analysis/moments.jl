@@ -155,7 +155,7 @@ moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
 
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior
 mean, and bands in various LaTeX tables. These tables will be saved in `outdir`
-if it is nonempty, or else in `tablespath(m, \"estimate\")`.
+if it is nonempty, or else in `tablespath(m, \\"estimate\\")`.
 
 ### Inputs
 
@@ -181,6 +181,8 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
                        groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                       tables = [:prior_posterior_means, :moments, :prior, :posterior],
+                       caption = true, outdir = "",
                        verbose::Symbol = :low, use_mode::Bool = false)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -201,7 +203,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     if use_mode
         post_mode = h5read(get_forecast_input_file(m, :mode), "params")
     end
-    post_means = vec(mean(params, 1))
+    post_means = vec(mean(params, dims=1))
 
     # Save posterior means
     basename = "paramsmean"
