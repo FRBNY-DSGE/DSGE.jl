@@ -16,7 +16,7 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 """
-function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(0, 0);
+function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method = :incremental_weights,
                                parallel::Bool = false)
@@ -60,7 +60,7 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
                     posterior!(m, params[:, i], data)
                 end
             else
-                logpost = Vector{Float64}(n_draws)
+                logpost = Vector{Float64}(undef, n_draws)
                 for i in 1:n_draws
                     logpost[i] = posterior!(m, params[:, i], data)
                 end
@@ -139,12 +139,12 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     end
     Σ_bar_inv = U * S * U'
 
-    all_invlike = Matrix{Float64}(length(p), 0)
+    all_invlike = Matrix{Float64}(undef, length(p), 0)
 
     ####################################
     # TEMPORARY
     ####################################
-    all_exp_terms = Matrix{Float64}(length(p), n_draws)
+    all_exp_terms = Matrix{Float64}(undef, length(p), n_draws)
     all_indpara = similar(all_exp_terms)
     all_lnfpara = similar(all_exp_terms)
     ####################################
@@ -226,12 +226,12 @@ function marginal_data_density_weighted(params::Matrix{Float64},
     end
     Σ_bar_inv = U * S * U'
 
-    all_invlike = Matrix{Float64}(length(p), 0)
+    all_invlike = Matrix{Float64}(undef, length(p), 0)
 
     ####################################
     # TEMPORARY
     ####################################
-    all_exp_terms = Matrix{Float64}(length(p), n_draws)
+    all_exp_terms = Matrix{Float64}(undef, length(p), n_draws)
     all_indpara = similar(all_exp_terms)
     all_lnfpara = similar(all_exp_terms)
     ####################################
@@ -267,7 +267,7 @@ function marginal_data_density_weighted(params::Matrix{Float64},
 end
 
 
-function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(0, 0);
+function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
                                parallel::Bool = false)
     if estimation_method == :mh && calculation_method == :incremental_weights
@@ -309,7 +309,7 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
                     posterior!(m, params[:, i], data)
                 end
             else
-                logpost = Vector{Float64}(n_draws)
+                logpost = Vector{Float64}(undef, n_draws)
                 for i in 1:n_draws
                     logpost[i] = posterior!(m, params[:, i], data)
                 end
