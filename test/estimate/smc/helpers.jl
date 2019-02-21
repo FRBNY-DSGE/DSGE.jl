@@ -3,7 +3,7 @@ using DSGE
 using HDF5, JLD2
 using Test
 
-file = jldopen("reference/helpers_input.jld2", "r")
+file = JLD2.jldopen("reference/helpers_input.jld2", "r")
 cloud = read(file, "cloud")
 proposed_fixed_schedule = read(file, "proposed_fixed_schedule")
 i = read(file, "i")
@@ -18,7 +18,7 @@ Random.seed!(42)
 test_ϕ_n, test_resampled_last_period, test_j, test_ϕ_prop = DSGE.solve_adaptive_ϕ(cloud, proposed_fixed_schedule,
                                                                              i, j, ϕ_prop, ϕ_n1, tempering_target,
                                                                              resampled_last_period)
-#= JLD.jldopen("reference/helpers_output.jld", "w") do file
+#= JLD2.jldopen("reference/helpers_output.jld", "w") do file
     write(file, "phi_n", test_ϕ_n)
     write(file, "resampled_last_period", test_resampled_last_period)
     write(file, "j", test_j)
@@ -31,7 +31,7 @@ JLD2.jldopen("reference/helpers_output.jld2", "w") do file
     write(file, "phi_prop", test_ϕ_prop)
 end=#
 
-file = jldopen("reference/helpers_output.jld2", "r")
+file = JLD2.jldopen("reference/helpers_output.jld2", "r")
 saved_ϕ_n = read(file, "phi_n")
 saved_resampled_last_period = read(file, "resampled_last_period")
 saved_j = read(file, "j")

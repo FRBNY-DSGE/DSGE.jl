@@ -22,11 +22,11 @@ alt = Scenario(:altscen, "Test Alternative Scenario", [:obs_gdp, :obs_cpi], [:g_
 forecast_scenario(m, def, verbose = :none)
 forecast_scenario(m, alt, verbose = :none)
 
-expect = jldopen(get_scenario_input_file(m, alt), "r") do file
+expect = JLD2.jldopen(get_scenario_input_file(m, alt), "r") do file
     read(file, "arr")
 end
 
-jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
+JLD2.jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
     observable_indices = read(file, "observable_indices")
     global inds = map(var -> observable_indices[var], def.target_names)
     global actual = read(file, "arr")[:, inds, :]
@@ -42,10 +42,10 @@ probs_exit  = zeros(12)
 allalt = SwitchingScenario(:allalt, alt, def, probs_enter, probs_exit)
 simulate_switching(m, allalt, verbose = :none)
 
-original_draws = jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs]) do file
+original_draws = JLD2.jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs]) do file
     read(file, "arr")
 end
-actual = jldopen(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs]) do file
+actual = JLD2.jldopen(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs]) do file
     read(file, "arr")
 end
 @testset "Test switching scenarios" begin
@@ -58,11 +58,11 @@ probs_exit  = zeros(12)
 alldef = SwitchingScenario(:alldef, alt, def, probs_enter, probs_exit)
 simulate_switching(m, alldef, verbose = :none)
 
-default_draws = jldopen(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs]) do file
+default_draws = JLD2.jldopen(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs]) do file
     read(file, "arr")
 end
 
-actual = jldopen(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs]) do file
+actual = JLD2.jldopen(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs]) do file
     read(file, "arr")
 end
 
@@ -83,7 +83,7 @@ somealt = SwitchingScenario(:somealt, alt, def, probs_enter, probs_exit)
 simulate_switching(m, somealt, verbose = :none)
 
 @testset "Test switching scenarios, where the switch happens at particular points in time" begin
-    global actual = jldopen(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs]) do file
+    global actual = JLD2.jldopen(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs]) do file
         read(file, "arr")
     end
     for i = 1:10
@@ -162,11 +162,11 @@ scale = Scenario(:altscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], 
                  shock_scaling = 2.0)
 forecast_scenario(m, scale, verbose = :none)
 
-expect = jldopen(get_scenario_input_file(m, scale), "r") do file
+expect = JLD2.jldopen(get_scenario_input_file(m, scale), "r") do file
     2.0 * read(file, "arr")
 end
 
-jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
+JLD2.jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
     observable_indices = read(file, "observable_indices")
     global inds = map(var -> observable_indices[var], def.target_names)
     global actual = read(file, "arr")[:, inds, :]

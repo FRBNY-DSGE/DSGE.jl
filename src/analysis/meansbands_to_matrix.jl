@@ -61,7 +61,7 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
     means, bands = meansbands_to_matrix(mb)
 
     # Save to file
-    jldopen(outfile, "w") do file
+    JLD2.jldopen(outfile, "w") do file
         write(file, "means", means)
         write(file, "bands", bands)
     end

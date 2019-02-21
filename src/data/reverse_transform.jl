@@ -232,7 +232,7 @@ function reverse_transform(path::String, class::Symbol, product::Symbol,
                            fourquarter::Bool = false)
 
     # Read in the draws for this variable
-    draws = jldopen(path, "r") do jld
+    draws = JLD2.jldopen(path, "r") do jld
         read_forecast_output(jld, class, product, var)
     end
 

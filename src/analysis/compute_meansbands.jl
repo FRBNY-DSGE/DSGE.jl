@@ -156,7 +156,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                                           forecast_string = forecast_string)
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
-    jldopen(filepath, true, true, true, IOStream) do file
+    JLD2.jldopen(filepath, true, true, true, IOStream) do file
         write(file, "mb", mb)
     end
 

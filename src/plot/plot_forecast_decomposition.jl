@@ -13,7 +13,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
                          class::Symbol; individual_shocks::Bool = false) where M<:AbstractModel
     # Read in means
     input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
-    decomps = jldopen(input_file, "r") do file
+    decomps = JLD2.jldopen(input_file, "r") do file
         read(file, "decomps")
     end
 

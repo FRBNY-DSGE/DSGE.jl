@@ -55,7 +55,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
             filepath = decomp_output_files[var]
 
             if isnull(block_number) || get(block_number) == 1
-                jldopen(filepath, "w") do file
+                JLD2.jldopen(filepath, "w") do file
                     # Write metadata
                     # Pass in m_old because its historical and forecast dates are used
                     write_forecast_metadata(m_old, file, var)
@@ -79,7 +79,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                 end
             end
 
-            jldopen(filepath, "r+") do file
+            JLD2.jldopen(filepath, "r+") do file
                 if isnull(block_number)
                     write(file, "arr", decomps[var])
                 else

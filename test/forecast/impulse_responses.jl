@@ -6,7 +6,7 @@ path = dirname(@__FILE__)
 # Set up arguments
 m = AnSchorfheide(testing = true)
 
-system = jldopen("$path/../reference/forecast_args.jld2","r") do file
+system = JLD2.jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system")
 end
 
@@ -15,7 +15,7 @@ states, obs, pseudo = impulse_responses(m, system)
 
 # Compare to expected output
 exp_states, exp_obs, exp_pseudo =
-    jldopen("$path/../reference/impulse_responses_out.jld2", "r") do file
+    JLD2.jldopen("$path/../reference/impulse_responses_out.jld2", "r") do file
         read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo")
     end
 

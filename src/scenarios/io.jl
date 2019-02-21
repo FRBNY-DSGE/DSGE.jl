@@ -21,7 +21,7 @@ Return the number of draws for `scen`, determined using
 """
 function count_scenario_draws!(m::AbstractModel, scen::Scenario)
     input_file = get_scenario_input_file(m, scen)
-    draws = jldopen(input_file, "r") do file
+    draws = JLD2.jldopen(input_file, "r") do file
         dataset = read(file, "arr")
         size(dataset, 1)
     end
@@ -45,7 +45,7 @@ function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::In
         end
     else
         path = get_scenario_input_file(m, scen)
-        raw_targets, target_inds = jldopen(path, "r") do file
+        raw_targets, target_inds = JLD2.jldopen(path, "r") do file
             arr = read(file, "arr")
             inds = read(file, "target_indices")
             arr[draw_index, :, :], inds
@@ -173,7 +173,7 @@ function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, outp
 
     for scen in agg.scenarios
         forecast_output_file = get_scenario_mb_input_file(m, scen, output_var)
-        scen_dates = jldopen(forecast_output_file, "r") do file
+        scen_dates = JLD2.jldopen(forecast_output_file, "r") do file
             read(file, "date_indices")
         end
 
@@ -209,7 +209,7 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
     # Get filename
     filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
 
-    jldopen(filename, "r") do file
+    JLD2.jldopen(filename, "r") do file
         # Read forecast outputs
         fcast_series = read_forecast_series(file, class, product, var_name)
 

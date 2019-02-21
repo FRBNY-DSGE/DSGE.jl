@@ -98,7 +98,9 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
-                       groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                       groupings::AbstractDict{String,Vector{Parameter}}=Dict{String,Vector{Parameter}}(),
+                       tables::Vector{Symbol} = [:prior_posterior_means, :moments, :prior, :posterior],
+                       caption::Bool = true, outdir::String = "",
                        verbose::Symbol = :low, use_mode::Bool = false)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -187,7 +189,8 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
 ```
 """
 function prior_table(m::AbstractModel; subset_string::String = "",
-             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+             caption::Bool = true, outdir::String = "")
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -429,8 +432,8 @@ function prior_posterior_moments_table(m::AbstractModel,
                  post_means::Vector, post_bands::Matrix;
                  percent::AbstractFloat = 0.9,
                  subset_string::String = "",
-                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
-
+                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                 caption::Bool = true, outdir::String = "")
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
         groupings[""] = sorted_parameters
@@ -531,7 +534,8 @@ Produce a table of prior means and posterior means or mode.
 function prior_posterior_table(m::AbstractModel, post_values::Vector;
                  subset_string::String = "",
                  groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                 use_mode::Bool = false)
+                 use_mode::Bool = false,
+                 caption::Bool = true, outdir::String = "")
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))

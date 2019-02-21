@@ -8,14 +8,14 @@ m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:forecast_horizons, 1)
 
-system = jldopen("$path/../reference/forecast_args.jld2","r") do file
+system = JLD2.jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system")
 end
 z0 = zeros(n_states_augmented(m))
 
 # Read expected output
 exp_states, exp_obs, exp_pseudo, exp_shocks =
-    jldopen("$path/../reference/forecast_out.jld2", "r") do file
+    JLD2.jldopen("$path/../reference/forecast_out.jld2", "r") do file
         read(file, "exp_states"),
         read(file, "exp_obs"),
         read(file, "exp_pseudo"),

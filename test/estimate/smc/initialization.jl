@@ -32,7 +32,7 @@ test_init_cloud = ParticleCloud(m, get_setting(m, :n_particles))
 Random.seed!(42)
 DSGE.initial_draw!(m, data, test_init_cloud)
 
-#= JLD.jldopen("reference/initial_draw.jld", "w") do file
+#= JLD2.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
 end =#
 #=JLD2.jldopen("reference/initial_draw.jld2", "w") do file
@@ -45,4 +45,3 @@ saved_init_cloud = load("reference/initial_draw.jld2", "cloud")
     @test @test_matrix_approx_eq DSGE.get_vals(test_init_cloud) DSGE.get_vals(saved_init_cloud)
     @test @test_matrix_approx_eq DSGE.get_loglh(test_init_cloud) DSGE.get_loglh(saved_init_cloud)
 end
-

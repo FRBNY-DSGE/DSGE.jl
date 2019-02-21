@@ -31,10 +31,10 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     for (i, output_var) in enumerate([:forecastobs, :forecastpseudo])
         # Read in original and default draws
-        original_draws = jldopen(original_output_files[output_var], "r") do file
+        original_draws = JLD2.jldopen(original_output_files[output_var], "r") do file
             read(file, "arr")
         end
-        default_draws  = jldopen(default_output_files[output_var], "r") do file
+        default_draws  = JLD2.jldopen(default_output_files[output_var], "r") do file
             read(file, "arr")
         end
 
