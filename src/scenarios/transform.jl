@@ -80,7 +80,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
     output_file = get_scenario_mb_output_file(m, scen, output_var)
     output_dir = dirname(output_file)
     isdir(output_dir) || mkpath(output_dir)
-    jldopen(output_file, "w") do file
+    JLD2.jldopen(output_file, "w") do file
         write(file, "mb", mb)
     end
 

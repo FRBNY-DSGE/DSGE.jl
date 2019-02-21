@@ -24,6 +24,6 @@ Roots
 SparseArrays
 SpecialFunctions
 StateSpaceRoutines
-StatPlots
+StatsPlots
 StatsBase
 StatsFuns

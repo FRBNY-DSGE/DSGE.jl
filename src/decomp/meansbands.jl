@@ -13,7 +13,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         print(verbose, :high, "Computing " * string(class) * "...")
 
         # Read metadata
-        variable_names = jldopen(input_files[Symbol(:decomptotal, class)]) do file
+        variable_names = JLD2.jldopen(input_files[Symbol(:decomptotal, class)]) do file
             class_long = get_class_longname(class)
             collect(keys(read(file, string(class_long) * "_indices")))
         end
@@ -32,7 +32,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
         output_dir = dirname(output_file)
         isdir(output_dir) || mkpath(output_dir)
-        jldopen(output_file, "w") do file
+        JLD2.jldopen(output_file, "w") do file
             write(file, "decomps", decomps)
         end
         println(verbose, :high, "wrote " * basename(output_file))
@@ -52,7 +52,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     # Read in dates
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class])
     input_file = input_files[Symbol(:decomptotal, class)]
-    dates = jldopen(input_file, "r") do file
+    dates = JLD2.jldopen(input_file, "r") do file
         sort(collect(keys(read(file, "date_indices"))))
     end
 
@@ -62,7 +62,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         product = Symbol(:decomp, comp)
 
         input_file = input_files[Symbol(product, class)]
-        jldopen(input_file, "r") do file
+        JLD2.jldopen(input_file, "r") do file
             # Parse transform
             class_long = get_class_longname(class)
             transforms = read(file, string(class_long) * "_revtransforms")

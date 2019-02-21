@@ -98,7 +98,7 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
         return population_forecast[1:nperiods, :]
 
     else
-        # Extend forecast by n_filler_periods
+       # Extend forecast by n_filler_periods
         n_filler_periods = nperiods - nperiods_act
 
         last_provided = population_forecast[end, :date]
@@ -314,8 +314,7 @@ function get_mb_metadata(m::AbstractModel, input_type::Symbol, cond_type::Symbol
 
     class   = get_class(output_var)
     product = get_product(output_var)
-
-    metadata = jldopen(forecast_output_file, "r") do jld
+    metadata = JLD2.jldopen(forecast_output_file, "r") do jld
         read_forecast_metadata(jld)
     end
 

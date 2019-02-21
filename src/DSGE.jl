@@ -2,7 +2,9 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Dates, Test, BenchmarkTools
-    using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots
+    using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra
+    using Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions
+    using StateSpaceRoutines, StatsPlots
     using CSV, DataFrames, DataStructures, OrderedCollections
     using DataStructures: SortedDict, insert!, ForwardOrdering
     using QuantEcon: solve_discrete_lyapunov
@@ -15,7 +17,8 @@ module DSGE
 
     export
         # distributions_ext.jl
-        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
+        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist,
+        MatrixNormal,
 
         # settings.jl
         Setting, get_setting,
@@ -38,7 +41,8 @@ module DSGE
         n_parameters_free, n_pseudo_observables, get_key,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
-        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
+        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names,
+        use_population_forecast,
         use_parallel_workers,
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
@@ -57,8 +61,9 @@ module DSGE
         # parameters.jl
         parameter, Transform, NullablePrior, AbstractParameter,
         Parameter, ParameterVector, ScaledParameter,
-        UnscaledParameter, SteadyStateParameter, transform_to_real_line, transform_to_model_space,
-        update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
+        UnscaledParameter, SteadyStateParameter, transform_to_real_line,
+        transform_to_model_space, update, update!, transform_to_model_space,
+        transform_to_real_line, Interval, ParamBoundsError,
 
         # observables.jl
         Observable, PseudoObservable, check_mnemonics,
@@ -75,8 +80,9 @@ module DSGE
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
         oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         loggrowthtopct_percapita, loggrowthtopct, logleveltopct_annualized,
-        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
-        logleveltopct_annualized_approx, loggrowthtopct_4q_approx, logleveltopct_4q_approx,
+        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized,
+        logleveltopct_annualized_percapita, logleveltopct_annualized_approx,
+        loggrowthtopct_4q_approx, logleveltopct_4q_approx,
         parse_data_series, collect_data_transforms, reverse_transform,
         subtract_quarters, iterate_quarters,
 
@@ -121,7 +127,8 @@ module DSGE
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
         n_targets, n_instruments, n_target_horizons, targets_to_data,
-        compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching, scenario_means_bands,
+        compute_scenario_system, filter_shocks!, forecast_scenario,
+        simulate_switching, scenario_means_bands,
         get_scenario_input_file, n_scenario_draws, get_scenario_filename, get_scenario_output_files,
         read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file, read_scenario_mb,
         count_scenario_draws,

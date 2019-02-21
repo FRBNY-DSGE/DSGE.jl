@@ -29,13 +29,13 @@ Random.seed!(42)
 
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
 
-file = jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), "r")
+file = JLD2.jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), "r")
 test_cloud = read(file, "cloud")
 test_w     = read(file, "w")
 test_W     = read(file, "W")
 close(file)
 
-file = jldopen("reference/smc_test_cloud.jld2", "r")
+file = JLD2.jldopen("reference/smc_test_cloud.jld2", "r")
 saved_cloud = read(file, "cloud")
 saved_w     = read(file, "w")
 saved_W     = read(file, "W")

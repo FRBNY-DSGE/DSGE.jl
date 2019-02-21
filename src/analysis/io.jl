@@ -144,7 +144,7 @@ If `bdd_and_unbdd`, then `output_var` must be either `:forecast` or
 """
 function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
-    jldopen(fn, "r") do f
+    JLD2.jldopen(fn, "r") do f
         read(f, "mb")
     end
 end

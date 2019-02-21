@@ -203,7 +203,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
         # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
         # is executed.
         if isnull(block_number) || get(block_number) == 1
-            jldopen(filepath, "w") do file
+            JLD2.jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
             end
             h5open(replace(filepath, "jld2" => "h5"), "w") do file
@@ -364,7 +364,7 @@ function combine_raw_forecast_output_and_metadata(m::AbstractModel,
     for jld_file_path in values(forecast_output_files)
         h5_file_path = replace(jld_file_path, "jld2" => "h5")
         arr = h5read(h5_file_path, "arr")
-        jldopen(jld_file_path, "r+") do file
+        JLD2.jldopen(jld_file_path, "r+") do file
             write(file, "arr", arr)
         end
         # Remove the h5 containing the raw forecast output when the data has been transferred.
@@ -419,7 +419,7 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
     product = get_product(output_var)
     class   = get_class(output_var)
 
-    jldopen(filename, "r") do file
+    JLD2.jldopen(filename, "r") do file
         # Read forecast output
         fcast_series = if isnull(shock_name)
             read_forecast_series(file, class, product, var_name)

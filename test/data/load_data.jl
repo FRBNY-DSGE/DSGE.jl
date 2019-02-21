@@ -21,7 +21,7 @@ path = dirname(@__FILE__)
 
         # Read expected results
         exp_data, exp_cond_data, exp_semicond_data =
-            jldopen("$path/../reference/load_data_out.jld2", "r") do file
+            JLD2.jldopen("$path/../reference/load_data_out.jld2", "r") do file
                 read(file, "data"), read(file, "cond_data"), read(file, "semi_cond_data")
             end
 
