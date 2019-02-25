@@ -5,7 +5,7 @@ module DSGE
     using BasisMatrices, BenchmarkTools, CSV, DataFrames, Dates
     using Distributed, Distributions, FFTW, FileIO, ForwardDiff, FredData, HDF5, JLD2
     using LinearAlgebra, Missings, Nullables, Optim, OrderedCollections, Printf, Random, RecipesBase
-    using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots, Test
+    using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatsPlots, Test
     using ColorTypes
     using DataStructures
     using QuantEcon: solve_discrete_lyapunov
