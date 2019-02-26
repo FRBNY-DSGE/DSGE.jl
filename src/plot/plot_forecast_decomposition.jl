@@ -10,9 +10,9 @@ forecast) necessary to call the plotting function `shockdec` in
 """
 function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
                          cond_new::Symbol, cond_old::Symbol,
-                         class::Symbol; individual_shocks::Bool = false) where M<:AbstractModel
+                         class::Symbol; individual_shocks::Bool = false, forecast_string_old = "", forecast_string_new = "") where M<:AbstractModel
     # Read in means
-    input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
+    input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
     decomps = JLD2.jldopen(input_file, "r") do file
         read(file, "decomps")
     end
@@ -146,11 +146,11 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
                                      individual_shocks::Bool = false,
                                      groups::Vector{ShockGroup} = shock_groupings(m_new),
                                      plotroot::String = figurespath(m_new, "forecast"),
-                                     verbose::Symbol = :low,
+                                     verbose::Symbol = :low, forecast_string_new = "", forecast_string_old = "",
                                      kwargs...) where M<:AbstractModel
     # Create MeansBands
     mbs = make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class,
-                          individual_shocks = individual_shocks)
+                          individual_shocks = individual_shocks, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
 
     # Create shock grouping
     if !individual_shocks
