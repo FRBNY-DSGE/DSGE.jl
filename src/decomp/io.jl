@@ -2,12 +2,12 @@ function get_decomp_filename(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
                              product::Symbol, class::Symbol;
                              pathfcn::Function = rawpath,
-                             fileformat::Symbol = :jld2) where M<:AbstractModel
+                             fileformat::Symbol = :jld2,
+                             forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
     output_var = Symbol(product, class)
-
     fn_new = get_forecast_filename(m_new, input_type, cond_new, output_var,
-                                   pathfcn = pathfcn, fileformat = fileformat)
-    fn_old = get_forecast_filename(m_old, input_type, cond_old, output_var)
+                                   pathfcn = pathfcn, fileformat = fileformat, forecast_string = forecast_string_new)
+    fn_old = get_forecast_filename(m_old, input_type, cond_old, output_var, forecast_string = forecast_string_old)
 
     dir = dirname(fn_new)
     base_new, ext = splitext(basename(fn_new))
@@ -20,7 +20,7 @@ end
 
 function get_decomp_output_files(m_new::M, m_old::M, input_type::Symbol,
                                  cond_new::Symbol, cond_old::Symbol,
-                                 classes::Vector{Symbol}) where M<:AbstractModel
+                                 classes::Vector{Symbol}; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
     output_files = Dict{Symbol, String}()
     for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         for class in classes
@@ -28,7 +28,7 @@ function get_decomp_output_files(m_new::M, m_old::M, input_type::Symbol,
             output_var = Symbol(product, class)
             output_files[output_var] =
                 get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old,
-                                    product, class, pathfcn = rawpath, fileformat = :jld2)
+                                    product, class, pathfcn = rawpath, fileformat = :jld2, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
         end
     end
     return output_files
@@ -36,9 +36,9 @@ end
 
 function get_decomp_mean_file(m_new::M, m_old::M, input_type::Symbol,
                               cond_new::Symbol, cond_old::Symbol,
-                              class::Symbol) where M<:AbstractModel
+                              class::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
     get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, :decomp, class,
-                        pathfcn = workpath, fileformat = :jld2)
+                        pathfcn = workpath, fileformat = :jld2, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
 end
 
 function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
@@ -47,13 +47,14 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                                       decomps::Dict{Symbol, Array{Float64}};
                                       block_number::Nullable{Int} = Nullable{Int}(),
                                       block_inds::AbstractRange{Int} = 1:0,
-                                      verbose::Symbol = :low) where M<:AbstractModel
+                                      verbose::Symbol = :low,
+                                      forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
     for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         for class in classes
             prod = Symbol(:decomp, comp)
             var = Symbol(prod, class)
             filepath = decomp_output_files[var]
-
+            #@show "c"*filepath
             if isnull(block_number) || get(block_number) == 1
                 JLD2.jldopen(filepath, "w") do file
                     # Write metadata

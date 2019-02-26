@@ -47,9 +47,9 @@ The first method returns nothing. The second method returns
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
                             classes::Vector{Symbol};
-                            verbose::Symbol = :low, kwargs...) where M<:AbstractModel
+                            verbose::Symbol = :low, forecast_string_new = "", forecast_string_old = "", kwargs...) where M<:AbstractModel
     # Get output file names
-    decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
+    decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, forecast_string_old = forecast_string_old, forecast_string_new = forecast_string_new)
 
     info_print(verbose, :low, "Decomposing forecast...")
     println(verbose, :low, "Start time: $(now())")
@@ -65,7 +65,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         params_new = load_draws(m_new, input_type, verbose = verbose)
         params_old = load_draws(m_old, input_type, verbose = verbose)
         decomps = f(params_new, params_old)
-        write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps,
+        write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old,
                                      verbose = verbose)
 
     # Multiple-draw forecasts
@@ -90,7 +90,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             decomps = convert(Vector{Dict{Symbol, Array{Float64}}}, decomps)
             decomps = assemble_block_outputs(decomps)
             write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps,
-                                         block_number = Nullable(block), block_inds = block_inds_thin[block],
+                                         block_number = Nullable(block), block_inds = block_inds_thin[block], forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old,
                                          verbose = verbose)
             gc()
 
@@ -117,7 +117,7 @@ end
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
-                            check::Bool = false) where M<:AbstractModel
+                            check::Bool = false, forecast_string_old = "", forecast_string_new = "") where M<:AbstractModel
     # Check numbers of periods
     T, k, H = decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 

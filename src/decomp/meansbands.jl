@@ -1,5 +1,5 @@
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
-                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
+                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol}; forecast_string_new = "", forecast_string_old = "",
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
     println(verbose, :low, )
@@ -7,7 +7,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     println(verbose, :low, "Start time: " * string(now()))
     begin_time = time_ns()
 
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
 
     for class in classes
         print(verbose, :high, "Computing " * string(class) * "...")
@@ -21,7 +21,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         # Get to work!
         mapfcn = use_parallel_workers(m_new) ? pmap : map
         decomp_vec = mapfcn(var -> decomposition_means(m_new, m_old, input_type,
-                                                       cond_new, cond_old, class, var),
+                                                       cond_new, cond_old, class, var, forecast_string_new = forecast_string_new, forecast_string_old, forecast_string_old),
                             variable_names)
         decomps = OrderedDict{Symbol, DataFrame}()
         for (var, decomp) in zip(variable_names, decomp_vec)
@@ -29,7 +29,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         end
 
         # Write to file
-        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
+        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
         output_dir = dirname(output_file)
         isdir(output_dir) || mkpath(output_dir)
         JLD2.jldopen(output_file, "w") do file
@@ -48,9 +48,9 @@ end
 
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
-                             class::Symbol, var::Symbol) where M<:AbstractModel
+                             class::Symbol, var::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
     # Read in dates
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class])
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class], forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
     input_file = input_files[Symbol(:decomptotal, class)]
     dates = JLD2.jldopen(input_file, "r") do file
         sort(collect(keys(read(file, "date_indices"))))
