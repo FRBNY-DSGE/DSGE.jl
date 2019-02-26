@@ -106,8 +106,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                    :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
         # Get to work!
-        #changed from pmap because of strange MethodError that I believe has to do with parallel workers trying to access same file
-        mb_vec = map(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+        mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                       pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
                       variable_names)
 
@@ -129,8 +128,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
         for shock_name in keys(metadata[:shock_indices])
             println(verbose, :high, "  * " * string(shock_name))
 
-            #changed from pmap because of strange MethodError that I believe has to do with parallel workers trying to access same file
-            mb_vec = map(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+            mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullables.Nullable(shock_name),
                                           forecast_string = forecast_string, kwargs...),
                           variable_names)
