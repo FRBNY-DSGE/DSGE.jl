@@ -184,6 +184,4 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
             save_plot(plots[var], output_file, verbose = verbose)
         end
     end
-
-    return plots
 end

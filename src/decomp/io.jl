@@ -5,6 +5,7 @@ function get_decomp_filename(m_new::M, m_old::M, input_type::Symbol,
                              fileformat::Symbol = :jld2,
                              forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
     output_var = Symbol(product, class)
+
     fn_new = get_forecast_filename(m_new, input_type, cond_new, output_var,
                                    pathfcn = pathfcn, fileformat = fileformat, forecast_string = forecast_string_new)
     fn_old = get_forecast_filename(m_old, input_type, cond_old, output_var, forecast_string = forecast_string_old)
@@ -56,6 +57,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
             prod = Symbol(:decomp, comp)
             var = Symbol(prod, class)
             filepath = decomp_output_files[var]
+
             if isnull(block_number) || get(block_number) == 1
                 # Write forecast metadata to a jld2 and the raw forecast output
                 # to an h5. The data in the HDF5 will be transferred to the jld2
