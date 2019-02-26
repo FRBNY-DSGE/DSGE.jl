@@ -419,14 +419,24 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
     product = get_product(output_var)
     class   = get_class(output_var)
 
-    JLD2.jldopen(filename, "r") do file
-        # Read forecast output
-        fcast_series = if isnull(shock_name)
-            read_forecast_series(file, class, product, var_name)
-        else
-            read_forecast_series(file, class, product, var_name, get(shock_name))
-        end
+    # Get index corresponding to var_name
+    class_long = get_class_longname(class)
+    indices = FileIO.load(filename, "$(class_long)_indices")
+    var_ind = indices[var_name]
 
+    # Read forecast output
+    fcast_series = if isnull(shock_name)
+        read_forecast_series(filename, product, var_ind)
+    else
+        # Get indices corresponding to shock_name
+        shock_name = get(shock_name)
+        shock_indices = FileIO.load(filename, "shock_indices")
+        shock_ind = shock_indices[shock_name]
+
+        read_forecast_series(filename, var_ind, shock_ind)
+    end
+
+    JLD2.jldopen(filename, "r") do file
         # The `fcast_output` for trends only is of size `ndraws` x `nvars`. We
         # need to use `repeat` below because population adjustments will be
         # different in each period. Now we have something of size `ndraws` x
@@ -447,26 +457,21 @@ end
 
 """
 ```
-read_forecast_series(file, class, product, var_name[, shock_name])
+read_forecast_series(file, filepath, class, product, var_name[, shock_name])
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
 observable) and possibly a particular shock. Result should be a matrix of size
 `ndraws` x `nperiods`.
 """
-function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol)
-    # Get index corresponding to var_name
-    class_long = get_class_longname(class)
-    filepath = file.path
-    indices = load(filepath, "$(class_long)_indices")
-    var_ind = indices[var_name]
+function read_forecast_series(filepath::String, product::Symbol, var_ind::Int)
 
-    dataset = load(filepath, "arr")
+    dataset = FileIO.load(filepath, "arr")
     ndims = length(size(dataset))
 
     # Trends are ndraws x nvars
     if product == :trend
-        whole = load(filepath, "arr")
+        whole = FileIO.load(filepath, "arr")
         if ndims == 1 # one draw
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, 1))
@@ -480,11 +485,11 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
                        :decompdata, :decompnews, :decomppara, :decompdettrend, :decomptotal]
         inds_to_read = if ndims == 2 # one draw
-            whole = load(filepath, "arr")
+            whole = FileIO.load(filepath, "arr")
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, length(arr)))
         elseif ndims == 3 # many draws
-            whole = load(filepath, "arr")
+            whole = FileIO.load(filepath, "arr")
             arr = whole[Colon(), var_ind, Colon()]
         end
     else
@@ -494,25 +499,17 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
     return arr
 end
 
-function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol,
-                              shock_name::Symbol)
-    # Get indices corresponding to var_name and shock_name
-    class_long = get_class_longname(class)
-    filepath = file.path
-    indices = load(filepath, "$(class_long)_indices")
-    var_ind = indices[var_name]
-    shock_indices = load(filepath, "shock_indices")
-    shock_ind = shock_indices[shock_name]
+function read_forecast_series(filepath::String, var_ind::Int, shock_ind::Int)
 
-    dataset = load(filepath, "arr")
+    dataset = FileIO.load(filepath, "arr")
     ndims = length(size(dataset))
 
     if ndims == 3 # one draw
-        whole = load(filepath, "arr")
+        whole = FileIO.load(filepath, "arr")
         arr = whole[var_ind, :, shock_ind]
         arr = reshape(arr, 1, length(arr))
     elseif ndims == 4 # many draws
-        whole = load(filepath, "arr")
+        whole = FileIO.load(filepath, "arr")
         arr = whole[:, var_ind, :, shock_ind]
     end
 
