@@ -12,7 +12,7 @@ m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Read in the data, mode, and hessian
 mode = load("$path/../reference/hessian.jld2","paramsmode")
-data = load("$path/../reference/hessian.jld2","data")'
+data = Matrix{Float64}(load("$path/../reference/hessian.jld2","data")')
 
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
 hessian_inv, ref_draws, ref_cov =

@@ -680,8 +680,8 @@ function describe_prior(param::Parameter)
             "mu", "sigma"
         end
 
-        return prior_dist * "(" * mom1 * "=" * string(round(prior_mean, 4)) * ", " *
-                                  mom2 * "=" * string(round(prior_std, 4)) * ")"
+        return prior_dist * "(" * mom1 * "=" * string(round(prior_mean, digits=4)) * ", " *
+                                  mom2 * "=" * string(round(prior_std, digits=4)) * ")"
 
     else
         error("Parameter must either be fixed or have non-null prior: " * string(param.key))

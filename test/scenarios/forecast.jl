@@ -24,11 +24,11 @@ end
     @test all(x -> x == 0, sys[:DD])
     @test all(x -> x == 0, sys[:DD_pseudo])
     for shock in keys(m.exogenous_shocks)
-        i = m.exogenous_shocks[shock]
+        ind = m.exogenous_shocks[shock]
         if shock in scen.instrument_names
-            @test sys[:QQ][i, i] != 0
+            @test sys[:QQ][ind, ind] != 0
         else
-            @test sys[:QQ][i, i] == 0
+            @test sys[:QQ][ind, ind] == 0
         end
     end
 
@@ -38,15 +38,15 @@ end
     end
     global forecastshocks = filter_shocks!(m, scen, sys)
     for var in scen.instrument_names
-        i = m.exogenous_shocks[var]
-        @test scen.instruments[var] == forecastshocks[i, :]
+        ind = m.exogenous_shocks[var]
+        @test scen.instruments[var] == forecastshocks[ind, :]
     end
 
     s_T = zeros(n_states_augmented(m))
     global _, forecastobs,_ ,_  = forecast(m, sys, s_T, shocks = forecastshocks)
     for var in scen.target_names
-        i = m.observables[var]
-        @test scen.targets[var] ≈ forecastobs[i, :]
+        ind = m.observables[var]
+        @test scen.targets[var] ≈ forecastobs[ind, :]
     end
 
     # Test scenario with shock scaling
@@ -57,11 +57,11 @@ end
 
     global forecastshocks = filter_shocks!(m, scale, sys)
     for var in scale.target_names
-        i = m.observables[var]
+        ind = m.observables[var]
         @test scale.targets[var] == scen.targets[var]
     end
     for var in scale.instrument_names
-        i = m.exogenous_shocks[var]
-        @test scale.instruments[var] == forecastshocks[i, :]
+        ind = m.exogenous_shocks[var]
+        @test scale.instruments[var] == forecastshocks[ind, :]
     end
 end

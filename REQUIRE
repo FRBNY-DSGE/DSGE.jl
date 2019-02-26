@@ -10,11 +10,13 @@ DataStructures
 Dates
 DifferentialEquations
 Distributions
+DSGEModels
 FileIO
 FFTW
 ForwardDiff
 FredData
 HDF5
+JLD
 JLD2
 LinearAlgebra
 Missings
@@ -29,7 +31,7 @@ Roots
 SparseArrays
 SpecialFunctions
 StateSpaceRoutines
-StatPlots
+StatsPlots
 StatsBase
 StatsFuns
 Test
