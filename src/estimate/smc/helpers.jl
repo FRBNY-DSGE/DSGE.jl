@@ -1,10 +1,19 @@
+"""
+```
+function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
+                          i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
+                          tempering_target::Float64, resampled_last_period::Bool)
+```
+
+Solves for next Φ. Returns ϕ_n, resampled_last_period, j, ϕ_prop.
+"""
 function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
                           i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
                           tempering_target::Float64, resampled_last_period::Bool)
     n_Φ = length(proposed_fixed_schedule)
 
     if resampled_last_period
-        # The ESS_bar should be reset to target an evenly weighted particle population
+        # The ESS_bar is reset to target an evenly weighted particle population
         ESS_bar = tempering_target*length(cloud)
         resampled_last_period = false
     else
@@ -12,8 +21,8 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
     end
 
     # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
-    optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
-                                         old_loglh = get_old_loglh(cloud)) - ESS_bar
+    optimal_ϕ_function(ϕ) = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
+                                        old_loglh = get_old_loglh(cloud)) - ESS_bar
 
     # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
     # Do so by iterating through a proposed_fixed_schedule and finding the first
@@ -24,9 +33,9 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
     end
 
     # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
-    # When ϕ_prop != 1. then there are still ϕ increments strictly below 1 that
+    # When ϕ_prop != 1.0, there are still ϕ increments strictly below 1 that
     # give the optimal ϕ step, ϕ_n.
-    # When ϕ_prop == 1. but optimal_ϕ_function(ϕ_prop) < 0 then there still exists
+    # When ϕ_prop == 1.0 but optimal_ϕ_function(ϕ_prop) < 0, there still exists
     # an optimal ϕ step, ϕ_n, that does not equal 1.
     # Thus the interval [optimal_ϕ_function(ϕ_n1), optimal_ϕ_function(ϕ_prop)] always
     # contains a 0 by construction.
@@ -80,38 +89,42 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 
 """
 function mvnormal_mixture_draw(θ_old::Vector{T}, d_prop::Distribution;
-                               cc::T = 1.0, α::T = 1.) where {T<:AbstractFloat}
+                               c::T = 1.0, α::T = 1.0) where T<:AbstractFloat
     @assert 0 <= α <= 1
-
-    d_bar = MvNormal(d_prop.μ, cc*d_prop.Σ)
+    d_bar = MvNormal(d_prop.μ, c^2 * d_prop.Σ)
 
     # Create mixture distribution conditional on the previous parameter value, θ_old
-    d_old = MvNormal(θ_old, cc*d_prop.Σ)
-    d_diag_old = MvNormal(θ_old, diagm(0 => diag(cc*d_prop.Σ)))
-    d_mix_old = MixtureModel(MvNormal[d_old, d_diag_old, d_bar], [α, (1 - α)/2, (1 - α)/2])
+    d_old      = MvNormal(θ_old, c^2 * d_prop.Σ)
+    d_diag_old = MvNormal(θ_old, diagm(0 => diag(c^2 * d_prop.Σ))) # FORTRAN: multiplies by 3
+    d_mix_old  = MixtureModel(MvNormal[d_old, d_diag_old, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
     θ_new = rand(d_mix_old)
 
     # Create mixture distribution conditional on the new parameter value, θ_new
-    d_new = MvNormal(θ_new, cc*d_prop.Σ)
-    d_diag_new = MvNormal(θ_new, diagm(0 => diag(cc*d_prop.Σ)))
-    d_mix_new = MixtureModel(MvNormal[d_new, d_diag_new, d_bar], [α, (1 - α)/2, (1 - α)/2])
+    d_new      = MvNormal(θ_new, c^2 * d_prop.Σ)
+    d_diag_new = MvNormal(θ_new, diagm(0 => diag(c^2 * d_prop.Σ)))
+    d_mix_new  = MixtureModel(MvNormal[d_new, d_diag_new, d_bar], [α, (1 - α)/2, (1 - α)/2])
 
-    # To clarify, this is not just the density of θ_new/θ_old using a given mixture
-    # density function, but rather, the density of θ_new | θ_old and the density of
-    # θ_old | θ_new taken with respect to their respective mixture densities
-    new_mixture_density = logpdf(d_mix_old, θ_new)
-    old_mixture_density = logpdf(d_mix_new, θ_old)
+    # The density of θ_new | θ_old and the density of θ_old | θ_new
+    # taken with respect to their respective mixture densities
+    new_mix_density = logpdf(d_mix_old, θ_new)
+    old_mix_density = logpdf(d_mix_new, θ_old)
 
-    return θ_new, new_mixture_density, old_mixture_density
+    return θ_new, new_mix_density, old_mix_density
 end
 
+"""
+```
+function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
+                                       ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh)))
+```
+Compute ESS given log likelihood, current weights, ϕ_n, ϕ_{n-1}, and old log likelihood.
+"""
 function compute_ESS(loglh::Vector{T}, current_weights::Vector{T},
-                     ϕ_n::T, ϕ_n1::T;
-                     old_loglh::Vector{T} = zeros(length(loglh))) where {T<:AbstractFloat}
-    incremental_weights = exp.((ϕ_n1 - ϕ_n)*old_loglh + (ϕ_n - ϕ_n1)*loglh)
-    new_weights = current_weights.*incremental_weights
-    normalized_weights = new_weights/sum(new_weights)
-    ESS = 1/sum(normalized_weights.^2)
+                     ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh))) where T<:AbstractFloat
+    inc_weights  = exp.((ϕ_n1 - ϕ_n) * old_loglh + (ϕ_n - ϕ_n1) * loglh)
+    new_weights  = current_weights .* inc_weights
+    norm_weights = new_weights / sum(new_weights)
+    ESS          = 1 / sum(norm_weights .^ 2)
     return ESS
 end

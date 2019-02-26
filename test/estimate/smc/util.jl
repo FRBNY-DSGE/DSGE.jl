@@ -1,7 +1,7 @@
 # To be removed after running this test individually in the REPL successfully
-using DSGE
-using HDF5, JLD2
-using Test
+#using DSGE
+#using HDF5, JLD2, Random
+#import Test: @test, @testset
 
 path = dirname(@__FILE__)
 
@@ -11,7 +11,7 @@ n_free_para = count([!m.parameters[i].fixed for i in 1:n_parameters(m)])
 free_para_inds = findall(x -> x.fixed == false, m.parameters)
 n_blocks = 3
 
-Random.seed!(42)
+@everywhere Random.seed!(42)
 test_blocks_free = DSGE.generate_free_blocks(n_free_para, n_blocks)
 test_blocks_all  = DSGE.generate_all_blocks(test_blocks_free, free_para_inds)
 

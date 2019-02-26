@@ -32,9 +32,11 @@ function solve(m::AbstractModel; apply_altpolicy = false, verbose::Symbol = :hig
             # Get equilibrium condition matrices
             Γ0, Γ1, C, Ψ, Π  = eqcond(m)
 
+            # Get equilibrium condition matrices
+            Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+
             # Solve model
-            TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose =
-            gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6) #, verbose = verbose)
+            TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
 
             # Check for LAPACK exception, existence and uniqueness
             if eu[1] != 1 || eu[2] != 1

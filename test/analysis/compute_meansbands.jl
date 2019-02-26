@@ -26,7 +26,7 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs,
 
 # Read expected output
 exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
-    jldopen("$path/../reference/means_bands_out.jld2", "r") do file
+    JLD2.jldopen("$path/../reference/means_bands_out.jld2", "r") do file
         read(file, "exp_modal_means"), read(file, "exp_modal_bands"),
         read(file, "exp_full_means"),  read(file, "exp_full_bands")
     end

@@ -22,7 +22,7 @@ mutable struct Particle
     loglh::Float64
     logpost::Float64
     old_loglh::Float64
-    accept::Bool
+    accept::Float64 #Bool # TO MATCH FORTRAN
 end
 
 """
@@ -76,6 +76,10 @@ end
 
 function get_loglh(c::ParticleCloud)
     return map(p -> p.loglh, c.particles)
+end
+
+function cloud_isempty(c::ParticleCloud)
+    return isempty(c.particles)
 end
 
 function get_old_loglh(c::ParticleCloud)
@@ -135,6 +139,16 @@ end
 
 function update_mutation!(p::Particle, para::Array{Float64,1},
                           like::Float64, post::Float64, old_like::Float64, accept::Bool)
+    p.value = para
+    p.loglh = like
+    p.logpost = post
+    p.old_loglh = old_like
+    p.accept = accept
+end
+
+
+function update_mutation!(p::Particle, para::Array{Float64,1},
+                          like::Float64, post::Float64, old_like::Float64, accept::Float64)
     p.value = para
     p.loglh = like
     p.logpost = post

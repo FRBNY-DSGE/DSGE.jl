@@ -108,10 +108,10 @@ end
 
 function rescale_annotations_fontsize!(p::Plots.Plot{Plots.GRBackend}, fontsize::Int64)
     for i in 1:length(p.series_list)
-        if typeof(p.series_list[i].d[:series_annotations]) == Void
+        if typeof(p.series_list[i].plotattributes[:series_annotations]) == Nothing
             continue
         else
-            p.series_list[i].d[:series_annotations].font.pointsize = fontsize
+            p.series_list[i].plotattributes[:series_annotations].font.pointsize = fontsize
         end
     end
 end
@@ -142,11 +142,11 @@ function relocate_annotations!(p::Plots.Plot{Plots.GRBackend},
     end
 
     for i in 1:length(p.series_list)
-        if typeof(p.series_list[i].d[:series_annotations]) == Void
+        if typeof(p.series_list[i].plotattributes[:series_annotations]) == Nothing
             continue
         else
-            p.series_list[i].d[:series_annotations].font.halign = horiz_position
-            p.series_list[i].d[:series_annotations].font.valign = vert_position
+            p.series_list[i].plotattributes[:series_annotations].font.halign = horiz_position
+            p.series_list[i].plotattributes[:series_annotations].font.valign = vert_position
         end
     end
 end

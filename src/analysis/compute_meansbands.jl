@@ -106,7 +106,8 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                    :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
         # Get to work!
-        mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+        #changed from pmap because of strange MethodError that I believe has to do with parallel workers trying to access same file
+        mb_vec = map(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                       pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
                       variable_names)
 
@@ -128,8 +129,9 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
         for shock_name in keys(metadata[:shock_indices])
             println(verbose, :high, "  * " * string(shock_name))
 
-            mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
-                                          pop_growth = pop_growth, shock_name = Nullable(shock_name),
+            #changed from pmap because of strange MethodError that I believe has to do with parallel workers trying to access same file
+            mb_vec = map(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+                                          pop_growth = pop_growth, shock_name = Nullables.Nullable(shock_name),
                                           forecast_string = forecast_string, kwargs...),
                           variable_names)
 
@@ -168,7 +170,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                             output_var::Symbol, var_name::Symbol, df::DataFrame;
                             forecast_string::String = "",
                             pop_growth::AbstractVector{Float64} = Float64[],
-                            shock_name::Nullable{Symbol} = Nullable{Symbol}(),
+                            shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false,
                             compute_shockdec_bands::Bool = false)
