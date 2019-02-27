@@ -2,7 +2,7 @@ using DSGE, StateSpaceRoutines
 using Test, Printf, JLD2, Distributed, Plots
 using HDF5, JLD2, FileIO, DelimitedFiles
 using LinearAlgebra, Distributions, PDMats, Random
-using DataStructures, OrderedCollections, DataFrames,
+using DataStructures, OrderedCollections, DataFrames
 
 my_tests = [
            "core",
