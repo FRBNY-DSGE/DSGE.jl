@@ -6,9 +6,9 @@
 @everywhere Random.seed!(42)
 weights = rand(400)
 weights = weights/sum(weights)
-test_sys_resample = resample(weights, method = :systematic)
-test_multi_resample = resample(weights, method = :multinomial)
-test_poly_resample = resample(weights, method = :polyalgo)
+test_sys_resample = DSGE.resample(weights, method = :systematic)
+test_multi_resample = DSGE.resample(weights, method = :multinomial)
+test_poly_resample = DSGE.resample(weights, method = :polyalgo)
 
 #=jldopen("resample.jld2", "w") do file
     file["sys"] = test_sys_resample
