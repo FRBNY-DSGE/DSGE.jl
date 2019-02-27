@@ -364,6 +364,9 @@ function model_settings!(m::RealBond)
     # m <= Setting(:n_anticipated_shocks_padding, 20,
                  # "Padding for anticipated policy shocks")
 
+    # Whether one wishes to re-compute βstar
+    m <= Setting(:use_last_βstar, false, "Flag to avoid recomputing steady-state.")
+
     # Number of states and jumps
     m <= Setting(:normalize_distr_variables, true, "Whether or not to perform the
                  normalization of the distributional states in the Klein solution step")
