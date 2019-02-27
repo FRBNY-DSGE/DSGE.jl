@@ -1,6 +1,4 @@
-using DSGE, StateSpaceRoutines
-using JLD2, Test
-import DSGE: jacobian, n_observables, n_shocks_exogenous, n_backward_looking_states, n_model_states
+import DSGE: n_model_states, n_backward_looking_states
 
 path = dirname(@__FILE__)
 
@@ -20,7 +18,7 @@ end
 
 ### Jacobian
 m.testing = true
-JJ       = jacobian(m)
+JJ       = DSGE.jacobian(m)
 @load "$path/reference/jacobian.jld2" saved_JJ nw
 
 # we will always order things XP YP X Y
@@ -178,7 +176,7 @@ end
 
 # Testing the filter inputs against the outputs
 EE_zero = zeros(1, 1)
-# reference_output = JLD2.load("$path/reference/filter_inputs_output.jld2")
+# reference_output = load("$path/reference/filter_inputs_output.jld2")
 @load "$path/reference/filter_inputs_output.jld2" y loglik
 test = kalman_filter(y, TTT, RRR, CCC, QQ, ZZ,
                      DD, EE_zero, s_0, P_0)
