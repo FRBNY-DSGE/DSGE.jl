@@ -16,7 +16,6 @@ FFTW
 ForwardDiff
 FredData
 HDF5
-JLD
 JLD2
 LinearAlgebra
 Missings
