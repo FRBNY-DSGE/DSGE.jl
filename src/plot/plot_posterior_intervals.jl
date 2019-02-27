@@ -155,7 +155,7 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                               :hline, markerstrokecolor = :black)
         @df df_baseline plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
                               :hline, markerstrokecolor = :black)
-        colors = [:blue, :green, :red, :orange, :yellow]
+        colors = [:red, :blue, :green, :orange, :yellow]
         for i = 1:length(df_comparisons)
             @df (df_comparisons[i]) plot!(p, :param_inds, :post_ub, label = comp_labels[i], linealpha = 0, marker =
                                     :hline, markerstrokecolor = colors[i])
