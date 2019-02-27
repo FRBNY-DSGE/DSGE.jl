@@ -177,7 +177,7 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
         # Save plot
         base = Symbol(:decomp, individual_shocks ? :shocks : :total, "_", var)
         output_file = get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, base, Symbol(),
-                                          pathfcn = figurespath, fileformat = plot_extension())
+                                          pathfcn = figurespath, fileformat = plot_extension(), forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
         output_file = joinpath(plotroot, basename(output_file))
 
         save_plot(plots[var], output_file, verbose = verbose)
