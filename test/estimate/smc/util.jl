@@ -1,8 +1,3 @@
-# To be removed after running this test individually in the REPL successfully
-#using DSGE
-#using HDF5, JLD2, Random
-#import Test: @test, @testset
-
 path = dirname(@__FILE__)
 
 m = AnSchorfheide()

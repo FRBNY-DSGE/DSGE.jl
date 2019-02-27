@@ -1,6 +1,3 @@
-using DSGE, JLD2, FileIO
-using HDF5, Test
-
 path = dirname(@__FILE__)
 
 custom_settings = Dict{Symbol, Setting}(

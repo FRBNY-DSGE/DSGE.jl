@@ -249,7 +249,7 @@ end
 
 """
 ```
-write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symbol)
+write_forecast_metadata(m::AbstractModel, file::JLDFile, var::Symbol)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -334,7 +334,7 @@ end
 
 """
 ```
-write_forecast_block(file::JLD2.JLDFile, arr::Array, block_number::Int,
+write_forecast_block(file::JLDFile, arr::Array, block_number::Int,
     block_inds::AbstractRange{Int64})
 ```
 
@@ -379,7 +379,7 @@ end
 
 """
 ```
-read_forecast_metadata(file::JLD2.JLDFile)
+read_forecast_metadata(file::JLDFile)
 ```
 
 Read metadata from forecast output files. This includes dictionaries mapping

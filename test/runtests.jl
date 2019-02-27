@@ -1,4 +1,8 @@
-using Test, Printf, DSGE, JLD2, FileIO, LinearAlgebra, Distributions, PDMats, HDF5, OrderedCollections, DataFrames, DelimitedFiles, Random, Distributed, Test
+using DSGE, StateSpaceRoutines
+using Test, Printf, JLD2, Distributed, Plots
+using HDF5, JLD2, FileIO, DelimitedFiles
+using LinearAlgebra, Distributions, PDMats, Random
+using DataStructures, OrderedCollections, DataFrames,
 
 my_tests = [
            "core",
