@@ -1,11 +1,3 @@
-# To be removed after running this test individually in the REPL successfully
-addprocs_frbny(10)     # There must be exactly 10 workers for these tests to pass.
-writing_output = false # Set to 'true' when re-writing output files.
-
-@everywhere using DSGE, DSGEModels
-@everywhere using DelimitedFiles, HDF5, JLD, JLD2, Random
-import Test: @test, @testset
-
 path = dirname(@__FILE__)
 
 m = AnSchorfheide()
@@ -41,7 +33,7 @@ test_W      = test_file["W"]
 test_z = test_file["z"]
 
 if writing_output
-    JLD2.jldopen("reference/smc_cloud_fix=true.jld2", true, true, true, IOStream) do file
+    jldopen("reference/smc_cloud_fix=true.jld2", true, true, true, IOStream) do file
         write(file, "cloud", test_cloud)
         write(file, "w", test_w)
         write(file, "W", test_W)
@@ -126,7 +118,7 @@ test_W      = test_file["W"]
 test_z      = test_file["z"]
 
 if writing_output
-    JLD2.jldopen("reference/smc_sw_cloud_fix=true_blocks=1.jld2", true, true, true, IOStream) do file
+    jldopen("reference/smc_sw_cloud_fix=true_blocks=1.jld2", true, true, true, IOStream) do file
         write(file, "cloud", test_cloud)
         write(file, "w", test_w)
         write(file, "W", test_W)
@@ -209,7 +201,7 @@ test_W      = test_file["W"]
 test_z = test_file["z"]
 
 if writing_output
-    JLD2.jldopen("reference/smc_sw_cloud_fix=true_blocks=3.jld2", true, true, true, IOStream) do file
+    jldopen("reference/smc_sw_cloud_fix=true_blocks=3.jld2", true, true, true, IOStream) do file
         write(file, "cloud", test_cloud)
         write(file, "w", test_w)
         write(file, "W", test_W)

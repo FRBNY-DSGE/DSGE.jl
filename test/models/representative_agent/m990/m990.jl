@@ -1,6 +1,3 @@
-using DSGE
-using HDF5, Test, Distributions, JLD2
-
 path = dirname(@__FILE__)
 
 ### Model
@@ -101,7 +98,7 @@ end
 
 ### Pseudo-measurement equation
 expect = Dict{Symbol, Any}()
-jld = JLD2.jldopen("$path/pseudo_measurement.jld2")
+jld = jldopen("$path/pseudo_measurement.jld2")
 expect[:ZZ_pseudo] = read(jld, "ZZ_pseudo")
 expect[:DD_pseudo] = read(jld, "DD_pseudo")
 close(jld)
