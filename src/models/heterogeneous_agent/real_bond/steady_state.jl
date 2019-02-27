@@ -32,6 +32,11 @@ function steadystate!(m::RealBond;
     ns      = get_setting(m, :ns)
     n       = get_setting(m, :n)
 
+    # Flag allows one not to recompute steady state
+    if get_setting(m, :use_last_βstar)
+        βlo = βhi = m[:βstar]
+    end
+
     # Initialization
     count   = 1
     c = zeros(n)
