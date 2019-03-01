@@ -605,7 +605,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     for key in keys(forecast_output)
         if !(key in output_vars)
-            delete!(forecast_output, key)
+            deletecols!(forecast_output, key)
         end
     end
     return forecast_output
