@@ -164,6 +164,7 @@ function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
         bdd_file = get_meansbands_output_file(m, input_type, cond_type, bdd_output_var;
                                               forecast_string = forecast_string,
                                               directory = directory)
+
         read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
     else
         read_mb(unbdd_file)
@@ -190,7 +191,12 @@ function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
 
     # Check well-formed
     for fld in [:para, :forecast_string, :cond_type, :date_inds, :class, :indices]
-        @assert bdd_mb.metadata[fld] == unbdd_mb.metadata[fld] "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
+        if typeof(bdd_mb.metadata[fld]) == OrderedDict{Date,Int64}
+            @assert bdd_mb.metadata[fld].vals == unbdd_mb.metadata[fld].vals
+            @assert bdd_mb.metadata[fld].keys == unbdd_mb.metadata[fld].keys
+        else
+            @assert bdd_mb.metadata[fld] == unbdd_mb.metadata[fld] "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
+        end
     end
     @assert (bdd_mb.metadata[:product], unbdd_mb.metadata[:product]) in [(:bddforecast, :forecast), (:bddforecast4q, :forecast4q)] "Invalid product fields: $((bdd_mb.metadata[:product], unbdd_mb.metadata[:product]))"
 
