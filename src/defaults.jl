@@ -134,6 +134,7 @@ function default_settings!(m::AbstractModel)
     settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40,
         "Number of periods for which to calculate an impulse response")
     settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false, "Whether or not to compute bands for shock decomposition. Setting to false saves signficant storage space.")
+<<<<<<< HEAD
 
 	# Sequential Monte Carlo
     settings[:n_particles] = Setting(:n_particles, 2000, "Number of particles for use in SMC")
@@ -154,6 +155,9 @@ function default_settings!(m::AbstractModel)
     settings[:adaptive_tempering_target_smc] = Setting(:adaptive_tempering_target_smc, 0.97, false, "adpt", "Either the adaptive tempering target or 0.0 if using fixed schedule")
     settings[:smc_iteration] = Setting(:smc_iteration, 1, false, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
     settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint, "The old data vintage to start SMC from when time tempering.")
+=======
+    settings[:smc_iteration] = Setting(:smc_iteration, 1, false, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
+>>>>>>> e4c76bf... Set iter to false so does not print in filestrings
     # Alternative policy
     baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
     settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
