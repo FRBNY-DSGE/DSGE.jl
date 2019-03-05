@@ -223,11 +223,7 @@ function init_parameters!(m::AnSchorfheide)
                    description="κ: Composite parameter in New Keynesian Phillips Curve.",
                    tex_label="\\kappa")
 
-<<<<<<< HEAD
-    m <= parameter(:ψ_1, 1.1434, (1+1e-20, 1e5), (1+1e-20, 1e5), Exponential(), GammaAlt(1.5, 0.25), fixed=false,
-=======
     m <= parameter(:ψ_1, 1.1434, (1e-20, 1e5), (1e-20, 1e5), Exponential(), GammaAlt(1.5, 0.25), fixed=false,
->>>>>>> 8eecb6c... Squash '1+' bug in Psi_1 of An_Schorfheide and update relevant tests
                    description="ψ_1: The weight on inflation in the monetary policy rule.",
                    tex_label="\\psi_1")
     m <= parameter(:ψ_2, 0.4536, (1e-20, 1e5), (1e-20, 1e5), Exponential(), GammaAlt(0.5, 0.25), fixed=false,
