@@ -202,7 +202,6 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     else
         find_density_bands(transformed_series, density_bands, minimize = minimize)
     end
-
     return means, bands
 end
 
