@@ -295,7 +295,7 @@ m <= parameter(:ρ_λ_f, 0.8692, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Dis
 
 m <= parameter(:ρ_λ_w, 0.9546, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.", # CHECK THIS
-               tex_label="\\rho_{\\lambda_f}")
+               tex_label="\\rho_{\\lambda_w}")
 
 # monetary policy shock - see eqcond
 m <= parameter(:ρ_rm, 0.3000, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
