@@ -137,32 +137,32 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
 
         p = @df df_deviations plot(:param_inds, :comp_ub, label = "", linealpha = 0, marker =
                                 :hline, markerstrokecolor = :blue, title = "",
-                                series_annotations = parameter_labels)
+                                series_annotations = parameter_labels, legend=:bottomright)
         @df df_deviations plot!(p, :param_inds, :comp_lb, label = "", linealpha = 0, marker =
-                                :hline, markerstrokecolor = :blue)
+                                :hline, markerstrokecolor = :blue, legend=:bottomright)
         @df df_deviations plot!(p, :param_inds, :base_mean, label = "", marker = :hline,
-                                markerstrokecolor = :black, linecolor = :black)
+                                markerstrokecolor = :black, linecolor = :black, legend=:bottomright)
         @df df_deviations plot!(p, :param_inds, :comp_mean, label = "", linealpha = 0, marker =
-                                :hline, markerstrokecolor = :red)
+                                :hline, markerstrokecolor = :red, legend=:bottomright)
 
         rescale_annotations_fontsize!(p, 6)
         relocate_annotations!(p, :right, :top)
     else
         p = @df df_baseline plot(:param_inds, :post_ub, label = base_label, linealpha = 0, marker =
                               :hline, markerstrokecolor = :black, title = "", series_annotations =
-                              parameter_labels)
+                              parameter_labels, legend=:bottomright)
         @df df_baseline plot!(p, :param_inds, :post_lb, label = "", linealpha = 0, marker =
-                              :hline, markerstrokecolor = :black)
+                              :hline, markerstrokecolor = :black, legend=:bottomright)
         @df df_baseline plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
-                              :hline, markerstrokecolor = :black)
+                              :hline, markerstrokecolor = :black, legend=:bottomright)
         colors = [:red, :blue, :green, :orange, :yellow]
         for i = 1:length(df_comparisons)
             @df (df_comparisons[i]) plot!(p, :param_inds, :post_ub, label = comp_labels[i], linealpha = 0, marker =
-                                    :hline, markerstrokecolor = colors[i])
+                                    :hline, markerstrokecolor = colors[i], legend=:bottomright)
             @df (df_comparisons[i]) plot!(p, :param_inds, :post_lb, label = "", linealpha = 0, marker =
-                                    :hline, markerstrokecolor = colors[i])
+                                    :hline, markerstrokecolor = colors[i], legend=:bottomright)
             @df (df_comparisons[i]) plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
-                                    :hline, markerstrokecolor = colors[i])
+                                    :hline, markerstrokecolor = colors[i], legend=:bottomright)
         end
         rescale_annotations_fontsize!(p, 6)
         relocate_annotations!(p, :right, :top)
