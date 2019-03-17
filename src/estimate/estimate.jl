@@ -1,6 +1,6 @@
 """
 ```
-estimate(m, data; verbose = :low, proposal_covariance = Matrix(undef, 0, 0))
+estimate(m, data; verbose=:low, proposal_covariance=Matrix(), method=:SMC)
 ```
 
 Estimate the DSGE parameter posterior distribution.
@@ -34,10 +34,11 @@ function estimate(m::AbstractModel, df::DataFrame;
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
                   sampling::Bool = true,
-                  filestring_addl::Vector{String} = Vector{String}())
+                  filestring_addl::Vector{String} = Vector{String}(), save_intermediate::Bool = false)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
-             mle = mle, sampling = sampling)
+             mle = mle, sampling = sampling
+	     save_intermediate = save_intermediate)
 end
 
 function estimate(m::AbstractModel;
@@ -45,11 +46,13 @@ function estimate(m::AbstractModel;
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
                   sampling::Bool = true,
-                  filestring_addl::Vector{String} = Vector{String}())
+                  filestring_addl::Vector{String} = Vector{String}(),
+		  save_intermediate::Bool = false)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
-             mle = mle, sampling = sampling)
+             mle = mle, sampling = sampling,
+	     save_intermediate = save_intermediate)
 end
 
 function estimate(m::AbstractModel, data::AbstractArray;
@@ -57,7 +60,8 @@ function estimate(m::AbstractModel, data::AbstractArray;
                   proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
                   sampling::Bool = true,
-                  filestring_addl::Vector{String} = Vector{String}())
+                  filestring_addl::Vector{String} = Vector{String}(),
+		  save_intermediate::Bool = false)
 
     if !(get_setting(m, :sampling_method) in [:SMC,:MH])
         error("method must be :SMC or :MH")
@@ -293,6 +297,10 @@ function metropolis_hastings(propdist::Distribution,
         end
     end
 
+    # Setup the default system if not recomputing the transition equation
+    if !recompute_transition_equation
+        system = compute_system(m)
+    end
 
     # Report number of blocks that will be used
     println(verbose, :low, "Blocks: $n_blocks")
