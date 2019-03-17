@@ -55,7 +55,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
              verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud = ParticleCloud(m, 0),
              recompute_transition_equation::Bool = true, run_test::Bool = false,
-             filestring_addl::Vector{String} = Vector{String}())
+             filestring_addl::Vector{String} = Vector{String}(),
+	     save_intermediate::Bool = false)
     ########################################################################################
     ### Setting Parameters
     ##################################################################################
@@ -227,6 +228,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         if (cloud.ESS[i] < threshold)
             new_inds = resample(normalized_weights; method = resampling_method)
             # update parameters/logpost/loglh with resampled values
+            # reset the weights to 1/n_parts
             cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
             reset_weights!(cloud) # reset the weights to 1/n_parts
             cloud.resamples += 1
@@ -272,6 +274,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                                       use_chand_recursion = use_chand_recursion,
                                       verbose = verbose) for k=1:n_parts]
         end
+    else
+        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                                  c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion,
+                                  verbose = verbose, system = system) for j = 1:n_parts]
+    end
 
         cloud.particles = new_particles
         update_acceptance_rate!(cloud) # Update average acceptance rate
@@ -289,6 +296,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         if run_test && (i == 3)
             break
+        end
+        if mod(cloud.stage_index, 10)==0 && save_intermediate
+            jldopen(rawpath(m, "estimate", "smc_cloud_$(cloud.stage_index).jld2"), "w") do file
+                write(file, "cloud", cloud)
+                write(file, "w", w_matrix)
+                write(file, "W", W_matrix)
+            end
         end
     end
 
@@ -313,17 +327,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 end
 
-function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
+function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low, save_intermediate::Bool = false)
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
-    return smc(m, data_mat, verbose = verbose,
+    return smc(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
                filestring_addl = filestring_addl)
 end
 
-function smc(m::AbstractModel; verbose::Symbol=:low,
+function smc(m::AbstractModel; verbose::Symbol=:low, save_intermediate::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
-    return smc(m, data_mat, verbose=verbose,
+    return smc(m, data_mat, verbose=verbose, save_intermediate = save_intermediate,
                filestring_addl = filestring_addl)
 end
