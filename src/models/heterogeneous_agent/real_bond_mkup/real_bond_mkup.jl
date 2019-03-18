@@ -272,10 +272,10 @@ function init_parameters!(m::RealBondMkup)
                    description = "Inverse Frisch elasticity of labor supply.", tex_label = "\\nu")
     m <= parameter(:abar, -0.5, fixed = true,
                    description = "Borrowing floor.", tex_label = "\\bar{a}")
-    m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed = true,
+    m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
-    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed = false,
+    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
     m <= parameter(:ρ_mon, 0., fixed = true, description = "ρ_mon: Persistence of monetary policy shock", tex_label = "\\rho_{mon}")
@@ -286,7 +286,7 @@ function init_parameters!(m::RealBondMkup)
                    fixed = true, tex_label = "\\rho_{mkp}", description = "ρ_mkp: Persistence of the markup shock")
 
     # Taken from m1002
-    m <= parameter(:σ_mkp, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed = false,
+    m <= parameter(:σ_mkp, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_mkp: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
