@@ -118,7 +118,7 @@ Function initializes illiquid asset grids.
         a_g = amin .+ (amax - amin) * a_raw
 
         for i = 1:9
-            a_g[i] = (i-1) * a_g[10]/(10 - 1)
+            a_g[i] = (i-1) * a_g[10]/(10. - 1.)
         end
 
     end
@@ -377,7 +377,7 @@ end
     w_g_grid	     = repeat([w], I_g, J_g,N)
     l_g_grid		 = permutedims(repeat(ones(N,1),1,I_g,J_g),[2 3 1])
 
-    return a_grid, a_g_grid, b_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, l_grid, l_g_grid, w_grid
+    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid
 end
 
 @inline function transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,

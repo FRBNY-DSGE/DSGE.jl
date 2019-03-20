@@ -365,47 +365,89 @@ function init_parameters!(m::TwoAssetHANK)
     m <= parameter(:kappa, 10.0, fixed=true,
                    description="Household effects of TFP shock",
                    tex_label="kappa")
+    m <= SteadyStateParameter(:KL_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:r_a_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:w_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:K_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameterArray(:u_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:c_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:d_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:V_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:g_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:dab, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:dab_g, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameter(:C_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:C_Var_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:I_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:B_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:Y_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:n_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameterArray(:earn_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameter(:earn_Var_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameterArray(:IcF_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:IcB_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:Ic0_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:IcFB_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:IcBF_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:IcBB_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:Ic00_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:IcBB_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameterArray(:WHTM_indicator, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameter(:WHTM_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:C_WHTM_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameterArray(:PHTM_indicator, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameter(:PHTM_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:C_PHTM_SS, NaN,
+                                   description = "")
+   m <= SteadyStateParameterArray(:NHTM_indicator, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameter(:NHTM_SS, NaN,
+                                   description = "")
+    m <= SteadyStateParameter(:C_NHTM_SS, NaN,
+                                   description = "")
 
-###
-#=
-    # Aggregate shocks
-    m <= parameter(:σ_MP, sqrt(0.05), (1e-20, 1e5), (1e-20, 1e5), Exponential(),
-                   RootInverseGamma(4, .4), fixed=false,
-                   description="Volatility of monetary policy shocks", tex_label="σ_MP")
+    m <= SteadyStateParameterArray(:r_a_grid, Vector{Float64}(),
+                                   description = "")
 
-    m <= parameter(:θ_MP, 0.25, fixed=true,
-                   description="Rate of mean reversion in monetary policy shocks",
-                   tex_label="θ_MP")
+    m <= SteadyStateParameterArray(:gg_SS, Vector{Float64}(),
+                                   description = "")
+    m <= SteadyStateParameter(:illiquid_wedge, NaN,
+                                   description = "")
 
-    m <= SteadyStateParameterArray(:V_ss, Vector{Float64}(),
-                                   description = "Stacked steady-state value function")
-
-    m <= SteadyStateParameter(:inflation_ss, NaN, description = "Steady-state rate of inflation")
-    m <= SteadyStateParameterArray(:g_ss, Vector{Float64}(),
-                                   description = "Stacked steady-state distribution")
-    m <= SteadyStateParameter(:r_ss, NaN, description = "Steady-state real interest rate")
-    m <= SteadyStateParameterArray(:u_ss, Vector{Float64}(),
-                                   description = "Steady-state flow utility")
-    m <= SteadyStateParameterArray(:c_ss, Vector{Float64}(),
-                                   description = "Steady-state individual consumption rate")
-    m <= SteadyStateParameterArray(:h_ss, Vector{Float64}(),
-                                   description = "Steady-state individual labor hours")
-    m <= SteadyStateParameterArray(:s_ss, Vector{Float64}(),
-                                   description = "Steady-state individual savings rate")
-    m <= SteadyStateParameter(:rnom_ss, NaN, description = "Steady-state nominal interest rate")
-    m <= SteadyStateParameter(:B_ss, NaN, description = "Steady-state bond supply")
-    m <= SteadyStateParameter(:N_ss, NaN, description = "Steady-state labor supply")
-    m <= SteadyStateParameter(:Y_ss, NaN, description = "Steady-state output")
-    m <= SteadyStateParameter(:labor_share_ss, NaN,
-                              description = "Frictionless labor share of income")
-    m <= SteadyStateParameter(:w_ss, NaN, description = "Steady-state wage rate")
-    m <= SteadyStateParameter(:profit_ss, NaN, description = "Steady-state profits")
-    m <= SteadyStateParameter(:C_ss, NaN, description = "Steady-state aggregate consumption")
-    m <= SteadyStateParameter(:T_ss, NaN, description = "Steady-state total taxes")
-    m <= SteadyStateParameter(:G_ss, NaN, description = "Steady-state government spending")
-    m <= SteadyStateParameter(:ρ_ss, NaN, description = "Steady-state discount rate")
-=#
-
+    m <= SteadyStateParameterArray(:vars_SS, Vector{Float64}(),
+                                   description = "")
 end
 
 """
@@ -488,8 +530,7 @@ function steadystate!(m::TwoAssetHANK)
     w	= (1 - aalpha) * (KL ^ aalpha)
     r_a	= aalpha * (KL ^ (aalpha - 1)) - ddelta
 
-    #=a_grid, a_g_grid, b_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_g_tilde_grid, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, l_grid, l_g_grid, w_grid =#
-    a_grid, a_g_grid, b_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, l_grid, l_g_grid, w_grid = set_grids(a, b, a_g, b_g, y, I, J, I_g, J_g, N, w, r_a, r_b, r_b_borr, trans)
+    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid = set_grids(a, b, a_g, b_g, y, I, J, I_g, J_g, N, w, r_a, r_b, r_b_borr, trans)
 
     # Initial consumption and value function
     c_0	= (1-xxi) * w * y_grid .* l_grid + (r_a_grid[1,1,1] + ddeath*pam) .* a_grid +
@@ -642,20 +683,38 @@ function steadystate!(m::TwoAssetHANK)
     aau = Array{Float64}(undef, 0, 0)
     bbu = Array{Float64}(undef, 0, 0)
     ccu = Array{Float64}(undef, 0, 0)
-    #dab_g_tilde = Array{Float64}(undef, 0, 0)
-    #dab_g_tilde_mat = Array{Float64}(undef, 0, 0)
-    #ccu = Array{Float64}(undef, 0, 0)
-    #ccu = Array{Float64}(undef, 0, 0)
-    #ccu = Array{Float64}(undef, 0, 0)
     Vn1 = Array{Float64}(undef, I,J,N)
     Bik_all = Vector{Array{Float64}}(undef, N)#cell(N,1)
     uk_stacked, Vk_stacked = Vector{Float64}(undef, I*J), Vector{Float64}(undef, I*J)
+
+    #Test
+    Vn = Array{Float64}(undef, I,J,N)
+    gg_tilde = Array{Float64}(undef, 0, 0)
+    g = Array{Float64}(undef, 0, 0)
+    c = Array{Float64}(undef, 0, 0)
+    s = Array{Float64}(undef, 0, 0)
+    u = Array{Float64}(undef, 0, 0)
+    d = Array{Float64}(undef, 0, 0)
+    c_g = Array{Float64}(undef, 0, 0)
+    s_g = Array{Float64}(undef, 0, 0)
+    d_g = Array{Float64}(undef, 0, 0)
+    IcF = Array{Float64}(undef, 0, 0)
+    IcB = Array{Float64}(undef, 0, 0)
+    Ic0 = Array{Float64}(undef, 0, 0)
+    IcFB = Array{Float64}(undef, 0, 0)
+    IcBF = Array{Float64}(undef, 0, 0)
+    IcBB = Array{Float64}(undef, 0, 0)
+    Ic00 = Array{Float64}(undef, 0, 0)
+
+    K_supply  = 0.
+    L_supply  = 0.
+    KL_supply = 0.
 
     #include("test_against_matlab.jl")
     #----------------------------------------------------------------
     # Iterate on KL to find steady state
     #----------------------------------------------------------------
-    for ii	= 1 : 2#maxit_KL
+    for ii	= 1 : maxit_KL
 
 	    # Derive aggregates given KL
 	    w			= (1 - aalpha) * (KL ^ aalpha)
@@ -835,8 +894,8 @@ function steadystate!(m::TwoAssetHANK)
             # Update value function
             #------------------------------------------------------------
 
-            Vn1 = Array{Float64}(undef, I,J,N)
-            Bik_all = Vector{Array{Float64}}(undef, N)#cell(N,1)
+            Vn1     = Array{Float64}(undef, I,J,N)
+            Bik_all = Vector{Array{Float64}}(undef, N)
             uk_stacked, Vk_stacked = Vector{Float64}(undef, I*J), Vector{Float64}(undef, I*J)
             for kk = 1:N
             	Ak 				= A[1+(kk-1)*(I*J):kk*(I*J),1+(kk-1)*(I*J):kk*(I*J)]
@@ -844,7 +903,7 @@ function steadystate!(m::TwoAssetHANK)
         	    Bik_all[kk] 	= inv(Matrix{Float64}(Bk))
         	    uk_stacked 		= reshape(u[:,:,kk],I*J,1)
                 Vk_stacked 		= reshape(Vn[:,:,kk],I*J,1)
-        	    indx_k 			= 1:N .!= kk    #~ismember(1:N,kk)
+        	    indx_k 			= 1:N .!= kk
         	    Vkp_stacked 	= sum(repeat(lambda[kk,indx_k]',I*J,1) .*
                                       reshape(Vn[:,:,indx_k],I*J,N-1), dims=2)
         	    qk 				= Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
@@ -903,8 +962,9 @@ function steadystate!(m::TwoAssetHANK)
     	λ0p = λ0'
 
         gg_tilde = dab_g_tilde_mat * gg
+
         gg1      = Array{Float64}(undef, I_g*J_g,N)
-        gg       = Array{Float64}(undef, I_g*J_g,N)
+        #gg       = Array{Float64}(undef, I_g*J_g,N)
         g        = Array{Float64,3}(undef, I_g,J_g,N)
 
         K_supply  = 0.
@@ -1004,9 +1064,9 @@ function steadystate!(m::TwoAssetHANK)
 
     # Rename variables in steady state
     m[:KL_SS]			= KL
-    m[:r_a_SS]			= aalpha * (m[:KL_SS] ^ (aalpha - 1)) - ddelta
-    m[:w_SS]			= (1 - aalpha) * (m[:KL_SS] ^ aalpha)
-    m[:K_SS]		    = m[:KL_SS] * L_supply
+    m[:r_a_SS]			= aalpha * (m[:KL_SS].value ^ (aalpha - 1)) - ddelta
+    m[:w_SS]			= (1 - aalpha) * (m[:KL_SS].value ^ aalpha)
+    m[:K_SS]		    = m[:KL_SS].value * L_supply
     m[:u_SS]			= u
     m[:c_SS]			= c
     m[:d_SS]			= d
@@ -1024,17 +1084,18 @@ function steadystate!(m::TwoAssetHANK)
     m[:earn_SS]         = log.((1-tau_I) * w * l_g_grid .* y_g_grid + b_g_grid .*
                                (r_b_g_grid .+ ddeath*pam) .+ trans_g_grid .+ a_g_grid .*
                                (r_a_g_grid .+ ddeath*pam))
-    m[:earn_Var_SS]     = sum(g .* m[:earn_SS].^2 .* dab_g_tilde_grid) -
-                                sum(g .* m[:earn_SS] .* dab_g_tilde_grid)^2
-    m[:IcF_SS]	 = IcF
-    m[:IcB_SS]	 = IcB
-    m[:Ic0_SS]	 = Ic0
-    m[:IcFB_SS]	 = IcFB
-    m[:IcBF_SS]	 = IcBF
-    m[:IcBB_SS]	 = IcBB
-    m[:Ic00_SS]	 = Ic00
-    m[:a_g_0pos] = a_g_0pos[1]
-    m[:b_g_0pos] = b_g_0pos[1]
+    m[:earn_Var_SS]     = sum(g .* m[:earn_SS].value .^ 2 .* dab_g_tilde_grid) -
+                                sum(g .* m[:earn_SS].value .* dab_g_tilde_grid)^2
+    m <= Setting(:IcF_SS, IcF)
+    m <= Setting(:IcB_SS, IcB)
+    m <= Setting(:Ic0_SS, Ic0)
+    m <= Setting(:IcFB_SS, IcFB)
+    m <= Setting(:IcBF_SS, IcBF)
+    m <= Setting(:IcBB_SS, IcBB)
+    m <= Setting(:Ic00_SS, Ic00)
+
+    a_g_0pos = get_setting(m, :a_g_0pos)
+    b_g_0pos = get_setting(m, :b_g_0pos)
 
     ###
     # Consumption by hand-to-mouth status
@@ -1048,7 +1109,6 @@ function steadystate!(m::TwoAssetHANK)
 
     PHTM_indicator      = zeros(I_g, J_g, N)
     PHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos:a_g_0pos+2:end,:] .= 1.0
-
     m[:PHTM_indicator] = PHTM_indicator
     m[:PHTM_SS]        = sum(g[:] .* PHTM_indicator[:] .* dab_g_tilde_grid[:])
     m[:C_PHTM_SS]      = sum(c_g[:] .* g[:] .* PHTM_indicator[:] .* dab_g_tilde_grid[:])
@@ -1056,41 +1116,46 @@ function steadystate!(m::TwoAssetHANK)
     NHTM_indicator      = zeros(I_g,J_g,N)
     NHTM_indicator[(b_g_0pos+3):end,2:end,:] .= 1.0
 
-    m[:NHTM_indicator_SS] = NHTM_indicator
+    m[:NHTM_indicator] = NHTM_indicator
     m[:NHTM_SS]           = sum(g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:])
     m[:C_NHTM_SS]         = sum(c_g[:] .* g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:]) /
-                        m[:NHTM_SS]
+                        m[:NHTM_SS].value
     m[:r_a_grid]	      = repeat([r_a], I_g, J_g, N)
+
+    n_v = get_setting(m, :n_v)
+    n_g = get_setting(m, :n_g)
+    n_p = get_setting(m, :n_p)
+    n_Z = get_setting(m, :n_Z)
 
     # Collect variables into vector
     vars_SS                      = zeros(n_v + n_g + n_p + n_Z, 1)
-    vars_SS[1:n_v]               = reshape(m[:V_SS], I*J*N, 1)
+    vars_SS[1:n_v]               = reshape(m[:V_SS].value, I*J*N, 1)
 
-    gg_SS                        = reshape(m[:g_SS], I_g*J_g*N, 1)
+    gg_SS                        = reshape(m[:g_SS].value, I_g*J_g*N, 1)
     m[:gg_SS] = gg_SS
 
     vars_SS[n_v+1:n_v+n_g,1]     = gg_SS[1:I_g*J_g*N-1]
-    vars_SS[n_v+n_g+1,1]         = m[:K_SS]
-    vars_SS[n_v+n_g+2,1]         = m[:r_b_SS]
+    vars_SS[n_v+n_g+1,1]         = m[:K_SS].value
+    vars_SS[n_v+n_g+2,1]         = m[:r_b_SS].value
 
     if aggregate_variables == 1
-        vars_SS[n_v+n_g+3,1]         = m[:Y_SS]
-        vars_SS[n_v+n_g+4,1]         = m[:C_SS]
+        vars_SS[n_v+n_g+3,1]         = m[:Y_SS].value
+        vars_SS[n_v+n_g+4,1]         = m[:C_SS].value
     elseif distributional_variables == 1
-        vars_SS[n_v+n_g+3,1]        = m[:C_Var_SS]
-    	vars_SS[n_v+n_g+4,1]        = m[:earn_Var_SS]
+        vars_SS[n_v+n_g+3,1]        = m[:C_Var_SS].value
+    	vars_SS[n_v+n_g+4,1]        = m[:earn_Var_SS].value
     elseif distributional_variables_1 == 1
-        vars_SS[n_v+n_g+3,1]        = m[:C_WHTM_SS]
+        vars_SS[n_v+n_g+3,1]        = m[:C_WHTM_SS].value
     	vars_SS[n_v+n_g+4,1]        = m[:C_PHTM_SS]
         #vars_SS[n_v+n_g+3,1]        = C_NHTM_SS
     end
     vars_SS[n_v+n_g+n_p+1,1] = 0.0
 
     # Compute illiquid wedge
-    m[:illiquid_wedge] = m[:r_a_SS] - m[:r_b_SS]
+    m[:illiquid_wedge] = m[:r_a_SS].value - m[:r_b_SS].value
 
     # Save SS variables
-    m[:var_SS] = var_SS
+    m[:vars_SS] = vars_SS
 
     return m
 end
@@ -1234,7 +1299,7 @@ function model_settings!(m::TwoAssetHANK)
                                      get_setting(m, :amax))
     m <= Setting(:a,        a, "a grid")
     m <= Setting(:a_g,      a_g, "a_g grid")
-    m <= Setting(:a_g_0pos, a_g_0pos, "Points in illiquid asset grid equal to 0")
+    m <= Setting(:a_g_0pos, a_g_0pos[1], "Points in illiquid asset grid equal to 0")
 
     # Create liquid asset grid
     m <= Setting(:I,   50, "Number of liquid grid points")
@@ -1249,7 +1314,7 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:bmax,     bmax, "Upper bound on liquid assets")
     m <= Setting(:b,        b, "b")
     m <= Setting(:b_g,      b_g, "b_g")
-    m <= Setting(:b_g_0pos, b_g_0pos, "Points in liquid asset grid equal to 0")
+    m <= Setting(:b_g_0pos, b_g_0pos[1], "Points in liquid asset grid equal to 0")
 
     m <= Setting(:interp_decision, kron(my_speye(get_setting(m, :N)), interpTwoD(b_g, a_g, b, a)),
                                         "interp_decision")
