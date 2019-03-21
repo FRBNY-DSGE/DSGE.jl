@@ -5,24 +5,24 @@ function equilibriumConditions(vars)
     # Housekeeping
     #----------------------------------------------------------------
     # Unpack variables
-    V						= reshape(vars[1:n_v] .+ vars_SS[1:n_v],I,J,N)       # value function
-    g						= vars[n_v+1:n_v+n_g] .+ vars_SS[n_v+1:n_v+n_g]      # distribution
+    V						= reshape(vars[1:n_v] .+ vars_SS[1:n_v],I,J,N)  # value function
+    g						= vars[n_v+1:n_v+n_g] .+ vars_SS[n_v+1:n_v+n_g] # distribution
     dab_aux					= reshape(dab,I*J*N,1)
     dab_g_aux               = reshape(dab_g,I_g*J_g*N,1)
     g_end					= (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g,J_g,N]
     gg						= [g;g_end]
-    K						= vars[n_v+n_g+1] + vars_SS[n_v+n_g+1]              # aggregate capital
+    K						= vars[n_v+n_g+1] + vars_SS[n_v+n_g+1]     # aggregate capital
     r_b                     = vars[n_v+n_g+2] + vars_SS[n_v+n_g+2]
 
     if aggregate_variables == 1
-        aggY                    = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3]              # aggregate output
-        aggC                    = vars[n_v+n_g+4] + vars_SS[n_v+n_g+4]              # aggregate consumption
+        aggY                    = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3] # aggregate output
+        aggC                    = vars[n_v+n_g+4] + vars_SS[n_v+n_g+4] # aggregate consumption
     elseif distributional_variables == 1
-        C_Var                   = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3]              # consumption inequality
-	    earn_Var                = vars[n_v+n_g+4] + vars_SS[n_v+n_g+4]              # earnings inequality
+        C_Var                   = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3] # consumption inequality
+	    earn_Var                = vars[n_v+n_g+4] + vars_SS[n_v+n_g+4] # earnings inequality
     elseif distributional_variables_1 == 1
-        C_WHTM                  = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3]             # consumption of wealthy hand-to-mouth
-	    C_PHTM                  = vars[n_v+n_g+4] + vars_SS[n_v+n_g+4]            # consumption of poor hand-to-mouth
+        C_WHTM                  = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3] # consumption of wealthy hand-to-mouth
+	    C_PHTM                  = vars[n_v+n_g+4] + vars_SS[n_v+n_g+4] # consumption of poor hand-to-mouth
         #C_NHTM                  = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3]
     end
 

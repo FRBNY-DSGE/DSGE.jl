@@ -533,6 +533,211 @@ end
     return aa, bb, aau, bbu
 end
 
+@inline function transition_deriva(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
+                                   l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid, daf_grid,
+                                   dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
+                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid)
+    chi  = zeros(I,J,N)
+    yy   = zeros(I,J,N)
+    zeta = zeros(I,J,N)
+
+    X = zeros(I,J,N)
+    Y = zeros(I,J,N)
+    Z = zeros(I,J,N)
+
+    chiu  = zeros(I_g,J_g,N)
+    yyu   = zeros(I_g,J_g,N)
+    zetau = zeros(I_g,J_g,N)
+
+    Xu = zeros(I_g,J_g,N)
+    Yu = zeros(I_g,J_g,N)
+    Zu = zeros(I_g,J_g,N)
+
+    # Transition_deriva_a
+    chi[:,2:J,:]    = -adriftB[:,2:J,:] ./ dab_grid[:,2:J,:]
+    chi[:,1,:]      = zeros(I,1,N)
+    yy[:,2:J-1,:]   = adriftB[:,2:J-1,:] ./ dab_grid[:,2:J-1,:] .-
+        adriftF[:,2:J-1,:] ./ daf_grid[:,2:J-1,:]
+    yy[:,1,:]       = -adriftF[:,1,:]./daf_grid[:,1,:]
+    yy[:,J,:]       = adriftB[:,J,:]./dab_grid[:,J,:]
+    zeta[:,1:J-1,:] = adriftF[:,1:J-1,:]./daf_grid[:,1:J-1,:]
+    zeta[:,J,:]     = zeros(I,1,N)
+
+    centdiag = reshape(yy,I*J,N)
+    lowdiag  = reshape(chi,I*J,N)
+    lowdiag  = circshift(lowdiag,-I)
+    updiag   = reshape(zeta,I*J,N)
+    updiag   = circshift(updiag,I)
+
+    centdiag = reshape(centdiag,I*J*N,1)
+    updiag   = reshape(updiag,I*J*N,1)
+    lowdiag  = reshape(lowdiag,I*J*N,1)
+
+    aa = spdiagm(0 => vec(centdiag), I => vec(updiag)[I+1:end], -I => vec(lowdiag)[1:end-I])
+
+    chiu[:,2:J_g,:]    = -audriftB[:,2:J_g,:] ./ dab_g_grid[:,2:J_g,:]
+    chiu[:,1,:]        = zeros(I_g,1,N)
+    yyu[:,2:J_g-1,:]   = audriftB[:,2:J_g-1,:] ./ dab_g_grid[:,2:J_g-1,:] -
+        audriftF[:,2:J_g-1,:] ./ daf_g_grid[:,2:J_g-1,:]
+    yyu[:,1,:]         = -audriftF[:,1,:] ./ daf_g_grid[:,1,:]
+    yyu[:,J_g,:]       = audriftB[:,J_g,:] ./ dab_g_grid[:,J_g,:]
+    zetau[:,1:J_g-1,:] = audriftF[:,1:J_g-1,:] ./ daf_g_grid[:,1:J_g-1,:]
+    zetau[:,J_g,:]     = zeros(I_g,1,N)
+
+    centdiagu = reshape(yyu,I_g*J_g,N)
+    lowdiagu  = reshape(chiu,I_g*J_g,N)
+    lowdiagu  = circshift(lowdiagu,-I_g)
+    updiagu   = reshape(zetau,I_g*J_g,N)
+    updiagu   = circshift(updiagu,I_g)
+
+    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
+    updiagu   = reshape(updiagu,I_g*J_g*N,1)
+    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
+
+    aau = spdiagm(0 => vec(centdiagu), I_g => vec(updiagu)[I_g+1:end], -I_g => vec(lowdiagu)[1:end-I_g])
+
+    # Transition_deriva b
+
+    # transition matrix for b
+    X[2:I,:,:] = - bdriftB[2:I,:,:]./dbb_grid[2:I,:,:]
+    X[1,:,:] = zeros(1,J,N)
+    Y[2:I-1,:,:] = bdriftB[2:I-1,:,:]./dbb_grid[2:I-1,:,:] - bdriftF[2:I-1,:,:]./dbf_grid[2:I-1,:,:]
+    Y[1,:,:] = - bdriftF[1,:,:]./dbf_grid[1,:,:]
+    Y[I,:,:] = bdriftB[I,:,:]./dbb_grid[I,:,:]
+    Z[1:I-1,:,:] = bdriftF[1:I-1,:,:]./dbf_grid[1:I-1,:,:]
+    Z[I,:,:] = zeros(1,J,N)
+
+    centdiag = reshape(Y,I*J,N)
+    lowdiag  = reshape(X,I*J,N)
+    lowdiag  = circshift(lowdiag,-1)
+    updiag   = reshape(Z,I*J,N)
+    updiag   = circshift(updiag,1)
+
+    centdiag = reshape(centdiag,I*J*N,1)
+    updiag   = reshape(updiag,I*J*N,1)
+    lowdiag  = reshape(lowdiag,I*J*N,1)
+
+    bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
+
+    Xu[2:I_g,:,:] = - budriftB[2:I_g,:,:]./dbb_g_grid[2:I_g,:,:]
+    Xu[1,:,:] = zeros(1,J_g,N)
+    Yu[2:I_g-1,:,:] = budriftB[2:I_g-1,:,:]./dbb_g_grid[2:I_g-1,:,:] -
+        budriftF[2:I_g-1,:,:]./dbf_g_grid[2:I_g-1,:,:]
+    Yu[1,:,:] = - budriftF[1,:,:]./dbf_g_grid[1,:,:]
+    Yu[I_g,:,:] = budriftB[I_g,:,:]./dbb_g_grid[I_g,:,:]
+    Zu[1:I_g-1,:,:] = budriftF[1:I_g-1,:,:]./dbf_g_grid[1:I_g-1,:,:]
+    Zu[I_g,:,:] = zeros(1,J_g,N)
+
+    centdiagu = reshape(Yu,I_g*J_g,N)
+    lowdiagu  = reshape(Xu,I_g*J_g,N)
+    lowdiagu  = circshift(lowdiagu,-1)
+    updiagu   = reshape(Zu,I_g*J_g,N)
+    updiagu   = circshift(updiagu,1)
+
+    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
+    updiagu   = reshape(updiagu,I_g*J_g*N,1)
+    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
+
+    bbu = spdiagm(0 => vec(centdiagu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
+
+    return aa, bb, aau, bbu
+end
+
+@inline function catch_my_drifts(permanent, death, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
+                                 l_g_grid, y_g_grid, d_g, a_g_grid, s_g, chi0, chi1, chi2,
+                                 a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
+
+    adriftB = Array{Float64}(undef, size(d))
+    adriftF = Array{Float64}(undef, size(d))
+
+    audriftB = Array{Float64}(undef, size(d_g))
+    audriftF = Array{Float64}(undef, size(d_g))
+    budriftB = Array{Float64}(undef, size(d_g))
+    budriftF = Array{Float64}(undef, size(d_g))
+
+    # Compute drifts for HJB
+    if permanent == 1
+        adriftB = min.(d,0) .+ min.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
+                                    xxi * w * l_grid .* y_grid,0)
+        adriftF = max.(d,0) .+ max.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
+                                xxi * w * l_grid .* y_grid,0)
+    elseif permanent == 0
+        adriftB = min.(d,0) .+ min.(a_grid .* (r_a_grid .+ ddeath*pam) .+
+                                    xxi * w * l_grid .* y_grid,0)
+        adriftF = max.(d,0) .+ max.(a_grid .* (r_a_grid .+ ddeath*pam) .+
+                                    xxi * w * l_grid .* y_grid,0)
+    end
+
+    bdriftB = min.(-d - adj_cost_fn(d,a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
+    bdriftF = max.(-d - adj_cost_fn(d,a_grid, chi0, chi1, chi2, a_lb),0) .+ max.(s,0)
+
+    # Compute drifts for KFE
+    if permanent == 0
+        audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
+                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi *
+                                     w * l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:],0)
+        audriftB[I_g,:,:] = min.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
+                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
+                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:],0)
+        audriftF[1:I_g-1,:,:] = max.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
+                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+
+                                     xxi * w * l_g_grid[1:I_g-1,:,:] .*
+                                     y_g_grid[1:I_g-1,:,:],0)
+        audriftF[I_g,:,:] = max.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
+                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+
+                                 xxi * w * l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:],0)
+
+        budriftB[1:I_g-1,:,:] = min.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
+                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
+                                                 chi0, chi1, chi2, a_lb),0)
+        budriftB[I_g,:,:] = min.(s_g[I_g,:,:] - d_g[I_g,:,:] -
+                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
+                                             chi0, chi1, chi2, a_lb),0)
+        budriftF[1:I_g-1,:,:] = max.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
+                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
+                                                 chi0, chi1, chi2, a_lb),0)
+        budriftF[I_g,:,:] = max.(s_g[I_g,:,:] - d_g[I_g,:,:] -
+                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
+                                             chi0, chi1, chi2, a_lb),0)
+    elseif permanent == 1
+        audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
+                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi *
+                                     w * l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:]
+                                     - aggZ * a_g_grid[1:I_g-1,:,:], 0)
+        audriftB[I_g,:,:] = min.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
+                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
+                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:] - aggZ *
+                                 a_g_grid[I_g,:,:],0)
+        audriftF[1:I_g-1,:,:] = max.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
+                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi *
+                                     w * l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:] -
+                                     aggZ * a_g_grid[1:I_g-1,:,:],0)
+        audriftF[I_g,:,:] = max.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
+                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
+                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:] - aggZ *
+                                 a_g_grid[I_g,:,:],0)
+
+        budriftB[1:I_g-1,:,:] = min.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
+                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
+                                                 chi0, chi1, chi2, a_lb) - aggZ *
+                                     b_g_grid[1:I_g-1,:,:],0)
+        budriftB[I_g,:,:] = min.(s_g[I_g,:,:] - d_g[I_g,:,:] -
+                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
+                                             chi0, chi1, chi2, a_lb) - aggZ * b_g_grid[I_g,:,:],0)
+        budriftF[1:I_g-1,:,:] = max.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
+                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
+                                                 chi0, chi1, chi2, a_lb) - aggZ *
+                                     b_g_grid[1:I_g-1,:,:],0)
+        budriftF[I_g,:,:] = max.(s_g[I_g,:,:] - d_g[I_g,:,:] -
+                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
+                                             chi0, chi1, chi2, a_lb) - aggZ *
+                                 b_g_grid[I_g,:,:],0)
+    end
+
+    return audriftB, budriftB, audriftF, budriftB, adriftB, bdriftB, adriftF, bdriftF
+end
+
+
 # This file contains additional helper functions for computing the steady state.
 
 # Discretize a state space dimension of I gridpoints
