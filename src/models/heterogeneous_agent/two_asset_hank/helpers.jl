@@ -382,9 +382,8 @@ end
 
 @inline function transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
                             l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid, daf_grid,
-                            dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid, d_g,
-                            a_grid, a_g_grid,
-                            s, s_g, r_a_grid, r_a_g_grid)
+                            dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
+                            d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid)
 
     audriftB = Array{Float64,3}(undef, I_g,J_g,N)
     audriftF = Array{Float64,3}(undef, I_g,J_g,N)
@@ -467,23 +466,25 @@ end
     aa = spdiagm(-I => vec(lowdiag)[1:end-I], 0 => vec(centdiag), I => vec(updiag)[I+1:end])
 
     chiu[:,2:J_g,:] = -audriftB[:,2:J_g,:] ./ dab_g_grid[:,2:J_g,:]
-    chiu[:,1,:] = zeros(I_g,1,N)
-    yyu[:,2:J_g-1,:] = audriftB[:,2:J_g-1,:] ./ dab_g_grid[:,2:J_g-1,:]
-                     - audriftF[:,2:J_g-1,:] ./ daf_g_grid[:,2:J_g-1,:]
+    chiu[:,1,:]     = zeros(I_g,1,N)
+
+    yyu[:,2:J_g-1,:] = audriftB[:,2:J_g-1,:] ./ dab_g_grid[:,2:J_g-1,:] -
+        audriftF[:,2:J_g-1,:] ./ daf_g_grid[:,2:J_g-1,:]
     yyu[:,1,:]   = -audriftF[:,1,:]   ./ daf_g_grid[:,1,:]
     yyu[:,J_g,:] =  audriftB[:,J_g,:] ./ dab_g_grid[:,J_g,:]
+
     zetau[:,1:J_g-1,:] = audriftF[:,1:J_g-1,:] ./ daf_g_grid[:,1:J_g-1,:]
-    zetau[:,J_g,:] = zeros(I_g,1,N)
+    zetau[:,J_g,:]     = zeros(I_g,1,N)
 
-    centdiagu = reshape(yyu,I_g*J_g,N)
-    lowdiagu  = reshape(chiu,I_g*J_g,N)
-    lowdiagu  = circshift(lowdiagu,-I_g)
-    updiagu   = reshape(zetau,I_g*J_g,N)
-    updiagu   = circshift(updiagu,I_g)
+    centdiagu = reshape(yyu, I_g * J_g, N)
+    lowdiagu  = reshape(chiu,I_g * J_g, N)
+    lowdiagu  = circshift(lowdiagu, -I_g)
+    updiagu   = reshape(zetau, I_g * J_g, N)
+    updiagu   = circshift(updiagu, I_g)
 
-    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
-    updiagu   = reshape(updiagu,I_g*J_g*N,1)
-    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
+    centdiagu = reshape(centdiagu,I_g * J_g * N, 1)
+    updiagu   = reshape(updiagu,  I_g * J_g * N, 1)
+    lowdiagu  = reshape(lowdiagu, I_g * J_g * N, 1)
 
     aau = spdiagm(0 => vec(centdiagu), -I_g => vec(lowdiagu)[1:end-I_g],
                      I_g => vec(updiagu)[I_g+1:end])
@@ -642,9 +643,9 @@ end
 
     return aa, bb, aau, bbu
 end
-
+#RECA
 @inline function catch_my_drifts(permanent, death, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
-                                 l_g_grid, y_g_grid, d_g, a_g_grid, s_g, chi0, chi1, chi2,
+                                 l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
                                  a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
 
     adriftB = Array{Float64}(undef, size(d))

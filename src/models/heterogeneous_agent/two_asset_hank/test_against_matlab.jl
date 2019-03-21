@@ -11,8 +11,6 @@ end
         cur_type = typeof(v[2])
         if (v[1] == "t0")
             continue
-        elseif (v[1] == "a_g_0pos") || (v[1] == "b_g_0pos")
-            @assert string_as_varname(v[1]) ≈ [v[2]]
         elseif v[1] == "a_grid"
             @assert v[2] ≈ a_grid
         elseif v[1] == "a_g_grid"
@@ -109,7 +107,8 @@ end
             #@assert v[2] ≈ distributional_variables_1
             continue
         else
-            #@show v[1]
+            @show "NOT PRINTING", v[1]
+            #=
             try
                 if !(string_as_varname(v[1]) ≈ v[2])
                     @show "NEQ", v[2]
@@ -124,6 +123,7 @@ end
                     throw(err)
                 end
             end
+            =#
         end
     end
     println("All tests passed for: ", filename)

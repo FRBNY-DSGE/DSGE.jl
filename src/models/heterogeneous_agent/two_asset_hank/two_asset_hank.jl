@@ -545,141 +545,6 @@ function steadystate!(m::TwoAssetHANK)
     gg0 = reshape(gg0, I_g*J_g*N, 1)
     gg = gg0
 
-    # RECANOW V_n =
-    #test_against_matlab("data/before_KL_iteration.mat")
-    filename = "data/before_KL_iteration.mat"
-    #>>>>>
-    @inline function string_as_varname(s::AbstractString)
-        S = Symbol(s)
-        @eval $S
-    end
-
-    #@inline function test_against_matlab(filename::String)
-    vars = matread(filename)
-    for v in vars
-        #@show v[1]
-        cur_type = typeof(v[2])
-        if (v[1] == "t0")
-            continue
-        elseif v[1] == "a_grid"
-            @assert v[2] ≈ a_grid
-        elseif v[1] == "a_g_grid"
-            @assert v[2] ≈ a_g_grid
-        elseif v[1] == "b_grid"
-            @assert v[2] ≈ b_grid
-        elseif v[1] == "y_grid"
-            @assert v[2] ≈ y_grid
-        elseif v[1] == "y_g_grid"
-            @assert v[2] ≈ y_g_grid
-        elseif v[1] == "r_a_grid"
-            @assert v[2] ≈ r_a_grid
-        elseif v[1] == "r_b_grid"
-            @assert v[2] ≈ r_b_grid
-        elseif v[1] == "r_a_g_grid"
-            @assert v[2] ≈ r_a_g_grid
-        elseif v[1] == "r_b_g_grid"
-            @assert v[2] ≈ r_b_g_grid
-        elseif v[1] == "daf_g_grid"
-            @assert v[2] ≈ daf_g_grid
-        elseif v[1] == "daf_grid"
-            @assert v[2] ≈ daf_grid
-        elseif v[1] == "dab_grid"
-            @assert v[2] ≈ dab_grid
-        elseif v[1] == "dab_g_grid"
-            @assert v[2] ≈ dab_g_grid
-        elseif v[1] == "dab_g_tilde_grid"
-            @assert v[2] ≈ dab_g_tilde_grid
-        elseif v[1] == "dbf_grid"
-            @assert v[2] ≈ dbf_grid
-        elseif v[1] == "dbf_g_grid"
-            @assert v[2] ≈ dbf_g_grid
-        elseif v[1] == "dbb_grid"
-            @assert v[2] ≈ dbb_grid
-        elseif v[1] == "dbb_g_grid"
-            @assert v[2] ≈ dbb_g_grid
-        elseif v[1] == "trans_grid"
-            @assert v[2] ≈ trans_grid
-        elseif v[1] == "l_g_grid"
-            @assert v[2] ≈ l_g_grid
-        elseif v[1] == "w_grid"
-            @assert v[2] ≈ w_grid
-        elseif v[1] == "c_0"
-            @assert v[2] ≈ c_0
-        elseif v[1] == "V_0"
-            @assert v[2] ≈ V_0
-        elseif v[1] == "gg0"
-            @assert v[2] ≈ gg0
-        elseif v[1] == "gg"
-            #@show size(gg), size(v[2])
-            @assert v[2] ≈ gg
-        elseif v[1] == "r_b"
-            @assert v[2] ≈ r_b
-        elseif v[1] == "r_b_borr"
-            @assert v[2] ≈ r_b_borr
-        elseif v[1] == "y_dist"
-            @assert v[2] ≈ y_dist
-        elseif v[1] == "y_mean"
-            @assert v[2] ≈ y_mean
-        elseif v[1] == "aalpha"
-            @assert v[2] ≈ aalpha
-        elseif v[1] == "ddeath"
-            @assert v[2] ≈ ddeath
-        elseif v[1] == "ddelta"
-            @assert v[2] ≈ ddelta
-        elseif v[1] == "rrho"
-            @assert v[2] ≈ rrho
-        elseif v[1] == "chi0"
-            @assert v[2] ≈ chi0
-        elseif v[1] == "chi1"
-            @assert v[2] ≈ chi1
-        elseif v[1] == "chi2"
-            @assert v[2] ≈ chi2
-        elseif v[1] == "a_lb"
-            @assert v[2] ≈ a_lb
-        elseif v[1] == "pam"
-            @assert v[2] ≈ pam
-        elseif v[1] == "xxi"
-            @assert v[2] ≈ xxi
-        elseif v[1] == "ggamma"
-            @assert v[2] ≈ ggamma
-        elseif v[1] == "tau_I"
-            @assert v[2] ≈ tau_I
-        elseif v[1] == "trans"
-            @assert v[2] ≈ trans
-        elseif v[1] == "lambda"
-            @assert v[2] ≈ lambda
-        elseif v[1] == "K_liquid"
-            @assert v[2] ≈ K_liquid
-        elseif v[1] == "aggregate_variables"
-            @assert v[2] ≈ aggregate_variables
-        elseif v[1] == "distributional_variables"
-            @assert v[2] ≈ distributional_variables
-        elseif v[1] == "distributional_variables_1"
-            #@assert v[2] ≈ distributional_variables_1
-            continue
-        else
-            @show "NOT PRINTING", v[1]
-            #=
-            try
-                if !(string_as_varname(v[1]) ≈ v[2])
-                    @show "NEQ", v[2]
-                else
-                    @show "WORKSWORKSWORKS", v[2]
-                end
-                @assert string_as_varname(v[1]) ≈ v[2]
-            catch err
-                if isa(err, UndefVarError)
-                    println(err)
-                else
-                    throw(err)
-                end
-            end
-            =#
-        end
-    end
-    println("All tests passed for: ", filename)
-    #end
-#<<<<<<
     aau = Array{Float64}(undef, 0, 0)
     bbu = Array{Float64}(undef, 0, 0)
     ccu = Array{Float64}(undef, 0, 0)
@@ -719,9 +584,9 @@ function steadystate!(m::TwoAssetHANK)
 	    # Derive aggregates given KL
 	    w			= (1 - aalpha) * (KL ^ aalpha)
  	    r_a			= aalpha * (KL ^ (aalpha - 1)) - ddelta
-	    r_a_grid    = repeat([r_a],I,J,N)
-        r_a_g_grid	= repeat([r_a],I_g,J_g,N)
-        w_g_grid	= repeat([w],I_g,J_g,N)
+	    r_a_grid    = repeat([r_a], I, J, N)
+        r_a_g_grid	= repeat([r_a], I_g, J_g, N)
+        w_g_grid	= repeat([w], I_g, J_g, N)
 
 	    # Store current value function
 	    Vn	= V_0
@@ -752,14 +617,14 @@ function steadystate!(m::TwoAssetHANK)
 	    #----------------------------------------------------------------
 	    # Solve HJB
 	    #----------------------------------------------------------------
-        for nn    = 1 : maxit_HJB
+        for nn = 1 : maxit_HJB
             #-----
             # Compute derivatives w.r.t. illiquid assets a
             #-----
             # Preparations
-            VaF        = zeros(I,J,N)
+            VaF     = zeros(I,J,N)
             VaB     = zeros(I,J,N)
-            Vamin     = 0
+            Vamin   = 0
 
             # Forward difference
             VaF[:,1:J-1,:]     = (Vn[:,2:J,:]-Vn[:,1:J-1,:]) ./ daf_grid[:,1:J-1,:]
@@ -780,50 +645,50 @@ function steadystate!(m::TwoAssetHANK)
 
             # Forward difference
             VbF[1:I-1,:,:] = (Vn[2:I,:,:]-Vn[1:I-1,:,:]) ./ dbf_grid[1:I-1,:,:]
-            VbF[1:I-1,:,:] = max.(VbF[1:I-1,:,:],Vbmin)
+            VbF[1:I-1,:,:] = max.(VbF[1:I-1,:,:], Vbmin)
 
             # Backward difference
             VbB[2:I,:,:] = (Vn[2:I,:,:]-Vn[1:I-1,:,:]) ./ dbb_grid[2:I,:,:]
-            VbB[2:I,:,:] = max.(VbB[2:I,:,:],Vbmin)
+            VbB[2:I,:,:] = max.(VbB[2:I,:,:], Vbmin)
 
             #------------------------------------------------------------
             # Consumption decisions
             #------------------------------------------------------------
             # Decisions conditional on a particular direction of derivative
             cF[1:I-1,:,:]     = VbF[1:I-1,:,:] .^ (-1/ggamma)
-            cF[I,:,:]         = zeros(1,J,N)
+            cF[I,:,:]        .= 0.0# = zeros(1,J,N)
             sF[1:I-1,:,:]     = ((1-xxi)-tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
                 b_grid[1:I-1,:,:] .* (r_b_grid[1:I-1,:,:] .+ ddeath*pam) .+
                 trans_grid[1:I-1,:,:] .- cF[1:I-1,:,:]
-            sF[I,:,:]         = zeros(1,J,N)
+            sF[I,:,:]        .= 0.0 #zeros(1,J,N)
             HcF[1:I-1,:,:]    = u_fn(cF[1:I-1,:,:],ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
-            HcF[I,:,:]         = -1e12*ones(1,J,N)
+            HcF[I,:,:]        = -1e12*ones(1,J,N)
             validF            = (sF .> 0)
 
-            cB[2:I,:,:]     = VbB[2:I,:,:].^(-1/ggamma)
+            cB[2:I,:,:]       = VbB[2:I,:,:].^(-1/ggamma)
             cB[1,:,:]         = ((1-xxi)-tau_I) * w * l_grid[1,:,:] .* y_grid[1,:,:] .+
                 b_grid[1,:,:] .* (r_b_grid[1,:,:] .+ ddeath*pam) .+ trans_grid[1,:,:]
-            sB[2:I,:,:]     = ((1-xxi)-tau_I) * w * l_grid[2:I,:,:] .* y_grid[2:I,:,:] .+
+            sB[2:I,:,:]       = ((1-xxi)-tau_I) * w * l_grid[2:I,:,:] .* y_grid[2:I,:,:] .+
                 b_grid[2:I,:,:] .* (r_b_grid[2:I,:,:] .+ ddeath*pam) .+ trans_grid[2:I,:,:] .-
                 cB[2:I,:,:]
-            sB[1,:,:]         = zeros(1,J,N)
-            HcB[:,:,:]         = u_fn(cB, ggamma) .+ VbB .* sB
+            sB[1,:,:]        .= 0.0 #zeros(1,J,N)
+            HcB[:,:,:]        = u_fn(cB, ggamma) .+ VbB .* sB
             validB            = (sB .< 0)
 
             c0[:,:,:]         = ((1-xxi)-tau_I) * w * l_grid[:,:,:] .* y_grid[:,:,:] .+
                 b_grid[:,:,:] .* (r_b_grid[:,:,:] .+ ddeath*pam) .+ trans_grid[:,:,:]
-            s0[:,:,:]         = zeros(I,J,N)
-            Hc0[:,:,:]         = u_fn(c0,ggamma)
+            s0[:,:,:]        .= 0.0 #zeros(I,J,N)
+            Hc0[:,:,:]        = u_fn(c0,ggamma)
 
             # Which direction to use
-            IcF             = validF .* max.(.!validB,(HcF.>=HcB)) .* (HcF.>=Hc0)
-            IcB             = validB .* max.(.!validF,(HcB.>=HcF)) .* (HcB.>=Hc0)
-            Ic0             = 1 .- IcF .- IcB
+            IcF = validF .* max.(.!validB,(HcF.>=HcB)) .* (HcF.>=Hc0)
+            IcB = validB .* max.(.!validF,(HcB.>=HcF)) .* (HcB.>=Hc0)
+            Ic0 = 1 .- IcF .- IcB
 
             # Optimal consumption and liquid savings
-            c        = IcF .* cF + IcB .* cB + Ic0 .* c0
-            s        = IcF .* sF + IcB .* sB + Ic0 .* s0
-            u        = u_fn(c,ggamma)
+            c = IcF .* cF + IcB .* cB + Ic0 .* c0
+            s = IcF .* sF + IcB .* sB + Ic0 .* s0
+            u = u_fn(c,ggamma)
 
             #------------------------------------------------------------
             # Deposit decision
@@ -831,41 +696,41 @@ function steadystate!(m::TwoAssetHANK)
             # Decisions conditional on a particular direction of derivative
             dFB[2:I,1:J-1,:]     = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
                                                 a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
-            dFB[:,J,:]             = zeros(I,1,N)
-            dFB[1,1:J-1,:]         = zeros(1,J-1,N)
+            dFB[:,J,:]            .= 0.0 #zeros(I,1,N)
+            dFB[1,1:J-1,:]        .= 0.0 #zeros(1,J-1,N)
             HdFB[2:I,1:J-1,:]     = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
                 (dFB[2:I,1:J-1,:] +
                  adj_cost_fn(dFB[2:I,1:J-1,:], a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb))
-            HdFB[:,J,:]         = -1.0e12 * ones(I,1,N)
-            HdFB[1,1:J-1,:]     = -1.0e12 * ones(1,J-1,N)
+            HdFB[:,J,:]         .= -1.0e12 #* ones(I,1,N)
+            HdFB[1,1:J-1,:]     .= -1.0e12 #* ones(1,J-1,N)
             validFB             = (dFB .> 0) .* (HdFB .> 0)
 
-            dBF[1:I-1,2:J,:]     = opt_deposits(VaB[1:I-1,2:J,:],VbF[1:I-1,2:J,:],
-                                                a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
-            dBF[:,1,:]    = zeros(I,1,N)
-            dBF[I,2:J,:]  = zeros(1,J-1,N)
+            dBF[1:I-1,2:J,:] = opt_deposits(VaB[1:I-1,2:J,:],VbF[1:I-1,2:J,:],
+                                            a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
+            dBF[:,1,:]    .= 0.0 #zeros(I,1,N)
+            dBF[I,2:J,:]  .= 0.0 #zeros(1,J-1,N)
+
             HdBF[1:I-1,2:J,:]  = VaB[1:I-1,2:J,:] .* dBF[1:I-1,2:J,:] - VbF[1:I-1,2:J,:] .*
                 (dBF[1:I-1,2:J,:] +
                  adj_cost_fn(dBF[1:I-1,2:J,:], a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb))
-            HdBF[:,1,:]   = -1.0e12 * ones(I,1,N)
-            HdBF[I,2:J,:]         = -1.0e12 * ones(1,J-1,N)
-            validBF             = (dBF .<= -adj_cost_fn(dBF, a_grid, chi0, chi1, chi2, a_lb)) .*
-                (HdBF .> 0)
+            HdBF[:,1,:]   .= -1.0e12 #* ones(I,1,N)
+            HdBF[I,2:J,:] .= -1.0e12 #* ones(1,J-1,N)
+            validBF = (dBF .<= -adj_cost_fn(dBF, a_grid, chi0, chi1, chi2, a_lb)) .* (HdBF .> 0)
 
-            VbB[1,2:J,:]         = u_fn(cB[1,2:J,:],ggamma)
-            dBB[:,2:J,:]         = opt_deposits(VaB[:,2:J,:],VbB[:,2:J,:],a_grid[:,2:J,:],
-                                                chi0, chi1, chi2, a_lb)
-            dBB[:,1,:]     = zeros(I,1,N)
+            VbB[1,2:J,:] = u_fn(cB[1,2:J,:],ggamma)
+            dBB[:,2:J,:] = opt_deposits(VaB[:,2:J,:],VbB[:,2:J,:],a_grid[:,2:J,:],
+                                       chi0, chi1, chi2, a_lb)
+            dBB[:,1,:]  .= 0.0 #zeros(I,1,N)
             HdBB[:,2:J,:]  = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
                 (dBB[:,2:J,:] + adj_cost_fn(dBB[:,2:J,:],a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
-            HdBB[:,1,:]    = -1.0e12 * ones(I,1,N)
+            HdBB[:,1,:] .= -1.0e12 #* ones(I,1,N)
             validBB        = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
                 (dBB .<= 0) .* (HdBB .> 0)
 
             # Which direction to use
-            IcFB = validFB .* max.(.!validBF,(HdFB .>= HdBF)) .* max.(.!validBB,(HdFB .>= HdBB))
-            IcBF = max.(.!validFB,(HdBF .>= HdFB)) .* validBF .* max.(.!validBB,(HdBF .>= HdBB))
-            IcBB = max.(.!validFB,(HdBB .>= HdFB)) .* max.(.!validBF,(HdBB .>= HdBF)) .* validBB
+            IcFB = validFB .* max.(.!validBF,(HdFB .>= HdBF)) .* max.(.!validBB, (HdFB .>= HdBB))
+            IcBF = max.(.!validFB, (HdBF .>= HdFB)) .* validBF .* max.(.!validBB, (HdBF .>= HdBB))
+            IcBB = max.(.!validFB, (HdBB .>= HdFB)) .* max.(.!validBF,(HdBB .>= HdBF)) .* validBB
             Ic00 = (.!validFB) .* (.!validBF) .* (.!validBB)
 
             # Optimal deposits
@@ -875,10 +740,10 @@ function steadystate!(m::TwoAssetHANK)
             # Construct "A" matrix multiplying value function
             #------------------------------------------------------------
 
-            # interpolate
-            d_g = reshape(interp_decision*d[:],I_g,J_g,N)
-            s_g = reshape(interp_decision*s[:],I_g,J_g,N)
-            c_g = reshape(interp_decision*c[:],I_g,J_g,N)
+            # Interpolate
+            d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
+            s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
+            c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
 
             aa, bb, aau, bbu = transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0,
                                           chi1, chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid,
@@ -886,8 +751,9 @@ function steadystate!(m::TwoAssetHANK)
                                           dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid, d_g,
                                           a_grid, a_g_grid, s, s_g,
                                           r_a_grid, r_a_g_grid)
-            cc  = kron(lambda,my_speye(I*J))
-            ccu = kron(lambda,my_speye(I_g*J_g))
+
+            cc  = kron(lambda, my_speye(I * J))
+            ccu = kron(lambda, my_speye(I_g * J_g))
             A = aa + bb
 
             #------------------------------------------------------------
@@ -897,17 +763,19 @@ function steadystate!(m::TwoAssetHANK)
             Vn1     = Array{Float64}(undef, I,J,N)
             Bik_all = Vector{Array{Float64}}(undef, N)
             uk_stacked, Vk_stacked = Vector{Float64}(undef, I*J), Vector{Float64}(undef, I*J)
+
             for kk = 1:N
             	Ak 				= A[1+(kk-1)*(I*J):kk*(I*J),1+(kk-1)*(I*J):kk*(I*J)]
-            	Bk 				= (1 + Delta*(rrho + ddeath) - Delta*lambda[kk,kk])*my_speye(I*J) - Delta*Ak
+            	Bk 				= (1 + Delta*(rrho + ddeath) -
+                                   Delta*lambda[kk,kk])*my_speye(I*J) - Delta*Ak
         	    Bik_all[kk] 	= inv(Matrix{Float64}(Bk))
-        	    uk_stacked 		= reshape(u[:,:,kk],I*J,1)
-                Vk_stacked 		= reshape(Vn[:,:,kk],I*J,1)
+        	    uk_stacked 		= reshape(u[:,:,kk], I * J, 1)
+                Vk_stacked 		= reshape(Vn[:,:,kk], I * J, 1)
         	    indx_k 			= 1:N .!= kk
         	    Vkp_stacked 	= sum(repeat(lambda[kk,indx_k]',I*J,1) .*
                                       reshape(Vn[:,:,indx_k],I*J,N-1), dims=2)
         	    qk 				= Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
-        	    Vn1k_stacked 	= Bik_all[kk]*qk
+        	    Vn1k_stacked 	= Bik_all[kk] * qk
         	    Vn1[:,:,kk] 	= reshape(Vn1k_stacked,I,J,1)
             end
 
@@ -958,44 +826,46 @@ function steadystate!(m::TwoAssetHANK)
     	# Find new stationary distribution associated with decision rules
     	#------------------------------------------------------------
     	A   = aau + bbu
-	    λ0 	= lambda - diagm(0 => diag(lambda))  		# transition matrix with diagonal killed
+	    λ0 	= lambda - diagm(0 => diag(lambda))  # transition matrix with diagonal killed
     	λ0p = λ0'
 
         gg_tilde = dab_g_tilde_mat * gg
-
-        gg1      = Array{Float64}(undef, I_g*J_g,N)
-        #gg       = Array{Float64}(undef, I_g*J_g,N)
-        g        = Array{Float64,3}(undef, I_g,J_g,N)
+        gg1      = Array{Float64}(undef,  I_g * J_g, N)
+        g        = Array{Float64,3}(undef, I_g, J_g, N)
 
         K_supply  = 0.
         L_supply  = 0.
         KL_supply = 0.
-        KL        = 0.
 
         # Iterate
         for nn = 1:maxit_KFE
 
             gg_tilde = dab_g_tilde_mat * gg
-            gg1      = Array{Float64}(undef, I_g*J_g,N)
+            gg1      = Array{Float64}(undef, I_g * J_g, N)
 
             for kk = 1:N
-                Ak = A[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g),1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)]
+                Ak = A[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g),
+                       1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)]
+
                 death_inflow = zeros(I_g, J_g)
                 death_inflow[b.==0, 1] .= sum(gg_tilde[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)])
-                death_inflow = reshape(death_inflow,I_g*J_g,1)
-                gk_sum = sum(repeat(λ0p[kk,:]',I_g*J_g,1) .* reshape(gg_tilde,I_g*J_g,N), dims=2)
+
+                death_inflow = reshape(death_inflow, I_g*J_g, 1)
+
+                gk_sum = sum(repeat(λ0p[kk,:]', I_g*J_g,1) .* reshape(gg_tilde,I_g*J_g,N), dims=2)
                 gg1[:,kk] = (my_speye(I_g*J_g) - Delta_KFE * Ak' - Delta_KFE *
                              (lambda[kk,kk] - ddeath) *
                              my_speye(I_g*J_g))\(gg_tilde[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)] +
                                                  Delta_KFE*gk_sum + Delta_KFE*ddeath*death_inflow)
             end
 
-            gg1             = reshape(gg1,I_g*J_g*N,1)
-            gg1_sum         = sum(gg1)
-            gg1             = gg1 ./ gg1_sum
-            gg1             = dab_g_tilde_mat \ gg1
+            gg1     = reshape(gg1, I_g*J_g*N,1)
+            gg1_sum = sum(gg1)
+            gg1     = gg1 ./ gg1_sum
+            gg1     = dab_g_tilde_mat \ gg1
 
             dist = maximum(abs.(gg1-gg))
+
             if mod(nn,100) == 0
                 println("Iteration ",nn,", distance is ", dist)
             end
@@ -1010,12 +880,11 @@ function steadystate!(m::TwoAssetHANK)
         #------------------------------------------------------------
         # Update guess of KL
         #------------------------------------------------------------
-
         # Capital supply
         if K_liquid == 1
-            K_supply = sum(g.*(a_g_grid + b_g_grid).*dab_tilde_grid)
+            K_supply = sum(g .* (a_g_grid + b_g_grid) .* dab_tilde_grid)
         else
-            K_supply = sum(g.*a_g_grid.*dab_g_tilde_grid)
+            K_supply = sum(g .* a_g_grid .* dab_g_tilde_grid)
         end
 
         # Labor supply
@@ -1034,8 +903,8 @@ function steadystate!(m::TwoAssetHANK)
             println("I have found the steady state, Iteration = ", ii)
             break
         end
-    end
 
+    end
 
     #compute_savings()
     A = aau + bbu + ccu
