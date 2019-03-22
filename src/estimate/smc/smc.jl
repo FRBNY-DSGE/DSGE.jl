@@ -51,10 +51,12 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis
     Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
-             old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-             old_cloud::ParticleCloud = ParticleCloud(m, 0), run_test::Bool = false)
-    ##################################################################################
+function smc(m::AbstractModel, data::Matrix{Float64};
+             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
+             old_cloud::ParticleCloud = ParticleCloud(m, 0),
+             recompute_transition_equation::Bool = true, run_test::Bool = false,
+             filestring_addl::Vector{String} = Vector{String}())
+    ########################################################################################
     ### Setting Parameters
     ##################################################################################
 
@@ -119,10 +121,7 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
 
     if tempered_update
         if isempty(old_cloud)
-            # Load previous ParticleCloud as the starting point for time tempering
-            loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
-            #loadpath = rawpath(m,"estimate","smc_cloud.jld2",
-            #                   ["adpt="*string(tempering_target)])
+            loadpath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
             cloud = load(loadpath, "cloud")
@@ -295,16 +294,15 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
     ### Saving data
     ##################################################################################
 
-    if !m.testing || run_test
-        simfile = h5open(rawpath(m, "estimate", "smcsave.h5"), "w")
+    if !m.testing
+        simfile = h5open(rawpath(m, "estimate", "smcsave.h5", filestring_addl), "w")
         particle_store = d_create(simfile, "smcparams", datatype(Float64),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld2"),
-                     true, true, true, IOStream) do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl), true, true, true, IOStream) do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
@@ -313,13 +311,17 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
     end
 end
 
-function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low)
+function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
+             filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
-    return smc(m, data_mat, verbose=verbose)
+    return smc(m, data_mat, verbose = verbose,
+               filestring_addl = filestring_addl)
 end
 
-function smc(m::AbstractModel; verbose::Symbol=:low)
+function smc(m::AbstractModel; verbose::Symbol=:low,
+             filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
-    return smc(m, data_mat, verbose=verbose)
+    return smc(m, data_mat, verbose=verbose,
+               filestring_addl = filestring_addl)
 end
