@@ -15,7 +15,8 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = \"path/to/input/file.h5\"
 ```
 """
-function get_forecast_input_file(m, input_type)
+function get_forecast_input_file(m, input_type;
+                                 filestring_addl::Vector{String} = Vector{String}(0))
     overrides = forecast_input_file_overrides(m)
     if haskey(overrides, input_type)
         override_file = overrides[input_type]
@@ -30,16 +31,16 @@ function get_forecast_input_file(m, input_type)
     end
 
     if input_type == :mode
-        return rawpath(m,"estimate","paramsmode.h5")
+        return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
     elseif input_type == :mean
-        return workpath(m,"estimate","paramsmean.h5")
+        return workpath(m,"estimate","paramsmean.h5", filestring_addl)
     elseif input_type == :init
         return ""
     elseif input_type in [:full, :subset]
         if get_setting(m, :sampling_method) == :MH
-            return rawpath(m, "estimate", "mhsave.h5")
+            return rawpath(m, "estimate", "mhsave.h5", filestring_addl)
         elseif get_setting(m, :sampling_method) == :SMC
-            return rawpath(m, "estimate", "smcsave.h5")
+            return rawpath(m, "estimate", "smcsave.h5", filestring_addl)
         else
             throw("Invalid sampling method specification. Change in setting :sampling_method")
         end
