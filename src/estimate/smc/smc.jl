@@ -52,7 +52,7 @@ SMC is broken up into three main steps:
     Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix{Float64};
-             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
+             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud = ParticleCloud(m, 0),
              recompute_transition_equation::Bool = true, run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}())

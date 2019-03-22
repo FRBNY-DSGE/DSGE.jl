@@ -103,10 +103,10 @@ Load and return parameter draws from Metropolis-Hastings.
   `Vector{Float64}`. Second method returns a `Vector{Vector{Float64}}` of
   parameter draws for this block.
 """
-function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
-    verbose::Symbol = :low)
+function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int64} = 1:0,
+                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(0))
 
-    input_file_name = get_forecast_input_file(m, input_type)
+    input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
     println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
@@ -151,8 +151,8 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     return params
 end
 
-function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRange{Int64};
-                    verbose::Symbol = :low)
+function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int64};
+                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0))
 
     input_file_name = get_forecast_input_file(m, input_type)
     println(verbose, :low, "Loading draws from $input_file_name")
