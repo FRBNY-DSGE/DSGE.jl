@@ -82,11 +82,11 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     gx2  = Qy'*TTT_jump*Qx
 
     # now we need to create GDP as a function of the normalized states
-    GDPeqn = (1/dGDP_dZ)*GDPfn*[eye(n_backward_looking_states_unnormalized(m)); gx2]*Qx'
-             # this is for log GDP
-             # to use the level of gdp, remove (1/GDP)
+    GDPeqn = GDPfn*[eye(n_backward_looking_states_unnormalized(m)); gx2]*Qx'
+             # this is for level of GDP
+             # to use the level of gdp, front multiply by (1/dGDP_dZ)
 
-    ZZ = zeros(_n_observables, _n_model_states)
+    ZZ = zeros(_n_observables, _n_model_states_aug)
 
     # GDP
     ZZ[obs[:obs_gdp], 1:_n_states]     = GDPeqn

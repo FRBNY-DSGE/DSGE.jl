@@ -170,6 +170,8 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
         TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
         CCC = zeros(n_model_states(m))
 
+        TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
+
         transition_equation = Transition(TTT, RRR, CCC)
 
         # Measurement (needs the additional TTT_jump argument)
