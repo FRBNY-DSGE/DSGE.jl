@@ -146,7 +146,7 @@ na2nan!(df::DataFrame)
 Convert all NAs in a DataFrame to NaNs.
 """
 function na2nan!(df::DataFrame)
-    for col in names(df)
+    for col in setdiff([:date], names(df))
         df[ismissing.(df[col]), col] = NaN
     end
 end
@@ -180,11 +180,11 @@ function missing_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol =
         elseif cond_type == :full
             cond_full_names(m)
         end
-
         # Make non-conditional variables missing
         cond_names_missing = setdiff(names(df), [cond_names; :date])
-        T = eltype(df[cond_names_missing])
-        df[df[:date] .>= date_forecast_start(m), cond_names_missing] = convert(T, missing)
+        #T = eltype(df[cond_names_missing])
+
+        df[df[:date] .>= date_forecast_start(m), cond_names_missing] = NaN #convert(T, NaN)
 
         # Warn if any conditional variables are missing
         for var in cond_names
