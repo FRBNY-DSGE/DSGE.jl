@@ -223,10 +223,10 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
 
         y0s = if use_data && transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
-            data[y0_index+1:end]
+            data[y0_index+1:end-1] #changed to end-1 to fix AssertionError: Length of data (4) must be 3
         elseif use_data && transform4q in [logleveltopct_4q_percapita, logleveltopct_4q]
             # Divide log levels y_t by y_{t-4}
-            data[y0_index:end]
+            data[y0_index:end-1] #changed to end-1 to fix AssertionError: Length of data (4) must be 3
         else
             Float64[]
         end
