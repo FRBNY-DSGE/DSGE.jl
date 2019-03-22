@@ -351,6 +351,10 @@ function load_parameters_from_file(m::AbstractModel, path::String)
         error("$path is not a valid HDF5 file.")
     end
 
+    if m.spec=="smets_wouters" && length(x)==42
+        x = vcat(x, zeros(7))
+    end
+
     @assert length(x) == length(m.parameters)
     @assert eltype(x) == typeof(m.parameters[1].value)
     return x
