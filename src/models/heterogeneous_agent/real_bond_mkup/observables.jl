@@ -11,10 +11,13 @@ function init_observable_mappings!(m::RealBondMkup)
         # TO:   The cyclical component of log real GDP
 
         levels[:rGDP] = nominal_to_real(:GDP, levels)
-        levels[:lGDP] = log.(levels[:rGDP])
+        gdp = oneqtrpctchange(levels[:rGDP])
+        levels[:GDP_cyc_comp] = hpfilter(gdp, 1600)
+        return levels[:GDP_cyc_comp]
+        #=levels[:lGDP] = log.(levels[:rGDP])
         _, levels[:lGDP_cyc_comp] = hpfilter(levels[:lGDP], 1600)
 
-        levels[:lGDP_cyc_comp]
+        levels[:lGDP_cyc_comp]=#
     end
 
     gdp_rev_transform = logleveltopct_annualized
