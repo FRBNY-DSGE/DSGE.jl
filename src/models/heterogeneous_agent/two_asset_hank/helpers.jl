@@ -644,38 +644,26 @@ end
 end
 
 @inline function transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam, xxi, w, chi0, chi1,
-                                   chi2, a_lb,
-                                   l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid, daf_grid,
-                                   dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
+                                   chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid,
+                                   daf_grid, dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
                                    dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid,
-                                   aggZ)#,
-                                   #audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB,
-                                   #adriftF, bdriftF)
-
-# Compute drifts for HJB
-    perm_const = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
+                                   aggZ)
+    # Compute drifts for HJB
+    perm_const      = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
     norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid .* y_grid)
-    norm_d = norm.(d)
-
-    bdriftB = min.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)
-    bdriftF = max.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)
+    norm_d          = norm.(d)
 
     # Compute drifts for KFE
     audrift_prod = d_g .+ a_g_grid .* (r_a_g_grid .+ ddeath*pam) .+ xxi * w * l_g_grid .*
         y_g_grid .- (permanent == 1 ? aggZ * a_g_grid : 0.0)
-
     budrift_prod = s_g - d_g - adj_cost_fn(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
         (permanent == 1 ? aggZ * b_g_grid : 0.0)
 
-    budriftB = min.(budrift_prod, 0)
-    budriftF = max.(budrift_prod, 0)
-    ###
-
     # Transition_deriva_a
-    chi         = -(min.(norm_d, 0) .+ min.(norm_perm_inter, 0)) ./ dab_grid#-adriftB ./ dab_grid
+    chi         = -(min.(norm_d, 0) .+ min.(norm_perm_inter, 0)) ./ dab_grid
     chi[:,1,:] .= 0.0
 
-    zeta         = (max.(norm_d, 0) .+ max.(norm_perm_inter, 0)) ./ daf_grid #adriftF ./ daf_grid
+    zeta         = (max.(norm_d, 0) .+ max.(norm_perm_inter, 0)) ./ daf_grid
     zeta[:,J,:] .= 0.0
 
     yy = -(chi .+ zeta)
@@ -691,10 +679,10 @@ end
 
     aa = spdiagm(0 => vec(centdiag), I => vec(updiag)[I+1:end], -I => vec(lowdiag)[1:end-I])
 
-    chiu         = -min.(audrift_prod, 0) ./ dab_g_grid #-audriftB ./ dab_g_grid
+    chiu         = -min.(audrift_prod, 0) ./ dab_g_grid
     chiu[:,1,:] .= 0.0
 
-    zetau           = max.(audrift_prod, 0) ./ daf_g_grid #audriftF ./ daf_g_grid
+    zetau           = max.(audrift_prod, 0) ./ daf_g_grid
     zetau[:,J_g,:] .= 0.0
 
     yyu = -(chiu .+ zetau)
@@ -712,9 +700,9 @@ end
                   -I_g => vec(lowdiagu)[1:end-I_g])
 
     # Transition_deriva b
-    X = -bdriftB ./ dbb_grid
+    X = -(min.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)) ./ dbb_grid
     X[1,:,:] .= 0.0
-    Z = bdriftF ./ dbf_grid
+    Z = (max.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)) ./ dbf_grid
     Z[I,:,:] .= 0.0
 
     Y = -(X .+ Z)
@@ -730,10 +718,10 @@ end
 
     bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
 
-    Xu = -budriftB ./ dbb_g_grid
+    Xu = -min.(budrift_prod, 0) ./ dbb_g_grid
     Xu[1,:,:] .= 0.0
 
-    Zu = budriftF ./ dbf_g_grid
+    Zu = max.(budrift_prod, 0) ./ dbf_g_grid
     Zu[I_g,:,:] .= 0.0
 
     Yu = -(Xu .+ Zu)

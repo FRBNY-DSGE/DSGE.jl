@@ -624,12 +624,6 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                         daf_grid, dab_grid, dbf_grid, dbb_grid,
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
 
-        # Compute drifts for KFE
-        #@show "catch_my_drifts"
-        #@time audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF = catch_my_drifts(I_g, permanent, ddeath, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
-         #                        l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
-         #                        a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
-
         # Derive transition matrices
         @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam,
@@ -637,9 +631,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                    l_g_grid, y_grid, y_g_grid, d,
                                              dab_grid, daf_grid, dab_g_grid, daf_g_grid, dbb_grid,
                                              dbf_grid, dbb_g_grid, dbf_g_grid, d_g, a_grid,
-                                             a_g_grid, s, s_g, r_a_grid, r_a_g_grid, aggZ)#,
-#                                             audriftB, budriftB, audriftF, budriftF, adriftB,
-#                                             bdriftB, adriftF, bdriftF)
+                                             a_g_grid, s, s_g, r_a_grid, r_a_g_grid, aggZ)
+
         # full transition matrix
         A = aa + bb + cc
 
