@@ -12,8 +12,8 @@ function init_observable_mappings!(m::RealBondMkup)
 
         levels[:rGDP] = nominal_to_real(:GDP, levels)
         gdp = oneqtrpctchange(levels[:rGDP])
-        levels[:GDP_cyc_comp] = hpfilter(gdp, 1600)
-        return levels[:GDP_cyc_comp]
+        _, levels[:GDP_cyc_comp] = hpfilter(gdp, 1600)
+        levels[:GDP_cyc_comp]
         #=levels[:lGDP] = log.(levels[:rGDP])
         _, levels[:lGDP_cyc_comp] = hpfilter(levels[:lGDP], 1600)
 
