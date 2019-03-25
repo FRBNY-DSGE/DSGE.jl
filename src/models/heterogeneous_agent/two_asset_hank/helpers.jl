@@ -12,8 +12,8 @@ THE GUTS OF EQCOND.
     # HJB Equation
     #----------------------------------------------------------------
     # Preparations
-    VaF   = similar(V) #0. * V
-    VaB   = similar(V) #0. * V
+    VaF   = similar(V)
+    VaB   = similar(V)
     Vamin = 0.0
     Va_dif = V[:,2:J,:] - V[:,1:J-1,:]
 
@@ -43,95 +43,57 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     # Consumption decision
     #----------------------------------------------------------------
-
     # Preparations
-    cF  = similar(V) #0 * V
-    sF  = similar(V) #0 * V
-
-    cB  = similar(V) #0 * V
-    sB  = similar(V) #0 * V
-
-    c0  = similar(V) #0 * V
-
-    # Decisions conditional on a particular direction of derivative
-    cF[1:I-1,:,:] = VbF[1:I-1,:,:] .^ (-1/ggamma)
-    cF[I,:,:]    .= 0.0 #zeros(1,J,N)
+    cF  = similar(V)
+    sF  = similar(V)
+    cB  = similar(V)
+    sB  = similar(V)
 
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
-
-    sF[1:I-1,:,:] = real(((1 - xxi) - tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
-                         b_grid[1:I-1,:,:].*(r_b_grid[1:I-1,:,:] .+ perm_const) .+
-                         trans_grid[1:I-1,:,:] - cF[1:I-1,:,:])
-    sF[I,:,:]     .= 0.0 #zeros(1,J,N)
-
-    #HcF[1:I-1,:,:] = u_fn(cF[1:I-1,:,:], ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
-    #HcF[I,:,:]    .= -1e12 #*ones(1,J,N)
-
-    cB[2:I,:,:] = VbB[2:I,:,:].^(-1/ggamma)
-    cB[1,:,:]   = real(((1-xxi)-tau_I) * w * l_grid[1,:,:] .* y_grid[1,:,:] .+
-                       b_grid[1,:,:] .*(r_b_grid[1,:,:] .+ perm_const) .+ trans_grid[1,:,:])
-
-    sB[1,:,:]  .= 0.0 #zeros(1,J,N)
-    sB[2:I,:,:] = real(((1-xxi)-tau_I) * w * l_grid[2:I,:,:] .*
-                       y_grid[2:I,:,:] .+ b_grid[2:I,:,:] .*
-                       (r_b_grid[2:I,:,:] .+ ddeath*pam) .+
-                       trans_grid[2:I,:,:] - cB[2:I,:,:])
-
-    #HcB = u_fn(cB, ggamma) .+ VbB .* sB
-
     c0 = real(((1-xxi)-tau_I) * w * l_grid .* y_grid .+
               b_grid .* (r_b_grid .+ perm_const) .+ trans_grid)
 
-    #s0  = zeros(I,J,N)
-    #Hc0 = u_fn(c0, ggamma)
+    # Decisions conditional on a particular direction of derivative
+    cF[1:I-1,:,:] = VbF[1:I-1,:,:] .^ (-1/ggamma)
+    cF[I,:,:]    .= 0.0
 
+    sF[1:I-1,:,:] = c0[1:I-1,:,:] - cF[1:I-1,:,:]
+    sF[I,:,:]    .= 0.0
+
+    cB[2:I,:,:] = VbB[2:I,:,:].^(-1/ggamma)
+    cB[1,:,:]   = c0[1,:,:]
+
+    sB[1,:,:]  .= 0.0
+    sB[2:I,:,:] = c0[2:I,:,:] - cB[2:I,:,:]
 
     # Optimal consumption and liquid savings
     c = IcF .* cF .+ IcB .* cB .+ Ic0 .* c0
-    s = IcF .* sF .+ IcB .* sB #.+ Ic0 .* s0
+    s = IcF .* sF .+ IcB .* sB
     u = u_fn(c, ggamma)
 
     #----------------------------------------------------------------
     # Deposit decision
     #----------------------------------------------------------------
-
     # Preparations
     dFB  = similar(V)
-    #HdFB = similar(V)
     dBF  = similar(V)
-    #HdBF = similar(V)
     dBB  = similar(V)
-    #HdBB = similar(V)
 
     # Decisions conditional on a particular direction of derivative
-    dFB[2:I,1:J-1,:]  = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
-                                     a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
-    dFB[:,J,:]        .= 0.0
-    dFB[1,1:J-1,:]    .= 0.0
+    dFB[2:I,1:J-1,:] = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
+                                    a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
+    dFB[:,J,:]     .= 0.0
+    dFB[1,1:J-1,:] .= 0.0
 
-    #HdFB[2:I,1:J-1,:]  = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
-    #    (dFB[2:I,1:J-1,:] .+ adj_cost_fn(dFB[2:I, 1:J-1,:], a_grid[2:I, 1:J-1,:],
-    #                                     chi0, chi1, chi2, a_lb))
-    #HdFB[:,J,:]     .= -1.0e12
-    #HdFB[1,1:J-1,:] .= -1.0e12
+    dBF[1:I-1,2:J,:] = opt_deposits(VaB[1:I-1,2:J,:], VbF[1:I-1,2:J,:],
+                                    a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
+    dBF[:,1,:]   .= 0.0
+    dBF[I,2:J,:] .= 0.0
 
-    dBF[1:I-1,2:J,:]  = opt_deposits(VaB[1:I-1,2:J,:], VbF[1:I-1,2:J,:],
-                                     a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
-    dBF[:,1,:]        .= 0.0
-    dBF[I,2:J,:]      .= 0.0
-    #HdBF[1:I-1,2:J,:]  = VaB[1:I-1,2:J,:] .* dBF[1:I-1,2:J,:] - VbF[1:I-1,2:J,:] .*
-    #    (dBF[1:I-1,2:J,:] .+ adj_cost_fn(dBF[1:I-1, 2:J,:], a_grid[1:I-1,2:J,:],
-    #                                     chi0, chi1, chi2, a_lb))
-    #HdBF[:,1,:]   .= -1.0e12
-    #HdBF[I,2:J,:] .= -1.0e12
 
-    VbB[1,2:J,:]  = u_fn(cB[1,2:J,:], ggamma)
     dBB[:,2:J,:]  = opt_deposits(VaB[:,2:J,:], VbB[:,2:J,:], a_grid[:,2:J,:],
                                  chi0, chi1, chi2, a_lb)
     dBB[:,1,:]   .= 0.0
-    #HdBB[:,2:J,:] = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
-    #    (dBB[:,2:J,:] .+ adj_cost_fn(dBB[:,2:J,:], a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
-    #HdBB[:,1,:]   .= -1.0e12
 
     # Optimal deposit decision
     d = IcFB .* dFB .+ IcBF .* dBF .+ IcBB .* dBB
@@ -681,111 +643,109 @@ end
     return aa, bb, aau, bbu
 end
 
-@inline function transition_deriva(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
+@inline function transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam, xxi, w, chi0, chi1,
+                                   chi2, a_lb,
                                    l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid, daf_grid,
                                    dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
                                    dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid,
-                                   audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB,
-                                   adriftF, bdriftF)
-    chi  = similar(adriftB) #zeros(I,J,N)
-    yy   = similar(adriftB) #zeros(I,J,N)
-    zeta = similar(adriftB) #zeros(I,J,N)
+                                   aggZ)#,
+                                   #audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB,
+                                   #adriftF, bdriftF)
 
-    X = similar(adriftB) #zeros(I,J,N)
-    Y = similar(adriftB) #zeros(I,J,N)
-    Z = similar(adriftB) #zeros(I,J,N)
+# Compute drifts for HJB
+    perm_const = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
+    norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid .* y_grid)
+    norm_d = norm.(d)
 
-    chiu  = similar(audriftB) #zeros(I_g,J_g,N)
-    yyu   = similar(audriftB) #zeros(I_g,J_g,N)
-    zetau = similar(audriftB) #zeros(I_g,J_g,N)
+    bdriftB = min.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)
+    bdriftF = max.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)
 
-    Xu = similar(audriftB) #zeros(I_g,J_g,N)
-    Yu = similar(audriftB) #zeros(I_g,J_g,N)
-    Zu = similar(audriftB) #zeros(I_g,J_g,N)
+    # Compute drifts for KFE
+    audrift_prod = d_g .+ a_g_grid .* (r_a_g_grid .+ ddeath*pam) .+ xxi * w * l_g_grid .*
+        y_g_grid .- (permanent == 1 ? aggZ * a_g_grid : 0.0)
+
+    budrift_prod = s_g - d_g - adj_cost_fn(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
+        (permanent == 1 ? aggZ * b_g_grid : 0.0)
+
+    budriftB = min.(budrift_prod, 0)
+    budriftF = max.(budrift_prod, 0)
+    ###
 
     # Transition_deriva_a
-    chi[:,2:J,:]    = -adriftB[:,2:J,:] ./ dab_grid[:,2:J,:]
-    chi[:,1,:]      = zeros(I,1,N)
-    yy[:,2:J-1,:]   = adriftB[:,2:J-1,:] ./ dab_grid[:,2:J-1,:] .- adriftF[:,2:J-1,:] ./ daf_grid[:,2:J-1,:]
-    yy[:,1,:]       = -adriftF[:,1,:]./daf_grid[:,1,:]
-    yy[:,J,:]       = adriftB[:,J,:]./dab_grid[:,J,:]
-    zeta[:,1:J-1,:] = adriftF[:,1:J-1,:]./daf_grid[:,1:J-1,:]
-    zeta[:,J,:]     = zeros(I,1,N)
+    chi         = -(min.(norm_d, 0) .+ min.(norm_perm_inter, 0)) ./ dab_grid#-adriftB ./ dab_grid
+    chi[:,1,:] .= 0.0
 
-    centdiag = reshape(yy,I*J,N)
-    lowdiag  = reshape(chi,I*J,N)
-    lowdiag  = circshift(lowdiag,-I)
-    updiag   = reshape(zeta,I*J,N)
-    updiag   = circshift(updiag,I)
+    zeta         = (max.(norm_d, 0) .+ max.(norm_perm_inter, 0)) ./ daf_grid #adriftF ./ daf_grid
+    zeta[:,J,:] .= 0.0
 
-    centdiag = reshape(centdiag,I*J*N,1)
-    updiag   = reshape(updiag,I*J*N,1)
-    lowdiag  = reshape(lowdiag,I*J*N,1)
+    yy = -(chi .+ zeta)
+
+    lowdiag  = reshape(chi, I*J, N)
+    lowdiag  = circshift(lowdiag, -I)
+    updiag   = reshape(zeta, I*J, N)
+    updiag   = circshift(updiag, I)
+
+    centdiag = reshape(yy, I*J*N, 1)
+    updiag   = reshape(updiag, I*J*N, 1)
+    lowdiag  = reshape(lowdiag, I*J*N, 1)
 
     aa = spdiagm(0 => vec(centdiag), I => vec(updiag)[I+1:end], -I => vec(lowdiag)[1:end-I])
 
-    chiu[:,2:J_g,:]    = -audriftB[:,2:J_g,:] ./ dab_g_grid[:,2:J_g,:]
-    chiu[:,1,:]        = zeros(I_g,1,N)
-    yyu[:,2:J_g-1,:]   = audriftB[:,2:J_g-1,:] ./ dab_g_grid[:,2:J_g-1,:] -
-        audriftF[:,2:J_g-1,:] ./ daf_g_grid[:,2:J_g-1,:]
-    yyu[:,1,:]         = -audriftF[:,1,:] ./ daf_g_grid[:,1,:]
-    yyu[:,J_g,:]       = audriftB[:,J_g,:] ./ dab_g_grid[:,J_g,:]
-    zetau[:,1:J_g-1,:] = audriftF[:,1:J_g-1,:] ./ daf_g_grid[:,1:J_g-1,:]
-    zetau[:,J_g,:]     = zeros(I_g,1,N)
+    chiu         = -min.(audrift_prod, 0) ./ dab_g_grid #-audriftB ./ dab_g_grid
+    chiu[:,1,:] .= 0.0
 
-    centdiagu = reshape(yyu,I_g*J_g,N)
+    zetau           = max.(audrift_prod, 0) ./ daf_g_grid #audriftF ./ daf_g_grid
+    zetau[:,J_g,:] .= 0.0
+
+    yyu = -(chiu .+ zetau)
+
     lowdiagu  = reshape(chiu,I_g*J_g,N)
     lowdiagu  = circshift(lowdiagu,-I_g)
     updiagu   = reshape(zetau,I_g*J_g,N)
     updiagu   = circshift(updiagu,I_g)
 
-    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
+    centdiagu = reshape(yyu,I_g*J_g*N,1)
     updiagu   = reshape(updiagu,I_g*J_g*N,1)
     lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
 
-    aau = spdiagm(0 => vec(centdiagu), I_g => vec(updiagu)[I_g+1:end], -I_g => vec(lowdiagu)[1:end-I_g])
+    aau = spdiagm(0 => vec(centdiagu), I_g => vec(updiagu)[I_g+1:end],
+                  -I_g => vec(lowdiagu)[1:end-I_g])
 
     # Transition_deriva b
+    X = -bdriftB ./ dbb_grid
+    X[1,:,:] .= 0.0
+    Z = bdriftF ./ dbf_grid
+    Z[I,:,:] .= 0.0
 
-    # transition matrix for b
-    X[2:I,:,:] = - bdriftB[2:I,:,:]./dbb_grid[2:I,:,:]
-    X[1,:,:] = zeros(1,J,N)
-    Y[2:I-1,:,:] = bdriftB[2:I-1,:,:]./dbb_grid[2:I-1,:,:] - bdriftF[2:I-1,:,:]./dbf_grid[2:I-1,:,:]
-    Y[1,:,:] = - bdriftF[1,:,:]./dbf_grid[1,:,:]
-    Y[I,:,:] = bdriftB[I,:,:]./dbb_grid[I,:,:]
-    Z[1:I-1,:,:] = bdriftF[1:I-1,:,:]./dbf_grid[1:I-1,:,:]
-    Z[I,:,:] = zeros(1,J,N)
+    Y = -(X .+ Z)
 
-    centdiag = reshape(Y,I*J,N)
-    lowdiag  = reshape(X,I*J,N)
-    lowdiag  = circshift(lowdiag,-1)
-    updiag   = reshape(Z,I*J,N)
+    lowdiag  = reshape(X, I*J, N)
+    lowdiag  = circshift(lowdiag, -1)
+    updiag   = reshape(Z, I*J, N)
     updiag   = circshift(updiag,1)
 
-    centdiag = reshape(centdiag,I*J*N,1)
-    updiag   = reshape(updiag,I*J*N,1)
-    lowdiag  = reshape(lowdiag,I*J*N,1)
+    centdiag = reshape(Y, I*J*N, 1)
+    updiag   = reshape(updiag, I*J*N, 1)
+    lowdiag  = reshape(lowdiag, I*J*N, 1)
 
     bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
 
-    Xu[2:I_g,:,:] = - budriftB[2:I_g,:,:]./dbb_g_grid[2:I_g,:,:]
-    Xu[1,:,:] .= 0.0 #zeros(1,J_g,N)
-    Yu[2:I_g-1,:,:] = budriftB[2:I_g-1,:,:]./dbb_g_grid[2:I_g-1,:,:] -
-        budriftF[2:I_g-1,:,:]./dbf_g_grid[2:I_g-1,:,:]
-    Yu[1,:,:] = - budriftF[1,:,:]./dbf_g_grid[1,:,:]
-    Yu[I_g,:,:] = budriftB[I_g,:,:]./dbb_g_grid[I_g,:,:]
-    Zu[1:I_g-1,:,:] = budriftF[1:I_g-1,:,:]./dbf_g_grid[1:I_g-1,:,:]
-    Zu[I_g,:,:] .= 0.0 #zeros(1,J_g,N)
+    Xu = -budriftB ./ dbb_g_grid
+    Xu[1,:,:] .= 0.0
 
-    centdiagu = reshape(Yu,I_g*J_g,N)
-    lowdiagu  = reshape(Xu,I_g*J_g,N)
-    lowdiagu  = circshift(lowdiagu,-1)
-    updiagu   = reshape(Zu,I_g*J_g,N)
-    updiagu   = circshift(updiagu,1)
+    Zu = budriftF ./ dbf_g_grid
+    Zu[I_g,:,:] .= 0.0
 
-    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
-    updiagu   = reshape(updiagu,I_g*J_g*N,1)
-    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
+    Yu = -(Xu .+ Zu)
+
+    lowdiagu  = reshape(Xu, I_g*J_g, N)
+    lowdiagu  = circshift(lowdiagu, -1)
+    updiagu   = reshape(Zu, I_g*J_g, N)
+    updiagu   = circshift(updiagu, 1)
+
+    centdiagu = reshape(Yu, I_g*J_g*N, 1)
+    updiagu   = reshape(updiagu, I_g*J_g*N, 1)
+    lowdiagu  = reshape(lowdiagu, I_g*J_g*N, 1)
 
     bbu = spdiagm(0 => vec(centdiagu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
 

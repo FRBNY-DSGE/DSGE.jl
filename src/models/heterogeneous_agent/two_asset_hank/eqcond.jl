@@ -570,10 +570,10 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     l_grid       = permutedims(repeat(ones(N,1),1,I,J), [2 3 1])
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # Unpack variables
-        V         = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
-        g         = vars[n_v + 1 : n_v + n_g] .+ vars_SS[n_v + 1 : n_v + n_g]    # distribution
-        K         = vars[n_v + n_g + 1] + vars_SS[n_v + n_g + 1]    # aggregate capital
-        r_b       = vars[n_v + n_g + 2] + vars_SS[n_v + n_g + 2]
+        V   = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
+        g   = vars[n_v + 1 : n_v + n_g] .+ vars_SS[n_v + 1 : n_v + n_g]    # distribution
+        K   = vars[n_v + n_g + 1] + vars_SS[n_v + n_g + 1]    # aggregate capital
+        r_b = vars[n_v + n_g + 2] + vars_SS[n_v + n_g + 2]
 
         if aggregate_variables == 1
             aggY     = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3] # aggregate output
@@ -625,29 +625,29 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
 
         # Compute drifts for KFE
-        @show "catch_my_drifts"
-        @time audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF = catch_my_drifts(I_g, permanent, ddeath, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
-                                 l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
-                                 a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
+        #@show "catch_my_drifts"
+        #@time audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF = catch_my_drifts(I_g, permanent, ddeath, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
+         #                        l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
+         #                        a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
 
         # Derive transition matrices
         @show "transition_deriva"
-        @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, ddeath, pam, xxi, w,
-                                                   chi0, chi1,
-                                             chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid, d,
+        @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam,
+                                                   xxi, w, chi0, chi1, chi2, a_lb, l_grid,
+                                                   l_g_grid, y_grid, y_g_grid, d,
                                              dab_grid, daf_grid, dab_g_grid, daf_g_grid, dbb_grid,
                                              dbf_grid, dbb_g_grid, dbf_g_grid, d_g, a_grid,
-                                             a_g_grid, s, s_g, r_a_grid, r_a_g_grid,
-                                             audriftB, budriftB, audriftF, budriftF, adriftB,
-                                             bdriftB, adriftF, bdriftF)
+                                             a_g_grid, s, s_g, r_a_grid, r_a_g_grid, aggZ)#,
+#                                             audriftB, budriftB, audriftF, budriftF, adriftB,
+#                                             bdriftB, adriftF, bdriftF)
         # full transition matrix
         A = aa + bb + cc
 
         #----------------------------------------------------------------
         # KFE
         #----------------------------------------------------------------
-        AT = aau + bbu + ccu
-        AT = AT'
+        AT = (aau + bbu + ccu)'
+        #AT = AT'
         gg_tilde            = dab_g_tilde_mat * gg
         gIntermediate       = AT * gg_tilde
         dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
