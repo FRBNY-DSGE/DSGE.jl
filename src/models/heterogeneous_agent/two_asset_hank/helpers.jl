@@ -537,22 +537,24 @@ end
 @inline function transition_deriva(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
                                    l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid, daf_grid,
                                    dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
-                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid)
-    chi  = zeros(I,J,N)
-    yy   = zeros(I,J,N)
-    zeta = zeros(I,J,N)
+                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid,
+                                   audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB,
+                                   adriftF, bdriftF)
+    chi  = similar(adriftB) #zeros(I,J,N)
+    yy   = similar(adriftB) #zeros(I,J,N)
+    zeta = similar(adriftB) #zeros(I,J,N)
 
-    X = zeros(I,J,N)
-    Y = zeros(I,J,N)
-    Z = zeros(I,J,N)
+    X = similar(adriftB) #zeros(I,J,N)
+    Y = similar(adriftB) #zeros(I,J,N)
+    Z = similar(adriftB) #zeros(I,J,N)
 
-    chiu  = zeros(I_g,J_g,N)
-    yyu   = zeros(I_g,J_g,N)
-    zetau = zeros(I_g,J_g,N)
+    chiu  = similar(audriftB) #zeros(I_g,J_g,N)
+    yyu   = similar(audriftB) #zeros(I_g,J_g,N)
+    zetau = similar(audriftB) #zeros(I_g,J_g,N)
 
-    Xu = zeros(I_g,J_g,N)
-    Yu = zeros(I_g,J_g,N)
-    Zu = zeros(I_g,J_g,N)
+    Xu = similar(audriftB) #zeros(I_g,J_g,N)
+    Yu = similar(audriftB) #zeros(I_g,J_g,N)
+    Zu = similar(audriftB) #zeros(I_g,J_g,N)
 
     # Transition_deriva_a
     chi[:,2:J,:]    = -adriftB[:,2:J,:] ./ dab_grid[:,2:J,:]
@@ -644,29 +646,29 @@ end
     return aa, bb, aau, bbu
 end
 #RECA
-@inline function catch_my_drifts(permanent, death, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
+@inline function catch_my_drifts(I_g, permanent, ddeath, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
                                  l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
                                  a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
 
-    adriftB = Array{Float64}(undef, size(d))
-    adriftF = Array{Float64}(undef, size(d))
+    adriftB = similar(d) #Array{Float64}(undef, size(d))
+    adriftF = similar(d) #Array{Float64}(undef, size(d))
 
-    audriftB = Array{Float64}(undef, size(d_g))
-    audriftF = Array{Float64}(undef, size(d_g))
-    budriftB = Array{Float64}(undef, size(d_g))
-    budriftF = Array{Float64}(undef, size(d_g))
+    audriftB = similar(d_g) #Array{Float64}(undef, size(d_g))
+    audriftF = similar(d_g) #Array{Float64}(undef, size(d_g))
+    budriftB = similar(d_g) #Array{Float64}(undef, size(d_g))
+    budriftF = similar(d_g) #Array{Float64}(undef, size(d_g))
 
     # Compute drifts for HJB
     if permanent == 1
-        adriftB = min.(d,0) .+ min.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
-                                    xxi * w * l_grid .* y_grid,0)
-        adriftF = max.(d,0) .+ max.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
-                                xxi * w * l_grid .* y_grid,0)
+        adriftB = min.(norm.(d),0) .+ min.(norm.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
+                                    xxi * w * l_grid .* y_grid), 0)
+        adriftF = max.(norm.(d),0) .+ max.(norm.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
+                                xxi * w * l_grid .* y_grid), 0)
     elseif permanent == 0
-        adriftB = min.(d,0) .+ min.(a_grid .* (r_a_grid .+ ddeath*pam) .+
-                                    xxi * w * l_grid .* y_grid,0)
-        adriftF = max.(d,0) .+ max.(a_grid .* (r_a_grid .+ ddeath*pam) .+
-                                    xxi * w * l_grid .* y_grid,0)
+        adriftB = min.(norm.(d),0) .+ min.(norm.(a_grid .* (r_a_grid .+ ddeath*pam) .+
+                                    xxi * w * l_grid .* y_grid), 0)
+        adriftF = max.(norm.(d),0) .+ max.(norm.(a_grid .* (r_a_grid .+ ddeath*pam) .+
+                                    xxi * w * l_grid .* y_grid), 0)
     end
 
     bdriftB = min.(-d - adj_cost_fn(d,a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
@@ -735,7 +737,7 @@ end
                                  b_g_grid[I_g,:,:],0)
     end
 
-    return audriftB, budriftB, audriftF, budriftB, adriftB, bdriftB, adriftF, bdriftF
+    return audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF
 end
 
 

@@ -4,7 +4,7 @@ TwoAssetHANK{T} <: AbstractCTModel{T}
 ```
 
 The `TwoAssetHANK` type defines the structure of the one-asset HANK model
-originally written in MATLAB by Ben Moll and SeHyoun Ahn at
+originally written in MATLAB by Ben Moll and Se Hyoun Ahn at
 https://sehyoun.com/EXAMPLE_one_asset_HANK_web.html
 
 ### Fields
@@ -107,7 +107,7 @@ mutable struct TwoAssetHANK{T} <: AbstractCTModel{T}
 end
 
 description(m::TwoAssetHANK) = "Julia implementation of the two-asset HANK model
-originally written in MATLAB by Ben Moll and SeHyoun Ahn."
+originally written in MATLAB by Ben Moll and Se Hyoun Ahn."
 
 
 """
@@ -459,7 +459,6 @@ Calculates the model's steady-state values. `steadystate!(m)` must be called whe
 the parameters of `m` are updated.
 """
 function steadystate!(m::TwoAssetHANK)
-
     # Read in parameters
     aalpha = m[:aalpha].value
     ddelta = m[:ddelta].value
@@ -469,23 +468,22 @@ function steadystate!(m::TwoAssetHANK)
     chi1   = m[:chi1].value
     chi2   = m[:chi2].value
     a_lb   = m[:a_lb].value
-
-    pam = m[:pam].value
-    xxi = m[:xxi].value
+    pam    = m[:pam].value
+    xxi    = m[:xxi].value
     ggamma = m[:ggamma].value
-    tau_I = m[:tau_I].value
-    trans = m[:trans].value
+    tau_I  = m[:tau_I].value
+    trans  = m[:trans].value
 
     # Set liquid rates
     r_b_SS = m[:r_b_SS].value
     r_b_borr_SS = m[:r_b_borr_SS].value
     borrwedge_SS = m[:borrwedge_SS].value
 
-
     lambda   = get_setting(m, :lambda)
     K_liquid = get_setting(m, :K_liquid)
-    aggregate_variables = get_setting(m, :aggregate_variables)
-    distributional_variables = get_setting(m, :distributional_variables)
+
+    aggregate_variables        = get_setting(m, :aggregate_variables)
+    distributional_variables   = get_setting(m, :distributional_variables)
     distributional_variables_1 = get_setting(m, :distributional_variables_1)
 
     # Read in approximation parameters
@@ -538,22 +536,18 @@ function steadystate!(m::TwoAssetHANK)
     V_0	= 1/(rrho + ddeath) * u_fn(c_0, ggamma)
 
     # Initial distribution
-    gg0 = zeros(I_g,J_g,N)
+    gg0 = zeros(I_g, J_g, N)
     gg0[b .== 0, 1, :] = vec(y_dist)
     gg0 = gg0 ./ sum(gg0)
     gg0 = gg0 ./ dab_g_tilde_grid 	# ensure integration to 1
-    gg0 = reshape(gg0, I_g*J_g*N, 1)
+    gg0 = vec(gg0) #, I_g*J_g*N, 1)
     gg = gg0
 
     aau = Array{Float64}(undef, 0, 0)
     bbu = Array{Float64}(undef, 0, 0)
     ccu = Array{Float64}(undef, 0, 0)
     Vn1 = Array{Float64}(undef, I,J,N)
-    Bik_all = Vector{Array{Float64}}(undef, N)#cell(N,1)
-    uk_stacked, Vk_stacked = Vector{Float64}(undef, I*J), Vector{Float64}(undef, I*J)
-
-    #Test
-    Vn = Array{Float64}(undef, I,J,N)
+    Vn  = Array{Float64}(undef, I,J,N)
     gg_tilde = Array{Float64}(undef, 0, 0)
     g = Array{Float64}(undef, 0, 0)
     c = Array{Float64}(undef, 0, 0)
@@ -575,16 +569,15 @@ function steadystate!(m::TwoAssetHANK)
     L_supply  = 0.
     KL_supply = 0.
 
-    #include("test_against_matlab.jl")
     #----------------------------------------------------------------
     # Iterate on KL to find steady state
     #----------------------------------------------------------------
-    for ii	= 1 : maxit_KL
-
+    for ii = 1 : maxit_KL
 	    # Derive aggregates given KL
 	    w			= (1 - aalpha) * (KL ^ aalpha)
  	    r_a			= aalpha * (KL ^ (aalpha - 1)) - ddelta
-	    r_a_grid    = repeat([r_a], I, J, N)
+
+        r_a_grid    = repeat([r_a], I, J, N)
         r_a_g_grid	= repeat([r_a], I_g, J_g, N)
         w_g_grid	= repeat([w], I_g, J_g, N)
 
@@ -604,16 +597,6 @@ function steadystate!(m::TwoAssetHANK)
 		s0  = Array{Float64}(undef, I,J,N)
 		Hc0 = Array{Float64}(undef, I,J,N)
 
-    	# Preparations
-		dFB 	= Array{Float64}(undef, I,J,N)
-		HdFB 	= Array{Float64}(undef, I,J,N)
-
-		dBF		= Array{Float64}(undef, I,J,N)
-		HdBF	= Array{Float64}(undef, I,J,N)
-
-		dBB   	= Array{Float64}(undef, I,J,N)
-		HdBB 	= Array{Float64}(undef, I,J,N)
-
 	    #----------------------------------------------------------------
 	    # Solve HJB
 	    #----------------------------------------------------------------
@@ -622,9 +605,9 @@ function steadystate!(m::TwoAssetHANK)
             # Compute derivatives w.r.t. illiquid assets a
             #-----
             # Preparations
-            VaF     = zeros(I,J,N)
-            VaB     = zeros(I,J,N)
-            Vamin   = 0
+            VaF   = zeros(I,J,N)
+            VaB   = zeros(I,J,N)
+            Vamin = 0.0
 
             # Forward difference
             VaF[:,1:J-1,:]     = (Vn[:,2:J,:]-Vn[:,1:J-1,:]) ./ daf_grid[:,1:J-1,:]
@@ -654,15 +637,16 @@ function steadystate!(m::TwoAssetHANK)
             #------------------------------------------------------------
             # Consumption decisions
             #------------------------------------------------------------
+
             # Decisions conditional on a particular direction of derivative
             cF[1:I-1,:,:]     = VbF[1:I-1,:,:] .^ (-1/ggamma)
-            cF[I,:,:]        .= 0.0# = zeros(1,J,N)
+            cF[I,:,:]        .= 0.0 # = zeros(1,J,N)
             sF[1:I-1,:,:]     = ((1-xxi)-tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
                 b_grid[1:I-1,:,:] .* (r_b_grid[1:I-1,:,:] .+ ddeath*pam) .+
                 trans_grid[1:I-1,:,:] .- cF[1:I-1,:,:]
             sF[I,:,:]        .= 0.0 #zeros(1,J,N)
             HcF[1:I-1,:,:]    = u_fn(cF[1:I-1,:,:],ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
-            HcF[I,:,:]        = -1e12*ones(1,J,N)
+            HcF[I,:,:]       .= -1e12 #*ones(1,J,N)
             validF            = (sF .> 0)
 
             cB[2:I,:,:]       = VbB[2:I,:,:].^(-1/ggamma)
@@ -693,11 +677,22 @@ function steadystate!(m::TwoAssetHANK)
             #------------------------------------------------------------
             # Deposit decision
             #------------------------------------------------------------
+            # Preparations
+            dFB  = Array{Float64}(undef, I,J,N)
+            HdFB = Array{Float64}(undef, I,J,N)
+
+            dBF  = Array{Float64}(undef, I,J,N)
+            HdBF = Array{Float64}(undef, I,J,N)
+
+            dBB  = Array{Float64}(undef, I,J,N)
+            HdBB = Array{Float64}(undef, I,J,N)
+
             # Decisions conditional on a particular direction of derivative
-            dFB[2:I,1:J-1,:]     = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
-                                                a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
-            dFB[:,J,:]            .= 0.0 #zeros(I,1,N)
-            dFB[1,1:J-1,:]        .= 0.0 #zeros(1,J-1,N)
+            dFB[2:I,1:J-1,:] = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
+                                            a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
+            dFB[:,J,:]      .= 0.0 #zeros(I,1,N)
+            dFB[1,1:J-1,:]  .= 0.0 #zeros(1,J-1,N)
+
             HdFB[2:I,1:J-1,:]     = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
                 (dFB[2:I,1:J-1,:] +
                  adj_cost_fn(dFB[2:I,1:J-1,:], a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb))
@@ -720,10 +715,10 @@ function steadystate!(m::TwoAssetHANK)
             VbB[1,2:J,:] = u_fn(cB[1,2:J,:],ggamma)
             dBB[:,2:J,:] = opt_deposits(VaB[:,2:J,:],VbB[:,2:J,:],a_grid[:,2:J,:],
                                        chi0, chi1, chi2, a_lb)
-            dBB[:,1,:]  .= 0.0 #zeros(I,1,N)
+            dBB[:,1,:]    .= 0.0 #zeros(I,1,N)
             HdBB[:,2:J,:]  = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
                 (dBB[:,2:J,:] + adj_cost_fn(dBB[:,2:J,:],a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
-            HdBB[:,1,:] .= -1.0e12 #* ones(I,1,N)
+            HdBB[:,1,:]   .= -1.0e12 #* ones(I,1,N)
             validBB        = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
                 (dBB .<= 0) .* (HdBB .> 0)
 
@@ -734,12 +729,11 @@ function steadystate!(m::TwoAssetHANK)
             Ic00 = (.!validFB) .* (.!validBF) .* (.!validBB)
 
             # Optimal deposits
-            d = IcFB .* dFB + IcBF .* dBF + IcBB .* dBB + Ic00 .* zeros(I,J,N)
+            d = IcFB .* dFB + IcBF .* dBF + IcBB .* dBB #+ Ic00 .* zeros(I,J,N)
 
             #------------------------------------------------------------
             # Construct "A" matrix multiplying value function
             #------------------------------------------------------------
-
             # Interpolate
             d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
             s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
@@ -759,75 +753,75 @@ function steadystate!(m::TwoAssetHANK)
             #------------------------------------------------------------
             # Update value function
             #------------------------------------------------------------
-
-            Vn1     = Array{Float64}(undef, I,J,N)
-            Bik_all = Vector{Array{Float64}}(undef, N)
-            uk_stacked, Vk_stacked = Vector{Float64}(undef, I*J), Vector{Float64}(undef, I*J)
-
+            Vn1 = Array{Float64}(undef, I,J,N)
             for kk = 1:N
-            	Ak 				= A[1+(kk-1)*(I*J):kk*(I*J),1+(kk-1)*(I*J):kk*(I*J)]
-            	Bk 				= (1 + Delta*(rrho + ddeath) -
-                                   Delta*lambda[kk,kk])*my_speye(I*J) - Delta*Ak
-        	    Bik_all[kk] 	= inv(Matrix{Float64}(Bk))
-        	    uk_stacked 		= reshape(u[:,:,kk], I * J, 1)
-                Vk_stacked 		= reshape(Vn[:,:,kk], I * J, 1)
-        	    indx_k 			= 1:N .!= kk
-        	    Vkp_stacked 	= sum(repeat(lambda[kk,indx_k]',I*J,1) .*
-                                      reshape(Vn[:,:,indx_k],I*J,N-1), dims=2)
-        	    qk 				= Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
-        	    Vn1k_stacked 	= Bik_all[kk] * qk
-        	    Vn1[:,:,kk] 	= reshape(Vn1k_stacked,I,J,1)
-            end
+                Ak                 = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
+                Bk                 = (1 + Delta*(rrho + ddeath) -
+                                      Delta*lambda[kk,kk]) * my_speye(I*J) - Delta*Ak
+                uk_stacked     = reshape(u[:,:,kk], I * J, 1)
+                Vk_stacked     = reshape(Vn[:,:,kk], I * J, 1)
+                indx_k         = 1:N .!= kk
 
+                Vkp_stacked    = sum(repeat(lambda[kk,indx_k]', I*J, 1) .*
+                                      reshape(Vn[:,:,indx_k],I*J,N-1), dims=2)
+                qk             = Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
+
+                Vn1k_stacked   = Bk \ qk
+                Vn1[:,:,kk]    = reshape(Vn1k_stacked,I,J,1)
+            end
             # Howard improvement step
             if nn >= start_HIS
-            	for jj = 1:maxit_HIS
-        		    Vn2 = Array{Float64}(undef, I, J, N)
-        		    for kk = 1:N
-        			    uk_stacked 	= reshape(u[:,:,kk],I*J,1)
-		        	    Vk_stacked 	= reshape(Vn1[:,:,kk],I*J,1)
-        			    indx_k 		= 1:N .!= kk
-		        	    Vkp_stacked	= sum(repeat(lambda[kk,indx_k]',I*J,1) .*
+                for jj = 1:maxit_HIS
+                    Vn2 = Array{Float64}(undef, I, J, N)
+                    for kk = 1:N
+                        uk_stacked     = reshape(u[:,:,kk],I*J,1)
+                        Vk_stacked     = reshape(Vn1[:,:,kk],I*J,1)
+                        Ak = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
+                        Bk = (1 + Delta*(rrho + ddeath) -
+                              Delta*lambda[kk,kk]) * my_speye(I*J) - Delta*Ak
+                        indx_k         = 1:N .!= kk
+                        Vkp_stacked    = sum(repeat(lambda[kk, indx_k]', I*J, 1) .*
                                           reshape(Vn1[:,:,indx_k],I*J,N-1), dims=2)
-        			    qk 			= Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
-	        		    Vn2k_stacked = Bik_all[kk]*qk
-        			    Vn2[:,:,kk] = reshape(Vn2k_stacked,I,J,1)
-		            end
-	        	    VHIS_delta = Vn2 - Vn1
-        		    Vn1 		= Vn2
-        		    dist 		= maximum(abs.(VHIS_delta))
+                        qk             = Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
+                        Vn2k_stacked = Bk \ qk
+                        Vn2[:,:,kk] = reshape(Vn2k_stacked,I,J,1)
+                    end
+                    VHIS_delta = Vn2 - Vn1
+                    Vn1  = Vn2
+                    dist = maximum(abs.(VHIS_delta))
 
                     if dist < crit_HIS
-		        	    break
-        		    end
-	            end
+                        break
+                    end
+                end
             end
 
             # Check for convergence
             V_Delta = Vn1 - Vn
-            Vn = Vn1
+            Vn      = Vn1
+
             dist = maximum(abs.(V_Delta))
             @show dist
 
             if dist < crit_HJB
- 	            println("Value Function Converged, Iteration = ", nn)
-	            break
+                 println("Value Function Converged, Iteration = ", nn)
+                break
             end
         end
 
-	    # Store value function
-    	V_0 = Vn
+        # Store value function
+        V_0 = Vn
 
-    	#----------------------------------------------------------------
-    	# Compute stationary distribution and update aggregate KL
-    	#----------------------------------------------------------------
+        #----------------------------------------------------------------
+        # Compute stationary distribution and update aggregate KL
+        #----------------------------------------------------------------
 
-    	#------------------------------------------------------------
-    	# Find new stationary distribution associated with decision rules
-    	#------------------------------------------------------------
-    	A   = aau + bbu
-	    λ0 	= lambda - diagm(0 => diag(lambda))  # transition matrix with diagonal killed
-    	λ0p = λ0'
+        #------------------------------------------------------------
+        # Find new stationary distribution associated with decision rules
+        #------------------------------------------------------------
+        A   = aau + bbu
+        λ0  = lambda - diagm(0 => diag(lambda))  # transition matrix with diagonal killed
+        λ0p = λ0'
 
         gg_tilde = dab_g_tilde_mat * gg
         gg1      = Array{Float64}(undef,  I_g * J_g, N)
@@ -848,7 +842,7 @@ function steadystate!(m::TwoAssetHANK)
                        1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)]
 
                 death_inflow = zeros(I_g, J_g)
-                death_inflow[b.==0, 1] .= sum(gg_tilde[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)])
+                death_inflow[b .== 0, 1] .= sum(gg_tilde[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)])
 
                 death_inflow = reshape(death_inflow, I_g*J_g, 1)
 
@@ -867,14 +861,14 @@ function steadystate!(m::TwoAssetHANK)
             dist = maximum(abs.(gg1-gg))
 
             if mod(nn,100) == 0
-                println("Iteration ",nn,", distance is ", dist)
+                println("Iteration ", nn, ", distance is ", dist)
             end
             if dist < crit_KFE
                 println("Distribution Converged, Iteration = ", nn)
                 break
             end
             gg = gg1
-            g  = reshape(gg,I_g,J_g,N)
+            g  = reshape(gg, I_g, J_g, N)
         end
 
         #------------------------------------------------------------
@@ -898,7 +892,7 @@ function steadystate!(m::TwoAssetHANK)
         println("The current gap is ", gap)
 
         if abs(gap) > crit_KL
-            KL = relax_KL*KL_supply + (1-relax_KL)*KL
+            KL = relax_KL * KL_supply + (1 - relax_KL) * KL
         else
             println("I have found the steady state, Iteration = ", ii)
             break
@@ -907,11 +901,11 @@ function steadystate!(m::TwoAssetHANK)
     end
 
     #compute_savings()
-    A = aau + bbu + ccu
-    dab_small = reshape(dab_g_tilde_grid[:,:,1], I_g*J_g, 1)
-    loc = findall(!iszero, b .== 0)
-    dab_small      = dab_small ./ dab_small[loc] * ddeath
-    dab_small[loc] .= 0.0
+    A                    = aau + bbu + ccu
+    dab_small            = reshape(dab_g_tilde_grid[:,:,1], I_g*J_g, 1)
+    loc                  = findall(!iszero, b .== 0)
+    dab_small            = dab_small ./ dab_small[loc] * ddeath
+    dab_small[loc]      .= 0.0
     death_process        = -ddeath * my_speye(I_g*J_g)
     death_process[loc,:] = vec(dab_small)
     death_process        = kron(my_speye(N),death_process)
@@ -932,24 +926,24 @@ function steadystate!(m::TwoAssetHANK)
     #compute_savings()
 
     # Rename variables in steady state
-    m[:KL_SS]			= KL
-    m[:r_a_SS]			= aalpha * (m[:KL_SS].value ^ (aalpha - 1)) - ddelta
-    m[:w_SS]			= (1 - aalpha) * (m[:KL_SS].value ^ aalpha)
-    m[:K_SS]		    = m[:KL_SS].value * L_supply
-    m[:u_SS]			= u
-    m[:c_SS]			= c
-    m[:d_SS]			= d
-    m[:V_SS]			= Vn
-    m[:g_SS]			= g
-    m[:dab]				= dab_tilde_grid
+    m[:KL_SS]           = real(KL)
+    m[:r_a_SS]          = aalpha * (m[:KL_SS].value ^ (aalpha - 1)) - ddelta
+    m[:w_SS]            = (1 - aalpha) * (m[:KL_SS].value ^ aalpha)
+    m[:K_SS]            = real(m[:KL_SS].value * L_supply)
+    m[:u_SS]            = u
+    m[:c_SS]            = c
+    m[:d_SS]            = d
+    m[:V_SS]            = Vn
+    m[:g_SS]            = g
+    m[:dab]             = dab_tilde_grid
     m[:dab_g]           = dab_g_tilde_grid
-    m[:C_SS]			= sum(g .* c_g .* dab_g_tilde_grid)
+    m[:C_SS]            = sum(g .* c_g .* dab_g_tilde_grid)
     m[:C_Var_SS]        = sum(g .* log.(c_g).^2 .* dab_g_tilde_grid) -
                                  sum(g .* log.(c_g) .* dab_g_tilde_grid)^2
-    m[:I_SS]			= save_a
-    m[:B_SS]			= sum(g .* b_g_grid .* dab_g_tilde_grid)
-    m[:Y_SS]			= (K_supply ^ aalpha) * (L_supply ^ (1 - aalpha))
-    m[:n_SS]			= L_supply
+    m[:I_SS]            = save_a
+    m[:B_SS]            = sum(g .* b_g_grid .* dab_g_tilde_grid)
+    m[:Y_SS]            = real((K_supply ^ aalpha) * (L_supply ^ (1 - aalpha)))
+    m[:n_SS]            = real(L_supply)
     m[:earn_SS]         = log.((1-tau_I) * w * l_g_grid .* y_g_grid + b_g_grid .*
                                (r_b_g_grid .+ ddeath*pam) .+ trans_g_grid .+ a_g_grid .*
                                (r_a_g_grid .+ ddeath*pam))
@@ -976,7 +970,7 @@ function steadystate!(m::TwoAssetHANK)
     m[:WHTM_SS]        = sum(g[:] .* WHTM_indicator[:] .* dab_g_tilde_grid[:])
     m[:C_WHTM_SS]      = sum(WHTM_indicator[:] .* c_g[:] .* g[:] .* dab_g_tilde_grid[:])
 
-    PHTM_indicator      = zeros(I_g, J_g, N)
+    PHTM_indicator     = zeros(I_g, J_g, N)
     PHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos:a_g_0pos+2:end,:] .= 1.0
     m[:PHTM_indicator] = PHTM_indicator
     m[:PHTM_SS]        = sum(g[:] .* PHTM_indicator[:] .* dab_g_tilde_grid[:])
@@ -986,10 +980,10 @@ function steadystate!(m::TwoAssetHANK)
     NHTM_indicator[(b_g_0pos+3):end,2:end,:] .= 1.0
 
     m[:NHTM_indicator] = NHTM_indicator
-    m[:NHTM_SS]           = sum(g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:])
-    m[:C_NHTM_SS]         = sum(c_g[:] .* g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:]) /
-                        m[:NHTM_SS].value
-    m[:r_a_grid]	      = repeat([r_a], I_g, J_g, N)
+    m[:NHTM_SS]        = sum(g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:])
+    m[:C_NHTM_SS]      = sum(c_g[:] .* g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:]) /
+        m[:NHTM_SS].value
+    m[:r_a_grid]       = repeat([r_a], I_g, J_g, N)
 
     n_v = get_setting(m, :n_v)
     n_g = get_setting(m, :n_g)
@@ -997,25 +991,25 @@ function steadystate!(m::TwoAssetHANK)
     n_Z = get_setting(m, :n_Z)
 
     # Collect variables into vector
-    vars_SS                      = zeros(n_v + n_g + n_p + n_Z, 1)
-    vars_SS[1:n_v]               = reshape(m[:V_SS].value, I*J*N, 1)
+    vars_SS                  = zeros(n_v + n_g + n_p + n_Z, 1)
+    vars_SS[1:n_v]           = reshape(m[:V_SS].value, I*J*N, 1)
 
-    gg_SS                        = reshape(m[:g_SS].value, I_g*J_g*N, 1)
-    m[:gg_SS] = gg_SS
+    gg_SS                    = reshape(m[:g_SS].value, I_g*J_g*N, 1)
+    m[:gg_SS]                = gg_SS
 
-    vars_SS[n_v+1:n_v+n_g,1]     = gg_SS[1:I_g*J_g*N-1]
-    vars_SS[n_v+n_g+1,1]         = m[:K_SS].value
-    vars_SS[n_v+n_g+2,1]         = m[:r_b_SS].value
+    vars_SS[n_v+1:n_v+n_g,1] = gg_SS[1:I_g*J_g*N-1]
+    vars_SS[n_v+n_g+1,1]     = m[:K_SS].value
+    vars_SS[n_v+n_g+2,1]     = m[:r_b_SS].value
 
     if aggregate_variables == 1
         vars_SS[n_v+n_g+3,1]         = m[:Y_SS].value
         vars_SS[n_v+n_g+4,1]         = m[:C_SS].value
     elseif distributional_variables == 1
         vars_SS[n_v+n_g+3,1]        = m[:C_Var_SS].value
-    	vars_SS[n_v+n_g+4,1]        = m[:earn_Var_SS].value
+        vars_SS[n_v+n_g+4,1]        = m[:earn_Var_SS].value
     elseif distributional_variables_1 == 1
         vars_SS[n_v+n_g+3,1]        = m[:C_WHTM_SS].value
-    	vars_SS[n_v+n_g+4,1]        = m[:C_PHTM_SS]
+        vars_SS[n_v+n_g+4,1]        = m[:C_PHTM_SS]
         #vars_SS[n_v+n_g+3,1]        = C_NHTM_SS
     end
     vars_SS[n_v+n_g+n_p+1,1] = 0.0
@@ -1038,10 +1032,10 @@ Function adjusts model parameters depending on what settings are provided.
 function adjust_parameters!(m::TwoAssetHANK)
     if get_setting(m, :para_new) == 0
         m[:rrho]   = 0.014526858925819 # discount factor (quarterly)
-        m[:ddeath] = 1. / (4. * 45)				# death rate (quarterly)
+        m[:ddeath] = 1. / (4. * 45)    # death rate (quarterly)
         # Technology
-        m[:aalpha] = 0.4					# capital share
-        m[:ddelta] = 0.02                # depreciation rate (quarterly)
+        m[:aalpha] = 0.4     # capital share
+        m[:ddelta] = 0.02    # depreciation rate (quarterly)
 
         # Portfolio adjustment cost function
         m[:chi0] = 0.070046
