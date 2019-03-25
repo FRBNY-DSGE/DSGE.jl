@@ -120,6 +120,12 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
             params = map(Float64, h5read(input_file_name, "smcparams"))
+            W = load(replace(input_file_name, "smc_cloud", "h5", "jld2"), "W")
+            weights = W[size(W, 1), :]
+            inds = resample(weights)
+            @show size(params)
+            aaa
+            params
         else
             throw("Invalid :sampling method specification. Change in setting :sampling_method")
         end
@@ -156,6 +162,10 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
 
     input_file_name = get_forecast_input_file(m, input_type)
     println(verbose, :low, "Loading draws from $input_file_name")
+
+    W = load(replace(input_file_name, "smc_cloud", "h5", "jld2"), "W")
+    weights = W[size(W, 1), :]
+    inds = resample(weights)
 
     if input_type in [:full, :subset]
         if isempty(block_inds)
