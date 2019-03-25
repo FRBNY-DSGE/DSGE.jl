@@ -808,31 +808,53 @@ end
                                  l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
                                  a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
 
-    adriftB = similar(d) #Array{Float64}(undef, size(d))
-    adriftF = similar(d) #Array{Float64}(undef, size(d))
+    adriftB = similar(d)
+    adriftF = similar(d)
 
-    audriftB = similar(d_g) #Array{Float64}(undef, size(d_g))
-    audriftF = similar(d_g) #Array{Float64}(undef, size(d_g))
-    budriftB = similar(d_g) #Array{Float64}(undef, size(d_g))
-    budriftF = similar(d_g) #Array{Float64}(undef, size(d_g))
+    audriftB = similar(d_g)
+    audriftF = similar(d_g)
+    budriftB = similar(d_g)
+    budriftF = similar(d_g)
 
     # Compute drifts for HJB
+    perm_const = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
+    norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid .* y_grid)
+    norm_d = norm.(d)
+
+    adriftB = min.(norm_d, 0) .+ min.(norm_perm_inter, 0)
+    adriftF = max.(norm_d, 0) .+ max.(norm_perm_inter, 0)
+#=
     if permanent == 1
         adriftB = min.(norm.(d),0) .+ min.(norm.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
-                                    xxi * w * l_grid .* y_grid), 0)
+                                            xxi * w * l_grid .* y_grid), 0)
         adriftF = max.(norm.(d),0) .+ max.(norm.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
-                                xxi * w * l_grid .* y_grid), 0)
+                                           xxi * w * l_grid .* y_grid), 0)
     elseif permanent == 0
         adriftB = min.(norm.(d),0) .+ min.(norm.(a_grid .* (r_a_grid .+ ddeath*pam) .+
                                     xxi * w * l_grid .* y_grid), 0)
         adriftF = max.(norm.(d),0) .+ max.(norm.(a_grid .* (r_a_grid .+ ddeath*pam) .+
                                     xxi * w * l_grid .* y_grid), 0)
     end
+=#
+    #@assert adriftB2 == adriftB
+    #@assert adriftF2 == adriftF
 
-    bdriftB = min.(-d - adj_cost_fn(d,a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
-    bdriftF = max.(-d - adj_cost_fn(d,a_grid, chi0, chi1, chi2, a_lb),0) .+ max.(s,0)
+    bdriftB = min.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)
+    bdriftF = max.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)
 
     # Compute drifts for KFE
+    audrift_prod = d_g .+ a_g_grid .* (r_a_g_grid .+ ddeath*pam) .+ xxi * w * l_g_grid .*
+        y_g_grid .- (permanent == 1 ? aggZ * a_g_grid : 0.0)
+
+    audriftB = min.(audrift_prod, 0)
+    audriftF = max.(audrift_prod, 0)
+
+    budrift_prod = s_g - d_g - adj_cost_fn(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
+        (permanent == 1 ? aggZ * b_g_grid : 0.0)
+
+    budriftB = min.(budrift_prod, 0)
+    budriftF = max.(budrift_prod, 0)
+#=
     if permanent == 0
         audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
                                      (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi *
@@ -894,7 +916,11 @@ end
                                              chi0, chi1, chi2, a_lb) - aggZ *
                                  b_g_grid[I_g,:,:],0)
     end
-
+    @assert audriftB2 == audriftB
+    @assert budriftB2 == budriftB
+    @assert budriftF2 == budriftF
+    @assert audriftF2 == audriftF
+=#
     return audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF
 end
 

@@ -567,14 +567,13 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                 C_PHTM_Residual; aggZ_Residual]
     end
 =#
-@inline function get_residuals(vars::Vector{T}) where {T<:Real}
+    l_grid       = permutedims(repeat(ones(N,1),1,I,J), [2 3 1])
+    @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # Unpack variables
         V         = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
-        g         = vars[n_v+1:n_v+n_g] .+ vars_SS[n_v+1:n_v+n_g]    # distribution
-        g_end     = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g,J_g,N]
-        gg        = [g;g_end]
-        K         = vars[n_v+n_g+1] + vars_SS[n_v+n_g+1]    # aggregate capital
-        r_b       = vars[n_v+n_g+2] + vars_SS[n_v+n_g+2]
+        g         = vars[n_v + 1 : n_v + n_g] .+ vars_SS[n_v + 1 : n_v + n_g]    # distribution
+        K         = vars[n_v + n_g + 1] + vars_SS[n_v + n_g + 1]    # aggregate capital
+        r_b       = vars[n_v + n_g + 2] + vars_SS[n_v + n_g + 2]
 
         if aggregate_variables == 1
             aggY     = vars[n_v+n_g+3] + vars_SS[n_v+n_g+3] # aggregate output
@@ -593,8 +592,11 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         g_Dot      = vars[nVars+n_v+1:nVars+n_v+n_g]
         aggZ_Dot   = vars[nVars+n_v+n_g+n_p+1]
 
-        VEErrors   = vars[2*nVars+1:2*nVars+n_v]
-        aggZ_Shock = vars[2*nVars+nEErrors+1]
+        VEErrors   = vars[2*nVars + 1 : 2 * nVars + n_v]
+        aggZ_Shock = vars[2*nVars + nEErrors + 1]
+
+        g_end     = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g,J_g,N]
+        gg        = vcat(g, g_end)
 
         # Prices
         w   = (1 - aalpha) * (K ^ aalpha) * n_SS ^ (-aalpha) *
@@ -607,13 +609,13 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # Other necessary objects
         r_a_grid     = repeat([r_a],I,J,N)
 
-        l_grid       = permutedims(repeat(ones(N,1),1,I,J), [2 3 1])
         y_shock      = y .* exp.(kappa * aggZ * (y .- y_mean) ./ std(y))
         y_shock_mean = dot(y_shock, y_dist) #y_shock * y_dist
         y_shock      = y_shock ./ y_shock_mean .* y_mean
         y_grid       = permutedims(repeat(y_shock',1,I,J), [2 3 1])
 
         # ripped out
+        @show "eqcond_helper"
         @time c, s, u, d, d_g, s_g, c_g = eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
                                                         a_lb, ggamma, permanent, interp_decision,
                                                         ddeath, pam, aggZ, xxi, tau_I, w, l_grid,
@@ -623,11 +625,13 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
 
         # Compute drifts for KFE
+        @show "catch_my_drifts"
         @time audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF = catch_my_drifts(I_g, permanent, ddeath, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
                                  l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
                                  a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
 
         # Derive transition matrices
+        @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, ddeath, pam, xxi, w,
                                                    chi0, chi1,
                                              chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid, d,
@@ -661,10 +665,10 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         gIntermediate = gIntermediate + death_process * gg
 
         # find death-corrected savings
-        a_g_grid_aux = reshape(a_g_grid,I_g*J_g*N,1)
+        a_g_grid_aux = reshape(a_g_grid, I_g*J_g*N, 1)
         a_save       = sum(gIntermediate .* dab_g_aux .* a_g_grid_aux)
 
-        b_g_grid_aux = reshape(b_g_grid,I_g*J_g*N,1)
+        b_g_grid_aux = reshape(b_g_grid, I_g*J_g*N, 1)
         b_save       = sum(gIntermediate .* dab_g_aux .* b_g_grid_aux)
 
         # consumption for low types and high types
@@ -794,6 +798,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     end
 
     # equilibrium conditions
+    #=
     if aggregate_variables == 1
         println("Agg")
         out = get_residuals_agg(zeros(Float64, 2 * nVars + nEErrors + 1))
@@ -807,21 +812,20 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         out = get_residuals_dist1(zeros(Float64, 2 * nVars + nEErrors + 1))
         @time get_residuals_dist1(zeros(Float64, 2 * nVars + nEErrors + 1))
     else
-#        vResidual = [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
+    #   vResidual = [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
     end
+    =#
 
-
-    #out = get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
+    out = get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
     #JLD2.jldopen("eqcond_before_factoring.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
     test_out = load("eqcond_before_factoring.jld2", "residuals")
     @assert test_out == out
 
-    #@time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
-
-    #error()
-    derivs = ForwardDiff.jacobian(get_residuals_agg, zeros(Float64, 2 * nVars + nEErrors + 1))
+    @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
+    error()
+    derivs = ForwardDiff.jacobian(get_residuals, zeros(Float64, 2 * nVars + nEErrors + 1))
 
     #####
     #nstates = n_states(m)
