@@ -15,31 +15,29 @@ THE GUTS OF EQCOND.
     VaF   = similar(V) #0. * V
     VaB   = similar(V) #0. * V
     Vamin = 0.0
+    Va_dif = V[:,2:J,:] - V[:,1:J-1,:]
 
     # Forward difference
-    VaF[:,1:J-1,:] = (V[:,2:J,:] - V[:,1:J-1,:]) ./ daf_grid[:,1:J-1,:]
-    VaF[:,1:J-1,:] = max.(VaF[:,1:J-1,:], Vamin)
+    VaF[:,1:J-1,:] = max.((Va_dif) ./ daf_grid[:,1:J-1,:], Vamin)
     VaF[:,J,:]    .= 0.0
 
     # Backward difference
-    VaB[:,2:J,:] = (V[:,2:J,:] - V[:,1:J-1,:]) ./ dab_grid[:,2:J,:]
-    VaB[:,2:J,:] = max.(VaB[:,2:J,:], Vamin)
+    VaB[:,2:J,:] = max.((Va_dif) ./ dab_grid[:,2:J,:], Vamin)
     VaB[:,1,:]  .= 0.0
 
     # Preparations (necessary to ensure that everything is a dual number,
     # required by derivative software)
-    VbF   = similar(V) #0 * V
-    VbB   = similar(V) #0 * V
+    VbF   = similar(V)
+    VbB   = similar(V)
     Vbmin = 1e-8
+    Vb_dif = V[2:I,:,:] - V[1:I-1,:,:]
 
     # Forward difference
-    VbF[1:I-1,:,:] = (V[2:I,:,:] - V[1:I-1,:,:]) ./ dbf_grid[1:I-1,:,:]
-    VbF[1:I-1,:,:] = max.(VbF[1:I-1,:,:], Vbmin)
+    VbF[1:I-1,:,:] = max.((Vb_dif) ./ dbf_grid[1:I-1,:,:], Vbmin)
     VbF[I,:,:]    .= 0.0
 
     # Backward difference
-    VbB[2:I,:,:] = (V[2:I,:,:] - V[1:I-1,:,:]) ./ dbb_grid[2:I,:,:]
-    VbB[2:I,:,:] = max.(VbB[2:I,:,:], Vbmin)
+    VbB[2:I,:,:] = max.((Vb_dif) ./ dbb_grid[2:I,:,:], Vbmin)
     VbB[1,:,:]  .= 0.0
 
     #----------------------------------------------------------------
@@ -49,14 +47,11 @@ THE GUTS OF EQCOND.
     # Preparations
     cF  = similar(V) #0 * V
     sF  = similar(V) #0 * V
-    HcF = similar(V) #0 * V
 
     cB  = similar(V) #0 * V
     sB  = similar(V) #0 * V
-    HcB = similar(V) #0 * V
 
     c0  = similar(V) #0 * V
-    Hc0 = similar(V) #0 * V
 
     # Decisions conditional on a particular direction of derivative
     cF[1:I-1,:,:] = VbF[1:I-1,:,:] .^ (-1/ggamma)
@@ -64,14 +59,13 @@ THE GUTS OF EQCOND.
 
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
 
-    sF[1:I-1,:,:] = real(((1-xxi)-tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
+    sF[1:I-1,:,:] = real(((1 - xxi) - tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
                          b_grid[1:I-1,:,:].*(r_b_grid[1:I-1,:,:] .+ perm_const) .+
                          trans_grid[1:I-1,:,:] - cF[1:I-1,:,:])
     sF[I,:,:]     .= 0.0 #zeros(1,J,N)
 
-    HcF[1:I-1,:,:] = u_fn(cF[1:I-1,:,:], ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
-    HcF[I,:,:]    .= -1e12 #*ones(1,J,N)
-    validF         = (sF .> 0)
+    #HcF[1:I-1,:,:] = u_fn(cF[1:I-1,:,:], ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
+    #HcF[I,:,:]    .= -1e12 #*ones(1,J,N)
 
     cB[2:I,:,:] = VbB[2:I,:,:].^(-1/ggamma)
     cB[1,:,:]   = real(((1-xxi)-tau_I) * w * l_grid[1,:,:] .* y_grid[1,:,:] .+
@@ -83,14 +77,13 @@ THE GUTS OF EQCOND.
                        (r_b_grid[2:I,:,:] .+ ddeath*pam) .+
                        trans_grid[2:I,:,:] - cB[2:I,:,:])
 
-    HcB        = u_fn(cB, ggamma) .+ VbB .* sB
-    validB     = (sB .< 0)
+    #HcB = u_fn(cB, ggamma) .+ VbB .* sB
 
     c0 = real(((1-xxi)-tau_I) * w * l_grid .* y_grid .+
               b_grid .* (r_b_grid .+ perm_const) .+ trans_grid)
 
     #s0  = zeros(I,J,N)
-    Hc0 = u_fn(c0, ggamma)
+    #Hc0 = u_fn(c0, ggamma)
 
 
     # Optimal consumption and liquid savings
@@ -103,49 +96,45 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
 
     # Preparations
-    dFB  = similar(V) #0*V
-    HdFB = similar(V) #0*V
-    dBF  = similar(V) #0*V
-    HdBF = similar(V) #0*V
-    dBB  = similar(V) #0*V
-    HdBB = similar(V) #0*V
+    dFB  = similar(V)
+    #HdFB = similar(V)
+    dBF  = similar(V)
+    #HdBF = similar(V)
+    dBB  = similar(V)
+    #HdBB = similar(V)
 
     # Decisions conditional on a particular direction of derivative
     dFB[2:I,1:J-1,:]  = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
                                      a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
-    dFB[:,J,:]        .= 0.0 #zeros(I,1,N)
-    dFB[1,1:J-1,:]    .= 0.0 #zeros(1,J-1,N)
-    HdFB[2:I,1:J-1,:]  = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
-        (dFB[2:I,1:J-1,:] .+ adj_cost_fn(dFB[2:I,1:J-1,:],a_grid[2:I,1:J-1,:],
-                                         chi0, chi1, chi2, a_lb))
-    HdFB[:,J,:]     .= -1.0e12 #* ones(I,1,N)
-    HdFB[1,1:J-1,:] .= -1.0e12 #* ones(1,J-1,N)
-    validFB          = (dFB .> 0) .* (HdFB .> 0)
+    dFB[:,J,:]        .= 0.0
+    dFB[1,1:J-1,:]    .= 0.0
+
+    #HdFB[2:I,1:J-1,:]  = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
+    #    (dFB[2:I,1:J-1,:] .+ adj_cost_fn(dFB[2:I, 1:J-1,:], a_grid[2:I, 1:J-1,:],
+    #                                     chi0, chi1, chi2, a_lb))
+    #HdFB[:,J,:]     .= -1.0e12
+    #HdFB[1,1:J-1,:] .= -1.0e12
 
     dBF[1:I-1,2:J,:]  = opt_deposits(VaB[1:I-1,2:J,:], VbF[1:I-1,2:J,:],
                                      a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
-    dBF[:,1,:]        .= 0.0 #zeros(I,1,N)
-    dBF[I,2:J,:]      .= 0.0 #zeros(1,J-1,N)
-    HdBF[1:I-1,2:J,:]  = VaB[1:I-1,2:J,:] .* dBF[1:I-1,2:J,:] - VbF[1:I-1,2:J,:] .*
-        (dBF[1:I-1,2:J,:] .+ adj_cost_fn(dBF[1:I-1,2:J,:], a_grid[1:I-1,2:J,:],
-                                         chi0, chi1, chi2, a_lb))
-    HdBF[:,1,:]   .= -1.0e12 #* ones(I,1,N)
-    HdBF[I,2:J,:] .= -1.0e12 #* ones(1,J-1,N)
-    validBF        = (dBF .<= -adj_cost_fn(dBF, a_grid, chi0, chi1, chi2, a_lb)) .*
-        (HdBF .> 0)
+    dBF[:,1,:]        .= 0.0
+    dBF[I,2:J,:]      .= 0.0
+    #HdBF[1:I-1,2:J,:]  = VaB[1:I-1,2:J,:] .* dBF[1:I-1,2:J,:] - VbF[1:I-1,2:J,:] .*
+    #    (dBF[1:I-1,2:J,:] .+ adj_cost_fn(dBF[1:I-1, 2:J,:], a_grid[1:I-1,2:J,:],
+    #                                     chi0, chi1, chi2, a_lb))
+    #HdBF[:,1,:]   .= -1.0e12
+    #HdBF[I,2:J,:] .= -1.0e12
 
     VbB[1,2:J,:]  = u_fn(cB[1,2:J,:], ggamma)
     dBB[:,2:J,:]  = opt_deposits(VaB[:,2:J,:], VbB[:,2:J,:], a_grid[:,2:J,:],
                                  chi0, chi1, chi2, a_lb)
-    dBB[:,1,:]   .= 0.0 #zeros(I,1,N)
-    HdBB[:,2:J,:] = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
-        (dBB[:,2:J,:] .+ adj_cost_fn(dBB[:,2:J,:], a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
-    HdBB[:,1,:]   .= -1.0e12 #* ones(I,1,N)
-    validBB       = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
-        (dBB .<= 0) .* (HdBB .> 0)
+    dBB[:,1,:]   .= 0.0
+    #HdBB[:,2:J,:] = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
+    #    (dBB[:,2:J,:] .+ adj_cost_fn(dBB[:,2:J,:], a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
+    #HdBB[:,1,:]   .= -1.0e12
 
     # Optimal deposit decision
-    d = IcFB .* dFB .+ IcBF .* dBF .+ IcBB .* dBB #.+ Ic00 .* zeros(I,J,N)
+    d = IcFB .* dFB .+ IcBF .* dBF .+ IcBB .* dBB
 
     ## Interpolate
     d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
@@ -717,8 +706,7 @@ end
     # Transition_deriva_a
     chi[:,2:J,:]    = -adriftB[:,2:J,:] ./ dab_grid[:,2:J,:]
     chi[:,1,:]      = zeros(I,1,N)
-    yy[:,2:J-1,:]   = adriftB[:,2:J-1,:] ./ dab_grid[:,2:J-1,:] .-
-        adriftF[:,2:J-1,:] ./ daf_grid[:,2:J-1,:]
+    yy[:,2:J-1,:]   = adriftB[:,2:J-1,:] ./ dab_grid[:,2:J-1,:] .- adriftF[:,2:J-1,:] ./ daf_grid[:,2:J-1,:]
     yy[:,1,:]       = -adriftF[:,1,:]./daf_grid[:,1,:]
     yy[:,J,:]       = adriftB[:,J,:]./dab_grid[:,J,:]
     zeta[:,1:J-1,:] = adriftF[:,1:J-1,:]./daf_grid[:,1:J-1,:]
@@ -781,13 +769,13 @@ end
     bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
 
     Xu[2:I_g,:,:] = - budriftB[2:I_g,:,:]./dbb_g_grid[2:I_g,:,:]
-    Xu[1,:,:] = zeros(1,J_g,N)
+    Xu[1,:,:] .= 0.0 #zeros(1,J_g,N)
     Yu[2:I_g-1,:,:] = budriftB[2:I_g-1,:,:]./dbb_g_grid[2:I_g-1,:,:] -
         budriftF[2:I_g-1,:,:]./dbf_g_grid[2:I_g-1,:,:]
     Yu[1,:,:] = - budriftF[1,:,:]./dbf_g_grid[1,:,:]
     Yu[I_g,:,:] = budriftB[I_g,:,:]./dbb_g_grid[I_g,:,:]
     Zu[1:I_g-1,:,:] = budriftF[1:I_g-1,:,:]./dbf_g_grid[1:I_g-1,:,:]
-    Zu[I_g,:,:] = zeros(1,J_g,N)
+    Zu[I_g,:,:] .= 0.0 #zeros(1,J_g,N)
 
     centdiagu = reshape(Yu,I_g*J_g,N)
     lowdiagu  = reshape(Xu,I_g*J_g,N)
@@ -803,41 +791,20 @@ end
 
     return aa, bb, aau, bbu
 end
-#RECA
+
 @inline function catch_my_drifts(I_g, permanent, ddeath, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
                                  l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
                                  a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
 
-    adriftB = similar(d)
-    adriftF = similar(d)
-
-    audriftB = similar(d_g)
-    audriftF = similar(d_g)
-    budriftB = similar(d_g)
-    budriftF = similar(d_g)
 
     # Compute drifts for HJB
     perm_const = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
+
     norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid .* y_grid)
     norm_d = norm.(d)
 
     adriftB = min.(norm_d, 0) .+ min.(norm_perm_inter, 0)
     adriftF = max.(norm_d, 0) .+ max.(norm_perm_inter, 0)
-#=
-    if permanent == 1
-        adriftB = min.(norm.(d),0) .+ min.(norm.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
-                                            xxi * w * l_grid .* y_grid), 0)
-        adriftF = max.(norm.(d),0) .+ max.(norm.(a_grid .* (r_a_grid .+ ddeath*pam - aggZ) .+
-                                           xxi * w * l_grid .* y_grid), 0)
-    elseif permanent == 0
-        adriftB = min.(norm.(d),0) .+ min.(norm.(a_grid .* (r_a_grid .+ ddeath*pam) .+
-                                    xxi * w * l_grid .* y_grid), 0)
-        adriftF = max.(norm.(d),0) .+ max.(norm.(a_grid .* (r_a_grid .+ ddeath*pam) .+
-                                    xxi * w * l_grid .* y_grid), 0)
-    end
-=#
-    #@assert adriftB2 == adriftB
-    #@assert adriftF2 == adriftF
 
     bdriftB = min.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)
     bdriftF = max.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)
@@ -854,73 +821,7 @@ end
 
     budriftB = min.(budrift_prod, 0)
     budriftF = max.(budrift_prod, 0)
-#=
-    if permanent == 0
-        audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
-                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi *
-                                     w * l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:],0)
-        audriftB[I_g,:,:] = min.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
-                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
-                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:],0)
-        audriftF[1:I_g-1,:,:] = max.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
-                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+
-                                     xxi * w * l_g_grid[1:I_g-1,:,:] .*
-                                     y_g_grid[1:I_g-1,:,:],0)
-        audriftF[I_g,:,:] = max.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
-                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+
-                                 xxi * w * l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:],0)
 
-        budriftB[1:I_g-1,:,:] = min.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
-                                                 chi0, chi1, chi2, a_lb),0)
-        budriftB[I_g,:,:] = min.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
-                                             chi0, chi1, chi2, a_lb),0)
-        budriftF[1:I_g-1,:,:] = max.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
-                                                 chi0, chi1, chi2, a_lb),0)
-        budriftF[I_g,:,:] = max.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
-                                             chi0, chi1, chi2, a_lb),0)
-    elseif permanent == 1
-        audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
-                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi *
-                                     w * l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:]
-                                     - aggZ * a_g_grid[1:I_g-1,:,:], 0)
-        audriftB[I_g,:,:] = min.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
-                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
-                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:] - aggZ *
-                                 a_g_grid[I_g,:,:],0)
-        audriftF[1:I_g-1,:,:] = max.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
-                                     (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi *
-                                     w * l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:] -
-                                     aggZ * a_g_grid[1:I_g-1,:,:],0)
-        audriftF[I_g,:,:] = max.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
-                                 (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
-                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:] - aggZ *
-                                 a_g_grid[I_g,:,:],0)
-
-        budriftB[1:I_g-1,:,:] = min.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
-                                                 chi0, chi1, chi2, a_lb) - aggZ *
-                                     b_g_grid[1:I_g-1,:,:],0)
-        budriftB[I_g,:,:] = min.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
-                                             chi0, chi1, chi2, a_lb) - aggZ * b_g_grid[I_g,:,:],0)
-        budriftF[1:I_g-1,:,:] = max.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                     adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
-                                                 chi0, chi1, chi2, a_lb) - aggZ *
-                                     b_g_grid[1:I_g-1,:,:],0)
-        budriftF[I_g,:,:] = max.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                 adj_cost_fn(d_g[I_g,:,:],a_g_grid[I_g,:,:],
-                                             chi0, chi1, chi2, a_lb) - aggZ *
-                                 b_g_grid[I_g,:,:],0)
-    end
-    @assert audriftB2 == audriftB
-    @assert budriftB2 == budriftB
-    @assert budriftF2 == budriftF
-    @assert audriftF2 == audriftF
-=#
     return audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF
 end
 
