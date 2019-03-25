@@ -1,4 +1,162 @@
 """
+THE GUTS OF EQCOND.
+
+"""
+@inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2, a_lb, ggamma,
+                               permanent, interp_decision,
+                               ddeath, pam, aggZ, xxi, tau_I, w, l_grid,
+                               y_grid, b_grid, r_b_grid, trans_grid, a_grid,
+                               daf_grid, dab_grid, dbf_grid, dbb_grid,
+                               IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
+    #----------------------------------------------------------------
+    # HJB Equation
+    #----------------------------------------------------------------
+    # Preparations
+    VaF   = similar(V) #0. * V
+    VaB   = similar(V) #0. * V
+    Vamin = 0.0
+
+    # Forward difference
+    VaF[:,1:J-1,:] = (V[:,2:J,:] - V[:,1:J-1,:]) ./ daf_grid[:,1:J-1,:]
+    VaF[:,1:J-1,:] = max.(VaF[:,1:J-1,:], Vamin)
+    VaF[:,J,:]    .= 0.0
+
+    # Backward difference
+    VaB[:,2:J,:] = (V[:,2:J,:] - V[:,1:J-1,:]) ./ dab_grid[:,2:J,:]
+    VaB[:,2:J,:] = max.(VaB[:,2:J,:], Vamin)
+    VaB[:,1,:]  .= 0.0
+
+    # Preparations (necessary to ensure that everything is a dual number,
+    # required by derivative software)
+    VbF   = similar(V) #0 * V
+    VbB   = similar(V) #0 * V
+    Vbmin = 1e-8
+
+    # Forward difference
+    VbF[1:I-1,:,:] = (V[2:I,:,:] - V[1:I-1,:,:]) ./ dbf_grid[1:I-1,:,:]
+    VbF[1:I-1,:,:] = max.(VbF[1:I-1,:,:], Vbmin)
+    VbF[I,:,:]    .= 0.0
+
+    # Backward difference
+    VbB[2:I,:,:] = (V[2:I,:,:] - V[1:I-1,:,:]) ./ dbb_grid[2:I,:,:]
+    VbB[2:I,:,:] = max.(VbB[2:I,:,:], Vbmin)
+    VbB[1,:,:]  .= 0.0
+
+    #----------------------------------------------------------------
+    # Consumption decision
+    #----------------------------------------------------------------
+
+    # Preparations
+    cF  = similar(V) #0 * V
+    sF  = similar(V) #0 * V
+    HcF = similar(V) #0 * V
+
+    cB  = similar(V) #0 * V
+    sB  = similar(V) #0 * V
+    HcB = similar(V) #0 * V
+
+    c0  = similar(V) #0 * V
+    Hc0 = similar(V) #0 * V
+
+    # Decisions conditional on a particular direction of derivative
+    cF[1:I-1,:,:] = VbF[1:I-1,:,:] .^ (-1/ggamma)
+    cF[I,:,:]    .= 0.0 #zeros(1,J,N)
+
+    perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
+
+    sF[1:I-1,:,:] = real(((1-xxi)-tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
+                         b_grid[1:I-1,:,:].*(r_b_grid[1:I-1,:,:] .+ perm_const) .+
+                         trans_grid[1:I-1,:,:] - cF[1:I-1,:,:])
+    sF[I,:,:]     .= 0.0 #zeros(1,J,N)
+
+    HcF[1:I-1,:,:] = u_fn(cF[1:I-1,:,:], ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
+    HcF[I,:,:]    .= -1e12 #*ones(1,J,N)
+    validF         = (sF .> 0)
+
+    cB[2:I,:,:] = VbB[2:I,:,:].^(-1/ggamma)
+    cB[1,:,:]   = real(((1-xxi)-tau_I) * w * l_grid[1,:,:] .* y_grid[1,:,:] .+
+                       b_grid[1,:,:] .*(r_b_grid[1,:,:] .+ perm_const) .+ trans_grid[1,:,:])
+
+    sB[1,:,:]  .= 0.0 #zeros(1,J,N)
+    sB[2:I,:,:] = real(((1-xxi)-tau_I) * w * l_grid[2:I,:,:] .*
+                       y_grid[2:I,:,:] .+ b_grid[2:I,:,:] .*
+                       (r_b_grid[2:I,:,:] .+ ddeath*pam) .+
+                       trans_grid[2:I,:,:] - cB[2:I,:,:])
+
+    HcB        = u_fn(cB, ggamma) .+ VbB .* sB
+    validB     = (sB .< 0)
+
+    c0 = real(((1-xxi)-tau_I) * w * l_grid .* y_grid .+
+              b_grid .* (r_b_grid .+ perm_const) .+ trans_grid)
+
+    #s0  = zeros(I,J,N)
+    Hc0 = u_fn(c0, ggamma)
+
+
+    # Optimal consumption and liquid savings
+    c = IcF .* cF .+ IcB .* cB .+ Ic0 .* c0
+    s = IcF .* sF .+ IcB .* sB #.+ Ic0 .* s0
+    u = u_fn(c, ggamma)
+
+    #----------------------------------------------------------------
+    # Deposit decision
+    #----------------------------------------------------------------
+
+    # Preparations
+    dFB  = similar(V) #0*V
+    HdFB = similar(V) #0*V
+    dBF  = similar(V) #0*V
+    HdBF = similar(V) #0*V
+    dBB  = similar(V) #0*V
+    HdBB = similar(V) #0*V
+
+    # Decisions conditional on a particular direction of derivative
+    dFB[2:I,1:J-1,:]  = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
+                                     a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
+    dFB[:,J,:]        .= 0.0 #zeros(I,1,N)
+    dFB[1,1:J-1,:]    .= 0.0 #zeros(1,J-1,N)
+    HdFB[2:I,1:J-1,:]  = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
+        (dFB[2:I,1:J-1,:] .+ adj_cost_fn(dFB[2:I,1:J-1,:],a_grid[2:I,1:J-1,:],
+                                         chi0, chi1, chi2, a_lb))
+    HdFB[:,J,:]     .= -1.0e12 #* ones(I,1,N)
+    HdFB[1,1:J-1,:] .= -1.0e12 #* ones(1,J-1,N)
+    validFB          = (dFB .> 0) .* (HdFB .> 0)
+
+    dBF[1:I-1,2:J,:]  = opt_deposits(VaB[1:I-1,2:J,:], VbF[1:I-1,2:J,:],
+                                     a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
+    dBF[:,1,:]        .= 0.0 #zeros(I,1,N)
+    dBF[I,2:J,:]      .= 0.0 #zeros(1,J-1,N)
+    HdBF[1:I-1,2:J,:]  = VaB[1:I-1,2:J,:] .* dBF[1:I-1,2:J,:] - VbF[1:I-1,2:J,:] .*
+        (dBF[1:I-1,2:J,:] .+ adj_cost_fn(dBF[1:I-1,2:J,:], a_grid[1:I-1,2:J,:],
+                                         chi0, chi1, chi2, a_lb))
+    HdBF[:,1,:]   .= -1.0e12 #* ones(I,1,N)
+    HdBF[I,2:J,:] .= -1.0e12 #* ones(1,J-1,N)
+    validBF        = (dBF .<= -adj_cost_fn(dBF, a_grid, chi0, chi1, chi2, a_lb)) .*
+        (HdBF .> 0)
+
+    VbB[1,2:J,:]  = u_fn(cB[1,2:J,:], ggamma)
+    dBB[:,2:J,:]  = opt_deposits(VaB[:,2:J,:], VbB[:,2:J,:], a_grid[:,2:J,:],
+                                 chi0, chi1, chi2, a_lb)
+    dBB[:,1,:]   .= 0.0 #zeros(I,1,N)
+    HdBB[:,2:J,:] = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
+        (dBB[:,2:J,:] .+ adj_cost_fn(dBB[:,2:J,:], a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
+    HdBB[:,1,:]   .= -1.0e12 #* ones(I,1,N)
+    validBB       = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
+        (dBB .<= 0) .* (HdBB .> 0)
+
+    # Optimal deposit decision
+    d = IcFB .* dFB .+ IcBF .* dBF .+ IcBB .* dBB #.+ Ic00 .* zeros(I,J,N)
+
+    ## Interpolate
+    d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
+    s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
+    c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
+
+    return c, s, u, d, d_g, s_g, c_g
+
+end
+
+"""
 ```
 @inline function create_y_grid(y_size::Int64, ygrid_new::Int64)
 ```
