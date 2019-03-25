@@ -89,18 +89,6 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     nVars    = get_setting(m, :nVars)
     nEErrors = get_setting(m, :nEErrors)
 
-        # Which direction to use
-        IcF = IcF_SS
-        IcB = IcB_SS
-        Ic0 = Ic0_SS
-
-# Which direction to use
-        IcFB = IcFB_SS
-        IcBF = IcBF_SS
-        IcBB = IcBB_SS
-        Ic00 = Ic00_SS
-
-
     vars_SS = m[:vars_SS].value
 
     # Computation taken from inside get_residuals
@@ -110,13 +98,21 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     dab_aux   = reshape(dab,I*J*N,1)
     dab_g_aux = reshape(dab_g,I_g*J_g*N,1)
 
+    # Which direction to use
+    IcF = IcF_SS
+    IcB = IcB_SS
+    Ic0 = Ic0_SS
+
+    # Which direction to use
+    IcFB = IcFB_SS
+    IcBF = IcBF_SS
+    IcBB = IcBB_SS
+    Ic00 = Ic00_SS
+
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
-        #----------------------------------------------------------------
-        # Housekeeping
-        #----------------------------------------------------------------
         # Unpack variables
         V         = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
-        g         = vars[n_v+1:n_v+n_g] .+ vars_SS[n_v+1:n_v+n_g] # distribution
+        g         = vars[n_v+1:n_v+n_g] .+ vars_SS[n_v+1:n_v+n_g]    # distribution
         g_end     = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g,J_g,N]
         gg        = [g;g_end]
         K         = vars[n_v+n_g+1] + vars_SS[n_v+n_g+1]    # aggregate capital
@@ -163,37 +159,39 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         y_shock      = y_shock ./ y_shock_mean .* y_mean
         y_grid       = permutedims(repeat(y_shock',1,I,J), [2 3 1])
 
-
         #----------------------------------------------------------------
         # HJB Equation
         #----------------------------------------------------------------
-
         # Preparations
-        VaF   = 0 * V
-        VaB   = 0 * V
+        VaF   = similar(V) #0. * V
+        VaB   = similar(V) #0. * V
         Vamin = 0.0
 
         # Forward difference
-        VaF[:,1:J-1,:] = (V[:,2:J,:]-V[:,1:J-1,:])./daf_grid[:,1:J-1,:]
+        VaF[:,1:J-1,:] = (V[:,2:J,:] - V[:,1:J-1,:]) ./ daf_grid[:,1:J-1,:]
         VaF[:,1:J-1,:] = max.(VaF[:,1:J-1,:], Vamin)
+        VaF[:,J,:]    .= 0.0
 
         # Backward difference
-        VaB[:,2:J,:] = (V[:,2:J,:]-V[:,1:J-1,:])./dab_grid[:,2:J,:]
+        VaB[:,2:J,:] = (V[:,2:J,:] - V[:,1:J-1,:]) ./ dab_grid[:,2:J,:]
         VaB[:,2:J,:] = max.(VaB[:,2:J,:], Vamin)
+        VaB[:,1,:]  .= 0.0
 
         # Preparations (necessary to ensure that everything is a dual number,
         # required by derivative software)
-        VbF   = 0 * V
-        VbB   = 0 * V
+        VbF   = similar(V) #0 * V
+        VbB   = similar(V) #0 * V
         Vbmin = 1e-8
 
         # Forward difference
         VbF[1:I-1,:,:] = (V[2:I,:,:] - V[1:I-1,:,:]) ./ dbf_grid[1:I-1,:,:]
         VbF[1:I-1,:,:] = max.(VbF[1:I-1,:,:], Vbmin)
+        VbF[I,:,:]    .= 0.0
 
         # Backward difference
         VbB[2:I,:,:] = (V[2:I,:,:] - V[1:I-1,:,:]) ./ dbb_grid[2:I,:,:]
         VbB[2:I,:,:] = max.(VbB[2:I,:,:], Vbmin)
+        VbB[1,:,:]  .= 0.0
 
         #----------------------------------------------------------------
         # Consumption decision
@@ -209,7 +207,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         HcB = similar(V) #0 * V
 
         c0  = similar(V) #0 * V
-        s0  = similar(V) #0 * V
+        #s0  = similar(V) #0 * V
         Hc0 = similar(V) #0 * V
 
         # Decisions conditional on a particular direction of derivative
@@ -248,24 +246,24 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         end
 
         sB[1,:,:] .= 0.0 #zeros(1,J,N)
-        HcB[:,:,:] = u_fn(cB, ggamma) .+ VbB .* sB
+        HcB        = u_fn(cB, ggamma) .+ VbB .* sB
         validB     = (sB .< 0)
 
         if permanent == 1
-            c0[:,:,:] = real(((1-xxi)-tau_I) * w * l_grid[:,:,:] .* y_grid[:,:,:] .+
-                b_grid[:,:,:] .* (r_b_grid[:,:,:] .+ ddeath*pam - aggZ) .+ trans_grid[:,:,:])
+            c0 = real(((1-xxi)-tau_I) * w * l_grid .* y_grid .+
+                b_grid .* (r_b_grid .+ ddeath*pam - aggZ) .+ trans_grid)
         elseif permanent == 0
-            c0[:,:,:] = real(((1-xxi)-tau_I) * w * l_grid[:,:,:] .* y_grid[:,:,:] .+
-                b_grid[:,:,:] .* (r_b_grid[:,:,:] .+ ddeath*pam) .+ trans_grid[:,:,:])
+            c0 = real(((1-xxi)-tau_I) * w * l_grid .* y_grid .+
+                b_grid .* (r_b_grid .+ ddeath*pam) .+ trans_grid)
         end
 
-        s0[:,:,:] .= 0.0 #zeros(I,J,N)
-        Hc0[:,:,:] = u_fn(c0,ggamma)
+        #s0  = zeros(I,J,N)
+        Hc0 = u_fn(c0, ggamma)
 
 
         # Optimal consumption and liquid savings
         c = IcF .* cF .+ IcB .* cB .+ Ic0 .* c0
-        s = IcF .* sF .+ IcB .* sB .+ Ic0 .* s0
+        s = IcF .* sF .+ IcB .* sB #.+ Ic0 .* s0
         u = u_fn(c, ggamma)
 
         #----------------------------------------------------------------
@@ -311,7 +309,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         HdBB[:,2:J,:] = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
             (dBB[:,2:J,:] .+ adj_cost_fn(dBB[:,2:J,:], a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
         HdBB[:,1,:]   .= -1.0e12 #* ones(I,1,N)
-        validBB       = (dBB .> -adj_cost_fn(dBB,a_grid, chi0, chi1, chi2, a_lb)) .*
+        validBB       = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
             (dBB .<= 0) .* (HdBB .> 0)
 
         # Optimal deposit decision
@@ -328,7 +326,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                  a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
 
         # Derive transition matrices
-        @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1,
+        @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, ddeath, pam, xxi, w,
+                                                   chi0, chi1,
                                              chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid, d,
                                              dab_grid, daf_grid, dab_g_grid, daf_g_grid, dbb_grid,
                                              dbf_grid, dbb_g_grid, dbf_g_grid, d_g, a_grid,
@@ -347,15 +346,15 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         AT = AT'
         gg_tilde            = dab_g_tilde_mat * gg
         gIntermediate       = AT * gg_tilde
-        dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde,N,1)))
+        dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
         gIntermediate       = dab_g_tilde_mat_inv * gIntermediate
 
         dab_g_small = reshape(dab_g[:,:,1],I_g*J_g,1)
 
         loc = findall(b .== 0)
-        dab_g_small           = dab_g_small ./ dab_g_small[loc]*ddeath
+        dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
         dab_g_small[loc]     .= 0.0
-        death_process         = -ddeath * my_speye(I_g*J_g)
+        death_process         = -ddeath * my_speye(I_g * J_g)
         death_process[loc,:]  = vec(dab_g_small)
         death_process         = kron(my_speye(N), death_process)
 
@@ -377,13 +376,12 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         #----------------------------------------------------------------
         # Compute equilibrium conditions
         #----------------------------------------------------------------
-
         # HJB equation
         if permanent == 0
-            hjbResidual = reshape(u,I*J*N,1) + A * reshape(V,I*J*N,1) + V_Dot + VEErrors -
+            hjbResidual = reshape(u, I*J*N, 1) + A * reshape(V, I*J*N, 1) + V_Dot + VEErrors -
                 (rrho + ddeath) * reshape(V,I*J*N,1)
         elseif permanent == 1
-            hjbResidual = reshape(u,I*J*N,1) + A * reshape(V,I*J*N,1) + V_Dot + VEErrors -
+            hjbResidual = reshape(u, I*J*N, 1) + A * reshape(V, I*J*N, 1) + V_Dot + VEErrors -
                 (rrho + ddeath - (1 - ggamma) * aggZ) * reshape(V,I*J*N,1)
         end
 
@@ -412,13 +410,13 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                 aggY_out = (K ^ aalpha) * (n_SS ^ (1 - aalpha))
                 aggC_out = sum(vec(c_g) .* gg .* vec(dab_g))
         elseif distributional_variables == 1
-                C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) - sum(log(vec(c_g)) .*
-                                                                            gg .* vec(dab_g))^2
+                C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
+                    sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
                 earn = log((1-tau_I) * w * l_g_grid .* y_g_grid + b_g_grid .*
                            (r_b_g_grid + ddeath*pam) + trans_grid + a_g_grid .*
                            (r_a_g_grid + ddeath*pam))
-                earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) - sum(vec(earn) .* gg .*
-                                                                           vec(dab_g))^2
+                earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
+                    sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
         elseif distributional_variables_1 == 1
                 WHTM_indicator      = zeros(I_g,J_g,N)
                 WHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos+2:end,:] .= 1.
@@ -486,7 +484,6 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         aggZ_Residual = aggZ_Dot - (-nnu_aggZ * aggZ + ssigma_aggZ * aggZ_Shock)
         vResidual     = Array{Float64}(undef, 0)
 
-
         # Return equilibrium conditions
         if aggregate_variables == 1
 
@@ -531,7 +528,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     #n_s_exo = n_shocks_exogenous(m)
     #vars = zeros(Float64, 2 * nstates + n_s_exp + n_s_exo)
     ####
-    @code_warntype get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
+    @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
 error()
     derivs = ForwardDiff.jacobian(get_residuals, zeros(Float64, 2 * nVars + nEErrors + 1))
 
