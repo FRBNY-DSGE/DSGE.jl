@@ -2,16 +2,24 @@
 THE GUTS OF EQCOND.
 
 """
-@inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2, a_lb, ggamma,
-                               permanent, interp_decision,
-                               ddeath, pam, aggZ, xxi, tau_I, w, #l_grid,
-                               y_grid, b_grid, r_b_grid, trans, alb_grid, #trans_grid, alb_grid,
-                               daf_grid, dab_grid, dbf_grid, dbb_grid,
-                               IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
+@inline function eqcond_helper(V::Array{T,3}, I::S, J::S, I_g::S, J_g::S,
+                               N::S, chi0::T, chi1::T, chi2::T, a_lb::T,
+                               ggamma::T, permanent::Bool,
+                               interp_decision::SparseMatrixCSC{T, S},
+                               ddeath::T, pam::T, aggZ::T, xxi::T,
+                               tau_I::T, w::T, trans::T,
+                               y_grid::Array{Complex{T},3}, b_grid::Array{T,3},
+                               r_b_grid::Array{T,3}, alb_grid::Array{T,3},
+                               daf_grid::Array{T,3}, dab_grid::Array{T,3},
+                               dbf_grid::Array{T,3}, dbb_grid::Array{T,3},
+                               IcF::BitArray{3}, IcB::BitArray{3}, Ic0::Array{S,3},
+                               IcFB::BitArray{3}, IcBF::BitArray{3}, IcBB::BitArray{3},
+                               Ic00::BitArray{3}) where {S<:Int64, T<:Float64}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
-    # Preparations
+    # Preparations (derivative software requires everything is a dual number)
+    # ---- Liquid ----
     VaF   = similar(V)
     VaB   = similar(V)
     Vamin = 0.0
@@ -25,8 +33,7 @@ THE GUTS OF EQCOND.
     VaB[:,2:J,:] = max.((Va_dif) ./ dab_grid[:,2:J,:], Vamin)
     VaB[:,1,:]  .= 0.0
 
-    # Preparations (necessary to ensure that everything is a dual number,
-    # required by derivative software)
+    # ---- Illiquid ----
     VbF   = similar(V)
     VbB   = similar(V)
     Vbmin = 1e-8
@@ -45,7 +52,7 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     # Preparations
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
-    c0 = real(((1-xxi)-tau_I) * w .* y_grid .+
+    c0 = real(((1 - xxi) - tau_I) * w .* y_grid .+
               b_grid .* (r_b_grid .+ perm_const) .+ trans)
 
     # Decisions conditional on a particular direction of derivative
@@ -75,33 +82,29 @@ THE GUTS OF EQCOND.
     dBB  = similar(V)
 
     # Decisions conditional on a particular direction of derivative
-    dFB[2:I,1:J-1,:] = opt_deposits.(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],alb_grid[2:I,1:J-1,:],
+    dFB[2:I,1:J-1,:] = opt_deposits.(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:], alb_grid[2:I,1:J-1,:],
                                     chi0, chi1, chi2)
-                                    #a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
     dFB[:,J,:]     .= 0.0
     dFB[1,1:J-1,:] .= 0.0
 
     dBF[1:I-1,2:J,:] = opt_deposits.(VaB[1:I-1,2:J,:], VbF[1:I-1,2:J,:], alb_grid[1:I-1,2:J,:],
                                     chi0, chi1, chi2)
-                                    #a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
     dBF[:,1,:]   .= 0.0
     dBF[I,2:J,:] .= 0.0
 
 
-    dBB[:,2:J,:]  = opt_deposits.(VaB[:,2:J,:], VbB[:,2:J,:], alb_grid[:,2:J,:], chi0, chi1, chi2)
-                                 #a_grid[:,2:J,:], chi0, chi1, chi2, a_lb)
-    dBB[:,1,:]   .= 0.0
+    dBB[:,2:J,:] = opt_deposits.(VaB[:,2:J,:], VbB[:,2:J,:], alb_grid[:,2:J,:], chi0, chi1, chi2)
+    dBB[:,1,:]  .= 0.0
 
     # Optimal deposit decision
     d = IcFB .* dFB .+ IcBF .* dBF .+ IcBB .* dBB
 
-    ## Interpolate
+    # Interpolate
     d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
     s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
     c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
 
     return c, s, u, d, d_g, s_g, c_g
-
 end
 
 """
@@ -310,7 +313,7 @@ Function to initialize liquid asset grid.
         # positive part
         bp_raw = range(0, stop = 1, length = I_pos)
         bp_raw = bp_raw .^ (1 / bgridparam)
-        bp = b0 .+ (bmax - b0) * bp_raw
+        bp     = b0 .+ (bmax - b0) * bp_raw
 
         # negative part
         bn_raw = range(0, stop = 1, length = Int64(I_neg/2+1))
@@ -322,7 +325,7 @@ Function to initialize liquid asset grid.
         end
 
         # Put everything together
-        b = [bn;bp]
+        b = [bn; bp]
 
         ## Define new grid points for g here. For now, it is created the same.
         # set parameters
@@ -335,13 +338,11 @@ Function to initialize liquid asset grid.
         b_ = bmin
 
         # positive part
-
         bp_raw = range(0, stop = 1, length = I_pos)
         bp_raw = bp_raw.^(1/bgridparam)
         bp = b0 .+ (bmax - b0) * bp_raw
 
         # negative part
-
         bn_raw = range(0, stop = 1, length = Int64(I_neg/2+1))
         bn_raw = bn_raw.^(1/bgridparam_neg)
         bn = bmin .+ (bmin/2 - bmin) * bn_raw
@@ -351,13 +352,13 @@ Function to initialize liquid asset grid.
         end
 
         # Put everything together
-        b_g = [bn;bp]
+        b_g = [bn; bp]
 
     elseif bgrid_new == 2
 
         # set parameters
         bmin = -1
-        b0 = 0
+        b0   = 0
         bmax = 40
         bgridparam = 0.25
         bgridparam_neg = 0.4
@@ -373,6 +374,7 @@ Function to initialize liquid asset grid.
         bn_raw = bn_raw.^(1/bgridparam_neg)
         bn = bmin .+ (bmin/2 - bmin) * bn_raw
         bn = [bn;Vector{Float64}(undef,Int(I_neg/2-1))]
+
         for i = I_neg/2+2:I_neg
             bn[i] = b0 - (bn[I_neg+2-i] - bn[1])
         end
@@ -445,9 +447,9 @@ end
     dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
     dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
 
-    r_a_grid	= repeat([r_a], I, J, N)
-    w_grid	    = repeat([w], I, J, N)
-    l_grid		= permutedims(repeat(ones(N,1),1,I,J),[2 3 1])
+    r_a_grid = repeat([r_a], I, J, N)
+    w_grid	 = repeat([w], I, J, N)
+    l_grid   = permutedims(repeat(ones(N,1),1,I,J),[2 3 1])
 
     b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
     a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
@@ -516,8 +518,8 @@ end
     adriftB = min.(d,0) .+ min.(a_grid .* (r_a_grid .+ ddeath*pam) .+ xxi * w * l_grid .* y_grid, 0)
     adriftF = max.(d,0) .+ max.(a_grid .* (r_a_grid .+ ddeath*pam) .+ xxi * w * l_grid .* y_grid, 0)
 
-    bdriftB = min.(-d .- adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
-    bdriftF = max.(-d .- adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ max.(s,0)
+    bdriftB = min.(-d .- adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
+    bdriftF = max.(-d .- adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ max.(s,0)
 
     audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
                                 (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi * w *
@@ -534,17 +536,17 @@ end
                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:], 0)
 
     budriftB[1:I_g-1,:,:] = min.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                adj_cost_fn.(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
+                                adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
                                             chi0, chi1, chi2, a_lb), 0)
     budriftB[I_g,:,:]     = min.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                adj_cost_fn.(d_g[I_g,:,:], a_g_grid[I_g,:,:],
+                                adj_cost_fn(d_g[I_g,:,:], a_g_grid[I_g,:,:],
                                             chi0, chi1, chi2, a_lb), 0)
 
     budriftF[1:I_g-1,:,:] = max.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                adj_cost_fn.(d_g[1:I_g-1,:,:],a_g_grid[1:I_g-1,:,:],
+                                adj_cost_fn(d_g[1:I_g-1,:,:],a_g_grid[1:I_g-1,:,:],
                                             chi0, chi1, chi2, a_lb), 0)
     budriftF[I_g,:,:]     = max.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                adj_cost_fn.(d_g[I_g,:,:], a_g_grid[I_g,:,:],
+                                adj_cost_fn(d_g[I_g,:,:], a_g_grid[I_g,:,:],
                                             chi0, chi1, chi2, a_lb),0)
 
     # Transition a
@@ -785,8 +787,8 @@ end
 # The expected value of income with respect to income_distr is meanlabeff
 # n_gridpoints should be the same as the number of grid points in the asset process
 @inline function construct_labor_income_grid(initial_ygrid::Vector{Float64},
-                                     income_distr::Vector{Float64},
-                                     meanlabeff::Float64, n_gridpoints::Int64)
+                                             income_distr::Vector{Float64},
+                                             meanlabeff::Float64, n_gridpoints::Int64)
     z       = exp.(initial_ygrid)
     z_bar   = dot(z, income_distr)
     z  	    = (meanlabeff/z_bar) .* z
@@ -795,9 +797,8 @@ end
 end
 
 @inline function construct_household_problem_functions(V::Matrix{S}, w::T,
-                                                       coefrra::R, frisch::R,
-                                                       labtax::R,
-                                                       labdisutil::R) where {R<:AbstractFloat,T<:Real,S<:Number}
+                                         coefrra::R, frisch::R, labtax::R,
+                                         labdisutil::R) where {R<:AbstractFloat,T<:Real,S<:Number}
 
     @inline function util(c::U, h::U) where {U<:Number}
         f(x::U) = coefrra == 1.0 ? log(x) : x^(1-coefrra) / (1-coefrra)
@@ -933,7 +934,6 @@ end
                         Vaf::Matrix{T}, Vab::Matrix{T},
                         daf::Vector{Float64},
                         dab::Vector{Float64}) where {T<:Number, S<:Number}
-
     I,J = size(sb)
     h   = similar(sb)
     c   = similar(sb)

@@ -127,6 +127,9 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     b_g_grid_aux = reshape(b_g_grid, I_g*J_g*N, 1)
     alb_grid = max.(a_grid, a_lb)
 
+    daba_g_aux = dab_g_aux .* a_g_grid_aux
+    dabb_g_aux = dab_g_aux .* b_g_grid_aux
+
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # Unpack variables
         V   = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
@@ -178,9 +181,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         @show "eqcond_helper"
         @time c, s, u, d, d_g, s_g, c_g = eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
                                                         a_lb, ggamma, permanent, interp_decision,
-                                                        ddeath, pam, aggZ, xxi, tau_I, w,
-                                                        y_grid, b_grid, r_b_grid, trans, alb_grid,
-
+                                                        ddeath, pam, aggZ, xxi, tau_I, w, trans,
+                                                        y_grid, b_grid, r_b_grid, alb_grid,
                                                         daf_grid, dab_grid, dbf_grid, dbb_grid,
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
         # Derive transition matrices
@@ -202,12 +204,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + death_process * gg
 
         # find death-corrected savings
-        a_save = sum(gIntermediate .* dab_g_aux .* a_g_grid_aux)
-        b_save = sum(gIntermediate .* dab_g_aux .* b_g_grid_aux)
-
-        # consumption for low types and high types
-        c_low  = c[:,:,1]
-        c_high = c[:,:,2]
+        a_save = dot(gIntermediate, daba_g_aux)
+        b_save = dot(gIntermediate, dabb_g_aux)
 
         #----------------------------------------------------------------
         # Compute equilibrium conditions
@@ -215,8 +213,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # HJB equation
         perm_mult = (permanent == 0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
 
-        hjbResidual = reshape(u, I*J*N, 1) + A * reshape(V, I*J*N, 1) + V_Dot + VEErrors -
-            perm_mult * reshape(V,I*J*N,1)
+        hjbResidual = vec(u) + A * vec(V) + V_Dot + VEErrors - perm_mult * reshape(V,I*J*N,1)
 
         # KFE
         gResidual = g_Dot - gIntermediate[1:n_g, 1]
@@ -310,26 +307,19 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
         # Law of motion for aggregate tfp shock
         aggZ_Residual = aggZ_Dot - (-nnu_aggZ * aggZ + ssigma_aggZ * aggZ_Shock)
-        vResidual     = Array{Float64}(undef, 0)
 
         # Return equilibrium conditions
         if aggregate_variables == 1
-
-            vResidual = [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
-                         C_Residual; aggZ_Residual]
+            return [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
+                    C_Residual; aggZ_Residual]
         elseif distributional_variables == 1
-
-            vResidual = [hjbResidual; gResidual; K_Residual; r_b_Residual; C_Var_Residual;
-                         earn_Var_Residual; aggZ_Residual]
+            return [hjbResidual; gResidual; K_Residual; r_b_Residual; C_Var_Residual;
+                    earn_Var_Residual; aggZ_Residual]
         elseif distributional_variables_1 == 1
-
-            vResidual = [hjbResidual; gResidual; K_Residual; r_b_Residual; C_WHTM_Residual;
-                         C_PHTM_Residual; aggZ_Residual]
-        else
-
-            vResidual = [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
+            return [hjbResidual; gResidual; K_Residual; r_b_Residual; C_WHTM_Residual;
+                    C_PHTM_Residual; aggZ_Residual]
         end
-        return vResidual
+        return [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
     end
 
     # equilibrium conditions
