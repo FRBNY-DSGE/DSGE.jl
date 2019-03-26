@@ -38,9 +38,9 @@ function changeBasis(basis,inv_basis,g1,psi,pi,c,g0)
 end
 
 function adj_cost_fn(d, a_grid, χ0, χ1, χ2, a_lb)
-    d_scaled = d ./ max.(a_grid, a_lb)
-    adj_cost = max.(a_grid,a_lb) .* (χ0 * abs.(d_scaled) .+ 1.0 / (1.0 .+ χ2) *
-                                    (abs.(d_scaled).^(1. +χ2) * χ1.^(-χ2)))
+    d_scaled = abs.(d ./ max.(a_grid, a_lb))
+    adj_cost = max.(a_grid, a_lb) .* (χ0 * (d_scaled) .+ 1.0 / (1.0 .+ χ2) *
+                                    ((d_scaled).^(1. +χ2) * χ1.^(-χ2)))
     return adj_cost
 end
 
@@ -198,16 +198,24 @@ function gstate(G1, impact; pick = Matrix{Float64}(undef, 0, 0))
     return GS,pickn,ok,uis,uiu,vs
 end
 
-function opt_deposits(Va,Vb,a_grid, χ0, χ1, χ2, a_lb) # RECA: Removed as "globals"
-    indx_0     = ((Va ./ Vb .- 1 .- χ0) .<= 0) .* ((Va ./ Vb .- 1 .+ χ0) .>= 0)
+function opt_deposits(Va, Vb, a_grid, χ0, χ1, χ2, a_lb)
     indx_plus  = ((Va ./ Vb .- 1 .- χ0) .> 0)
     indx_minus = ((Va ./ Vb .- 1 .+ χ0) .< 0)
 
-    d = 0*indx_0 .+ χ1 .* (max.(Va./Vb .- 1 .- χ0, 0)) .^ (1/χ2) .* max.(a_grid, a_lb) .*
-        indx_plus .+ (-χ1) .* (max.(-(Va./Vb .- 1) .- χ0,0)).^(1/χ2) .* max.(a_grid,a_lb) .*
-        indx_minus
-    return d
+    return χ1 .* (max.(Va ./ Vb .- 1 .- χ0, 0)) .^ (1/χ2) .*
+        max.(a_grid, a_lb) .* indx_plus .+ (-χ1) .*
+        (max.(-(Va./Vb .- 1) .- χ0, 0)) .^ (1/χ2) .* max.(a_grid, a_lb) .* indx_minus
 end
+
+
+function opt_deposits(Va::T, Vb::T, a::T, χ0::T, χ1::T, χ2::T) where {T<:Real}
+    indx_plus  = ((Va ./ Vb .- 1 .- χ0) .> 0)
+    indx_minus = ((Va ./ Vb .- 1 .+ χ0) .< 0)
+
+    return χ1 .* (max.(Va ./ Vb .- 1 .- χ0, 0)) .^ (1/χ2) .* a .* indx_plus .+
+        (-χ1) .* (max.(-(Va./Vb .- 1) .- χ0, 0)) .^ (1/χ2) .* a .* indx_minus
+end
+
 
 @inline function u_fn(c::Array{T}, γ::Float64) where T
     if γ == 1.0

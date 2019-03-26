@@ -5,7 +5,7 @@ THE GUTS OF EQCOND.
 @inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2, a_lb, ggamma,
                                permanent, interp_decision,
                                ddeath, pam, aggZ, xxi, tau_I, w, l_grid,
-                               y_grid, b_grid, r_b_grid, trans_grid, a_grid,
+                               y_grid, b_grid, r_b_grid, trans_grid, alb_grid,
                                daf_grid, dab_grid, dbf_grid, dbb_grid,
                                IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
     #----------------------------------------------------------------
@@ -44,27 +44,22 @@ THE GUTS OF EQCOND.
     # Consumption decision
     #----------------------------------------------------------------
     # Preparations
-    cF  = similar(V)
-    sF  = similar(V)
-    cB  = similar(V)
-    sB  = similar(V)
-
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
     c0 = real(((1-xxi)-tau_I) * w * l_grid .* y_grid .+
               b_grid .* (r_b_grid .+ perm_const) .+ trans_grid)
 
     # Decisions conditional on a particular direction of derivative
-    cF[1:I-1,:,:] = VbF[1:I-1,:,:] .^ (-1/ggamma)
-    cF[I,:,:]    .= 0.0
+    cF = VbF .^ (-1/ggamma)
+    cF[I,:,:] .= 0.0
 
-    sF[1:I-1,:,:] = c0[1:I-1,:,:] - cF[1:I-1,:,:]
-    sF[I,:,:]    .= 0.0
+    sF = c0 - cF
+    sF[I,:,:] .= 0.0
 
-    cB[2:I,:,:] = VbB[2:I,:,:].^(-1/ggamma)
-    cB[1,:,:]   = c0[1,:,:]
+    cB = VbB .^ (-1/ggamma)
+    cB[1,:,:] = c0[1,:,:]
 
-    sB[1,:,:]  .= 0.0
-    sB[2:I,:,:] = c0[2:I,:,:] - cB[2:I,:,:]
+    sB = c0 - cB
+    sB[1,:,:] .= 0.0
 
     # Optimal consumption and liquid savings
     c = IcF .* cF .+ IcB .* cB .+ Ic0 .* c0
@@ -80,19 +75,21 @@ THE GUTS OF EQCOND.
     dBB  = similar(V)
 
     # Decisions conditional on a particular direction of derivative
-    dFB[2:I,1:J-1,:] = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
-                                    a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
+    dFB[2:I,1:J-1,:] = opt_deposits.(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],alb_grid[2:I,1:J-1,:],
+                                    chi0, chi1, chi2)
+                                    #a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
     dFB[:,J,:]     .= 0.0
     dFB[1,1:J-1,:] .= 0.0
 
-    dBF[1:I-1,2:J,:] = opt_deposits(VaB[1:I-1,2:J,:], VbF[1:I-1,2:J,:],
-                                    a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
+    dBF[1:I-1,2:J,:] = opt_deposits.(VaB[1:I-1,2:J,:], VbF[1:I-1,2:J,:], alb_grid[1:I-1,2:J,:],
+                                    chi0, chi1, chi2)
+                                    #a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
     dBF[:,1,:]   .= 0.0
     dBF[I,2:J,:] .= 0.0
 
 
-    dBB[:,2:J,:]  = opt_deposits(VaB[:,2:J,:], VbB[:,2:J,:], a_grid[:,2:J,:],
-                                 chi0, chi1, chi2, a_lb)
+    dBB[:,2:J,:]  = opt_deposits.(VaB[:,2:J,:], VbB[:,2:J,:], alb_grid[:,2:J,:], chi0, chi1, chi2)
+                                 #a_grid[:,2:J,:], chi0, chi1, chi2, a_lb)
     dBB[:,1,:]   .= 0.0
 
     # Optimal deposit decision
@@ -650,7 +647,7 @@ end
                                    aggZ)
     # Compute drifts for HJB
     perm_const      = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
-    norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid .* y_grid)
+    norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid.* y_grid)
     norm_d          = norm.(d)
 
     # Compute drifts for KFE

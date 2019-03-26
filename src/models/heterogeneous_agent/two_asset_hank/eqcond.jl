@@ -568,6 +568,23 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     end
 =#
     l_grid       = permutedims(repeat(ones(N,1),1,I,J), [2 3 1])
+    loc = findall(b .== 0)
+    dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
+    dab_g_small = reshape(dab_g[:,:,1], I_g * J_g, 1)
+
+    dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
+    dab_g_small[loc]     .= 0.0
+    death_process         = -ddeath * my_speye(I_g * J_g)
+    death_process[loc,:]  = vec(dab_g_small)
+    death_process         = kron(my_speye(N), death_process)
+
+    dab_low  = dab[:,:,1]
+    dab_high = dab[:,:,2]
+
+    a_g_grid_aux = reshape(a_g_grid, I_g*J_g*N, 1)
+    b_g_grid_aux = reshape(b_g_grid, I_g*J_g*N, 1)
+    alb_grid = max.(a_grid, a_lb)
+
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # Unpack variables
         V   = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
@@ -588,15 +605,15 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
         aggZ       = vars[n_v+n_g+n_p+1] + vars_SS[n_v+n_g+n_p+1] # aggregate Z
 
-        V_Dot      = vars[nVars+1:nVars+n_v]
-        g_Dot      = vars[nVars+n_v+1:nVars+n_v+n_g]
-        aggZ_Dot   = vars[nVars+n_v+n_g+n_p+1]
+        V_Dot      = vars[nVars + 1 : nVars + n_v]
+        g_Dot      = vars[nVars + n_v + 1:nVars + n_v + n_g]
+        aggZ_Dot   = vars[nVars + n_v + n_g + n_p + 1]
 
         VEErrors   = vars[2*nVars + 1 : 2 * nVars + n_v]
         aggZ_Shock = vars[2*nVars + nEErrors + 1]
 
-        g_end     = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g,J_g,N]
-        gg        = vcat(g, g_end)
+        g_end = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g, N]
+        gg    = vcat(g, g_end)
 
         # Prices
         w   = (1 - aalpha) * (K ^ aalpha) * n_SS ^ (-aalpha) *
@@ -612,7 +629,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         y_shock      = y .* exp.(kappa * aggZ * (y .- y_mean) ./ std(y))
         y_shock_mean = dot(y_shock, y_dist) #y_shock * y_dist
         y_shock      = y_shock ./ y_shock_mean .* y_mean
-        y_grid       = permutedims(repeat(y_shock',1,I,J), [2 3 1])
+        y_grid       = permutedims(repeat(y_shock', 1, I, J), [2 3 1])
 
         # ripped out
         @show "eqcond_helper"
@@ -620,19 +637,18 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                         a_lb, ggamma, permanent, interp_decision,
                                                         ddeath, pam, aggZ, xxi, tau_I, w, l_grid,
                                                         y_grid, b_grid, r_b_grid, trans_grid,
-                                                        a_grid,
+                                                        alb_grid,
                                                         daf_grid, dab_grid, dbf_grid, dbb_grid,
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
-
         # Derive transition matrices
         @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam,
                                                    xxi, w, chi0, chi1, chi2, a_lb, l_grid,
                                                    l_g_grid, y_grid, y_g_grid, d,
-                                             dab_grid, daf_grid, dab_g_grid, daf_g_grid, dbb_grid,
-                                             dbf_grid, dbb_g_grid, dbf_g_grid, d_g, a_grid,
-                                             a_g_grid, s, s_g, r_a_grid, r_a_g_grid, aggZ)
-
+                                                   dab_grid, daf_grid, dab_g_grid, daf_g_grid,
+                                                   dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
+                                                   d_g, a_grid, a_g_grid, s, s_g, r_a_grid,
+                                                   r_a_g_grid, aggZ)
         # full transition matrix
         A = aa + bb + cc
 
@@ -640,41 +656,21 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # KFE
         #----------------------------------------------------------------
         AT = (aau + bbu + ccu)'
-        #AT = AT'
-        gg_tilde            = dab_g_tilde_mat * gg
-        gIntermediate       = AT * gg_tilde
-        dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
-        gIntermediate       = dab_g_tilde_mat_inv * gIntermediate
-
-        dab_g_small = reshape(dab_g[:,:,1],I_g*J_g,1)
-
-        loc = findall(b .== 0)
-        dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
-        dab_g_small[loc]     .= 0.0
-        death_process         = -ddeath * my_speye(I_g * J_g)
-        death_process[loc,:]  = vec(dab_g_small)
-        death_process         = kron(my_speye(N), death_process)
-
-        gIntermediate = gIntermediate + death_process * gg
-
+        gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + death_process * gg
         # find death-corrected savings
-        a_g_grid_aux = reshape(a_g_grid, I_g*J_g*N, 1)
-        a_save       = sum(gIntermediate .* dab_g_aux .* a_g_grid_aux)
-
-        b_g_grid_aux = reshape(b_g_grid, I_g*J_g*N, 1)
-        b_save       = sum(gIntermediate .* dab_g_aux .* b_g_grid_aux)
+        a_save = sum(gIntermediate .* dab_g_aux .* a_g_grid_aux)
+        b_save = sum(gIntermediate .* dab_g_aux .* b_g_grid_aux)
 
         # consumption for low types and high types
-        c_low     = c[:,:,1]
-        dab_low   = dab[:,:,1]
-        c_high    = c[:,:,2]
-        dab_high  = dab[:,:,2]
+        c_low    = c[:,:,1]
+        c_high   = c[:,:,2]
 
         #----------------------------------------------------------------
         # Compute equilibrium conditions
         #----------------------------------------------------------------
         # HJB equation
-        perm_mult = (permanent == 0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
+        perm_mult   = (permanent == 0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
+
         hjbResidual = reshape(u, I*J*N, 1) + A * reshape(V, I*J*N, 1) + V_Dot + VEErrors -
             perm_mult * reshape(V,I*J*N,1)
 
@@ -688,8 +684,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
             K_out = sum(vec(a_g_grid) .* gg .* vec(dab_g))
         end
 
-        K_Residual = K_out - K
-        r_b_out = 0.0
+        K_Residual   = K_out - K
+        r_b_out      = 0.0
         r_b_Residual = 0.0
         if r_b_fix      == 1
             r_b_out      = r_b_SS
@@ -726,7 +722,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
             PHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos:a_g_0pos+2:end,:] .= 1.
             PHTM_out            = sum(vec(PHTM_indicator) .* gg .* vec(dab_g))
             C_PHTM_out          = sum(vec(PHTM_indicator) .* vec(c_g) .* gg .* vec(dab_g))
-
+#=
             if permanent == 0
                 NHTM_indicator      = zeros(I_g,J_g,N)
                 NHTM_indicator[b_g_0pos+2:end,a_g_0pos+2:end,:] .= 1.
@@ -735,15 +731,16 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                 NHTM_indicator[b_g_0pos+3:end,2:end,:] .= 1.
                 NHTM_out            = sum(vec(NHTM_indicator) .* gg .* vec(dab_g))
                 C_NHTM_out          = sum(vec(NHTM_indicator) .* vec(c_g) .* gg .*
-                                          vec(dab_g))/NHTM_out
+                                          vec(dab_g)) / NHTM_out
 
             elseif permanent == 1
                 NHTM_indicator      = zeros(I_g,J_g,N)
                 NHTM_indicator[b_g_0pos+2:end,:,:] .= 1.
                 NHTM_out            = sum(vec(NHTM_indicator) .* gg .* vec(dab_g))
                 C_NHTM_out          = sum(vec(NHTM_indicator) .* vec(c_g) .* gg .*
-                                          vec(dab_g))/NHTM_out
+                                          vec(dab_g)) / NHTM_out
             end
+=#
         end
 
         Y_Residual        = Array{Float64}(undef, 0)
@@ -756,14 +753,14 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         C_PHTM_Residual   = Array{Float64}(undef, 0)
 
         if aggregate_variables == 1
-            Y_Residual          = aggY_out - aggY
-            C_Residual          = aggC_out - aggC
+            Y_Residual        = aggY_out - aggY
+            C_Residual        = aggC_out - aggC
         elseif distributional_variables == 1
-            C_Var_Residual      = C_Var_out - C_Var
-            earn_Var_Residual   = earn_Var_out - earn_Var
+            C_Var_Residual    = C_Var_out - C_Var
+            earn_Var_Residual = earn_Var_out - earn_Var
         elseif distributional_variables_1 == 1
-            C_WHTM_Residual     = C_WHTM_out - C_WHTM
-            C_PHTM_Residual     = C_PHTM_out - C_PHTM
+            C_WHTM_Residual   = C_WHTM_out - C_WHTM
+            C_PHTM_Residual   = C_PHTM_out - C_PHTM
         end
 
         # Law of motion for aggregate tfp shock
