@@ -4,8 +4,8 @@ THE GUTS OF EQCOND.
 """
 @inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2, a_lb, ggamma,
                                permanent, interp_decision,
-                               ddeath, pam, aggZ, xxi, tau_I, w, l_grid,
-                               y_grid, b_grid, r_b_grid, trans_grid, alb_grid,
+                               ddeath, pam, aggZ, xxi, tau_I, w, #l_grid,
+                               y_grid, b_grid, r_b_grid, trans, alb_grid, #trans_grid, alb_grid,
                                daf_grid, dab_grid, dbf_grid, dbb_grid,
                                IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
     #----------------------------------------------------------------
@@ -45,8 +45,8 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     # Preparations
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
-    c0 = real(((1-xxi)-tau_I) * w * l_grid .* y_grid .+
-              b_grid .* (r_b_grid .+ perm_const) .+ trans_grid)
+    c0 = real(((1-xxi)-tau_I) * w .* y_grid .+
+              b_grid .* (r_b_grid .+ perm_const) .+ trans)
 
     # Decisions conditional on a particular direction of derivative
     cF = VbF .^ (-1/ggamma)
@@ -64,7 +64,7 @@ THE GUTS OF EQCOND.
     # Optimal consumption and liquid savings
     c = IcF .* cF .+ IcB .* cB .+ Ic0 .* c0
     s = IcF .* sF .+ IcB .* sB
-    u = u_fn(c, ggamma)
+    u = u_fn.(c, ggamma)
 
     #----------------------------------------------------------------
     # Deposit decision
@@ -516,8 +516,8 @@ end
     adriftB = min.(d,0) .+ min.(a_grid .* (r_a_grid .+ ddeath*pam) .+ xxi * w * l_grid .* y_grid, 0)
     adriftF = max.(d,0) .+ max.(a_grid .* (r_a_grid .+ ddeath*pam) .+ xxi * w * l_grid .* y_grid, 0)
 
-    bdriftB = min.(-d .- adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
-    bdriftF = max.(-d .- adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ max.(s,0)
+    bdriftB = min.(-d .- adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
+    bdriftF = max.(-d .- adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ max.(s,0)
 
     audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
                                 (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi * w *
@@ -534,17 +534,17 @@ end
                                 l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:], 0)
 
     budriftB[1:I_g-1,:,:] = min.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
+                                adj_cost_fn.(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
                                             chi0, chi1, chi2, a_lb), 0)
     budriftB[I_g,:,:]     = min.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                adj_cost_fn(d_g[I_g,:,:], a_g_grid[I_g,:,:],
+                                adj_cost_fn.(d_g[I_g,:,:], a_g_grid[I_g,:,:],
                                             chi0, chi1, chi2, a_lb), 0)
 
     budriftF[1:I_g-1,:,:] = max.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                adj_cost_fn(d_g[1:I_g-1,:,:],a_g_grid[1:I_g-1,:,:],
+                                adj_cost_fn.(d_g[1:I_g-1,:,:],a_g_grid[1:I_g-1,:,:],
                                             chi0, chi1, chi2, a_lb), 0)
     budriftF[I_g,:,:]     = max.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                adj_cost_fn(d_g[I_g,:,:], a_g_grid[I_g,:,:],
+                                adj_cost_fn.(d_g[I_g,:,:], a_g_grid[I_g,:,:],
                                             chi0, chi1, chi2, a_lb),0)
 
     # Transition a
@@ -641,19 +641,19 @@ end
 end
 
 @inline function transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam, xxi, w, chi0, chi1,
-                                   chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid,
+                                   chi2, a_lb, #=l_grid, l_g_grid, =# y_grid, y_g_grid, d, dab_grid,
                                    daf_grid, dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
-                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid,
+                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a, #r_a_g_grid,
                                    aggZ)
     # Compute drifts for HJB
     perm_const      = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
-    norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid.* y_grid)
+    norm_perm_inter = norm.(a_grid .* (r_a .+ perm_const) .+ xxi * w .* y_grid)
     norm_d          = norm.(d)
 
     # Compute drifts for KFE
-    audrift_prod = d_g .+ a_g_grid .* (r_a_g_grid .+ ddeath*pam) .+ xxi * w * l_g_grid .*
+    audrift_prod = d_g .+ a_g_grid .* (r_a .+ ddeath*pam) .+ xxi * w .* #l_g_grid .*
         y_g_grid .- (permanent == 1 ? aggZ * a_g_grid : 0.0)
-    budrift_prod = s_g - d_g - adj_cost_fn(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
+    budrift_prod = s_g - d_g - adj_cost_fn.(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
         (permanent == 1 ? aggZ * b_g_grid : 0.0)
 
     # Transition_deriva_a
@@ -697,9 +697,9 @@ end
                   -I_g => vec(lowdiagu)[1:end-I_g])
 
     # Transition_deriva b
-    X = -(min.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)) ./ dbb_grid
+    X = -(min.(-d - adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)) ./ dbb_grid
     X[1,:,:] .= 0.0
-    Z = (max.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)) ./ dbf_grid
+    Z = (max.(-d - adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)) ./ dbf_grid
     Z[I,:,:] .= 0.0
 
     Y = -(X .+ Z)
@@ -736,40 +736,6 @@ end
 
     return aa, bb, aau, bbu
 end
-
-@inline function catch_my_drifts(I_g, permanent, ddeath, pam, xxi, d_g, a_g_grid, r_a_g_grid, w,
-                                 l_g_grid, y_g_grid, s_g, chi0, chi1, chi2,
-                                 a_lb, a_grid, r_a_grid, l_grid, y_grid, aggZ, d, s)
-
-
-    # Compute drifts for HJB
-    perm_const = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
-
-    norm_perm_inter = norm.(a_grid .* (r_a_grid .+ perm_const) .+ xxi * w * l_grid .* y_grid)
-    norm_d = norm.(d)
-
-    adriftB = min.(norm_d, 0) .+ min.(norm_perm_inter, 0)
-    adriftF = max.(norm_d, 0) .+ max.(norm_perm_inter, 0)
-
-    bdriftB = min.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)
-    bdriftF = max.(-d - adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)
-
-    # Compute drifts for KFE
-    audrift_prod = d_g .+ a_g_grid .* (r_a_g_grid .+ ddeath*pam) .+ xxi * w * l_g_grid .*
-        y_g_grid .- (permanent == 1 ? aggZ * a_g_grid : 0.0)
-
-    audriftB = min.(audrift_prod, 0)
-    audriftF = max.(audrift_prod, 0)
-
-    budrift_prod = s_g - d_g - adj_cost_fn(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
-        (permanent == 1 ? aggZ * b_g_grid : 0.0)
-
-    budriftB = min.(budrift_prod, 0)
-    budriftF = max.(budrift_prod, 0)
-
-    return audriftB, budriftB, audriftF, budriftF, adriftB, bdriftB, adriftF, bdriftF
-end
-
 
 # This file contains additional helper functions for computing the steady state.
 
