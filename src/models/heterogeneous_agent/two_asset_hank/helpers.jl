@@ -641,18 +641,17 @@ end
 end
 
 @inline function transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam, xxi, w, chi0, chi1,
-                                   chi2, a_lb, #=l_grid, l_g_grid, =# y_grid, y_g_grid, d, dab_grid,
+                                   chi2, a_lb, y_grid, y_g_grid, d, dab_grid,
                                    daf_grid, dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
-                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a, #r_a_g_grid,
-                                   aggZ)
+                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a, aggZ)
     # Compute drifts for HJB
-    perm_const      = (permanent == 1) ? ddeath*pam - aggZ : ddeath*pam
+    perm_const      = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
     norm_perm_inter = norm.(a_grid .* (r_a .+ perm_const) .+ xxi * w .* y_grid)
     norm_d          = norm.(d)
 
-    # Compute drifts for KFE
-    audrift_prod = d_g .+ a_g_grid .* (r_a .+ ddeath*pam) .+ xxi * w .* #l_g_grid .*
-        y_g_grid .- (permanent == 1 ? aggZ * a_g_grid : 0.0)
+    # Compute drifts for KFE -- RECA: is it possible that below is incorrect?
+    audrift_prod = d_g .+ a_g_grid .* (r_a .+ ddeath*pam) .+ xxi * w .* y_g_grid .-
+        (permanent == 1 ? aggZ * a_g_grid : 0.0)
     budrift_prod = s_g - d_g - adj_cost_fn.(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
         (permanent == 1 ? aggZ * b_g_grid : 0.0)
 
@@ -670,11 +669,7 @@ end
     updiag   = reshape(zeta, I*J, N)
     updiag   = circshift(updiag, I)
 
-    centdiag = reshape(yy, I*J*N, 1)
-    updiag   = reshape(updiag, I*J*N, 1)
-    lowdiag  = reshape(lowdiag, I*J*N, 1)
-
-    aa = spdiagm(0 => vec(centdiag), I => vec(updiag)[I+1:end], -I => vec(lowdiag)[1:end-I])
+    aa = spdiagm(0 => vec(yy), I => vec(updiag)[I+1:end], -I => vec(lowdiag)[1:end-I])
 
     chiu         = -min.(audrift_prod, 0) ./ dab_g_grid
     chiu[:,1,:] .= 0.0
@@ -684,17 +679,12 @@ end
 
     yyu = -(chiu .+ zetau)
 
-    lowdiagu  = reshape(chiu,I_g*J_g,N)
-    lowdiagu  = circshift(lowdiagu,-I_g)
-    updiagu   = reshape(zetau,I_g*J_g,N)
-    updiagu   = circshift(updiagu,I_g)
+    chiu  = reshape(chiu,I_g*J_g,N)
+    chiu  = circshift(chiu,-I_g)
+    zetau   = reshape(zetau,I_g*J_g,N)
+    zetau   = circshift(zetau,I_g)
 
-    centdiagu = reshape(yyu,I_g*J_g*N,1)
-    updiagu   = reshape(updiagu,I_g*J_g*N,1)
-    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
-
-    aau = spdiagm(0 => vec(centdiagu), I_g => vec(updiagu)[I_g+1:end],
-                  -I_g => vec(lowdiagu)[1:end-I_g])
+    aau = spdiagm(0 => vec(yyu), I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g])
 
     # Transition_deriva b
     X = -(min.(-d - adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)) ./ dbb_grid
@@ -704,16 +694,12 @@ end
 
     Y = -(X .+ Z)
 
-    lowdiag  = reshape(X, I*J, N)
-    lowdiag  = circshift(lowdiag, -1)
-    updiag   = reshape(Z, I*J, N)
-    updiag   = circshift(updiag,1)
+    X  = reshape(X, I*J, N)
+    X  = circshift(X, -1)
+    Z  = reshape(Z, I*J, N)
+    Z  = circshift(Z, 1)
 
-    centdiag = reshape(Y, I*J*N, 1)
-    updiag   = reshape(updiag, I*J*N, 1)
-    lowdiag  = reshape(lowdiag, I*J*N, 1)
-
-    bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
+    bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
 
     Xu = -min.(budrift_prod, 0) ./ dbb_g_grid
     Xu[1,:,:] .= 0.0
@@ -728,11 +714,7 @@ end
     updiagu   = reshape(Zu, I_g*J_g, N)
     updiagu   = circshift(updiagu, 1)
 
-    centdiagu = reshape(Yu, I_g*J_g*N, 1)
-    updiagu   = reshape(updiagu, I_g*J_g*N, 1)
-    lowdiagu  = reshape(lowdiagu, I_g*J_g*N, 1)
-
-    bbu = spdiagm(0 => vec(centdiagu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
+    bbu = spdiagm(0 => vec(Yu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
 
     return aa, bb, aau, bbu
 end
