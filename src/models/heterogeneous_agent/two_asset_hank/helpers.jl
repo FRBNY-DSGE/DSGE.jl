@@ -2,6 +2,7 @@
 THE GUTS OF EQCOND.
 
 """
+#=
 @inline function eqcond_helper(V::Array{T,3}, I::S, J::S, I_g::S, J_g::S,
                                N::S, chi0::T, chi1::T, chi2::T, a_lb::T,
                                ggamma::T, permanent::Bool,
@@ -15,6 +16,13 @@ THE GUTS OF EQCOND.
                                IcF::BitArray{3}, IcB::BitArray{3}, Ic0::Array{S,3},
                                IcFB::BitArray{3}, IcBF::BitArray{3}, IcBB::BitArray{3},
                                Ic00::BitArray{3}) where {S<:Int64, T<:Float64}
+=#
+@inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
+                                                        a_lb, ggamma, permanent, interp_decision,
+                                                        ddeath, pam, aggZ, xxi, tau_I, w, trans,
+                                                        y_grid, b_grid, r_b_grid, alb_grid,
+                                                        daf_grid, dab_grid, dbf_grid, dbb_grid,
+                                                        IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------

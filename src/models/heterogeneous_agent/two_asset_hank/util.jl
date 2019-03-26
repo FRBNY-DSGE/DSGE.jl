@@ -208,7 +208,7 @@ end
 end
 
 
-@inline function opt_deposits(Va::T, Vb::T, a::T, χ0::T, χ1::T, χ2::T) where {T<:Real}
+@inline function opt_deposits(Va::T, Vb::T, a::T, χ0::T, χ1::T, χ2::T) where T#{T<:Real}
     indx_plus  = ((Va ./ Vb .- 1 .- χ0) .> 0)
     indx_minus = ((Va ./ Vb .- 1 .+ χ0) .< 0)
 

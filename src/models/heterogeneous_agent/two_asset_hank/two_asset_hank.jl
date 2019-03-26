@@ -864,6 +864,9 @@ function steadystate!(m::TwoAssetHANK)
                 println("Iteration ", nn, ", distance is ", dist)
             end
             if dist < crit_KFE
+                gg = gg1
+                g  = reshape(gg, I_g, J_g, N)
+
                 println("Distribution Converged, Iteration = ", nn)
                 break
             end

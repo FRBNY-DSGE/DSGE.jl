@@ -322,35 +322,18 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         return [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
     end
 
-    # equilibrium conditions
-    #=
-    if aggregate_variables == 1
-        println("Agg")
-        out = get_residuals_agg(zeros(Float64, 2 * nVars + nEErrors + 1))
-        @time get_residuals_agg(zeros(Float64, 2 * nVars + nEErrors + 1))
-    elseif distributional_variables == 1
-        println("Dist")
-        out = get_residuals_dist(zeros(Float64, 2 * nVars + nEErrors + 1))
-        @time get_residuals_dist(zeros(Float64, 2 * nVars + nEErrors + 1))
-    elseif distributional_variables_1 == 1
-        println("Dist_1")
-        out = get_residuals_dist1(zeros(Float64, 2 * nVars + nEErrors + 1))
-        @time get_residuals_dist1(zeros(Float64, 2 * nVars + nEErrors + 1))
-    else
-    #   vResidual = [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
-    end
-    =#
-
     out = get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
-    #JLD2.jldopen("eqcond_before_factoring.jld2", true, true, true, IOStream) do file
+    #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_factoring.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-    test_out = load("eqcond_before_factoring.jld2", "residuals")
+    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_factoring.jld2", "residuals")
     @assert test_out == out
 
     @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
-    error()
-    derivs = ForwardDiff.jacobian(get_residuals, zeros(Float64, 2 * nVars + nEErrors + 1))
+    #error()
+    x = zeros(Float64, 2 * nVars + nEErrors + 1)
+    cfg = ForwardDiff.JacobianConfig(get_residuals, x, ForwardDiff.Chunk{4}())
+    derivs = ForwardDiff.jacobian(get_residuals, x, cfg)
 
     #####
     #nstates = n_states(m)
