@@ -20,10 +20,10 @@ THE GUTS OF EQCOND.
 @inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
                                a_lb, ggamma, permanent, interp_decision,
                                ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                               y_grid, b_grid, r_b_grid, alb_grid,
+                               #=y_grid, b_grid, r_b_grid, =#r_b_vec, alb_vec,#alb_grid,
                                daf_grid, dab_grid, dbf_grid, dbb_grid,
                                IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                               a, b, a_g, b_g)
+                               y, a, b)
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -62,18 +62,13 @@ THE GUTS OF EQCOND.
     # Preparations
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
 
-    c0 = real(((1 - xxi) - tau_I) * w .* y_grid .+
-              b_grid .* (r_b_grid .+ perm_const) .+ trans)
-
-    @show size(b), size(b_grid)
-
-    c0 = real(((1 - xxi) - tau_I) * w .* y_grid .+
-               broadcast(*, b, (r_b_grid .+ perm_const)) .+ trans)
-
-
-
-    @assert c0 == c02
-#permutedims(repeat(b , 1, J, N), [1 2 3])
+    #c0 = real(((1 - xxi) - tau_I) * w .* y_grid .+
+    #          b_grid .* (r_b_grid .+ perm_const) .+ trans)
+    c0 = Array{Float64,3}(undef, I, J, N)
+    c0_c = ((1-xxi) - tau_I) * w
+    for i=1:I, j=1:J, n=1:N
+       c0[i,j,n] = c0_c * real(y[1,n]) + b[i] * (r_b_vec[i] + perm_const) + trans
+    end
 
     # Decisions conditional on a particular direction of derivative
     cF = VbF .^ (-1/ggamma)
@@ -101,6 +96,7 @@ THE GUTS OF EQCOND.
     dBF  = similar(V)
     dBB  = similar(V)
 
+#=
     # Decisions conditional on a particular direction of derivative
     dFB[2:I,1:J-1,:] = opt_deposits.(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:], alb_grid[2:I,1:J-1,:],
                                     chi0, chi1, chi2)
@@ -112,12 +108,33 @@ THE GUTS OF EQCOND.
     dBF[:,1,:]   .= 0.0
     dBF[I,2:J,:] .= 0.0
 
-
     dBB[:,2:J,:] = opt_deposits.(VaB[:,2:J,:], VbB[:,2:J,:], alb_grid[:,2:J,:], chi0, chi1, chi2)
     dBB[:,1,:]  .= 0.0
 
     # Optimal deposit decision
     d = IcFB .* dFB .+ IcBF .* dBF .+ IcBB .* dBB
+=#
+    d = Array{Float64,3}(undef, I, J, N)
+    for i=1:I, j=1:J, n=1:N
+        dFB = if i == 1 || j == J
+            0.0
+        else
+            opt_deposits(VaF[i,j,n], VbB[i,j,n], alb_vec[j], chi0, chi1, chi2)
+        end
+        dBF = if i == I || j == 1
+            0.0
+        else
+            opt_deposits(VaB[i,j,n], VbF[i,j,n], alb_vec[j], chi0, chi1, chi2)
+        end
+        dBB = if j == 1
+            0.0
+        else
+            opt_deposits(VaB[i,j,n], VbB[i,j,n], alb_vec[j], chi0, chi1, chi2)
+        end
+        d[i,j,n] = IcFB[i,j,n] * dFB + IcBF[i,j,n] * dBF + dBB * IcBB[i,j,n]
+    end
+
+    #@assert d2 == d
 
     # Interpolate
     d_g = reshape(interp_decision * vec(d), I_g, J_g, N)

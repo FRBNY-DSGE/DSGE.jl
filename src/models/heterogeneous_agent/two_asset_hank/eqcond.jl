@@ -132,6 +132,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     daba_g_aux = dab_g_aux .* a_g_grid_aux
     dabb_g_aux = dab_g_aux .* b_g_grid_aux
 
+    alb_vec = max.(a, a_lb)
+
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # Unpack variables
         V   = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
@@ -171,7 +173,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         r_b_borr = r_b .+ borrwedge_SS
 
         # SET GRIDS
-
+        r_b_vec = r_b .* (b .>= 0) + r_b_borr .* (b .< 0)
 
         # Other necessary objects
         y_shock      = y .* exp.(kappa * aggZ * (y .- y_mean) ./ std(y))
@@ -184,11 +186,12 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         @time c, s, u, d, d_g, s_g, c_g = eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
                                                         a_lb, ggamma, permanent, interp_decision,
                                                         ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                                        y_grid, b_grid, r_b_grid, alb_grid,
+                                                        #=y_grid, b_grid, r_b_grid,=#
+                                                        r_b_vec, alb_vec,#alb_grid,
                                                         daf_grid, dab_grid, dbf_grid, dbb_grid,
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                                                        a,b,a_g,b_g)
-@show typeof.([c,s,u,d,d_g,s_g,c_g])
+                                                        y,a,b)
+#@show typeof.([c,s,u,d,d_g,s_g,c_g])
         # Derive transition matrices
         @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam,
@@ -298,7 +301,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # Return equilibrium conditions
         #if aggregate_variables == 1
 
-@show typeof(hjbResidual)
+#@show typeof(hjbResidual)
             return [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
                     C_Residual; aggZ_Residual]
         #elseif distributional_variables == 1
