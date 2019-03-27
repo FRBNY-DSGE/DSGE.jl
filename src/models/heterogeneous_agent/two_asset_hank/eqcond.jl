@@ -186,11 +186,10 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         @time c, s, u, d, d_g, s_g, c_g = eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
                                                         a_lb, ggamma, permanent, interp_decision,
                                                         ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                                        #=y_grid, b_grid, r_b_grid,=#
-                                                        r_b_vec, alb_vec,#alb_grid,
+                                                        r_b_vec, alb_vec,
                                                         daf_grid, dab_grid, dbf_grid, dbb_grid,
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                                                        y,a,b)
+                                                        y, b)
 #@show typeof.([c,s,u,d,d_g,s_g,c_g])
         # Derive transition matrices
         @show "transition_deriva"
