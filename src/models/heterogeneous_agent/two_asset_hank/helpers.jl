@@ -18,11 +18,12 @@ THE GUTS OF EQCOND.
                                Ic00::BitArray{3}) where {S<:Int64, T<:Float64}
 =#
 @inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
-                                                        a_lb, ggamma, permanent, interp_decision,
-                                                        ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                                        y_grid, b_grid, r_b_grid, alb_grid,
-                                                        daf_grid, dab_grid, dbf_grid, dbb_grid,
-                                                        IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
+                               a_lb, ggamma, permanent, interp_decision,
+                               ddeath, pam, aggZ, xxi, tau_I, w, trans,
+                               y_grid, b_grid, r_b_grid, alb_grid,
+                               daf_grid, dab_grid, dbf_grid, dbb_grid,
+                               IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
+                               a, b, a_g, b_g)
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -60,8 +61,19 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     # Preparations
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
+
     c0 = real(((1 - xxi) - tau_I) * w .* y_grid .+
               b_grid .* (r_b_grid .+ perm_const) .+ trans)
+
+    @show size(b), size(b_grid)
+
+    c0 = real(((1 - xxi) - tau_I) * w .* y_grid .+
+               broadcast(*, b, (r_b_grid .+ perm_const)) .+ trans)
+
+
+
+    @assert c0 == c02
+#permutedims(repeat(b , 1, J, N), [1 2 3])
 
     # Decisions conditional on a particular direction of derivative
     cF = VbF .^ (-1/ggamma)

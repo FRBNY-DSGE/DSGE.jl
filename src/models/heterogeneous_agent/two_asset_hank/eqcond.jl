@@ -51,13 +51,15 @@ function eqcond(m::TwoAssetHANK)
 
     I      = get_setting(m, :I)
     J      = get_setting(m, :J)
-    a_g    = get_setting(m, :a_g)
-    b_g    = get_setting(m, :b_g)
     I_g    = get_setting(m, :I_g)
     J_g    = get_setting(m, :J_g)
     N      = get_setting(m, :N)
+
     a      = get_setting(m, :a)
     b      = get_setting(m, :b)
+    a_g    = get_setting(m, :a_g)
+    b_g    = get_setting(m, :b_g)
+
     y      = get_setting(m, :y)
     y_dist = get_setting(m, :y_dist)
     y_mean = get_setting(m, :y_mean)
@@ -184,7 +186,9 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                         ddeath, pam, aggZ, xxi, tau_I, w, trans,
                                                         y_grid, b_grid, r_b_grid, alb_grid,
                                                         daf_grid, dab_grid, dbf_grid, dbb_grid,
-                                                        IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00)
+                                                        IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
+                                                        a,b,a_g,b_g)
+@show typeof.([c,s,u,d,d_g,s_g,c_g])
         # Derive transition matrices
         @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam,
@@ -226,7 +230,6 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         end
 
         K_Residual   = K_out - K
-
         r_b_out      = 0.0
         r_b_Residual = 0.0
         if r_b_fix      == 1
@@ -244,9 +247,11 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         end
 
         if aggregate_variables == 1
+
             aggY_out = (K ^ aalpha) * (n_SS ^ (1 - aalpha))
             aggC_out = sum(vec(c_g) .* gg .* vec(dab_g))
         elseif distributional_variables == 1
+
             C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
                 sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
             earn = log((1-tau_I) * w * l_g_grid .* y_g_grid + b_g_grid .*
@@ -255,6 +260,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
             earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
                 sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
         elseif distributional_variables_1 == 1
+
             WHTM_indicator      = zeros(I_g,J_g,N)
             WHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos+2:end,:] .= 1.
             WHTM_out            = sum(vec(WHTM_indicator) .* gg .* vec(dab_g))
@@ -264,29 +270,10 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
             PHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos:a_g_0pos+2:end,:] .= 1.
             PHTM_out            = sum(vec(PHTM_indicator) .* gg .* vec(dab_g))
             C_PHTM_out          = sum(vec(PHTM_indicator) .* vec(c_g) .* gg .* vec(dab_g))
-#=
-            if permanent == 0
-                NHTM_indicator      = zeros(I_g,J_g,N)
-                NHTM_indicator[b_g_0pos+2:end,a_g_0pos+2:end,:] .= 1.
-
-                NHTM_indicator      = zeros(I_g,J_g,N)
-                NHTM_indicator[b_g_0pos+3:end,2:end,:] .= 1.
-                NHTM_out            = sum(vec(NHTM_indicator) .* gg .* vec(dab_g))
-                C_NHTM_out          = sum(vec(NHTM_indicator) .* vec(c_g) .* gg .*
-                                          vec(dab_g)) / NHTM_out
-
-            elseif permanent == 1
-                NHTM_indicator      = zeros(I_g,J_g,N)
-                NHTM_indicator[b_g_0pos+2:end,:,:] .= 1.
-                NHTM_out            = sum(vec(NHTM_indicator) .* gg .* vec(dab_g))
-                C_NHTM_out          = sum(vec(NHTM_indicator) .* vec(c_g) .* gg .*
-                                          vec(dab_g)) / NHTM_out
-            end
-=#
         end
 
-        Y_Residual        = Array{Float64}(undef, 0)
-        C_Residual        = Array{Float64}(undef, 0)
+        Y_Residual        = 0.0
+        C_Residual        = 0.0
 
         C_Var_Residual    = Array{Float64}(undef, 0)
         earn_Var_Residual = Array{Float64}(undef, 0)
@@ -309,17 +296,19 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         aggZ_Residual = aggZ_Dot - (-nnu_aggZ * aggZ + ssigma_aggZ * aggZ_Shock)
 
         # Return equilibrium conditions
-        if aggregate_variables == 1
+        #if aggregate_variables == 1
+
+@show typeof(hjbResidual)
             return [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
                     C_Residual; aggZ_Residual]
-        elseif distributional_variables == 1
-            return [hjbResidual; gResidual; K_Residual; r_b_Residual; C_Var_Residual;
-                    earn_Var_Residual; aggZ_Residual]
-        elseif distributional_variables_1 == 1
-            return [hjbResidual; gResidual; K_Residual; r_b_Residual; C_WHTM_Residual;
-                    C_PHTM_Residual; aggZ_Residual]
-        end
-        return [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
+        #elseif distributional_variables == 1
+        #    return [hjbResidual; gResidual; K_Residual; r_b_Residual; C_Var_Residual;
+        #            earn_Var_Residual; aggZ_Residual]
+        #elseif distributional_variables_1 == 1
+        #    return [hjbResidual; gResidual; K_Residual; r_b_Residual; C_WHTM_Residual;
+        #            C_PHTM_Residual; aggZ_Residual]
+        #end
+        #return [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
     end
 
     out = get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
@@ -330,10 +319,10 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     @assert test_out == out
 
     @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
-    #error()
+    error()
     x = zeros(Float64, 2 * nVars + nEErrors + 1)
-    cfg = ForwardDiff.JacobianConfig(get_residuals, x, ForwardDiff.Chunk{4}())
-    derivs = ForwardDiff.jacobian(get_residuals, x, cfg)
+    cfg = ForwardDiff.JacobianConfig(get_residuals, x, ForwardDiff.Chunk{40}())
+    derivs = ForwardDiff.jacobian(get_residuals, x)
 
     #####
     #nstates = n_states(m)
