@@ -135,7 +135,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     alb_vec = max.(a, a_lb)
 
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
-        # Unpack variables
+        # ------- Unpack variables -------
         V   = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
         g   = vars[n_v + 1 : n_v + n_g] .+ vars_SS[n_v + 1 : n_v + n_g] # distribution
         K   = vars[n_v + n_g + 1] + vars_SS[n_v + n_g + 1]     # aggregate capital
@@ -163,6 +163,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
         g_end = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g, N]
         gg    = vcat(g, g_end)
+        # ------- Unpack variables -------
 
         # Prices
         w   = (1 - aalpha) * (K ^ aalpha) * n_SS ^ (-aalpha) *
@@ -183,22 +184,21 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
         # ripped out
         @show "eqcond_helper"
-        @time c, s, u, d, d_g, s_g, c_g = eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
+        @time c, s, u, d, d_g, s_g, c_g = eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
                                                         a_lb, ggamma, permanent, interp_decision,
                                                         ddeath, pam, aggZ, xxi, tau_I, w, trans,
                                                         r_b_vec, alb_vec,
                                                         daf_grid, dab_grid, dbf_grid, dbb_grid,
                                                         IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
                                                         y, b)
-#@show typeof.([c,s,u,d,d_g,s_g,c_g])
         # Derive transition matrices
         @show "transition_deriva"
-        @time aa, bb, aau, bbu = transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam,
+        @time aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
                                                    xxi, w, chi0, chi1, chi2, a_lb,
-                                                   y_grid, y_g_grid, d,
                                                    dab_grid, daf_grid, dab_g_grid, daf_g_grid,
                                                    dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
-                                                   d_g, a_grid, a_g_grid, s, s_g, r_a, aggZ)
+                                                   d, d_g, s, s_g, r_a, aggZ,
+                                                   a, a_g, b, b_g, y)
 
         # full transition matrix
         A = aa + bb + cc
@@ -300,7 +300,6 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # Return equilibrium conditions
         #if aggregate_variables == 1
 
-#@show typeof(hjbResidual)
             return [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
                     C_Residual; aggZ_Residual]
         #elseif distributional_variables == 1

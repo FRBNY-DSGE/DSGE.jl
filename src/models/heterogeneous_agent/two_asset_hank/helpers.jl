@@ -17,7 +17,7 @@ THE GUTS OF EQCOND.
                                IcFB::BitArray{3}, IcBF::BitArray{3}, IcBB::BitArray{3},
                                Ic00::BitArray{3}) where {S<:Int64, T<:Float64}
 =#
-@inline function eqcond_helper(V, I, J, I_g, J_g, N, chi0, chi1, chi2,
+@inline function eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
                                a_lb, ggamma, permanent, interp_decision,
                                ddeath, pam, aggZ, xxi, tau_I, w, trans,
                                r_b_vec, alb_vec,
@@ -27,7 +27,8 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
-    # Preparations (derivative software requires everything is a dual number)
+    I, J, N = size(V)
+
     # ---- Liquid ----
     VaF   = similar(V)
     VaB   = similar(V)
@@ -59,12 +60,11 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     # Consumption decision
     #----------------------------------------------------------------
-    # Preparations
     perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
     c0_c = ((1-xxi) - tau_I) * w
 
     # Optimal consumption and liquid savings
-    c, s = Array{Float64,3}(undef, I, J, N), Array{Float64,3}(undef, I, J, N)
+    c, s = similar(V), similar(V)
     for i=1:I, j=1:J, n=1:N
         c0 = c0_c * real(y[1,n]) + b[i] * (r_b_vec[i] + perm_const) + trans
 
@@ -72,11 +72,10 @@ THE GUTS OF EQCOND.
         cF = (i==I) ? 0.0 : VbF[i,j,n] ^ (-1 / ggamma)
         cB = (i==1) ? c0  : VbB[i,j,n] ^ (-1 / ggamma)
 
-        c[i,j,n] = IcF[i,j,n] * cF + IcB[i,j,n] * cB + Ic0[i,j,n] * c0
-
         sF = (i==I) ? 0.0 : c0 - cF
         sB = (i==1) ? 0.0 : c0 - cB
 
+        c[i,j,n] = IcF[i,j,n] * cF + IcB[i,j,n] * cB + Ic0[i,j,n] * c0
         s[i,j,n] = IcF[i,j,n] * sF + IcB[i,j,n] * sB
     end
     u = u_fn.(c, ggamma)
@@ -84,7 +83,7 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     # Deposit decision
     #----------------------------------------------------------------
-    d = Array{Float64,3}(undef, I, J, N)
+    d = similar(V)
     for i=1:I, j=1:J, n=1:N
         dFB = (i == 1 || j == J) ? 0.0 :
             opt_deposits(VaF[i,j,n], VbB[i,j,n], alb_vec[j], chi0, chi1, chi2)
@@ -641,57 +640,40 @@ end
     return aa, bb, aau, bbu
 end
 
-@inline function transition_deriva(I_g, J_g, N, I, J, permanent, ddeath, pam, xxi, w, chi0, chi1,
-                                   chi2, a_lb, y_grid, y_g_grid, d, dab_grid,
-                                   daf_grid, dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid,
-                                   dbf_g_grid, d_g, a_grid, a_g_grid, s, s_g, r_a, aggZ)
+@inline function transition_deriva(permanent, ddeath, pam, xxi, w, chi0, chi1,
+                                   chi2, a_lb, dab_grid, daf_grid, dab_g_grid, daf_g_grid,
+                                   dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
+                                   d, d_g, s, s_g, r_a, aggZ,
+                                   a, a_g, b, b_g, y)
+    I, J, N  = size(d)
+    I_g, J_g = size(d_g)
+
     # Compute drifts for HJB
-    perm_const      = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
-    norm_perm_inter = norm.(a_grid .* (r_a .+ perm_const) .+ xxi * w .* y_grid)
-    norm_d          = norm.(d)
+    perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
 
-    # Compute drifts for KFE -- RECA: is it possible that below is incorrect?
-    audrift_prod = d_g .+ a_g_grid .* (r_a .+ ddeath*pam) .+ xxi * w .* y_g_grid .-
-        (permanent == 1 ? aggZ * a_g_grid : 0.0)
-    budrift_prod = s_g - d_g - adj_cost_fn.(d_g, a_g_grid, chi0, chi1, chi2, a_lb) .-
-        (permanent == 1 ? aggZ * b_g_grid : 0.0)
+    chi, zeta = similar(d), similar(d)
+    X, Z      = similar(d), similar(d)
+    for i=1:I, j=1:J, n=1:N
+        α = a[j] * (r_a + perm_const) + (xxi * w * real(y[1,n]))
 
-    # Transition_deriva_a
-    chi         = -(min.(norm_d, 0) .+ min.(norm_perm_inter, 0)) ./ dab_grid
-    chi[:,1,:] .= 0.0
+        chi[i,j,n]  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / dab_grid[i,j,n]
+        zeta[i,j,n] = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / daf_grid[i,j,n]
 
-    zeta         = (max.(norm_d, 0) .+ max.(norm_perm_inter, 0)) ./ daf_grid
-    zeta[:,J,:] .= 0.0
-
+        X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
+                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                              min(s[i,j,n], 0)) / dbb_grid[i,j,n]
+        Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
+                                 adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                             max(s[i,j,n], 0)) / dbf_grid[i,j,n]
+    end
     yy = -(chi .+ zeta)
 
-    lowdiag  = reshape(chi, I*J, N)
-    lowdiag  = circshift(lowdiag, -I)
-    updiag   = reshape(zeta, I*J, N)
-    updiag   = circshift(updiag, I)
+    chi  = reshape(chi, I*J, N)
+    chi  = circshift(chi, -I)
+    zeta = reshape(zeta, I*J, N)
+    zeta = circshift(zeta, I)
 
-    aa = spdiagm(0 => vec(yy), I => vec(updiag)[I+1:end], -I => vec(lowdiag)[1:end-I])
-
-    chiu         = -min.(audrift_prod, 0) ./ dab_g_grid
-    chiu[:,1,:] .= 0.0
-
-    zetau           = max.(audrift_prod, 0) ./ daf_g_grid
-    zetau[:,J_g,:] .= 0.0
-
-    yyu = -(chiu .+ zetau)
-
-    chiu  = reshape(chiu,I_g*J_g,N)
-    chiu  = circshift(chiu,-I_g)
-    zetau   = reshape(zetau,I_g*J_g,N)
-    zetau   = circshift(zetau,I_g)
-
-    aau = spdiagm(0 => vec(yyu), I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g])
-
-    # Transition_deriva b
-    X = -(min.(-d - adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ min.(s,0)) ./ dbb_grid
-    X[1,:,:] .= 0.0
-    Z = (max.(-d - adj_cost_fn.(d, a_grid, chi0, chi1, chi2, a_lb), 0) .+ max.(s,0)) ./ dbf_grid
-    Z[I,:,:] .= 0.0
+    aa = spdiagm(0 => vec(yy), I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I])
 
     Y = -(X .+ Z)
 
@@ -702,20 +684,40 @@ end
 
     bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
 
-    Xu = -min.(budrift_prod, 0) ./ dbb_g_grid
-    Xu[1,:,:] .= 0.0
+    chiu, zetau = similar(d_g), similar(d_g)
+    Xu, Zu      = similar(d_g), similar(d_g)
+    for i=1:I_g, j=1:J_g, n=1:N
 
-    Zu = max.(budrift_prod, 0) ./ dbf_g_grid
-    Zu[I_g,:,:] .= 0.0
+        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
+        audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[1,n] -
+            (permanent == 1 ? aggZ * a_g[j] : 0.0)
+
+        budrift = s_g[i,j,n] - d_g[i,j,n] -
+            adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb) -
+            (permanent == 1 ? aggZ * b_g[i] : 0.0)
+
+        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / dab_g_grid[i,j,n]
+        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / daf_g_grid[i,j,n]
+
+        Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / dbb_g_grid[i,j,n]
+        Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / dbf_g_grid[i,j,n]
+    end
+
+    yyu   = -(chiu .+ zetau)
+    chiu  = reshape(chiu,I_g*J_g,N)
+    chiu  = circshift(chiu,-I_g)
+    zetau = reshape(zetau,I_g*J_g,N)
+    zetau = circshift(zetau,I_g)
+
+    aau = spdiagm(0 => vec(yyu), I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g])
 
     Yu = -(Xu .+ Zu)
+    Xu = reshape(Xu, I_g*J_g, N)
+    Xu = circshift(Xu, -1)
+    Zu = reshape(Zu, I_g*J_g, N)
+    Zu = circshift(Zu, 1)
 
-    lowdiagu  = reshape(Xu, I_g*J_g, N)
-    lowdiagu  = circshift(lowdiagu, -1)
-    updiagu   = reshape(Zu, I_g*J_g, N)
-    updiagu   = circshift(updiagu, 1)
-
-    bbu = spdiagm(0 => vec(Yu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
+    bbu = spdiagm(0 => vec(Yu), 1 => vec(Zu)[2:end], -1 => vec(Xu)[1:end-1])
 
     return aa, bb, aau, bbu
 end
