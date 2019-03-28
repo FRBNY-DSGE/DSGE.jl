@@ -2,21 +2,6 @@
 THE GUTS OF EQCOND.
 
 """
-#=
-@inline function eqcond_helper(V::Array{T,3}, I::S, J::S, I_g::S, J_g::S,
-                               N::S, chi0::T, chi1::T, chi2::T, a_lb::T,
-                               ggamma::T, permanent::Bool,
-                               interp_decision::SparseMatrixCSC{T, S},
-                               ddeath::T, pam::T, aggZ::T, xxi::T,
-                               tau_I::T, w::T, trans::T,
-                               y_grid::Array{Complex{T},3}, b_grid::Array{T,3},
-                               r_b_grid::Array{T,3}, alb_grid::Array{T,3},
-                               daf_grid::Array{T,3}, dab_grid::Array{T,3},
-                               dbf_grid::Array{T,3}, dbb_grid::Array{T,3},
-                               IcF::BitArray{3}, IcB::BitArray{3}, Ic0::Array{S,3},
-                               IcFB::BitArray{3}, IcBF::BitArray{3}, IcBB::BitArray{3},
-                               Ic00::BitArray{3}) where {S<:Int64, T<:Float64}
-=#
 @inline function eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
                                a_lb, ggamma, permanent, interp_decision,
                                ddeath, pam, aggZ, xxi, tau_I, w, trans,
@@ -29,70 +14,49 @@ THE GUTS OF EQCOND.
     #----------------------------------------------------------------
     I, J, N = size(V)
 
-    # ---- Liquid ----
-    VaF   = similar(V)
-    VaB   = similar(V)
     Vamin = 0.0
-    Va_dif = V[:,2:J,:] - V[:,1:J-1,:]
-
-    # Forward difference
-    VaF[:,1:J-1,:] = max.((Va_dif) ./ daf_grid[:,1:J-1,:], Vamin)
-    VaF[:,J,:]    .= 0.0
-
-    # Backward difference
-    VaB[:,2:J,:] = max.((Va_dif) ./ dab_grid[:,2:J,:], Vamin)
-    VaB[:,1,:]  .= 0.0
-
-    # ---- Illiquid ----
-    VbF   = similar(V)
-    VbB   = similar(V)
     Vbmin = 1e-8
-    Vb_dif = V[2:I,:,:] - V[1:I-1,:,:]
 
-    # Forward difference
-    VbF[1:I-1,:,:] = max.((Vb_dif) ./ dbf_grid[1:I-1,:,:], Vbmin)
-    VbF[I,:,:]    .= 0.0
+    perm_c = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
+    c0_c   = ((1-xxi) - tau_I) * w
 
-    # Backward difference
-    VbB[2:I,:,:] = max.((Vb_dif) ./ dbb_grid[2:I,:,:], Vbmin)
-    VbB[1,:,:]  .= 0.0
-
-    #----------------------------------------------------------------
-    # Consumption decision
-    #----------------------------------------------------------------
-    perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
-    c0_c = ((1-xxi) - tau_I) * w
-
-    # Optimal consumption and liquid savings
-    c, s = similar(V), similar(V)
+    c, s, d = similar(V), similar(V), similar(V)
     for i=1:I, j=1:J, n=1:N
-        c0 = c0_c * real(y[1,n]) + b[i] * (r_b_vec[i] + perm_const) + trans
+
+        c0 = c0_c * real(y[1,n]) + b[i] * (r_b_vec[i] + perm_c) + trans
+
+        # ---- Liquid Assets, Forward + Backward Difference ----
+        VaF = (j==J) ? 0.0 : max((V[i,j+1,n] - V[i,j,n]) / daf_grid[i,j,n], Vamin)
+        VaB = (j==1) ? 0.0 : max((V[i,j,n] - V[i,j-1,n]) / dab_grid[i,j,n], Vamin)
+
+        # ---- Illiquid Assets, Forward + Backward Difference ----
+        VbF = (i==I) ? 0.0 : max((V[i+1,j,n] - V[i,j,n]) / dbf_grid[i,j,n], Vbmin)
+        VbB = (i==1) ? 0.0 : max((V[i,j,n] - V[i-1,j,n]) / dbb_grid[i,j,n], Vbmin)
 
         # Decisions conditional on a particular direction of derivative
-        cF = (i==I) ? 0.0 : VbF[i,j,n] ^ (-1 / ggamma)
-        cB = (i==1) ? c0  : VbB[i,j,n] ^ (-1 / ggamma)
+        cF = (i==I) ? 0.0 : VbF ^ (-1 / ggamma)
+        cB = (i==1) ? c0  : VbB ^ (-1 / ggamma)
 
         sF = (i==I) ? 0.0 : c0 - cF
         sB = (i==1) ? 0.0 : c0 - cB
 
+        #----------------------------------------------------------------
+        # Consumption  & Savings Decision
+        #----------------------------------------------------------------
         c[i,j,n] = IcF[i,j,n] * cF + IcB[i,j,n] * cB + Ic0[i,j,n] * c0
         s[i,j,n] = IcF[i,j,n] * sF + IcB[i,j,n] * sB
-    end
-    u = u_fn.(c, ggamma)
 
-    #----------------------------------------------------------------
-    # Deposit decision
-    #----------------------------------------------------------------
-    d = similar(V)
-    for i=1:I, j=1:J, n=1:N
+        #----------------------------------------------------------------
+        # Deposit Decision
+        #----------------------------------------------------------------
         dFB = (i == 1 || j == J) ? 0.0 :
-            opt_deposits(VaF[i,j,n], VbB[i,j,n], alb_vec[j], chi0, chi1, chi2)
+            opt_deposits(VaF, VbB, alb_vec[j], chi0, chi1, chi2)
 
         dBF = (i == I || j == 1) ? 0.0 :
-            opt_deposits(VaB[i,j,n], VbF[i,j,n], alb_vec[j], chi0, chi1, chi2)
+            opt_deposits(VaB, VbF, alb_vec[j], chi0, chi1, chi2)
 
         dBB = (j == 1) ? 0.0 :
-            opt_deposits(VaB[i,j,n], VbB[i,j,n], alb_vec[j], chi0, chi1, chi2)
+            opt_deposits(VaB, VbB, alb_vec[j], chi0, chi1, chi2)
 
         d[i,j,n] = IcFB[i,j,n] * dFB + IcBF[i,j,n] * dBF + dBB * IcBB[i,j,n]
     end
@@ -102,7 +66,7 @@ THE GUTS OF EQCOND.
     s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
     c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
 
-    return c, s, u, d, d_g, s_g, c_g
+    return c, s, d, c_g, s_g, d_g
 end
 
 """

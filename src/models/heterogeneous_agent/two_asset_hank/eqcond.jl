@@ -134,6 +134,12 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
     alb_vec = max.(a, a_lb)
 
+#    a_gg = repeat(a_g, inner=I_g)
+#    b_gg = repeat(b_g, outer=J_g)
+
+#    @assert vec(a_g_grid) == repeat(repeat(a_g, inner=I_g), outer=N)
+#    @assert vec(b_g_grid) == repeat(repeat(b_g, outer=J_g), outer=N)
+
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # ------- Unpack variables -------
         V   = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
@@ -184,13 +190,13 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
         # ripped out
         @show "eqcond_helper"
-        @time c, s, u, d, d_g, s_g, c_g = eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
-                                                        a_lb, ggamma, permanent, interp_decision,
-                                                        ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                                        r_b_vec, alb_vec,
-                                                        daf_grid, dab_grid, dbf_grid, dbb_grid,
-                                                        IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                                                        y, b)
+        @time c, s, d, c_g, s_g, d_g = eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
+                                                     a_lb, ggamma, permanent, interp_decision,
+                                                     ddeath, pam, aggZ, xxi, tau_I, w, trans,
+                                                     r_b_vec, alb_vec,
+                                                     daf_grid, dab_grid, dbf_grid, dbb_grid,
+                                                     IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
+                                                     y, b)
         # Derive transition matrices
         @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
@@ -219,7 +225,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # HJB equation
         perm_mult = (permanent == 0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
 
-        hjbResidual = vec(u) + A * vec(V) + V_Dot + VEErrors - perm_mult * reshape(V,I*J*N,1)
+        hjbResidual = vec(u_fn.(c, ggamma)) + A * vec(V) + V_Dot + VEErrors - perm_mult *
+            reshape(V, I*J*N,1)
 
         # KFE
         gResidual = g_Dot - gIntermediate[1:n_g, 1]
@@ -256,9 +263,9 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
             C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
                 sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
-            earn = log((1-tau_I) * w * l_g_grid .* y_g_grid + b_g_grid .*
+            earn = log((1-tau_I) * w * y_g_grid + b_g_grid .*
                        (r_b_g_grid + ddeath*pam) + trans_grid + a_g_grid .*
-                       (r_a_g_grid + ddeath*pam))
+                       (r_a + ddeath*pam))
             earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
                 sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
         elseif distributional_variables_1 == 1
