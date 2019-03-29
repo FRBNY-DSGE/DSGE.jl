@@ -186,7 +186,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         y_shock      = y .* exp.(kappa * aggZ * (y .- y_mean) ./ std(y))
         y_shock_mean = dot(y_shock, y_dist)
         y_shock      = y_shock ./ y_shock_mean .* y_mean
-        y_grid       = permutedims(repeat(y_shock', 1, I, J), [2 3 1])
+        #y_grid       = permutedims(repeat(y_shock', 1, I, J), [2 3 1])
 
         # ripped out
         @show "eqcond_helper"
@@ -196,7 +196,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                      r_b_vec, alb_vec,
                                                      daf_grid, dab_grid, dbf_grid, dbb_grid,
                                                      IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                                                     y, b)
+                                                     y_shock, b)
         # Derive transition matrices
         @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
@@ -204,7 +204,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
                                                    dab_grid, daf_grid, dab_g_grid, daf_g_grid,
                                                    dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
                                                    d, d_g, s, s_g, r_a, aggZ,
-                                                   a, a_g, b, b_g, y)
+                                                   a, a_g, b, b_g, y_shock)
 
         # full transition matrix
         A = aa + bb + cc
@@ -320,10 +320,10 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     end
 
     out = get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
-    #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_factoring.jld2", true, true, true, IOStream) do file
+    #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_update_y.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_factoring.jld2", "residuals")
+    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_update_y.jld2", "residuals")
     @assert test_out == out
 
     @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
