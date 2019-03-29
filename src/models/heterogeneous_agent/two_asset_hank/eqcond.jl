@@ -323,7 +323,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_update_y.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_update_y.jld2", "residuals")
+    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_y_shock.jld2", "residuals")
     @assert test_out == out
 
     @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
