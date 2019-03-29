@@ -2,13 +2,15 @@
 THE GUTS OF EQCOND.
 
 """
-@inline function eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
-                               a_lb, ggamma, permanent, interp_decision,
-                               ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                               r_b_vec, alb_vec,
-                               daf_grid, dab_grid, dbf_grid, dbb_grid,
-                               IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                               y, b)
+@inline function eqcond_helper(V::Array{S}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
+                               a_lb::R, ggamma::R, permanent::Bool,
+                               interp_decision::SparseMatrixCSC{R,T},
+                               ddeath::R, pam::R, aggZ::R, xxi::R, tau_I::R, w::R, trans::R,
+                               r_b_vec::Vector{R},
+                               IcF::BitArray{3}, IcB::BitArray{3}, Ic0,
+                               IcFB::BitArray{3}, IcBF::BitArray{3}, IcBB::BitArray{3},
+                               Ic00::BitArray{3}, y::Matrix{U}, a::Vector{R},
+                               b::Vector{R}) where {R<:AbstractFloat, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -17,7 +19,7 @@ THE GUTS OF EQCOND.
     Vamin = 0.0
     Vbmin = 1e-8
 
-    perm_c = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
+    perm_c = permanent ? ddeath * pam - aggZ : ddeath * pam
     c0_c   = ((1-xxi) - tau_I) * w
 
     c, s, d = similar(V), similar(V), similar(V)
@@ -26,12 +28,12 @@ THE GUTS OF EQCOND.
         c0 = c0_c * real(y[1,n]) + b[i] * (r_b_vec[i] + perm_c) + trans
 
         # ---- Liquid Assets, Forward + Backward Difference ----
-        VaF = (j==J) ? 0.0 : max((V[i,j+1,n] - V[i,j,n]) / daf_grid[i,j,n], Vamin)
-        VaB = (j==1) ? 0.0 : max((V[i,j,n] - V[i,j-1,n]) / dab_grid[i,j,n], Vamin)
+        VaF = (j==J) ? 0.0 : max((V[i,j+1,n] - V[i,j,n]) / (a[j+1]-a[j]), Vamin)
+        VaB = (j==1) ? 0.0 : max((V[i,j,n] - V[i,j-1,n]) / (a[j]-a[j-1]), Vamin)
 
         # ---- Illiquid Assets, Forward + Backward Difference ----
-        VbF = (i==I) ? 0.0 : max((V[i+1,j,n] - V[i,j,n]) / dbf_grid[i,j,n], Vbmin)
-        VbB = (i==1) ? 0.0 : max((V[i,j,n] - V[i-1,j,n]) / dbb_grid[i,j,n], Vbmin)
+        VbF = (i==I) ? 0.0 : max((V[i+1,j,n] - V[i,j,n]) / (b[i+1]-b[i]), Vbmin)
+        VbB = (i==1) ? 0.0 : max((V[i,j,n] - V[i-1,j,n]) / (b[i]-b[i-1]), Vbmin)
 
         # Decisions conditional on a particular direction of derivative
         cF = (i==I) ? 0.0 : VbF ^ (-1 / ggamma)
@@ -50,13 +52,13 @@ THE GUTS OF EQCOND.
         # Deposit Decision
         #----------------------------------------------------------------
         dFB = (i == 1 || j == J) ? 0.0 :
-            opt_deposits(VaF, VbB, alb_vec[j], chi0, chi1, chi2)
+            opt_deposits(VaF, VbB, max(a[j], a_lb), chi0, chi1, chi2)
 
         dBF = (i == I || j == 1) ? 0.0 :
-            opt_deposits(VaB, VbF, alb_vec[j], chi0, chi1, chi2)
+            opt_deposits(VaB, VbF, max(a[j], a_lb), chi0, chi1, chi2)
 
         dBB = (j == 1) ? 0.0 :
-            opt_deposits(VaB, VbB, alb_vec[j], chi0, chi1, chi2)
+            opt_deposits(VaB, VbB, max(a[j], a_lb), chi0, chi1, chi2)
 
         d[i,j,n] = IcFB[i,j,n] * dFB + IcBF[i,j,n] * dBF + dBB * IcBB[i,j,n]
     end
@@ -450,6 +452,79 @@ end
     return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid
 end
 
+"""
+```
+@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
+```
+Instantiates necessary difference vectors.
+"""
+@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
+    I, J = length(b), length(a)
+    I_g, J_g = length(b_g), length(a_g)
+
+    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
+    r_b_g_vec = r_b .* (b_g .>= 0) + r_b_borr .* (b_g .< 0)
+
+    dbf = similar(b)
+    dbf[1:I-1] = b[2:I] - b[1:I-1]
+    dbf[I]     = dbf[I-1]
+
+    dbb = similar(b)
+    dbb[2:I] = b[2:I] - b[1:I-1]
+    dbb[1]   = dbb[2]
+
+    daf = similar(a)
+    daf[1:J-1] = a[2:J] - a[1:J-1]
+    daf[J]     = daf[J-1]
+
+    dab = similar(a)
+    dab[2:J] = a[2:J] - a[1:J-1]
+    dab[1]   = dab[2]
+
+    db_tilde = 0.5*(dbb + dbf)
+    db_tilde[1] = 0.5*(dbf[1])
+    db_tilde[end] = 0.5*(dbb[end])
+
+    da_tilde = 0.5*(dab + daf)
+    da_tilde[1] = 0.5*(daf[1])
+    da_tilde[end] = 0.5*(dab[end])
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
+    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
+
+    dbf_g = similar(b_g)
+    dbf_g[1:I_g-1] = b_g[2:I_g] - b_g[1:I_g-1]
+    dbf_g[I_g] = dbf_g[I_g-1]
+
+    dbb_g = similar(b_g)
+    dbb_g[2:I_g] = b_g[2:I_g] - b_g[1:I_g-1]
+    dbb_g[1] = dbb_g[2]
+
+    daf_g = similar(a_g)
+    daf_g[1:J_g-1] = a_g[2:J_g] - a_g[1:J_g-1]
+    daf_g[J_g] = daf_g[J_g-1]
+
+    dab_g = similar(a_g)
+    dab_g[2:J_g] = a_g[2:J_g] - a_g[1:J_g-1]
+    dab_g[1] = dab_g[2]
+
+    db_g_tilde       = 0.5*(dbb_g + dbf_g)
+    db_g_tilde[1]    = 0.5*dbf_g[1]
+    db_g_tilde[end]  = 0.5*dbb_g[end]
+
+    da_g_tilde       = 0.5*(dab_g + daf_g)
+    da_g_tilde[1]    = 0.5*daf_g[1]
+    da_g_tilde[end]  = 0.5*dab_g[end]
+
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
+    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
+
+    return r_b_vec,r_b_g_vec, daf, daf_g, dab, dab_g, dab_tilde, dab_g_tilde, dbf, dbf_g, dbb, dbb_g, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
+end
+
+
 @inline function transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
                             l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid, daf_grid,
                             dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
@@ -604,31 +679,45 @@ end
     return aa, bb, aau, bbu
 end
 
-@inline function transition_deriva(permanent, ddeath, pam, xxi, w, chi0, chi1,
-                                   chi2, a_lb, dab_grid, daf_grid, dab_g_grid, daf_g_grid,
-                                   dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
-                                   d, d_g, s, s_g, r_a, aggZ,
-                                   a, a_g, b, b_g, y)
+@inline function transition_deriva(permanent::Bool, ddeath::R, pam::R, xxi::R, w::R,
+                                   chi0::R, chi1::R, chi2::R, a_lb::R,
+                                   d, d_g, s, s_g, r_a, aggZ::R,
+                                   a, a_g, b, b_g, y) where {R<:AbstractFloat}
     I, J, N  = size(d)
     I_g, J_g = size(d_g)
 
     # Compute drifts for HJB
-    perm_const = (permanent == 1) ? ddeath * pam - aggZ : ddeath * pam
+    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
 
     chi, zeta = similar(d), similar(d)
     X, Z      = similar(d), similar(d)
+
+    aa2 = spzeros(I*J*N, I*J*N)
+    chi2 = Vector{Float64}(undef, I*J*N)
+
+    f_ind(x,J) = x % J + 1
+    ind_dict = Dict(f_ind.(1:J,J) .=> 1:J)
+
     for i=1:I, j=1:J, n=1:N
         α = a[j] * (r_a + perm_const) + (xxi * w * real(y[1,n]))
 
-        chi[i,j,n]  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / dab_grid[i,j,n]
-        zeta[i,j,n] = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / daf_grid[i,j,n]
+        chi[i,j,n]  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta[i,j,n] = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
 
         X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
                                   adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
-                              min(s[i,j,n], 0)) / dbb_grid[i,j,n]
+                              min(s[i,j,n], 0)) / (b[i] - b[i-1])
         Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
-                             max(s[i,j,n], 0)) / dbf_grid[i,j,n]
+                             max(s[i,j,n], 0)) / (b[i+1] - b[i])
+
+        ind = (I*J)*(n-1) + I*(j-1) + i
+        aa2[ind,   ind] = -(chi[i,j,n] + zeta[i,j,n])
+        #aa2[ind, ind+I] =
+        #aa2[ind+I, ind]
+
+        #NONSENSE = j % J + 1
+        chi2[I*J*(n-1) + I*(ind_dict[j]-1) + i] = chi[i,j,n]
     end
     yy = -(chi .+ zeta)
 
@@ -637,7 +726,13 @@ end
     zeta = reshape(zeta, I*J, N)
     zeta = circshift(zeta, I)
 
+    @assert chi2 == vec(chi)
+@show "passes assert"
     aa = spdiagm(0 => vec(yy), I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I])
+
+    for i=1:I, j=1:J, n=1:N
+    @assert aa2[(I*J)*(n-1) + I*(j-1) + i, (I*J)*(n-1) + I*(j-1) + i] == aa[(I*J)*(n-1) + I*(j-1) + i, (I*J)*(n-1) + I*(j-1) + i]
+    end
 
     Y = -(X .+ Z)
 
@@ -654,17 +749,17 @@ end
 
         # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
         audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[1,n] -
-            (permanent == 1 ? aggZ * a_g[j] : 0.0)
+            (permanent ? aggZ * a_g[j] : 0.0)
 
         budrift = s_g[i,j,n] - d_g[i,j,n] -
             adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb) -
-            (permanent == 1 ? aggZ * b_g[i] : 0.0)
+            (permanent ? aggZ * b_g[i] : 0.0)
 
-        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / dab_g_grid[i,j,n]
-        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / daf_g_grid[i,j,n]
+        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
 
-        Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / dbb_g_grid[i,j,n]
-        Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / dbf_g_grid[i,j,n]
+        Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
     end
 
     yyu   = -(chiu .+ zetau)

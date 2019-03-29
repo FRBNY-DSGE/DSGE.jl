@@ -76,6 +76,8 @@ function eqcond(m::TwoAssetHANK)
 
 a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid = set_grids(a, b, a_g, b_g, y, I, J, I_g, J_g, N, w2, r_a2, r_b, r_b_borr, trans)
 
+    r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat = set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
+
     n_v = get_setting(m, :n_v)
     n_g = get_setting(m, :n_g)
     n_p = get_setting(m, :n_p)
@@ -111,7 +113,6 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     IcBB = IcBB_SS
     Ic00 = Ic00_SS
 
-    l_grid       = permutedims(repeat(ones(N,1),1,I,J), [2 3 1])
     loc = findall(b .== 0)
     dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
     dab_g_small = reshape(dab_g[:,:,1], I_g * J_g, 1)
@@ -185,7 +186,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # Other necessary objects
         y_shock      = y .* exp.(kappa * aggZ * (y .- y_mean) ./ std(y))
         y_shock_mean = dot(y_shock, y_dist)
-        y_shock      = y_shock ./ y_shock_mean .* y_mean
+        y_shock      = real(y_shock ./ y_shock_mean .* y_mean)
         #y_grid       = permutedims(repeat(y_shock', 1, I, J), [2 3 1])
 
         # ripped out
@@ -193,21 +194,20 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         @time c, s, d, c_g, s_g, d_g = eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
                                                      a_lb, ggamma, permanent, interp_decision,
                                                      ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                                     r_b_vec, alb_vec,
-                                                     daf_grid, dab_grid, dbf_grid, dbb_grid,
+                                                     r_b_vec,
                                                      IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                                                     y_shock, b)
+                                                     y_shock, a, b)
         # Derive transition matrices
         @show "transition_deriva"
         @time aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
                                                    xxi, w, chi0, chi1, chi2, a_lb,
-                                                   dab_grid, daf_grid, dab_g_grid, daf_g_grid,
-                                                   dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
                                                    d, d_g, s, s_g, r_a, aggZ,
                                                    a, a_g, b, b_g, y_shock)
 
         # full transition matrix
         A = aa + bb + cc
+
+        @show size(aa), size(bb), size(cc), size(aau), size(bbu)
 
         #----------------------------------------------------------------
         # KFE
@@ -223,7 +223,7 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
         # Compute equilibrium conditions
         #----------------------------------------------------------------
         # HJB equation
-        perm_mult = (permanent == 0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
+        perm_mult = !permanent ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
 
         hjbResidual = vec(u_fn.(c, ggamma)) + A * vec(V) + V_Dot + VEErrors - perm_mult *
             reshape(V, I*J*N,1)
@@ -236,11 +236,14 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
             K_out = sum((vec(a_g_grid) .+ vec(b_g_grid)) .* gg .* vec(dab_g))
         else
             K_out = sum(vec(a_g_grid) .* gg .* vec(dab_g))
+            #K_out = sum(broadcast(*, a_g, reshape(gg, I_g*J_g, N)) .* reshape(dab_g,I_g*J_g, N))
+            #@show K_out2 == K_out
         end
 
         K_Residual   = K_out - K
         r_b_out      = 0.0
         r_b_Residual = 0.0
+
         if r_b_fix      == 1
             r_b_out      = r_b_SS
             r_b_Residual = r_b_out - r_b
@@ -259,15 +262,19 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
             aggY_out = (K ^ aalpha) * (n_SS ^ (1 - aalpha))
             aggC_out = sum(vec(c_g) .* gg .* vec(dab_g))
+
         elseif distributional_variables == 1
 
             C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
                 sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
+
             earn = log((1-tau_I) * w * y_g_grid + b_g_grid .*
                        (r_b_g_grid + ddeath*pam) + trans_grid + a_g_grid .*
                        (r_a + ddeath*pam))
+
             earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
                 sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
+
         elseif distributional_variables_1 == 1
 
             WHTM_indicator      = zeros(I_g,J_g,N)
@@ -306,7 +313,6 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
 
         # Return equilibrium conditions
         #if aggregate_variables == 1
-
             return [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
                     C_Residual; aggZ_Residual]
         #elseif distributional_variables == 1
@@ -329,8 +335,8 @@ a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_
     @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
     error()
     x = zeros(Float64, 2 * nVars + nEErrors + 1)
-    cfg = ForwardDiff.JacobianConfig(get_residuals, x, ForwardDiff.Chunk{40}())
-    derivs = ForwardDiff.jacobian(get_residuals, x)
+    cfg = ForwardDiff.JacobianConfig(get_residuals, x, ForwardDiff.Chunk{1}())
+    derivs = ForwardDiff.jacobian(get_residuals, x, cfg)
 
     #####
     #nstates = n_states(m)

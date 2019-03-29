@@ -640,13 +640,13 @@ function steadystate!(m::TwoAssetHANK)
 
             # Decisions conditional on a particular direction of derivative
             cF[1:I-1,:,:]     = VbF[1:I-1,:,:] .^ (-1/ggamma)
-            cF[I,:,:]        .= 0.0 # = zeros(1,J,N)
+            cF[I,:,:]        .= 0.0
             sF[1:I-1,:,:]     = ((1-xxi)-tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
                 b_grid[1:I-1,:,:] .* (r_b_grid[1:I-1,:,:] .+ ddeath*pam) .+
                 trans_grid[1:I-1,:,:] .- cF[1:I-1,:,:]
-            sF[I,:,:]        .= 0.0 #zeros(1,J,N)
+            sF[I,:,:]        .= 0.0
             HcF[1:I-1,:,:]    = u_fn(cF[1:I-1,:,:],ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
-            HcF[I,:,:]       .= -1e12 #*ones(1,J,N)
+            HcF[I,:,:]       .= -1e12
             validF            = (sF .> 0)
 
             cB[2:I,:,:]       = VbB[2:I,:,:].^(-1/ggamma)
@@ -655,13 +655,13 @@ function steadystate!(m::TwoAssetHANK)
             sB[2:I,:,:]       = ((1-xxi)-tau_I) * w * l_grid[2:I,:,:] .* y_grid[2:I,:,:] .+
                 b_grid[2:I,:,:] .* (r_b_grid[2:I,:,:] .+ ddeath*pam) .+ trans_grid[2:I,:,:] .-
                 cB[2:I,:,:]
-            sB[1,:,:]        .= 0.0 #zeros(1,J,N)
+            sB[1,:,:]        .= 0.0
             HcB[:,:,:]        = u_fn(cB, ggamma) .+ VbB .* sB
             validB            = (sB .< 0)
 
             c0[:,:,:]         = ((1-xxi)-tau_I) * w * l_grid[:,:,:] .* y_grid[:,:,:] .+
                 b_grid[:,:,:] .* (r_b_grid[:,:,:] .+ ddeath*pam) .+ trans_grid[:,:,:]
-            s0[:,:,:]        .= 0.0 #zeros(I,J,N)
+            s0[:,:,:]        .= 0.0
             Hc0[:,:,:]        = u_fn(c0,ggamma)
 
             # Which direction to use
@@ -690,35 +690,35 @@ function steadystate!(m::TwoAssetHANK)
             # Decisions conditional on a particular direction of derivative
             dFB[2:I,1:J-1,:] = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
                                             a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
-            dFB[:,J,:]      .= 0.0 #zeros(I,1,N)
-            dFB[1,1:J-1,:]  .= 0.0 #zeros(1,J-1,N)
+            dFB[:,J,:]      .= 0.0
+            dFB[1,1:J-1,:]  .= 0.0
 
             HdFB[2:I,1:J-1,:]     = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
                 (dFB[2:I,1:J-1,:] +
                  adj_cost_fn(dFB[2:I,1:J-1,:], a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb))
-            HdFB[:,J,:]         .= -1.0e12 #* ones(I,1,N)
-            HdFB[1,1:J-1,:]     .= -1.0e12 #* ones(1,J-1,N)
+            HdFB[:,J,:]         .= -1.0e12
+            HdFB[1,1:J-1,:]     .= -1.0e12
             validFB             = (dFB .> 0) .* (HdFB .> 0)
 
             dBF[1:I-1,2:J,:] = opt_deposits(VaB[1:I-1,2:J,:],VbF[1:I-1,2:J,:],
                                             a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
-            dBF[:,1,:]    .= 0.0 #zeros(I,1,N)
-            dBF[I,2:J,:]  .= 0.0 #zeros(1,J-1,N)
+            dBF[:,1,:]    .= 0.0
+            dBF[I,2:J,:]  .= 0.0
 
             HdBF[1:I-1,2:J,:]  = VaB[1:I-1,2:J,:] .* dBF[1:I-1,2:J,:] - VbF[1:I-1,2:J,:] .*
                 (dBF[1:I-1,2:J,:] +
                  adj_cost_fn(dBF[1:I-1,2:J,:], a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb))
-            HdBF[:,1,:]   .= -1.0e12 #* ones(I,1,N)
-            HdBF[I,2:J,:] .= -1.0e12 #* ones(1,J-1,N)
+            HdBF[:,1,:]   .= -1.0e12
+            HdBF[I,2:J,:] .= -1.0e12
             validBF = (dBF .<= -adj_cost_fn(dBF, a_grid, chi0, chi1, chi2, a_lb)) .* (HdBF .> 0)
 
             VbB[1,2:J,:] = u_fn(cB[1,2:J,:],ggamma)
             dBB[:,2:J,:] = opt_deposits(VaB[:,2:J,:],VbB[:,2:J,:],a_grid[:,2:J,:],
                                        chi0, chi1, chi2, a_lb)
-            dBB[:,1,:]    .= 0.0 #zeros(I,1,N)
+            dBB[:,1,:]    .= 0.0
             HdBB[:,2:J,:]  = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
                 (dBB[:,2:J,:] + adj_cost_fn(dBB[:,2:J,:],a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
-            HdBB[:,1,:]   .= -1.0e12 #* ones(I,1,N)
+            HdBB[:,1,:]   .= -1.0e12
             validBB        = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
                 (dBB .<= 0) .* (HdBB .> 0)
 
@@ -729,7 +729,7 @@ function steadystate!(m::TwoAssetHANK)
             Ic00 = (.!validFB) .* (.!validBF) .* (.!validBB)
 
             # Optimal deposits
-            d = IcFB .* dFB + IcBF .* dBF + IcBB .* dBB #+ Ic00 .* zeros(I,J,N)
+            d = IcFB .* dFB + IcBF .* dBF + IcBB .* dBB
 
             #------------------------------------------------------------
             # Construct "A" matrix multiplying value function
