@@ -241,7 +241,7 @@ function RealBondMkup(subspec::String="ss0";
     init_model_indices!(m)
 
     # # Initialize subspecs
-    # init_subspec!(m)
+    init_subspec!(m)
 
     # Solve for the steady state
     steadystate!(m)
