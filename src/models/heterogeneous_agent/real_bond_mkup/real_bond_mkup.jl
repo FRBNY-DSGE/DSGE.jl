@@ -93,6 +93,7 @@ mutable struct RealBondMkup{T} <: AbstractModel{T}
     exogenous_shocks::OrderedDict{Symbol,Int}              #
     expected_shocks::OrderedDict{Symbol,Int}               #
     equilibrium_conditions::OrderedDict{Symbol,UnitRange}  #
+    model_states_augmented::OrderedDict{Symbol, Int}
     observables::OrderedDict{Symbol,Int}                   #
 
     spec::String                                           # Model specification number (eg "m990")
@@ -134,6 +135,8 @@ function init_model_indices!(m::RealBondMkup)
         :eq_euler, :eq_kolmogorov_fwd, :eq_market_clearing, :eq_TFP,
         :eq_phillips, :eq_taylor, :eq_fisher, :eq_transfers, :eq_monetary_policy,
         :eq_markup, :eq_lagged_nominal_rate])
+
+    model_states_augmented = [:y_t1]
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -179,6 +182,7 @@ function init_model_indices!(m::RealBondMkup)
     m.jump_variables = m.endogenous_states.keys[get_setting(m, :jump_indices)]
 
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
+    for (i,k) in enumerate(model_states_augmented); m.model_states_augmented[k]   = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
@@ -207,7 +211,7 @@ function RealBondMkup(subspec::String="ss0";
             # endogenous states unnormalized, endogenous states normalized
             OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
-            OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,Int}(),
+            OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol, Int}(),
 
             spec,
             subspec,
@@ -268,28 +272,28 @@ function init_parameters!(m::RealBondMkup)
                    description = "Inverse Frisch elasticity of labor supply.", tex_label = "\\nu")
     m <= parameter(:abar, -0.5, fixed = true,
                    description = "Borrowing floor.", tex_label = "\\bar{a}")
-    m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed = true,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
-    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed = false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
-    m <= parameter(:ρ_mon, 0., fixed = true, description = "ρ_mon: Persistence of monetary policy shock")
-    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=true,
+    m <= parameter(:ρ_mon, 0., fixed = true, description = "ρ_mon: Persistence of monetary policy shock", tex_label = "\\rho_{mon}")
+    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed = false,
                    description="σ_mon: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{mon}")
-    m <= parameter(:ρ_mkp, 0., (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed = false, tex_label = "\\rho_{mkp}", description = "ρ_mkp: Persistence of the markup shock")
+    m <= parameter(:ρ_mkp, 0.5, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                   fixed = true, tex_label = "\\rho_{mkp}", description = "ρ_mkp: Persistence of the markup shock")
 
     # Taken from m1002
-    m <= parameter(:σ_mkp, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_mkp, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed = false,
                    description="σ_mkp: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
     m <= parameter(:ρ_tay, 0.5, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed = false, tex_label = "rho_{tay}", description = "ρ_tay: Persistence in the taylor rule")
+                   fixed = true, tex_label = "rho_{tay}", description = "ρ_tay: Persistence in the taylor rule")
     m <= parameter(:κ, 1.0, (0., 0.999), (0., 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0),
-                   fixed = false, tex_label = "\\kappa",
+                   fixed = true, tex_label = "\\kappa",
                    description = "κ: The slope of the Phillips curve")
     m <= parameter(:phipi, 1.5, fixed = true, description = "phipi: The slope of the taylor rule")
     m <= parameter(:μ_s, 0., fixed = true, description = "μ_s: Mu of log normal in income")
