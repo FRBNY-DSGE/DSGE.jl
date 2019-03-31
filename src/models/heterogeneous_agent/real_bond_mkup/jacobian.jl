@@ -11,9 +11,9 @@ function jacobian(m::RealBondMkup)
     R::Float64     = m[:R].value
     ν::Float64     = m[:ν].value
     ρz::Float64    = m[:ρ_z].value
-    ρmon::Float64  = m[:ρmon].value
-    ρmkp::Float64  = m[:ρmkp].value
-    ρtay::Float64  = m[:ρtay].value
+    ρmon::Float64  = m[:ρ_mon].value
+    ρmkp::Float64  = m[:ρ_mkp].value
+    ρtay::Float64  = m[:ρ_tay].value
     κ::Float64     = m[:κ].value
     phipi::Float64 = m[:phipi].value
     aborrow::Float64 = abar/R
