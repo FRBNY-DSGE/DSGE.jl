@@ -43,9 +43,6 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
 """
 function augment_states{T<:AbstractFloat}(m::RealBondMkup, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
     endo     = m.endogenous_states
-    endo_unnorm = m.endogenous_states_unnormalized
-    endo_new = m.model_states_augmented
-    model_states_aug = m.model_states_augmented
     exo      = m.exogenous_shocks
 
     _n_model_states     = n_model_states(m)
@@ -54,24 +51,20 @@ function augment_states{T<:AbstractFloat}(m::RealBondMkup, TTT::Matrix{T}, RRR::
     _n_observables      = n_observables(m)
     _n_shocks_exogenous = n_shocks_exogenous(m)
 
-    n_exo  = n_shocks_exogenous(m)
     @assert (_n_model_states, _n_model_states) == size(TTT)
-    @assert (_n_model_states, n_exo)  == size(RRR)
+    @assert (_n_model_states, _n_shocks_exogenous)  == size(RRR)
     @assert (_n_model_states,)        == size(CCC)
 
     # Initialize augmented matrices
-    n_states_add = _n_states #length(model_states_aug)
+    n_states_add = _n_states
     TTT_aug = zeros(_n_model_states + n_states_add, _n_model_states + n_states_add)
     TTT_aug[1:_n_model_states, 1:_n_model_states] = TTT
-    RRR_aug = [RRR; zeros(n_states_add, n_exo)]
+    RRR_aug = [RRR; zeros(n_states_add, _n_shocks_exogenous)]
     CCC_aug = [CCC; zeros(n_states_add)]
 
     ### TTT modifications
 
     # Track Lags
-    @show endo
-    @show endo_new
-    @show _n_states
             # Aug[:y_t1]                      States[:y_t]
     TTT_aug[_n_model_states:size(TTT_aug, 1), 1:_n_states] = 1.0
 

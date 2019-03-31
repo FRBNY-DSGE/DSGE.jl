@@ -27,6 +27,7 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     obs         = m.observables
 
     _n_model_states = n_model_states(m)
+    _n_model_states_aug = 2*n_backward_looking_states(m) + n_jumps(m)
     _n_states       = n_backward_looking_states(m)
     _n_jumps        = n_jumps(m)
 
@@ -90,13 +91,14 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
 
     # GDP
     ZZ[obs[:obs_gdp], 1:_n_states]     = GDPeqn
-    ZZ[obs[:obs_gdp], _n_states+1:end] = zeros(_n_jumps)
+    ZZ[obs[:obs_gdp], _n_states+1:_n_states + _n_jumps] = zeros(_n_jumps)
+    ZZ[obs[:obs_gdp], _n_states + _n_jumps+ 1:end] = -GDPeqn
 
     # Inflation
     ZZ[obs[:obs_corepce], endo[:π′_t]] = 1.
 
     # Nominal FFR
-    ZZ[obs[:obs_nominalrate], endo[:i′_t]] = 1.
+    ZZ[obs[:obs_nominalrate], endo[:i′_t]] = 1./R
 
     # Measurement error
     EE[obs[:obs_gdp], obs[:obs_gdp]] = m[:e_y]
