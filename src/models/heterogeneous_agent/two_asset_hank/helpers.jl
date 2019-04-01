@@ -689,12 +689,13 @@ end
     # Compute drifts for HJB
     perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
 
-    X, Z = similar(d), similar(d)
+    #X, Z = similar(d), similar(d)
     aa   = spzeros(I*J*N, I*J*N)
+    bb   = spzeros(I*J*N, I*J*N)
 
     f_ind(x, my_J, n) = (x + (n-1)) % my_J + 1
-    chi_dict  = Dict(f_ind.(1:J, J, 1)   .=> 1:J)
-    zeta_dict = Dict(f_ind.(1:J, J, J-1) .=> 1:J)
+    #chi_dict  = Dict(f_ind.(1:J, J, 1)   .=> 1:J)
+    #zeta_dict = Dict(f_ind.(1:J, J, J-1) .=> 1:J)
 
     for i=1:I, j=1:J, n=1:N
         α = a[j] * (r_a + perm_const) + (xxi * w * real(y[1,n]))
@@ -703,23 +704,37 @@ end
         zeta = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
 
         ind      = (I*J)*(n-1) + I*(j-1) + i
-        chi_ind  = I*J*(n-1) + I*(chi_dict[j]-1) + i
-        zeta_ind = I*J*(n-1) + I*(zeta_dict[j]-1) + i
+        chi_ind  = I*J*(n-1) + I*(f_ind(j,J,J-1) - 1) + i#(chi_dict[j]-1) + i
+        zeta_ind = I*J*(n-1) + I*(f_ind(j,J,1) - 1) + i#(zeta_dict[j]-1) + i
 
         aa[ind, ind] = -(chi + zeta)
 
         if (chi_ind  <= I*J*N - I) aa[chi_ind  + I, chi_ind]  = chi  end
         if (zeta_ind >= I + 1)     aa[zeta_ind - I, zeta_ind] = zeta end
-
+        #=
         X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
                                   adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
                               min(s[i,j,n], 0)) / (b[i] - b[i-1])
         Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
                              max(s[i,j,n], 0)) / (b[i+1] - b[i])
+        =#
+        X = (i==1) ? 0.0 : -(min(-d[i,j,n] -
+                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                              min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z = (i==I) ? 0.0 : (max(-d[i,j,n] -
+                                 adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                             max(s[i,j,n], 0)) / (b[i+1] - b[i])
 
+        bb[ind, ind] = -(X + Z)
+
+        ind      = (I*J)*(n-1) + I*(j-1) + i
+        X_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,I*J-1)#I*(chi_dict[j]-1) + i
+        Z_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,1)#I*(zeta_dict[j]-1) + i
+        if (X_ind <= I*J*N - 1) bb[X_ind  + 1, X_ind] = X end
+        if (Z_ind >= 2)          bb[Z_ind - 1, Z_ind] = Z end
     end
-
+#=
     Y = -(X .+ Z)
 
     X  = reshape(X, I*J, N)
@@ -728,17 +743,11 @@ end
     Z  = circshift(Z, 1)
 
     bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
-
+    @assert bb == bb2
+=#
     aau = spzeros(I_g*J_g*N, I_g*J_g*N)
-    #chiu_dict  = Dict(f_ind.(1:J_g, J_g, 1)     .=> 1:J_g)
-    #zetau_dict = Dict(f_ind.(1:J_g, J_g, J_g-1) .=> 1:J_g)
-
     bbu = spzeros(I_g*J_g*N, I_g*J_g*N)
-    #Xu_dict = Dict(f_ind.(1:I_g*J_g, I_g*J_g, 1)           .=> 1:I_g*J_g)
-    #Zu_dict = Dict(f_ind.(1:I_g*J_g, I_g*J_g, I_g*J_g - 1) .=> 1:I_g*J_g)
-    #Xu_dict = f_ind.(1:I_g*J_g, I_g*J_g, I_g*J_g - 1)
-    #Zu_dict = f_ind.(1:I_g*J_g, I_g*J_g, 1)
-    #Xu, Zu      = similar(d_g), similar(d_g)
+
     for i=1:I_g, j=1:J_g, n=1:N
 
         # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
@@ -753,45 +762,24 @@ end
         zetau = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
 
         ind       = (I_g*J_g)*(n-1) + I_g*(j-1) + i
-        chiu_ind  = I_g*J_g*(n-1) + I_g *(f_ind(j,J_g,J_g-1)-1) + i# (chiu_dict[j]-1) + i
-        zetau_ind = I_g*J_g*(n-1) + I_g*(f_ind(j,J_g,1)-1) + i#(zetau_dict[j]-1) + i
+        chiu_ind  = I_g*J_g*(n-1) + I_g *(f_ind(j,J_g,J_g-1)-1) + i
+        zetau_ind = I_g*J_g*(n-1) + I_g*(f_ind(j,J_g,1)-1) + i
 
         aau[ind, ind] = -(chiu + zetau)
         if (chiu_ind  <= I_g*J_g*N - I_g) aau[chiu_ind  + I_g, chiu_ind]  = chiu  end
         if (zetau_ind >= I_g + 1)         aau[zetau_ind - I_g, zetau_ind] = zetau end
 
-        #=
-        Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
-        Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
-        =#
         Xu = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
         Zu = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
 
-        #Xu_ind = I_g*J_g*(n-1) + Xu_dict[I_g*(j-1) + i]
-        #Zu_ind = I_g*J_g*(n-1) + Zu_dict[I_g*(j-1) + i]
+        Xu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, I_g*J_g - 1)
+        Zu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, 1)
 
-        Xu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, I_g*J_g - 1)#Xu_dict[I_g*(j-1) + i]
-        Zu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, 1)#Zu_dict[I_g*(j-1) + i]
-
-        #Xu2[Xu_ind] = Xu[i,j,n]
-        #Zu2[Zu_ind] = Zu[i,j,n]
         bbu[ind, ind] = -(Xu + Zu)
-        if (Xu_ind <= I_g*J_g*N - 1) bbu[Xu_ind  + 1, Xu_ind]  = Xu  end
-        if (Zu_ind >= 2)             bbu[Zu_ind - 1, Zu_ind] = Zu end
+        if (Xu_ind <= I_g*J_g*N - 1) bbu[Xu_ind  + 1, Xu_ind] = Xu  end
+        if (Zu_ind >= 2)             bbu[Zu_ind - 1, Zu_ind]  = Zu end
 
     end
-#=
-    Yu = -(Xu .+ Zu)
-    Xu = reshape(Xu, I_g*J_g, N)
-    Xu = circshift(Xu, -1)
-    Zu = reshape(Zu, I_g*J_g, N)
-    Zu = circshift(Zu, 1)
-=#
-    #@assert Xu2 == vec(Xu)
-    #@assert Zu2 == vec(Zu)
-
-    #bbu = spdiagm(0 => vec(Yu), 1 => vec(Zu)[2:end], -1 => vec(Xu)[1:end-1])
-    #@assert bbu == bbu2
     return aa, bb, aau, bbu
 end
 
