@@ -749,7 +749,11 @@ end
 
     bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
 
-    chiu, zetau = similar(d_g), similar(d_g)
+    aau = spzeros(I_g*J_g*N, I_g*J_g*N)
+    chiu_dict  = Dict(f_ind.(1:J_g, J_g, 1)     .=> 1:J_g)
+    zetau_dict = Dict(f_ind.(1:J_g, J_g, J_g-1) .=> 1:J_g)
+
+    #chiu, zetau = similar(d_g), similar(d_g)
     Xu, Zu      = similar(d_g), similar(d_g)
     for i=1:I_g, j=1:J_g, n=1:N
 
@@ -760,14 +764,26 @@ end
         budrift = s_g[i,j,n] - d_g[i,j,n] -
             adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb) -
             (permanent ? aggZ * b_g[i] : 0.0)
-
+        #=
         chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
         zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
+        =#
+        chiu  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        zetau = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
+
+        ind       = (I_g*J_g)*(n-1) + I_g*(j-1) + i
+        chiu_ind  = I_g*J_g*(n-1) + I_g*(chiu_dict[j]-1) + i
+        zetau_ind = I_g*J_g*(n-1) + I_g*(zetau_dict[j]-1) + i
+
+        aau[ind,   ind] = -(chiu + zetau)
+
+        if (chiu_ind  <= I_g*J_g*N - I_g) aau[chiu_ind  + I_g, chiu_ind]  = chiu end
+        if (zetau_ind >= I_g + 1)         aau[zetau_ind - I_g, zetau_ind] = zetau end
 
         Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
         Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
     end
-
+    #=
     yyu   = -(chiu .+ zetau)
     chiu  = reshape(chiu,I_g*J_g,N)
     chiu  = circshift(chiu,-I_g)
@@ -776,6 +792,8 @@ end
 
     aau = spdiagm(0 => vec(yyu), I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g])
 
+    @assert aau == aau2
+    =#
     Yu = -(Xu .+ Zu)
     Xu = reshape(Xu, I_g*J_g, N)
     Xu = circshift(Xu, -1)
