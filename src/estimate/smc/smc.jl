@@ -68,7 +68,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     n_steps  = get_setting(m, :n_mh_steps_smc)
 
     use_chand_recursion = get_setting(m, :use_chand_recursion)
-
+    @show use_chand_recursion
     if any(isnan.(data)) & use_chand_recursion
         error("Cannot use Chandrasekhar recursions with missing data")
     end

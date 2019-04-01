@@ -71,12 +71,12 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     # we are using the indices (MUP,ZP, etc.) corresponding to date t+1 variables
     # simply because these indices happen to work here also
     # this does not mean that GDP is a function of date t+1 variables
-    GDPfn[1, endo_unnorm[:μ′_t]]  = dGDP_dMU
-    GDPfn[1, endo_unnorm[:z′_t]]  = dGDP_dZ
-    GDPfn[1, endo_unnorm[:l′_t]]  = dGDP_dELL
-    GDPfn[1, endo_unnorm[:R′_t]]  = dGDP_dRR
-    GDPfn[1, endo_unnorm[:w′_t]]  = dGDP_dWW
-    GDPfn[1, endo_unnorm[:t′_t]]  = dGDP_dTT
+    GDPfn[1, endo_unnorm[:μ′_t]]  = vec(dGDP_dMU)
+    GDPfn[1, endo_unnorm[:z′_t]]  .= dGDP_dZ
+    GDPfn[1, endo_unnorm[:l′_t]]  = vec(dGDP_dELL)
+    GDPfn[1, endo_unnorm[:R′_t]]  .= dGDP_dRR
+    GDPfn[1, endo_unnorm[:w′_t]]  .= dGDP_dWW
+    GDPfn[1, endo_unnorm[:t′_t]]  .= dGDP_dTT
 
     ########################################
     Qx, Qy, _, _ = compose_normalization_matrices(m)
@@ -95,18 +95,18 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     ZZ[obs[:obs_gdp], _n_states + _n_jumps+ 1:end] = -GDPeqn
 
     # Inflation
-    ZZ[obs[:obs_corepce], endo[:π′_t]] = 1.
+    ZZ[obs[:obs_corepce], endo[:π′_t]] .= 1.
 
     # Nominal FFR
-    ZZ[obs[:obs_nominalrate], endo[:i′_t]] = 1./R
+    ZZ[obs[:obs_nominalrate], endo[:i′_t]] .= 1.0 ./ R
 
     # Measurement error
-    EE[obs[:obs_gdp], obs[:obs_gdp]] = m[:e_y]
+    EE[obs[:obs_gdp], obs[:obs_gdp]] .= m[:e_y]
 
     # Variance of innovations
-    QQ[exo[:z_sh], exo[:z_sh]] = m[:σ_z]^2
-    QQ[exo[:mon_sh], exo[:mon_sh]] = m[:σ_mon]^2
-    QQ[exo[:mkp_sh], exo[:mkp_sh]] = m[:σ_mkp]^2
+    QQ[exo[:z_sh], exo[:z_sh]] .= m[:σ_z]^2
+    QQ[exo[:mon_sh], exo[:mon_sh]] .= m[:σ_mon]^2
+    QQ[exo[:mkp_sh], exo[:mkp_sh]] .= m[:σ_mkp]^2
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC != 0)

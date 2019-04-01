@@ -7,13 +7,13 @@ using DataStructures, OrderedCollections, DataFrames
 my_tests = [
            "core",
            "parameters",
-           "models/representative_agent/an_schorfheide/an_schorfheide",
+           #="models/representative_agent/an_schorfheide/an_schorfheide",
            "models/representative_agent/smets_wouters/smets_wouters",
            "models/representative_agent/m990/m990",
            "models/representative_agent/m1002/m1002",
            "models/representative_agent/m1010/m1010",
            "models/heterogeneous_agent/krusell_smith/krusell_smith",
-           "models/heterogeneous_agent/bond_labor/bond_labor",
+           "models/heterogeneous_agent/bond_labor/bond_labor",=#
            "models/heterogeneous_agent/real_bond/real_bond",
            # "models/heterogeneous_agent/krusell_smith_ct/krusell_smith_ct",
            # "models/heterogeneous_agent/one_asset_hank/one_asset_hank",
