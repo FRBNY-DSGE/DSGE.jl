@@ -689,20 +689,25 @@ end
     # Compute drifts for HJB
     perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
 
-    chi, zeta = similar(d), similar(d)
+    #chi, zeta = similar(d), similar(d)
+    #zeta = similar(d)
     X, Z      = similar(d), similar(d)
 
-    aa2 = spzeros(I*J*N, I*J*N)
-    chi2 = Vector{Float64}(undef, I*J*N)
+    aa = spzeros(I*J*N, I*J*N)
 
-    f_ind(x,J) = x % J + 1
-    ind_dict = Dict(f_ind.(1:J,J) .=> 1:J)
+    f_ind(x,my_J,n) = (x + (n-1)) % my_J + 1
+    chi_dict  = Dict(f_ind.(1:J,J,1)   .=> 1:J)
+    zeta_dict = Dict(f_ind.(1:J,J,J-1) .=> 1:J)
 
     for i=1:I, j=1:J, n=1:N
         α = a[j] * (r_a + perm_const) + (xxi * w * real(y[1,n]))
-
+        #=
         chi[i,j,n]  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
         zeta[i,j,n] = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
+        =#
+
+        chi  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
 
         X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
                                   adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
@@ -711,14 +716,16 @@ end
                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
                              max(s[i,j,n], 0)) / (b[i+1] - b[i])
 
-        ind = (I*J)*(n-1) + I*(j-1) + i
-        aa2[ind,   ind] = -(chi[i,j,n] + zeta[i,j,n])
-        #aa2[ind, ind+I] =
-        #aa2[ind+I, ind]
+        ind      = (I*J)*(n-1) + I*(j-1) + i
+        chi_ind  = I*J*(n-1) + I*(chi_dict[j]-1) + i
+        zeta_ind = I*J*(n-1) + I*(zeta_dict[j]-1) + i
 
-        #NONSENSE = j % J + 1
-        chi2[I*J*(n-1) + I*(ind_dict[j]-1) + i] = chi[i,j,n]
+        aa[ind,   ind] = -(chi + zeta)
+
+        if (chi_ind  <= I*J*N - I) aa[chi_ind  + I, chi_ind]  = chi end
+        if (zeta_ind >= I + 1)     aa[zeta_ind - I, zeta_ind] = zeta end
     end
+    #=
     yy = -(chi .+ zeta)
 
     chi  = reshape(chi, I*J, N)
@@ -726,14 +733,13 @@ end
     zeta = reshape(zeta, I*J, N)
     zeta = circshift(zeta, I)
 
-    @assert chi2 == vec(chi)
-@show "passes assert"
     aa = spdiagm(0 => vec(yy), I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I])
 
-    for i=1:I, j=1:J, n=1:N
-    @assert aa2[(I*J)*(n-1) + I*(j-1) + i, (I*J)*(n-1) + I*(j-1) + i] == aa[(I*J)*(n-1) + I*(j-1) + i, (I*J)*(n-1) + I*(j-1) + i]
-    end
-
+    @assert chi22 == vec(chi)
+    @assert zeta2 == vec(zeta)
+    @assert aa2 == aa
+    @show "passes assert"
+    =#
     Y = -(X .+ Z)
 
     X  = reshape(X, I*J, N)
