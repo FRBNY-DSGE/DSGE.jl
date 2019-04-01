@@ -689,25 +689,27 @@ end
     # Compute drifts for HJB
     perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
 
-    #chi, zeta = similar(d), similar(d)
-    #zeta = similar(d)
-    X, Z      = similar(d), similar(d)
+    X, Z = similar(d), similar(d)
+    aa   = spzeros(I*J*N, I*J*N)
 
-    aa = spzeros(I*J*N, I*J*N)
-
-    f_ind(x,my_J,n) = (x + (n-1)) % my_J + 1
-    chi_dict  = Dict(f_ind.(1:J,J,1)   .=> 1:J)
-    zeta_dict = Dict(f_ind.(1:J,J,J-1) .=> 1:J)
+    f_ind(x, my_J, n) = (x + (n-1)) % my_J + 1
+    chi_dict  = Dict(f_ind.(1:J, J, 1)   .=> 1:J)
+    zeta_dict = Dict(f_ind.(1:J, J, J-1) .=> 1:J)
 
     for i=1:I, j=1:J, n=1:N
         α = a[j] * (r_a + perm_const) + (xxi * w * real(y[1,n]))
-        #=
-        chi[i,j,n]  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
-        zeta[i,j,n] = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
-        =#
 
         chi  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
         zeta = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
+
+        ind      = (I*J)*(n-1) + I*(j-1) + i
+        chi_ind  = I*J*(n-1) + I*(chi_dict[j]-1) + i
+        zeta_ind = I*J*(n-1) + I*(zeta_dict[j]-1) + i
+
+        aa[ind, ind] = -(chi + zeta)
+
+        if (chi_ind  <= I*J*N - I) aa[chi_ind  + I, chi_ind]  = chi  end
+        if (zeta_ind >= I + 1)     aa[zeta_ind - I, zeta_ind] = zeta end
 
         X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
                                   adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
@@ -716,30 +718,8 @@ end
                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
                              max(s[i,j,n], 0)) / (b[i+1] - b[i])
 
-        ind      = (I*J)*(n-1) + I*(j-1) + i
-        chi_ind  = I*J*(n-1) + I*(chi_dict[j]-1) + i
-        zeta_ind = I*J*(n-1) + I*(zeta_dict[j]-1) + i
-
-        aa[ind,   ind] = -(chi + zeta)
-
-        if (chi_ind  <= I*J*N - I) aa[chi_ind  + I, chi_ind]  = chi end
-        if (zeta_ind >= I + 1)     aa[zeta_ind - I, zeta_ind] = zeta end
     end
-    #=
-    yy = -(chi .+ zeta)
 
-    chi  = reshape(chi, I*J, N)
-    chi  = circshift(chi, -I)
-    zeta = reshape(zeta, I*J, N)
-    zeta = circshift(zeta, I)
-
-    aa = spdiagm(0 => vec(yy), I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I])
-
-    @assert chi22 == vec(chi)
-    @assert zeta2 == vec(zeta)
-    @assert aa2 == aa
-    @show "passes assert"
-    =#
     Y = -(X .+ Z)
 
     X  = reshape(X, I*J, N)
@@ -750,11 +730,15 @@ end
     bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
 
     aau = spzeros(I_g*J_g*N, I_g*J_g*N)
-    chiu_dict  = Dict(f_ind.(1:J_g, J_g, 1)     .=> 1:J_g)
-    zetau_dict = Dict(f_ind.(1:J_g, J_g, J_g-1) .=> 1:J_g)
+    #chiu_dict  = Dict(f_ind.(1:J_g, J_g, 1)     .=> 1:J_g)
+    #zetau_dict = Dict(f_ind.(1:J_g, J_g, J_g-1) .=> 1:J_g)
 
-    #chiu, zetau = similar(d_g), similar(d_g)
-    Xu, Zu      = similar(d_g), similar(d_g)
+    bbu = spzeros(I_g*J_g*N, I_g*J_g*N)
+    #Xu_dict = Dict(f_ind.(1:I_g*J_g, I_g*J_g, 1)           .=> 1:I_g*J_g)
+    #Zu_dict = Dict(f_ind.(1:I_g*J_g, I_g*J_g, I_g*J_g - 1) .=> 1:I_g*J_g)
+    #Xu_dict = f_ind.(1:I_g*J_g, I_g*J_g, I_g*J_g - 1)
+    #Zu_dict = f_ind.(1:I_g*J_g, I_g*J_g, 1)
+    #Xu, Zu      = similar(d_g), similar(d_g)
     for i=1:I_g, j=1:J_g, n=1:N
 
         # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
@@ -764,44 +748,50 @@ end
         budrift = s_g[i,j,n] - d_g[i,j,n] -
             adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb) -
             (permanent ? aggZ * b_g[i] : 0.0)
-        #=
-        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
-        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
-        =#
+
         chiu  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
         zetau = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
 
         ind       = (I_g*J_g)*(n-1) + I_g*(j-1) + i
-        chiu_ind  = I_g*J_g*(n-1) + I_g*(chiu_dict[j]-1) + i
-        zetau_ind = I_g*J_g*(n-1) + I_g*(zetau_dict[j]-1) + i
+        chiu_ind  = I_g*J_g*(n-1) + I_g *(f_ind(j,J_g,J_g-1)-1) + i# (chiu_dict[j]-1) + i
+        zetau_ind = I_g*J_g*(n-1) + I_g*(f_ind(j,J_g,1)-1) + i#(zetau_dict[j]-1) + i
 
-        aau[ind,   ind] = -(chiu + zetau)
-
-        if (chiu_ind  <= I_g*J_g*N - I_g) aau[chiu_ind  + I_g, chiu_ind]  = chiu end
+        aau[ind, ind] = -(chiu + zetau)
+        if (chiu_ind  <= I_g*J_g*N - I_g) aau[chiu_ind  + I_g, chiu_ind]  = chiu  end
         if (zetau_ind >= I_g + 1)         aau[zetau_ind - I_g, zetau_ind] = zetau end
 
+        #=
         Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
         Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
+        =#
+        Xu = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Zu = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
+
+        #Xu_ind = I_g*J_g*(n-1) + Xu_dict[I_g*(j-1) + i]
+        #Zu_ind = I_g*J_g*(n-1) + Zu_dict[I_g*(j-1) + i]
+
+        Xu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, I_g*J_g - 1)#Xu_dict[I_g*(j-1) + i]
+        Zu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, 1)#Zu_dict[I_g*(j-1) + i]
+
+        #Xu2[Xu_ind] = Xu[i,j,n]
+        #Zu2[Zu_ind] = Zu[i,j,n]
+        bbu[ind, ind] = -(Xu + Zu)
+        if (Xu_ind <= I_g*J_g*N - 1) bbu[Xu_ind  + 1, Xu_ind]  = Xu  end
+        if (Zu_ind >= 2)             bbu[Zu_ind - 1, Zu_ind] = Zu end
+
     end
-    #=
-    yyu   = -(chiu .+ zetau)
-    chiu  = reshape(chiu,I_g*J_g,N)
-    chiu  = circshift(chiu,-I_g)
-    zetau = reshape(zetau,I_g*J_g,N)
-    zetau = circshift(zetau,I_g)
-
-    aau = spdiagm(0 => vec(yyu), I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g])
-
-    @assert aau == aau2
-    =#
+#=
     Yu = -(Xu .+ Zu)
     Xu = reshape(Xu, I_g*J_g, N)
     Xu = circshift(Xu, -1)
     Zu = reshape(Zu, I_g*J_g, N)
     Zu = circshift(Zu, 1)
+=#
+    #@assert Xu2 == vec(Xu)
+    #@assert Zu2 == vec(Zu)
 
-    bbu = spdiagm(0 => vec(Yu), 1 => vec(Zu)[2:end], -1 => vec(Xu)[1:end-1])
-
+    #bbu = spdiagm(0 => vec(Yu), 1 => vec(Zu)[2:end], -1 => vec(Xu)[1:end-1])
+    #@assert bbu == bbu2
     return aa, bb, aau, bbu
 end
 
