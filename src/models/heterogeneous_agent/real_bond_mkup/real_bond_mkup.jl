@@ -272,7 +272,7 @@ function init_parameters!(m::RealBondMkup)
                    description = "Inverse Frisch elasticity of labor supply.", tex_label = "\\nu")
     m <= parameter(:abar, -0.5, fixed = true,
                    description = "Borrowing floor.", tex_label = "\\bar{a}")
-    m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
     m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
@@ -349,7 +349,7 @@ function init_grids!(m::RealBondMkup)
     # Skill grid
     lsgrid, sprob, sscale = tauchen86(m[:μ_s].value, m[:σ_s].value, ns, λ)
     swts = (sscale/ns)*ones(ns)
-    sgrid = exp.(lsgrid) + ehi
+    sgrid = exp.(lsgrid) .+ ehi
     grids[:sgrid] = Grid(sgrid, swts, sscale)
 
     # Density of skill across skill grid

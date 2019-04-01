@@ -41,7 +41,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states{T<:AbstractFloat}(m::RealBondMkup, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
+function augment_states(m::RealBondMkup, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where T<:AbstractFloat
     endo     = m.endogenous_states
     exo      = m.exogenous_shocks
 
@@ -66,7 +66,7 @@ function augment_states{T<:AbstractFloat}(m::RealBondMkup, TTT::Matrix{T}, RRR::
 
     # Track Lags
             # Aug[:y_t1]                      States[:y_t]
-    TTT_aug[_n_model_states:size(TTT_aug, 1), 1:_n_states] = 1.0
+    TTT_aug[_n_model_states:size(TTT_aug, 1), 1:_n_states] .= 1.0
 
     return TTT_aug, RRR_aug, CCC_aug
 end

@@ -84,56 +84,56 @@ function jacobian(m::RealBondMkup)
     JJ[eq[:eq_kolmogorov_fwd], endo[:μ′_t]] = -eye(nx*ns)
     JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t]]  = dF2_dMU
     JJ[eq[:eq_kolmogorov_fwd], endo[:l_t]]  = dF2_dELL
-    JJ[eq[:eq_kolmogorov_fwd], endo[:w_t]]  = dF2_dWW
+    JJ[eq[:eq_kolmogorov_fwd], endo[:w_t]]  .= dF2_dWW
     JJ[eq[:eq_kolmogorov_fwd], endo[:R_t]]  = dF2_dRR
     JJ[eq[:eq_kolmogorov_fwd], endo[:t_t]]  = dF2_dTT
 
     # mkt ckr
     JJ[eq[:eq_market_clearing], endo[:μ_t]]  = dF3_dMU
-    JJ[eq[:eq_market_clearing], endo[:z_t]]  = GDP
+    JJ[eq[:eq_market_clearing], endo[:z_t]]  .= GDP
     JJ[eq[:eq_market_clearing], endo[:l_t]]  = dF3_dELL
-    JJ[eq[:eq_market_clearing], endo[:w_t]]  = dF3_dWW
-    JJ[eq[:eq_market_clearing], endo[:R_t]]  = dF3_dRR
-    JJ[eq[:eq_market_clearing], endo[:t_t]]  = dF3_dTT
+    JJ[eq[:eq_market_clearing], endo[:w_t]]  .= dF3_dWW
+    JJ[eq[:eq_market_clearing], endo[:R_t]]  .= dF3_dRR
+    JJ[eq[:eq_market_clearing], endo[:t_t]]  .= dF3_dTT
 
     # TFP
-    JJ[eq[:eq_TFP], endo[:z′_t]]  = 1.0
-    JJ[eq[:eq_TFP], endo[:z_t]]   = -ρ_z
+    JJ[eq[:eq_TFP], endo[:z′_t]]  .= 1.0
+    JJ[eq[:eq_TFP], endo[:z_t]]   .= -ρ_z
 
     # Phillips
-    JJ[eq[:eq_phillips], endo[:π′_t]] = -1.0/R
-    JJ[eq[:eq_phillips], endo[:z_t]]  = κ
-    JJ[eq[:eq_phillips], endo[:w_t]]  = -κ
-    JJ[eq[:eq_phillips], endo[:π_t]]  = 1.0
-    JJ[eq[:eq_phillips], endo[:mkp_t]]= -1.0
+    JJ[eq[:eq_phillips], endo[:π′_t]] .= -1.0/R
+    JJ[eq[:eq_phillips], endo[:z_t]]  .= κ
+    JJ[eq[:eq_phillips], endo[:w_t]]  .= -κ
+    JJ[eq[:eq_phillips], endo[:π_t]]  .= 1.0
+    JJ[eq[:eq_phillips], endo[:mkp_t]] .= -1.0
 
     # taylor
-    JJ[eq[:eq_taylor], endo[:i_t]]   = 1.0
-    JJ[eq[:eq_taylor], endo[:π_t]]   = -phipi*R*(1-ρ_tay)
-    JJ[eq[:eq_taylor], endo[:mon_t]] = -1.0
-    JJ[eq[:eq_taylor], endo[:l_i_t]] = -ρ_tay
+    JJ[eq[:eq_taylor], endo[:i_t]]   .= 1.0
+    JJ[eq[:eq_taylor], endo[:π_t]]   .= -phipi*R*(1-ρ_tay)
+    JJ[eq[:eq_taylor], endo[:mon_t]] .= -1.0
+    JJ[eq[:eq_taylor], endo[:l_i_t]] .= -ρ_tay
 
     # fisher
-    JJ[eq[:eq_fisher], endo[:i_t]]  = 1.0
-    JJ[eq[:eq_fisher], endo[:π′_t]] = -R
-    JJ[eq[:eq_fisher], endo[:R_t]]  = -1.0
+    JJ[eq[:eq_fisher], endo[:i_t]]  .= 1.0
+    JJ[eq[:eq_fisher], endo[:π′_t]] .= -R
+    JJ[eq[:eq_fisher], endo[:R_t]]  .= -1.0
 
     # transfers
-    JJ[eq[:eq_transfers], endo[:t_t]]  = 1.0
-    JJ[eq[:eq_transfers], endo[:z_t]]  = -GDP
-    JJ[eq[:eq_transfers], endo[:w_t]]  = GDP
+    JJ[eq[:eq_transfers], endo[:t_t]]  .= 1.0
+    JJ[eq[:eq_transfers], endo[:z_t]]  .= -GDP
+    JJ[eq[:eq_transfers], endo[:w_t]] .= GDP
 
     # MP
-    JJ[eq[:eq_monetary_policy], endo[:mon′_t]] = 1.0
-    JJ[eq[:eq_monetary_policy], endo[:mon_t]]  = -ρ_mon
+    JJ[eq[:eq_monetary_policy], endo[:mon′_t]] .= 1.0
+    JJ[eq[:eq_monetary_policy], endo[:mon_t]]  .= -ρ_mon
 
     # Markup
-    JJ[eq[:eq_markup], endo[:mkp′_t]] = 1.0
-    JJ[eq[:eq_markup], endo[:mkp_t]]  = -ρ_mkp
+    JJ[eq[:eq_markup], endo[:mkp′_t]] .= 1.0
+    JJ[eq[:eq_markup], endo[:mkp_t]]  .= -ρ_mkp
 
     # Lagged Monetary Policy
-    JJ[eq[:eq_lagged_nominal_rate], endo[:l_i′_t]] = 1.0
-    JJ[eq[:eq_lagged_nominal_rate], endo[:i_t]]    = -1.0
+    JJ[eq[:eq_lagged_nominal_rate], endo[:l_i′_t]] .= 1.0
+    JJ[eq[:eq_lagged_nominal_rate], endo[:i_t]]    .= -1.0
 
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
@@ -146,9 +146,9 @@ function construct_chip_realbond(xgrid_total::Vector{Float64},
                                  γ::Float64, ν::Float64, aborrow::Float64,
                                  abar::Float64, R::Float64,
                                  χss::Vector{Float64})
-    chipW = (1.0+ν)./(ν./(aborrow + χss - xgrid_total) + γ./χss)
-    chipR = (1.0/(R^2))*(ν*abar./(aborrow + χss - xgrid_total))./(ν./(aborrow + χss - xgrid_total) + γ./χss)
-    chipX = (ν*χss)./(ν*χss + γ*(aborrow + χss - xgrid_total))
+    chipW = (1.0+ν)./(ν./(aborrow .+ χss - xgrid_total) + γ./χss)
+    chipR = (1.0/(R^2))*(ν*abar./(aborrow .+ χss - xgrid_total))./(ν./(aborrow .+ χss - xgrid_total) + γ./χss)
+    chipX = (ν*χss)./(ν*χss + γ*(aborrow .+ χss - xgrid_total))
 
     return chipW, chipR, chipX
 end
@@ -311,10 +311,10 @@ function compose_normalization_matrices(m::RealBondMkup)
     (Q,R) = qr(P)
 
     S         = Q[:, ns+1:end]'
-    Qleft     = cat([1 2],eye(nx*ns),S,[1],[1],[1],[1],[1],[1],[1],[1],[1])
-    Qx        = cat([1 2],S,[1],[1],[1],[1])
-    Qy        = cat([1 2],eye(nx*ns),[1],[1],[1],[1],[1])
-    Qright    = cat([1,2],Qx',Qy',Qx',Qy')
+    Qleft     = cat(eye(nx*ns),S,[1],[1],[1],[1],[1],[1],[1],[1],[1], dims = [1 2])
+    Qx        = cat(S,[1],[1],[1],[1], dims = [1 2])
+    Qy        = cat(eye(nx*ns),[1],[1],[1],[1],[1], dims = [1 2])
+    Qright    = cat(Qx',Qy',Qx',Qy', dims = [1 2])
 
     return Qx, Qy, Qleft, Qright
 end

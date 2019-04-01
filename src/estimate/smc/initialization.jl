@@ -56,7 +56,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
         for i in 1:n_parts
             success = false
             while !success
-                try
+              #  try
                     update!(m, draws[:, i])
                     loglh[i] = likelihood(m, data, catch_errors = true,
                                           use_chand_recursion = use_chand_recursion, verbose = verbose)
@@ -65,7 +65,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                         logpost[i] = -Inf
                         loglh[i] = -Inf
                     end
-                catch err
+           #=     catch err
                     if isa(err, ParamBoundsError)
                         loglh[i] = logpost[i] = -Inf
                     elseif isa(err, PosDefException)
@@ -74,7 +74,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                     else
                         throw(err)
                     end
-                end
+                end =#
                 if isinf(loglh[i])
                     draws[:, i] = rand(m.parameters, 1)
                 else
