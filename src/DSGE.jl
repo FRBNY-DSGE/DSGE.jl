@@ -12,12 +12,13 @@ module DSGE
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
+    using Statistics: std
     import Calculus, Missings, Nullables
     import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter
-    import SparseArrays: sparse
+    import SparseArrays: sparse, spdiagm, spzeros
     export
         # distributions_ext.jl
         BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist,
@@ -157,6 +158,9 @@ module DSGE
         # models
         solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT, SteadyStateParameterArray,
         OneAssetHANK,
+
+        # TwoAssetHANK
+        TwoAssetHANK,
 
         # solve/
         gensysct, gensysct!, new_divct, decomposition_svdct!, <,
@@ -366,4 +370,11 @@ module DSGE
     include("models/heterogeneous_agent/one_asset_hank/measurement.jl")
     include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
     include("models/heterogeneous_agent/one_asset_hank/helpers.jl")
+
+    include("models/heterogeneous_agent/two_asset_hank/two_asset_hank.jl")
+    #include("models/heterogeneous_agent/two_asset_hank/measurement.jl")
+    include("models/heterogeneous_agent/two_asset_hank/eqcond.jl")
+    include("models/heterogeneous_agent/two_asset_hank/util.jl")
+    include("models/heterogeneous_agent/two_asset_hank/helpers.jl")
+    include("models/heterogeneous_agent/two_asset_hank/interp.jl")
 end

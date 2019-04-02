@@ -568,7 +568,8 @@ function steadystate!(m::TwoAssetHANK)
     K_supply  = 0.
     L_supply  = 0.
     KL_supply = 0.
-
+    Vamin     = 0.
+    Vbmin     = 1e-8
     #----------------------------------------------------------------
     # Iterate on KL to find steady state
     #----------------------------------------------------------------
@@ -601,6 +602,85 @@ function steadystate!(m::TwoAssetHANK)
 	    # Solve HJB
 	    #----------------------------------------------------------------
         for nn = 1 : maxit_HJB
+
+            perm_c =  ddeath * pam # check
+            c0_c   = ((1-xxi) - tau_I) * w
+            c, s, d = similar(Vn), similar(Vn), similar(Vn)
+
+            for i=1:I, j=1:J, n=1:N
+
+                c0 = c0_c * real(y[1,n]) + b[i] * (r_b_grid[i,j,n] + perm_c) + trans
+
+                # ---- Liquid Assets, Forward + Backward Difference ----
+                VaF = (j==J) ? 0.0 : max((Vn[i,j+1,n] - Vn[i,j,n]) / (a[j+1]-a[j]), Vamin)
+                VaB = (j==1) ? 0.0 : max((Vn[i,j,n] - Vn[i,j-1,n]) / (a[j]-a[j-1]), Vamin)
+
+                # ---- Illiquid Assets, Forward + Backward Difference ----
+                VbF = (i==I) ? 0.0 : max((Vn[i+1,j,n] - Vn[i,j,n]) / (b[i+1]-b[i]), Vbmin)
+                VbB = (i==1) ? 0.0 : max((Vn[i,j,n] - Vn[i-1,j,n]) / (b[i]-b[i-1]), Vbmin)
+
+                # Decisions conditional on a particular direction of derivative
+                cF = (i==I) ? 0.0 : VbF ^ (-1 / ggamma)
+                cB = (i==1) ? c0  : VbB ^ (-1 / ggamma)
+
+                sF = (i==I) ? 0.0 : c0 - cF
+                sB = (i==1) ? 0.0 : c0 - cB
+
+                #----------------------------------------------------------------
+                # Consumption  & Savings Decision
+                #----------------------------------------------------------------
+                # Which direction to use
+                Hc0 = u_fn(c0, ggamma)
+                HcF = (i==I) ? -1e12 : u_fn(cF,ggamma) + VbF * sF
+                HcB = u_fn(cB, ggamma) + VbB * sB
+                validF = (sF > 0)
+                validB = (sB < 0)
+
+                IcF = validF * max(!validB, (HcF >= HcB)) * (HcF >= Hc0)
+                IcB = validB * max(!validF, (HcB >= HcF)) * (HcB >= Hc0)
+                Ic0 = 1 - IcF - IcB
+
+                c[i,j,n] = IcF * cF + IcB * cB + Ic0 * c0
+                s[i,j,n] = IcF * sF + IcB * sB
+
+                #----------------------------------------------------------------
+                # Deposit Decision
+                #----------------------------------------------------------------
+                dFB = (i == 1 || j == J) ? 0.0 :
+                    opt_deposits(VaF, VbB, max(a[j], a_lb), chi0, chi1, chi2)
+
+                dBF = (i == I || j == 1) ? 0.0 :
+                    opt_deposits(VaB, VbF, max(a[j], a_lb), chi0, chi1, chi2)
+
+                dBB = (j == 1) ? 0.0 :
+                    opt_deposits(VaB, VbB, max(a[j], a_lb), chi0, chi1, chi2)
+
+                HdFB = (i == 1 || j == J) ? -1e12 : VaF * dFB - VbB *
+                    (dFB + adj_cost_fn(dFB, a[j], chi0, chi1, chi2, a_lb))
+                validFB  = (dFB > 0) * (HdFB > 0)
+
+                HdBB = (j == 1) ? -1.0e12 :
+                    VaB * dBB - VbB * (dBB + adj_cost_fn(dBB, a[j], chi0, chi1, chi2, a_lb))
+                validBB = (dBB > -adj_cost_fn(dBB, a[j], chi0, chi1, chi2, a_lb)) .*
+                    (dBB <= 0) * (HdBB > 0)
+
+                HdBF = (i == I || j == 1) ? -1e12 : VaB * dBF - VbF *
+                    (dBF + adj_cost_fn(dBF, a[j], chi0, chi1, chi2, a_lb))
+                validBF = (dBF <= -adj_cost_fn(dBF, a[j], chi0, chi1, chi2, a_lb)) * (HdBF > 0)
+
+                IcFB = validFB * max(!validBF,(HdFB >= HdBF)) * max(!validBB, (HdFB >= HdBB))
+                IcBF = max(!validFB, (HdBF >= HdFB)) * validBF * max(!validBB, (HdBF >= HdBB))
+                IcBB = max(!validFB, (HdBB >= HdFB)) * max(!validBF, (HdBB >= HdBF)) * validBB
+
+                d[i,j,n] = IcFB * dFB + IcBF * dBF + dBB * IcBB
+            end
+
+            # Interpolate
+            d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
+            s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
+            c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
+            #=
+
             #-----
             # Compute derivatives w.r.t. illiquid assets a
             #-----
@@ -672,8 +752,9 @@ function steadystate!(m::TwoAssetHANK)
             # Optimal consumption and liquid savings
             c = IcF .* cF + IcB .* cB + Ic0 .* c0
             s = IcF .* sF + IcB .* sB + Ic0 .* s0
+            =#
             u = u_fn(c,ggamma)
-
+#=
             #------------------------------------------------------------
             # Deposit decision
             #------------------------------------------------------------
@@ -722,6 +803,7 @@ function steadystate!(m::TwoAssetHANK)
             validBB        = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
                 (dBB .<= 0) .* (HdBB .> 0)
 
+
             # Which direction to use
             IcFB = validFB .* max.(.!validBF,(HdFB .>= HdBF)) .* max.(.!validBB, (HdFB .>= HdBB))
             IcBF = max.(.!validFB, (HdBF .>= HdFB)) .* validBF .* max.(.!validBB, (HdBF .>= HdBB))
@@ -738,7 +820,7 @@ function steadystate!(m::TwoAssetHANK)
             d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
             s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
             c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
-
+=#
             aa, bb, aau, bbu = transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0,
                                           chi1, chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid,
                                           d, dab_grid, daf_grid, dab_g_grid, daf_g_grid,
@@ -1116,6 +1198,8 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:reduceV,            true, "Reduction of v using splines")
     m <= Setting(:reduceDist_hor,     100,
                  "Maximal horizon for observability matrix")
+    m <= Setting(:krylov_dim, 100, "Maximal horizon for observability matrix") # same as above
+
 
     # Liquid asset suply
     m <= Setting(:r_b_fix,  true,
@@ -1197,6 +1281,12 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:nEErrors, get_setting(m, :n_v), "nEErrors")
     m <= Setting(:n_v_full, get_setting(m, :n_v), "n_v_Full")
     m <= Setting(:n_g_full, get_setting(m, :n_g), "n_g_Full")
+    # Our syntax
+    m <= Setting(:n_jump_vars,  get_setting(m, :I) * get_setting(m, :J) * get_setting(m, :N),
+                 "Number of jump variables (value function entries)")
+    m <= Setting(:n_state_vars, get_setting(m, :I_g)*get_setting(m, :J_g)*get_setting(m, :N)-1,
+                 "Number of endogenous state variables (distribution)")
+    m <= Setting(:n_state_vars_unreduce,      1, "Number of aggregate shocks")
 
     # Steady state approximation
     m <= Setting(:maxit_HJB, 100, "Max number of iterations for HJB")
