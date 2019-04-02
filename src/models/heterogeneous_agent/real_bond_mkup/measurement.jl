@@ -72,11 +72,12 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     # simply because these indices happen to work here also
     # this does not mean that GDP is a function of date t+1 variables
     GDPfn[1, endo_unnorm[:μ′_t]]  = vec(dGDP_dMU)
-    GDPfn[1, endo_unnorm[:z′_t]]  .= dGDP_dZ
+    #@info size(GDPfn[1, endo_unnorm[:z′_t]])
+    GDPfn[1, endo_unnorm[:z′_t]]  = dGDP_dZ
     GDPfn[1, endo_unnorm[:l′_t]]  = vec(dGDP_dELL)
-    GDPfn[1, endo_unnorm[:R′_t]]  .= dGDP_dRR
-    GDPfn[1, endo_unnorm[:w′_t]]  .= dGDP_dWW
-    GDPfn[1, endo_unnorm[:t′_t]]  .= dGDP_dTT
+    GDPfn[1, endo_unnorm[:R′_t]]  = dGDP_dRR
+    GDPfn[1, endo_unnorm[:w′_t]]  = dGDP_dWW
+    GDPfn[1, endo_unnorm[:t′_t]]  = dGDP_dTT
 
     ########################################
     Qx, Qy, _, _ = compose_normalization_matrices(m)
@@ -85,7 +86,7 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     # now we need to create GDP as a function of the normalized states
     GDPeqn = GDPfn*[eye(n_backward_looking_states_unnormalized(m)); gx2]*Qx'
              # this is for level of GDP
-             # to use the level of gdp, front multiply by (1/dGDP_dZ)
+             # to use the log of gdp, front multiply by (1/dGDP_dZ)
 
     ZZ = zeros(_n_observables, _n_model_states_aug)
 

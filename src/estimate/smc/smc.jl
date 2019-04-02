@@ -136,6 +136,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
+        @info "Initializing"
+        @show parallel
         initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
 
@@ -173,6 +175,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         println("\n\n SMC recursion starts \n\n")
     end
 
+    @info "pre loop"
     while ϕ_n < 1.
 
         start_time = time_ns()
@@ -211,7 +214,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         push!(z_matrix, sum(mult_weights))
         w_matrix = hcat(w_matrix, incremental_weights)
         W_matrix = hcat(W_matrix, normalized_weights)
-
+        @info "pre selection"
         ##############################################################################
         ### Step 2: Selection
         ##############################################################################
@@ -232,7 +235,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             resampled_last_period = true
             W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
         end
-
+        @info "pre mutation"
         ##############################################################################
         ### Step 3: Mutation
         ##############################################################################
@@ -257,6 +260,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
+        @show parallel
         if parallel
             new_particles = @distributed (vcat) for k in 1:n_parts
                 mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
