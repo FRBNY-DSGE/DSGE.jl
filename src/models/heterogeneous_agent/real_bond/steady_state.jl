@@ -73,6 +73,7 @@ function steadystate!(m::RealBond;
     l_in = l_in_const*ones(nx*ns)
 
     while abs(excess) > tol && count < maxit # clearing markets
+        @warn "You're recomputing steady state! BAD!"
         l_in_guess = ones(n)
         β = (βlo + βhi)/2.0
 
