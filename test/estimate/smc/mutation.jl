@@ -1,3 +1,8 @@
+# To be removed after running this test individually in the REPL successfully
+#using DSGE
+#using HDF5, JLD, JLD2, Random, Distributions, PDMats
+#import Test: @test, @testset
+
 path = dirname(@__FILE__)
 
 m = AnSchorfheide()
@@ -24,7 +29,7 @@ m <= Setting(:use_fixed_schedule, true)
 
 n_parts = get_setting(m, :n_particles)
 
-file = jldopen("reference/mutation_inputs.jld2", "r")
+file = JLD2.jldopen("reference/mutation_inputs.jld2", "r")
 old_particles = read(file, "particles")
 d = read(file, "d")
 blocks_free = read(file, "blocks_free")
@@ -53,6 +58,13 @@ end
 new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                  c = c, α = α, old_data = old_data) for j = 1:n_parts]
 
+#=JLD.jldopen("reference/mutation_outputs.jld", "w") do file
+    write(file, "particles", new_particles)
+end =#
+#=JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
+    write(file, "particles", new_particles)
+end=#
+
 saved_particles = load("reference/mutation_outputs.jld2", "particles")
 
 particle_fields = fieldnames(typeof(new_particles[1]))
@@ -63,6 +75,6 @@ particle_fields = fieldnames(typeof(new_particles[1]))
         new_particles_field = stack_values(new_particles, field)
         saved_particles_field = stack_values(saved_particles, field)
 
-        @test isapprox(new_particles_field, saved_particles_field)
+        @test isapprox(new_particles_field, saved_particles_field, atol = 1e-5)
     end
 end

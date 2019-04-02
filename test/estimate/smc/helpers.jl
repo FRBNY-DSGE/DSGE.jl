@@ -90,7 +90,18 @@ close(file)
 
 test_θ_new, test_new_mix_density, test_old_mix_density = DSGE.mvnormal_mixture_draw(para_subset,
                                                                                    d_subset; c=c, α=α)
+<<<<<<< HEAD
 file = jldopen("reference/mvnormal_output.jld2")
+=======
+
+#=JLD2.jldopen("reference/mvnormal_output.jld2", true, true, true, IOStream) do file
+    write(file, "θ_new", test_θ_new)
+    write(file, "new_mix_density", test_new_mix_density)
+    write(file, "old_mix_density", test_old_mix_density)
+end=#
+
+file = JLD2.jldopen("reference/mvnormal_output.jld2")
+>>>>>>> fab6824... Regenerate test files for different seeding from new package versions
     saved_θ_new = read(file, "θ_new")
     saved_new_mix_density = read(file, "new_mix_density")
     saved_old_mix_density = read(file, "old_mix_density")
