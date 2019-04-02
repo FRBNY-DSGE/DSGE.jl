@@ -60,10 +60,10 @@ new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all,
 
 #=JLD.jldopen("reference/mutation_outputs.jld", "w") do file
     write(file, "particles", new_particles)
-end
-JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
-    write(file, "particles", new_particles)
 end =#
+#=JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
+    write(file, "particles", new_particles)
+end=#
 
 saved_particles = load("reference/mutation_outputs.jld2", "particles")
 
@@ -75,6 +75,6 @@ particle_fields = fieldnames(typeof(new_particles[1]))
         new_particles_field = stack_values(new_particles, field)
         saved_particles_field = stack_values(saved_particles, field)
 
-        @test isapprox(new_particles_field, saved_particles_field)
+        @test isapprox(new_particles_field, saved_particles_field, atol = 1e-5)
     end
 end
