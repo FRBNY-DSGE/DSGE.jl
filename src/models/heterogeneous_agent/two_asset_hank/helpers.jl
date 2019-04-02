@@ -7,7 +7,7 @@ THE GUTS OF EQCOND.
                                interp_decision::SparseMatrixCSC{R,T},
                                ddeath::R, pam::R, aggZ::R, xxi::R, tau_I::R, w::R, trans::R,
                                r_b_vec::Vector{R},
-                               IcF::BitArray{3}, IcB::BitArray{3}, Ic0,
+                               IcF::BitArray{3}, IcB::BitArray{3}, Ic0::BitArray{3},
                                IcFB::BitArray{3}, IcBF::BitArray{3}, IcBB::BitArray{3},
                                Ic00::BitArray{3}, y::Matrix{U}, a::Vector{R},
                                b::Vector{R}) where {R<:AbstractFloat, S, T<:Int, U<:Number}
