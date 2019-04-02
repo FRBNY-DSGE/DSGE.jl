@@ -34,8 +34,8 @@ DSGE.initial_draw!(m, data, test_init_cloud)
 
 #=JLD.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
-end
-JLD2.jldopen("reference/initial_draw.jld2", "w") do file
+end =#
+#=JLD2.jldopen("reference/initial_draw.jld2", "w") do file
     write(file, "cloud", test_init_cloud)
 end=#
 
@@ -82,10 +82,10 @@ DSGE.initial_draw!(m, data, test_init_cloud)
 
 #=JLD.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
-end
-JLD2.jldopen("reference/initial_draw_sw.jld2", true, true, true, IOStream) do file
+end=#
+#=JLD2.jldopen("reference/initial_draw_sw.jld2", true, true, true, IOStream) do file
     write(file, "cloud", test_init_cloud)
-end =#
+end=#
 
 saved_init_cloud = load("reference/initial_draw_sw.jld2", "cloud")
 
