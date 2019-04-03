@@ -335,6 +335,9 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
         else
             # If BOR8 or BOR9 (switching or non-switching), read GDP Deflator instead of core PCE
             if scen.key==:bor8 || scen.key==:bor9 || scen.key==:bor8_02 || scen.key==:bor9_02
+                if var_name==:obs_corepce
+                    var_name = :obs_gdpdeflator
+                end
                 # Recursively read in scenario draws
                 scen_draws, transform = read_scenario_output(m904, scen, class, product, var_name)
             else
