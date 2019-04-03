@@ -209,7 +209,10 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
     # Get filename
     filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
 
-    JLD2.jldopen(filename, "r") do file
+    fcast_dates_dict = load(filename, "date_indices")
+    fcast_dates = map(x -> x[1], sort(collect(fcast_dates_dict), by = x->x[2]))
+
+    jldopen(filename, "r") do file
         # Read forecast outputs
         fcast_series = read_forecast_series(file, class, product, var_name)
 
@@ -218,8 +221,83 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
         transforms = load(filename, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
-        fcast_series, transform
+        fcast_series, transform, fcast_dates
     end
+end
+
+function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::ScenarioAggregate, class::Symbol,
+                              product::Symbol, var_name::Symbol)
+    # Aggregate scenarios
+    nscens = length(agg.scenarios)
+    agg_draws = Vector{Matrix{Float64}}(nscens)
+    scen_dates = Vector{Date}(nscens)
+
+    # If not sampling, initialize vector to record number of draws in each
+    # scenario in order to update `agg.proportions` and `agg.total_draws` at the
+    # end
+    if !agg.sample
+        n_scen_draws = zeros(Int, nscens)
+    end
+
+    # Initialize transform so it can be assigned from within the following for
+    # loop. Each transform read in from read_scenario_output will be the
+    # same. We just want to delegate the transform parsing to the recursive
+    # read_scenario_output call.
+    transform = identity
+
+    for (i, scen) in enumerate(agg.scenarios)
+        if in(:scenarios, fieldnames(scen)) #length(scen.scenarios)>1
+            scen_draws, transform, scen_dates = read_scenario_output(m, m904, scen, class, product, var_name)
+        else
+            if scen.key==:bor8 || scen.key==:bor9 || scen.key==:bor8_02 || scen.key==:bor9_02
+                if var_name==:obs_corepce
+                    var_name = :obs_gdpdeflator
+                end
+                # Recursively read in scenario draws
+                scen_draws, transform, scen_dates = read_scenario_output(m904, scen, class, product, var_name)
+            else
+                # Recursively read in scenario draws
+                scen_draws, transform, scen_dates = read_scenario_output(m, scen, class, product, var_name)
+            end
+        end
+        # Sample if desired
+        agg_draws[i]  = if agg.sample
+            pct = agg.proportions[i]
+            actual_ndraws = size(scen_draws, 1)
+            desired_ndraws = convert(Int, round(pct * agg.total_draws))
+
+            sampled_inds = if agg.replace
+                sample(1:actual_ndraws, desired_ndraws, replace = true)
+            else
+                if desired_ndraws == 0
+                    Int[]
+                else
+                    quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
+                    remainder = actual_ndraws % desired_ndraws
+                    vcat(repmat(1:actual_ndraws, quotient),
+                         sample(1:actual_ndraws, remainder, replace = false))
+                end
+            end
+            sort!(sampled_inds)
+            scen_draws[sampled_inds, :]
+        else
+            # Record number of draws in this scenario
+            n_scen_draws[i] = size(scen_draws, 1)
+            scen_draws
+        end
+    end
+
+    # Stack draws from all component scenarios
+    fcast_series = cat(1, agg_draws...)
+
+    # If not sampling, update `agg.proportions` and `agg.total_draws`
+    if !agg.sample
+        agg.total_draws = sum(n_scen_draws)
+        agg.proportions = n_scen_draws ./ agg.total_draws
+    end
+
+
+    return fcast_series, transform, scen_dates
 end
 
 function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::Symbol,
@@ -227,6 +305,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
     # Aggregate scenarios
     nscens = length(agg.scenarios)
     agg_draws = Vector{Matrix{Float64}}(undef, nscens)
+    agg_dates = Vector{Vector{Date}}(nscens)
 
     # If not sampling, initialize vector to record number of draws in each
     # scenario in order to update `agg.proportions` and `agg.total_draws` at the
@@ -243,10 +322,10 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
 
     for (i, scen) in enumerate(agg.scenarios)
         # Recursively read in scenario draws
-        scen_draws, transform = read_scenario_output(m, scen, class, product, var_name)
+        scen_draws, transform, scen_dates = read_scenario_output(m, scen, class, product, var_name)
 
         # Sample if desired
-        agg_draws[i] = if agg.sample
+        agg_draws[i], agg_dates[i] = if agg.sample
             pct = agg.proportions[i]
             actual_ndraws = size(scen_draws, 1)
             desired_ndraws = convert(Int, round(pct * agg.total_draws))
@@ -264,16 +343,19 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                 end
             end
             sort!(sampled_inds)
-            scen_draws[sampled_inds, :]
+            scen_draws[sampled_inds, :], scen_dates
         else
             # Record number of draws in this scenario
             n_scen_draws[i] = size(scen_draws, 1)
-            scen_draws
+            scen_draws, scen_dates
         end
     end
 
     # Stack draws from all component scenarios
     fcast_series = cat(agg_draws..., dims = 1)
+
+   #= fcast_dates_dict = load(get_scenario_mb_input_file(m, scen, Symbol(:forecast, class)), "date_indices")
+    fcast_dates = map(x -> x[1], sort(collect(fcast_draws_dates_dict), by = x->x[2]))=#
 
     # If not sampling, update `agg.proportions` and `agg.total_draws`
     if !agg.sample
@@ -281,7 +363,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
         agg.proportions = n_scen_draws ./ agg.total_draws
     end
 
-    return fcast_series, transform
+    return fcast_series, transform, agg_dates
 end
 
 """
