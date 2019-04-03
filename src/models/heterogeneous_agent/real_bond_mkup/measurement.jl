@@ -110,7 +110,8 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     QQ[exo[:mkp_sh], exo[:mkp_sh]] = m[:σ_mkp]^2
     @info "pre inverse"
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(CCC != 0)
+    if any(CCC .!= 0)
+        @show CCC[CCC.!=0]
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
     @info "post inverse"
