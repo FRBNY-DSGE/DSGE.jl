@@ -528,11 +528,17 @@ function steadystate!(m::TwoAssetHANK)
     w	= (1 - aalpha) * (KL ^ aalpha)
     r_a	= aalpha * (KL ^ (aalpha - 1)) - ddelta
 
-    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid = set_grids(a, b, a_g, b_g, y, I, J, I_g, J_g, N, w, r_a, r_b, r_b_borr, trans)
+    @time a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
+
+
+    # Construct problem functions
+    #@inline u_fn(c) = u_fn(c, ggamma)
+    #@inline opt_deposits(Va, Vb, a) = opt_deposits(Va, Vb, a, chi0, chi1, chi2)
+    #@inline adj_cost_fn(d, a) = adj_cost_fn(d, a, chi0, chi1, chi2, a_lb)
 
     # Initial consumption and value function
-    c_0	= (1-xxi) * w * y_grid .* l_grid + (r_a_grid[1,1,1] + ddeath*pam) .* a_grid +
-        (r_b_borr + ddeath * pam) .* b_grid + trans_grid - tau_I * w * y_grid .* l_grid
+    c_0 = (1-xxi) * w * y_grid .+ (r_a + ddeath*pam) .* a_grid +
+        (r_b_borr + ddeath * pam) .* b_grid .+ trans - tau_I * w * y_grid
     V_0	= 1/(rrho + ddeath) * u_fn(c_0, ggamma)
 
     # Initial distribution
@@ -546,9 +552,11 @@ function steadystate!(m::TwoAssetHANK)
     aau = Array{Float64}(undef, 0, 0)
     bbu = Array{Float64}(undef, 0, 0)
     ccu = Array{Float64}(undef, 0, 0)
-    Vn1 = Array{Float64}(undef, I,J,N)
-    Vn  = Array{Float64}(undef, I,J,N)
+    Vn1 = Array{Float64}(undef, I, J, N)
+    Vn  = Array{Float64}(undef, I, J, N)
+
     gg_tilde = Array{Float64}(undef, 0, 0)
+
     g = Array{Float64}(undef, 0, 0)
     c = Array{Float64}(undef, I, J, N)
     s = Array{Float64}(undef, I, J, N)
@@ -558,12 +566,6 @@ function steadystate!(m::TwoAssetHANK)
     s_g = Array{Float64}(undef, 0, 0)
     d_g = Array{Float64}(undef, 0, 0)
 
-
-    c2 = Array{Float64}(undef, 0, 0)
-    s2 = Array{Float64}(undef, 0, 0)
-    u2 = Array{Float64}(undef, 0, 0)
-    d2 = Array{Float64}(undef, 0, 0)
-
     IcF = BitArray{3}(undef, I,J,N)
     IcB = BitArray{3}(undef, I,J,N)
     Ic0 = BitArray{3}(undef, I,J,N)
@@ -571,15 +573,6 @@ function steadystate!(m::TwoAssetHANK)
     IcBF = BitArray{3}(undef, I,J,N)
     IcBB = BitArray{3}(undef, I,J,N)
     Ic00 = BitArray{3}(undef, I,J,N)
-
-    IcF2 = BitArray{3}(undef, I,J,N)
-    IcB2 = BitArray{3}(undef, I,J,N)
-    Ic02 = BitArray{3}(undef, I,J,N)
-    IcFB2 = BitArray{3}(undef, I,J,N)
-    IcBF2 = BitArray{3}(undef, I,J,N)
-    IcBB2 = BitArray{3}(undef, I,J,N)
-    Ic002 = BitArray{3}(undef, I,J,N)
-
 
     K_supply  = 0.
     L_supply  = 0.
@@ -590,13 +583,9 @@ function steadystate!(m::TwoAssetHANK)
     # Iterate on KL to find steady state
     #----------------------------------------------------------------
     for ii = 1 : maxit_KL
-	    # Derive aggregates given KL
+	    # Derive aggregates, given KL
 	    w			= (1 - aalpha) * (KL ^ aalpha)
  	    r_a			= aalpha * (KL ^ (aalpha - 1)) - ddelta
-
-        r_a_grid    = repeat([r_a], I, J, N)
-        r_a_g_grid	= repeat([r_a], I_g, J_g, N)
-        w_g_grid	= repeat([w], I_g, J_g, N)
 
 	    # Store current value function
 	    Vn	= V_0
@@ -613,27 +602,15 @@ function steadystate!(m::TwoAssetHANK)
 		c0  = Array{Float64}(undef, I,J,N)
 		s0  = Array{Float64}(undef, I,J,N)
 		Hc0 = Array{Float64}(undef, I,J,N)
-cF2  = Array{Float64}(undef, I,J,N)
-		sF2  = Array{Float64}(undef, I,J,N)
-		HcF2 = Array{Float64}(undef, I,J,N)
-
-		cB2  = Array{Float64}(undef, I,J,N)
-		sB2  = Array{Float64}(undef, I,J,N)
-		HcB2 = Array{Float64}(undef, I,J,N)
-
-		c02  = Array{Float64}(undef, I,J,N)
-		s02  = Array{Float64}(undef, I,J,N)
-		Hc02 = Array{Float64}(undef, I,J,N)
 
 	    #----------------------------------------------------------------
 	    # Solve HJB
 	    #----------------------------------------------------------------
         for nn = 1 : maxit_HJB
-            perm_c =  ddeath * pam # check
+            perm_c =  ddeath * pam # NOTE: perm?
             c0_c   = ((1-xxi) - tau_I) * w
 
             for i=1:I, j=1:J, n=1:N
-
                 c0 = c0_c * real(y[1,n]) + b[i] * (r_b_grid[i,j,n] + perm_c) + trans
 
                 # ---- Liquid Assets, Forward + Backward Difference ----
@@ -658,7 +635,7 @@ cF2  = Array{Float64}(undef, I,J,N)
                 #----------------------------------------------------------------
                 # Which direction to use
                 Hc0 = u_fn(c0, ggamma)
-                HcF = (i==I) ? -1e12 : u_fn(cF,ggamma) + VbF * sF
+                HcF = (i==I) ? -1e12 : u_fn(cF, ggamma) + VbF * sF
                 HcB = u_fn(cB, ggamma) + VbB * sB
 
                 validF = (sF > 0)
@@ -711,24 +688,8 @@ cF2  = Array{Float64}(undef, I,J,N)
             s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
             c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
 
-            @time aa, bb, aau, bbu = transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0,
-                                          chi1, chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid,
-                                          d, dab_grid, daf_grid, dab_g_grid, daf_g_grid,
-                                          dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid, d_g,
-                                          a_grid, a_g_grid, s, s_g,
-                                          r_a_grid, r_a_g_grid)
-
-            @time aa2, bb2, aau2, bbu2 = transition2(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0,
-                                          chi1, chi2, a_lb,  y, y_grid, y_g_grid,
-                                          d, dab_grid, daf_grid, dab_g_grid, daf_g_grid,
-                                          dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid, d_g,
-                                          a_grid, a_g_grid, s, s_g, r_a, a, b)
-
-            @assert aa2 == aa
-            @assert bb2 == bb
-            @assert aau2 == aau
-            @assert bbu2 == bbu
-            @show "PASSED"
+            aa, bb, aau, bbu = transition(ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb, r_a,
+                                          vec(y), d, d_g, s, s_g, a, a_g, b, b_g)
 
             cc  = kron(lambda, my_speye(I * J))
             ccu = kron(lambda, my_speye(I_g * J_g))
@@ -747,8 +708,8 @@ cF2  = Array{Float64}(undef, I,J,N)
                 indx_k      = 1:N .!= kk
 
                 Vkp_stacked = sum(repeat(lambda[kk,indx_k]', I*J, 1) .*
-                                      reshape(Vn[:,:,indx_k],I*J,N-1), dims=2)
-                qk          = Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
+                                      reshape(Vn[:,:,indx_k], I*J,N-1), dims=2)
+                qk          = Delta * uk_stacked + Vk_stacked + Delta * Vkp_stacked
 
                 Vn1k_stacked = Bk \ qk
                 Vn1[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
@@ -759,8 +720,8 @@ cF2  = Array{Float64}(undef, I,J,N)
                 for jj = 1:maxit_HIS
                     Vn2 = Array{Float64}(undef, I, J, N)
                     for kk = 1:N
-                        uk_stacked     = reshape(u[:,:,kk],I*J,1)
-                        Vk_stacked     = reshape(Vn1[:,:,kk],I*J,1)
+                        uk_stacked = reshape(u[:,:,kk],I*J,1)
+                        Vk_stacked = reshape(Vn1[:,:,kk],I*J,1)
                         Ak = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
                         Bk = (1 + Delta*(rrho + ddeath) -
                               Delta*lambda[kk,kk]) * my_speye(I*J) - Delta*Ak
@@ -807,7 +768,7 @@ cF2  = Array{Float64}(undef, I,J,N)
         λ0p = λ0'
 
         gg_tilde = dab_g_tilde_mat * gg
-        gg1      = Array{Float64}(undef,  I_g * J_g, N)
+        gg1      = Array{Float64,2}(undef,  I_g * J_g, N)
         g        = Array{Float64,3}(undef, I_g, J_g, N)
 
         K_supply  = 0.
@@ -818,7 +779,7 @@ cF2  = Array{Float64}(undef, I,J,N)
         for nn = 1:maxit_KFE
 
             gg_tilde = dab_g_tilde_mat * gg
-            gg1      = Array{Float64}(undef, I_g * J_g, N)
+            gg1      = Array{Float64,2}(undef, I_g * J_g, N)
 
             for kk = 1:N
                 Ak = A[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g),
@@ -837,8 +798,7 @@ cF2  = Array{Float64}(undef, I,J,N)
             end
 
             gg1     = reshape(gg1, I_g*J_g*N,1)
-            gg1_sum = sum(gg1)
-            gg1     = gg1 ./ gg1_sum
+            gg1     = gg1 ./ sum(gg1)
             gg1     = dab_g_tilde_mat \ gg1
 
             dist = maximum(abs.(gg1-gg))
@@ -900,15 +860,10 @@ cF2  = Array{Float64}(undef, I,J,N)
     g_new = dab_g_tilde_mat \ g_new
     g_new = g_new + death_process * gg
     g_new = reshape(g_new ,I_g, J_g, N)
-    g_new = sum(sum(g_new, dims=1), dims=3)
-    save_a = dot(g_new, a_g)
-
-    g_new = A' * gg_tilde
-    g_new = dab_g_tilde_mat\g_new
-    g_new = g_new + death_process * gg
-    g_new = reshape(g_new, I_g, J_g, N)
-    g_new = sum(sum(g_new, dims=2), dims=3)
-    save_b = dot(vec(g_new), b_g)
+    g_new_a = sum(sum(g_new, dims=1), dims=3)
+    save_a = dot(g_new_a, a_g)
+    g_new_b = sum(sum(g_new, dims=2), dims=3)
+    save_b = dot(vec(g_new_b), b_g)
     #compute_savings()
 
     # Rename variables in steady state
@@ -935,9 +890,9 @@ cF2  = Array{Float64}(undef, I,J,N)
                                (r_a .+ ddeath*pam))
     m[:earn_Var_SS]     = sum(g .* m[:earn_SS].value .^ 2 .* dab_g_tilde_grid) -
                                 sum(g .* m[:earn_SS].value .* dab_g_tilde_grid)^2
-    m <= Setting(:IcF_SS, IcF)
-    m <= Setting(:IcB_SS, IcB)
-    m <= Setting(:Ic0_SS, Ic0)
+    m <= Setting(:IcF_SS,  IcF)
+    m <= Setting(:IcB_SS,  IcB)
+    m <= Setting(:Ic0_SS,  Ic0)
     m <= Setting(:IcFB_SS, IcFB)
     m <= Setting(:IcBF_SS, IcBF)
     m <= Setting(:IcBB_SS, IcBB)

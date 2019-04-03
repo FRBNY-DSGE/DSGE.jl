@@ -738,13 +738,42 @@ end
     return aa, bb, aau, bbu
 end
 
-# This file contains additional helper functions for computing the steady state.
 
-# Discretize a state space dimension of I gridpoints
-# Where agridparam is the "bending" coefficient of the grid
-# i.e. grid_param = 1 implies a uniform grid
-# And grid_min/grid_max are the start and endpoints of the grid
-@inline function construct_asset_grid(I::Int64, grid_param::Int64, grid_min::Float64, grid_max::Float64)
+@inline function construct_problem_functions(γ::T, χ0::R, χ1::R, χ2::R,
+                                             a_lb::R) where {T<:Number,R<:Number}
+
+    @inline util(c::S) where {S<:Number} = 1.0 / (1.0 - γ) * (c ^ (1-γ) - 1.0)
+    if γ == 1.0
+        @inline util(c::S) where {S<:Number} = log(c)
+    end
+
+    @inline function deposit(Va, Vb, a)
+        indx_plus  = ((Va / Vb - 1 - χ0) > 0)
+        indx_minus = ((Va / Vb - 1 + χ0) < 0)
+        return χ1 * (max(Va / Vb - 1 - χ0, 0)) ^ (1/χ2) * a * indx_plus +
+            (-χ1) * (max(-(Va / Vb - 1) - χ0, 0)) ^ (1/χ2) * a * indx_minus
+    end
+
+    @inline function cost(d, a)
+        d_scaled = abs(d / max(a, a_lb))
+        return max(a, a_lb) * (χ0 * (d_scaled) + 1.0 / (1.0 + χ2) * ((d_scaled)^(1+χ2) * χ1^(-χ2)))
+    end
+    return util, deposit, cost
+end
+
+
+# This file contains additional helper functions for computing the steady state.
+"""
+```
+@inline function construct_asset_grid(I::Int64, grid_param::Int64, grid_min::Float64,
+                                      grid_max::Float64)
+```
+Discretize a state space dimension of I gridpoints, where agridparam is the "bending"
+coefficient of the grid; i.e. grid_param = 1 implies a uniform grid, and grid_min/grid_max
+are the start and endpoints of the grid.
+"""
+@inline function construct_asset_grid(I::Int64, grid_param::Int64, grid_min::Float64,
+                                      grid_max::Float64)
     a  = collect(range(0, stop=1, length=I))
     a  = a .^ (1 / grid_param)
     a  = grid_min .+ (grid_max - grid_min) * a
