@@ -74,7 +74,8 @@ function eqcond(m::TwoAssetHANK)
     w2	= (1 - aalpha) * (KL ^ aalpha)
     r_a2	= aalpha * (KL ^ (aalpha - 1)) - ddelta
 
-    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid = set_grids(a, b, a_g, b_g, y, I, J, I_g, J_g, N, w2, r_a2, r_b, r_b_borr, trans)
+    #a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid = set_grids(a, b, a_g, b_g, y, I, J, I_g, J_g, N, w2, r_a2, r_b, r_b_borr, trans)
+    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids2(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
 
     r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat = set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
 
@@ -330,8 +331,8 @@ function eqcond(m::TwoAssetHANK)
     #end
     test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_y_shock.jld2", "residuals")
     @assert test_out == out
-
-    for i=1:10 @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1)) end
+    @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
+    #for i=1:10 @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1)) end
 
     error()
     x = zeros(Float64, 2 * nVars + nEErrors + 1)

@@ -415,7 +415,6 @@ end
 
     r_a_grid = repeat([r_a], I, J, N)
     w_grid	 = repeat([w], I, J, N)
-    l_grid   = permutedims(repeat(ones(N,1),1,I,J),[2 3 1])
 
     b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
     a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
@@ -449,10 +448,82 @@ end
 
     r_a_g_grid	     = repeat([r_a], I_g, J_g, N)
     w_g_grid	     = repeat([w], I_g, J_g,N)
-    l_g_grid		 = permutedims(repeat(ones(N,1),1,I_g,J_g),[2 3 1])
 
-    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, l_grid, l_g_grid, w_grid
+    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, w_grid
 end
+
+
+@inline function set_grids2(a, b, a_g, b_g, y, r_b, r_b_borr)
+    I   = length(b)
+    J   = length(a)
+    I_g = length(b_g)
+    J_g = length(a_g)
+    N   = length(y)
+
+    b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
+    a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
+    y_grid    = permutedims(repeat(y, 1, I, J), [2 3 1])
+    r_b_grid  = r_b .* (b_grid .>= 0) + r_b_borr .* (b_grid .< 0)
+
+    dbf_grid            = Array{Float64}(undef, I,J,N)
+    dbb_grid            = Array{Float64}(undef, I,J,N)
+    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
+    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
+
+    daf_grid            = Array{Float64}(undef, I, J, N)
+    dab_grid            = Array{Float64}(undef, I, J, N)
+    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
+    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    dab_grid[:,1,:]     = dab_grid[:,2,:]
+
+    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
+    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
+    db_tilde[end] = 0.5*dbb_grid[end,1,1]
+    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
+    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
+    da_tilde[end] = 0.5*dab_grid[1,end,1]
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
+    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
+
+    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
+    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
+    y_g_grid     = permutedims(repeat(y, 1, I_g, J_g), [2 3 1])
+    r_b_g_grid   = r_b .* (b_g_grid .>= 0) + r_b_borr .* (b_g_grid .< 0)
+
+    dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
+    dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
+    dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
+
+    daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
+    dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
+
+    db_g_tilde       = 0.5*(dbb_g_grid[:,1,1] + dbf_g_grid[:,1,1])
+    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1,1]
+    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1,1]
+    da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
+    da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
+    da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+
+    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
+
+    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
+
+    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid
+end
+
 
 """
 ```
@@ -527,8 +598,11 @@ Instantiates necessary difference vectors.
 end
 
 
-@inline function transition(ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
-                            y, d, d_g, s, s_g, r_a, a, a_g, b, b_g)
+@inline function transition2(ddeath::S, pam::S, xxi::S, w::R, chi0::S, chi1::S, chi2::S, a_lb::S,
+                            r_a::R, y::Vector{T}, d::Array{S,3}, d_g::Array{S,3},
+                            s::Array{S,3}, s_g::Array{S,3},
+                            a::Vector{S}, a_g::Vector{S}, b::Vector{S},
+                            b_g::Vector{S}) where {S<:AbstractFloat, R<:Number, T<:Number}
     I, J, N  = size(d)
     I_g, J_g = size(d_g)
 
