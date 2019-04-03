@@ -1,3 +1,4 @@
+using FileIO
 path = dirname(@__FILE__)
 
 custom_settings = Dict{Symbol, Setting}(
