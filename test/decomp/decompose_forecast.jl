@@ -6,7 +6,7 @@ path = dirname(@__FILE__)
 # Initialize models
 function make_test_model(year::Int)
     m = Model990()
-    vint = Dates.format(Date(year, 4, 10), "yymmdd")
+    vint = Dates.format(Dates.Date(year, 4, 10), "yymmdd")
     m <= Setting(:data_vintage, vint)
     m <= Setting(:cond_vintage, vint)
     m <= Setting(:date_forecast_start, DSGE.quartertodate("$year-Q1"))

@@ -282,7 +282,7 @@ function init_parameters!(m::RealBondMkup)
     m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed = false,
                    description="σ_mon: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{mon}")
-    m <= parameter(:ρ_mkp, 0.5, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+    m <= parameter(:ρ_mkp, 0.0, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                    fixed = true, tex_label = "\\rho_{mkp}", description = "ρ_mkp: Persistence of the markup shock")
 
     # Taken from m1002

@@ -1,8 +1,4 @@
-using DSGE, StateSpaceRoutines
-using Test, Printf, JLD2, Distributed, Plots
-using HDF5, JLD2, FileIO, DelimitedFiles
-using LinearAlgebra, Distributions, PDMats, Random
-using DataStructures, OrderedCollections, DataFrames
+
 
 my_tests = [
            "core",
@@ -15,6 +11,7 @@ my_tests = [
            "models/heterogeneous_agent/krusell_smith/krusell_smith",
            "models/heterogeneous_agent/bond_labor/bond_labor",=#
            "models/heterogeneous_agent/real_bond/real_bond",
+           "models/heterogeneous_agent/real_bond_mkup/real_bond_mkup",
            # "models/heterogeneous_agent/krusell_smith_ct/krusell_smith_ct",
            # "models/heterogeneous_agent/one_asset_hank/one_asset_hank",
            # "models/heterogeneous_agent/one_asset_hank/interns",
