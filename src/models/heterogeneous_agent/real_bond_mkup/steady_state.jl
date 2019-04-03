@@ -6,24 +6,24 @@ function steadystate!(m::RealBondMkup;
                       maxit::Int64 = 100)
 
     # Load in parameters and grids
-    R     = m[:R]
-    γ     = m[:γ]
-    ν     = m[:ν]
-    abar  = m[:abar]
-    sigs  = m[:σ_s]
+    R::Float64     = m[:R].value
+    γ::Float64     = m[:γ].value
+    ν::Float64     = m[:ν].value
+    abar::Float64  = m[:abar].value
+    sigs::Float64  = m[:σ_s].value
 
     elo   = get_setting(m, :elo)
     ehi   = get_setting(m, :ehi)
 
-    xgrid = m.grids[:xgrid].points
-    xwts  = m.grids[:xgrid].weights
-    sgrid = m.grids[:sgrid].points
-    swts  = m.grids[:sgrid].weights
-    ggrid = m.grids[:ggrid]
+    xgrid::Vector{Float64} = m.grids[:xgrid].points
+    xwts::Vector{Float64}  = m.grids[:xgrid].weights
+    sgrid::Vector{Float64} = m.grids[:sgrid].points
+    swts::Vector{Float64}  = m.grids[:sgrid].weights
+    ggrid::Vector{Float64} = m.grids[:ggrid]
 
-    xgrid_total   = m.grids[:xgrid_total]
-    sgrid_total   = m.grids[:sgrid_total]
-    weights_total = m.grids[:weights_total]
+    xgrid_total::Vector{Float64}   = m.grids[:xgrid_total]
+    sgrid_total::Vector{Float64}   = m.grids[:sgrid_total]
+    weights_total::Vector{Float64} = m.grids[:weights_total]
 
     nx      = get_setting(m, :nx)
     ns      = get_setting(m, :ns)
@@ -59,7 +59,7 @@ function steadystate!(m::RealBondMkup;
 
     for iss in 1:ns
         for ix in 1:nx
-            χss[ix + nx*(iss-1)] = chifun(sgrid[iss],xgrid[ix],ν.value,γ.value,aborrow)
+            χss[ix + nx*(iss-1)] = chifun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
             # ηss[ix + nx*(iss-1)] = etafun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
         end
     end
@@ -69,17 +69,17 @@ function steadystate!(m::RealBondMkup;
 
     # MDχ: This l_in doesn't seem to be used, since it gets immediately overwritten by
     # l_in from policy, unless the while loop condition is never entered
-    l_in_const = βguess*R*sum((qfunction.(abar - xgrid_total).*χss.^(-γ)).*(kron((swts.*ggrid),xwts)))
+    l_in_const = βguess*R*sum((qfunction.(abar .- xgrid_total).*χss.^(-γ)).*(kron((swts.*ggrid),xwts)))
     l_in = l_in_const*ones(nx*ns)
 
     while abs(excess) > tol && count < maxit # clearing markets
         if count>1
-            @warn "In steady state loop. BAD!"
+        #    @warn "In steady state loop. BAD!"
         end
         l_in_guess = ones(n)
         β = (βlo + βhi)/2.0
 
-        (c, η, ap, l_in, KF) = policy_realbond_mkup(β, R.value, γ.value, ν.value, sigs.value,
+        (c, η, ap, l_in, KF) = policy_realbond_mkup(β, R, γ, ν, sigs,
                                                ehi, elo, xgrid_total, sgrid_total,
                                                xwts, swts, l_in_guess, ggrid, χss)
 

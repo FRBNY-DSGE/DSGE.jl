@@ -21,6 +21,8 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
                      TTT_jump::Matrix{T},
                      RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
+
+    @info "enter"
     endo        = m.endogenous_states
     endo_unnorm = m.endogenous_states_unnormalized
     exo         = m.exogenous_shocks
@@ -33,11 +35,6 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
 
     _n_observables = n_observables(m)
     _n_shocks_exogenous = n_shocks_exogenous(m)
-
-    ZZ = zeros(_n_observables, _n_model_states)
-    DD = zeros(_n_observables)
-    EE = zeros(_n_observables, _n_observables)
-    QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     # Load in parameters, steady-state parameters, and grids
     γ::Float64     = m[:γ].value
@@ -59,36 +56,39 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
 
     nx::Int = get_setting(m, :nx)
     ns::Int = get_setting(m, :ns)
-
+    @info "pre gdp"
     # Construct GDP
     dGDP_dMU, dGDP_dZ, dGDP_dELL, dGDP_dRR, dGDP_dWW, dGDP_dTT = construct_GDPfn_realbond(nx, ns, xgrid_total, sgrid, xwts, swts,
                                                                                       γ, ν, abar, R, aborrow, μ,
                                                                                       c, η, ell, χss)
+    @info "post gdp"
 
-    GDPfn = zeros(1, n_model_states_unnormalized(m))
+    GDPfn = zeros(n_model_states_unnormalized(m))
     # GDP as function of un-normalized MU Z MON ELL RR II WW PI TT
     # note: GDP is only a function of contemporaneous variables
     # we are using the indices (MUP,ZP, etc.) corresponding to date t+1 variables
     # simply because these indices happen to work here also
     # this does not mean that GDP is a function of date t+1 variables
-    GDPfn[1, endo_unnorm[:μ′_t]]  = vec(dGDP_dMU)
-    #@info size(GDPfn[1, endo_unnorm[:z′_t]])
-    GDPfn[1, endo_unnorm[:z′_t]]  = dGDP_dZ
-    GDPfn[1, endo_unnorm[:l′_t]]  = vec(dGDP_dELL)
-    GDPfn[1, endo_unnorm[:R′_t]]  = dGDP_dRR
-    GDPfn[1, endo_unnorm[:w′_t]]  = dGDP_dWW
-    GDPfn[1, endo_unnorm[:t′_t]]  = dGDP_dTT
+    GDPfn[endo_unnorm[:μ′_t]]  = vec(dGDP_dMU)
+    GDPfn[first(endo_unnorm[:z′_t])]  = dGDP_dZ      #first because the index is a range of single number
+    GDPfn[endo_unnorm[:l′_t]]  = vec(dGDP_dELL)
+    GDPfn[first(endo_unnorm[:R′_t])]  = dGDP_dRR
+    GDPfn[first(endo_unnorm[:w′_t])]  = dGDP_dWW
+    GDPfn[first(endo_unnorm[:t′_t])]  = dGDP_dTT
 
     ########################################
     Qx, Qy, _, _ = compose_normalization_matrices(m)
     gx2  = Qy'*TTT_jump*Qx
 
     # now we need to create GDP as a function of the normalized states
-    GDPeqn = GDPfn*[eye(n_backward_looking_states_unnormalized(m)); gx2]*Qx'
+    GDPeqn = GDPfn'*[eye(n_backward_looking_states_unnormalized(m)); gx2]*Qx'
              # this is for level of GDP
              # to use the log of gdp, front multiply by (1/dGDP_dZ)
 
     ZZ = zeros(_n_observables, _n_model_states_aug)
+    DD = zeros(_n_observables)
+    EE = zeros(_n_observables, _n_observables)
+    QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     # GDP
     ZZ[obs[:obs_gdp], 1:_n_states]     = GDPeqn
@@ -96,23 +96,24 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     ZZ[obs[:obs_gdp], _n_states + _n_jumps+ 1:end] = -GDPeqn
 
     # Inflation
-    ZZ[obs[:obs_corepce], endo[:π′_t]] .= 1.
+    ZZ[obs[:obs_corepce], first(endo[:π′_t])] = 1.
 
     # Nominal FFR
-    ZZ[obs[:obs_nominalrate], endo[:i′_t]] .= 1.0 ./ R
+    ZZ[obs[:obs_nominalrate], first(endo[:i′_t])] = 1.0 / R
 
     # Measurement error
-    EE[obs[:obs_gdp], obs[:obs_gdp]] .= m[:e_y]
+    EE[obs[:obs_gdp], obs[:obs_gdp]] = m[:e_y]
 
     # Variance of innovations
-    QQ[exo[:z_sh], exo[:z_sh]] .= m[:σ_z]^2
-    QQ[exo[:mon_sh], exo[:mon_sh]] .= m[:σ_mon]^2
-    QQ[exo[:mkp_sh], exo[:mkp_sh]] .= m[:σ_mkp]^2
-
+    QQ[exo[:z_sh], exo[:z_sh]] = m[:σ_z]^2
+    QQ[exo[:mon_sh], exo[:mon_sh]] = m[:σ_mon]^2
+    QQ[exo[:mkp_sh], exo[:mkp_sh]] = m[:σ_mkp]^2
+    @info "pre inverse"
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC != 0)
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
+    @info "post inverse"
 
     return Measurement(ZZ, DD, QQ, EE)
 end

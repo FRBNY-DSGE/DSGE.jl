@@ -72,68 +72,68 @@ function jacobian(m::RealBondMkup)
 
     # Euler equation
     JJ[eq[:eq_euler], endo[:l′_t]]  = dF1_dELLP
-    JJ[eq[:eq_euler], endo[:R′_t]]  = dF1_dRRP
-    JJ[eq[:eq_euler], endo[:w′_t]]  = dF1_dWWP
-    JJ[eq[:eq_euler], endo[:t′_t]]  = dF1_dTTP
+    JJ[eq[:eq_euler], first(endo[:R′_t])]  = dF1_dRRP
+    JJ[eq[:eq_euler], first(endo[:w′_t])]  = dF1_dWWP
+    JJ[eq[:eq_euler], first(endo[:t′_t])]  = dF1_dTTP
     JJ[eq[:eq_euler], endo[:l_t]]   = dF1_dELL
-    JJ[eq[:eq_euler], endo[:R_t]]   = dF1_dRR
-    JJ[eq[:eq_euler], endo[:w_t]]   = dF1_dWW
-    JJ[eq[:eq_euler], endo[:t_t]]   = dF1_dTT
+    JJ[eq[:eq_euler], first(endo[:R_t])]   = dF1_dRR
+    JJ[eq[:eq_euler], first(endo[:w_t])]   = dF1_dWW
+    JJ[eq[:eq_euler], first(endo[:t_t])]   = dF1_dTT
 
     # KF
     JJ[eq[:eq_kolmogorov_fwd], endo[:μ′_t]] = -eye(nx*ns)
     JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t]]  = dF2_dMU
     JJ[eq[:eq_kolmogorov_fwd], endo[:l_t]]  = dF2_dELL
-    JJ[eq[:eq_kolmogorov_fwd], endo[:w_t]]  .= dF2_dWW
-    JJ[eq[:eq_kolmogorov_fwd], endo[:R_t]]  = dF2_dRR
-    JJ[eq[:eq_kolmogorov_fwd], endo[:t_t]]  = dF2_dTT
+    JJ[eq[:eq_kolmogorov_fwd], first(endo[:w_t])]  = dF2_dWW
+    JJ[eq[:eq_kolmogorov_fwd], first(endo[:R_t])]  = dF2_dRR
+    JJ[eq[:eq_kolmogorov_fwd], first(endo[:t_t])]  = dF2_dTT
 
     # mkt ckr
-    JJ[eq[:eq_market_clearing], endo[:μ_t]]  = dF3_dMU
-    JJ[eq[:eq_market_clearing], endo[:z_t]]  .= GDP
-    JJ[eq[:eq_market_clearing], endo[:l_t]]  = dF3_dELL
-    JJ[eq[:eq_market_clearing], endo[:w_t]]  .= dF3_dWW
-    JJ[eq[:eq_market_clearing], endo[:R_t]]  .= dF3_dRR
-    JJ[eq[:eq_market_clearing], endo[:t_t]]  .= dF3_dTT
+    JJ[first(eq[:eq_market_clearing]), endo[:μ_t]]  = dF3_dMU
+    JJ[first(eq[:eq_market_clearing]), first(endo[:z_t])]  = GDP
+    JJ[first(eq[:eq_market_clearing]), endo[:l_t]]  = dF3_dELL
+    JJ[first(eq[:eq_market_clearing]), first(endo[:w_t])]  = dF3_dWW
+    JJ[first(eq[:eq_market_clearing]), first(endo[:R_t])]  = dF3_dRR
+    JJ[first(eq[:eq_market_clearing]), first(endo[:t_t])]  = dF3_dTT
 
     # TFP
-    JJ[eq[:eq_TFP], endo[:z′_t]]  .= 1.0
-    JJ[eq[:eq_TFP], endo[:z_t]]   .= -ρ_z
+    JJ[first(eq[:eq_TFP]), first(endo[:z′_t])]  = 1.0
+    JJ[first(eq[:eq_TFP]), first(endo[:z_t])]   = -ρ_z
 
     # Phillips
-    JJ[eq[:eq_phillips], endo[:π′_t]] .= -1.0/R
-    JJ[eq[:eq_phillips], endo[:z_t]]  .= κ
-    JJ[eq[:eq_phillips], endo[:w_t]]  .= -κ
-    JJ[eq[:eq_phillips], endo[:π_t]]  .= 1.0
-    JJ[eq[:eq_phillips], endo[:mkp_t]] .= -1.0
+    JJ[first(eq[:eq_phillips]), first(endo[:π′_t])] = -1.0/R
+    JJ[first(eq[:eq_phillips]), first(endo[:z_t])]  = κ
+    JJ[first(eq[:eq_phillips]), first(endo[:w_t])]  = -κ
+    JJ[first(eq[:eq_phillips]), first(endo[:π_t])]  = 1.0
+    JJ[first(eq[:eq_phillips]), first(endo[:mkp_t])] = -1.0
 
     # taylor
-    JJ[eq[:eq_taylor], endo[:i_t]]   .= 1.0
-    JJ[eq[:eq_taylor], endo[:π_t]]   .= -phipi*R*(1-ρ_tay)
-    JJ[eq[:eq_taylor], endo[:mon_t]] .= -1.0
-    JJ[eq[:eq_taylor], endo[:l_i_t]] .= -ρ_tay
+    JJ[first(eq[:eq_taylor]), first(endo[:i_t])]   = 1.0
+    JJ[first(eq[:eq_taylor]), first(endo[:π_t])]   = -phipi*R*(1-ρ_tay)
+    JJ[first(eq[:eq_taylor]), first(endo[:mon_t])] = -1.0
+    JJ[first(eq[:eq_taylor]), first(endo[:l_i_t])] = -ρ_tay
 
     # fisher
-    JJ[eq[:eq_fisher], endo[:i_t]]  .= 1.0
-    JJ[eq[:eq_fisher], endo[:π′_t]] .= -R
-    JJ[eq[:eq_fisher], endo[:R_t]]  .= -1.0
+    JJ[first(eq[:eq_fisher]), first(endo[:i_t])]  = 1.0
+    JJ[first(eq[:eq_fisher]), first(endo[:π′_t])] = -R
+    JJ[first(eq[:eq_fisher]), first(endo[:R_t])]  = -1.0
 
     # transfers
-    JJ[eq[:eq_transfers], endo[:t_t]]  .= 1.0
-    JJ[eq[:eq_transfers], endo[:z_t]]  .= -GDP
-    JJ[eq[:eq_transfers], endo[:w_t]] .= GDP
+    JJ[first(eq[:eq_transfers]), first(endo[:t_t])]   = 1.0
+    JJ[first(eq[:eq_transfers]), first(endo[:z_t])]   = -GDP
+    JJ[first(eq[:eq_transfers]), first(endo[:w_t])]   = GDP
 
     # MP
-    JJ[eq[:eq_monetary_policy], endo[:mon′_t]] .= 1.0
-    JJ[eq[:eq_monetary_policy], endo[:mon_t]]  .= -ρ_mon
+    JJ[first(eq[:eq_monetary_policy]), first(endo[:mon′_t])] = 1.0
+    JJ[first(eq[:eq_monetary_policy]), first(endo[:mon_t])]  = -ρ_mon
 
     # Markup
-    JJ[eq[:eq_markup], endo[:mkp′_t]] .= 1.0
-    JJ[eq[:eq_markup], endo[:mkp_t]]  .= -ρ_mkp
+    JJ[first(eq[:eq_markup]), first(endo[:mkp′_t])] = 1.0
+    JJ[first(eq[:eq_markup]), first(endo[:mkp_t])]  = -ρ_mkp
 
     # Lagged Monetary Policy
-    JJ[eq[:eq_lagged_nominal_rate], endo[:l_i′_t]] .= 1.0
-    JJ[eq[:eq_lagged_nominal_rate], endo[:i_t]]    .= -1.0
+    JJ[first(eq[:eq_lagged_nominal_rate]), first(endo[:l_i′_t])] = 1.0
+    JJ[first(eq[:eq_lagged_nominal_rate]), first(endo[:i_t])]    = -1.0
 
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)

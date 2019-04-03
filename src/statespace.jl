@@ -167,15 +167,19 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
         TTT_jump, TTT_state = klein(m)
 
         # Transition
+#        @info "pre klein"
         TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
         CCC = zeros(n_model_states(m))
+#        @info "post kelin"
 
         TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
-
+#        @info "post aug"
         transition_equation = Transition(TTT, RRR, CCC)
+#        @info "post trans"
 
         # Measurement (needs the additional TTT_jump argument)
         measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC)
+#        @info "post measure"
     else
         throw("solution_method provided does not exist.")
     end
