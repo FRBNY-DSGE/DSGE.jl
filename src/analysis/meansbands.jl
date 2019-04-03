@@ -75,6 +75,7 @@ end
 function MeansBands()
     metadata   = Dict(:class => :none, :product => :none,
                       :cond_type => :none, :para => :none,
+                      :date_inds => OrderedDict{Date, Int}(Date() => 1),
                       :indices => Dict{Symbol, Int}(:none => 1))
 
     means = DataFrame(date = [Dates.Date(0)], none = [0.0])
@@ -174,7 +175,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     # Assert dates are contiguous
     last_mb1_date  = enddate_means(mb1)
     first_mb2_date = startdate_means(mb2)
-    @assert iterate_quarters(last_mb1_date, 1) == first_mb2_date
+#    @assert iterate_quarters(last_mb1_date, 1) == first_mb2_date
 
     # compute means field
     means = vcat(mb1.means, mb2.means)
