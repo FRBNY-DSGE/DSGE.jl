@@ -381,79 +381,7 @@ Function to initialize liquid asset grid.
     return I_neg, bmin, bmax, b, b_g, b_g_0pos
 end
 
-@inline function set_grids(a, b, a_g, b_g, y, I, J, I_g, J_g, N, w, r_a, r_b, r_b_borr, trans)
-    b_grid     = permutedims(repeat(b , 1, J, N), [1 2 3])
-    a_grid     = permutedims(repeat(a , 1, I, N), [2 1 3])
-    y_grid     = permutedims(repeat(y', 1, I, J), [2 3 1])
-    r_b_grid   = r_b .* (b_grid .>= 0) + r_b_borr .* (b_grid .< 0)
-    trans_grid = trans * ones(I,J,N)
-
-    dbf_grid            = Array{Float64}(undef, I,J,N)
-    dbb_grid            = Array{Float64}(undef, I,J,N)
-    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
-    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
-
-    daf_grid            = Array{Float64}(undef, I, J, N)
-    dab_grid            = Array{Float64}(undef, I, J, N)
-    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
-    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    dab_grid[:,1,:]     = dab_grid[:,2,:]
-
-    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
-    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
-    db_tilde[end] = 0.5*dbb_grid[end,1,1]
-    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
-    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
-    da_tilde[end] = 0.5*dab_grid[1,end,1]
-
-    dab_tilde      = kron(da_tilde, db_tilde)
-    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
-    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
-
-    r_a_grid = repeat([r_a], I, J, N)
-    w_grid	 = repeat([w], I, J, N)
-
-    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
-    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
-    y_g_grid     = permutedims(repeat(y', 1, I_g, J_g), [2 3 1])
-    r_b_g_grid   = r_b .* (b_g_grid .>= 0) + r_b_borr .* (b_g_grid .< 0)
-    trans_g_grid = trans * ones(I_g,J_g,N)
-
-    dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
-    dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
-    dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
-    dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
-    dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
-
-    daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
-    daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
-    dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
-    dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
-
-    db_g_tilde       = 0.5*(dbb_g_grid[:,1,1] + dbf_g_grid[:,1,1])
-    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1,1]
-    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1,1]
-    da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
-    da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
-    da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
-    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
-    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
-    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
-
-    r_a_g_grid	     = repeat([r_a], I_g, J_g, N)
-    w_g_grid	     = repeat([w], I_g, J_g,N)
-
-    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_a_grid, r_b_grid, r_a_g_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid, trans_grid, trans_g_grid, w_grid
-end
-
-
-@inline function set_grids2(a, b, a_g, b_g, y, r_b, r_b_borr)
+@inline function set_grids(a, b, a_g, b_g, y, r_b, r_b_borr)
     I   = length(b)
     J   = length(a)
     I_g = length(b_g)
@@ -594,11 +522,11 @@ Instantiates necessary difference vectors.
     dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
     dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
 
-    return r_b_vec,r_b_g_vec, daf, daf_g, dab, dab_g, dab_tilde, dab_g_tilde, dbf, dbf_g, dbb, dbb_g, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
+    return r_b_vec, r_b_g_vec, daf, daf_g, dab, dab_g, dab_tilde, dab_g_tilde, dbf, dbf_g, dbb, dbb_g, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
 end
 
 
-@inline function transition2(ddeath::S, pam::S, xxi::S, w::R, chi0::S, chi1::S, chi2::S, a_lb::S,
+@inline function transition(ddeath::S, pam::S, xxi::S, w::R, chi0::S, chi1::S, chi2::S, a_lb::S,
                             r_a::R, y::Vector{T}, d::Array{S,3}, d_g::Array{S,3},
                             s::Array{S,3}, s_g::Array{S,3},
                             a::Vector{S}, a_g::Vector{S}, b::Vector{S},
@@ -690,161 +618,6 @@ end
 
     aau = spdiagm(0 => vec(centdiagu), -I_g => vec(lowdiagu)[1:end-I_g],
                      I_g => vec(updiagu)[I_g+1:end])
-
-    centdiagu = reshape(Yu,I_g*J_g,N)
-    lowdiagu = reshape(Xu,I_g*J_g,N)
-    lowdiagu = circshift(lowdiagu,-1)
-    updiagu = reshape(Zu,I_g*J_g,N)
-    updiagu = circshift(updiagu,1)
-
-    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
-    updiagu   = reshape(updiagu,I_g*J_g*N,1)
-    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
-
-    bbu = spdiagm(0 => vec(centdiagu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
-
-    return aa, bb, aau, bbu
-end
-
-
-@inline function transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
-                            l_grid, l_g_grid, y_grid, y_g_grid, d, dab_grid, daf_grid,
-                            dab_g_grid, daf_g_grid, dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid,
-                            d_g, a_grid, a_g_grid, s, s_g, r_a_grid, r_a_g_grid)
-
-    audriftB = Array{Float64,3}(undef, I_g,J_g,N)
-    audriftF = Array{Float64,3}(undef, I_g,J_g,N)
-    budriftB = Array{Float64,3}(undef, I_g,J_g,N)
-    budriftF = Array{Float64,3}(undef, I_g,J_g,N)
-
-    chi  = Array{Float64,3}(undef, I,J,N)
-    yy   = Array{Float64,3}(undef, I,J,N)
-    zeta = Array{Float64,3}(undef, I,J,N)
-
-    X = Array{Float64,3}(undef, I,J,N)
-    Y = Array{Float64,3}(undef, I,J,N)
-    Z = Array{Float64,3}(undef, I,J,N)
-
-    chiu  = Array{Float64,3}(undef, I_g,J_g,N)
-    yyu   = Array{Float64,3}(undef, I_g,J_g,N)
-    zetau = Array{Float64,3}(undef, I_g,J_g,N)
-
-    Xu = Array{Float64,3}(undef, I_g,J_g,N)
-    Yu = Array{Float64,3}(undef, I_g,J_g,N)
-    Zu = Array{Float64,3}(undef, I_g,J_g,N)
-
-    # compute all drifts
-    adriftB = min.(d,0) .+ min.(a_grid .* (r_a_grid .+ ddeath*pam) .+ xxi * w * l_grid .* y_grid, 0)
-    adriftF = max.(d,0) .+ max.(a_grid .* (r_a_grid .+ ddeath*pam) .+ xxi * w * l_grid .* y_grid, 0)
-
-    bdriftB = min.(-d .- adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ min.(s,0)
-    bdriftF = max.(-d .- adj_cost_fn(d, a_grid, chi0, chi1, chi2, a_lb),0) .+ max.(s,0)
-
-    audriftB[1:I_g-1,:,:] = min.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
-                                (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) .+ xxi * w *
-                                l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:], 0)
-    audriftB[I_g,:,:]     = min.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
-                                 ((r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
-                                  l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:]), 0)
-
-    audriftF[1:I_g-1,:,:] = max.(d_g[1:I_g-1,:,:] .+ a_g_grid[1:I_g-1,:,:] .*
-                                (r_a_g_grid[1:I_g-1,:,:] .+ ddeath*pam) + xxi * w *
-                                l_g_grid[1:I_g-1,:,:] .* y_g_grid[1:I_g-1,:,:], 0)
-    audriftF[I_g,:,:]     = max.(d_g[I_g,:,:] .+ a_g_grid[I_g,:,:] .*
-                                (r_a_g_grid[I_g,:,:] .+ ddeath*pam) .+ xxi * w *
-                                l_g_grid[I_g,:,:] .* y_g_grid[I_g,:,:], 0)
-
-    budriftB[1:I_g-1,:,:] = min.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                adj_cost_fn(d_g[1:I_g-1,:,:], a_g_grid[1:I_g-1,:,:],
-                                            chi0, chi1, chi2, a_lb), 0)
-    budriftB[I_g,:,:]     = min.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                adj_cost_fn(d_g[I_g,:,:], a_g_grid[I_g,:,:],
-                                            chi0, chi1, chi2, a_lb), 0)
-
-    budriftF[1:I_g-1,:,:] = max.(s_g[1:I_g-1,:,:] - d_g[1:I_g-1,:,:] -
-                                adj_cost_fn(d_g[1:I_g-1,:,:],a_g_grid[1:I_g-1,:,:],
-                                            chi0, chi1, chi2, a_lb), 0)
-    budriftF[I_g,:,:]     = max.(s_g[I_g,:,:] - d_g[I_g,:,:] -
-                                adj_cost_fn(d_g[I_g,:,:], a_g_grid[I_g,:,:],
-                                            chi0, chi1, chi2, a_lb),0)
-
-    # Transition a
-    chi[:,2:J,:] = -adriftB[:,2:J,:] ./ dab_grid[:,2:J,:]
-    chi[:,1,:] = zeros(I,1,N)
-
-    yy[:,2:J-1,:] = adriftB[:,2:J-1,:] ./ dab_grid[:,2:J-1,:] -
-                    adriftF[:,2:J-1,:] ./ daf_grid[:,2:J-1,:]
-    yy[:,1,:] = -adriftF[:,1,:] ./ daf_grid[:,1,:]
-    yy[:,J,:] =  adriftB[:,J,:] ./ dab_grid[:,J,:]
-
-    zeta[:,1:J-1,:] = adriftF[:,1:J-1,:] ./ daf_grid[:,1:J-1,:]
-    zeta[:,J,:]     = zeros(I,1,N)
-
-    centdiag = reshape(yy,I*J,N)
-    lowdiag  = reshape(chi,I*J,N)
-    lowdiag  = circshift(lowdiag,-I)
-    updiag   = reshape(zeta,I*J,N)
-    updiag   = circshift(updiag,I)
-
-    centdiag = reshape(centdiag,I*J*N,1)
-    updiag   = reshape(updiag,I*J*N,1)
-    lowdiag  = reshape(lowdiag,I*J*N,1)
-
-    aa = spdiagm(-I => vec(lowdiag)[1:end-I], 0 => vec(centdiag), I => vec(updiag)[I+1:end])
-
-    chiu[:,2:J_g,:] = -audriftB[:,2:J_g,:] ./ dab_g_grid[:,2:J_g,:]
-    chiu[:,1,:]     = zeros(I_g,1,N)
-
-    yyu[:,2:J_g-1,:] = audriftB[:,2:J_g-1,:] ./ dab_g_grid[:,2:J_g-1,:] -
-        audriftF[:,2:J_g-1,:] ./ daf_g_grid[:,2:J_g-1,:]
-    yyu[:,1,:]   = -audriftF[:,1,:]   ./ daf_g_grid[:,1,:]
-    yyu[:,J_g,:] =  audriftB[:,J_g,:] ./ dab_g_grid[:,J_g,:]
-
-    zetau[:,1:J_g-1,:] = audriftF[:,1:J_g-1,:] ./ daf_g_grid[:,1:J_g-1,:]
-    zetau[:,J_g,:]     = zeros(I_g,1,N)
-
-    centdiagu = reshape(yyu, I_g * J_g, N)
-    lowdiagu  = reshape(chiu,I_g * J_g, N)
-    lowdiagu  = circshift(lowdiagu, -I_g)
-    updiagu   = reshape(zetau, I_g * J_g, N)
-    updiagu   = circshift(updiagu, I_g)
-
-    centdiagu = reshape(centdiagu,I_g * J_g * N, 1)
-    updiagu   = reshape(updiagu,  I_g * J_g * N, 1)
-    lowdiagu  = reshape(lowdiagu, I_g * J_g * N, 1)
-
-    aau = spdiagm(0 => vec(centdiagu), -I_g => vec(lowdiagu)[1:end-I_g],
-                     I_g => vec(updiagu)[I_g+1:end])
-
-    X[2:I,:,:]   = -bdriftB[2:I,:,:] ./ dbb_grid[2:I,:,:]
-    X[1,:,:]     = zeros(1,J,N)
-    Y[2:I-1,:,:] = bdriftB[2:I-1,:,:] ./ dbb_grid[2:I-1,:,:] -
-                   bdriftF[2:I-1,:,:] ./ dbf_grid[2:I-1,:,:]
-    Y[1,:,:]     = -bdriftF[1,:,:] ./ dbf_grid[1,:,:]
-    Y[I,:,:]     = bdriftB[I,:,:] ./ dbb_grid[I,:,:]
-    Z[1:I-1,:,:] = bdriftF[1:I-1,:,:] ./ dbf_grid[1:I-1,:,:]
-    Z[I,:,:]     = zeros(1,J,N)
-
-    centdiag = reshape(Y,I*J,N)
-    lowdiag  = reshape(X,I*J,N)
-    lowdiag  = circshift(lowdiag,-1)
-    updiag   = reshape(Z,I*J,N)
-    updiag   = circshift(updiag,1)
-
-    centdiag = reshape(centdiag,I*J*N,1)
-    updiag   = reshape(updiag,I*J*N,1)
-    lowdiag  = reshape(lowdiag,I*J*N,1)
-
-    bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
-
-    Xu[2:I_g,:,:]   = -budriftB[2:I_g,:,:] ./ dbb_g_grid[2:I_g,:,:]
-    Xu[1,:,:]       = zeros(1,J_g,N)
-    Yu[2:I_g-1,:,:] = budriftB[2:I_g-1,:,:] ./ dbb_g_grid[2:I_g-1,:,:] -
-        budriftF[2:I_g-1,:,:] ./ dbf_g_grid[2:I_g-1,:,:]
-    Yu[1,:,:]       = -budriftF[1,:,:] ./ dbf_g_grid[1,:,:]
-    Yu[I_g,:,:]     = budriftB[I_g,:,:] ./ dbb_g_grid[I_g,:,:]
-    Zu[1:I_g-1,:,:] = budriftF[1:I_g-1,:,:] ./ dbf_g_grid[1:I_g-1,:,:]
-    Zu[I_g,:,:]     = zeros(1,J_g,N)
 
     centdiagu = reshape(Yu,I_g*J_g,N)
     lowdiagu = reshape(Xu,I_g*J_g,N)
