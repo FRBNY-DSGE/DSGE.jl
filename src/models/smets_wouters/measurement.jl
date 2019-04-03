@@ -94,7 +94,7 @@ function measurement(m::SmetsWouters{T},
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(CCC != 0)
+    if any(CCC .!= 0)
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
 
