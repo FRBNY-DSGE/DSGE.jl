@@ -48,7 +48,7 @@ function measurement(m::KrusellSmith{T},
     QQ[exo[:z_sh], exo[:z_sh]] = m[:σ_z]^2
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(CCC != 0)
+    if any(CCC .!= 0)
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
 

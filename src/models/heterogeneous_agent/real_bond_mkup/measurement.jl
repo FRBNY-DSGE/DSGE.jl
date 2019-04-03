@@ -22,7 +22,7 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
                      TTT_jump::Matrix{T},
                      RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
 
-    @info "enter"
+    #@info "enter"
     endo        = m.endogenous_states
     endo_unnorm = m.endogenous_states_unnormalized
     exo         = m.exogenous_shocks
@@ -56,12 +56,12 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
 
     nx::Int = get_setting(m, :nx)
     ns::Int = get_setting(m, :ns)
-    @info "pre gdp"
+    #@info "pre gdp"
     # Construct GDP
     dGDP_dMU, dGDP_dZ, dGDP_dELL, dGDP_dRR, dGDP_dWW, dGDP_dTT = construct_GDPfn_realbond(nx, ns, xgrid_total, sgrid, xwts, swts,
                                                                                       γ, ν, abar, R, aborrow, μ,
                                                                                       c, η, ell, χss)
-    @info "post gdp"
+    #@info "post gdp"
 
     GDPfn = zeros(n_model_states_unnormalized(m))
     # GDP as function of un-normalized MU Z MON ELL RR II WW PI TT
@@ -108,13 +108,13 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     QQ[exo[:z_sh], exo[:z_sh]] = m[:σ_z]^2
     QQ[exo[:mon_sh], exo[:mon_sh]] = m[:σ_mon]^2
     QQ[exo[:mkp_sh], exo[:mkp_sh]] = m[:σ_mkp]^2
-    @info "pre inverse"
+    #@info "pre inverse"
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0)
         @show CCC[CCC.!=0]
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
-    @info "post inverse"
+    #@info "post inverse"
 
     return Measurement(ZZ, DD, QQ, EE)
 end
