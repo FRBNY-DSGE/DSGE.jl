@@ -197,14 +197,13 @@ function eqcond(m::TwoAssetHANK)
                                                      r_b_vec,
                                                      IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
                                                      y_shock, a, b)
+
         # Derive transition matrices
         @show "transition_deriva"
-        @code_warntype aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
+        @time aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
                                                    xxi, w, chi0, chi1, chi2, a_lb,
                                                    d, d_g, s, s_g, r_a, aggZ,
                                                    a, a_g, b, b_g, y_shock)
-
-
 
         # full transition matrix
         A = aa + bb + cc
@@ -332,7 +331,8 @@ function eqcond(m::TwoAssetHANK)
     test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_y_shock.jld2", "residuals")
     @assert test_out == out
 
-    @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
+    for i=1:10 @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1)) end
+
     error()
     x = zeros(Float64, 2 * nVars + nEErrors + 1)
     cfg = ForwardDiff.JacobianConfig(get_residuals, x, ForwardDiff.Chunk{1}())

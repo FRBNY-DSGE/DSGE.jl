@@ -42,6 +42,8 @@ THE GUTS OF EQCOND.
         sF = (i==I) ? 0.0 : c0 - cF
         sB = (i==1) ? 0.0 : c0 - cB
 
+        if (i==1 && j > 1) VbB = u_fn(cB, ggamma) end
+
         #----------------------------------------------------------------
         # Consumption  & Savings Decision
         #----------------------------------------------------------------
@@ -522,6 +524,112 @@ Instantiates necessary difference vectors.
     dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
 
     return r_b_vec,r_b_g_vec, daf, daf_g, dab, dab_g, dab_tilde, dab_g_tilde, dbf, dbf_g, dbb, dbb_g, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
+end
+
+
+@inline function transition(ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb,
+                            y, d, d_g, s, s_g, r_a, a, a_g, b, b_g)
+    I, J, N  = size(d)
+    I_g, J_g = size(d_g)
+
+    chi  = Array{Float64,3}(undef, I,J,N)
+    yy   = Array{Float64,3}(undef, I,J,N)
+    zeta = Array{Float64,3}(undef, I,J,N)
+
+    X = Array{Float64,3}(undef, I,J,N)
+    Y = Array{Float64,3}(undef, I,J,N)
+    Z = Array{Float64,3}(undef, I,J,N)
+
+    chiu  = Array{Float64,3}(undef, I_g,J_g,N)
+    yyu   = Array{Float64,3}(undef, I_g,J_g,N)
+    zetau = Array{Float64,3}(undef, I_g,J_g,N)
+
+    Xu = Array{Float64,3}(undef, I_g,J_g,N)
+    Yu = Array{Float64,3}(undef, I_g,J_g,N)
+    Zu = Array{Float64,3}(undef, I_g,J_g,N)
+
+    α    = (r_a + ddeath*pam)
+    xxiw = xxi * w
+
+    for i=1:I, j=1:J, n=1:N
+        # compute all drifts
+        adrift = a[j] * α + xxiw * y[n]
+        bdrift = -d[i,j,n] - adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb)
+
+        chi[i,j,n]  = (j==1) ? 0.0 : -(min(d[i,j,n],0) + min(adrift, 0)) / (a[j] - a[j-1])
+        zeta[i,j,n] = (j==J) ? 0.0 :  (max(d[i,j,n],0) + max(adrift, 0)) / (a[j+1] - a[j])
+
+        X[i,j,n] = (i==1) ? 0.0 : -(min(bdrift, 0) + min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z[i,j,n] = (i==I) ? 0.0 :  (max(bdrift, 0) + max(s[i,j,n], 0)) / (b[i+1] - b[i])
+    end
+    yy = -chi .- zeta
+    Y  = -X .- Z
+
+    centdiag = reshape(yy,I*J,N)
+    lowdiag  = reshape(chi,I*J,N)
+    lowdiag  = circshift(lowdiag,-I)
+    updiag   = reshape(zeta,I*J,N)
+    updiag   = circshift(updiag,I)
+
+    centdiag = reshape(centdiag,I*J*N,1)
+    updiag   = reshape(updiag,I*J*N,1)
+    lowdiag  = reshape(lowdiag,I*J*N,1)
+
+    aa = spdiagm(-I => vec(lowdiag)[1:end-I], 0 => vec(centdiag), I => vec(updiag)[I+1:end])
+
+    centdiag = reshape(Y,I*J,N)
+    lowdiag  = reshape(X,I*J,N)
+    lowdiag  = circshift(lowdiag,-1)
+    updiag   = reshape(Z,I*J,N)
+    updiag   = circshift(updiag,1)
+
+    centdiag = reshape(centdiag,I*J*N,1)
+    updiag   = reshape(updiag,I*J*N,1)
+    lowdiag  = reshape(lowdiag,I*J*N,1)
+
+    bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
+
+    for i=1:I_g, j=1:J_g, n=1:N
+        audrift = d_g[i,j,n] + a_g[j] * α + xxiw * y[n]
+        budrift = s_g[i,j,n] - d_g[i,j,n] -
+            adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb)
+
+        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift,0) / (a_g[j] - a_g[j-1])
+        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift,0) / (a_g[j+1] - a_g[j])
+
+        Xu[i,j,n] = (i==1)      ? 0.0 : -min(budrift,0) / (b_g[i] - b_g[i-1])
+        Zu[i,j,n] = (i==I_g)    ? 0.0 :  max(budrift,0) / (b_g[i+1] - b_g[i])
+    end
+
+    yyu = -(chiu .+ zetau)
+    Yu  = -(Xu .+ Zu)
+
+    centdiagu = reshape(yyu, I_g * J_g, N)
+    lowdiagu  = reshape(chiu,I_g * J_g, N)
+    lowdiagu  = circshift(lowdiagu, -I_g)
+    updiagu   = reshape(zetau, I_g * J_g, N)
+    updiagu   = circshift(updiagu, I_g)
+
+    centdiagu = reshape(centdiagu,I_g * J_g * N, 1)
+    updiagu   = reshape(updiagu,  I_g * J_g * N, 1)
+    lowdiagu  = reshape(lowdiagu, I_g * J_g * N, 1)
+
+    aau = spdiagm(0 => vec(centdiagu), -I_g => vec(lowdiagu)[1:end-I_g],
+                     I_g => vec(updiagu)[I_g+1:end])
+
+    centdiagu = reshape(Yu,I_g*J_g,N)
+    lowdiagu = reshape(Xu,I_g*J_g,N)
+    lowdiagu = circshift(lowdiagu,-1)
+    updiagu = reshape(Zu,I_g*J_g,N)
+    updiagu = circshift(updiagu,1)
+
+    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
+    updiagu   = reshape(updiagu,I_g*J_g*N,1)
+    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
+
+    bbu = spdiagm(0 => vec(centdiagu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
+
+    return aa, bb, aau, bbu
 end
 
 

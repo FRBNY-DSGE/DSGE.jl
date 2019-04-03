@@ -629,278 +629,8 @@ cF2  = Array{Float64}(undef, I,J,N)
 	    # Solve HJB
 	    #----------------------------------------------------------------
         for nn = 1 : maxit_HJB
-            #=
-            #-----
-            # Compute derivatives w.r.t. illiquid assets a
-            #-----
-            # Preparations
-            VaF   = zeros(I,J,N)
-            VaB   = zeros(I,J,N)
-            Vamin = 0.0
-
-            # Forward difference
-            VaF[:,1:J-1,:]     = (Vn[:,2:J,:]-Vn[:,1:J-1,:]) ./ daf_grid[:,1:J-1,:]
-            VaF[:,1:J-1,:]     = max.(VaF[:,1:J-1,:], Vamin)
-
-            # Backward difference
-            VaB[:,2:J,:]     = (Vn[:,2:J,:]-Vn[:,1:J-1,:]) ./ dab_grid[:,2:J,:]
-            VaB[:,2:J,:]     = max.(VaB[:,2:J,:], Vamin)
-
-            #------------------------------------------------------------
-            # Compute derivatives w.r.t. liquid assets b
-            #------------------------------------------------------------
-
-            # Preparations
-            VbF = zeros(I,J,N)
-            VbB = zeros(I,J,N)
-            Vbmin = 1e-8
-
-            # Forward difference
-            VbF[1:I-1,:,:] = (Vn[2:I,:,:]-Vn[1:I-1,:,:]) ./ dbf_grid[1:I-1,:,:]
-            VbF[1:I-1,:,:] = max.(VbF[1:I-1,:,:], Vbmin)
-
-            # Backward difference
-            VbB[2:I,:,:] = (Vn[2:I,:,:]-Vn[1:I-1,:,:]) ./ dbb_grid[2:I,:,:]
-            VbB[2:I,:,:] = max.(VbB[2:I,:,:], Vbmin)
-
-            #------------------------------------------------------------
-            # Consumption decisions
-            #------------------------------------------------------------
-
-            # Decisions conditional on a particular direction of derivative
-            cF[1:I-1,:,:]     = VbF[1:I-1,:,:] .^ (-1/ggamma)
-            cF[I,:,:]        .= 0.0
-            sF[1:I-1,:,:]     = ((1-xxi)-tau_I) * w * l_grid[1:I-1,:,:] .* y_grid[1:I-1,:,:] .+
-                b_grid[1:I-1,:,:] .* (r_b_grid[1:I-1,:,:] .+ ddeath*pam) .+
-                trans_grid[1:I-1,:,:] .- cF[1:I-1,:,:]
-            sF[I,:,:]        .= 0.0
-            HcF[1:I-1,:,:]    = u_fn(cF[1:I-1,:,:],ggamma) .+ VbF[1:I-1,:,:] .* sF[1:I-1,:,:]
-            HcF[I,:,:]       .= -1e12
-            validF            = (sF .> 0)
-
-            cB[2:I,:,:]       = VbB[2:I,:,:].^(-1/ggamma)
-            cB[1,:,:]         = ((1-xxi)-tau_I) * w * l_grid[1,:,:] .* y_grid[1,:,:] .+
-                b_grid[1,:,:] .* (r_b_grid[1,:,:] .+ ddeath*pam) .+ trans_grid[1,:,:]
-            sB[2:I,:,:]       = ((1-xxi)-tau_I) * w * l_grid[2:I,:,:] .* y_grid[2:I,:,:] .+
-                b_grid[2:I,:,:] .* (r_b_grid[2:I,:,:] .+ ddeath*pam) .+ trans_grid[2:I,:,:] .-
-                cB[2:I,:,:]
-            sB[1,:,:]        .= 0.0
-            HcB[:,:,:]        = u_fn(cB, ggamma) .+ VbB .* sB
-            validB            = (sB .< 0)
-
-            c0[:,:,:]         = ((1-xxi)-tau_I) * w * l_grid[:,:,:] .* y_grid[:,:,:] .+
-                b_grid[:,:,:] .* (r_b_grid[:,:,:] .+ ddeath*pam) .+ trans_grid[:,:,:]
-            s0[:,:,:]        .= 0.0
-            Hc0[:,:,:]        = u_fn(c0,ggamma)
-
-            # Which direction to use
-            IcF = validF .* max.(.!validB,(HcF.>=HcB)) .* (HcF.>=Hc0)
-            IcB = validB .* max.(.!validF,(HcB.>=HcF)) .* (HcB.>=Hc0)
-            Ic0 = 1 .- IcF .- IcB
-
-            # Optimal consumption and liquid savings
-            c = IcF .* cF + IcB .* cB + Ic0 .* c0
-            s = IcF .* sF + IcB .* sB + Ic0 .* s0
-            u = u_fn(c,ggamma)
-
-            #------------------------------------------------------------
-            # Deposit decision
-            #------------------------------------------------------------
-            # Preparations
-            dFB  = Array{Float64}(undef, I,J,N)
-            HdFB = Array{Float64}(undef, I,J,N)
-
-            dBF  = Array{Float64}(undef, I,J,N)
-            HdBF = Array{Float64}(undef, I,J,N)
-
-            dBB  = Array{Float64}(undef, I,J,N)
-            HdBB = Array{Float64}(undef, I,J,N)
-
-            # Decisions conditional on a particular direction of derivative
-            dFB[2:I,1:J-1,:] = opt_deposits(VaF[2:I,1:J-1,:], VbB[2:I,1:J-1,:],
-                                            a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb)
-            dFB[:,J,:]      .= 0.0
-            dFB[1,1:J-1,:]  .= 0.0
-
-            HdFB[2:I,1:J-1,:]     = VaF[2:I,1:J-1,:] .* dFB[2:I,1:J-1,:] - VbB[2:I,1:J-1,:] .*
-                (dFB[2:I,1:J-1,:] +
-                 adj_cost_fn(dFB[2:I,1:J-1,:], a_grid[2:I,1:J-1,:], chi0, chi1, chi2, a_lb))
-            HdFB[:,J,:]         .= -1.0e12
-            HdFB[1,1:J-1,:]     .= -1.0e12
-            validFB             = (dFB .> 0) .* (HdFB .> 0)
-
-            dBF[1:I-1,2:J,:] = opt_deposits(VaB[1:I-1,2:J,:],VbF[1:I-1,2:J,:],
-                                            a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb)
-            dBF[:,1,:]    .= 0.0
-            dBF[I,2:J,:]  .= 0.0
-
-            HdBF[1:I-1,2:J,:]  = VaB[1:I-1,2:J,:] .* dBF[1:I-1,2:J,:] - VbF[1:I-1,2:J,:] .*
-                (dBF[1:I-1,2:J,:] +
-                 adj_cost_fn(dBF[1:I-1,2:J,:], a_grid[1:I-1,2:J,:], chi0, chi1, chi2, a_lb))
-            HdBF[:,1,:]   .= -1.0e12
-            HdBF[I,2:J,:] .= -1.0e12
-            validBF = (dBF .<= -adj_cost_fn(dBF, a_grid, chi0, chi1, chi2, a_lb)) .* (HdBF .> 0)
-
-            VbB[1,2:J,:] = u_fn(cB[1,2:J,:],ggamma)
-            dBB[:,2:J,:] = opt_deposits(VaB[:,2:J,:],VbB[:,2:J,:],a_grid[:,2:J,:],
-                                       chi0, chi1, chi2, a_lb)
-            dBB[:,1,:]    .= 0.0
-            HdBB[:,2:J,:]  = VaB[:,2:J,:] .* dBB[:,2:J,:] - VbB[:,2:J,:] .*
-                (dBB[:,2:J,:] + adj_cost_fn(dBB[:,2:J,:],a_grid[:,2:J,:], chi0, chi1, chi2, a_lb))
-            HdBB[:,1,:]   .= -1.0e12
-            validBB        = (dBB .> -adj_cost_fn(dBB, a_grid, chi0, chi1, chi2, a_lb)) .*
-                (dBB .<= 0) .* (HdBB .> 0)
-
-            # Which direction to use
-            IcFB = validFB .* max.(.!validBF,(HdFB .>= HdBF)) .* max.(.!validBB, (HdFB .>= HdBB))
-            IcBF = max.(.!validFB, (HdBF .>= HdFB)) .* validBF .* max.(.!validBB, (HdBF .>= HdBB))
-            IcBB = max.(.!validFB, (HdBB .>= HdFB)) .* max.(.!validBF,(HdBB .>= HdBF)) .* validBB
-            Ic00 = (.!validFB) .* (.!validBF) .* (.!validBB)
-
-            # Optimal deposits
-            d = IcFB .* dFB + IcBF .* dBF + IcBB .* dBB
-
             perm_c =  ddeath * pam # check
             c0_c   = ((1-xxi) - tau_I) * w
-            c2, s2, d2 = similar(c), similar(s), similar(d)
-
-            for i=1:I, j=1:J, n=1:N
-
-                c02 = c0_c * real(y[1,n]) + b[i] * (r_b_grid[i,j,n] + perm_c) + trans
-
-                # ---- Liquid Assets, Forward + Backward Difference ----
-                VaF2 = (j==J) ? 0.0 : max((Vn[i,j+1,n] - Vn[i,j,n]) / (a[j+1]-a[j]), Vamin)
-                VaB2 = (j==1) ? 0.0 : max((Vn[i,j,n] - Vn[i,j-1,n]) / (a[j]-a[j-1]), Vamin)
-
-                # ---- Illiquid Assets, Forward + Backward Difference ----
-                VbF2 = (i==I) ? 0.0 : max((Vn[i+1,j,n] - Vn[i,j,n]) / (b[i+1]-b[i]), Vbmin)
-                VbB2 = (i==1) ? 0.0 : max((Vn[i,j,n] - Vn[i-1,j,n]) / (b[i]-b[i-1]), Vbmin)
-
-                # Decisions conditional on a particular direction of derivative
-                cF2 = (i==I) ? 0.0 : VbF2 ^ (-1 / ggamma)
-                cB2 = (i==1) ? c02  : VbB2 ^ (-1 / ggamma)
-
-                sF2 = (i==I) ? 0.0 : c02 - cF2
-                sB2 = (i==1) ? 0.0 : c02 - cB2
-                if (i==1 && j > 1) VbB2 = u_fn(cB2, ggamma) end
-                #----------------------------------------------------------------
-                # Consumption  & Savings Decision
-                #----------------------------------------------------------------
-                # Which direction to use
-                Hc02 = u_fn(c02, ggamma)
-                HcF2 = (i==I) ? -1e12 : u_fn(cF2,ggamma) + VbF2 * sF2
-                HcB2 = u_fn(cB2, ggamma) + VbB2 * sB2
-
-                validF2 = (sF2 > 0)
-                validB2 = (sB2 < 0)
-
-                IcF2[i,j,n] = validF2 * max(!validB2, (HcF2 >= HcB2)) * (HcF2 >= Hc02)
-                IcB2[i,j,n] = validB2 * max(!validF2, (HcB2 >= HcF2)) * (HcB2 >= Hc02)
-                Ic02[i,j,n] = 1 - IcF2[i,j,n] - IcB2[i,j,n]
-
-                c2[i,j,n] = IcF2[i,j,n] * cF2 + IcB2[i,j,n] * cB2 + Ic02[i,j,n] * c02
-                s2[i,j,n] = IcF2[i,j,n] * sF2 + IcB2[i,j,n] * sB2
-
-
-                @show i,j,n
-                @assert c02 == c0[i,j,n]
-                @assert cF2 == cF[i,j,n]
-                @assert cB2 == cB[i,j,n]
-                @assert sB2 == sB[i,j,n]
-                @assert sF2 == sF[i,j,n]
-                @assert VaF2 == VaF[i,j,n]
-                @assert VaB2 == VaB[i,j,n]
-                @assert VbB2 == VbB[i,j,n]
-                @assert VbF2 == VbF[i,j,n]
-
-                if (HcB2 != HcB[i,j,n]) @show HcB2, HcB[i,j,n], typeof(HcB2), typeof(HcB[i,j,n]) end
-                @assert HcB2 == HcB[i,j,n]
-                @assert HcF2 == HcF[i,j,n]
-                @assert Hc02 == Hc0[i,j,n]
-
-                @assert validF2 == validF[i,j,n]
-                @assert validB2 == validB[i,j,n]
-
-                @assert IcF2[i,j,n] == IcF[i,j,n]
-                @assert IcB2[i,j,n] == IcB[i,j,n]
-                @assert Ic02[i,j,n] == Ic0[i,j,n]
-
-                @assert c2[i,j,n] == c[i,j,n]
-                @assert s2[i,j,n] == s[i,j,n]
-
-                @show "passed asserts for", i,j,n
-                #----------------------------------------------------------------
-                # Deposit Decision
-                #----------------------------------------------------------------
-                dFB2 = (i == 1 || j == J) ? 0.0 :
-                    opt_deposits(VaF2, VbB2, max(a[j], a_lb), chi0, chi1, chi2)
-
-                dBF2 = (i == I || j == 1) ? 0.0 :
-                    opt_deposits(VaB2, VbF2, max(a[j], a_lb), chi0, chi1, chi2)
-
-                dBB2 = (j == 1) ? 0.0 :
-                    opt_deposits(VaB2, VbB2, max(a[j], a_lb), chi0, chi1, chi2)
-
-                HdFB2 = (i == 1 || j == J) ? -1e12 : VaF2 * dFB2 - VbB2 *
-                    (dFB2 + adj_cost_fn(dFB2, a[j], chi0, chi1, chi2, a_lb))
-                validFB2  = (dFB2 > 0) * (HdFB2 > 0)
-
-                HdBB2 = (j == 1) ? -1.0e12 :
-                    VaB2 * dBB2 - VbB2 * (dBB2 + adj_cost_fn(dBB2, a[j], chi0, chi1, chi2, a_lb))
-                validBB2 = (dBB2 > -adj_cost_fn(dBB2, a[j], chi0, chi1, chi2, a_lb)) .*
-                    (dBB2 <= 0) * (HdBB2 > 0)
-
-                HdBF2 = (i == I || j == 1) ? -1e12 : VaB2 * dBF2 - VbF2 *
-                    (dBF2 + adj_cost_fn(dBF2, a[j], chi0, chi1, chi2, a_lb))
-                validBF2 = (dBF2 <= -adj_cost_fn(dBF2, a[j], chi0, chi1, chi2, a_lb)) * (HdBF2 > 0)
-
-                IcFB2[i,j,n] = validFB2 * max(!validBF2,(HdFB2 >= HdBF2)) * max(!validBB2, (HdFB2 >= HdBB2))
-                IcBF2[i,j,n] = max(!validFB2, (HdBF2 >= HdFB2)) * validBF2 * max(!validBB2, (HdBF2 >= HdBB2))
-                IcBB2[i,j,n] = max(!validFB2, (HdBB2 >= HdFB2)) * max(!validBF2, (HdBB2 >= HdBF2)) * validBB2
-                Ic002[i,j,n] = !validFB2 * !validBF2 * !validBB2
-
-                d2[i,j,n] = IcFB2[i,j,n] * dFB2 + IcBF2[i,j,n] * dBF2 + dBB2 * IcBB2[i,j,n]
-
-                @assert d2[i,j,n] == d[i,j,n]
-
-                @assert HdBF2 == HdBF[i,j,n]
-                @assert HdBB2 == HdBB[i,j,n]
-                @assert HdFB2 == HdFB[i,j,n]
-
-                @assert dFB2 == dFB[i,j,n]
-                @assert dBF2 == dBF[i,j,n]
-                @assert dBB2 == dBB[i,j,n]
-
-                @assert IcFB2[i,j,n] == IcFB[i,j,n]
-                @assert IcBF2[i,j,n] == IcBF[i,j,n]
-                @assert IcBB2[i,j,n] == IcBB[i,j,n]
-
-                @assert validFB2 == validFB[i,j,n]
-                @assert validBF2 == validBF[i,j,n]
-                @assert validBB2 == validBB[i,j,n]
-
-
-                @assert cF2 == cF[i,j,n]
-                @assert cB2 == cB[i,j,n]
-                @assert sB2 == sB[i,j,n]
-                @assert sF2 == sF[i,j,n]
-
-            end
-            u2 = u_fn(c2, ggamma)
-
-@assert d2 == d
-@assert c2 == c
-@assert s2 == s
-@show "here!!"
-@show typeof(c2), typeof(c)
-@show typeof(d2), typeof(d)
-@show typeof(u2), typeof(u), size(u2), size(u)
-@assert u2 == u
-=#
-
-            perm_c =  ddeath * pam # check
-            c0_c   = ((1-xxi) - tau_I) * w
-            #c, s, d = similar(c), similar(s), similar(d)
 
             for i=1:I, j=1:J, n=1:N
 
@@ -920,7 +650,9 @@ cF2  = Array{Float64}(undef, I,J,N)
 
                 sF = (i==I) ? 0.0 : c0 - cF
                 sB = (i==1) ? 0.0 : c0 - cB
+
                 if (i==1 && j > 1) VbB = u_fn(cB, ggamma) end
+
                 #----------------------------------------------------------------
                 # Consumption  & Savings Decision
                 #----------------------------------------------------------------
@@ -964,9 +696,9 @@ cF2  = Array{Float64}(undef, I,J,N)
                     (dBF + adj_cost_fn(dBF, a[j], chi0, chi1, chi2, a_lb))
                 validBF = (dBF <= -adj_cost_fn(dBF, a[j], chi0, chi1, chi2, a_lb)) * (HdBF > 0)
 
-                IcFB[i,j,n] = validFB * max(!validBF,(HdFB >= HdBF)) * max(!validBB, (HdFB >= HdBB))
-                IcBF[i,j,n] = max(!validFB, (HdBF >= HdFB)) * validBF * max(!validBB, (HdBF >= HdBB))
-                IcBB[i,j,n] = max(!validFB, (HdBB >= HdFB)) * max(!validBF, (HdBB >= HdBF)) * validBB
+                IcFB[i,j,n] = validFB * max(!validBF, HdFB >= HdBF) * max(!validBB, HdFB >= HdBB)
+                IcBF[i,j,n] = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
+                IcBB[i,j,n] = max(!validFB, HdBB >= HdFB) * max(!validBF, HdBB >= HdBF) * validBB
                 Ic00[i,j,n] = !validFB * !validBF * !validBB
 
                 d[i,j,n] = IcFB[i,j,n] * dFB + IcBF[i,j,n] * dBF + dBB * IcBB[i,j,n]
@@ -978,12 +710,25 @@ cF2  = Array{Float64}(undef, I,J,N)
             d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
             s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
             c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
-            aa, bb, aau, bbu = transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0,
+
+            @time aa, bb, aau, bbu = transition(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0,
                                           chi1, chi2, a_lb, l_grid, l_g_grid, y_grid, y_g_grid,
                                           d, dab_grid, daf_grid, dab_g_grid, daf_g_grid,
                                           dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid, d_g,
                                           a_grid, a_g_grid, s, s_g,
                                           r_a_grid, r_a_g_grid)
+
+            @time aa2, bb2, aau2, bbu2 = transition2(I_g, J_g, N, I, J, ddeath, pam, xxi, w, chi0,
+                                          chi1, chi2, a_lb,  y, y_grid, y_g_grid,
+                                          d, dab_grid, daf_grid, dab_g_grid, daf_g_grid,
+                                          dbb_grid, dbf_grid, dbb_g_grid, dbf_g_grid, d_g,
+                                          a_grid, a_g_grid, s, s_g, r_a, a, b)
+
+            @assert aa2 == aa
+            @assert bb2 == bb
+            @assert aau2 == aau
+            @assert bbu2 == bbu
+            @show "PASSED"
 
             cc  = kron(lambda, my_speye(I * J))
             ccu = kron(lambda, my_speye(I_g * J_g))
