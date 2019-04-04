@@ -32,7 +32,7 @@ function eqcond(m::TwoAssetHANK)
     dab    = m[:dab].value
     dab_g  = m[:dab_g].value
     n_SS   = m[:n_SS].value
-
+    vars_SS     = m[:vars_SS].value
     nnu_aggZ    = m[:nnu_aggZ].value
     ssigma_aggZ = m[:ssigma_aggZ].value
 
@@ -89,7 +89,7 @@ function eqcond(m::TwoAssetHANK)
     # Construct problem functions
     util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
 
-    vars_SS = m[:vars_SS].value
+
 
     # Computation taken from inside get_residuals
     cc  = kron(lambda, my_speye(I*J))
@@ -175,37 +175,34 @@ function eqcond(m::TwoAssetHANK)
         #y_grid       = permutedims(repeat(y_shock', 1, I, J), [2 3 1])
 
         # ripped out
-        @show "eqcond_helper"
-        @time c, s, d, c_g, s_g, d_g = eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
-                                                     a_lb, ggamma, permanent, interp_decision,
-                                                     ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                                     r_b_vec, y_shock, a, b, cost, util, deposit)
+        @show "solve_hjb"
+        @time c, s, d, c_g, s_g, d_g = solve_hjb(V, I_g, J_g, chi0, chi1, chi2,
+                                                 a_lb, ggamma, permanent, interp_decision,
+                                                 ddeath, pam, aggZ, xxi, tau_I, w, trans,
+                                                 r_b_vec, y_shock, a, b, cost, util, deposit)
 
         # Derive transition matrices
         @show "transition_deriva"
-        @time aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
-                                                   xxi, w, chi0, chi1, chi2, a_lb,
-                                                   d, d_g, s, s_g, r_a, aggZ,
-                                                   a, a_g, b, b_g, y_shock)
+        #@time aa, bb, aau, bbu = transition_deriva(permanent, ddeath, pam,
+        #                                           xxi, w, chi0, chi1, chi2, a_lb,
+        #                                           d, d_g, s, s_g, r_a, aggZ,
+        #                                           a, a_g, b, b_g, y_shock)
 
-        @time A2, AT2 = transition_deriva2(permanent, ddeath, pam,
-                                           xxi, w, chi0, chi1, chi2, a_lb,
-                                           d, d_g, s, s_g, r_a, aggZ,
-                                           a, a_g, b, b_g, vec(y_shock), lambda)
+        @time A, AT = transition_deriva2(permanent, ddeath, pam,
+                                         xxi, w, chi0, chi1, chi2, a_lb,
+                                         d, d_g, s, s_g, r_a, aggZ,
+                                         a, a_g, b, b_g, vec(y_shock), lambda)
 
+        cc  = kron(lambda, my_speye(I*J))
+        ccu = kron(lambda, my_speye(I_g*J_g))
 
         # full transition matrix
-        A = aa + bb + cc
+        A  = A + cc
+        AT = (AT + ccu)'
 
         #----------------------------------------------------------------
         # KFE
         #----------------------------------------------------------------
-        AT = (aau + bbu + ccu)'
-
-        @assert A == A2 + cc
-        @show "pass 1"
-        @assert (aau+bbu+ccu) == AT2
-        @show "pass 2"
         gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + death_process * gg
 
         # find death-corrected savings
@@ -216,9 +213,8 @@ function eqcond(m::TwoAssetHANK)
         # Compute equilibrium conditions
         #----------------------------------------------------------------
         # HJB equation
-        perm_mult = !permanent ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
-
-        hjbResidual = vec(u_fn.(c, ggamma)) + A * vec(V) + V_Dot + VEErrors - perm_mult *
+        perm_mult   = !permanent ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
+        hjbResidual = vec(util.(c)) + A * vec(V) + V_Dot + VEErrors - perm_mult *
             reshape(V, I*J*N,1)
 
         # KFE
@@ -226,13 +222,12 @@ function eqcond(m::TwoAssetHANK)
 
         K_out = 0.0
         if K_liquid == 1
-            K_out = sum((vec(a_g_grid) .+ vec(b_g_grid)) .* gg .* vec(dab_g))
+            K_out = sum((repeat(repeat(a_g, inner=I_g), outer=N) .+
+                         repeat(repeat(b_g, outer=J_g), outer=N)) .* gg .* vec(dab_g))
         else
-            K_out = sum(vec(a_g_grid) .* gg .* vec(dab_g))
-            #K_out = sum(broadcast(*, a_g, reshape(gg, I_g*J_g, N)) .* reshape(dab_g,I_g*J_g, N))
-            #@show K_out2 == K_out
+            K_out = sum(repeat(repeat(a_g, inner=I_g), outer=N)   .* gg .* vec(dab_g))
         end
-
+        #error()
         K_Residual   = K_out - K
         r_b_out      = 0.0
         r_b_Residual = 0.0
@@ -241,7 +236,7 @@ function eqcond(m::TwoAssetHANK)
             r_b_out      = r_b_SS
             r_b_Residual = r_b_out - r_b
         elseif r_b_phi  == 1
-            r_b_out      = sum(vec(b_g_grid) .* gg .* vec(dab_g))
+            r_b_out      = sum(repeat(repeat(b_g, outer=J_g), outer=N) .* gg .* vec(dab_g))
             r_b_Residual = r_b_out - B_SS * exp(1/pphi * (r_b - r_b_SS))
         elseif B_fix    == 1
             r_b_out      = 0.0

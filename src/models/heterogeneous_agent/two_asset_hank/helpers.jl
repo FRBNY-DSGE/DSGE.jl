@@ -1,13 +1,13 @@
 """
-THE GUTS OF EQCOND.
+Solves Hamilton-Jacobi-Bellman equation.
 
 """
-@inline function eqcond_helper(V::Array{S}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
-                               a_lb::R, ggamma::R, permanent::Bool,
-                               interp_decision::SparseMatrixCSC{R,T},
-                               ddeath::R, pam::R, aggZ::S, xxi::R, tau_I::R, w::S, trans::R,
-                               r_b_vec::Vector{S}, y::Matrix{U}, a::Vector{R}, b::Vector{R},
-                               cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
+@inline function solve_hjb(V::Array{S}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
+                           a_lb::R, ggamma::R, permanent::Bool,
+                           interp_decision::SparseMatrixCSC{R,T},
+                           ddeath::R, pam::R, aggZ::S, xxi::R, tau_I::R, w::S, trans::R,
+                           r_b_vec::Vector{S}, y::Matrix{U}, a::Vector{R}, b::Vector{R},
+                           cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
