@@ -308,12 +308,15 @@ function compose_normalization_matrices(m::RealBondMkup)
     P2 = kron(eye(ns), eye(nx)[:, 2:end])
     P  = hcat(P1, P2)
 
-    (Q,R) = qr(P)
-
+    Q,R = qr(P)
+    Q = Array(Q)
     S         = Q[:, ns+1:end]'
-    Qleft     = cat(eye(nx*ns),S,[1],[1],[1],[1],[1],[1],[1],[1],[1], dims = [1 2])
+
+    nxns = nx*ns
+
+    Qleft     = cat(eye(nxns),S,[1],[1],[1],[1],[1],[1],[1],[1],[1], dims = [1 2])
     Qx        = cat(S,[1],[1],[1],[1], dims = [1 2])
-    Qy        = cat(eye(nx*ns),[1],[1],[1],[1],[1], dims = [1 2])
+    Qy        = cat(eye(nxns),[1],[1],[1],[1],[1], dims = [1 2])
     Qright    = cat(Qx',Qy',Qx',Qy', dims = [1 2])
 
     return Qx, Qy, Qleft, Qright
