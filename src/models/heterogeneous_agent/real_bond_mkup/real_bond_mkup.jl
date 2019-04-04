@@ -145,35 +145,36 @@ function init_model_indices!(m::RealBondMkup)
     # Setting indices of endogenous_states and equilibrium conditions manually for now
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
+    nxns = nx*ns
     endo = m.endogenous_states_unnormalized
     eqconds = m.equilibrium_conditions
 
     # State variables
-    endo[:μ′_t]   = 1:nx*ns
-    endo[:l_i′_t] = nx*ns+1:nx*ns+1
-    endo[:z′_t]   = nx*ns+2:nx*ns+2
-    endo[:mon′_t] = nx*ns+3:nx*ns+3
-    endo[:mkp′_t] = nx*ns+4:nx*ns+4
+    endo[:μ′_t]   = 1:nxns
+    endo[:l_i′_t] = nxns+1:nxns+1
+    endo[:z′_t]   = nxns+2:nxns+2
+    endo[:mon′_t] = nxns+3:nxns+3
+    endo[:mkp′_t] = nxns+4:nxns+4
 
     # Jump variables
-    endo[:l′_t]   = nx*ns+5:2*nx*ns+4
-    endo[:R′_t]   = 2*nx*ns+5:2*nx*ns+5
-    endo[:i′_t]   = 2*nx*ns+6:2*nx*ns+6
-    endo[:w′_t]   = 2*nx*ns+7:2*nx*ns+7
-    endo[:π′_t]   = 2*nx*ns+8:2*nx*ns+8
-    endo[:t′_t]   = 2*nx*ns+9:2*nx*ns+9
+    endo[:l′_t]   = nxns+5:2*nxns+4
+    endo[:R′_t]   = 2*nxns+5:2*nxns+5
+    endo[:i′_t]   = 2*nxns+6:2*nxns+6
+    endo[:w′_t]   = 2*nxns+7:2*nxns+7
+    endo[:π′_t]   = 2*nxns+8:2*nxns+8
+    endo[:t′_t]   = 2*nxns+9:2*nxns+9
 
-    eqconds[:eq_euler]              = 1:nx*ns
-    eqconds[:eq_kolmogorov_fwd]     = nx*ns+1:2*nx*ns
-    eqconds[:eq_market_clearing]    = 2*nx*ns+1:2*nx*ns+1
-    eqconds[:eq_TFP]                = 2*nx*ns+2:2*nx*ns+2
-    eqconds[:eq_phillips]           = 2*nx*ns+3:2*nx*ns+3
-    eqconds[:eq_taylor]             = 2*nx*ns+4:2*nx*ns+4
-    eqconds[:eq_fisher]             = 2*nx*ns+5:2*nx*ns+5
-    eqconds[:eq_transfers]          = 2*nx*ns+6:2*nx*ns+6
-    eqconds[:eq_monetary_policy]    = 2*nx*ns+7:2*nx*ns+7
-    eqconds[:eq_markup]             = 2*nx*ns+8:2*nx*ns+8
-    eqconds[:eq_lagged_nominal_rate]= 2*nx*ns+9:2*nx*ns+9
+    eqconds[:eq_euler]              = 1:nxns
+    eqconds[:eq_kolmogorov_fwd]     = nxns+1:2*nxns
+    eqconds[:eq_market_clearing]    = 2*nxns+1:2*nxns+1
+    eqconds[:eq_TFP]                = 2*nxns+2:2*nxns+2
+    eqconds[:eq_phillips]           = 2*nxns+3:2*nxns+3
+    eqconds[:eq_taylor]             = 2*nxns+4:2*nxns+4
+    eqconds[:eq_fisher]             = 2*nxns+5:2*nxns+5
+    eqconds[:eq_transfers]          = 2*nxns+6:2*nxns+6
+    eqconds[:eq_monetary_policy]    = 2*nxns+7:2*nxns+7
+    eqconds[:eq_markup]             = 2*nxns+8:2*nxns+8
+    eqconds[:eq_lagged_nominal_rate]= 2*nxns+9:2*nxns+9
     ########################################################################################
 
     m.normalized_model_states = [:μ′_t]
@@ -220,9 +221,9 @@ function RealBondMkup(subspec::String="ss0";
             rng,
             testing,
             OrderedDict{Symbol,Observable}())
-
     # Set settings
     model_settings!(m)
+
     # default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -305,19 +306,20 @@ function init_parameters!(m::RealBondMkup)
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
+    nxns = nx*ns
 
-    m <= SteadyStateParameterGrid(:lstar, fill(NaN, nx*ns), description = "Steady-state expected discounted
+    m <= SteadyStateParameterGrid(:lstar, fill(NaN, nxns), description = "Steady-state expected discounted
                                   marginal utility of consumption", tex_label = "l_*")
-    m <= SteadyStateParameterGrid(:cstar, fill(NaN, nx*ns), description = "Steady-state consumption",
+    m <= SteadyStateParameterGrid(:cstar, fill(NaN, nxns), description = "Steady-state consumption",
                                   tex_label = "c_*")
-    m <= SteadyStateParameterGrid(:ηstar, fill(NaN, nx*ns), description = "Steady-state
+    m <= SteadyStateParameterGrid(:ηstar, fill(NaN, nxns), description = "Steady-state
                                   level of labor supply",
                                   tex_label = "\\eta_*")
-    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nx*ns), description = "Steady-state cross-sectional
+    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nxns), description = "Steady-state cross-sectional
                                   density of cash on hand", tex_label = "\\mu_*")
 
     # Figure out a better description for this...
-    m <= SteadyStateParameterGrid(:χstar, fill(NaN, nx*ns), description = "Steady-state
+    m <= SteadyStateParameterGrid(:χstar, fill(NaN, nxns), description = "Steady-state
                                   solution for constrained consumption and labor supply",
                                   tex_label = "\\chi_*")
 
