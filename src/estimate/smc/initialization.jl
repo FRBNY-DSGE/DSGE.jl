@@ -10,13 +10,11 @@ particle objects in the particle cloud in place.
 function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
                        parallel::Bool = false, use_chand_recursion::Bool = true,
                        verbose::Symbol = :low)
-    @info use_chand_recursion
     n_parts = length(c)
     loglh   = zeros(n_parts)
     logpost = zeros(n_parts)
     if parallel
         draws, loglh, logpost = @sync @distributed (vector_reduce) for i in 1:n_parts
-#            @show i
             draw         = vec(rand(m.parameters, 1))
             draw_loglh   = 0.
             draw_logpost = 0.
