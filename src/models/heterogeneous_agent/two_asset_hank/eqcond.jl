@@ -29,9 +29,8 @@ function eqcond(m::TwoAssetHANK)
     ggamma = m[:ggamma].value
     tau_I  = m[:tau_I].value
     trans  = m[:trans].value
-    dab    = m[:dab].value
-    dab_g  = m[:dab_g].value
     n_SS   = m[:n_SS].value
+
     vars_SS     = m[:vars_SS].value
     nnu_aggZ    = m[:nnu_aggZ].value
     ssigma_aggZ = m[:ssigma_aggZ].value
@@ -42,11 +41,11 @@ function eqcond(m::TwoAssetHANK)
     borrwedge_SS = m[:borrwedge_SS].value
 
     lambda                     = get_setting(m, :lambda)
+
     K_liquid                   = get_setting(m, :K_liquid)
     aggregate_variables        = get_setting(m, :aggregate_variables)
     distributional_variables   = get_setting(m, :distributional_variables)
     distributional_variables_1 = get_setting(m, :distributional_variables_1)
-    interp_decision            = get_setting(m, :interp_decision)
     permanent                  = get_setting(m, :permanent)
 
     I      = get_setting(m, :I)
@@ -60,7 +59,7 @@ function eqcond(m::TwoAssetHANK)
     a_g    = get_setting(m, :a_g)
     b_g    = get_setting(m, :b_g)
 
-    y      = get_setting(m, :y)
+    y      = vec(get_setting(m, :y))
     y_dist = get_setting(m, :y_dist)
     y_mean = get_setting(m, :y_mean)
     KL     = get_setting(m, :KL_0)
@@ -73,60 +72,21 @@ function eqcond(m::TwoAssetHANK)
     nVars    = get_setting(m, :nVars)
     nEErrors = get_setting(m, :nEErrors)
 
-
     # Set liquid rates
     r_b      = r_b_SS
     r_b_borr = r_b_borr_SS
 
+@inline function get_residuals(vars::Vector{T}) where {T<:Real}
     # Compute prices associated with initial guess of KL
-    w2	= (1 - aalpha) * (KL ^ aalpha)
-    r_a2	= aalpha * (KL ^ (aalpha - 1)) - ddelta
-    #@inline function get_residuals(vars::Vector{T}) where {T<:Real}
-    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
+    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, y, r_b, r_b_borr)
 
     r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat = set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
 
-    # Construct problem functions
-    util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
-
-
-
-    # Computation taken from inside get_residuals
-    cc  = kron(lambda, my_speye(I*J))
-    ccu = kron(lambda, my_speye(I_g*J_g))
-
-    dab_aux   = reshape(dab,I*J*N,1)
-    dab_g_aux = reshape(dab_g,I_g*J_g*N,1)
-
-    loc = findall(b .== 0)
-    dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
-    dab_g_small = reshape(dab_g[:,:,1], I_g * J_g, 1)
-
-    dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
-    dab_g_small[loc]     .= 0.0
-    death_process         = -ddeath * my_speye(I_g * J_g)
-    death_process[loc,:]  = vec(dab_g_small)
-    death_process         = kron(my_speye(N), death_process)
-
-    dab_low  = dab[:,:,1]
-    dab_high = dab[:,:,2]
-
-    a_g_grid_aux = reshape(a_g_grid, I_g*J_g*N, 1)
-    b_g_grid_aux = reshape(b_g_grid, I_g*J_g*N, 1)
-    alb_grid = max.(a_grid, a_lb)
-
-    daba_g_aux = dab_g_aux .* a_g_grid_aux
-    dabb_g_aux = dab_g_aux .* b_g_grid_aux
-
-    alb_vec = max.(a, a_lb)
-
-#    a_gg = repeat(a_g, inner=I_g)
-#    b_gg = repeat(b_g, outer=J_g)
 
 #    @assert vec(a_g_grid) == repeat(repeat(a_g, inner=I_g), outer=N)
 #    @assert vec(b_g_grid) == repeat(repeat(b_g, outer=J_g), outer=N)
 
-    @inline function get_residuals(vars::Vector{T}) where {T<:Real}
+
         # ------- Unpack variables -------
         V   = reshape(vars[1:n_v] .+ vars_SS[1:n_v], I, J, N)  # value function
         g   = vars[n_v + 1 : n_v + n_g] .+ vars_SS[n_v + 1 : n_v + n_g] # distribution
@@ -152,6 +112,34 @@ function eqcond(m::TwoAssetHANK)
 
         VEErrors   = vars[2*nVars + 1 : 2 * nVars + n_v]
         aggZ_Shock = vars[2*nVars + nEErrors + 1]
+
+        # stuff
+
+        # Construct problem functions
+        util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
+        interp_decision = kron(my_speye(N), interpTwoD(b_g, a_g, b, a))
+
+        dab = dab_tilde_grid
+        dab_g = dab_g_tilde_grid
+
+        dab_aux   = reshape(dab,I*J*N,1)
+        dab_g_aux = reshape(dab_g,I_g*J_g*N,1)
+
+        loc = findall(b .== 0)
+        dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
+        dab_g_small = reshape(dab_g[:,:,1], I_g * J_g, 1)
+
+        dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
+        dab_g_small[loc]     .= 0.0
+        death_process         = -ddeath * my_speye(I_g * J_g)
+        death_process[loc,:]  = vec(dab_g_small)
+        death_process         = kron(my_speye(N), death_process)
+
+        a_g_grid_aux = repeat(repeat(a_g, inner=I_g), outer=N)
+        b_g_grid_aux = repeat(repeat(b_g, outer=J_g), outer=N)
+
+        daba_g_aux = dab_g_aux .* a_g_grid_aux
+        dabb_g_aux = dab_g_aux .* b_g_grid_aux
 
         g_end = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g, N]
         gg    = vcat(g, g_end)
@@ -225,7 +213,7 @@ function eqcond(m::TwoAssetHANK)
             K_out = sum((repeat(repeat(a_g, inner=I_g), outer=N) .+
                          repeat(repeat(b_g, outer=J_g), outer=N)) .* gg .* vec(dab_g))
         else
-            K_out = sum(repeat(repeat(a_g, inner=I_g), outer=N)   .* gg .* vec(dab_g))
+            K_out = sum(repeat(repeat(a_g, inner=I_g), outer=N) .* gg .* vec(dab_g))
         end
         #error()
         K_Residual   = K_out - K
@@ -255,10 +243,15 @@ function eqcond(m::TwoAssetHANK)
 
             C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
                 sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
+            earn = log.((1-tau_I) * w * repeat(repeat(vec(y), inner=I_g), inner=J_g) .+
+                         repeat(repeat(b_g, outer=J_g), outer=N) .*
+                         (repeat(repeat(r_b_g_vec, outer=J_g), outer=N) .+ ddeath*pam) .+
+                         trans .+
+                         repeat(repeat(a_g, inner=I_g), outer=N) .* (r_a + ddeath*pam))
 
-            earn = log((1-tau_I) * w * y_g_grid + b_g_grid .*
-                       (r_b_g_grid + ddeath*pam) + trans_grid + a_g_grid .*
-                       (r_a + ddeath*pam))
+            #earn = log((1-tau_I) * w * y_g_grid + b_g_grid .*
+            #           (r_b_g_grid + ddeath*pam) + trans + a_g_grid .*
+            #           (r_a + ddeath*pam))
 
             earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
                 sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
@@ -298,7 +291,7 @@ function eqcond(m::TwoAssetHANK)
 
         # Law of motion for aggregate tfp shock
         aggZ_Residual = aggZ_Dot - (-nnu_aggZ * aggZ + ssigma_aggZ * aggZ_Shock)
-
+error()
         # Return equilibrium conditions
         #if aggregate_variables == 1
             return [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;

@@ -6,7 +6,7 @@ Solves Hamilton-Jacobi-Bellman equation.
                            a_lb::R, ggamma::R, permanent::Bool,
                            interp_decision::SparseMatrixCSC{R,T},
                            ddeath::R, pam::R, aggZ::S, xxi::R, tau_I::R, w::S, trans::R,
-                           r_b_vec::Vector{S}, y::Matrix{U}, a::Vector{R}, b::Vector{R},
+                           r_b_vec::Vector{S}, y::Vector{U}, a::Vector{R}, b::Vector{R},
                            cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
@@ -22,7 +22,7 @@ Solves Hamilton-Jacobi-Bellman equation.
     c, s, d = similar(V), similar(V), similar(V)
     for i=1:I, j=1:J, n=1:N
 
-        c0 = c0_c * real(y[1,n]) + b[i] * (r_b_vec[i] + perm_c) + trans
+        c0 = c0_c * real(y[n]) + b[i] * (r_b_vec[i] + perm_c) + trans
 
         # ---- Liquid Assets, Forward + Backward Difference ----
         VaF = (j==J) ? 0.0 : max((V[i,j+1,n] - V[i,j,n]) / (a[j+1]-a[j]), Vamin)
@@ -401,6 +401,78 @@ Function to initialize liquid asset grid.
 end
 
 @inline function set_grids(a, b, a_g, b_g, y, r_b, r_b_borr)
+    I   = length(b)
+    J   = length(a)
+    I_g = length(b_g)
+    J_g = length(a_g)
+    N   = length(y)
+
+    b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
+    a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
+    y_grid    = permutedims(repeat(y, 1, I, J), [2 3 1])
+    r_b_grid  = r_b .* (b_grid .>= 0) + r_b_borr .* (b_grid .< 0)
+
+    dbf_grid            = Array{Float64}(undef, I,J,N)
+    dbb_grid            = Array{Float64}(undef, I,J,N)
+    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
+    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
+
+    daf_grid            = Array{Float64}(undef, I, J, N)
+    dab_grid            = Array{Float64}(undef, I, J, N)
+    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
+    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    dab_grid[:,1,:]     = dab_grid[:,2,:]
+
+    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
+    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
+    db_tilde[end] = 0.5*dbb_grid[end,1,1]
+    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
+    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
+    da_tilde[end] = 0.5*dab_grid[1,end,1]
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
+    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
+
+    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
+    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
+    y_g_grid     = permutedims(repeat(y, 1, I_g, J_g), [2 3 1])
+    r_b_g_grid   = r_b .* (b_g_grid .>= 0) + r_b_borr .* (b_g_grid .< 0)
+
+    dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
+    dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
+    dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
+
+    daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
+    dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
+
+    db_g_tilde       = 0.5*(dbb_g_grid[:,1,1] + dbf_g_grid[:,1,1])
+    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1,1]
+    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1,1]
+    da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
+    da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
+    da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+
+    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
+
+    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
+
+    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid
+end
+
+
+@inline function set_grids_lite(a, b, a_g, b_g, y, r_b, r_b_borr)
     I   = length(b)
     J   = length(a)
     I_g = length(b_g)
