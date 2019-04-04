@@ -41,7 +41,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states(m::RealBondMkup, TTT::Matrix{T}, TTT_jump::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where T<:AbstractFloat
+function augment_states(m::RealBondMkup, TTT::Matrix{T}, TTT_jump::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}, GDPeqn::AbstractMatrix{T}) where T<:AbstractFloat
     endo     = m.endogenous_states
     endo_unnorm = m.endogenous_states_unnormalized
     endo_new = m.model_states_augmented
@@ -64,59 +64,11 @@ function augment_states(m::RealBondMkup, TTT::Matrix{T}, TTT_jump::Matrix{T}, RR
     RRR_aug = [RRR; zeros(n_states_add, _n_shocks_exogenous)]
     CCC_aug = [CCC; zeros(n_states_add)]
 
-    #all of this is to compute GDPeqn or what on Marco's shee is Z^y
-    γ::Float64     = m[:γ].value
-    ν::Float64     = m[:ν].value
-    R::Float64     = m[:R].value
-    abar::Float64  = m[:abar].value
-    aborrow        = abar/R
-
-    ell::Vector{Float64}  = m[:lstar].value
-    c::Vector{Float64}    = m[:cstar].value
-    μ::Vector{Float64}    = m[:μstar].value
-    η::Vector{Float64}    = m[:ηstar].value
-    χss::Vector{Float64}  = m[:χstar].value
-
-    xwts::Vector{Float64}  = m.grids[:xgrid].weights
-    sgrid::Vector{Float64} = m.grids[:sgrid].points
-    swts::Vector{Float64}  = m.grids[:sgrid].weights
-    xgrid_total::Vector{Float64}  = m.grids[:xgrid_total]
-
-    nx::Int = get_setting(m, :nx)
-    ns::Int = get_setting(m, :ns)
-
-    # Construct GDP
-    dGDP_dMU, dGDP_dZ, dGDP_dELL, dGDP_dRR, dGDP_dWW, dGDP_dTT =
-        construct_GDPfn_realbond(nx, ns, xgrid_total, sgrid,
-                                 xwts, swts, γ, ν, abar, R, aborrow, μ, c, η, ell, χss)
-    GDPfn = zeros(n_model_states_unnormalized(m))
-    # GDP as function of un-normalized MU Z MON ELL RR II WW PI TT
-    # note: GDP is only a function of contemporaneous variables
-    # we are using the indices (MUP,ZP, etc.) corresponding to date t+1 variables
-    # simply because these indices happen to work here also
-    # this does not mean that GDP is a function of date t+1 variables
-    GDPfn[endo_unnorm[:μ′_t]]  = vec(dGDP_dMU)
-    GDPfn[first(endo_unnorm[:z′_t])]  = dGDP_dZ      #first because the index is a range of single number
-    GDPfn[endo_unnorm[:l′_t]]  = vec(dGDP_dELL)
-    GDPfn[first(endo_unnorm[:R′_t])]  = dGDP_dRR
-    GDPfn[first(endo_unnorm[:w′_t])]  = dGDP_dWW
-    GDPfn[first(endo_unnorm[:t′_t])]  = dGDP_dTT
-
-    ########################################
-    Qx, Qy, _, _ = compose_normalization_matrices(m)
-    gx2  = Qy'*TTT_jump*Qx
-
-    # now we need to create GDP as a function of the normalized states
-    GDPeqn = GDPfn'*[eye(n_backward_looking_states_unnormalized(m)); gx2]*Qx'
-
     ### TTT modifications
 
     # Track Lags
-            # Aug[:y_t1]                      States[:y_t]
-   #= @show endo_new[:y_t1]
-    @show size(TTT_aug)
-    @show size(GDPeqn)=#
-    TTT_aug[endo_new[:y_t1], 1:_n_states] = GDPeqn
+              # Aug[:y_t1]    States[:y_t]
+     TTT_aug[endo_new[:y_t1], 1:_n_states] = GDPeqn
 
     return TTT_aug, RRR_aug, CCC_aug
 end

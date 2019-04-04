@@ -172,13 +172,15 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
         CCC = zeros(n_model_states(m))
 #        @info "post kelin"
 
-        TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC)
+        GDPeqn = construct_GDPeqn(m, TTT_jump)
+
+        TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
 #        @info "post aug"
         transition_equation = Transition(TTT, RRR, CCC)
 #        @info "post trans"
 
         # Measurement (needs the additional TTT_jump argument)
-        measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC)
+        measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
 #        @info "post measure"
     else
         throw("solution_method provided does not exist.")
