@@ -5,12 +5,9 @@ THE GUTS OF EQCOND.
 @inline function eqcond_helper(V::Array{S}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
                                a_lb::R, ggamma::R, permanent::Bool,
                                interp_decision::SparseMatrixCSC{R,T},
-                               ddeath::R, pam::R, aggZ::R, xxi::R, tau_I::R, w::R, trans::R,
-                               r_b_vec::Vector{R},
-                               IcF::BitArray{3}, IcB::BitArray{3}, Ic0::BitArray{3},
-                               IcFB::BitArray{3}, IcBF::BitArray{3}, IcBB::BitArray{3},
-                               Ic00::BitArray{3}, y::Matrix{U}, a::Vector{R},
-                               b::Vector{R}) where {R<:AbstractFloat, S, T<:Int, U<:Number}
+                               ddeath::R, pam::R, aggZ::S, xxi::R, tau_I::R, w::S, trans::R,
+                               r_b_vec::Vector{S}, y::Matrix{U}, a::Vector{R}, b::Vector{R},
+                               cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -47,8 +44,19 @@ THE GUTS OF EQCOND.
         #----------------------------------------------------------------
         # Consumption  & Savings Decision
         #----------------------------------------------------------------
-        c[i,j,n] = IcF[i,j,n] * cF + IcB[i,j,n] * cB + Ic0[i,j,n] * c0
-        s[i,j,n] = IcF[i,j,n] * sF + IcB[i,j,n] * sB
+        Hc0 = util(c0)
+        HcF = (i==I) ? -1e12 : util(cF) + VbF * sF
+        HcB = util(cB) + VbB * sB
+
+        validF = (sF > 0)
+        validB = (sB < 0)
+
+        IcF = validF * max(!validB, (HcF >= HcB)) * (HcF >= Hc0)
+        IcB = validB * max(!validF, (HcB >= HcF)) * (HcB >= Hc0)
+        Ic0 = 1 - IcF - IcB
+
+        c[i,j,n] = IcF * cF + IcB * cB + Ic0 * c0
+        s[i,j,n] = IcF * sF + IcB * sB
 
         #----------------------------------------------------------------
         # Deposit Decision
@@ -62,14 +70,25 @@ THE GUTS OF EQCOND.
         dBB = (j == 1) ? 0.0 :
             opt_deposits(VaB, VbB, max(a[j], a_lb), chi0, chi1, chi2)
 
-        d[i,j,n] = IcFB[i,j,n] * dFB + IcBF[i,j,n] * dBF + dBB * IcBB[i,j,n]
-    end
+        HdFB = (i == 1 || j == J) ? -1e1 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
+        HdBB = (j == 1) ? -1.0e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
+        HdBF = (i == I || j == 1) ? -1e1 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
 
+        validFB = (dFB > 0) * (HdFB > 0)
+        validBB = (dBB > -cost(dBB, a[j])) .* (dBB <= 0) * (HdBB > 0)
+        validBF = (dBF <= -cost(dBF, a[j])) * (HdBF > 0)
+
+        IcFB = validFB * max(!validBF, HdFB >= HdBF) * max(!validBB, HdFB >= HdBB)
+        IcBF = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
+        IcBB = max(!validFB, HdBB >= HdFB) * max(!validBF, HdBB >= HdBF) * validBB
+        Ic00 = !validFB * !validBF * !validBB
+
+        d[i,j,n] = IcFB * dFB + IcBF * dBF + dBB * IcBB
+    end
     # Interpolate
     d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
     s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
     c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
-
     return c, s, d, c_g, s_g, d_g
 end
 
@@ -634,10 +653,10 @@ end
     return aa, bb, aau, bbu
 end
 
-@inline function transition_deriva(permanent::Bool, ddeath::R, pam::R, xxi::R, w::R,
+@inline function transition_deriva(permanent::Bool, ddeath::R, pam::R, xxi::R, w::S,
                                    chi0::R, chi1::R, chi2::R, a_lb::R,
-                                   d, d_g, s, s_g, r_a, aggZ::R,
-                                   a, a_g, b, b_g, y) where {R<:AbstractFloat}
+                                   d, d_g, s, s_g, r_a, aggZ::S,
+                                   a, a_g, b, b_g, y) where {R<:AbstractFloat, S}
     I, J, N  = size(d)
     I_g, J_g = size(d_g)
 
@@ -645,8 +664,8 @@ end
     perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
 
     #X, Z = similar(d), similar(d)
-    aa   = spzeros(I*J*N, I*J*N)
-    bb   = spzeros(I*J*N, I*J*N)
+    aa   = spzeros(eltype(d), I*J*N, I*J*N)
+    bb   = spzeros(eltype(d), I*J*N, I*J*N)
 
     f_ind(x, my_J, n) = (x + (n-1)) % my_J + 1
     #chi_dict  = Dict(f_ind.(1:J, J, 1)   .=> 1:J)
@@ -700,8 +719,8 @@ end
     bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
     @assert bb == bb2
 =#
-    aau = spzeros(I_g*J_g*N, I_g*J_g*N)
-    bbu = spzeros(I_g*J_g*N, I_g*J_g*N)
+    aau = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
+    bbu = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
 
     for i=1:I_g, j=1:J_g, n=1:N
 
@@ -736,6 +755,118 @@ end
 
     end
     return aa, bb, aau, bbu
+end
+
+
+@inline function transition_deriva2(permanent::Bool, ddeath::R, pam::R, xxi::R, w::S,
+                                   chi0::R, chi1::R, chi2::R, a_lb::R,
+                                   d, d_g, s, s_g, r_a, aggZ::S,
+                                   a, a_g, b, b_g, y, lambda) where {R<:AbstractFloat, S}
+    I, J, N  = size(d)
+    I_g, J_g = size(d_g)
+
+    # Compute drifts for HJB
+    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
+
+    #X, Z = similar(d), similar(d)
+    #aa   = spzeros(eltype(d), I*J*N, I*J*N)
+    #bb   = spzeros(eltype(d), I*J*N, I*J*N)
+    #A   = kron(lambda, my_speye(eltype(d), I*J))
+    A = #=kron(lambda, my_speye(I*J))=#spzeros(eltype(d), I*J*N, I*J*N)
+    f_ind(x, my_J, n) = (x + (n-1)) % my_J + 1
+    #chi_dict  = Dict(f_ind.(1:J, J, 1)   .=> 1:J)
+    #zeta_dict = Dict(f_ind.(1:J, J, J-1) .=> 1:J)
+
+    #for n=1:N
+    #    A[1+(n-1)*I*J:n*I*J, 1+(n-1)*I*J:n*I*J] = lambda
+    #end
+
+    for i=1:I, j=1:J, n=1:N
+
+        α = a[j] * (r_a + perm_const) + (xxi * w * real(y[n]))
+
+        chi  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
+
+        ind      = (I*J)*(n-1) + I*(j-1) + i
+        chi_ind  = I*J*(n-1) + I*(f_ind(j,J,J-1) - 1) + i#(chi_dict[j]-1) + i
+        zeta_ind = I*J*(n-1) + I*(f_ind(j,J,1) - 1) + i#(zeta_dict[j]-1) + i
+
+        A[ind, ind] += -(chi + zeta)
+
+        if (chi_ind  <= I*J*N - I) A[chi_ind  + I, chi_ind]  += chi  end
+        if (zeta_ind >= I + 1)     A[zeta_ind - I, zeta_ind] += zeta end
+        #=
+        X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
+                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                              min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
+                                 adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                             max(s[i,j,n], 0)) / (b[i+1] - b[i])
+        =#
+        X = (i==1) ? 0.0 : -(min(-d[i,j,n] -
+                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                              min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z = (i==I) ? 0.0 : (max(-d[i,j,n] -
+                                 adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+                             max(s[i,j,n], 0)) / (b[i+1] - b[i])
+
+        A[ind, ind] += -(X + Z)
+
+        ind      = (I*J)*(n-1) + I*(j-1) + i
+        X_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,I*J-1) #I*(chi_dict[j]-1) + i
+        Z_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,1)     #I*(zeta_dict[j]-1) + i
+        if (X_ind <= I*J*N - 1) A[X_ind + 1, X_ind] += X end
+        if (Z_ind >= 2)         A[Z_ind - 1, Z_ind] += Z end
+    end
+#=
+    Y = -(X .+ Z)
+
+    X  = reshape(X, I*J, N)
+    X  = circshift(X, -1)
+    Z  = reshape(Z, I*J, N)
+    Z  = circshift(Z, 1)
+
+    bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
+    @assert bb == bb2
+=#
+    #aau = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
+    #bbu = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
+    AT = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
+
+    for i=1:I_g, j=1:J_g, n=1:N
+
+        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
+        audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
+            (permanent ? aggZ * a_g[j] : 0.0)
+
+        budrift = s_g[i,j,n] - d_g[i,j,n] -
+            adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb) -
+            (permanent ? aggZ * b_g[i] : 0.0)
+
+        chiu  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        zetau = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
+
+        ind       = (I_g*J_g)*(n-1) + I_g*(j-1) + i
+        chiu_ind  = I_g*J_g*(n-1) + I_g *(f_ind(j,J_g,J_g-1)-1) + i
+        zetau_ind = I_g*J_g*(n-1) + I_g*(f_ind(j,J_g,1)-1) + i
+
+        AT[ind, ind] = -(chiu + zetau)
+        if (chiu_ind  <= I_g*J_g*N - I_g) AT[chiu_ind  + I_g, chiu_ind]  = chiu  end
+        if (zetau_ind >= I_g + 1)         AT[zetau_ind - I_g, zetau_ind] = zetau end
+
+        Xu = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Zu = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
+
+        Xu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, I_g*J_g - 1)
+        Zu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, 1)
+
+        AT[ind, ind] += -(Xu + Zu)
+        if (Xu_ind <= I_g*J_g*N - 1) AT[Xu_ind + 1, Xu_ind] += Xu  end
+        if (Zu_ind >= 2)             AT[Zu_ind - 1, Zu_ind] += Zu end
+
+    end
+    return A, AT
 end
 
 

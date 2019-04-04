@@ -66,6 +66,14 @@ function eqcond(m::TwoAssetHANK)
     KL     = get_setting(m, :KL_0)
     r_b_fix= get_setting(m, :r_b_fix)
 
+    n_v = get_setting(m, :n_v)
+    n_g = get_setting(m, :n_g)
+    n_p = get_setting(m, :n_p)
+    n_Z = get_setting(m, :n_Z)
+    nVars    = get_setting(m, :nVars)
+    nEErrors = get_setting(m, :nEErrors)
+
+
     # Set liquid rates
     r_b      = r_b_SS
     r_b_borr = r_b_borr_SS
@@ -73,25 +81,13 @@ function eqcond(m::TwoAssetHANK)
     # Compute prices associated with initial guess of KL
     w2	= (1 - aalpha) * (KL ^ aalpha)
     r_a2	= aalpha * (KL ^ (aalpha - 1)) - ddelta
-
+    #@inline function get_residuals(vars::Vector{T}) where {T<:Real}
     a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
 
     r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat = set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
 
-    n_v = get_setting(m, :n_v)
-    n_g = get_setting(m, :n_g)
-    n_p = get_setting(m, :n_p)
-    n_Z = get_setting(m, :n_Z)
-
-    IcF_SS   = get_setting(m, :IcF_SS)
-    IcB_SS   = get_setting(m, :IcB_SS)
-    Ic0_SS   = get_setting(m, :Ic0_SS)
-    IcFB_SS  = get_setting(m, :IcFB_SS)
-    IcBF_SS  = get_setting(m, :IcBF_SS)
-    IcBB_SS  = get_setting(m, :IcBB_SS)
-    Ic00_SS  = get_setting(m, :Ic00_SS)
-    nVars    = get_setting(m, :nVars)
-    nEErrors = get_setting(m, :nEErrors)
+    # Construct problem functions
+    util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
 
     vars_SS = m[:vars_SS].value
 
@@ -101,17 +97,6 @@ function eqcond(m::TwoAssetHANK)
 
     dab_aux   = reshape(dab,I*J*N,1)
     dab_g_aux = reshape(dab_g,I_g*J_g*N,1)
-
-    # Which direction to use
-    IcF = IcF_SS
-    IcB = IcB_SS
-    Ic0 = Ic0_SS
-
-    # Which direction to use
-    IcFB = IcFB_SS
-    IcBF = IcBF_SS
-    IcBB = IcBB_SS
-    Ic00 = Ic00_SS
 
     loc = findall(b .== 0)
     dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
@@ -194,9 +179,7 @@ function eqcond(m::TwoAssetHANK)
         @time c, s, d, c_g, s_g, d_g = eqcond_helper(V, I_g, J_g, chi0, chi1, chi2,
                                                      a_lb, ggamma, permanent, interp_decision,
                                                      ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                                     r_b_vec,
-                                                     IcF, IcB, Ic0, IcFB, IcBF, IcBB, Ic00,
-                                                     y_shock, a, b)
+                                                     r_b_vec, y_shock, a, b, cost, util, deposit)
 
         # Derive transition matrices
         @show "transition_deriva"
@@ -205,6 +188,12 @@ function eqcond(m::TwoAssetHANK)
                                                    d, d_g, s, s_g, r_a, aggZ,
                                                    a, a_g, b, b_g, y_shock)
 
+        @time A2, AT2 = transition_deriva2(permanent, ddeath, pam,
+                                           xxi, w, chi0, chi1, chi2, a_lb,
+                                           d, d_g, s, s_g, r_a, aggZ,
+                                           a, a_g, b, b_g, vec(y_shock), lambda)
+
+
         # full transition matrix
         A = aa + bb + cc
 
@@ -212,6 +201,11 @@ function eqcond(m::TwoAssetHANK)
         # KFE
         #----------------------------------------------------------------
         AT = (aau + bbu + ccu)'
+
+        @assert A == A2 + cc
+        @show "pass 1"
+        @assert (aau+bbu+ccu) == AT2
+        @show "pass 2"
         gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + death_process * gg
 
         # find death-corrected savings
