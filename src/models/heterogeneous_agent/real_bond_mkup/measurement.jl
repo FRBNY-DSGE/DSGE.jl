@@ -25,11 +25,12 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     #@info "enter"
     endo        = m.endogenous_states
     endo_unnorm = m.endogenous_states_unnormalized
+    endo_new    = m.model_states_augmented
     exo         = m.exogenous_shocks
     obs         = m.observables
 
     _n_model_states = n_model_states(m)
-    _n_model_states_aug = 2*n_backward_looking_states(m) + n_jumps(m)
+    _n_model_states_aug = _n_model_states + length(endo_new)
     _n_states       = n_backward_looking_states(m)
     _n_jumps        = n_jumps(m)
 
@@ -93,7 +94,8 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     # GDP
     ZZ[obs[:obs_gdp], 1:_n_states]     = GDPeqn
     ZZ[obs[:obs_gdp], _n_states+1:_n_states + _n_jumps] = zeros(_n_jumps)
-    ZZ[obs[:obs_gdp], _n_states + _n_jumps+ 1:end] = -GDPeqn
+    #@show size(ZZ[obs[:obs_gdp], _n_states + _n_jumps + 1:end])
+    ZZ[obs[:obs_gdp], first(_n_states + _n_jumps + 1:end)] = -1
 
     # Inflation
     ZZ[obs[:obs_corepce], first(endo[:π′_t])] = 1.

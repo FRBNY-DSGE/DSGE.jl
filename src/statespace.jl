@@ -172,7 +172,7 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
         CCC = zeros(n_model_states(m))
 #        @info "post kelin"
 
-        TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
+        TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC)
 #        @info "post aug"
         transition_equation = Transition(TTT, RRR, CCC)
 #        @info "post trans"
