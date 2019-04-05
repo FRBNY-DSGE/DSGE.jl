@@ -82,6 +82,45 @@ if check_jacobian
     F11 = read(file, "F11")
     close(file)
 
+   #= jldopen("$path/reference/jacobian.jld2", "w") do file
+        file["JJ"]   = JJ
+        file["MUP"]  = MUP
+        file["LIIP"] = LIIP
+        file["ZP"]   = ZP
+        file["MONP"] = MONP
+        file["MKPP"] = MKPP
+        file["ELLP"] = ELLP
+        file["RRP"]  = RRP
+        file["IIP"]  = IIP
+        file["WWP"]  = WWP
+        file["PIP"]  = PIP
+        file["TTP"]  = TTP
+        file["MU"]   = MU
+        file["LII"]  = LII
+        file["Z"]    = Z
+        file["MON"]  = MON
+        file["MKP"]  = MKP
+        file["ELL"]  = ELL
+        file["RR"]   = RR
+        file["II"]   = II
+        file["WW"]   = WW
+        file["PI"]   = PI
+        file["TT"]   = TT
+
+        file["F1"]   = F1
+        file["F2"]   = F2
+        file["F3"]   = F3
+        file["F4"]   = F4
+        file["F5"]   = F5
+        file["F6"]   = F6
+        file["F7"]   = F7
+        file["F8"]   = F8
+        file["F9"]   = F9
+        file["F10"]  = F10
+        file["F11"]  = F11
+    end =#
+
+
     @testset "Check jacobian outputs" begin
         @testset "Euler Equation" begin
             @test saved_JJ[F1, ELLP] ≈ JJ[F1, ELLP]
@@ -164,6 +203,11 @@ if check_solution
     m.testing = false      # So the Jacobian will be normalized within the klein solution
     gx, hx = klein(m)
     # @btime klein(m)
+
+    #=jldopen("$path/reference/solve.jld2", "w") do file
+        file["gx"] = gx
+        file["hx"] = hx
+    end =#
 
     file = jldopen("$path/reference/solve.jld2", "r")
     saved_gx   = read(file, "gx")
