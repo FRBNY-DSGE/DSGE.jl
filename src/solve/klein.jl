@@ -59,7 +59,17 @@ function klein(m::AbstractModel)
 
     # Find minimum norm solution to U₂₁ + U₂₂*g_x = 0 (more numerically stable than -U₂₂⁻¹*U₂₁)
     gx_coef = Matrix{Float64}(undef, n-NK, NK)
-	gx_coef = -U22'*pinv(U22*U22')*U21
+	gx_coef = try
+        -U22'*pinv(U22*U22')*U21
+    catch ex
+        if isa(ex, LAPACKException)
+            @info "LAPACK exception thrown while computing pseudo inverse of U22*U22'"
+            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
+        else
+            rethrow(ex)
+        end
+    end
+
 
     # Solve for h_x (in a more numerically stable way)
 	S11invT11 = S11\T11;
@@ -81,7 +91,7 @@ function klein(m::AbstractModel)
 	# gx_fval = Qy'*gx_coef*Qx
 	# hx_fval = Qx'*hx_coef*Qx
 
-	return gx_coef, hx_coef
+	return gx_coef, hx_coef, 0
 end
 
 # Need an additional transition_equation function to properly stack the
