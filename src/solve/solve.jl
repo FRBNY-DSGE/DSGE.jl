@@ -87,3 +87,25 @@ mutable struct GensysError <: Exception
 end
 GensysError() = GensysError("Error in Gensys")
 Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
+
+
+"""
+```
+KleinError <: Exception
+```
+A `KleinError` is thrown when:
+1. A LAPACK error was thrown while computing the pseudo-inverse of U22*U22'
+
+If a `KleinError`is thrown during Metropolis-Hastings, it is caught by
+`posterior`.  `posterior` then returns a value of `-Inf`, which
+Metropolis-Hastings always rejects.
+
+### Fields
+
+* `msg::String`: Info message. Default = \"Error in Klein\"
+"""
+mutable struct KleinError <: Exception
+    msg::String
+end
+KleinError() = KleinError("Error in Klein")
+Base.showerror(io::IO, ex::KleinError) = print(io, ex.msg)

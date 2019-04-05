@@ -164,7 +164,10 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
         measurement_equation = measurement(m, TTT, RRR, CCC)
     elseif solution_method == :klein
         # Unpacking the method from solve to hang on to TTT_jump
-        TTT_jump, TTT_state = klein(m)
+        TTT_jump, TTT_state, eu = klein(m)
+        if eu==-1
+            throw(KleinError())
+        end
 
         # Transition
 #        @info "pre klein"

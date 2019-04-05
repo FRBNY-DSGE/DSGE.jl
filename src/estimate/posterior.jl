@@ -130,7 +130,7 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
     system = try
         compute_system(m, verbose = verbose)
     catch err
-        if catch_errors && isa(err, GensysError)
+        if catch_errors && (isa(err, GensysError) || isa(err, KleinError))
             return -Inf
         else
             rethrow(err)
