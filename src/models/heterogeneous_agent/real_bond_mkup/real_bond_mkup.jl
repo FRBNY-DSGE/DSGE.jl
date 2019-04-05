@@ -276,15 +276,15 @@ function init_parameters!(m::RealBondMkup)
 
     # AR for observables (Non-steadystate)
     m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed=true,
+                   fixed=false,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
     m <= parameter(:ρ_mon, 0.0, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed = true,
+                   fixed = false,
                    description = "ρ_mon: Persistence of monetary policy shock",
                    tex_label = "\\rho_{mon}")
     m <= parameter(:ρ_mkp, 0.0, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed = true,
+                   fixed = false,
                    tex_label = "\\rho_{mkp}", description = "ρ_mkp: Persistence of the markup shock")
 
     m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10),
@@ -302,15 +302,15 @@ function init_parameters!(m::RealBondMkup)
 
     # More non-steadystate parameters
     m <= parameter(:ρ_tay, 0.5, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed = true,
+                   fixed = false,
                    description = "ρ_tay: Persistence in the taylor rule",
                    tex_label = "rho_{tay}")
     m <= parameter(:κ, 1.0, (0., 0.999), (0., 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0),
-                   fixed = true,
+                   fixed = false,
                    description = "κ: The slope of the Phillips curve",
                    tex_label = "\\kappa")
     m <= parameter(:phipi, 1.5, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.25),
-                   fixed = true,
+                   fixed = false,
                    description = "phipi: The slope of the taylor rule",
                    tex_label = "\\phi_\\pi")
 
