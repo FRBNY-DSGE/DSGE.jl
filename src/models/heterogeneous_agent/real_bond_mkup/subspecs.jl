@@ -127,24 +127,24 @@ function ss4!(m::RealBondMkup)
                    description = "Borrowing floor.", tex_label = "\\bar{a}")
 
     # Ar for observables (non-steadystate)
-    m <= parameter(:ρ_z, 0.03081565350294113, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+    m <= parameter(:ρ_z, 0.03081565350294113, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                    fixed=true,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
-    m <= parameter(:ρ_mon, 0.0, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+    m <= parameter(:ρ_mon, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                    fixed = true,
                    description = "ρ_mon: Persistence of monetary policy shock",
                    tex_label = "\\rho_{mon}")
-    m <= parameter(:ρ_mkp, 0.0, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+    m <= parameter(:ρ_mkp, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                    fixed = true,
                    tex_label = "\\rho_{mkp}", description = "ρ_mkp: Persistence of the markup shock")
 
     # More non-steadystate parameters
-    m <= parameter(:ρ_tay, 0.5, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+    m <= parameter(:ρ_tay, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                    fixed = true,
                    description = "ρ_tay: Persistence in the taylor rule",
                    tex_label = "rho_{tay}")
-    m <= parameter(:κ, 1.0, (0., 0.999), (0., 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0),
+    m <= parameter(:κ, 1.0, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0),
                    fixed = true,
                    description = "κ: The slope of the Phillips curve",
                    tex_label = "\\kappa")
@@ -181,11 +181,11 @@ function ss5!(m::RealBondMkup)
                    description = "Borrowing floor.", tex_label = "\\bar{a}")
 
     # More non-steadystate parameters
-    m <= parameter(:ρ_tay, 0.5, (0., 0.999), (0., 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+    m <= parameter(:ρ_tay, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                    fixed = true,
                    description = "ρ_tay: Persistence in the taylor rule",
                    tex_label = "rho_{tay}")
-    m <= parameter(:κ, 1.0, (0., 0.999), (0., 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0),
+    m <= parameter(:κ, 1.0, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0),
                    fixed = true,
                    description = "κ: The slope of the Phillips curve",
                    tex_label = "\\kappa")
