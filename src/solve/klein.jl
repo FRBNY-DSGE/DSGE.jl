@@ -62,8 +62,8 @@ function klein(m::AbstractModel)
 	gx_coef = try
         -U22'*pinv(U22*U22')*U21
     catch ex
-        if isa(ex, LAPACKException)
-            @info "LAPACK exception thrown while computing pseudo inverse of U22*U22'"
+        if isa(ex, LinearAlgebra.LAPACKException)
+            #@info "LAPACK exception thrown while computing pseudo inverse of U22*U22'"
             return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
         else
             rethrow(ex)
@@ -74,7 +74,16 @@ function klein(m::AbstractModel)
     # Solve for h_x (in a more numerically stable way)
 	S11invT11 = S11\T11;
 	Ustuff = (U11 + U12*gx_coef);
-	invterm = pinv(eye(NK)+gx_coef'*gx_coef);
+	invterm = try
+        pinv(eye(NK)+gx_coef'*gx_coef)
+    catch ex
+        if isa(ex, LinearAlgebra.LAPACKException)
+            #@info "LAPACK exception thrown while computing pseudo inverse of eye(NK) + gx_coef'*gx_+coef"
+            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
+        else
+            rethrow(ex)
+        end
+    end
     # hx_coef = Array{Float64, 2}(NK, NK)
 	hx_coef = invterm*Ustuff'*S11invT11*Ustuff;
 
