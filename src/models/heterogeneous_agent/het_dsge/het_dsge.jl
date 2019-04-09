@@ -355,9 +355,11 @@ function init_grids!(m::HetDSGE)
     grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
 
     # Skill grid
-    lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
+    #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
+    f1 = [[0.9 0.1]; [0.2 0.1]]
+    sgrid = [0.8; 1.2] #sgrid = exp.(lsgrid)
+    sscale = sgrid[2] - sgrid[1]
     swts = (sscale/ns)*ones(ns)
-    sgrid = exp.(lsgrid)
     grids[:sgrid] = Grid(sgrid, swts, sscale)
 
     # Markov transition matrix for skill
