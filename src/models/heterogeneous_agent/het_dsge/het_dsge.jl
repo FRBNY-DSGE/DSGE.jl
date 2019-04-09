@@ -400,7 +400,7 @@ function model_settings!(m::HetDSGE)
     m <= Setting(:zhi, 5.0, "Upper bound on second income shock to mollify actual income")
 
     # s: Skill Distribution/ "Units of effective labor" Grid Setup
-    m <= Setting(:ns, 5, "Skill distribution grid points")
+    m <= Setting(:ns, 2, "Skill distribution grid points")
     m <= Setting(:λ, 2.0, "The λ parameter in the Tauchen distribution calculation")
 
     # x: Cash on Hand Grid Setup
