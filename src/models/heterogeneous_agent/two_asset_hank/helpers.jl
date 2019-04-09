@@ -3,16 +3,16 @@ Solves Hamilton-Jacobi-Bellman equation.
 
 """
 @inline function solve_hjb(V::Array{S}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
-                           a_lb::R, ggamma::R, permanent::Bool,
-                           interp_decision::SparseMatrixCSC{R,T},
+                           a_lb::R, ggamma::R, perm::T,
+                           #interp_decision::SparseMatrixCSC{R,T},
                            ddeath::R, pam::R, aggZ::S, xxi::R, tau_I::R, w::S, trans::R,
-                           r_b_vec::Vector{S}, y::Vector{U}, a::Vector{R}, b::Vector{R},
+                           r_b_vec::Vector{S}, y::Vector{U}, a::Vector{R}, b::Vector{R}, #a_g, b_g,
                            cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
     I, J, N = size(V)
-
+    permanent = (perm==1) ? true : false
     Vamin = 0.0
     Vbmin = 1e-8
 
@@ -85,11 +85,7 @@ Solves Hamilton-Jacobi-Bellman equation.
 
         d[i,j,n] = IcFB * dFB + IcBF * dBF + dBB * IcBB
     end
-    # Interpolate
-    d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
-    s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
-    c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
-    return c, s, d, c_g, s_g, d_g
+    return c, s, d
 end
 
 """
@@ -98,7 +94,7 @@ end
 ```
 Function initializes income grid.
 """
-@inline function create_y_grid(y_size::Int64, ygrid_new::Int64, dataroot::String)
+@inline function create_y_grid(y_size::Int64, ygrid_new::Int64)#, dataroot::String)
 
     y      = Array{Float64}(undef, 0)
     y_dist = Array{Float64}(undef, 0)
@@ -114,26 +110,55 @@ Function initializes income grid.
 
     elseif y_size == 30
         # Load grid and transition probabilities from external calibration
-        y      = load(dataroot * "income_grid_30.jld2", "y")
-        y_dist = load(dataroot * "income_grid_30.jld2", "y_dist")
-        λ      = load(dataroot * "income_transition_30.jld2", "lambda")
+        #y      = load(dataroot * "income_grid_30.jld2", "y")
+        #y_dist = load(dataroot * "income_grid_30.jld2", "y_dist")
+        #λ      = load(dataroot * "income_transition_30.jld2", "lambda")
+        y = [-4.0043487, -2.3712946, -2.2529091, -1.861575, -1.7594332, -1.751468,
+             -1.7514113, -1.7434461, -1.6413042, -1.1315846, -0.61985494, -0.50146947,
+             -0.1101354, -0.0079935576, -2.8361989e-5, 2.8362067e-5, 0.0079935649,
+             0.11013543, 0.50146947, 0.619855, 1.1315847, 1.6413042, 1.7434461, 1.7514113,
+             1.751468, 1.7594332, 1.8615751, 2.2529091, 2.3712946, 4.0043487]
+
+        y_dist = [0.001696604, 0.0036905108, 0.054850618, 0.0034315242, 0.002345745,
+                  0.0034002893, 0.0034002799, 0.0023457452, 0.0034315242, 0.0036905106,
+                  0.11931293, 0.001696604, 0.11093998, 0.07583712, 0.10993017, 0.10992986,
+                  0.075837123, 0.11093998, 0.001696604, 0.11931292, 0.0036905108, 0.0034315242,
+                  0.002345745, 0.0034002893, 0.0034002799, 0.0023457452, 0.0034315242,
+                  0.054850615, 0.0036905106, 0.001696604]
+
+        λ = build_lambda(y_size)
 
         # Create grid of income shocks
         y = exp.(y)
 
     elseif y_size == 33
         # Load grid and transition probabilities from external calibration
-        y      = load(dataroot * "income_grid.jld2", "y")
-        y_dist = load(dataroot * "income_grid.jld2", "y_dist")
-        λ      = load(dataroot * "income_transition.jld2", "lambda")
+        #y      = load(dataroot * "income_grid.jld2", "y")
+        #y_dist = load(dataroot * "income_grid.jld2", "y_dist")
+        #λ      = load(dataroot * "income_transition.jld2", "lambda")
 
+        y = [-4.7415191, -3.9041665, -3.1769113, -2.8490016, -2.5749613, -2.1240338,
+             -2.011649, -1.8925175, -1.6610012, -1.2843938, -1.2100737, -0.95648415,
+             -0.68244382, -0.60812364, -0.23151632, -0.1191315, 0.0, 0.1191315, 0.23151632,
+             0.60812364, 0.68244382, 0.95648415, 1.2100737, 1.2843938, 1.6610012, 1.8925175,
+             2.011649, 2.1240338, 2.5749613, 2.8490016, 3.1769113, 3.9041665, 4.7415191]
+
+        y_dist = [0.00026325521, 0.00073171922, 0.0015341331, 0.008947109, 0.0025562662,
+                  0.0032773437, 0.024868536, 0.011062805, 0.0032773437, 0.052139733,
+                  0.0025562662, 0.00026325521, 0.086878404, 0.0015341331, 0.11138526,
+                  0.00073171922, 0.37598543, 0.00073171922, 0.11138526, 0.0015341331,
+                  0.086878404, 0.00026325521, 0.0025562662, 0.052139733, 0.0032773437,
+                  0.011062805, 0.024868536, 0.0032773437, 0.0025562662, 0.008947109,
+                  0.0015341331, 0.00073171922, 0.00026325521]
+
+        λ = build_lambda(y_size)
         # Create grid of income shocks
         y = exp.(y)
     end
 
     # Compute stationary income distribution
     y_dist = stat_dist(λ')   # stationary distribution
-    y_mean = y * y_dist
+    y_mean = dot(y, y_dist)
 
     if     ygrid_new == 0
         y = y ./ y_mean
@@ -472,17 +497,14 @@ end
 end
 
 
-@inline function set_grids_lite(a, b, a_g, b_g, y, r_b, r_b_borr)
+@inline function set_grids_lite(a, b, a_g, b_g, N)
     I   = length(b)
     J   = length(a)
     I_g = length(b_g)
     J_g = length(a_g)
-    N   = length(y)
 
     b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
     a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
-    y_grid    = permutedims(repeat(y, 1, I, J), [2 3 1])
-    r_b_grid  = r_b .* (b_grid .>= 0) + r_b_borr .* (b_grid .< 0)
 
     dbf_grid            = Array{Float64}(undef, I,J,N)
     dbb_grid            = Array{Float64}(undef, I,J,N)
@@ -511,8 +533,6 @@ end
 
     b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
     a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
-    y_g_grid     = permutedims(repeat(y, 1, I_g, J_g), [2 3 1])
-    r_b_g_grid   = r_b .* (b_g_grid .>= 0) + r_b_borr .* (b_g_grid .< 0)
 
     dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
     dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
@@ -537,10 +557,9 @@ end
     dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
 
     dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
-
     dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
 
-    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid
+    return dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde
 end
 
 
@@ -822,7 +841,7 @@ end
         Zu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, 1)
 
         bbu[ind, ind] = -(Xu + Zu)
-        if (Xu_ind <= I_g*J_g*N - 1) bbu[Xu_ind  + 1, Xu_ind] = Xu  end
+        if (Xu_ind <= I_g*J_g*N - 1) bbuq[Xu_ind  + 1, Xu_ind] = Xu  end
         if (Zu_ind >= 2)             bbu[Zu_ind - 1, Zu_ind]  = Zu end
 
     end
@@ -830,13 +849,13 @@ end
 end
 
 
-@inline function transition_deriva2(permanent::Bool, ddeath::R, pam::R, xxi::R, w::S,
+@inline function transition_deriva2(perm::T, ddeath::R, pam::R, xxi::R, w::S,
                                    chi0::R, chi1::R, chi2::R, a_lb::R,
                                    d, d_g, s, s_g, r_a, aggZ::S,
-                                   a, a_g, b, b_g, y, lambda) where {R<:AbstractFloat, S}
+                                   a, a_g, b, b_g, y, lambda) where {R<:AbstractFloat, S, T}
     I, J, N  = size(d)
     I_g, J_g = size(d_g)
-
+    permanent = (perm==1) ? true : false
     # Compute drifts for HJB
     perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
 

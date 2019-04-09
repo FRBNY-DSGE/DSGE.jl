@@ -528,18 +528,16 @@ function steadystate!(m::TwoAssetHANK)
     w	= (1 - aalpha) * (KL ^ aalpha)
     r_a	= aalpha * (KL ^ (aalpha - 1)) - ddelta
 
-    @time a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
-
+    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
+    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
 
     # Construct problem functions
-    #@inline u_fn(c) = u_fn(c, ggamma)
-    #@inline opt_deposits(Va, Vb, a) = opt_deposits(Va, Vb, a, chi0, chi1, chi2)
-    #@inline adj_cost_fn(d, a) = adj_cost_fn(d, a, chi0, chi1, chi2, a_lb)
+    util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
 
     # Initial consumption and value function
     c_0 = (1-xxi) * w * y_grid .+ (r_a + ddeath*pam) .* a_grid +
         (r_b_borr + ddeath * pam) .* b_grid .+ trans - tau_I * w * y_grid
-    V_0	= 1/(rrho + ddeath) * u_fn(c_0, ggamma)
+    V_0	= 1/(rrho + ddeath) * util.(c_0)
 
     # Initial distribution
     gg0 = zeros(I_g, J_g, N)
@@ -552,6 +550,7 @@ function steadystate!(m::TwoAssetHANK)
     aau = Array{Float64}(undef, 0, 0)
     bbu = Array{Float64}(undef, 0, 0)
     ccu = Array{Float64}(undef, 0, 0)
+
     Vn1 = Array{Float64}(undef, I, J, N)
     Vn  = Array{Float64}(undef, I, J, N)
 
@@ -579,39 +578,27 @@ function steadystate!(m::TwoAssetHANK)
     KL_supply = 0.
     Vamin     = 0.
     Vbmin     = 1e-8
+
     #----------------------------------------------------------------
     # Iterate on KL to find steady state
     #----------------------------------------------------------------
     for ii = 1 : maxit_KL
 	    # Derive aggregates, given KL
-	    w			= (1 - aalpha) * (KL ^ aalpha)
- 	    r_a			= aalpha * (KL ^ (aalpha - 1)) - ddelta
+	    w   = (1 - aalpha) * (KL ^ aalpha)
+ 	    r_a = aalpha * (KL ^ (aalpha - 1)) - ddelta
 
 	    # Store current value function
-	    Vn	= V_0
-
-		# Preparations
-		cF  = Array{Float64}(undef, I,J,N)
-		sF  = Array{Float64}(undef, I,J,N)
-		HcF = Array{Float64}(undef, I,J,N)
-
-		cB  = Array{Float64}(undef, I,J,N)
-		sB  = Array{Float64}(undef, I,J,N)
-		HcB = Array{Float64}(undef, I,J,N)
-
-		c0  = Array{Float64}(undef, I,J,N)
-		s0  = Array{Float64}(undef, I,J,N)
-		Hc0 = Array{Float64}(undef, I,J,N)
+	    Vn = V_0
 
 	    #----------------------------------------------------------------
 	    # Solve HJB
 	    #----------------------------------------------------------------
-        for nn = 1 : maxit_HJB
+        @time for nn = 1 : maxit_HJB
             perm_c =  ddeath * pam # NOTE: perm?
             c0_c   = ((1-xxi) - tau_I) * w
 
             for i=1:I, j=1:J, n=1:N
-                c0 = c0_c * real(y[1,n]) + b[i] * (r_b_grid[i,j,n] + perm_c) + trans
+                c0 = c0_c * real(y[n]) + b[i] * (r_b_vec[i] + perm_c) + trans
 
                 # ---- Liquid Assets, Forward + Backward Difference ----
                 VaF = (j==J) ? 0.0 : max((Vn[i,j+1,n] - Vn[i,j,n]) / (a[j+1]-a[j]), Vamin)
@@ -628,15 +615,15 @@ function steadystate!(m::TwoAssetHANK)
                 sF = (i==I) ? 0.0 : c0 - cF
                 sB = (i==1) ? 0.0 : c0 - cB
 
-                if (i==1 && j > 1) VbB = u_fn(cB, ggamma) end
+                if (i==1 && j > 1) VbB = util(cB) end
 
                 #----------------------------------------------------------------
                 # Consumption  & Savings Decision
                 #----------------------------------------------------------------
                 # Which direction to use
-                Hc0 = u_fn(c0, ggamma)
-                HcF = (i==I) ? -1e12 : u_fn(cF, ggamma) + VbF * sF
-                HcB = u_fn(cB, ggamma) + VbB * sB
+                Hc0 = util(c0)
+                HcF = (i==I) ? -1e12 : util(cF) + VbF * sF
+                HcB = util(cB) + VbB * sB
 
                 validF = (sF > 0)
                 validB = (sB < 0)
@@ -651,27 +638,18 @@ function steadystate!(m::TwoAssetHANK)
                 #----------------------------------------------------------------
                 # Deposit Decision
                 #----------------------------------------------------------------
-                dFB = (i == 1 || j == J) ? 0.0 :
-                    opt_deposits(VaF, VbB, max(a[j], a_lb), chi0, chi1, chi2)
+                dFB = (i == 1 || j == J) ? 0.0 : deposit(VaF, VbB, max(a[j], a_lb))
+                dBF = (i == I || j == 1) ? 0.0 : deposit(VaB, VbF, max(a[j], a_lb))
+                dBB = (j == 1)           ? 0.0 : deposit(VaB, VbB, max(a[j], a_lb))
 
-                dBF = (i == I || j == 1) ? 0.0 :
-                    opt_deposits(VaB, VbF, max(a[j], a_lb), chi0, chi1, chi2)
+                HdFB = (i == 1 || j == J) ? -1e1 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
+                validFB = (dFB > 0) * (HdFB > 0)
 
-                dBB = (j == 1) ? 0.0 :
-                    opt_deposits(VaB, VbB, max(a[j], a_lb), chi0, chi1, chi2)
+                HdBB = (j == 1) ? -1.0e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
+                validBB = (dBB > -cost(dBB, a[j])) .* (dBB <= 0) * (HdBB > 0)
 
-                HdFB = (i == 1 || j == J) ? -1e1 : VaF * dFB - VbB *
-                    (dFB + adj_cost_fn(dFB, a[j], chi0, chi1, chi2, a_lb))
-                validFB  = (dFB > 0) * (HdFB > 0)
-
-                HdBB = (j == 1) ? -1.0e12 :
-                    VaB * dBB - VbB * (dBB + adj_cost_fn(dBB, a[j], chi0, chi1, chi2, a_lb))
-                validBB = (dBB > -adj_cost_fn(dBB, a[j], chi0, chi1, chi2, a_lb)) .*
-                    (dBB <= 0) * (HdBB > 0)
-
-                HdBF = (i == I || j == 1) ? -1e1 : VaB * dBF - VbF *
-                    (dBF + adj_cost_fn(dBF, a[j], chi0, chi1, chi2, a_lb))
-                validBF = (dBF <= -adj_cost_fn(dBF, a[j], chi0, chi1, chi2, a_lb)) * (HdBF > 0)
+                HdBF = (i == I || j == 1) ? -1e1 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
+                validBF = (dBF <= -cost(dBF, a[j])) * (HdBF > 0)
 
                 IcFB[i,j,n] = validFB * max(!validBF, HdFB >= HdBF) * max(!validBB, HdFB >= HdBB)
                 IcBF[i,j,n] = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
@@ -679,9 +657,8 @@ function steadystate!(m::TwoAssetHANK)
                 Ic00[i,j,n] = !validFB * !validBF * !validBB
 
                 d[i,j,n] = IcFB[i,j,n] * dFB + IcBF[i,j,n] * dBF + dBB * IcBB[i,j,n]
-
             end
-            u = u_fn(c, ggamma)
+            u = util.(c)
 
             # Interpolate
             d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
@@ -690,9 +667,6 @@ function steadystate!(m::TwoAssetHANK)
 
             aa, bb, aau, bbu = transition(ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb, r_a,
                                           vec(y), d, d_g, s, s_g, a, a_g, b, b_g)
-
-            cc  = kron(lambda, my_speye(I * J))
-            ccu = kron(lambda, my_speye(I_g * J_g))
             A = aa + bb
 
             #------------------------------------------------------------
@@ -706,11 +680,9 @@ function steadystate!(m::TwoAssetHANK)
                 uk_stacked  = reshape(u[:,:,kk], I * J, 1)
                 Vk_stacked  = reshape(Vn[:,:,kk], I * J, 1)
                 indx_k      = 1:N .!= kk
-
-                Vkp_stacked = sum(repeat(lambda[kk,indx_k]', I*J, 1) .*
-                                      reshape(Vn[:,:,indx_k], I*J,N-1), dims=2)
+                Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
+                                          reshape(Vn[:,:,indx_k],I*J,N-1)), dims=2)
                 qk          = Delta * uk_stacked + Vk_stacked + Delta * Vkp_stacked
-
                 Vn1k_stacked = Bk \ qk
                 Vn1[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
             end
@@ -726,8 +698,8 @@ function steadystate!(m::TwoAssetHANK)
                         Bk = (1 + Delta*(rrho + ddeath) -
                               Delta*lambda[kk,kk]) * my_speye(I*J) - Delta*Ak
                         indx_k         = 1:N .!= kk
-                        Vkp_stacked    = sum(repeat(lambda[kk, indx_k]', I*J, 1) .*
-                                          reshape(Vn1[:,:,indx_k],I*J,N-1), dims=2)
+                        Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
+                                          reshape(Vn1[:,:,indx_k],I*J,N-1)), dims=2)
                         qk             = Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
                         Vn2k_stacked = Bk \ qk
                         Vn2[:,:,kk] = reshape(Vn2k_stacked,I,J,1)
@@ -847,6 +819,7 @@ function steadystate!(m::TwoAssetHANK)
     end
 
     #compute_savings()
+    ccu                  = kron(lambda, my_speye(I_g * J_g))
     A                    = aau + bbu + ccu
     dab_small            = reshape(dab_g_tilde_grid[:,:,1], I_g*J_g, 1)
     loc                  = findall(!iszero, b .== 0)
@@ -862,8 +835,8 @@ function steadystate!(m::TwoAssetHANK)
     g_new = reshape(g_new ,I_g, J_g, N)
     g_new_a = sum(sum(g_new, dims=1), dims=3)
     save_a = dot(g_new_a, a_g)
-    g_new_b = sum(sum(g_new, dims=2), dims=3)
-    save_b = dot(vec(g_new_b), b_g)
+    #g_new_b = sum(sum(g_new, dims=2), dims=3)
+    #save_b = dot(vec(g_new_b), b_g)
     #compute_savings()
 
     # Rename variables in steady state
@@ -1082,15 +1055,13 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:ygrid_new, 0, "ygrid_new = 0")
 
     # Create income grid
-    lambda, y, y_mean, y_dist, N = create_y_grid(get_setting(m, :y_size),
-                                                 get_setting(m, :ygrid_new),
-                                            #get_setting(m, :incomegridroot))
-                                            "/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/reference/")
+    lambda, y, y_mean, y_dist = create_y_grid(get_setting(m, :y_size),
+                                              get_setting(m, :ygrid_new))
     m <= Setting(:lambda, lambda, "Transition probabilities")
     m <= Setting(:y, y, "Grid of income shocks")
     m <= Setting(:y_mean, y_mean, "Mean grid of income shocks")
     m <= Setting(:y_dist, y_dist, "Stationary distribution of income shocks")
-    m <= Setting(:N, size(y, 2), "N")
+    m <= Setting(:N, length(y), "N")
 
     # Create illiquid asset grid
     m <= Setting(:J,    40, "Number of illiquid grid points (a)")

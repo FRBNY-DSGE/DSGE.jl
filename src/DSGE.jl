@@ -371,6 +371,7 @@ module DSGE
     include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
     include("models/heterogeneous_agent/one_asset_hank/helpers.jl")
 
+    include("models/heterogeneous_agent/two_asset_hank/income_transition.jl")
     include("models/heterogeneous_agent/two_asset_hank/two_asset_hank.jl")
     #include("models/heterogeneous_agent/two_asset_hank/measurement.jl")
     include("models/heterogeneous_agent/two_asset_hank/eqcond.jl")

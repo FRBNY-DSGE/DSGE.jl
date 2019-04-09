@@ -77,10 +77,10 @@ function steadystate!(m::TwoAssetHANK)
     r_a	= aalpha * (KL ^ (aalpha - 1)) - ddelta
 
     @time a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
-    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
+    r_b_vec   = r_b .* (b .>= 0) + r_b_borr .* (b .< 0)
 
     # Construct problem functions
-    util, deposit, cost = construct_problem_functions(γ, chi0, chi1, chi2, a_lb)
+    util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
 
     # Initial consumption and value function
     c_0 = (1-xxi) * w * y_grid .+ (r_a + ddeath*pam) .* a_grid +
