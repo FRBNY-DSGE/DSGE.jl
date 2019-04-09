@@ -339,7 +339,7 @@ function init_grids!(m::HetDSGE)
     # Calculate the lowest possible cash on hand in steady state
     smin = exp(m[:μ_sp]/(1-m[:ρ_sp]) - get_setting(m, :λ)*sqrt(m[:σ_sp]^2/(1-m[:ρ_sp])^2))*get_setting(m, :zlo)
     m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + 1e-6, "Lower bound on cash on hand")
-    m <= Setting(:xhi, get_setting(m, :xlo)*3, "Upper Bound on cash on hand")
+    m <= Setting(:xhi, get_setting(m, :xlo)*2, "Upper Bound on cash on hand")
     m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
 
     nx      = get_setting(m, :nx)
