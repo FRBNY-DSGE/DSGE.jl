@@ -87,8 +87,8 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
                         zlo::AbstractFloat, sumz::AbstractFloat,
                         xgrid::Vector{Float64}, sgrid::Vector{Float64},
                         xswts::Vector{Float64}, Win::Vector{Float64},
-                        f::Array{Float64,2}, damp::Float64 = 0.25, dist::Float64 = 1.,
-                        tol::Float64 = 1e-4, maxit::Int64 = 150)
+                        f::Array{Float64,2}, damp::Float64 = 0.1, dist::Float64 = 1.,
+                        tol::Float64 = 1e-4, maxit::Int64 = 300)
     n = nx*ns
     c  = zeros(n)      # consumption
     bp = zeros(n)      # savings
