@@ -48,6 +48,9 @@ function curtis_clenshaw_quadrature(kind::Int = 2)
     return (lb, ub, n) -> curtis_clenshaw_quadrature(lb, ub, n, kind = kind)
 end
 
+# Tauchen86 developed a method for "finding a discrete-valued Markov chain
+# whose sample paths approximate well those of a vector autoregression"
+# Hence the method below is the Tauchen86 method applied to a general AR(1).
 function tauchen86(μ::AbstractFloat,ρ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
     #output is xgrid, xprob
     # x_t+1 = μ + ρ x_t + σ e_{t+1}, e_t+1 ∼ N(0,1)
@@ -78,32 +81,14 @@ function tauchen86(μ::AbstractFloat,ρ::AbstractFloat,σ::AbstractFloat,n::Int6
     return ( xgrid,xprob, xscale )
 end
 
-# CONSOLIDATE WITH tauchen86 LATER AND FIX ALL OTHER OLDER HANK MODELS
-# TO RELY ON NEW GENERALIZED TAUCHEN
-function tauchen86_norho(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
-    # output is xgrid, xprob
-    xhi = μ + λ*σ;
-    xlo = μ - λ*σ;
-    xgrid = zeros(n);
-    xscale =(xhi-xlo)/(n-1)
-
-    for i=1:n
-        xgrid[i] = xlo + xscale*(i-1);
-    end
-    m = zeros(n-1);
-    for i=1:n-1
-        m[i] = (xgrid[i]+xgrid[i+1])/2;
-    end
-    xprob = zeros(n);
-    normie = Normal(μ,σ)
-    normpdf(x) = pdf.(normie,x)
-    normcdf(x) = cdf.(normie,x)
-    for j=2:n-1
-        xprob[j] = normcdf(m[j]) - normcdf(m[j-1]);
-    end
-    xprob[1] = normcdf(m[1]);
-    xprob[n] = 1 - normcdf(m[n-1]);
-    return ( xgrid,xprob, xscale )
+# However, Tauchen86 can also be applied to "degenerate" AR(1)s where ρ = 0.
+# i.e. i.i.d noise with mean μ, std. σ, but the way the returned
+# Markov transition matrix, xprob, is used in the code, assumes it to be
+# 1-dimensional, since the second-dimension of the Markov transition matrix is trivial
+# (since the process is i.i.d).
+function tauchen86(μ::AbstractFloat, σ::AbstractFloat, n::Int64, λ::AbstractFloat)
+    xgrid, xprob, xscale = tauchen86(μ, 0., σ, n, λ)
+    return xgrid, vec(xprob[:, 1]), xscale
 end
 
 ####################
