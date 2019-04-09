@@ -2,8 +2,8 @@ function steadystate!(m::HetDSGE;
                       # For debugging
                       # βlo::Float64 = 0.95*exp(m[:γ])/(1 + m[:r]),
                       # βhi::Float64 = exp(m[:γ])/(1 + m[:r]),
-                      βlo::Float64 = 0.988658,
-                      βhi::Float64 = 0.988663,
+                      βlo::Float64 = 0.99*exp(m[:γ])/R,
+                      βhi::Float64 = exp(m[:γ])/R,
                       excess::Float64 = 5000.,
                       tol::Float64 = 1e-5,
                       maxit::Int64 = 20)
@@ -56,7 +56,7 @@ function steadystate!(m::HetDSGE;
 
         LPMKF = xswts[1]*KF
         # find eigenvalue closest to 1
-        (D,V) = eigen(LPMKF)
+        (D,V) = eig(LPMKF)
         if abs(D[1]-1)>2e-1 # that's the tolerance we are allowing
             warn("your eigenvalue is too far from 1, something is wrong")
         end
