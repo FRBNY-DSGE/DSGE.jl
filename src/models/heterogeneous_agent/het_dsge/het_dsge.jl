@@ -274,6 +274,26 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:g, 0.18, fixed = true, description = "g: Steady-state government spending/gdp")
     m <= parameter(:η, 0.1, fixed = true, description = "η: Borrowing constraint (normalized by TFP)")
 
+    # Other parameters that affect dynamics
+    m <= parameter(:spp, 4., fixed = true, description = "second derivative of investment adjustment cost")
+    m <= parameter(:lamw, 1.5, fixed = true,  description = "wage markup")
+    m <= parameter(:ϕh   = 2., fixed = true, description = "inverse frisch elasticity")
+    m <= parameter(:Φw   = 100., fixed = true, description = "rotemberg cost for wages")
+    m <= parameter(:lamf = 1.5, fixed = true, description = "price markup")
+    m <= parameter(:Φp   = 100., fixed = true, description = "rotemberg cost for prices")
+    m <= parameter(:ρR   = 0.75, fixed = true, description = "persistence in taylor rule")
+    m <= parameter(:ψπ   = 10.5, fixed = true, description = "weight on inflation in taylor rule")
+    m <= parameter(:ψy   = 0.5, fixed = true, description = "weight on output growth in taylor rule")
+
+    # Aggregate shocks
+    m <= parameter(:ρB, 0.5, fixed = true, description = " persistence of discount factor shock")
+    m <= parameter(:ρG, 0.5, fixed = true, description = "persistence of govt spending shock")
+    m <= parameter(:ρZ, 0.5 fixed = true, description = "persistence of tfp growth shock")
+    m <= parameter(:ρμ, 0.5, fixed = true, description = "persistence of investment shock")
+    m <= parameter(:ρlamw, 0.5, fixed = true, description = "persistence of wage mkup shock")
+    m <= parameter(:ρlamf, 0.5, fixed = true, description = "persistence of price mkup shock")
+    m <= parameter(:ρmon, 0.5, fixed = true, description = "persistence of mon policy shock")
+
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
