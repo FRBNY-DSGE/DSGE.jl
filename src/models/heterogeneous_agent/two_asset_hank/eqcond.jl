@@ -206,7 +206,7 @@ function eqcond(m::TwoAssetHANK)
 
         # ripped out
         @show "solve_hjb"
-        @time c, s, d  = solve_hjb(V, I_g, J_g, chi0, chi1, chi2,
+        @time c, s, d  = solve_hjb3(V, I_g, J_g, chi0, chi1, chi2,
                                    a_lb, ggamma, permanent,
                                    ddeath, pam, aggZ, xxi, tau_I, w, trans,
                                    r_b_vec, y_shock, a, b, cost, util, deposit)

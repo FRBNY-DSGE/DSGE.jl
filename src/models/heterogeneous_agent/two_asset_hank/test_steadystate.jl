@@ -1,3 +1,4 @@
+using SparseArrays
 """
 ```
 steadystate!(m::TwoAssetHANK)
@@ -76,8 +77,8 @@ function steadystate!(m::TwoAssetHANK)
     w	= (1 - aalpha) * (KL ^ aalpha)
     r_a	= aalpha * (KL ^ (aalpha - 1)) - ddelta
 
-    @time a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
-    r_b_vec   = r_b .* (b .>= 0) + r_b_borr .* (b .< 0)
+    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
+    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
 
     # Construct problem functions
     util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
@@ -110,16 +111,8 @@ function steadystate!(m::TwoAssetHANK)
     u = Array{Float64}(undef, I, J, N)
     d = Array{Float64}(undef, I, J, N)
     c_g = Array{Float64}(undef, 0, 0)
-    s_g = Array{Float64}(undef, 0, 0)
-    d_g = Array{Float64}(undef, 0, 0)
-
-    IcF = BitArray{3}(undef, I,J,N)
-    IcB = BitArray{3}(undef, I,J,N)
-    Ic0 = BitArray{3}(undef, I,J,N)
-    IcFB = BitArray{3}(undef, I,J,N)
-    IcBF = BitArray{3}(undef, I,J,N)
-    IcBB = BitArray{3}(undef, I,J,N)
-    Ic00 = BitArray{3}(undef, I,J,N)
+    #s_g = Array{Float64}(undef, 0, 0)
+    #d_g = Array{Float64}(undef, 0, 0)
 
     K_supply  = 0.
     L_supply  = 0.
@@ -142,70 +135,8 @@ function steadystate!(m::TwoAssetHANK)
 	    # Solve HJB
 	    #----------------------------------------------------------------
         @time for nn = 1 : maxit_HJB
-            perm_c =  ddeath * pam # NOTE: perm?
-            c0_c   = ((1-xxi) - tau_I) * w
-
-            for i=1:I, j=1:J, n=1:N
-                c0 = c0_c * real(y[1,n]) + b[i] * (r_b_vec[i] + perm_c) + trans
-
-                # ---- Liquid Assets, Forward + Backward Difference ----
-                VaF = (j==J) ? 0.0 : max((Vn[i,j+1,n] - Vn[i,j,n]) / (a[j+1]-a[j]), Vamin)
-                VaB = (j==1) ? 0.0 : max((Vn[i,j,n] - Vn[i,j-1,n]) / (a[j]-a[j-1]), Vamin)
-
-                # ---- Illiquid Assets, Forward + Backward Difference ----
-                VbF = (i==I) ? 0.0 : max((Vn[i+1,j,n] - Vn[i,j,n]) / (b[i+1]-b[i]), Vbmin)
-                VbB = (i==1) ? 0.0 : max((Vn[i,j,n] - Vn[i-1,j,n]) / (b[i]-b[i-1]), Vbmin)
-
-                # Decisions conditional on a particular direction of derivative
-                cF = (i==I) ? 0.0 : VbF ^ (-1 / ggamma)
-                cB = (i==1) ? c0  : VbB ^ (-1 / ggamma)
-
-                sF = (i==I) ? 0.0 : c0 - cF
-                sB = (i==1) ? 0.0 : c0 - cB
-
-                if (i==1 && j > 1) VbB = util(cB) end
-
-                #----------------------------------------------------------------
-                # Consumption  & Savings Decision
-                #----------------------------------------------------------------
-                # Which direction to use
-                Hc0 = util(c0)
-                HcF = (i==I) ? -1e12 : util(cF) + VbF * sF
-                HcB = util(cB) + VbB * sB
-
-                validF = (sF > 0)
-                validB = (sB < 0)
-
-                IcF[i,j,n] = validF * max(!validB, (HcF >= HcB)) * (HcF >= Hc0)
-                IcB[i,j,n] = validB * max(!validF, (HcB >= HcF)) * (HcB >= Hc0)
-                Ic0[i,j,n] = 1 - IcF[i,j,n] - IcB[i,j,n]
-
-                c[i,j,n] = IcF[i,j,n] * cF + IcB[i,j,n] * cB + Ic0[i,j,n] * c0
-                s[i,j,n] = IcF[i,j,n] * sF + IcB[i,j,n] * sB
-
-                #----------------------------------------------------------------
-                # Deposit Decision
-                #----------------------------------------------------------------
-                dFB = (i == 1 || j == J) ? 0.0 : deposit(VaF, VbB, max(a[j], a_lb))
-                dBF = (i == I || j == 1) ? 0.0 : deposit(VaB, VbF, max(a[j], a_lb))
-                dBB = (j == 1)           ? 0.0 : deposit(VaB, VbB, max(a[j], a_lb))
-
-                HdFB = (i == 1 || j == J) ? -1e1 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
-                validFB = (dFB > 0) * (HdFB > 0)
-
-                HdBB = (j == 1) ? -1.0e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
-                validBB = (dBB > -cost(dBB, a[j])) .* (dBB <= 0) * (HdBB > 0)
-
-                HdBF = (i == I || j == 1) ? -1e1 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
-                validBF = (dBF <= -cost(dBF, a[j])) * (HdBF > 0)
-
-                IcFB[i,j,n] = validFB * max(!validBF, HdFB >= HdBF) * max(!validBB, HdFB >= HdBB)
-                IcBF[i,j,n] = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
-                IcBB[i,j,n] = max(!validFB, HdBB >= HdFB) * max(!validBF, HdBB >= HdBF) * validBB
-                Ic00[i,j,n] = !validFB * !validBF * !validBB
-
-                d[i,j,n] = IcFB[i,j,n] * dFB + IcBF[i,j,n] * dBF + dBB * IcBB[i,j,n]
-            end
+            c, s, d = solve_hjb(Vn, I_g, J_g, a_lb, ggamma, 0, ddeath, pam, 0.0, xxi,
+                                tau_I, w, trans, r_b_vec, y, a, b, cost, util, deposit)
             u = util.(c)
 
             # Interpolate
@@ -214,48 +145,48 @@ function steadystate!(m::TwoAssetHANK)
             c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
 
             aa, bb, aau, bbu = transition(ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb, r_a,
-                                          vec(y), d, d_g, s, s_g, a, a_g, b, b_g)
+                                          y, d, d_g, s, s_g, a, a_g, b, b_g)
             A = aa + bb
 
             #------------------------------------------------------------
             # Update value function
             #------------------------------------------------------------
-            Vn1 = Array{Float64}(undef, I,J,N)
-            for kk = 1:N
-                Ak          = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
-                Bk          = (1 + Delta*(rrho + ddeath) -
-                               Delta*lambda[kk,kk]) * my_speye(I*J) - Delta*Ak
-                uk_stacked  = reshape(u[:,:,kk], I * J, 1)
-                Vk_stacked  = reshape(Vn[:,:,kk], I * J, 1)
-                indx_k      = 1:N .!= kk
-                Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
-                                          reshape(Vn[:,:,indx_k],I*J,N-1)), dims=2)
-                qk          = Delta * uk_stacked + Vk_stacked + Delta * Vkp_stacked
-                Vn1k_stacked = Bk \ qk
-                Vn1[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
+            @inline function add_diag(A::SparseMatrixCSC, c::AbstractFloat)
+                for i=1:size(A,1)
+                    A[i,i] += c
+                end
+                return A
             end
+            @inline function update_value_fn(A::SparseMatrixCSC, Delta::R, lambda::Matrix{R},
+                                             I::Int64, J::Int64, N::Int64,
+                                             u::Union{Array{T,3},Array{R,3}},
+                                             Vn::Union{Array{T,3},Array{R,3}},
+                                             rrho::R, ddeath::R) where {R<:Float64,T<:Complex}
+                Vn_new = Array{Float64}(undef,I,J,N)
+                for kk = 1:N
+                    Ak    = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
+                    Bk    = add_diag(-Delta*Ak, 1 + Delta*(rrho + ddeath) - Delta*lambda[kk,kk])
+                    uk_stacked  = reshape(u[:,:,kk], I * J, 1)
+                    Vk_stacked  = reshape(Vn[:,:,kk], I * J, 1)
+                    indx_k      = 1:N .!= kk
+                    Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
+                                          reshape(Vn[:,:,indx_k], I*J, N-1)), dims=2)
+                    qk          = Delta .* uk_stacked + Vk_stacked + Delta .* Vkp_stacked
+                    Vn1k_stacked = Bk \ qk
+                    Vn_new[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
+                end
+                return Vn_new
+            end
+
+            Vn1 = update_value_fn(A, Delta, lambda, I, J, N, u, Vn, rrho, ddeath)
 
             # Howard improvement step
             if nn >= start_HIS
                 for jj = 1:maxit_HIS
-                    Vn2 = Array{Float64}(undef, I, J, N)
-                    for kk = 1:N
-                        uk_stacked = reshape(u[:,:,kk],I*J,1)
-                        Vk_stacked = reshape(Vn1[:,:,kk],I*J,1)
-                        Ak = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
-                        Bk = (1 + Delta*(rrho + ddeath) -
-                              Delta*lambda[kk,kk]) * my_speye(I*J) - Delta*Ak
-                        indx_k         = 1:N .!= kk
-                        Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
-                                          reshape(Vn1[:,:,indx_k],I*J,N-1)), dims=2)
-                        qk             = Delta*uk_stacked + Vk_stacked + Delta*Vkp_stacked
-                        Vn2k_stacked = Bk \ qk
-                        Vn2[:,:,kk] = reshape(Vn2k_stacked,I,J,1)
-                    end
+                    Vn2 = update_value_fn(A, Delta, lambda, I, J, N, u, Vn1, rrho, ddeath)
                     VHIS_delta = Vn2 - Vn1
                     Vn1  = Vn2
                     dist = maximum(abs.(VHIS_delta))
-
                     if dist < crit_HIS
                         break
                     end
@@ -288,8 +219,8 @@ function steadystate!(m::TwoAssetHANK)
         λ0p = λ0'
 
         gg_tilde = dab_g_tilde_mat * gg
-        gg1      = Array{Float64,2}(undef,  I_g * J_g, N)
-        g        = Array{Float64,3}(undef, I_g, J_g, N)
+        gg1      = Array{Float64,2}(undef, I_g * J_g, N)
+        g        = Array{Float64,3}(undef, I_g,  J_g, N)
 
         K_supply  = 0.
         L_supply  = 0.
@@ -411,13 +342,6 @@ function steadystate!(m::TwoAssetHANK)
                                (r_a .+ ddeath*pam))
     m[:earn_Var_SS]     = sum(g .* m[:earn_SS].value .^ 2 .* dab_g_tilde_grid) -
                                 sum(g .* m[:earn_SS].value .* dab_g_tilde_grid)^2
-    m <= Setting(:IcF_SS,  IcF)
-    m <= Setting(:IcB_SS,  IcB)
-    m <= Setting(:Ic0_SS,  Ic0)
-    m <= Setting(:IcFB_SS, IcFB)
-    m <= Setting(:IcBF_SS, IcBF)
-    m <= Setting(:IcBB_SS, IcBB)
-    m <= Setting(:Ic00_SS, Ic00)
 
     a_g_0pos = get_setting(m, :a_g_0pos)
     b_g_0pos = get_setting(m, :b_g_0pos)

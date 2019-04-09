@@ -2,12 +2,93 @@
 Solves Hamilton-Jacobi-Bellman equation.
 
 """
-@inline function solve_hjb(V::Array{S}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
-                           a_lb::R, ggamma::R, perm::T,
-                           #interp_decision::SparseMatrixCSC{R,T},
-                           ddeath::R, pam::R, aggZ::S, xxi::R, tau_I::R, w::S, trans::R,
-                           r_b_vec::Vector{S}, y::Vector{U}, a::Vector{R}, b::Vector{R}, #a_g, b_g,
-                           cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
+@inline function solve_hjb(V::Union{Array{R},Array{S}}, I_g::T, J_g::T,
+                            a_lb::R, ggamma::R, perm::T, ddeath::R, pam::R,
+                            aggZ::Union{R,S}, xxi::R, tau_I::R, w::Union{R,S}, trans::R,
+                            r_b_vec::Union{Vector{R},Vector{S}}, y::Vector{U}, a::Vector{R},
+                            b::Vector{R},
+                            cost, util, deposit) where {R<:Float64, S, T<:Int, U<:Number}
+    #----------------------------------------------------------------
+    # HJB Equation
+    #----------------------------------------------------------------
+    I, J, N = size(V)
+    permanent = (perm==1) ? true : false
+    Vamin = 0.0
+    Vbmin = 1e-8
+
+    perm_c = permanent ? ddeath * pam - aggZ : ddeath * pam
+    c0_c   = ((1-xxi) - tau_I) * w
+
+    c, s, d = similar(V), similar(V), similar(V)
+    for i=1:I, j=1:J, n=1:N
+
+        c0 = c0_c * real(y[n]) + b[i] * (r_b_vec[i] + perm_c) + trans
+
+        # ---- Liquid Assets, Forward + Backward Difference ----
+        VaF = (j==J) ? 0.0 : max((V[i,j+1,n] - V[i,j,n]) / (a[j+1]-a[j]), Vamin)
+        VaB = (j==1) ? 0.0 : max((V[i,j,n] - V[i,j-1,n]) / (a[j]-a[j-1]), Vamin)
+
+        # ---- Illiquid Assets, Forward + Backward Difference ----
+        VbF = (i==I) ? 0.0 : max((V[i+1,j,n] - V[i,j,n]) / (b[i+1]-b[i]), Vbmin)
+        VbB = (i==1) ? 0.0 : max((V[i,j,n] - V[i-1,j,n]) / (b[i]-b[i-1]), Vbmin)
+
+        # Decisions conditional on a particular direction of derivative
+        cF = (i==I) ? 0.0 : VbF ^ (-1 / ggamma)
+        cB = (i==1) ? c0  : VbB ^ (-1 / ggamma)
+
+        sF = (i==I) ? 0.0 : c0 - cF
+        sB = (i==1) ? 0.0 : c0 - cB
+
+        if (i==1 && j > 1) VbB = util(cB) end
+
+        #----------------------------------------------------------------
+        # Consumption  & Savings Decision
+        #----------------------------------------------------------------
+        Hc0 = util(c0)
+        HcF = (i==I) ? -1e12 : util(cF) + VbF * sF
+        HcB =                  util(cB) + VbB * sB
+
+        validF = (sF > 0)
+        validB = (sB < 0)
+
+        IcF = validF * max(!validB, (HcF >= HcB)) * (HcF >= Hc0)
+        IcB = validB * max(!validF, (HcB >= HcF)) * (HcB >= Hc0)
+        Ic0 = 1 - IcF - IcB
+
+        c[i,j,n] = IcF * cF + IcB * cB + Ic0 * c0
+        s[i,j,n] = IcF * sF + IcB * sB
+
+        #----------------------------------------------------------------
+        # Deposit Decision
+        #----------------------------------------------------------------
+        dFB = (i == 1 || j == J) ? 0.0 : deposit(VaF, VbB, max(a[j], a_lb))
+        dBF = (i == I || j == 1) ? 0.0 : deposit(VaB, VbF, max(a[j], a_lb))
+        dBB = (j == 1)           ? 0.0 : deposit(VaB, VbB, max(a[j], a_lb))
+
+        HdFB = (i == 1 || j == J) ? -1e12 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
+        HdBB = (j == 1) ?           -1e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
+        HdBF = (i == I || j == 1) ? -1e12 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
+
+        validFB =                             (HdFB > 0) * (dFB >  0)
+        validBB = (dBB >  -cost(dBB, a[j])) * (HdBB > 0) * (dBB <= 0)
+        validBF = (dBF <= -cost(dBF, a[j])) * (HdBF > 0)
+
+        IcFB = max(!validBF, HdFB >= HdBF) * validFB * max(!validBB, HdFB >= HdBB)
+        IcBF = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
+        IcBB = max(!validFB, HdBB >= HdFB) * validBB * max(!validBF, HdBB >= HdBF)
+        Ic00 = !validFB * !validBF * !validBB
+
+        d[i,j,n] = IcFB * dFB + IcBF * dBF + dBB * IcBB
+    end
+    return c, s, d
+end
+
+@inline function solve_hjb3(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
+                            a_lb::R, ggamma::R, perm::T, ddeath::R, pam::R,
+                            aggZ::Union{R,S}, xxi::R, tau_I::R, w::Union{R,S}, trans::R,
+                            r_b_vec::Union{Vector{R},Vector{S}}, y::Vector{U}, a::Vector{R},
+                            b::Vector{R},
+                            cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -87,6 +168,7 @@ Solves Hamilton-Jacobi-Bellman equation.
     end
     return c, s, d
 end
+
 
 """
 ```
@@ -637,8 +719,9 @@ end
 
 
 @inline function transition(ddeath::S, pam::S, xxi::S, w::R, chi0::S, chi1::S, chi2::S, a_lb::S,
-                            r_a::R, y::Vector{T}, d::Array{S,3}, d_g::Array{S,3},
-                            s::Array{S,3}, s_g::Array{S,3},
+                            r_a::R, y::Vector{T}, d::Union{Array{S,3},Array{T,3}},
+                            d_g::Union{Array{S,3},Array{T,3}},
+                            s::Union{Array{S,3},Array{T,3}}, s_g::Union{Array{S,3},Array{T,3}},#Array{S,3},
                             a::Vector{S}, a_g::Vector{S}, b::Vector{S},
                             b_g::Vector{S}) where {S<:AbstractFloat, R<:Number, T<:Number}
     I, J, N  = size(d)
