@@ -120,7 +120,22 @@ function parameterized_expectations_hetdsge(nx::Int,ns::Int, β::AbstractFloat, 
                                             xgrid::Vector{Float64}, sgrid::Vector{Float64},
                                             xswts::Vector{Float64}, c::Vector{Float64},
                                             bp::Vector{Float64}, f::Array{Float64,2})
-    qfunction(x) = mollifier_hetdsge(x, zhi, zlo)/sumz
+    # experiment with a different q
+    ne = 100
+    σe = 0.01
+    (legrid, fe, sscale) = tauchen86(0.0,0.0,σe,ne,2.0)
+    egrid = exp.(legrid)
+    eprob = fe[1,:]
+
+    function convoluted_q(x::AbstractFloat, zhi::AbstractFloat, zlo::AbstractFloat, ne::Int, egrid::Vector{Float64}, eprob::Vector{Float64})
+        sumne = 0.
+        for i=1:ne
+            sumne += mollifier(x - egrid[i], zhi, zlo)*eprob[i]
+        end
+        return sumne
+    end
+    qfunction(x) = convoluted_q(x, zhi, zlo, ne, egrid, eprob)
+    #qfunction(x) = mollifier_hetdsge(x, zhi, zlo)/sumz
 
     l_out = zeros(nx*ns)
     for iss=1:ns
