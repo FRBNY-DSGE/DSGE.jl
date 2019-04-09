@@ -48,7 +48,39 @@ function curtis_clenshaw_quadrature(kind::Int = 2)
     return (lb, ub, n) -> curtis_clenshaw_quadrature(lb, ub, n, kind = kind)
 end
 
-function tauchen86(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
+function tauchen86(μ::AbstractFloat,ρ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
+    #output is xgrid, xprob
+    # x_t+1 = μ + ρ x_t + σ e_{t+1}, e_t+1 ∼ N(0,1)
+    xhi = μ/(1-ρ) + λ*sqrt(σ^2/(1-ρ)^2)
+    xlo = μ/(1-ρ) - λ*sqrt(σ^2/(1-ρ)^2)
+    xgrid = zeros(n);
+    xscale =(xhi-xlo)/(n-1)
+
+    for i=1:n
+        xgrid[i] = xlo + xscale*(i-1)
+    end
+    m=zeros(n-1);
+    for i=1:n-1
+        m[i] = (xgrid[i]+xgrid[i+1])/2
+    end
+    xprob = zeros(n,n) # xprob[i,j] = Pr(x_t+1=xgrid[j]|x_t=xgrid[i])
+    for i=1:n # this is the state today
+        normie = Normal(μ+ρ*xgrid[i],σ)
+        normpdf(x) = pdf.(normie,x)
+        normcdf(x) = cdf.(normie,x)
+        for j=2:n-1
+            xprob[i,j] = normcdf(m[j]) - normcdf(m[j-1])
+        end
+        xprob[i,1] = normcdf(m[1])
+        xprob[i,n] = 1 - normcdf(m[n-1])
+    end
+    xprob = xprob./sum(xprob, dims = 2) # make sure the rows sum to 1
+    return ( xgrid,xprob, xscale )
+end
+
+# CONSOLIDATE WITH tauchen86 LATER AND FIX ALL OTHER OLDER HANK MODELS
+# TO RELY ON NEW GENERALIZED TAUCHEN
+function tauchen86_norho(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
     # output is xgrid, xprob
     xhi = μ + λ*σ;
     xlo = μ - λ*σ;
