@@ -318,7 +318,7 @@ function init_parameters!(m::RealBondMkup)
     m <= parameter(:μ_s, 0., fixed = true, description = "μ_s: Mu of log normal in income")
     m <= parameter(:σ_s, 0.1, fixed = true,
                    description = "σ_s: Sigma of log normal in income")
-    m <= parameter(:e_y, 1e-3, fixed = true, description = "e_y: Measurement error on GDP",
+    m <= parameter(:e_y, 0., fixed = true, description = "e_y: Measurement error on GDP",
                    tex_label = "e_y")
 
     # Setting steady-state parameters
