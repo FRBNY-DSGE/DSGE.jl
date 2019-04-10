@@ -133,8 +133,13 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
             cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "smcsave" => "smc_cloud"), "cloud")
-            params = get_vals(cloud)
-            #params = map(Float64, h5read(input_file_name, "smcparams"))
+            params_unweighted = get_vals(cloud)
+            # Re-sample SMC draws according to their weights
+            W = load(replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2"), "W")
+            weights = W[:, end]
+            inds = resample(weights)
+
+            params = params_unweighted[inds, :]
         else
             throw("Invalid :sampling method specification. Change in setting :sampling_method")
         end
@@ -183,15 +188,30 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
         else
             ndraws = length(block_inds)
             params = Vector{Vector{Float64}}(undef, ndraws)
+            if get_setting(m, :sampling_method) == :SMC
+                params_unweighted = similar(params)
+            end
             for (i, j) in zip(1:ndraws, block_inds)
                 if get_setting(m, :sampling_method) == :MH
                     params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
                 elseif get_setting(m, :sampling_method) == :SMC
-                    params[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+
+                    params_unweighted[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
                 else
                     throw("Invalid :sampling_method setting specification.")
                 end
             end
+
+            # Re-sample draws according to weights if the sampling_method was SMC
+            if get_setting(m, :sampling_method) == :SMC
+                # Re-sample SMC draws according to their weights
+                @load replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2") W
+                weights = W[:, end][block_inds]
+                inds = resample(weights)
+
+                params = params_unweighted[inds]
+            end
+
             return params
         end
     elseif input_type == :init_draw_shocks
