@@ -288,7 +288,7 @@ function init_parameters!(m::HetDSGE)
     # Aggregate shocks
     m <= parameter(:ρB, 0.5, fixed = true, description = " persistence of discount factor shock")
     m <= parameter(:ρG, 0.5, fixed = true, description = "persistence of govt spending shock")
-    m <= parameter(:ρZ, 0.5 fixed = true, description = "persistence of tfp growth shock")
+    m <= parameter(:ρZ, 0.5, fixed = true, description = "persistence of tfp growth shock")
     m <= parameter(:ρμ, 0.5, fixed = true, description = "persistence of investment shock")
     m <= parameter(:ρlamw, 0.5, fixed = true, description = "persistence of wage mkup shock")
     m <= parameter(:ρlamf, 0.5, fixed = true, description = "persistence of price mkup shock")
