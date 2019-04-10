@@ -119,12 +119,13 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
-            params = map(Float64, h5read(input_file_name, "smcparams"))
-            W = load(replace(replace(input_file_name, "smcsave", "smc_cloud"), "h5", "jld2"), "W")
-            weights = W[size(W, 1), :]
+            params_unweighted = map(Float64, h5read(input_file_name, "smcparams"))
+            # Re-sample SMC draws according to their weights
+            W = load(replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2"), "W")
+            weights = W[:, end]
             inds = resample(weights)
-            @show size(params)
-            params
+
+            params = params_unweighted[inds, :]
         else
             throw("Invalid :sampling method specification. Change in setting :sampling_method")
         end
@@ -162,25 +163,36 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
     input_file_name = get_forecast_input_file(m, input_type)
     println(verbose, :low, "Loading draws from $input_file_name")
 
-    W = load(replace(input_file_name, "smc_cloud", "h5", "jld2"), "W")
-    weights = W[size(W, 1), :]
-    inds = resample(weights)
-
     if input_type in [:full, :subset]
         if isempty(block_inds)
             error("Must supply nonempty range of block_inds for this load_draws method")
         else
             ndraws = length(block_inds)
             params = Vector{Vector{Float64}}(undef, ndraws)
+            if get_setting(m, :sampling_method) == :SMC
+                params_unweighted = similar(params)
+            end
             for (i, j) in zip(1:ndraws, block_inds)
                 if get_setting(m, :sampling_method) == :MH
                     params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
                 elseif get_setting(m, :sampling_method) == :SMC
-                    params[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+
+                    params_unweighted[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
                 else
                     throw("Invalid :sampling_method setting specification.")
                 end
             end
+
+            # Re-sample draws according to weights if the sampling_method was SMC
+            if get_setting(m, :sampling_method) == :SMC
+                # Re-sample SMC draws according to their weights
+                @load replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2") W
+                weights = W[:, end][block_inds]
+                inds = resample(weights)
+
+                params = params_unweighted[inds]
+            end
+
             return params
         end
     else
