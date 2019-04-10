@@ -84,6 +84,23 @@ function eqcond(m::TwoAssetHANK)
     # Set liquid rates
     r_b_borr = r_b_borr_SS
 
+
+        a, a_g, a_g_0pos          = create_a_grid(agrid_new, J, J_g, amin, amax)
+        _, _, _, b, b_g, b_g_0pos = create_b_grid(bgrid_new, I, I_g)
+
+        lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
+
+        dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite(a,
+                                                                           b, a_g, b_g, N)
+
+
+        a_gg = repeat(repeat(a_g, inner=I_g), outer=N)
+        b_gg = repeat(repeat(b_g, outer=J_g), outer=N)
+
+        # Construct problem functions
+        util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
+
+
     vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
     V_SS = vars_SS[1:n_v]
     g_SS = vars_SS[n_v + 1 : n_v + n_g]
@@ -126,21 +143,7 @@ function eqcond(m::TwoAssetHANK)
         aggZ_Shock = vars[2*nVars + nEErrors + 1]
         # ------- Unpack variables -------
 
-        a, a_g, a_g_0pos          = create_a_grid(agrid_new, J, J_g, amin, amax)
-        _, _, _, b, b_g, b_g_0pos = create_b_grid(bgrid_new, I, I_g)
-
-        lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
-
-        dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite(a,
-                                                                           b, a_g, b_g, N)
-
         r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab, dab_tilde_mat, dab_g, dab_g_tilde_mat = set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
-
-        a_gg = repeat(repeat(a_g, inner=I_g), outer=N)
-        b_gg = repeat(repeat(b_g, outer=J_g), outer=N)
-
-        # Construct problem functions
-        util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
 
         dab_aux   = reshape(dab, I*J*N, 1)
         dab_g_aux = reshape(dab_g, I_g*J_g*N, 1)
@@ -190,9 +193,9 @@ function eqcond(m::TwoAssetHANK)
 
         # Derive transition matrices
         println("Timing: transition_deriva()")
-        @time A, AT = transition_deriva(permanent==1, ddeath, pam, xxi, w, a_lb,
-                                        d, d_g, s, s_g, r_a, aggZ,
-                                        a, a_g, b, b_g, y_shock, cost, util, deposit)
+        @time A, AT = transition_deriva(permanent==1, ddeath, pam, xxi, w, a_lb, aggZ,
+                                        d, d_g, s, s_g, r_a, a, a_g, b, b_g, y_shock,
+                                        cost, util, deposit)
         cc  = kron(lambda, my_speye(I*J))
         ccu = kron(lambda, my_speye(I_g*J_g))
 
