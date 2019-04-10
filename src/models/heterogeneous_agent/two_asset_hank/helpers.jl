@@ -83,6 +83,34 @@ Solves Hamilton-Jacobi-Bellman equation.
     return c, s, d
 end
 
+@inline function add_diag(A::SparseMatrixCSC, c::AbstractFloat)
+    for i=1:size(A,1)
+        A[i,i] += c
+    end
+    return A
+end
+
+@inline function update_value_fn(A::SparseMatrixCSC, Delta::R, lambda::Matrix{R},
+                                 I::Int64, J::Int64, N::Int64,
+                                 u::Union{Array{T,3},Array{R,3}},
+                                 Vn::Union{Array{T,3},Array{R,3}},
+                                 rrho::R, ddeath::R) where {R<:Float64,T<:Complex}
+    Vn_new = Array{Float64}(undef,I,J,N)
+    for kk = 1:N
+        Ak    = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
+        Bk    = add_diag(-Delta*Ak, 1 + Delta*(rrho + ddeath) - Delta*lambda[kk,kk])
+        uk_stacked  = reshape(u[:,:,kk], I * J, 1)
+        Vk_stacked  = reshape(Vn[:,:,kk], I * J, 1)
+        indx_k      = 1:N .!= kk
+        Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
+                                    reshape(Vn[:,:,indx_k], I*J, N-1)), dims=2)
+        qk          = Delta .* uk_stacked + Vk_stacked + Delta .* Vkp_stacked
+        Vn1k_stacked = Bk \ qk
+        Vn_new[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
+    end
+    return Vn_new
+end
+
 @inline function solve_hjb3(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
                             a_lb::R, ggamma::R, perm::T, ddeath::R, pam::R,
                             aggZ::Union{R,S}, xxi::R, tau_I::R, w::Union{R,S}, trans::R,
@@ -830,7 +858,8 @@ end
 @inline function transition_deriva(permanent::Bool, ddeath::R, pam::R, xxi::R, w::S,
                                    chi0::R, chi1::R, chi2::R, a_lb::R,
                                    d, d_g, s, s_g, r_a, aggZ::S,
-                                   a, a_g, b, b_g, y) where {R<:AbstractFloat, S}
+                                   a, a_g, b, b_g, y
+                                   ) where {R<:AbstractFloat, S}
     I, J, N  = size(d)
     I_g, J_g = size(d_g)
 
@@ -933,9 +962,10 @@ end
 
 
 @inline function transition_deriva2(perm::T, ddeath::R, pam::R, xxi::R, w::S,
-                                   chi0::R, chi1::R, chi2::R, a_lb::R,
-                                   d, d_g, s, s_g, r_a, aggZ::S,
-                                   a, a_g, b, b_g, y, lambda) where {R<:AbstractFloat, S, T}
+                                    #=chi0::R, chi1::R, chi2::R,=# a_lb::R,
+                                    d, d_g, s, s_g, r_a, aggZ::S,
+                                    a, a_g, b, b_g, y, lambda,
+                                    cost, util, deposit) where {R<:AbstractFloat, S, T}
     I, J, N  = size(d)
     I_g, J_g = size(d_g)
     permanent = (perm==1) ? true : false
@@ -978,11 +1008,9 @@ end
                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
                              max(s[i,j,n], 0)) / (b[i+1] - b[i])
         =#
-        X = (i==1) ? 0.0 : -(min(-d[i,j,n] -
-                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+        X = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
                               min(s[i,j,n], 0)) / (b[i] - b[i-1])
-        Z = (i==I) ? 0.0 : (max(-d[i,j,n] -
-                                 adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+        Z = (i==I) ? 0.0 : (max(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
                              max(s[i,j,n], 0)) / (b[i+1] - b[i])
 
         A[ind, ind] += -(X + Z)
@@ -1014,8 +1042,7 @@ end
         audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
             (permanent ? aggZ * a_g[j] : 0.0)
 
-        budrift = s_g[i,j,n] - d_g[i,j,n] -
-            adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb) -
+        budrift = s_g[i,j,n] - d_g[i,j,n] - cost(d_g[i,j,n], max(a_g[j], a_lb)) -
             (permanent ? aggZ * b_g[i] : 0.0)
 
         chiu  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])

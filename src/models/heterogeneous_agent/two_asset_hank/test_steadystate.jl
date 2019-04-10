@@ -151,33 +151,6 @@ function steadystate!(m::TwoAssetHANK)
             #------------------------------------------------------------
             # Update value function
             #------------------------------------------------------------
-            @inline function add_diag(A::SparseMatrixCSC, c::AbstractFloat)
-                for i=1:size(A,1)
-                    A[i,i] += c
-                end
-                return A
-            end
-            @inline function update_value_fn(A::SparseMatrixCSC, Delta::R, lambda::Matrix{R},
-                                             I::Int64, J::Int64, N::Int64,
-                                             u::Union{Array{T,3},Array{R,3}},
-                                             Vn::Union{Array{T,3},Array{R,3}},
-                                             rrho::R, ddeath::R) where {R<:Float64,T<:Complex}
-                Vn_new = Array{Float64}(undef,I,J,N)
-                for kk = 1:N
-                    Ak    = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
-                    Bk    = add_diag(-Delta*Ak, 1 + Delta*(rrho + ddeath) - Delta*lambda[kk,kk])
-                    uk_stacked  = reshape(u[:,:,kk], I * J, 1)
-                    Vk_stacked  = reshape(Vn[:,:,kk], I * J, 1)
-                    indx_k      = 1:N .!= kk
-                    Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
-                                          reshape(Vn[:,:,indx_k], I*J, N-1)), dims=2)
-                    qk          = Delta .* uk_stacked + Vk_stacked + Delta .* Vkp_stacked
-                    Vn1k_stacked = Bk \ qk
-                    Vn_new[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
-                end
-                return Vn_new
-            end
-
             Vn1 = update_value_fn(A, Delta, lambda, I, J, N, u, Vn, rrho, ddeath)
 
             # Howard improvement step

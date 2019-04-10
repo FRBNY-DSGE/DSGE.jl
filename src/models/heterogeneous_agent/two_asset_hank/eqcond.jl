@@ -101,58 +101,32 @@ function eqcond(m::TwoAssetHANK)
     end
     aggZ_SS = vars_SS[n_v+n_g+n_p+1] # aggregate Z
 
-#=
-    JLD2.jldopen("vars.jld2", true, true, true, IOStream) do f
-        f["vars"] = var_SS
-    end
-=#
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
-        #=
-        vars_SS = Float64.(load("vars.jld2","vars"))
-        V_SS = vars_SS[1:n_v]
-        g_SS = vars_SS[n_v + 1 : n_v + n_g]
-        K_SS = vars_SS[n_v + n_g + 1]
-        r_b_SS= vars_SS[n_v + n_g + 2]
-        if aggregate_variables == 1
-            aggY_SS = vars_SS[n_v+n_g+3] # aggregate output
-            aggC_SS = vars_SS[n_v+n_g+4] # aggregate consumption
-        elseif distributional_variables == 1
-            C_Var_SS = vars_SS[n_v+n_g+3] # consumption inequality
-            earn_Var_SS = vars_SS[n_v+n_g+4] # earnings inequality
-        elseif distributional_variables_1 == 1
-            C_WHTM_SS = vars_SS[n_v+n_g+3] # consumption of wealthy hand-to-mouth
-            C_PHTM_SS = vars_SS[n_v+n_g+4] # consumption of poor hand-to-mouth
-        end
-        aggZ_SS = vars_SS[n_v+n_g+n_p+1] # aggregate Z
-        =#
-
         # ------- Unpack variables -------
         V   = reshape(vars[1:n_v] .+ V_SS, I, J, N)  # value function
-        g   = vars[n_v + 1 : n_v + n_g] .+ g_SS#vars_SS[n_v + 1 : n_v + n_g] # distribution
-        K   = vars[n_v + n_g + 1] + K_SS#vars_SS[n_v + n_g + 1]     # aggregate capital
-        r_b = vars[n_v + n_g + 2] + r_b_SS#vars_SS[n_v + n_g + 2]
+        g   = vars[n_v + 1 : n_v + n_g] .+ g_SS      # distribution
+        K   = vars[n_v + n_g + 1] + K_SS             # aggregate capital
+        r_b = vars[n_v + n_g + 2] + r_b_SS
 
         if aggregate_variables == 1
-            aggY     = vars[n_v+n_g+3] + aggY_SS#vars_SS[n_v+n_g+3] # aggregate output
-            aggC     = vars[n_v+n_g+4] + aggC_SS#vars_SS[n_v+n_g+4] # aggregate consumption
+            aggY     = vars[n_v+n_g+3] + aggY_SS  # aggregate output
+            aggC     = vars[n_v+n_g+4] + aggC_SS  # aggregate consumption
         elseif distributional_variables == 1
-            C_Var    = vars[n_v+n_g+3] + C_Var_SS#vars_SS[n_v+n_g+3] # consumption inequality
-            earn_Var = vars[n_v+n_g+4] + earn_Var_SS#vars_SS[n_v+n_g+4] # earnings inequality
+            C_Var    = vars[n_v+n_g+3] + C_Var_SS    # consumption inequality
+            earn_Var = vars[n_v+n_g+4] + earn_Var_SS # earnings inequality
         elseif distributional_variables_1 == 1
-            C_WHTM  = vars[n_v+n_g+3] + C_WHTM_SS#vars_SS[n_v+n_g+3] # consumption of wealthy hand-to-mouth
-            C_PHTM  = vars[n_v+n_g+4] + C_PHTM_SS#vars_SS[n_v+n_g+4] # consumption of poor hand-to-mouth
+            C_WHTM  = vars[n_v+n_g+3] + C_WHTM_SS  # consumption of wealthy hand-to-mouth
+            C_PHTM  = vars[n_v+n_g+4] + C_PHTM_SS  # consumption of poor hand-to-mouth
         end
-        aggZ       = vars[n_v+n_g+n_p+1] + aggZ_SS#vars_SS[n_v+n_g+n_p+1] # aggregate Z
-
+        aggZ       = vars[n_v+n_g+n_p+1] + aggZ_SS  # aggregate Z
         V_Dot      = vars[nVars + 1 : nVars + n_v]
         g_Dot      = vars[nVars + n_v + 1:nVars + n_v + n_g]
         aggZ_Dot   = vars[nVars + n_v + n_g + n_p + 1]
-
         VEErrors   = vars[2*nVars + 1 : 2 * nVars + n_v]
         aggZ_Shock = vars[2*nVars + nEErrors + 1]
         # ------- Unpack variables -------
 
-        a, a_g, a_g_0pos = create_a_grid(agrid_new, J, J_g, amin, amax)
+        a, a_g, a_g_0pos          = create_a_grid(agrid_new, J, J_g, amin, amax)
         _, _, _, b, b_g, b_g_0pos = create_b_grid(bgrid_new, I, I_g)
 
         lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
@@ -191,7 +165,7 @@ function eqcond(m::TwoAssetHANK)
         w   = (1 - aalpha) * (K ^ aalpha) * n_SS ^ (-aalpha) *
             ((permanent == 0) ? exp(aggZ) ^ (1-aalpha) : 1.)
         r_a = aalpha * (K ^ (aalpha - 1)) * (((permanent == 0) ? exp(aggZ) : 1.) *
-                                             n_SS) ^ (1 - aalpha) - ddelta
+            n_SS) ^ (1 - aalpha) - ddelta
         # Auxiliary variables
         r_b_borr = r_b .+ borrwedge_SS
 
@@ -202,12 +176,10 @@ function eqcond(m::TwoAssetHANK)
         y_shock      = y .* exp.(kappa * aggZ * (y .- y_mean) ./ std(y))
         y_shock_mean = dot(y_shock, y_dist)
         y_shock      = real(y_shock ./ y_shock_mean .* y_mean)
-        #y_grid       = permutedims(repeat(y_shock', 1, I, J), [2 3 1])
 
         # ripped out
         @show "solve_hjb"
-        @time c, s, d  = solve_hjb3(V, I_g, J_g, chi0, chi1, chi2,
-                                   a_lb, ggamma, permanent,
+        @time c, s, d  = solve_hjb(V, I_g, J_g, a_lb, ggamma, permanent,
                                    ddeath, pam, aggZ, xxi, tau_I, w, trans,
                                    r_b_vec, y_shock, a, b, cost, util, deposit)
 
@@ -219,10 +191,9 @@ function eqcond(m::TwoAssetHANK)
         # Derive transition matrices
         @show "transition_deriva"
         @time A, AT = transition_deriva2(permanent, ddeath, pam,
-                                         xxi, w, chi0, chi1, chi2, a_lb,
+                                         xxi, w, a_lb,
                                          d, d_g, s, s_g, r_a, aggZ,
-                                         a, a_g, b, b_g, vec(y_shock), lambda)
-
+                                         a, a_g, b, b_g, y_shock, lambda, cost, util, deposit)
         cc  = kron(lambda, my_speye(I*J))
         ccu = kron(lambda, my_speye(I_g*J_g))
 
@@ -257,7 +228,7 @@ function eqcond(m::TwoAssetHANK)
         else
             K_out = sum(a_gg .* gg .* vec(dab_g))
         end
-        #error()
+
         K_Residual   = K_out - K
         r_b_out      = 0.0
         r_b_Residual = 0.0
@@ -327,15 +298,8 @@ function eqcond(m::TwoAssetHANK)
         # Law of motion for aggregate tfp shock
         aggZ_Residual = aggZ_Dot - (-nnu_aggZ * aggZ + ssigma_aggZ * aggZ_Shock)
 
-@show unique(eltype.(([hjbResidual, gResidual, K_Residual, r_b_Residual, Y_Residual,
-                    C_Residual, aggZ_Residual])))
-
         # Return equilibrium conditions
         #if aggregate_variables == 1
-
-#@time x = deepcopy([hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
-#                    C_Residual; aggZ_Residual])
-
             return [hjbResidual; gResidual; K_Residual; r_b_Residual; Y_Residual;
                     C_Residual; aggZ_Residual]
         #elseif distributional_variables == 1
@@ -347,25 +311,17 @@ function eqcond(m::TwoAssetHANK)
         #end
         #return [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
     end
-    #end
-    #args = [:V_SSS, :g_SSS, :K_SSS, :r_b_SSS, :aggY_SSS, :aggC_SSS, :aggZ_SSS]
-    #@show build_get_residuals
-    #attempt = :(build_get_residuals($(args)))
-    #get_residuals = eval(attempt)
-    #callfunc(f) = f()
-    #get_residuals = callfunc(@closure () -> build_get_residuals(V_SSS, g_SSS, K_SSS, r_b_SSS, aggY_SSS, aggC_SSS, aggZ_SSS))
-@show get_residuals
 
     out = get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
-    #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_update_y.jld2", true, true, true, IOStream) do file
+    #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_y_shock.jld2", "residuals")
+    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_1e12.jld2", "residuals")
     @assert test_out == out
     @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
 
     x = zeros(Float64, 2 * nVars + nEErrors + 1)
-    derivs = ForwardDiff.sparse_jacobian(get_residuals, x)
+    @time derivs = ForwardDiff.sparse_jacobian(get_residuals, x)
 
     nstates = nVars # n_states(m)
     n_s_exp = nEErrors # n_shocks_expectational(m)
