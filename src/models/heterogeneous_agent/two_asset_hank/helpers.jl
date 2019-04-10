@@ -2,12 +2,11 @@
 Solves Hamilton-Jacobi-Bellman equation.
 
 """
-@inline function solve_hjb(V::Union{Array{R},Array{S}}, I_g::T, J_g::T,
-                            a_lb::R, ggamma::R, perm::T, ddeath::R, pam::R,
-                            aggZ::Union{R,S}, xxi::R, tau_I::R, w::Union{R,S}, trans::R,
-                            r_b_vec::Union{Vector{R},Vector{S}}, y::Vector{U}, a::Vector{R},
-                            b::Vector{R},
-                            cost, util, deposit) where {R<:Float64, S, T<:Int, U<:Number}
+@inline function solve_hjb(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, a_lb::R, ggamma::R,
+                           perm::T, ddeath::R, pam::R, aggZ::Union{R,S}, xxi::R, tau_I::R,
+                           w::Union{R,S}, trans::R, r_b_vec::Union{Vector{R},Vector{S}},
+                           y::Vector{U}, a::Vector{R}, b::Vector{R},
+                           cost, util, deposit) where {R<:Float64, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -44,7 +43,7 @@ Solves Hamilton-Jacobi-Bellman equation.
         #----------------------------------------------------------------
         # Consumption  & Savings Decision
         #----------------------------------------------------------------
-        Hc0 = util(c0)
+        Hc0 =                  util(c0)
         HcF = (i==I) ? -1e12 : util(cF) + VbF * sF
         HcB =                  util(cB) + VbB * sB
 
@@ -66,12 +65,12 @@ Solves Hamilton-Jacobi-Bellman equation.
         dBB = (j == 1)           ? 0.0 : deposit(VaB, VbB, max(a[j], a_lb))
 
         HdFB = (i == 1 || j == J) ? -1e12 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
-        HdBB = (j == 1) ?           -1e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
+        HdBB = (j == 1)           ? -1e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
         HdBF = (i == I || j == 1) ? -1e12 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
 
-        validFB =                             (HdFB > 0) * (dFB >  0)
-        validBB = (dBB >  -cost(dBB, a[j])) * (HdBB > 0) * (dBB <= 0)
-        validBF = (dBF <= -cost(dBF, a[j])) * (HdBF > 0)
+        validFB = (HdFB > 0) * (dFB >  0)
+        validBB = (HdBB > 0) * (dBB <= 0) * (dBB >  -cost(dBB, a[j]))
+        validBF = (HdBF > 0) *              (dBF <= -cost(dBF, a[j]))
 
         IcFB = max(!validBF, HdFB >= HdBF) * validFB * max(!validBB, HdFB >= HdBB)
         IcBF = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
@@ -95,7 +94,7 @@ end
                                  u::Union{Array{T,3},Array{R,3}},
                                  Vn::Union{Array{T,3},Array{R,3}},
                                  rrho::R, ddeath::R) where {R<:Float64,T<:Complex}
-    Vn_new = Array{Float64}(undef,I,J,N)
+    Vn_new = Array{Float64,3}(undef,I,J,N)
     for kk = 1:N
         Ak    = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
         Bk    = add_diag(-Delta*Ak, 1 + Delta*(rrho + ddeath) - Delta*lambda[kk,kk])
@@ -110,93 +109,6 @@ end
     end
     return Vn_new
 end
-
-@inline function solve_hjb3(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, chi0::R, chi1::R, chi2::R,
-                            a_lb::R, ggamma::R, perm::T, ddeath::R, pam::R,
-                            aggZ::Union{R,S}, xxi::R, tau_I::R, w::Union{R,S}, trans::R,
-                            r_b_vec::Union{Vector{R},Vector{S}}, y::Vector{U}, a::Vector{R},
-                            b::Vector{R},
-                            cost, util, deposit) where {R<:AbstractFloat, S, T<:Int, U<:Number}
-    #----------------------------------------------------------------
-    # HJB Equation
-    #----------------------------------------------------------------
-    I, J, N = size(V)
-    permanent = (perm==1) ? true : false
-    Vamin = 0.0
-    Vbmin = 1e-8
-
-    perm_c = permanent ? ddeath * pam - aggZ : ddeath * pam
-    c0_c   = ((1-xxi) - tau_I) * w
-
-    c, s, d = similar(V), similar(V), similar(V)
-    for i=1:I, j=1:J, n=1:N
-
-        c0 = c0_c * real(y[n]) + b[i] * (r_b_vec[i] + perm_c) + trans
-
-        # ---- Liquid Assets, Forward + Backward Difference ----
-        VaF = (j==J) ? 0.0 : max((V[i,j+1,n] - V[i,j,n]) / (a[j+1]-a[j]), Vamin)
-        VaB = (j==1) ? 0.0 : max((V[i,j,n] - V[i,j-1,n]) / (a[j]-a[j-1]), Vamin)
-
-        # ---- Illiquid Assets, Forward + Backward Difference ----
-        VbF = (i==I) ? 0.0 : max((V[i+1,j,n] - V[i,j,n]) / (b[i+1]-b[i]), Vbmin)
-        VbB = (i==1) ? 0.0 : max((V[i,j,n] - V[i-1,j,n]) / (b[i]-b[i-1]), Vbmin)
-
-        # Decisions conditional on a particular direction of derivative
-        cF = (i==I) ? 0.0 : VbF ^ (-1 / ggamma)
-        cB = (i==1) ? c0  : VbB ^ (-1 / ggamma)
-
-        sF = (i==I) ? 0.0 : c0 - cF
-        sB = (i==1) ? 0.0 : c0 - cB
-
-        if (i==1 && j > 1) VbB = u_fn(cB, ggamma) end
-
-        #----------------------------------------------------------------
-        # Consumption  & Savings Decision
-        #----------------------------------------------------------------
-        Hc0 = util(c0)
-        HcF = (i==I) ? -1e12 : util(cF) + VbF * sF
-        HcB = util(cB) + VbB * sB
-
-        validF = (sF > 0)
-        validB = (sB < 0)
-
-        IcF = validF * max(!validB, (HcF >= HcB)) * (HcF >= Hc0)
-        IcB = validB * max(!validF, (HcB >= HcF)) * (HcB >= Hc0)
-        Ic0 = 1 - IcF - IcB
-
-        c[i,j,n] = IcF * cF + IcB * cB + Ic0 * c0
-        s[i,j,n] = IcF * sF + IcB * sB
-
-        #----------------------------------------------------------------
-        # Deposit Decision
-        #----------------------------------------------------------------
-        dFB = (i == 1 || j == J) ? 0.0 :
-            opt_deposits(VaF, VbB, max(a[j], a_lb), chi0, chi1, chi2)
-
-        dBF = (i == I || j == 1) ? 0.0 :
-            opt_deposits(VaB, VbF, max(a[j], a_lb), chi0, chi1, chi2)
-
-        dBB = (j == 1) ? 0.0 :
-            opt_deposits(VaB, VbB, max(a[j], a_lb), chi0, chi1, chi2)
-
-        HdFB = (i == 1 || j == J) ? -1e1 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
-        HdBB = (j == 1) ? -1.0e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
-        HdBF = (i == I || j == 1) ? -1e1 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
-
-        validFB = (dFB > 0) * (HdFB > 0)
-        validBB = (dBB > -cost(dBB, a[j])) .* (dBB <= 0) * (HdBB > 0)
-        validBF = (dBF <= -cost(dBF, a[j])) * (HdBF > 0)
-
-        IcFB = validFB * max(!validBF, HdFB >= HdBF) * max(!validBB, HdFB >= HdBB)
-        IcBF = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
-        IcBB = max(!validFB, HdBB >= HdFB) * max(!validBF, HdBB >= HdBF) * validBB
-        Ic00 = !validFB * !validBF * !validBB
-
-        d[i,j,n] = IcFB * dFB + IcBF * dBF + dBB * IcBB
-    end
-    return c, s, d
-end
-
 
 """
 ```
@@ -246,7 +158,6 @@ Function initializes income grid.
         #y      = load(dataroot * "income_grid.jld2", "y")
         #y_dist = load(dataroot * "income_grid.jld2", "y_dist")
         #λ      = load(dataroot * "income_transition.jld2", "lambda")
-
         y = [-4.7415191, -3.9041665, -3.1769113, -2.8490016, -2.5749613, -2.1240338,
              -2.011649, -1.8925175, -1.6610012, -1.2843938, -1.2100737, -0.95648415,
              -0.68244382, -0.60812364, -0.23151632, -0.1191315, 0.0, 0.1191315, 0.23151632,
@@ -749,7 +660,7 @@ end
 @inline function transition(ddeath::S, pam::S, xxi::S, w::R, chi0::S, chi1::S, chi2::S, a_lb::S,
                             r_a::R, y::Vector{T}, d::Union{Array{S,3},Array{T,3}},
                             d_g::Union{Array{S,3},Array{T,3}},
-                            s::Union{Array{S,3},Array{T,3}}, s_g::Union{Array{S,3},Array{T,3}},#Array{S,3},
+                            s::Union{Array{S,3},Array{T,3}}, s_g::Union{Array{S,3},Array{T,3}},
                             a::Vector{S}, a_g::Vector{S}, b::Vector{S},
                             b_g::Vector{S}) where {S<:AbstractFloat, R<:Number, T<:Number}
     I, J, N  = size(d)
@@ -962,17 +873,17 @@ end
 
 
 @inline function transition_deriva2(perm::T, ddeath::R, pam::R, xxi::R, w::S,
-                                    #=chi0::R, chi1::R, chi2::R,=# a_lb::R,
-                                    d, d_g, s, s_g, r_a, aggZ::S,
+                                    a_lb::R, d, d_g, s, s_g, r_a, aggZ::S,
                                     a, a_g, b, b_g, y, lambda,
                                     cost, util, deposit) where {R<:AbstractFloat, S, T}
     I, J, N  = size(d)
     I_g, J_g = size(d_g)
     permanent = (perm==1) ? true : false
+
     # Compute drifts for HJB
     perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
 
-    #X, Z = similar(d), similar(d)
+    X, Z = similar(d), similar(d)
     #aa   = spzeros(eltype(d), I*J*N, I*J*N)
     #bb   = spzeros(eltype(d), I*J*N, I*J*N)
     #A   = kron(lambda, my_speye(eltype(d), I*J))
@@ -1000,14 +911,14 @@ end
 
         if (chi_ind  <= I*J*N - I) A[chi_ind  + I, chi_ind]  += chi  end
         if (zeta_ind >= I + 1)     A[zeta_ind - I, zeta_ind] += zeta end
-        #=
-        X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
-                                  adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
-                              min(s[i,j,n], 0)) / (b[i] - b[i-1])
-        Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
-                                 adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
-                             max(s[i,j,n], 0)) / (b[i+1] - b[i])
-        =#
+
+        #X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
+        #                          adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+        #                      min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        #Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
+        #                         adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+        #                     max(s[i,j,n], 0)) / (b[i+1] - b[i])
+
         X = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
                               min(s[i,j,n], 0)) / (b[i] - b[i-1])
         Z = (i==I) ? 0.0 : (max(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
@@ -1095,6 +1006,7 @@ end
 
 
 # This file contains additional helper functions for computing the steady state.
+
 """
 ```
 @inline function construct_asset_grid(I::Int64, grid_param::Int64, grid_min::Float64,
@@ -1174,62 +1086,9 @@ end
     return zz
 end
 
-@inline function construct_household_problem_functions(V::Matrix{S}, w::T,
-                                         coefrra::R, frisch::R, labtax::R,
-                                         labdisutil::R) where {R<:AbstractFloat,T<:Real,S<:Number}
-
-    @inline function util(c::U, h::U) where {U<:Number}
-        f(x::U) = coefrra == 1.0 ? log(x) : x^(1-coefrra) / (1-coefrra)
-        return f(c) - labdisutil * (h ^ (1 + 1/frisch)/(1 + 1/frisch))
-    end
-
-    @inline income(h::U, z::Float64, profshare::V, lumptransfer::V, r::T,
-                   a::Float64) where {T<:Number,U<:Number,V<:Number} = h * z * w * (1 - labtax) + lumptransfer + profshare + r * a
-
-    @inline labor(z::U, val::V) where {U<:Number,V<:Number} = (z * w * (1 - labtax) * val / labdisutil) ^ frisch
-
-    return util, income, labor
-end
-
-@inline function construct_initial_diff_matrices(V::Matrix{T},
-                                                 Vaf::Matrix{T}, Vab::Matrix{T},
-                                                 income::Function, labor::Function,
-                                                 h::Matrix{U}, h0::Matrix{U},
-                                                 zz::Matrix{S}, profshare::Matrix{T},
-                                                 lumptransfer::T,
-                                                 amax::S, amin::S, coefrra::S, r::S,
-                                                 daf::Vector{S}, dab::Vector{S},
-                                                 maxhours::S) where {S<:Number,T<:Number,U<:Number}
-    I,J = size(V)
-    cf  = similar(V)
-    hf  = similar(V)
-    cb  = similar(V)
-    hb  = similar(V)
-
-    for j=1:J, i=1:I
-        if i==I
-            Vaf[end, j] = income(h[end, j], zz[end, j], profshare[end, j], lumptransfer, r, amax) ^ (-coefrra)
-            Vab[i, j]   = (V[i, j] - V[i-1, j]) / dab[i]
-        elseif i==1
-            Vaf[i, j]   = (V[i+1, j] - V[i, j]) / daf[i]
-            Vab[1, j]   = income(h0[1, j], zz[1, j], profshare[1, j], lumptransfer, r, amin) ^ (-coefrra)
-        else
-            Vaf[i, j]   = (V[i+1, j] - V[i, j]) / daf[i]
-            Vab[i, j]   = (V[i, j] - V[i-1, j]) / dab[i]
-        end
-        cf[i,j] = Vaf[i,j] ^ (-1 / coefrra)
-        cb[i,j] = Vab[i,j] ^ (-1 / coefrra)
-
-        hf[i,j] = min(norm(labor(zz[i,j], Vaf[i,j])), maxhours)
-        hb[i,j] = min(norm(labor(zz[i,j], Vab[i,j])), maxhours)
-    end
-
-    return Vaf, Vab, cf, hf, cb, hb
-end
-
 # For initialization
 @inline function calculate_ss_equil_vars(zz::Matrix{Float64}, m_ss::Float64, meanlabeff::Float64,
-                                 lumptransferpc::Float64, govbondtarget::Float64)
+                                         lumptransferpc::Float64, govbondtarget::Float64)
 
     N_ss         = complex(1/3) # steady state hours: so that quarterly GDP = 1 in s.s
     Y_ss         = complex(1.)
@@ -1352,38 +1211,4 @@ end
     A = spdiagm(-1 => reshape(X,I*J)[2:I*J], 0 => reshape(Y,I*J), 1 => reshape(Z,I*J)[1:I*J-1]) + A_switch
 
     return A, u, h, c, s
-end
-
-
-# Using the market clearing condition on bonds to determine whether or not
-# an equilibrium has been reached
-@inline function check_bond_market_clearing(bond_err::ComplexF64, crit_S::Float64,
-                                            r::Float64, r_min::Float64, r_max::Float64,
-                                            r_ρ::Float64, ρ_min::Float64, ρ_max::Float64,
-                                            iter_r::Bool, iter_ρ::Bool)
-    clearing_condition = false
-    # Using the market clearing condition on bonds to determine whether or not
-    # an equilibrium has been reached
-    if abs(bond_err) > crit_S
-        if bond_err > 0
-            if iter_r
-                r_max  = r
-                r      = 0.5 * (r + r_min)
-            elseif iter_ρ
-                ρ_min = r_ρ
-                r_ρ   = 0.5 * (r_ρ + ρ_max)
-            end
-        else
-            if iter_r
-                r_min  = r
-                r      = 0.5 * (r + r_max)
-            elseif iter_ρ
-                ρ_max = r_ρ
-                r_ρ   = 0.5 * (r_ρ + ρ_min)
-            end
-        end
-    else
-        clearing_condition = true
-    end
-    return r, r_min, r_max, r_ρ, ρ_min, ρ_max, clearing_condition
 end

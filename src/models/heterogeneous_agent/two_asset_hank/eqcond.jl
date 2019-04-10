@@ -178,7 +178,7 @@ function eqcond(m::TwoAssetHANK)
         y_shock      = real(y_shock ./ y_shock_mean .* y_mean)
 
         # ripped out
-        @show "solve_hjb"
+        println("Timing: solve_hjb()")
         @time c, s, d  = solve_hjb(V, I_g, J_g, a_lb, ggamma, permanent,
                                    ddeath, pam, aggZ, xxi, tau_I, w, trans,
                                    r_b_vec, y_shock, a, b, cost, util, deposit)
@@ -189,9 +189,8 @@ function eqcond(m::TwoAssetHANK)
         c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
 
         # Derive transition matrices
-        @show "transition_deriva"
-        @time A, AT = transition_deriva2(permanent, ddeath, pam,
-                                         xxi, w, a_lb,
+        println("Timing: transition_deriva()")
+        @time A, AT = transition_deriva2(permanent, ddeath, pam, xxi, w, a_lb,
                                          d, d_g, s, s_g, r_a, aggZ,
                                          a, a_g, b, b_g, y_shock, lambda, cost, util, deposit)
         cc  = kron(lambda, my_speye(I*J))
@@ -205,10 +204,6 @@ function eqcond(m::TwoAssetHANK)
         # KFE
         #----------------------------------------------------------------
         gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + death_process * gg
-
-        # find death-corrected savings
-        a_save = dot(gIntermediate, daba_g_aux)
-        b_save = dot(gIntermediate, dabb_g_aux)
 
         #----------------------------------------------------------------
         # Compute equilibrium conditions
@@ -232,7 +227,6 @@ function eqcond(m::TwoAssetHANK)
         K_Residual   = K_out - K
         r_b_out      = 0.0
         r_b_Residual = 0.0
-
         if r_b_fix      == 1
             r_b_out      = r_b_SS
             r_b_Residual = r_b_out - r_b
@@ -240,6 +234,8 @@ function eqcond(m::TwoAssetHANK)
             r_b_out      = sum(b_gg .* gg .* vec(dab_g))
             r_b_Residual = r_b_out - B_SS * exp(1/pphi * (r_b - r_b_SS))
         elseif B_fix    == 1
+            # find death-corrected savings
+            b_save       = dot(gIntermediate, dabb_g_aux)
             r_b_out      = 0.0
             r_b_Residual = r_b_out - b_save
         elseif K_liquid == 1
