@@ -3,6 +3,7 @@ using DSGE, JLD2, Distributions, PDMats, DataStructures, OrderedCollections, Fil
 my_tests = [
            "core",
            "parameters",
+           "models/heterogeneous_agent/het_dsge/het_dsge",
            #="models/representative_agent/an_schorfheide/an_schorfheide",
            "models/representative_agent/smets_wouters/smets_wouters",
            "models/representative_agent/m990/m990",
