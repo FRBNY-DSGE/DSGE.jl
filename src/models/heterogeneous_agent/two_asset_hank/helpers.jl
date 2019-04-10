@@ -981,6 +981,92 @@ end
     return A, AT
 end
 
+@inline function transition_deriva(permanent, ddeath, pam, xxi, w, a_lb,
+                                       d, d_g, s, s_g, r_a, aggZ,
+                                       a, a_g, b, b_g, y, cost, util, deposit)
+    I, J, N  = size(d)
+    I_g, J_g = size(d_g)
+
+    # Compute drifts for HJB
+    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
+
+    chi, zeta = similar(d), similar(d)
+    X, Z      = similar(d), similar(d)
+    for i=1:I, j=1:J, n=1:N
+        α = a[j] * (r_a + perm_const) + (xxi * w * real(y[n]))
+
+        chi[i,j,n]  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta[i,j,n] = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
+
+        X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
+                                    min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
+                                   max(s[i,j,n], 0)) / (b[i+1] - b[i])
+    end
+    yy = -(chi .+ zeta)
+
+    chi  = reshape(chi, I*J, N)
+    chi  = circshift(chi, -I)
+    zeta = reshape(zeta, I*J, N)
+    zeta = circshift(zeta, I)
+
+    #aa = spdiagm(0 => vec(yy), I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I])
+
+    Y = -(X .+ Z)
+
+    X  = reshape(X, I*J, N)
+    X  = circshift(X, -1)
+    Z  = reshape(Z, I*J, N)
+    Z  = circshift(Z, 1)
+
+    #bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
+
+    #A = aa + bb
+    A = spdiagm(0 => vec(yy) + vec(Y), I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I],
+                 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
+    #@assert A == A2
+
+    chiu, zetau = similar(d_g), similar(d_g)
+    Xu, Zu      = similar(d_g), similar(d_g)
+    for i=1:I_g, j=1:J_g, n=1:N
+
+        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
+        audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
+            (permanent == 1 ? aggZ * a_g[j] : 0.0)
+
+        budrift = s_g[i,j,n] - d_g[i,j,n] - cost(d_g[i,j,n], max(a_g[j], a_lb)) -
+            (permanent ? aggZ * b_g[i] : 0.0)
+
+        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
+
+        Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
+    end
+
+    yyu   = -(chiu .+ zetau)
+    chiu  = reshape(chiu,I_g*J_g,N)
+    chiu  = circshift(chiu,-I_g)
+    zetau = reshape(zetau,I_g*J_g,N)
+    zetau = circshift(zetau,I_g)
+
+    #aau = spdiagm(0 => vec(yyu), I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g])
+
+    Yu = -(Xu .+ Zu)
+    Xu = reshape(Xu, I_g*J_g, N)
+    Xu = circshift(Xu, -1)
+    Zu = reshape(Zu, I_g*J_g, N)
+    Zu = circshift(Zu, 1)
+
+    #bbu = spdiagm(0 => vec(Yu), 1 => vec(Zu)[2:end], -1 => vec(Xu)[1:end-1])
+
+    #AT = aau + bbu
+    AT = spdiagm(0 => vec(yyu) + vec(Yu), I_g => vec(zetau)[I_g+1:end],
+                  -I_g => vec(chiu)[1:end-I_g], 1 => vec(Zu)[2:end], -1 => vec(Xu)[1:end-1])
+    #@assert AT == AT2
+
+    return A, AT#aa, bb, aau, bbu
+end
 
 @inline function construct_problem_functions(γ::T, χ0::R, χ1::R, χ2::R,
                                              a_lb::R) where {T<:Number,R<:Number}

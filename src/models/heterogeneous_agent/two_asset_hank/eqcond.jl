@@ -190,9 +190,9 @@ function eqcond(m::TwoAssetHANK)
 
         # Derive transition matrices
         println("Timing: transition_deriva()")
-        @time A, AT = transition_deriva2(permanent, ddeath, pam, xxi, w, a_lb,
-                                         d, d_g, s, s_g, r_a, aggZ,
-                                         a, a_g, b, b_g, y_shock, lambda, cost, util, deposit)
+        @time A, AT = transition_deriva(permanent==1, ddeath, pam, xxi, w, a_lb,
+                                        d, d_g, s, s_g, r_a, aggZ,
+                                        a, a_g, b, b_g, y_shock, cost, util, deposit)
         cc  = kron(lambda, my_speye(I*J))
         ccu = kron(lambda, my_speye(I_g*J_g))
 
