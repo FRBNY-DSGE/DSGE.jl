@@ -332,25 +332,12 @@ init_grids!(m::HetDSGE)
 """
 function init_grids!(m::HetDSGE)
 
-    # Calculate endogenous grid bounds (bounds are analytic functions of model parameters,
-    # which ensure there is no mass in the distributions across x where there shouldn't be)
-    # Calculate the lowest possible cash on hand in steady state
-    smin = exp(m[:μ_sp]/(1-m[:ρ_sp]) - get_setting(m, :λ)*sqrt(m[:σ_sp]^2/(1-m[:ρ_sp])^2))*get_setting(m, :zlo)
-    m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + 1e-6, "Lower bound on cash on hand")
-    m <= Setting(:xhi, get_setting(m, :xlo)*2, "Upper Bound on cash on hand")
-    m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
 
     nx      = get_setting(m, :nx)
-    xlo     = get_setting(m, :xlo)
-    xhi     = get_setting(m, :xhi)
-    xscale  = get_setting(m, :xscale)
     ns      = get_setting(m, :ns)
     λ       = get_setting(m, :λ)
 
     grids = OrderedDict()
-
-    # Cash on hand grid
-    grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
 
     # Skill grid
     #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
@@ -360,6 +347,22 @@ function init_grids!(m::HetDSGE)
     swts = (sscale/ns)*ones(ns)
     #sgrid = exp.(lsgrid)
     grids[:sgrid] = Grid(sgrid, swts, sscale)
+
+ # Calculate endogenous grid bounds (bounds are analytic functions of model parameters,
+    # which ensure there is no mass in the distributions across x where there shouldn't be)
+    # Calculate the lowest possible cash on hand in steady state
+    zlo = get_setting(m, :zlo)
+    smin = minimum(sgrid)*zlo #exp(m[:μ_sp]/(1-m[:ρ_sp]) - get_setting(m, :λ)*sqrt(m[:σ_sp]^2/(1-m[:ρ_sp])^2))*get_setting(m, :zlo)
+    m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + 1e-6, "Lower bound on cash on hand")
+    m <= Setting(:xhi, get_setting(m, :xlo)*2, "Upper Bound on cash on hand")
+    m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
+    xlo     = get_setting(m, :xlo)
+    xhi     = get_setting(m, :xhi)
+    xscale  = get_setting(m, :xscale)
+
+    # Cash on hand grid
+    grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
+
 
     # Markov transition matrix for skill
     grids[:fgrid] = sprob./swts
