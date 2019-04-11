@@ -2,10 +2,12 @@ function steadystate!(m::HetDSGE;
                       # For debugging
                       # βlo::Float64 = 0.95*exp(m[:γ])/(1 + m[:r]),
                       # βhi::Float64 = exp(m[:γ])/(1 + m[:r]),
-                      βlo::Float64 = 0.99*exp(m[:γ])/R,
-                      βhi::Float64 = exp(m[:γ])/R,
+                      #βlo::Float64 = 0.988658,
+                      #βhi::Float64 = 0.988663,
+                      βlo::Float64 = 0.99*exp(m[:γ])/(1 + m[:r]),
+                      βhi::Float64 = exp(m[:γ])/(1 + m[:r]),
                       excess::Float64 = 5000.,
-                      tol::Float64 = 1e-5,
+                      tol::Float64 = 1e-4,
                       maxit::Int64 = 20)
 
     # Load settings
@@ -46,17 +48,18 @@ function steadystate!(m::HetDSGE;
     μ = zeros(n)
 
     # Initial guess
-    β   = 0.9
+    β   = (βlo - βhi)/2.0
     Win = 2*ones(nx*ns)/(xhi+xlo)
     while abs(excess) > tol && counter < maxit # clearing markets
         β = (βlo+βhi)/2.0
+        Win_guess = ones(n)
 
         (c, bp, Win, KF) = policy_hetdsge(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, sumz, xgrid, sgrid,
-                                          xswts, Win, f)
+                                          xswts, Win_guess, f)
 
         LPMKF = xswts[1]*KF
         # find eigenvalue closest to 1
-        (D,V) = eig(LPMKF)
+        (D,V) = (eigen(LPMKF)...,)
         if abs(D[1]-1)>2e-1 # that's the tolerance we are allowing
             warn("your eigenvalue is too far from 1, something is wrong")
         end
@@ -87,8 +90,8 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
                         zlo::AbstractFloat, sumz::AbstractFloat,
                         xgrid::Vector{Float64}, sgrid::Vector{Float64},
                         xswts::Vector{Float64}, Win::Vector{Float64},
-                        f::Array{Float64,2}, damp::Float64 = 0.1, dist::Float64 = 1.,
-                        tol::Float64 = 1e-4, maxit::Int64 = 300)
+                        f::Array{Float64,2}, damp::Float64 = 0.5, dist::Float64 = 1.,
+                        tol::Float64 = 1e-4, maxit::Int64 = 500)
     n = nx*ns
     c  = zeros(n)      # consumption
     bp = zeros(n)      # savings
@@ -120,22 +123,7 @@ function parameterized_expectations_hetdsge(nx::Int,ns::Int, β::AbstractFloat, 
                                             xgrid::Vector{Float64}, sgrid::Vector{Float64},
                                             xswts::Vector{Float64}, c::Vector{Float64},
                                             bp::Vector{Float64}, f::Array{Float64,2})
-    # experiment with a different q
-    ne = 100
-    σe = 0.01
-    (legrid, fe, sscale) = tauchen86(0.0,0.0,σe,ne,2.0)
-    egrid = exp.(legrid)
-    eprob = fe[1,:]
-
-    function convoluted_q(x::AbstractFloat, zhi::AbstractFloat, zlo::AbstractFloat, ne::Int, egrid::Vector{Float64}, eprob::Vector{Float64})
-        sumne = 0.
-        for i=1:ne
-            sumne += mollifier(x - egrid[i], zhi, zlo)*eprob[i]
-        end
-        return sumne
-    end
-    qfunction(x) = convoluted_q(x, zhi, zlo, ne, egrid, eprob)
-    #qfunction(x) = mollifier_hetdsge(x, zhi, zlo)/sumz
+    qfunction(x) = mollifier_hetdsge(x, zhi, zlo)/sumz
 
     l_out = zeros(nx*ns)
     for iss=1:ns

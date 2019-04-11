@@ -270,29 +270,27 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_sp: The standard deviation of the skill process.",
                    tex_label="\\sigma_{sp}")
-    m <= parameter(:γ, 0.0, fixed = true, description = "γ: TFP growth")
-    m <= parameter(:g, 0.18, fixed = true, description = "g: Steady-state government spending/gdp")
-    m <= parameter(:η, 0.1, fixed = true, description = "η: Borrowing constraint (normalized by TFP)")
+    m <= parameter(:γ, 0.0, description = "γ: TFP growth")
+    m <= parameter(:g, 0.18, description = "g: Steady-state government spending/gdp")
+    m <= parameter(:η, 0.1, description = "η: Borrowing constraint (normalized by TFP)")
 
-    # Other parameters that affect dynamics
-    m <= parameter(:spp, 4., fixed = true, description = "second derivative of investment adjustment cost")
-    m <= parameter(:lamw, 1.5, fixed = true,  description = "wage markup")
-    m <= parameter(:ϕh, 2., fixed = true, description = "inverse frisch elasticity")
-    m <= parameter(:Φw, 100., fixed = true, description = "rotemberg cost for wages")
-    m <= parameter(:lamf, 1.5, fixed = true, description = "price markup")
-    m <= parameter(:Φp, 100., fixed = true, description = "rotemberg cost for prices")
-    m <= parameter(:ρR, 0.75, fixed = true, description = "persistence in taylor rule")
-    m <= parameter(:ψπ, 10.5, fixed = true, description = "weight on inflation in taylor rule")
-    m <= parameter(:ψy, 0.5, fixed = true, description = "weight on output growth in taylor rule")
+    m <= parameter(:ρB, 0.5, description = "# persistence of discount factor shock")
+    m <= parameter(:ρG, 0.5, description = "# persistence of govt spending shock")
+    m <= parameter(:ρZ, 0.5, description = "# persistence of tfp growth shock")
+    m <= parameter(:ρμ, 0.5, description = " # persistence of investment shock")
+    m <= parameter(:ρlamw, 0.5, description = "# persistence of wage mkup shock")
+    m <= parameter(:ρlamf, 0.5, description = " # persistence of price mkup shock")
+    m <= parameter(:ρmon, 0.5, description = " # persistence of mon policy shock")
 
-    # Aggregate shocks
-    m <= parameter(:ρB, 0.5, fixed = true, description = " persistence of discount factor shock")
-    m <= parameter(:ρG, 0.5, fixed = true, description = "persistence of govt spending shock")
-    m <= parameter(:ρZ, 0.5, fixed = true, description = "persistence of tfp growth shock")
-    m <= parameter(:ρμ, 0.5, fixed = true, description = "persistence of investment shock")
-    m <= parameter(:ρlamw, 0.5, fixed = true, description = "persistence of wage mkup shock")
-    m <= parameter(:ρlamf, 0.5, fixed = true, description = "persistence of price mkup shock")
-    m <= parameter(:ρmon, 0.5, fixed = true, description = "persistence of mon policy shock")
+ m <= parameter(:spp, 4., description = "# second derivative of investment adjustment cost")
+ m <= parameter(:lamw, 1.5, description = "# wage markup")
+ m <= parameter(:ϕh , 2., description = "# inverse frisch elasticity")
+ m <= parameter(:Φw , 100., description = "# rotemberg cost for wages")
+ m <= parameter(:lamf, 1.5 , description = "# price markup")
+ m <= parameter(:Φp , 100., description = "# rotemberg cost for prices")
+ m <= parameter(:ρR , 0.75, description = "# persistence in taylor rule")
+ m <= parameter(:ψπ , 10.5, description = "# weight on inflation in taylor rule")
+ m <= parameter(:ψy , 0.5, description = "# weight on output growth in taylor rule")
 
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
@@ -356,10 +354,11 @@ function init_grids!(m::HetDSGE)
 
     # Skill grid
     #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
-    f1 = [[0.9 0.1]; [0.2 0.1]]
-    sgrid = [0.8; 1.2] #sgrid = exp.(lsgrid)
+    sprob = [[0.9 0.1];[0.9 0.1]]
+    sgrid = [0.8;1.2]
     sscale = sgrid[2] - sgrid[1]
     swts = (sscale/ns)*ones(ns)
+    #sgrid = exp.(lsgrid)
     grids[:sgrid] = Grid(sgrid, swts, sscale)
 
     # Markov transition matrix for skill
