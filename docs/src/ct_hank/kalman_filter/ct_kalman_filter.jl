@@ -1,7 +1,7 @@
 using EHANK, JLD, DifferentialEquations
 include("../../src/estimate/kalman_filter.jl")
 
-# This file tests how well this Kalman Filter finds the
+# This file will test how well this Kalman Filter finds the
 # true outcome when we generate new data many different times
 
 # Solve model
