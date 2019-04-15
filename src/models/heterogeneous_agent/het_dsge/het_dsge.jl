@@ -118,20 +118,27 @@ Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
 function init_model_indices!(m::HetDSGE)
     # Endogenous states
-    endogenous_states = collect([
-    # These states corresp. to the following in the original notation
-    #    MUP,   ZP,    MONP,    ELLP,  RRP
-        :μ′_t, :z′_t, :mon′_t, :l′_t, :R′_t,
-    #    IIP    WWP    PIP    TTP
-        :i′_t, :w′_t, :π′_t, :t′_t])
+    endogenous_states = collect([:l′_t1, :μ′_t1, :k′_t, :R′_t1, :i′_t1,
+                                 :π′_t1,:π′_t2,:π′_t3,:y′_t1,:y′_t2,:y′_t3, :y′_t4,
+                                 :z′_t1,:z′_t2,:z′_t3,:w′_t1,:I′_t1,:BP,:GP,:ZP,:MUP,:LAMWP,
+                                 :LAMFP,:MONP,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
+                                 :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t,
+                                 :LELL,:LM,:KK,:LRR,:LII,:LPI,:L2PI,:L3PI,:LY,:L2Y,:L3Y,:L4Y,:LZ,
+                                 :L2Z,:L3Z,:LW,:LX,:B,:G,:Z,:MU,:LAMW,:LAMF,:MON,:ELL,:M,:RR,:II,
+                                 :TT,:W,:HH,:PI,:PIW,:LAM,:Y,:X,:MC,:Q,:RK])
 
     # Exogenous shocks
-    exogenous_shocks = collect([:z_sh, :mon_sh])
+    exogenous_shocks = collect([])
 
     # Equilibrium conditions
-    equilibrium_conditions = collect([
-        :eq_euler, :eq_kolmogorov_fwd, :eq_market_clearing, :eq_TFP,
-        :eq_phillips, :eq_taylor, :eq_fisher, :eq_transfers, :eq_monetary_policy])
+    equilibrium_conditions = collect([:eq_euler,:eq_kolmogorov_fwd,:eq_lag_ell,:eq_lag_wealth,
+                                      :eq_market_clearing,:eq_lambda, :eq_transfers,
+                                      :eq_investment,:eq_tobin_q,:eq_capital_accumulation,
+                                      :eq_wage_phillips,:eq_price_phillips,:eq_marginal_cost,
+                                      :eq_gdp,:eq_optimal_kl,:eq_taylor, :eq_fisher,
+                                      :eq_nominal_wage_inflation,:LR,:LI,:LPI,:L2PI,:L3PI,:LY,:L2Y,
+                                      :L3Y,:L4Y,:LZ,:L2Z,:L3Z,:LW,:LX,:F33,:F34,:F35,:F36,:F37,
+                                      :F38, :F39])
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -142,29 +149,155 @@ function init_model_indices!(m::HetDSGE)
     ns = get_setting(m, :ns)
     endo = m.endogenous_states_unnormalized
     eqconds = m.equilibrium_conditions
+    nxns = nx*ns
 
-    # State variables
-    endo[:μ′_t]   = 1:nx*ns
-    endo[:z′_t]   = nx*ns+1:nx*ns+1
-    endo[:mon′_t] = nx*ns+2:nx*ns+2
+    # Endogenous function-valued states
+    endo[:l′_t1]    = 1:nxns            # lagged ell function
+    endo[:μ′_t1]    = nxns+1:2*nxns     # lagged wealth distribution
+    #endogenous scalar-valued states
+    endo[:k′_t]  = 2*nxns+1:2*nxns+1             # capital –dont get confused with steadystate object K
+    endo[:R′_t1] = 2*nxns+2:2*nxns+2              # lagged real interest rate
+    endo[:i′_t1] = 2*nxns+3:2*nxns+3             # lagged nominal interest rate
+    endo[:π′_t1] = 2*nxns+4:2*nxns+4             # lagged inflation
+    endo[:π′_t2] = 2*nxns+5:2*nxns+5             # double-lagged inflation
+    endo[:π′_t3] = 2*nxns+6:2*nxns+6             # triple-lagged inflation
+    endo[:y′_t1] = 2*nxns+7:2*nxns+7             # lagged gdp
+    endo[:y′_t2] = 2*nxns+8:2*nxns+8             # double-lagged gdp
+    endo[:y′_t3] = 2*nxns+9:2*nxns+9             # triple-lagged gdp
+    endo[:y′_t4] = 2*nxns+10:2*nxns+10           # quad-lagged gdp
+    endo[:z′_t1] = 2*nxns+11:2*nxns+11           # lag tfp growth
+    endo[:z′_t2] = 2*nxns+12:2*nxns+12           # double-lag tfp growth
+    endo[:z′_t3] = 2*nxns+13:2*nxns+13           # triple-lag tfp growth
+    endo[:w′_t1] = 2*nxns+14:2*nxns+14           # lag real wages
+    endo[:I′_t1] = 2*nxns+15:2*nxns+15           # lag investment–don't get this confused with i, the nominal interest rate
+    # exogenous scalar-valued states:
+    endo[:BP]    = 2*nxns+16:2*nxns+16        # discount factor shock
+    endo[:GP]    = 2*nxns+17:2*nxns+17        # govt spending
+    endo[:ZP]    = 2*nxns+18:2*nxns+18        # tfp growth
+    endo[:MUP]   = 2*nxns+19:2*nxns+19        # investment shock
+    endo[:LAMWP] = 2*nxns+20:2*nxns+20        # wage markup
+    endo[:LAMFP] = 2*nxns+21:2*nxns+21        # price markup
+    endo[:MONP]  = 2*nxns+22:2*nxns+22        # monetary policy shock
 
-    # Jump variables
-    endo[:l′_t]   = nx*ns+3:2*nx*ns+2
-    endo[:R′_t]   = 2*nx*ns+3:2*nx*ns+3
-    endo[:i′_t]   = 2*nx*ns+4:2*nx*ns+4
-    endo[:w′_t]   = 2*nx*ns+5:2*nx*ns+5
-    endo[:π′_t]   = 2*nx*ns+6:2*nx*ns+6
-    endo[:t′_t]   = 2*nx*ns+7:2*nx*ns+7
+ # function-valued jumps
+    endo[:l′_t]  = 2*nxns+23:3*nxns+22 # ell function
+    endo[:μ′_t]  = 3*nxns+23:4*nxns+22 # wealth distribution
+    #scalar-valued jumps
+    endo[:R′_t]  = 4*nxns+23:4*nxns+23        # real interest rate
+    endo[:i′_t]  = 4*nxns+24:4*nxns+24        # nominal interest rate
+    endo[:t′_t]  = 4*nxns+25:4*nxns+25        # transfers + dividends
+    endo[:w′_t]  = 4*nxns+26:4*nxns+26        # real wage
+    endo[:L′_t]  = 4*nxns+27:4*nxns+27        # hours worked
+    endo[:π′_t]  = 4*nxns+28:4*nxns+28        # inflation
+    endo[:wageinflation′_t] = 4*nxns+29:4*nxns+29        # nominal wage inflation
+    endo[:mu′_t] =  4*nxns+30:4*nxns+30        # average marginal utility
+    endo[:y′_t]  = 4*nxns+31:4*nxns+31       # gdp
+    endo[:I′_t]  = 4*nxns+32:4*nxns+32        # investment
+    endo[:mc′_t] = 4*nxns+33:4*nxns+33        # marginal cost - this is ζ in HetDSGEₖd.pdf
+    endo[:Q′_t]  = 4*nxns+34:4*nxns+34        # Tobin's qfunction
+    endo[:capreturn′_t] = 4*nxns+35:4*nxns+35        # return on capital
 
-    eqconds[:eq_euler]              = 1:nx*ns
+    nvars = 4*nxns+35
+    nscalars = 35 # num eqs which output scalars
+    nyscalars = 13 # num scalar jumps
+    nxscalars = nscalars - nyscalars # num scalar states
+
+endo[:LELL] = endo[:l′_t1] .+ nvars
+endo[:LM] = endo[:μ′_t1] .+ nvars
+endo[:KK] = endo[:k′_t] .+ nvars
+endo[:LRR] = endo[:R′_t1] .+ nvars
+endo[:LII] = endo[:i′_t1] .+ nvars
+endo[:LPI] = endo[:π′_t1]  .+ nvars
+endo[:L2PI] = endo[:π′_t2]  .+ nvars
+endo[:L3PI] = endo[:π′_t3]  .+ nvars
+endo[:LY] = endo[:y′_t1] .+ nvars
+endo[:L2Y] = endo[:y′_t2] .+ nvars
+endo[:L3Y] = endo[:y′_t3] .+ nvars
+endo[:L4Y] = endo[:y′_t4] .+ nvars
+endo[:LZ] = endo[:z′_t1] .+ nvars
+endo[:L2Z] = endo[:z′_t2] .+ nvars
+endo[:L3Z] = endo[:z′_t3] .+ nvars
+endo[:LW] = endo[:w′_t1] .+ nvars
+endo[:LX] = endo[:I′_t1] .+ nvars
+endo[:B] = endo[:BP] .+ nvars
+endo[:G] = endo[:GP] .+ nvars
+endo[:Z] = endo[:ZP] .+ nvars
+endo[:MU] = endo[:MUP] .+ nvars
+endo[:LAMW] = endo[:LAMWP] .+ nvars
+endo[:LAMF] = endo[:LAMFP] .+ nvars
+endo[:MON] = endo[:MONP] .+ nvars
+endo[:ELL] = endo[:l′_t] .+ nvars
+endo[:M] = endo[:μ′_t] .+ nvars
+endo[:RR] = endo[:R′_t] .+ nvars
+endo[:II] = endo[:i′_t] .+ nvars
+endo[:TT] = endo[:t′_t]  .+ nvars
+endo[:W] = endo[:w′_t] .+ nvars
+endo[:HH] = endo[:L′_t] .+ nvars
+endo[:PI] = endo[:π′_t] .+ nvars
+endo[:PIW] = endo[:wageinflation′_t] .+ nvars
+endo[:LAM] = endo[:mu′_t] .+ nvars
+endo[:Y] = endo[:y′_t] .+ nvars
+endo[:X] = endo[:I′_t]  .+ nvars
+endo[:MC] = endo[:mc′_t]  .+ nvars
+endo[:Q] = endo[:Q′_t]  .+ nvars
+endo[:RK] = endo[:capreturn′_t] .+ nvars
+
+# create objects needed for solve.jl
+# we will order function blocks as follows:
+# 1. all function blocks which output a function (first real eqs, then lags)
+# 2. all function blocks which map functions to scalars
+# 3. all scalar blocks involving endogenous vbls (first real eqs, then lags)
+# 4. shock processes
+funops = 1:4 # which operators output a function
+
+
+    # function blocks which output a function
+    eqconds[:eq_euler]              = 1:nxns
     eqconds[:eq_kolmogorov_fwd]     = nx*ns+1:2*nx*ns
-    eqconds[:eq_market_clearing]    = 2*nx*ns+1:2*nx*ns+1
-    eqconds[:eq_TFP]                = 2*nx*ns+2:2*nx*ns+2
-    eqconds[:eq_phillips]           = 2*nx*ns+3:2*nx*ns+3
-    eqconds[:eq_taylor]             = 2*nx*ns+4:2*nx*ns+4
-    eqconds[:eq_fisher]             = 2*nx*ns+5:2*nx*ns+5
-    eqconds[:eq_transfers]          = 2*nx*ns+6:2*nx*ns+6
-    eqconds[:eq_monetary_policy]    = 2*nx*ns+7:2*nx*ns+7
+    eqconds[:eq_lag_ell]            = 2*nxns+1:3*nxns
+    eqconds[:eq_lag_wealth]         = 3*nxns+1:4*nxns
+    # function blocks which map functions to scalars
+    eqconds[:eq_market_clearing]    = 4*nxns+1:4*nxns+1
+    eqconds[:eq_lambda]             = 4*nxns+2:4*nxns+2
+    #scalar blocks involving endogenous variables
+    eqconds[:eq_transfers]            = 4*nxns+3:4*nxns+3 # transfers
+    eqconds[:eq_investment]          = 4*nxns+4:4*nxns+4 # investment
+    eqconds[:eq_tobin_q]              = 4*nxns+5:4*nxns+5 # tobin's q
+    eqconds[:eq_capital_accumulation] = 4*nxns+6:4*nxns+6 # capital accumulation
+    eqconds[:eq_wage_phillips] = 4*nxns+7:4*nxns+7 # wage phillips curve
+    eqconds[:eq_price_phillips] = 4*nxns+8:4*nxns+8 # price phillips curve
+    eqconds[:eq_marginal_cost]  = 4*nxns+9:4*nxns+9 # marginal cost
+    eqconds[:eq_gdp]  = 4*nxns+10:4*nxns+10 # gdp
+    eqconds[:eq_optimal_kl] = 4*nxns+11:4*nxns+11 # optimal K/L ratio
+    eqconds[:eq_taylor] = 4*nxns+12:4*nxns+12 # taylor rule
+    eqconds[:eq_fisher] = 4*nxns+13:4*nxns+13 # fisher eqn
+    eqconds[:eq_nominal_wage_inflation] = 4*nxns+14:4*nxns+14 # nominal wage inflation
+    # lagged variables
+    eqconds[:LR] = 4*nxns+15:4*nxns+15 # LR
+    eqconds[:LI] = 4*nxns+16:4*nxns+16 # LI
+    eqconds[:LPI] = 4*nxns+17:4*nxns+17 # LPI
+    eqconds[:L2PI] = 4*nxns+18:4*nxns+18 # L2PI
+    eqconds[:L3PI] = 4*nxns+19:4*nxns+19 # L3PI
+    eqconds[:LY] = 4*nxns+20:4*nxns+20 # LY
+    eqconds[:L2Y] = 4*nxns+21:4*nxns+21 # L2Y
+    eqconds[:L3Y] = 4*nxns+22:4*nxns+22 # L3Y
+    eqconds[:L4Y] = 4*nxns+23:4*nxns+23 # L4Y
+    eqconds[:LZ]  = 4*nxns+24:4*nxns+24 # LZ
+    eqconds[:L2Z] = 4*nxns+25:4*nxns+25 # L2Z
+    eqconds[:L3Z] = 4*nxns+26:4*nxns+26 # L3Z
+    eqconds[:LW]  = 4*nxns+27:4*nxns+27 # LW
+    eqconds[:LX] = 4*nxns+28:4*nxns+28 # LX
+    # shocks
+    eqconds[:F33] = 4*nxns+29:4*nxns+29 # discount factor B
+    eqconds[:F34] = 4*nxns+30:4*nxns+30 # govt spending G
+    eqconds[:F35] = 4*nxns+31:4*nxns+31 # tfp growth Z
+    eqconds[:F36] = 4*nxns+32:4*nxns+32 # investment MU
+    eqconds[:F37] = 4*nxns+33:4*nxns+33 # wage mkup LAMW
+    eqconds[:F38] = 4*nxns+34:4*nxns+34 # price mkup LAMF
+    eqconds[:F39] = 4*nxns+35:4*nxns+35 # monetary policy MON
+
+
+
     ########################################################################################
 
     m.normalized_model_states = [:μ′_t]
@@ -230,8 +363,8 @@ function HetDSGE(subspec::String="ss0";
     # Initialize grids
     init_grids!(m)
 
-    # # Initialize model indices
-    # init_model_indices!(m)
+    # Initialize model indices
+    init_model_indices!(m)
 
     # # Solve for the steady state
     # steadystate!(m)
@@ -433,6 +566,12 @@ function model_settings!(m::HetDSGE)
     # Total grid x*s
     m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
                  across grid dimensions.")
+
+    m <= Setting(:nvars, 4*get_setting(m, :n) +35, "num variables")
+    m <= Setting(:nscalars, 35, " # num eqs which output scalars")
+    m <= Setting(:nyscalars, 13, "num scalar jumps")
+    m <= Setting(:nxscalars, 35 - 13, "num scalar states")
+
 
     # Function-valued variables include distributional variables
     m <= Setting(:n_function_valued_backward_looking_states, 1, "Number of function-valued
