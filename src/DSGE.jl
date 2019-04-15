@@ -361,6 +361,7 @@ module DSGE
     include("models/heterogeneous_agent/het_dsge/het_dsge.jl")
     include("models/heterogeneous_agent/het_dsge/steady_state.jl")
     include("models/heterogeneous_agent/het_dsge/subspecs.jl")
+    include("models/heterogeneous_agent/het_dsge/jacobian.jl")
 
     # Continuous Time Heterogenous Agent Models
     include("solve/solve_hank.jl")

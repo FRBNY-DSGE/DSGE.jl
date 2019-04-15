@@ -178,7 +178,7 @@ function dmollifier_hetdsge(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractF
     In = 0.443993816237631
     if x<ehi && x>elo
         temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
-        out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
+        out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier_hetdsge(x, ehi, elo)
     else
         out = 0.0
     end
