@@ -35,6 +35,10 @@ function steadystate!(m::HetDSGE;
         sumz += mollifier_hetdsge(zgrid[i],zhi,zlo)*zwts
     end
 
+    if get_setting(m, :use_laster_βstar) && !isnan(m[:βstar].value)
+        βlo = βhi = m[:βstar]
+    end
+
     counter = 1
     n = ns*nx
     c = zeros(n)
