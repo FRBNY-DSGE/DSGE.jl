@@ -75,9 +75,9 @@ Solves Hamilton-Jacobi-Bellman equation.
         IcFB = max(!validBF, HdFB >= HdBF) * validFB * max(!validBB, HdFB >= HdBB)
         IcBF = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
         IcBB = max(!validFB, HdBB >= HdFB) * validBB * max(!validBF, HdBB >= HdBF)
-        Ic00 = !validFB * !validBF * !validBB
+        #Ic00 = !validFB * !validBF * !validBB
 
-        d[i,j,n] = IcFB * dFB + IcBF * dBF + dBB * IcBB
+        d[i,j,n] = IcFB * dFB + IcBF * dBF + IcBB * dBB
     end
     return c, s, d
 end
@@ -1108,11 +1108,12 @@ end
 
     chi, zeta = similar(d), similar(d)
     X, Z      = similar(d), similar(d)
+
     for i=1:I, j=1:J, n=1:N
         α = a[j] * (r_a + perm_const) + (xxi * w * real(y[n]))
 
-        chi[i,j,n]  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
-        zeta[i,j,n] = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
+        chi[i,j,n]  = (j==1) ? 0.0 : -(min(d[i,j,n], 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta[i,j,n] = (j==J) ? 0.0 :  (max(d[i,j,n], 0) + max(α, 0)) / (a[j+1] - a[j])
 
         X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
                                     min(s[i,j,n], 0)) / (b[i] - b[i-1])
@@ -1162,7 +1163,16 @@ end
     Xu = circshift(Xu, -1)
     Zu = reshape(Zu, I_g*J_g, N)
     Zu = circshift(Zu, 1)
-
+    #=
+    diag_out = MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/diags.mat")
+    @show vec(diag_out["updiag_aa"]) ≈ vec(zetau)
+    @show vec(diag_out["lowdiag_aa"]) ≈ vec(chiu)
+    @show vec(diag_out["lowdiag_bb"]) ≈ vec(Xu)
+    @show vec(diag_out["updiag_bb"]) ≈ vec(Zu)
+    @show vec(diag_out["lowdiag"]) ≈ vec(X)
+    @show vec(diag_out["updiag"]) ≈ vec(Z)
+    @show vec(test_out["y_shock"]) ≈ y
+    =#
     AT = spdiagm(0 => yyyu, I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g],
                             1 => vec(Zu)[2:end],          -1 => vec(Xu)[1:end-1])
     return A, AT
@@ -1185,8 +1195,8 @@ end
     for i=1:I, j=1:J
         α = a[j] * (r_a + perm_const) + (xxi * w * real(y))
 
-        chi[i,j]  = (j==1) ? 0.0 : -(min(norm(d[i,j]), 0) + min(α, 0)) / (a[j]   - a[j-1])
-        zeta[i,j] = (j==J) ? 0.0 :  (max(norm(d[i,j]), 0) + max(α, 0)) / (a[j+1] - a[j])
+        chi[i,j]  = (j==1) ? 0.0 : -(min(d[i,j], 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta[i,j] = (j==J) ? 0.0 :  (max(d[i,j], 0) + max(α, 0)) / (a[j+1] - a[j])
 
         X[i,j] = (i==1) ? 0.0 : -(min(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
                                     min(s[i,j], 0)) / (b[i] - b[i-1])

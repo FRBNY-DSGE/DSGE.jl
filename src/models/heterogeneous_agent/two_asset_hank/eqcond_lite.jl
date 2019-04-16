@@ -107,10 +107,20 @@ function eqcond_lite(m::TwoAssetHANK)
     _, _, _, b, b_g, b_g_0pos = create_b_grid(bgrid_new, I, I_g)
     lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
 
+    # exp
+    dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite(a,
+                                                                           b, a_g, b_g, N)
+
+    g_end = (1 - sum(g_SS .* vec(dab_g_tilde_grid)[1:end-1])) / dab_g_tilde_grid[I_g, J_g, N]
+    @show g_end
+
+    #g_end = 0.0#(1 - sum(g_SS .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g]
+
     indx = 1
     V_SS = reshape(V_SS, I*J, N)
+    g_SS_inds = reshape(vcat(g_SS, g_end), I_g*J_g, N)
     g_SS_ind = (indx != N) ? g_SS[(indx - 1)*I_g*J_g + 1 : indx*I_g*J_g] :
-        vcat(g_SS[(indx - 1)*I_g*J_g + 1 : end], 0.0)
+        vcat(g_SS[(indx - 1)*I_g*J_g + 1 : end], g_end)
 
     n_v = Int(n_v/N)
     n_g = Int((n_g + 1)/N)
@@ -118,7 +128,7 @@ function eqcond_lite(m::TwoAssetHANK)
 
     @inline function get_residuals_lite(vars::Vector{T}) where {T<:Real}
         # ------- Unpack variables -------
-        V   = reshape(vars[1:n_v] .+ V_SS[indx], I, J)  # value function
+        V   = reshape(vars[1:n_v] .+ V_SS[:,indx], I, J)  # value function
         g   = vars[n_v + 1 : n_v + n_g] .+ g_SS_ind     # distribution
         K   = vars[n_v + n_g + 1] + K_SS                # aggregate capital
         r_b = vars[n_v + n_g + 2] + r_b_SS
@@ -154,24 +164,16 @@ function eqcond_lite(m::TwoAssetHANK)
         dab_aux   = reshape(dab, I*J, 1)
         dab_g_aux = reshape(dab_g, I_g*J_g, 1)
 
-        loc = findall(b .== 0)
-        dab_g_tilde_mat_inv = spdiagm(0 => vec(1.0 ./ dab_g_tilde))
-        dab_g_small = reshape(dab_g, I_g * J_g, 1)
-
-        dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
-        dab_g_small[loc]     .= 0.0
-        death_process         = -ddeath * my_speye(I_g * J_g)
-        death_process[loc,:]  = vec(dab_g_small)
-        #death_process         = kron(my_speye(N), death_process)
-
         daba_g_aux = dab_g_aux .* a_gg
         dabb_g_aux = dab_g_aux .* b_gg
 
-        if indx == N
-            g_end = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g]
-            @show g_end
-            gg    = vcat(g, g_end)
-        end
+        #if indx == N
+        #    g_end = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g]
+        #    @show g_end
+        #    g[end] = g_end#gg    = vcat(g, g_end)
+        #end
+        gg = g
+
         # Prices
         w   = (1 - aalpha) * (K ^ aalpha) * n_SS ^ (-aalpha) *
             ((permanent == 0) ? exp(aggZ) ^ (1-aalpha) : 1.)
@@ -195,6 +197,14 @@ function eqcond_lite(m::TwoAssetHANK)
                                    ddeath, pam, aggZ, xxi, tau_I, w, trans,
                                    r_b_vec, y_shock[indx], a, b, cost, util, deposit)
 
+        c2, s2, d2 = solve_hjb(reshape(V_SS, I, J, N), I_g, J_g, a_lb, ggamma, permanent,
+                               ddeath, pam, aggZ, xxi, tau_I, w, trans,
+                               r_b_vec, y_shock, a, b, cost, util, deposit)
+        @show "hey"
+        @show c2[:,:,indx] == c
+        @show s2[:,:,indx] == s
+        @show d2[:,:,indx] == d
+
         interp_decision = interpTwoD(b_g, a_g, b, a)#kron(my_speye(N), interpTwoD(b_g, a_g, b, a))
         d_g = reshape(interp_decision * vec(d), I_g, J_g)
         s_g = reshape(interp_decision * vec(s), I_g, J_g)
@@ -206,20 +216,36 @@ function eqcond_lite(m::TwoAssetHANK)
                                         d, d_g, s, s_g, r_a, a, a_g, b, b_g, y_shock[indx],
                                         cost, util, deposit)
 
-        cc  = kron(lambda, my_speye(I*J))
-        ccu = kron(lambda, my_speye(I_g*J_g))
+        #cc  = kron(lambda, my_speye(I*J))
+        #ccu = kron(lambda, my_speye(I_g*J_g))
+        my_inds = findall(x -> x != indx, 1:N)
 
-        @show cc[1:I*J+1,1:I*J+1]
-@show lambda == Array(lambda')
-@show lambda
+
+        cc = sum([lambda[indx,kk]*(V_SS[:,kk] - V_SS[:,indx]) for kk in my_inds])
+        @show size(g_SS), I_g, J_g, size(lambda), size(cc)
+
+        ccu = sum([lambda[indx,kk]*(g_SS_inds[:,kk] - g_SS_inds[:,indx]) for kk in my_inds])
+
+        #@show cc[1:I*J+1,1:I*J+1]
+
         # full transition matrix
-        A  = A + cc
-        AT = (AT + ccu)'
+        A  = A #+ cc
+        AT = AT' # + ccu)'
 
         #----------------------------------------------------------------
         # KFE
         #----------------------------------------------------------------
-        gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + death_process * gg
+        loc = findall(b .== 0)
+        dab_g_tilde_mat_inv = spdiagm(0 => vec(1.0 ./ dab_g_tilde))
+        dab_g_small = reshape(dab_g, I_g * J_g, 1)
+        dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
+        dab_g_small[loc]     .= 0.0
+        death_process         = -ddeath * my_speye(I_g * J_g)
+        death_process[loc,:]  = vec(dab_g_small)
+        #death_process         = kron(my_speye(N), death_process)
+
+        @show size(death_process), size(gg)
+        gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + (death_process) * (gg + ccu)
 
         #----------------------------------------------------------------
         # Compute equilibrium conditions
@@ -227,16 +253,15 @@ function eqcond_lite(m::TwoAssetHANK)
         # HJB equation
         perm_mult   = (permanent==0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
 
-        hjbResidual = vec(util.(c)) + A * vec(V) + V_Dot + VEErrors - perm_mult *
-            reshape(V, I*J*N,1)
+        hjbResidual = vec(util.(c)) + A * vec(V) + cc + V_Dot + VEErrors - perm_mult *
+            reshape(V, I*J, 1)
 
         # KFE
         gResidual = g_Dot - gIntermediate[1:n_g, 1]
 
         K_out = 0.0
         if K_liquid == 1
-            K_out = sum((a_gg .+
-                         b_gg) .* gg .* vec(dab_g))
+            K_out = sum((a_gg .+ b_gg) .* gg .* vec(dab_g))
         else
             K_out = sum(a_gg .* gg .* vec(dab_g))
         end
@@ -326,11 +351,14 @@ function eqcond_lite(m::TwoAssetHANK)
     end
 
     out = get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
+    @time out = get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
     #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_1e12.jld2", "residuals")
-    @assert test_out == out
+    return out
+
+    #test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_1e12.jld2", "residuals")
+    #@assert test_out == out
     @time get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
 
     x = zeros(Float64, 2 * nVars + nEErrors + 1)

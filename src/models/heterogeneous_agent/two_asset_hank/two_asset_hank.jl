@@ -642,13 +642,13 @@ function steadystate!(m::TwoAssetHANK)
                 dBF = (i == I || j == 1) ? 0.0 : deposit(VaB, VbF, max(a[j], a_lb))
                 dBB = (j == 1)           ? 0.0 : deposit(VaB, VbB, max(a[j], a_lb))
 
-                HdFB = (i == 1 || j == J) ? -1e1 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
+                HdFB = (i == 1 || j == J) ? -1e12 : VaF * dFB - VbB * (dFB + cost(dFB, a[j]))
                 validFB = (dFB > 0) * (HdFB > 0)
 
                 HdBB = (j == 1) ? -1.0e12 : VaB * dBB - VbB * (dBB + cost(dBB, a[j]))
                 validBB = (dBB > -cost(dBB, a[j])) .* (dBB <= 0) * (HdBB > 0)
 
-                HdBF = (i == I || j == 1) ? -1e1 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
+                HdBF = (i == I || j == 1) ? -1e12 : VaB * dBF - VbF * (dBF + cost(dBF, a[j]))
                 validBF = (dBF <= -cost(dBF, a[j])) * (HdBF > 0)
 
                 IcFB[i,j,n] = validFB * max(!validBF, HdFB >= HdBF) * max(!validBB, HdFB >= HdBB)
@@ -740,7 +740,7 @@ function steadystate!(m::TwoAssetHANK)
         λ0p = λ0'
 
         gg_tilde = dab_g_tilde_mat * gg
-        gg1      = Array{Float64,2}(undef,  I_g * J_g, N)
+        gg1      = Array{Float64,2}(undef, I_g * J_g, N)
         g        = Array{Float64,3}(undef, I_g, J_g, N)
 
         K_supply  = 0.
