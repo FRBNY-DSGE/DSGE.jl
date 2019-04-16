@@ -404,7 +404,8 @@ function init_parameters!(m::HetDSGE)
                    description="σ_sp: The standard deviation of the skill process.",
                    tex_label="\\sigma_{sp}")
     m <= parameter(:γ, 0.0, description = "γ: TFP growth")
-    m <= parameter(:g, 0.18, description = "g: Steady-state government spending/gdp")
+    #GoverY = 0.01
+    m <= parameter(:g, 1/(1-0.01), description = "g: Steady-state government spending/gdp")
     m <= parameter(:η, 0.1, description = "η: Borrowing constraint (normalized by TFP)")
 
     m <= parameter(:ρB, 0.5, description = "# persistence of discount factor shock")
@@ -418,9 +419,9 @@ function init_parameters!(m::HetDSGE)
  m <= parameter(:spp, 4., description = "# second derivative of investment adjustment cost")
  m <= parameter(:lamw, 1.5, description = "# wage markup")
  m <= parameter(:ϕh , 2., description = "# inverse frisch elasticity")
- m <= parameter(:Φw , 100., description = "# rotemberg cost for wages")
+ m <= parameter(:Φw , 10., description = "# rotemberg cost for wages")
  m <= parameter(:lamf, 1.5 , description = "# price markup")
- m <= parameter(:Φp , 100., description = "# rotemberg cost for prices")
+ m <= parameter(:Φp , 10., description = "# rotemberg cost for prices")
  m <= parameter(:ρR , 0.75, description = "# persistence in taylor rule")
  m <= parameter(:ψπ , 10.5, description = "# weight on inflation in taylor rule")
  m <= parameter(:ψy , 0.5, description = "# weight on output growth in taylor rule")
@@ -448,7 +449,7 @@ Steady state of aggregate scalar variables (Break out the "analytic" steady-stat
 """
 function aggregate_steadystate!(m::HetDSGE)
     m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ], description = "Rental rate on capital", tex_label = "Rk_*")
-    m <= SteadyStateParameter(:ωstar, ((1-m[:α])^(1-m[:α])*(m[:α]^m[:α])*m[:Rkstar]^m[:α])^(1/(1-m[:α])), description = "Real wage", tex_label = "\\omega_*")
+    m <= SteadyStateParameter(:ωstar, (m[:α]^(m[:α]/(1-m[:α])))*(1-m[:α])*m[:Rkstar]^(-m[:α]/(1-m[:α])), description = "Real wage", tex_label = "\\omega_*")
     m <= SteadyStateParameter(:klstar, (m[:α]/(1-m[:α]))*(m[:ωstar]/m[:Rkstar])*exp(m[:γ]), description = "Capital/Labor ratio", tex_label = "kl_*")
     m <= SteadyStateParameter(:kstar, m[:klstar]*m[:H], description = "Capital", tex_label = "k_*")
     m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar], description = "Investment", tex_label = "x_*")
@@ -474,8 +475,15 @@ function init_grids!(m::HetDSGE)
 
     # Skill grid
     #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
-    sprob = [[0.9 0.1];[0.9 0.1]]
+    sprob = [[0.9 0.1];[0.1 0.9]]
     sgrid = [0.8;1.2]
+    (λs, vs) = eig(Matrix{Float64}(sprob'))
+    order_λs = sortperm(λs, rev = true)
+    vs = vs[:,order_λs]
+    ss_skill_distr = vs[:,1]/sum(vs[:,1])
+    means = ss_skill_distr'*sgrid
+    meanz = (get_setting(m, :zhi)+get_setting(m, :zlo))/2.
+    sgrid = sgrid/(meanz*means) # so that skills integrate to 1
     sscale = sgrid[2] - sgrid[1]
     swts = (sscale/ns)*ones(ns)
     #sgrid = exp.(lsgrid)
@@ -486,8 +494,8 @@ function init_grids!(m::HetDSGE)
     # Calculate the lowest possible cash on hand in steady state
     zlo = get_setting(m, :zlo)
     smin = minimum(sgrid)*zlo #exp(m[:μ_sp]/(1-m[:ρ_sp]) - get_setting(m, :λ)*sqrt(m[:σ_sp]^2/(1-m[:ρ_sp])^2))*get_setting(m, :zlo)
-    m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + 1e-6, "Lower bound on cash on hand")
-    m <= Setting(:xhi, get_setting(m, :xlo)*2, "Upper Bound on cash on hand")
+    m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + sgrid[1]*m[:ωstar]*m[:H]*0.05, "Lower bound on cash on hand")
+    m <= Setting(:xhi, max(get_setting(m, :xlo)*2, get_setting(m, :xlo)+5.), "Upper Bound on cash on hand")
     m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
     xlo     = get_setting(m, :xlo)
     xhi     = get_setting(m, :xhi)
@@ -561,7 +569,7 @@ function model_settings!(m::HetDSGE)
     m <= Setting(:λ, 2.0, "The λ parameter in the Tauchen distribution calculation")
 
     # x: Cash on Hand Grid Setup
-    m <= Setting(:nx, 300, "Cash on hand distribution grid points")
+    m <= Setting(:nx, 350, "Cash on hand distribution grid points")
 
     # Total grid x*s
     m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
