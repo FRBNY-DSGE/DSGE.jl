@@ -1,12 +1,12 @@
-using EHANK, JLD, DifferentialEquations
-include("../../src/estimate/kalman_filter.jl")
+using DSGE, JLD, DifferentialEquations, StateSpaceRoutines
+include("../../../../src/estimate/ct_filters/ct_kalman_filter.jl")
 
 # This file will test how well this Kalman Filter finds the
 # true outcome when we generate new data many different times
 
 # Solve model
-m = KrusellSmith()
-T, R, C, inverse_basis, basis = solve(m)
+m = KrusellSmithCT()
+T, R, C, inverse_basis, basis = DSGE.solve(m)
 
 # Get quarterly data using the truth to change from reduced to full basis
 trials = load("many_fine_data_red_basis.jld", "trials")
