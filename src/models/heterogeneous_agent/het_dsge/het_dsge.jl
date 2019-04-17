@@ -478,7 +478,7 @@ function init_grids!(m::HetDSGE)
     #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
     sprob = [[0.9 0.1];[0.1 0.9]]
     sgrid = [0.8;1.2]
-    (λs, vs) = eig(Matrix{Float64}(sprob'))
+    (λs, vs) = eigen(Matrix{Float64}(sprob'))
     order_λs = sortperm(λs, rev = true)
     vs = vs[:,order_λs]
     ss_skill_distr = vs[:,1]/sum(vs[:,1])
