@@ -570,7 +570,7 @@ function model_settings!(m::HetDSGE)
     m <= Setting(:λ, 2.0, "The λ parameter in the Tauchen distribution calculation")
 
     # x: Cash on Hand Grid Setup
-    m <= Setting(:nx, 350, "Cash on hand distribution grid points")
+    m <= Setting(:nx, 300, "Cash on hand distribution grid points")
 
     # Total grid x*s
     m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
