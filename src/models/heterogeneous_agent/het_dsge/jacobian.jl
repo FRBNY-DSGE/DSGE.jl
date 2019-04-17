@@ -203,7 +203,7 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_optimal_kl]),first(endo[:Z])]  = -1.
 
     # taylor rule
-    JJ[first(eq[:eq_taylor]),first(endo[:R_t1])]   = -1.
+    JJ[first(eq[:eq_taylor]),first(endo[:i_t])]   = -1.
     JJ[first(eq[:eq_taylor]),first(endo[:i_t1])]  = ρR
     JJ[first(eq[:eq_taylor]),first(endo[:π_t])]   = (1-ρR)*ψπ
     JJ[first(eq[:eq_taylor]),first(endo[:π_t1])]  = (1-ρR)*ψπ
@@ -220,7 +220,7 @@ function jacobian(m::HetDSGE)
     # fisher eqn
     JJ[first(eq[:eq_fisher]),first(endo[:R_t])]  = 1.
     JJ[first(eq[:eq_fisher]),first(endo[:π′_t])] = 1.
-    JJ[first(eq[:eq_fisher]),first(endo[:I_t])]  = -1.
+    JJ[first(eq[:eq_fisher]),first(endo[:i_t])]  = -1.
 
     # wage inflation
     JJ[first(eq[:eq_nominal_wage_inflation]),first(endo[:wageinflation_t])] = 1.
