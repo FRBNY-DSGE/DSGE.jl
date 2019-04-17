@@ -508,7 +508,7 @@ if check_jacobian
         end
     end
 end
-[<0;35;8m
+
 if check_solution
     m.testing = false
     gx, hx = klein(m)
