@@ -131,7 +131,7 @@ function valuef_reduction(m::AbstractCTModel,
     Γ0_spl, Γ1_spl, Ψ_spl, ~, C_spl = change_basis(to_spline, from_spline, Γ0, Γ1, Ψ, Π, C; ignore_Γ0 = true)
 
     Π_spl = to_spline * Π * from_spline[1:n_jump_vars, 1:n_splined]
-    m    <= Setting(:n_splined, n_splined, "Dimension of jump variables after spline basis reduction")
+    m  <= Setting(:n_splined, n_splined, "Dimension of jump variables after spline basis reduction")
 
     return Γ0_spl, Γ1_spl, Ψ_spl, Π_spl, C_spl, to_spline, from_spline
  end
@@ -159,8 +159,9 @@ end
 
 # Cleans Γ0 matrix to be identity by solving out static conditions
 function solve_static_conditions(Γ0::SparseMatrixCSC{Float64,Int64},
-                                 Γ1::SparseMatrixCSC{Float64,Int64}, Ψ::SparseMatrixCSC{Float64,Int64},
-                  Π::SparseMatrixCSC{Float64,Int64}, C::Array{Float64})
+                                 Γ1::SparseMatrixCSC{Float64,Int64},
+                                 Ψ::SparseMatrixCSC{Float64,Int64},
+                                 Π::SparseMatrixCSC{Float64,Int64}, C::Array{Float64})
 
     redundant     = maximum(abs.([Γ0, Ψ]), 2) .== 0  # Find rows of both Γ0 & Ψ with only zeros
     inv_state_red = null(Γ1(redundant,:)) # Compute orthonormal basis of null space of Γ1

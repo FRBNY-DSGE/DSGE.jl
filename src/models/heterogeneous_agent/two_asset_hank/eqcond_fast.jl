@@ -1,4 +1,5 @@
 using Statistics, SparseArrays
+using MAT, DelimitedFiles, ForwardDiff
 """
 ``
 eqcond(m::TwoAssetHANK)
@@ -54,10 +55,10 @@ function eqcond_lite(m::TwoAssetHANK)
     J_g    = get_setting(m, :J_g)::Int64
     N      = get_setting(m, :N)::Int64
 
-    #a      = get_setting(m, :a)::Vector{Float64}
-    #b      = get_setting(m, :b)::Vector{Float64}
-    #a_g    = get_setting(m, :a_g)::Vector{Float64}
-    #b_g    = get_setting(m, :b_g)::Vector{Float64}
+    a      = get_setting(m, :a)::Vector{Float64}
+    b      = get_setting(m, :b)::Vector{Float64}
+    a_g    = get_setting(m, :a_g)::Vector{Float64}
+    b_g    = get_setting(m, :b_g)::Vector{Float64}
 
     agrid_new = get_setting(m, :agrid_new)::Int64
     bgrid_new = get_setting(m, :bgrid_new)::Int64
@@ -71,8 +72,8 @@ function eqcond_lite(m::TwoAssetHANK)
     #y      = vec(get_setting(m, :y))::Vector{Complex{Float64}}
     #y_dist = get_setting(m, :y_dist)::Vector{Complex{Float64}}
     #y_mean = get_setting(m, :y_mean)::Complex{Float64}
-    KL     = get_setting(m, :KL_0)::Float64
-    r_b_fix= get_setting(m, :r_b_fix) ? 1 : 0::Int64
+    KL      = get_setting(m, :KL_0)::Float64
+    r_b_fix = get_setting(m, :r_b_fix) ? 1 : 0::Int64
 
     #--- Taken from what used to be inside
     a, a_g, a_g_0pos          = create_a_grid(agrid_new, J, J_g, amin, amax)
@@ -86,11 +87,11 @@ function eqcond_lite(m::TwoAssetHANK)
     nVars    = get_setting(m, :nVars)::Int64
     nEErrors = get_setting(m, :nEErrors)::Int64
 
-    #vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
+#    vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
     vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
-    V_SS = vars_SS[1:n_v]
-    g_SS = vars_SS[n_v + 1 : n_v + n_g]
-    K_SS = vars_SS[n_v + n_g + 1]
+    V_SS   = vars_SS[1:n_v]
+    g_SS   = vars_SS[n_v + 1 : n_v + n_g]
+    K_SS   = vars_SS[n_v + n_g + 1]
     r_b_SS = vars_SS[n_v + n_g + 2]
 
     # Aggregate output and aggregate consumption
@@ -110,23 +111,13 @@ function eqcond_lite(m::TwoAssetHANK)
     # Construct problem functions
     util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
 
-    # exp
-    dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite(a,
-                                                                           b, a_g, b_g, N)
-    indx = 1
+    # Reshape this for use below:
     V_SS = reshape(V_SS, I*J, N)
-    g_SS_inds = reshape(vcat(g_SS, g_end), I_g*J_g, N)
-    g_SS_ind = (indx != N) ? g_SS[(indx - 1)*I_g*J_g + 1 : indx*I_g*J_g] :
-        vcat(g_SS[(indx - 1)*I_g*J_g + 1 : end], g_end)
-
-    n_v = Int(n_v/N)
-    n_g = Int((n_g + 1)/N)
-    nVars = n_v + n_g + n_p + 1
 
     @inline function get_residuals_lite(vars::Vector{T}) where {T<:Real}
         # ------- Unpack variables -------
         V   = reshape(vars[1:n_v] .+ V_SS[:,indx], I, J)  # value function
-        g   = vars[n_v + 1 : n_v + n_g] .+ g_SS_ind     # distribution
+        g   = vars[n_v + 1 : n_v + n_g] .+ g_SS     # distribution
         K::T   = vars[n_v + n_g + 1] + K_SS             # aggregate capital
         r_b::T = vars[n_v + n_g + 2] + r_b_SS
 
@@ -146,7 +137,7 @@ function eqcond_lite(m::TwoAssetHANK)
         aggZ::T  = vars[n_v+n_g+n_p+1] + aggZ_SS
 
         V_Dot      = vars[nVars + 1 : nVars + n_v]
-        g_Dot      = vars[nVars + n_v + 1:nVars + n_v + n_g]
+        g_Dot      = vars[nVars + n_v + 1: nVars + n_v + n_g]
         aggZ_Dot   = vars[nVars + n_v + n_g + n_p + 1]
         VEErrors   = vars[2*nVars + 1 : 2 * nVars + n_v]
         aggZ_Shock = vars[2*nVars + nEErrors + 1]
@@ -161,36 +152,20 @@ function eqcond_lite(m::TwoAssetHANK)
         # Set liquid rates
         r_b_borr = r_b .+ borrwedge_SS
 
+        # Set grids
+        r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab, dab_tilde_mat, dab_g, dab_g_tilde_mat = set_vectors_lite(a, b, a_g, b_g, r_b, r_b_borr)
+
         dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite2(a,
                                                                            b, a_g, b_g)
+        dab_g_o = reshape(repeat(dab_g,N,1),I_g,J_g,N)
+        g_end = (1 - sum(g .* vec(dab_g_o)[1:end-1])) / dab_g_o[I_g, J_g, N]
+        g = vcat(g, g_end)
+        g_inds = reshape(g, I_g*J_g, N)
+        gg = g_inds[:,indx]
+
         a_gg = repeat(a_g, inner=I_g)
         b_gg = repeat(b_g, outer=J_g)
 
-        r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab, dab_tilde_mat, dab_g, dab_g_tilde_mat = set_vectors_lite(a, b, a_g, b_g, r_b, r_b_borr)
-
-        dab_aux   = reshape(dab, I*J, 1)
-        dab_g_aux = reshape(dab_g, I_g*J_g, 1)
-
-        daba_g_aux = dab_g_aux .* a_gg
-        dabb_g_aux = dab_g_aux .* b_gg
-
-        #if indx == N
-        #    g_end = (1 - sum(g .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g]
-        #    @show g_end
-        #    g[end] = g_end#gg    = vcat(g, g_end)
-        #end
-        gg = g
-
-        # Prices
-        w   = (1 - aalpha) * (K ^ aalpha) * n_SS ^ (-aalpha) *
-            ((permanent == 0) ? exp(aggZ) ^ (1-aalpha) : 1.)
-        r_a = aalpha * (K ^ (aalpha - 1)) * (((permanent == 0) ? exp(aggZ) : 1.) *
-            n_SS) ^ (1 - aalpha) - ddelta
-
-        # Auxiliary variables
-        r_b_borr = r_b .+ borrwedge_SS
-
-        # SET GRIDS
         r_b_vec = r_b .* (b .>= 0) + r_b_borr .* (b .< 0)
 
         # Other necessary objects
@@ -198,83 +173,58 @@ function eqcond_lite(m::TwoAssetHANK)
         y_shock_mean = dot(y_shock, y_dist)
         y_shock      = real(y_shock ./ y_shock_mean .* y_mean)
 
-        # ripped out
         println("Timing: solve_hjb()")
         @time c, s, d  = solve_hjb_lite(V, I_g, J_g, a_lb, ggamma, permanent,
-                                   ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                   r_b_vec, y_shock[indx], a, b, cost, util, deposit)
+                                        ddeath, pam, aggZ, xxi, tau_I, w, trans,
+                                        r_b_vec, y_shock[indx], a, b, cost, util, deposit)
 
-        c2, s2, d2 = solve_hjb(reshape(V_SS, I, J, N), I_g, J_g, a_lb, ggamma, permanent,
-                               ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                               r_b_vec, y_shock, a, b, cost, util, deposit)
-        @show "hey"
-        @show c2[:,:,indx] == c
-        @show s2[:,:,indx] == s
-        @show d2[:,:,indx] == d
-
-        interp_decision = interpTwoD(b_g, a_g, b, a)#kron(my_speye(N), interpTwoD(b_g, a_g, b, a))
+        interp_decision = interpTwoD(b_g, a_g, b, a)
         d_g = reshape(interp_decision * vec(d), I_g, J_g)
         s_g = reshape(interp_decision * vec(s), I_g, J_g)
         c_g = reshape(interp_decision * vec(c), I_g, J_g)
 
         # Derive transition matrices
         println("Timing: transition_deriva()")
-        @time A, AT = transition_deriva_lite(permanent==1, ddeath, pam, xxi, w, a_lb, aggZ,
+        @time A, AT = transition_deriva_lite(permanent, ddeath, pam, xxi, w, a_lb, aggZ,
                                         d, d_g, s, s_g, r_a, a, a_g, b, b_g, y_shock[indx],
                                         cost, util, deposit)
-
         #cc  = kron(lambda, my_speye(I*J))
-        #ccu = kron(lambda, my_speye(I_g*J_g))
+        #ccu  = kron(lambda, my_speye(I_g*J_g))[I_g*J_g*(indx-1)+1:I_g*J_g*indx, :]
+        ccu = kron(lambda[indx,:], my_speye(I_g*J_g))
+
         my_inds = findall(x -> x != indx, 1:N)
-
-
         cc = sum([lambda[indx,kk]*(V_SS[:,kk] - V_SS[:,indx]) for kk in my_inds])
-        @show size(g_SS), I_g, J_g, size(lambda), size(cc)
-
-        ccu = sum([lambda[indx,kk]*(g_SS_inds[:,kk] - g_SS_inds[:,indx]) for kk in my_inds])
-
-        #@show cc[1:I*J+1,1:I*J+1]
 
         # full transition matrix
-        A  = A #+ cc
-        AT = AT' # + ccu)'
+        AT = (AT + lambda[indx,indx]*my_speye(I_g*J_g))'
 
         #----------------------------------------------------------------
         # KFE
         #----------------------------------------------------------------
         loc = findall(b .== 0)
-        dab_g_tilde_mat_inv = spdiagm(0 => vec(1.0 ./ dab_g_tilde))
-        dab_g_small = reshape(dab_g, I_g * J_g, 1)
+        dab_g_tilde_inv       = vec(1.0 ./ dab_g_tilde)
+        dab_g_small           = reshape(dab_g, I_g * J_g, 1)
         dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
         dab_g_small[loc]     .= 0.0
         death_process         = -ddeath * my_speye(I_g * J_g)
         death_process[loc,:]  = vec(dab_g_small)
-        #death_process         = kron(my_speye(N), death_process)
 
-        @show size(death_process), size(gg)
-        gIntermediate = dab_g_tilde_mat_inv * (AT * (dab_g_tilde_mat * gg)) + (death_process) * (gg + ccu)
+        gIntermediate = dab_g_tilde_inv .* ((AT * (vec(dab_g_tilde) .* gg)) +
+                                            sum([lambda[kk,indx] .* vec(dab_g_tilde) .*
+                                                 g[(kk-1)*I_g*J_g+1:kk*I_g*J_g] for kk in my_inds])) + death_process * gg
 
         #----------------------------------------------------------------
         # Compute equilibrium conditions
         #----------------------------------------------------------------
         # HJB equation
-        perm_mult   = (permanent==0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
-
-        hjbResidual = vec(util.(c)) + A * vec(V) + cc + V_Dot + VEErrors - perm_mult *
-            reshape(V, I*J, 1)
+        perm_mult   = !permanent ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
+        hjbResidual = vec(util.(c)) + A * vec(V) + cc + V_Dot + VEErrors - perm_mult * vec(V)
 
         # KFE
-        gResidual = g_Dot - gIntermediate[1:n_g, 1]
+        gResidual  = g_Dot[I_g*J_g*(indx-1)+1 : I_g*J_g*indx] - gIntermediate #[1:n_g, 1]
 
-        K_out = 0.0
-        if K_liquid == 1
-            K_out = sum((a_gg .+ b_gg) .* gg .* vec(dab_g))
-        else
-            K_out = sum(a_gg .* gg .* vec(dab_g))
-        end
-
-        K_Residual   = K_out - K
-        r_b_out      = 0.0
+        K_Residual = (K_liquid ? sum((a_gg .+ b_gg) .* gg .* vec(dab_g)) :
+                                 sum( a_gg          .* gg .* vec(dab_g))) - K
         r_b_Residual = 0.0
         if r_b_fix      == 1
             r_b_out      = r_b_SS
@@ -283,21 +233,32 @@ function eqcond_lite(m::TwoAssetHANK)
             r_b_out      = sum(b_gg .* gg .* vec(dab_g))
             r_b_Residual = r_b_out - B_SS * exp(1/pphi * (r_b - r_b_SS))
         elseif B_fix    == 1
-            # find death-corrected savings
-            b_save       = dot(gIntermediate, dabb_g_aux)
+            # Find death-corrected savings
+            b_save       = dot(gIntermediate, vec(dab_g) .* b_gg)
             r_b_out      = 0.0
             r_b_Residual = r_b_out - b_save
-        elseif K_liquid == 1
+        elseif K_liquid
             r_b_out      = r_a_out - illiquid_wedge
             r_b_Residual = r_b_out - r_b
         end
 
-        #if aggregate_variables == 1
+        Y_Residual        = zero(T)
+        C_Residual        = zero(T)
 
-            aggY_out = (K ^ aalpha) * (n_SS ^ (1 - aalpha))
+        C_Var_Residual    = Array{T}(undef, 0)
+        earn_Var_Residual = Array{T}(undef, 0)
+
+        C_WHTM_Residual   = Array{T}(undef, 0)
+        C_PHTM_Residual   = Array{T}(undef, 0)
+
+        if aggregate_variables
+
+            aggY_out = (K ^ aalpha) * (!permanent ? exp(aggZ) * n_SS : n_SS ) ^ (1 - aalpha)
             aggC_out = sum(vec(c_g) .* gg .* vec(dab_g))
-        #=
-        elseif distributional_variables == 1
+            Y_Residual = aggY_out - aggY
+            C_Residual = aggC_out - aggC
+
+        elseif distributional_variables
 
             C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
                 sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
@@ -307,7 +268,10 @@ function eqcond_lite(m::TwoAssetHANK)
             earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
                 sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
 
-        elseif distributional_variables_1 == 1
+            C_Var_Residual    = C_Var_out - C_Var
+            earn_Var_Residual = earn_Var_out - earn_Var
+
+        elseif distributional_variables_1
 
             WHTM_indicator      = zeros(I_g,J_g,N)
             WHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos+2:end,:] .= 1.
@@ -318,26 +282,9 @@ function eqcond_lite(m::TwoAssetHANK)
             PHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos:a_g_0pos+2:end,:] .= 1.
             PHTM_out            = sum(vec(PHTM_indicator) .* gg .* vec(dab_g))
             C_PHTM_out          = sum(vec(PHTM_indicator) .* vec(c_g) .* gg .* vec(dab_g))
-        end
-        =#
-        Y_Residual        = 0.0
-        C_Residual        = 0.0
 
-        C_Var_Residual    = Array{Float64}(undef, 0)
-        earn_Var_Residual = Array{Float64}(undef, 0)
-
-        C_WHTM_Residual   = Array{Float64}(undef, 0)
-        C_PHTM_Residual   = Array{Float64}(undef, 0)
-
-        if aggregate_variables == 1
-            Y_Residual        = aggY_out - aggY
-            C_Residual        = aggC_out - aggC
-        elseif distributional_variables == 1
-            C_Var_Residual    = C_Var_out - C_Var
-            earn_Var_Residual = earn_Var_out - earn_Var
-        elseif distributional_variables_1 == 1
-            C_WHTM_Residual   = C_WHTM_out - C_WHTM
-            C_PHTM_Residual   = C_PHTM_out - C_PHTM
+            C_WHTM_Residual = C_WHTM_out - C_WHTM
+            C_PHTM_Residual = C_PHTM_out - C_PHTM
         end
 
         # Law of motion for aggregate tfp shock
@@ -357,41 +304,53 @@ function eqcond_lite(m::TwoAssetHANK)
         #return [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
     end
 
+
+    indx = 1
+    n_v = Int(n_v/N)
+    #n_g = Int((n_g + 1)/N)
+    nVars = n_v + n_g + n_p + 1
+
     out = get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
     @time out = get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
+
     #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-    return out
 
-    #test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_1e12.jld2", "residuals")
-    #@assert test_out == out
-    @time get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
+    my_out = vec(DelimitedFiles.readdlm("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/my_residuals.csv", ','))
+
+    @show maximum(abs.(my_out[1:2000] - vec(out)[1:2000]))#, length(findall(x->x>1e-5, abs.(my_out - out)))
+@show size(my_out)
+    @show maximum(abs.(my_out[60001:62250] - vec(out)[2001:4250]))
+    @show length(findall(x->x>1e-7, abs.(my_out[60001:62250] - vec(out)[2001:4250])))
+    #@assert isapprox(my_out[1:2000], vec(out)[1:2000], rtol=1e-3)
+
+    #@time get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
 
     x = zeros(Float64, 2 * nVars + nEErrors + 1)
     @time derivs = ForwardDiff.sparse_jacobian(get_residuals_lite, x)
 
-    nstates = nVars # n_states(m)
+    nstates = nVars    # n_states(m)
     n_s_exp = nEErrors # n_shocks_expectational(m)
-    n_s_exo = n_Z # n_shocks_exogenous(m)
-    #vars = zeros(Float64, 2 * nstates + n_s_exp + n_s_exo)
+    n_s_exo = n_Z      # n_shocks_exogenous(m)
+
+    # vars = zeros(Float64, 2 * nstates + n_s_exp + n_s_exo)
 
     Γ1 = -derivs[:, 1:nstates]
     Γ0 =  derivs[:,   nstates +           1:2 * nstates]
     Π  = -derivs[:, 2*nstates +           1:2 * nstates + n_s_exp]
     Ψ  = -derivs[:, 2*nstates + n_s_exp + 1:2 * nstates + n_s_exp + n_s_exo]
-    C  = spzeros(Float64, nstates)
+    C  =  spzeros(Float64, nstates)
 
     if typeof(Ψ) == Vector{Float64}
         Ψ = reshape(Ψ, length(Ψ), n_s_exo)
     end
 
     test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/data/eqcond_output_matlab.jld2")
-    @show test_out["g0"] == Γ0
-    @show isapprox(test_out["g1"], Γ1, rtol=1e-4)
-    @show test_out["psi"] == Ψ
-    @show test_out["pi"] == Π
-    @show test_out["constant"] == C
+    @assert test_out["g0"] == Γ0
+    @assert test_out["g1"] ≈ Γ1
+    @assert test_out["psi"] == Ψ
+    @assert test_out["pi"] == Π
 
     return Γ0, Γ1, Ψ, Π, C
 end

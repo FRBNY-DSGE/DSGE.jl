@@ -72,13 +72,12 @@ function eqcond(m::TwoAssetHANK)
     #y      = vec(get_setting(m, :y))::Vector{Complex{Float64}}
     #y_dist = get_setting(m, :y_dist)::Vector{Complex{Float64}}
     #y_mean = get_setting(m, :y_mean)::Complex{Float64}
-    KL     = get_setting(m, :KL_0)::Float64
-    r_b_fix= get_setting(m, :r_b_fix) ? 1 : 0::Int64
+    KL      = get_setting(m, :KL_0)::Float64
+    r_b_fix = get_setting(m, :r_b_fix) ? 1 : 0::Int64
 
     #--- Taken from what used to be inside
     a, a_g, a_g_0pos          = create_a_grid(agrid_new, J, J_g, amin, amax)
     _, _, _, b, b_g, b_g_0pos = create_b_grid(bgrid_new, I, I_g)
-
     lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
 
     n_v = get_setting(m, :n_v)::Int64
@@ -147,7 +146,7 @@ function eqcond(m::TwoAssetHANK)
         r_a = aalpha * (K ^ (aalpha - 1)) * ((!permanent ? exp(aggZ) : 1.0) *
             n_SS) ^ (1 - aalpha) - ddelta
 
-        # Auxiliary variables
+        # Set liquid rates
         r_b_borr = r_b .+ borrwedge_SS
 
         # Set grids

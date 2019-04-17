@@ -37,6 +37,79 @@ function changeBasis(basis,inv_basis,g1,psi,pi,c,g0)
     return g1, psi, pi, c, g0
 end
 
+function stateSpaceReduction(g0, g1, n_v, n_g, n_p, n_Z, reduceDist_hor)
+    # Reduce Dimensionality of State Space
+    #
+    # REQUIRES: <block_arnoldi_func.m>
+    #
+    # INPUTS:
+    #   g0 = LHS matrix, only used to check it satisfies require form
+    #   g1 = Dynamics matrix
+    #   n_v = number of jump variables
+    #   n_g = number of state variables
+    #   n_p = number of static constraints
+    #   n_Z = number of exogenous variables
+    #
+    # OUTPUTS:
+    #   state_red = tranformation to get from full grid to reduced states
+    #   inv_state_red = inverse transform
+    #   n_g = number of state variables after reduction
+    #
+
+    ## Check to make sure that LHS satisfies the required form
+
+    loc = [1:n_v+n_g, n_v+n_g+n_p+1:n_v+n_g+n_p+n_Z]
+#    if (maximum(abs.(g0[loc,loc] .- my_speye(n_v+n_g+n_Z)))≈0)
+#        error("Make sure that g0 is normalized.")
+#    end
+
+    n_total = n_v + n_g
+
+    ## Slice Dynamics Equation into Different Parts
+    B_pv = g1[n_v+n_g+1:n_v+n_g+n_p,n_v+n_g+1:n_v+n_g+n_p] \ g1[n_v+n_g+1:n_v+n_g+n_p,1:n_v]
+    B_pZ = g1[n_v+n_g+1:n_v+n_g+n_p,n_v+n_g+1:n_v+n_g+n_p] \ g1[n_v+n_g+1:n_v+n_g+n_p,n_v+n_g+n_p+1:n_v+n_g+n_p+n_Z]
+    B_pg = g1[n_v+n_g+1:n_v+n_g+n_p,n_v+n_g+1:n_v+n_g+n_p] \ g1[n_v+n_g+1:n_v+n_g+n_p,n_v+1:n_v+n_g]
+    B_gg = g1[n_v+1:n_v+n_g,n_v+1:n_v+n_g]
+    B_gp = g1[n_v+1:n_v+n_g,n_v+n_g+1:n_v+n_g+n_p]
+
+    ## Orthonormalize B_pg as the direction to keep
+    # Drop redundant Directions
+    ~, d0, V_g = svd(B_pg)#,'econ')
+    aux = diagm(0 => d0)
+    n_Bpg = Int64(sum(aux .> 10 * eps() * aux[1]))
+    V_g = V_g[:, 1:n_Bpg] .* aux[1:n_Bpg]'
+
+@show n_Bpg
+
+    ## Arnoldi Iteration
+    hor = reduceDist_hor
+    A(x::Matrix{Float64}) = B_gg' * x - B_pg' * (B_gp'*x)
+    # [V_g,~] = block_arnoldi_func(A,V_g,hor)
+    V_g, ~ = deflated_block_arnoldi(A, V_g, hor)
+    n_g = size(V_g, 2)
+@show "HERE"
+error()
+
+    ## Build State-Space Reduction transform
+    state_red = spzeros(Float64, n_v + n_g + n_Z, n_total + n_p + n_Z)
+    state_red[1:n_v,1:n_v] = my_speye(n_v)
+    state_red[n_v+1:n_v+n_g,n_v+1:n_total] = V_g'
+    state_red[:,n_total+1:n_total+n_p] = 0
+    state_red[n_v+n_g+1:n_v+n_g+n_Z,n_total+n_p+1:n_total+n_p+n_Z] = my_speye(n_Z)
+
+    ## Build inverse transform
+    inv_state_red = spzeros(Float64, n_total+n_p+n_Z,n_v+n_g+n_Z)
+    inv_state_red[1:n_v,1:n_v] = my_speye(n_v)
+    inv_state_red[n_v+1:n_total,n_v+1:n_g+n_v] = V_g
+    inv_state_red[n_total+1:n_total+n_p,n_v+1:n_v+n_g] = -B_pg*V_g
+    inv_state_red[n_total+1:n_total+n_p,1:n_v] = -B_pv
+    inv_state_red[n_total+1:n_total+n_p,n_v+n_g+1:n_v+n_g+n_Z] = -B_pZ
+    inv_state_red[n_total+n_p+1:n_total+n_p+n_Z,n_v+n_g+1:n_v+n_g+n_Z] = my_speye(n_Z)
+
+    return state_red, inv_state_red, n_g
+end
+
+
 @inline function adj_cost_fn(d, a_grid, χ0, χ1, χ2, a_lb)
     d_scaled = abs.(d ./ max.(a_grid, a_lb))
     adj_cost = max.(a_grid, a_lb) .* (χ0 * (d_scaled) .+ 1.0 / (1.0 .+ χ2) *
@@ -67,12 +140,13 @@ function cleanG0Sparse(g0,g1,c,pi,psi)
     inv_base = sparse(n_keep,n)
     inv_base[:,keep] = my_speye(n_keep)
 
-    g0=inv_base*g0*base
-    g1=inv_base*g1*base
-    g1=g0\g1
-    psi=g0\inv_base*psi
-    pi=g0\inv_base*pi
-    c=g0\inv_base*c
+    g0  = inv_base * g0 * base
+    g1  = inv_base * g1 * base
+    g1  = g0 \ g1
+    psi = g0 \ inv_base * psi
+    pi  = g0 \ inv_base * pi
+    c   = g0 \ inv_base * c
+
     return base, inv_base, g1, c, pi, psi
 end
 

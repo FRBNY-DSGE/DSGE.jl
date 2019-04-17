@@ -795,7 +795,7 @@ end
     for i=1:I_g, j=1:J_g, n=1:N
         # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
         audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
-            (permanent == 1 ? aggZ * a_g[j] : 0.0)
+            (permanent ? aggZ * a_g[j] : 0.0)
 
         budrift = s_g[i,j,n] - d_g[i,j,n] - cost(d_g[i,j,n], max(a_g[j], a_lb)) -
             (permanent ? aggZ * b_g[i] : 0.0)
@@ -823,13 +823,13 @@ end
     return A, AT
 end
 
-@inline function transition_deriva_lite(permanent::T, ddeath::R, pam::R, xxi::R, w::S,
+@inline function transition_deriva_lite(permanent::Bool, ddeath::R, pam::R, xxi::R, w::S,
                                         a_lb::R, aggZ::S, d::Array{U,2}, d_g::Array{U,2},
                                         s::Array{U,2}, s_g::Array{U,2},
                                         r_a::U, a::Array{R,1}, a_g::Array{R,1}, b::Array{R,1},
                                         b_g::Array{R,1}, y::U,
                                         cost, util, deposit) where {R<:AbstractFloat, S<:Number,
-                                                                    T<:Bool, U<:Number}
+                                                                    U<:Number}
     I, J = size(d)
     I_g, J_g = size(d_g)
 
@@ -840,7 +840,7 @@ end
     for i=1:I, j=1:J
         α = a[j] * (r_a + perm_const) + (xxi * w * real(y))
 
-        chi[i,j]  = (j==1) ? 0.0 : -(min(d[i,j], 0) + min(α, 0)) / (a[j]   - a[j-1])
+        chi[i,j]  = (j==1) ? 0.0 : -(min(d[i,j], 0) + min(α, 0)) / (a[j] - a[j-1])
         zeta[i,j] = (j==J) ? 0.0 :  (max(d[i,j], 0) + max(α, 0)) / (a[j+1] - a[j])
 
         X[i,j] = (i==1) ? 0.0 : -(min(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
@@ -868,15 +868,15 @@ end
     for i=1:I_g, j=1:J_g
         # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
         audrift = d_g[i,j] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y -
-            (permanent == 1 ? aggZ * a_g[j] : 0.0)
+            (permanent ? aggZ * a_g[j] : 0.0)
 
         budrift = s_g[i,j] - d_g[i,j] - cost(d_g[i,j], max(a_g[j], a_lb)) -
             (permanent ? aggZ * b_g[i] : 0.0)
 
-        chiu[i,j]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        chiu[i,j]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j] - a_g[j-1])
         zetau[i,j] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
 
-        Xu[i,j] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Xu[i,j] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i] - b_g[i-1])
         Zu[i,j] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
     end
     yyyu  = -vec(chiu .+ zetau .+ Xu .+ Zu)
