@@ -1,7 +1,7 @@
-using EHANK, JLD
+using DSGE, JLD
 
 # Solve model
-m = KrusellSmith()
+m = KrusellSmithCT()
 T, R, C, inverse_basis, basis = solve(m)
 T = full(T)
 R = full(R)
@@ -44,7 +44,7 @@ for i = 1:length(sim_freqs)
     QQ = measure.QQ
     EE = measure.EE
 
-    out = EHANK.kalman_filter(data, TT, RR, CC, QQ, ZZ, DD, EE)
+    out = DSGE.kalman_filter(data, TT, RR, CC, QQ, ZZ, DD, EE)
     true_lik_vec[i] = sum(out[1])
 end
 
@@ -77,7 +77,7 @@ for j = 1:length(sim_freqs)
             QQ = measure.QQ
             EE = measure.EE
 
-            out = EHANK.kalman_filter(data, TT, RR, CC, QQ, ZZ, DD, EE)
+            out = DSGE.kalman_filter(data, TT, RR, CC, QQ, ZZ, DD, EE)
             loglik_mat[i, j, n] = sum(out[1])
         end
         max_ind = find(maximum(loglik_mat[:, j, n]) .== loglik_mat[:, j, n])[1]
