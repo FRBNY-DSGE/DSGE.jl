@@ -7,31 +7,31 @@ function jacobian(m::HetDSGE)
 
     # Load in parameters, steady-state parameters, and grids
     r::Float64     = m[:r].value
-    α::Float64  = m[:α].value
+    α::Float64     = m[:α].value
     H::Float64     = m[:H].value
     δ::Float64     = m[:δ].value
-    μ_sp::Float64    = m[:μ_sp].value
+    μ_sp::Float64  = m[:μ_sp].value
     ρ_sp::Float64  = m[:ρ_sp].value
     σ_sp::Float64  = m[:σ_sp].value
-    γ::Float64  = m[:γ].value
+    γ::Float64     = m[:γ].value
     g::Float64     = m[:g].value
-    η::Float64 = m[:η].value
-    ρB::Float64 = m[:ρB].value
-    ρG::Float64 = m[:ρG].value
-    ρZ::Float64 = m[:ρZ].value
-    ρμ::Float64 = m[:ρμ].value
+    η::Float64     = m[:η].value
+    ρB::Float64    = m[:ρB].value
+    ρG::Float64    = m[:ρG].value
+    ρZ::Float64    = m[:ρZ].value
+    ρμ::Float64    = m[:ρμ].value
     ρlamw::Float64 = m[:ρlamw].value
     ρlamf::Float64 = m[:ρlamf].value
-    ρmon::Float64 = m[:ρmon].value
-    spp::Float64 = m[:spp].value
-    lamw::Float64 = m[:lamw].value
-    ϕh::Float64 = m[:ϕh].value
-    Φw::Float64 = m[:Φw].value
-    lamf::Float64 = m[:lamf].value
-    Φp::Float64 = m[:Φp].value
-    ρR::Float64 = m[:ρR].value
-    ψπ::Float64 = m[:ψπ].value
-    ψy::Float64 = m[:ψy].value
+    ρmon::Float64  = m[:ρmon].value
+    spp::Float64   = m[:spp].value
+    lamw::Float64  = m[:lamw].value
+    ϕh::Float64    = m[:ϕh].value
+    Φw::Float64    = m[:Φw].value
+    lamf::Float64  = m[:lamf].value
+    Φp::Float64    = m[:Φp].value
+    ρR::Float64    = m[:ρR].value
+    ψπ::Float64    = m[:ψπ].value
+    ψy::Float64    = m[:ψy].value
 
     R = 1 + r
 
@@ -40,11 +40,11 @@ function jacobian(m::HetDSGE)
     μ::Vector{Float64}    = m[:μstar].value
     β::Float64            = m[:βstar].value
 
-    T::Float64 = m[:Tstar].value
-    ω::Float64 = m[:ωstar].value
+    T::Float64     = m[:Tstar].value
+    ω::Float64     = m[:ωstar].value
     xstar::Float64 = m[:xstar].value
     ystar::Float64 = m[:ystar].value
-    Rk::Float64 = m[:Rkstar].value
+    Rk::Float64    = m[:Rkstar].value
     kstar::Float64 = m[:kstar].value
 
 
@@ -53,9 +53,6 @@ function jacobian(m::HetDSGE)
     sgrid::Vector{Float64} = m.grids[:sgrid].points
     swts::Vector{Float64}  = m.grids[:sgrid].weights
     fgrid::Matrix{Float64} = m.grids[:fgrid]
-    xgrid_total::Vector{Float64} = m.grids[:xgrid_total]
-    sgrid_total::Vector{Float64} = m.grids[:sgrid_total]
-    weights_total::Vector{Float64} = m.grids[:weights_total]
 
     xswts = kron(swts,xwts)
 
@@ -79,18 +76,18 @@ function jacobian(m::HetDSGE)
     unc = 1 ./ ell .<= repeat(xgrid,ns) .+ η
 
     # Euler Equation
-    dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee = euler_equation_hetdsge(nx, ns, qp, qfunction, xgrid, sgrid, sgrid_total, fgrid, unc,
-                           xwts, swts, xswts,
-                           R, γ, β,
-                           c, η, ell, T, ω, H)
+    dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee =
+        euler_equation_hetdsge(nx, ns, qp, qfunction, xgrid, sgrid, fgrid, unc, xswts,
+                               R, γ, β, η, ell, T, ω, H)
 
     # KF Equation
-    dF2_dWH, dF2_dRZ, dF2_dTT,dF2_dELL, bigΨ = kolmogorov_fwd_hetdsge(nx, ns, qfunction, qp, xgrid, sgrid, fgrid, unc, xwts, swts, xswts, R, γ,
-                       ell, μ, η, c, T, ω, H, ee)
+    dF2_dWH, dF2_dRZ, dF2_dTT,dF2_dELL, bigΨ =
+        kolmogorov_fwd_hetdsge(nx, ns, qfunction, qp, xgrid, sgrid, fgrid, unc, xswts,
+                               R, γ, ell, μ, η, T, ω, H, ee)
 
     # Market clearing, lambda function
     c = min.(1 ./ ell,repeat(xgrid,ns).+η)
-    lam = (xswts.*μ)'*(1./c) # average marginal utility which the union uses to set wages
+    lam = (xswts.*μ)'*(1 ./ c) # average marginal utility which the union uses to set wages
     ϕ = lam*ω/(H^ϕh) # now that we know lam in steady state, choose disutility to target hours H
 
 
@@ -119,12 +116,12 @@ function jacobian(m::HetDSGE)
     JJ[eq[:eq_kolmogorov_fwd],endo[:t_t]]   = dF2_dTT
 
     # update lagged ELL
-    JJ[eq[:eq_lag_ell],endo[:l′_t1]] = eye(nxns)
-    JJ[eq[:eq_lag_ell],endo[:ELL]]   = -eye(nxns)
+    JJ[eq[:eq_lag_ell],endo[:l′_t1]] = Matrix{Float64}(I, nxns, nxns)
+    JJ[eq[:eq_lag_ell],endo[:ELL]]   = -Matrix{Float64}(I, nxns, nxns)
 
     # update lagged M
-    JJ[eq[:eq_lag_wealth],endo[:μ′_t1]] = eye(nxns)
-    JJ[eq[:eq_lag_wealth],endo[:μ_t]]   = -eye(nxns)
+    JJ[eq[:eq_lag_wealth],endo[:μ′_t1]] = Matrix{Float64}(I, nxns, nxns)
+    JJ[eq[:eq_lag_wealth],endo[:μ_t]]   = -Matrix{Float64}(I, nxns, nxns)
 
     # mkt clearing
     JJ[first(eq[:eq_market_clearing]),first(endo[:y_t])]   = ystar/g
@@ -310,11 +307,11 @@ end
 function euler_equation_hetdsge(nx::Int, ns::Int,
                                 qp::Function, qfunction::Function,
                                 xgrid::Vector{Float64}, sgrid::Vector{Float64},
-                                sgrid_total::Vector{Float64}, fgrid::Matrix{Float64},
+                                fgrid::Matrix{Float64},
                                 unc::BitArray,
-                                xwts::Vector{Float64}, swts::Vector{Float64}, xswts::Vector{Float64},
+                                xswts::Vector{Float64},
                                 R::Float64, γ::Float64, β::Float64,
-                                c::Vector{Float64}, η::Float64, ell::Vector{Float64}, T::Float64,
+                                η::Float64, ell::Vector{Float64}, T::Float64,
                                 ω::Float64, H::Float64)
     nxns = nx*ns
     ee  = zeros(nxns,nxns) # ee[i,j] takes you from i to j
@@ -356,10 +353,12 @@ end
 
 function kolmogorov_fwd_hetdsge(nx::Int, ns::Int,
                                 qfunction::Function, qp::Function,
-                                xgrid::Vector{Float64}, sgrid::Vector{Float64}, fgrid::Matrix{Float64}, unc::BitArray,
-                                xwts::Vector{Float64}, swts::Vector{Float64}, xswts::Vector{Float64},
+                                xgrid::Vector{Float64}, sgrid::Vector{Float64},
+                                fgrid::Matrix{Float64}, unc::BitArray,
+                                xswts::Vector{Float64},
                                 R::Float64, γ::Float64,
-                                ell::Vector{Float64}, μ::Vector{Float64}, η::Float64, c::Vector{Float64}, T::Float64, ω::Float64, H::Float64, ee::Matrix{Float64})
+                                ell::Vector{Float64}, μ::Vector{Float64},
+                                η::Float64, T::Float64, ω::Float64, H::Float64, ee::Matrix{Float64})
     nxns = nx*ns
     bigΨ    = zeros(nxns,nxns) # this is also dF2_dM
     smallψ = zeros(nxns,nxns)
@@ -399,7 +398,7 @@ function normalize(m::HetDSGE, JJ::Matrix{Float64})
 
     m <= Setting(:n_predetermined_variables, size(Qx, 1))
 
-	Jac1 = Qleft*JJ*Qright
+	Jac1 = Qleft*sparse(JJ)*Qright
 
     return Jac1
 end
@@ -412,10 +411,10 @@ function compose_normalization_matrices(m::HetDSGE)
     nxscalars::Int = get_setting(m, :nxscalars)
 
     # Create PPP matrix
-    P1 = kron(eye(ns),ones(nx,1))
-    Ptemp = eye(nx)
+    P1 = kron(Matrix{Float64}(I, ns,ns),ones(nx,1))
+    Ptemp = Matrix{Float64}(I, nx, nx)
     Ptemp = Ptemp[:, 2:end]
-    P2 = kron(eye(ns), Ptemp)
+    P2 = kron(Matrix{Float64}(I, ns, ns), Ptemp)
     P  = hcat(P1, P2)
 
     Q,R = qr(P)
@@ -424,10 +423,14 @@ function compose_normalization_matrices(m::HetDSGE)
 
     nxns = nx*ns
 
-    Qleft     = cat(eye(nxns),S,eye(nxns),S,eye(nscalars), dims = [1 2])
-    Qx        = cat(eye(nxns),S,eye(nxscalars), dims = [1 2])
-    Qy        = cat(eye(nxns),S,eye(nyscalars), dims = [1 2])
-    Qright    = cat(Qx',Qy',Qx',Qy', dims = [1,2])
+    Qleft     = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,
+                    Matrix{Float64}(I, nxns, nxns),S,
+                    Matrix{Float64}(I, nscalars, nscalars), dims = [1 2]))
+    Qx        = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,
+                    Matrix{Float64}(I, nxscalars, nxscalars), dims = [1 2]))
+    Qy        = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,
+                    Matrix{Float64}(I, nyscalars, nyscalars), dims = [1 2]))
+    Qright    = sparse(cat(Qx',Qy',Qx',Qy', dims = [1,2]))
 
     return Qx, Qy, Qleft, Qright
 end
