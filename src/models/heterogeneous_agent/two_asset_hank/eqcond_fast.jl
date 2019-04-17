@@ -153,12 +153,11 @@ function eqcond_lite(m::TwoAssetHANK)
         r_b_borr = r_b .+ borrwedge_SS
 
         # Set grids
-        r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab, dab_tilde_mat, dab_g, dab_g_tilde_mat = set_vectors_lite(a, b, a_g, b_g, r_b, r_b_borr)
+        dab_g_tilde = set_vectors_lite(a, b, a_g, b_g)
 
-        dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite2(a,
-                                                                           b, a_g, b_g)
-        dab_g_o = reshape(repeat(dab_g,N,1),I_g,J_g,N)
+        dab_g_o = reshape(repeat(reshape(dab_g_tilde, I_g, J_g), N, 1),I_g,J_g,N)
         g_end = (1 - sum(g .* vec(dab_g_o)[1:end-1])) / dab_g_o[I_g, J_g, N]
+
         g = vcat(g, g_end)
         g_inds = reshape(g, I_g*J_g, N)
         gg = g_inds[:,indx]
@@ -188,30 +187,27 @@ function eqcond_lite(m::TwoAssetHANK)
         @time A, AT = transition_deriva_lite(permanent, ddeath, pam, xxi, w, a_lb, aggZ,
                                         d, d_g, s, s_g, r_a, a, a_g, b, b_g, y_shock[indx],
                                         cost, util, deposit)
-        #cc  = kron(lambda, my_speye(I*J))
-        #ccu  = kron(lambda, my_speye(I_g*J_g))[I_g*J_g*(indx-1)+1:I_g*J_g*indx, :]
-        ccu = kron(lambda[indx,:], my_speye(I_g*J_g))
 
         my_inds = findall(x -> x != indx, 1:N)
         cc = sum([lambda[indx,kk]*(V_SS[:,kk] - V_SS[:,indx]) for kk in my_inds])
 
         # full transition matrix
-        AT = (AT + lambda[indx,indx]*my_speye(I_g*J_g))'
-
+        AT = add_diag(AT, lambda[indx,indx])'
         #----------------------------------------------------------------
         # KFE
         #----------------------------------------------------------------
         loc = findall(b .== 0)
         dab_g_tilde_inv       = vec(1.0 ./ dab_g_tilde)
-        dab_g_small           = reshape(dab_g, I_g * J_g, 1)
+        dab_g_small           = dab_g_tilde
         dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
         dab_g_small[loc]     .= 0.0
         death_process         = -ddeath * my_speye(I_g * J_g)
         death_process[loc,:]  = vec(dab_g_small)
 
-        gIntermediate = dab_g_tilde_inv .* ((AT * (vec(dab_g_tilde) .* gg)) +
-                                            sum([lambda[kk,indx] .* vec(dab_g_tilde) .*
-                                                 g[(kk-1)*I_g*J_g+1:kk*I_g*J_g] for kk in my_inds])) + death_process * gg
+        @time gIntermediate = dab_g_tilde_inv .* ((AT * (dab_g_tilde .* gg)) +
+                                             sum([lambda[kk,indx] .* dab_g_tilde .*
+                                                  g_inds[:,kk] for kk in my_inds])) +
+                                                  death_process * gg
 
         #----------------------------------------------------------------
         # Compute equilibrium conditions
@@ -221,20 +217,19 @@ function eqcond_lite(m::TwoAssetHANK)
         hjbResidual = vec(util.(c)) + A * vec(V) + cc + V_Dot + VEErrors - perm_mult * vec(V)
 
         # KFE
-        gResidual  = g_Dot[I_g*J_g*(indx-1)+1 : I_g*J_g*indx] - gIntermediate #[1:n_g, 1]
-
-        K_Residual = (K_liquid ? sum((a_gg .+ b_gg) .* gg .* vec(dab_g)) :
-                                 sum( a_gg          .* gg .* vec(dab_g))) - K
+        gResidual  = g_Dot[I_g*J_g*(indx-1)+1 : I_g*J_g*indx] - gIntermediate
+        K_Residual = (K_liquid ? sum((a_gg .+ b_gg) .* gg .* dab_g_tilde) :
+                                 sum( a_gg          .* gg .* dab_g_tilde)) - K
         r_b_Residual = 0.0
         if r_b_fix      == 1
             r_b_out      = r_b_SS
             r_b_Residual = r_b_out - r_b
         elseif r_b_phi  == 1
-            r_b_out      = sum(b_gg .* gg .* vec(dab_g))
+            r_b_out      = sum(b_gg .* gg .* dab_g_tilde)
             r_b_Residual = r_b_out - B_SS * exp(1/pphi * (r_b - r_b_SS))
         elseif B_fix    == 1
             # Find death-corrected savings
-            b_save       = dot(gIntermediate, vec(dab_g) .* b_gg)
+            b_save       = dot(gIntermediate, dab_g_tilde .* b_gg)
             r_b_out      = 0.0
             r_b_Residual = r_b_out - b_save
         elseif K_liquid
@@ -254,19 +249,19 @@ function eqcond_lite(m::TwoAssetHANK)
         if aggregate_variables
 
             aggY_out = (K ^ aalpha) * (!permanent ? exp(aggZ) * n_SS : n_SS ) ^ (1 - aalpha)
-            aggC_out = sum(vec(c_g) .* gg .* vec(dab_g))
+            aggC_out = sum(vec(c_g) .* gg .* dab_g_tilde)
             Y_Residual = aggY_out - aggY
             C_Residual = aggC_out - aggC
 
         elseif distributional_variables
-
-            C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
-                sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
+            r_b_g_vec = r_b .* (b_g .>= 0) + r_b_borr .* (b_g .< 0)
+            C_Var_out = sum(log(vec(c_g)).^2 .* gg .* dab_g_tilde) -
+                sum(log(vec(c_g)) .* gg .* dab_g_tilde) ^ 2
             earn = log.((1-tau_I) * w * repeat(repeat(vec(y), inner=I_g), inner=J_g) .+
                          b_gg .* (repeat(repeat(r_b_g_vec, outer=J_g), outer=N) .+ ddeath*pam) .+
                          trans .+ a_gg .* (r_a + ddeath*pam))
-            earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
-                sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
+            earn_Var_out = sum(vec(earn).^2 .* gg .* dab_g_tilde) -
+                sum(vec(earn) .* gg .* dab_g_tilde) ^ 2
 
             C_Var_Residual    = C_Var_out - C_Var
             earn_Var_Residual = earn_Var_out - earn_Var
@@ -275,13 +270,13 @@ function eqcond_lite(m::TwoAssetHANK)
 
             WHTM_indicator      = zeros(I_g,J_g,N)
             WHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos+2:end,:] .= 1.
-            WHTM_out            = sum(vec(WHTM_indicator) .* gg .* vec(dab_g))
-            C_WHTM_out          = sum(vec(WHTM_indicator) .* vec(c_g) .* gg .* vec(dab_g))
+            WHTM_out            = sum(vec(WHTM_indicator) .* gg .* dab_g_tilde)
+            C_WHTM_out          = sum(vec(WHTM_indicator) .* vec(c_g) .* gg .* dab_g_tilde)
 
             PHTM_indicator      = zeros(I_g,J_g,N)
             PHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos:a_g_0pos+2:end,:] .= 1.
-            PHTM_out            = sum(vec(PHTM_indicator) .* gg .* vec(dab_g))
-            C_PHTM_out          = sum(vec(PHTM_indicator) .* vec(c_g) .* gg .* vec(dab_g))
+            PHTM_out            = sum(vec(PHTM_indicator) .* gg .* dab_g_tilde)
+            C_PHTM_out          = sum(vec(PHTM_indicator) .* vec(c_g) .* gg .* dab_g_tilde)
 
             C_WHTM_Residual = C_WHTM_out - C_WHTM
             C_PHTM_Residual = C_PHTM_out - C_PHTM
@@ -320,9 +315,8 @@ function eqcond_lite(m::TwoAssetHANK)
     my_out = vec(DelimitedFiles.readdlm("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/my_residuals.csv", ','))
 
     @show maximum(abs.(my_out[1:2000] - vec(out)[1:2000]))#, length(findall(x->x>1e-5, abs.(my_out - out)))
-@show size(my_out)
-    @show maximum(abs.(my_out[60001:62250] - vec(out)[2001:4250]))
-    @show length(findall(x->x>1e-7, abs.(my_out[60001:62250] - vec(out)[2001:4250])))
+    @show isapprox(my_out[60001:62250], vec(out)[2001:4250], rtol=1e-4)#maximum(abs.(my_out[60001:62250] - vec(out)[2001:4250]))
+    #@show length(findall(x->x>1e-7, abs.(my_out[60001:62250] - vec(out)[2001:4250])))
     #@assert isapprox(my_out[1:2000], vec(out)[1:2000], rtol=1e-3)
 
     #@time get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
