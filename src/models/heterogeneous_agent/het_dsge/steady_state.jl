@@ -35,7 +35,7 @@ function steadystate!(m::HetDSGE;
         sumz += mollifier_hetdsge(zgrid[i],zhi,zlo)*zwts
     end
 
-    if get_setting(m, :use_laster_βstar) && !isnan(m[:βstar].value)
+    if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
         βlo = βhi = m[:βstar]
     end
 
@@ -47,17 +47,17 @@ function steadystate!(m::HetDSGE;
     μ = zeros(n)
 
     # Initial guess
-    β   = (βlo + βhi)/2.0
-    Win = 2*ones(nx*ns)/(xhi+xlo)
+    β   = 1.0
+    Win = Vector{Float64}(undef, n)
     while abs(excess) > tol && counter < maxit # clearing markets
         β = (βlo+βhi)/2.0
-
         Win_guess = ones(n)
 
         c, bp, Win, KF = policy_hetdsge(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, sumz, xgrid, sgrid,
                                           xswts, Win_guess, f)
 
         LPMKF = xswts[1]*KF
+
         # find eigenvalue closest to 1
         (D,V) = (eigen(LPMKF)...,)
         order_D = sortperm(abs.(D), rev = true)
@@ -66,6 +66,7 @@ function steadystate!(m::HetDSGE;
         if abs(D[1]-1)>2e-1 # that's the tolerance we are allowing
             warn("your eigenvalue is too far from 1, something is wrong")
         end
+
         μ = real(V[:,1]) # Pick the eigen vector associated with the largest eigenvalue and moving it back to values
         μ = μ/(xswts'*μ) # Scale of eigenvectors not determinate: rescale to integrate to exactly 1
         excess = (xswts'*(μ.*bp))[1]  # compute excess supply of savings, which is a fn of w
@@ -96,10 +97,11 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
                         f::Array{Float64,2}, damp::Float64 = 0.5, dist::Float64 = 1.,
                         tol::Float64 = 1e-4, maxit::Int64 = 500)
     n = nx*ns
-    c  = zeros(n)      # consumption
-    bp = zeros(n)      # savings
+    c  = zeros(n)                # consumption
+    bp = Vector{Float64}(undef, n)      # savings
     counter = 1
-    Wout = copy(Win)
+    Wout = Vector{Float64}(undef, length(Win))
+    qfunction(x::Float64) = mollifier_hetdsge(x, zhi, zlo)/sumz
     while dist>tol && counter<maxit # for debugging
         # compute c(w) given guess for Win = β*R*E[u'(c_{t+1})]
         for iss in 1:ns
@@ -108,7 +110,7 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
             end
         end
         bp = repeat(xgrid,ns) - c  # compute bp(w) given guess for Win
-        Wout = parameterized_expectations_hetdsge(nx,ns,β,R,ω,H,η,T,γ,zhi,zlo,sumz,xgrid,sgrid,xswts,c,bp,f)
+        Wout = parameterized_expectations_hetdsge(nx,ns,β,R,ω,H,T,γ,qfunction,xgrid,sgrid,xswts,c,bp,f)
         dist = maximum(abs.(Wout-Win))
         Win = damp*Wout + (1.0-damp)*Win
         counter += 1
@@ -116,25 +118,23 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
     if counter == maxit
         @warn "Euler iteration did not converge"
     end
-    tr = kolmogorov_fwd_hetdsge(nx,ns,ω,H,η,T,R,γ,zhi,zlo,sumz,xgrid,sgrid,bp,f)
+    tr = kolmogorov_fwd_hetdsge(nx,ns,ω,H,T,R,γ,qfunction,xgrid,sgrid,bp,f)
     return c, bp, Wout, tr
 end
 
 function parameterized_expectations_hetdsge(nx::Int,ns::Int, β::AbstractFloat, R::AbstractFloat, ω::AbstractFloat,
-                                            H::AbstractFloat, η::AbstractFloat, T::AbstractFloat, γ::AbstractFloat,
-                                            zhi::AbstractFloat, zlo::AbstractFloat, sumz::AbstractFloat,
+                                            H::AbstractFloat, T::AbstractFloat, γ::AbstractFloat,
+                                            qfunc::Function,
                                             xgrid::Vector{Float64}, sgrid::Vector{Float64},
                                             xswts::Vector{Float64}, c::Vector{Float64},
                                             bp::Vector{Float64}, f::Array{Float64,2})
-    qfunction(x) = mollifier_hetdsge(x, zhi, zlo)/sumz
-
     l_out = zeros(nx*ns)
     for iss=1:ns
         for ia=1:nx
             sumn = 0.0
             for isp=1:ns
                 for iap=1:nx
-                    sumn += (xswts[nx*(isp-1)+iap]/c[nx*(isp-1)+iap])*qfunction((xgrid[iap] - R*(exp(-γ))*bp[nx*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./sgrid[isp]
+                    sumn += (xswts[nx*(isp-1)+iap]/c[nx*(isp-1)+iap])*qfunc((xgrid[iap] - R*(exp(-γ))*bp[nx*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./sgrid[isp]
                 end
             end
             l_out[nx*(iss-1)+ia] = (β*R*(exp(-γ))/ω*H)*sumn
@@ -144,19 +144,17 @@ function parameterized_expectations_hetdsge(nx::Int,ns::Int, β::AbstractFloat, 
 end
 
 function kolmogorov_fwd_hetdsge(nx::Int, ns::Int, ω::AbstractFloat,
-                                H::AbstractFloat, η::AbstractFloat, T::AbstractFloat,
+                                H::AbstractFloat, T::AbstractFloat,
                                 R::AbstractFloat, γ::AbstractFloat,
-                                zhi::AbstractFloat, zlo::AbstractFloat,
-                                sumz::AbstractFloat, xgrid::Vector{Float64},
+                                qfunc::Function,
+                                xgrid::Vector{Float64},
                                 sgrid::Vector{Float64}, bp::Vector{Float64}, f::Array{Float64,2})
-    qfunction(x) = mollifier_hetdsge(x, zhi, zlo)/sumz
-
     tr = zeros(nx*ns,nx*ns)
     for iss=1:ns
         for ia=1:nx
             for isp=1:ns
                 for iap=1:nx
-                    tr[nx*(isp-1)+iap,nx*(iss-1)+ia] = qfunction((xgrid[iap] - R*(exp(-γ))*bp[nx*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./(ω*H*sgrid[isp])
+                    tr[nx*(isp-1)+iap,nx*(iss-1)+ia] = qfunc((xgrid[iap] - R*(exp(-γ))*bp[nx*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./(ω*H*sgrid[isp])
                 end
             end
         end
