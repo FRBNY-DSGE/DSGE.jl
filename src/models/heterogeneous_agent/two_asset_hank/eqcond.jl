@@ -43,11 +43,11 @@ function eqcond(m::TwoAssetHANK)
 
     #lambda                     = get_setting(m, :lambda)::Matrix{Float64}
 
-    K_liquid                   = get_setting(m, :K_liquid) ? 1 : 0::Int64
-    aggregate_variables        = get_setting(m, :aggregate_variables)::Int64
-    distributional_variables   = get_setting(m, :distributional_variables)::Int64
-    distributional_variables_1 = get_setting(m, :distributional_variables_1)::Int64
-    permanent                  = get_setting(m, :permanent) ? 1 : 0::Int64
+    K_liquid                   = get_setting(m, :K_liquid)::Bool
+    aggregate_variables        = get_setting(m, :aggregate_variables)==1#::Bool
+    distributional_variables   = get_setting(m, :distributional_variables)==1#::Int64
+    distributional_variables_1 = get_setting(m, :distributional_variables_1)==1#::Int64
+    permanent                  = get_setting(m, :permanent)::Bool
 
     I      = get_setting(m, :I)::Int64
     J      = get_setting(m, :J)::Int64
@@ -89,49 +89,50 @@ function eqcond(m::TwoAssetHANK)
     nEErrors = get_setting(m, :nEErrors)::Int64
 
 #    vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
-    vars_SS = MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"]
-    V_SS = vars_SS[1:n_v]
-    g_SS = vars_SS[n_v + 1 : n_v + n_g]
-    K_SS = vars_SS[n_v + n_g + 1]
+    vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
+    V_SS   = vars_SS[1:n_v]
+    g_SS   = vars_SS[n_v + 1 : n_v + n_g]
+    K_SS   = vars_SS[n_v + n_g + 1]
     r_b_SS = vars_SS[n_v + n_g + 2]
-    if aggregate_variables == 1
-        aggY_SS = vars_SS[n_v+n_g+3] # aggregate output
-        aggC_SS = vars_SS[n_v+n_g+4] # aggregate consumption
-    elseif distributional_variables == 1
-        C_Var_SS = vars_SS[n_v+n_g+3] # consumption inequality
-        earn_Var_SS = vars_SS[n_v+n_g+4] # earnings inequality
-    elseif distributional_variables_1 == 1
-        C_WHTM_SS = vars_SS[n_v+n_g+3] # consumption of wealthy hand-to-mouth
-        C_PHTM_SS = vars_SS[n_v+n_g+4] # consumption of poor hand-to-mouth
-    end
-    aggZ_SS = vars_SS[n_v+n_g+n_p+1] # aggregate Z
+
+    # Aggregate output and aggregate consumption
+    aggY_SS = aggregate_variables ? vars_SS[n_v+n_g+3] : 0.0 # aggregate output
+    aggC_SS = aggregate_variables ? vars_SS[n_v+n_g+4] : 0.0 # aggregate consumption
+
+    # Consumption and earnings inequality
+    C_Var_SS    = distributional_variables ? vars_SS[n_v+n_g+3] : 0.0
+    earn_Var_SS = distributional_variables ? vars_SS[n_v+n_g+4] : 0.0
+
+    # Consumption of wealthy and poor hand-to-mouth
+    C_WHTM_SS = distributional_variables_1 ? vars_SS[n_v+n_g+3] : 0.0
+    C_PHTM_SS = distributional_variables_1 ? vars_SS[n_v+n_g+4] : 0.0
+
+    aggZ_SS = vars_SS[n_v+n_g+n_p+1] # Aggregate Z
 
     # Construct problem functions
     util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
-
-    # exp
-    dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite(a,
-                                                                           b, a_g, b_g, N)
 
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # ------- Unpack variables -------
         V   = reshape(vars[1:n_v] .+ V_SS, I, J, N)  # value function
         g   = vars[n_v + 1 : n_v + n_g] .+ g_SS      # distribution
-        K   = vars[n_v + n_g + 1] + K_SS             # aggregate capital
-        r_b = vars[n_v + n_g + 2] + r_b_SS
+        K::T   = vars[n_v + n_g + 1] + K_SS             # aggregate capital
+        r_b::T = vars[n_v + n_g + 2] + r_b_SS
 
-        if aggregate_variables == 1
-            aggY     = vars[n_v+n_g+3] + aggY_SS     # aggregate output
-            aggC     = vars[n_v+n_g+4] + aggC_SS     # aggregate consumption
-        elseif distributional_variables == 1
-            C_Var    = vars[n_v+n_g+3] + C_Var_SS    # consumption inequality
-            earn_Var = vars[n_v+n_g+4] + earn_Var_SS # earnings inequality
-        elseif distributional_variables_1 == 1
-            C_WHTM  = vars[n_v+n_g+3] + C_WHTM_SS    # consumption of wealthy hand-to-mouth
-            C_PHTM  = vars[n_v+n_g+4] + C_PHTM_SS    # consumption of poor hand-to-mouth
-        end
-        aggZ       = vars[n_v+n_g+n_p+1] + aggZ_SS   # aggregate Z
-        # Above is all in ^ Γ1.
+        # Aggregate output, aggregate consumption
+        aggY::T = aggregate_variables ? vars[n_v+n_g+3] + aggY_SS : zero(T)
+        aggC::T = aggregate_variables ? vars[n_v+n_g+4] + aggC_SS : zero(T)
+
+        # Consumption and earnings inequality
+        C_Var::T    = distributional_variables ? vars[n_v+n_g+3] + C_Var_SS    : zero(T)
+        earn_Var::T = distributional_variables ? vars[n_v+n_g+4] + earn_Var_SS : zero(T)
+
+        # Consumption of wealthy and poor hand-to-mouth
+        C_WHTM::T = distributional_variables_1 ? vars[n_v+n_g+3] + C_WHTM_SS : zero(T)
+        C_PHTM::T = distributional_variables_1 ? vars[n_v+n_g+4] + C_PHTM_SS : zero(T)
+
+        # Aggregate Z
+        aggZ::T  = vars[n_v+n_g+n_p+1] + aggZ_SS
 
         V_Dot      = vars[nVars + 1 : nVars + n_v]
         g_Dot      = vars[nVars + n_v + 1: nVars + n_v + n_g]
@@ -142,27 +143,21 @@ function eqcond(m::TwoAssetHANK)
 
         # Prices
         w   = (1 - aalpha) * (K ^ aalpha) * n_SS ^ (-aalpha) *
-            ((permanent == 0) ? exp(aggZ) ^ (1-aalpha) : 1.)
-        r_a = aalpha * (K ^ (aalpha - 1)) * (((permanent == 0) ? exp(aggZ) : 1.0) *
+            (!permanent ? exp(aggZ) ^ (1-aalpha) : 1.)
+        r_a = aalpha * (K ^ (aalpha - 1)) * ((!permanent ? exp(aggZ) : 1.0) *
             n_SS) ^ (1 - aalpha) - ddelta
 
         # Auxiliary variables
         r_b_borr = r_b .+ borrwedge_SS
 
-        # SET GRIDS
-        r_b_vec, r_b_g_vec, daf_vec, daf_g_vec, dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dbf_vec, dbf_g_vec, dbb_vec, dbb_g_vec, dab, dab_tilde_mat, dab_g, dab_g_tilde_mat = set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
-
-        dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite(a,
-                                                                           b, a_g, b_g, N)
+        # Set grids
+        dab_vec, dab_g_vec, dab_tilde, dab_g_tilde, dab, dab_tilde_mat, dab_g, dab_g_tilde_mat = set_vectors(a, b, a_g, b_g, N)
 
         a_gg = repeat(repeat(a_g, inner=I_g), outer=N)
         b_gg = repeat(repeat(b_g, outer=J_g), outer=N)
 
-        dab_aux   = reshape(dab,   I*J*N,     1)
-        dab_g_aux = reshape(dab_g, I_g*J_g*N, 1)
-
-        g_end = (1 - sum(g .* vec(dab_g_tilde_grid)[1:end-1])) / dab_g_tilde_grid[I_g, J_g, N]
-        gg  = vcat(g, g_end)
+        g_end = (1 - sum(g .* vec(dab_g)[1:end-1])) / dab_g[I_g, J_g, N]
+        gg    = vcat(g, g_end)
 
         loc = findall(b .== 0)
         dab_g_tilde_mat_inv = spdiagm(0 => vec(repeat(1.0 ./ dab_g_tilde, N, 1)))
@@ -174,9 +169,6 @@ function eqcond(m::TwoAssetHANK)
         death_process[loc,:]  = vec(dab_g_small)
         death_process         = kron(my_speye(N), death_process)
 
-        daba_g_aux = dab_g_aux .* a_gg
-        dabb_g_aux = dab_g_aux .* b_gg
-
         r_b_vec = r_b .* (b .>= 0) + r_b_borr .* (b .< 0)
 
         # Other necessary objects
@@ -184,7 +176,6 @@ function eqcond(m::TwoAssetHANK)
         y_shock_mean = dot(y_shock, y_dist)
         y_shock      = real(y_shock ./ y_shock_mean .* y_mean)
 
-        # ripped out
         println("Timing: solve_hjb()")
         @time c, s, d  = solve_hjb(V, I_g, J_g, a_lb, ggamma, permanent,
                                    ddeath, pam, aggZ, xxi, tau_I, w, trans,
@@ -194,20 +185,10 @@ function eqcond(m::TwoAssetHANK)
         d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
         s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
         c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
-        #=
-        test_out = MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/cds.mat")
 
-        @show test_out["c"] ≈ c, maximum(abs.(test_out["c"] - c)), minimum(abs.(test_out["c"]))
-        #@show length(findall(x->x>1e-13, abs.(test_out["c"] - c))), size(c)
-        @show test_out["d"] ≈ d, maximum(abs.(test_out["d"] - d)), minimum(abs.(test_out["d"]))
-        @show test_out["s"] ≈ s, maximum(abs.(test_out["s"] - s)), minimum(abs.(test_out["s"]))
-        @show test_out["c_g"] ≈ c_g
-        @show test_out["d_g"] ≈ d_g
-        @show test_out["s_g"] ≈ s_g
-        =#
         # Derive transition matrices
         println("Timing: transition_deriva()")
-        @time A, AT = transition_deriva(permanent==1, ddeath, pam, xxi, w, a_lb, aggZ,
+        @time A, AT = transition_deriva(permanent, ddeath, pam, xxi, w, a_lb, aggZ,
                                         d, d_g, s, s_g, r_a, a, a_g, b, b_g, y_shock,
                                         cost, util, deposit)
         cc  = kron(lambda, my_speye(I*J))
@@ -216,13 +197,6 @@ function eqcond(m::TwoAssetHANK)
         # full transition matrix
         A  = A + cc
         AT = (AT + ccu)'
-
-        #test_out = MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/mid_residuals.mat")
-
-        #@show test_out["A"] ≈ A, maximum(abs.(test_out["A"] - A))
-        #@assert test_out["cc"] == cc
-        #@show test_out["AT_T"] ≈ AT_T, maximum(abs.(test_out["AT_T"] - AT_T))
-        #@assert test_out["ccu"] == ccu
 
         #----------------------------------------------------------------
         # KFE
@@ -233,22 +207,13 @@ function eqcond(m::TwoAssetHANK)
         # Compute equilibrium conditions
         #----------------------------------------------------------------
         # HJB equation
-        perm_mult   = (permanent==0) ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
-        hjbResidual = vec(util.(c)) + A * vec(V) + V_Dot + VEErrors - perm_mult *
-            reshape(V, I*J*N,1)
+        perm_mult   = !permanent ? rrho + ddeath : rrho + ddeath - (1 - ggamma) * aggZ
+        hjbResidual = vec(util.(c)) + A * vec(V) + V_Dot + VEErrors - perm_mult * vec(V)
 
         # KFE
-        gResidual = g_Dot - gIntermediate[1:n_g, 1]
-
-        K_out = 0.0
-        if K_liquid == 1
-            K_out = sum((a_gg .+ b_gg) .* gg .* vec(dab_g))
-        else
-            K_out = sum(a_gg .* gg .* vec(dab_g))
-        end
-
-        K_Residual   = K_out - K
-        r_b_out      = 0.0
+        gResidual  = g_Dot - gIntermediate[1:n_g, 1]
+        K_Residual = (K_liquid ? sum((a_gg .+ b_gg) .* gg .* vec(dab_g)) :
+                                 sum( a_gg          .* gg .* vec(dab_g))) - K
         r_b_Residual = 0.0
         if r_b_fix      == 1
             r_b_out      = r_b_SS
@@ -257,21 +222,32 @@ function eqcond(m::TwoAssetHANK)
             r_b_out      = sum(b_gg .* gg .* vec(dab_g))
             r_b_Residual = r_b_out - B_SS * exp(1/pphi * (r_b - r_b_SS))
         elseif B_fix    == 1
-            # find death-corrected savings
-            b_save       = dot(gIntermediate, dabb_g_aux)
+            # Find death-corrected savings
+            b_save       = dot(gIntermediate, vec(dab_g) .* b_gg)
             r_b_out      = 0.0
             r_b_Residual = r_b_out - b_save
-        elseif K_liquid == 1
+        elseif K_liquid
             r_b_out      = r_a_out - illiquid_wedge
             r_b_Residual = r_b_out - r_b
         end
 
-        if aggregate_variables == 1
+        Y_Residual        = zero(T)
+        C_Residual        = zero(T)
 
-            aggY_out = (K ^ aalpha) * ((permanent==0) ? exp(aggZ) * n_SS : n_SS ) ^ (1 - aalpha)
+        C_Var_Residual    = Array{T}(undef, 0)
+        earn_Var_Residual = Array{T}(undef, 0)
+
+        C_WHTM_Residual   = Array{T}(undef, 0)
+        C_PHTM_Residual   = Array{T}(undef, 0)
+
+        if aggregate_variables
+
+            aggY_out = (K ^ aalpha) * (!permanent ? exp(aggZ) * n_SS : n_SS ) ^ (1 - aalpha)
             aggC_out = sum(vec(c_g) .* gg .* vec(dab_g))
+            Y_Residual = aggY_out - aggY
+            C_Residual = aggC_out - aggC
 
-        elseif distributional_variables == 1
+        elseif distributional_variables
 
             C_Var_out = sum(log(vec(c_g)).^2 .* gg .* vec(dab_g)) -
                 sum(log(vec(c_g)) .* gg .* vec(dab_g)) ^ 2
@@ -281,7 +257,10 @@ function eqcond(m::TwoAssetHANK)
             earn_Var_out = sum(vec(earn).^2 .* gg .* vec(dab_g)) -
                 sum(vec(earn) .* gg .* vec(dab_g)) ^ 2
 
-        elseif distributional_variables_1 == 1
+            C_Var_Residual    = C_Var_out - C_Var
+            earn_Var_Residual = earn_Var_out - earn_Var
+
+        elseif distributional_variables_1
 
             WHTM_indicator      = zeros(I_g,J_g,N)
             WHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos+2:end,:] .= 1.
@@ -292,26 +271,9 @@ function eqcond(m::TwoAssetHANK)
             PHTM_indicator[b_g_0pos:b_g_0pos+1,a_g_0pos:a_g_0pos+2:end,:] .= 1.
             PHTM_out            = sum(vec(PHTM_indicator) .* gg .* vec(dab_g))
             C_PHTM_out          = sum(vec(PHTM_indicator) .* vec(c_g) .* gg .* vec(dab_g))
-        end
 
-        Y_Residual        = 0.0
-        C_Residual        = 0.0
-
-        C_Var_Residual    = Array{Float64}(undef, 0)
-        earn_Var_Residual = Array{Float64}(undef, 0)
-
-        C_WHTM_Residual   = Array{Float64}(undef, 0)
-        C_PHTM_Residual   = Array{Float64}(undef, 0)
-
-        if aggregate_variables == 1
-            Y_Residual        = aggY_out - aggY
-            C_Residual        = aggC_out - aggC
-        elseif distributional_variables == 1
-            C_Var_Residual    = C_Var_out - C_Var
-            earn_Var_Residual = earn_Var_out - earn_Var
-        elseif distributional_variables_1 == 1
-            C_WHTM_Residual   = C_WHTM_out - C_WHTM
-            C_PHTM_Residual   = C_PHTM_out - C_PHTM
+            C_WHTM_Residual = C_WHTM_out - C_WHTM
+            C_PHTM_Residual = C_PHTM_out - C_PHTM
         end
 
         # Law of motion for aggregate tfp shock
@@ -336,29 +298,28 @@ function eqcond(m::TwoAssetHANK)
     #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-    test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_1e12.jld2", "residuals")
-    #@assert test_out == out
 
     my_out = vec(DelimitedFiles.readdlm("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/my_residuals.csv", ','))
 
     @show maximum(abs.(my_out - vec(out)))#, length(findall(x->x>1e-5, abs.(my_out - out)))
-    @show isapprox(my_out, vec(out), rtol=1e-4)
+    @assert isapprox(my_out, vec(out), rtol=1e-4)
 
     @time get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
 
     x = zeros(Float64, 2 * nVars + nEErrors + 1)
     @time derivs = ForwardDiff.sparse_jacobian(get_residuals, x)
-#return derivs
-    nstates = nVars # n_states(m)
+
+    nstates = nVars    # n_states(m)
     n_s_exp = nEErrors # n_shocks_expectational(m)
-    n_s_exo = n_Z # n_shocks_exogenous(m)
-    #vars = zeros(Float64, 2 * nstates + n_s_exp + n_s_exo)
+    n_s_exo = n_Z      # n_shocks_exogenous(m)
+
+    # vars = zeros(Float64, 2 * nstates + n_s_exp + n_s_exo)
 
     Γ1 = -derivs[:, 1:nstates]
     Γ0 =  derivs[:,   nstates +           1:2 * nstates]
     Π  = -derivs[:, 2*nstates +           1:2 * nstates + n_s_exp]
     Ψ  = -derivs[:, 2*nstates + n_s_exp + 1:2 * nstates + n_s_exp + n_s_exo]
-    C  = spzeros(Float64, nstates)
+    C  =  spzeros(Float64, nstates)
 
     if typeof(Ψ) == Vector{Float64}
         Ψ = reshape(Ψ, length(Ψ), n_s_exo)

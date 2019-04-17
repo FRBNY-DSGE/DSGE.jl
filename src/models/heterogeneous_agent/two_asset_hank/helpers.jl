@@ -3,17 +3,14 @@ Solves Hamilton-Jacobi-Bellman equation.
 
 """
 @inline function solve_hjb(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, a_lb::R, ggamma::R,
-                           perm::T, ddeath::R, pam::R, aggZ::Union{R,S}, xxi::R, tau_I::R,
+                           permanent::Bool, ddeath::R, pam::R, aggZ::Union{R,S}, xxi::R, tau_I::R,
                            w::Union{R,S}, trans::R, r_b_vec::Union{Vector{R},Vector{S}},
-                           y::Vector{U}, a::Vector{R}, b::Vector{R},
-                           cost, util, deposit) where {R<:Float64, S, T<:Int, U<:Number}
+                           y::Vector{U}, a::Vector{R}, b::Vector{R}, cost, util, deposit;
+                           Vamin = 0.0, Vbmin = 1e-8) where {R<:Float64, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
     I, J, N = size(V)
-    permanent = (perm==1) ? true : false
-    Vamin = 0.0
-    Vbmin = 1e-8
 
     perm_c = permanent ? ddeath * pam - aggZ : ddeath * pam
     c0_c   = ((1-xxi) - tau_I) * w
@@ -75,7 +72,6 @@ Solves Hamilton-Jacobi-Bellman equation.
         IcFB = max(!validBF, HdFB >= HdBF) * validFB * max(!validBB, HdFB >= HdBB)
         IcBF = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
         IcBB = max(!validFB, HdBB >= HdFB) * validBB * max(!validBF, HdBB >= HdBF)
-        #Ic00 = !validFB * !validBF * !validBB
 
         d[i,j,n] = IcFB * dFB + IcBF * dBF + IcBB * dBB
     end
@@ -83,17 +79,14 @@ Solves Hamilton-Jacobi-Bellman equation.
 end
 
 @inline function solve_hjb_lite(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, a_lb::R, ggamma::R,
-                           perm::T, ddeath::R, pam::R, aggZ::Union{R,S}, xxi::R, tau_I::R,
+                           permanent::Bool, ddeath::R, pam::R, aggZ::Union{R,S}, xxi::R, tau_I::R,
                            w::Union{R,S}, trans::R, r_b_vec::Union{Vector{R},Vector{S}},
-                           y::U, a::Vector{R}, b::Vector{R},
-                           cost, util, deposit) where {R<:Float64, S, T<:Int, U<:Number}
+                           y::U, a::Vector{R}, b::Vector{R}, cost, util, deposit;
+                           Vamin = 0.0, Vbmin = 1e-8) where {R<:Float64, S, T<:Int, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
     I, J = size(V)
-    permanent = (perm==1) ? true : false
-    Vamin = 0.0
-    Vbmin = 1e-8
 
     perm_c = permanent ? ddeath * pam - aggZ : ddeath * pam
     c0_c   = ((1-xxi) - tau_I) * w
@@ -155,7 +148,6 @@ end
         IcFB = max(!validBF, HdFB >= HdBF) * validFB * max(!validBB, HdFB >= HdBB)
         IcBF = max(!validFB, HdBF >= HdFB) * validBF * max(!validBB, HdBF >= HdBB)
         IcBB = max(!validFB, HdBB >= HdFB) * validBB * max(!validBF, HdBB >= HdBF)
-        Ic00 = !validFB * !validBF * !validBB
 
         d[i,j] = IcFB * dFB + IcBF * dBF + dBB * IcBB
     end
@@ -189,6 +181,742 @@ end
         Vn_new[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
     end
     return Vn_new
+end
+
+@inline function set_grids(a, b, a_g, b_g, y, r_b, r_b_borr)
+    I   = length(b)
+    J   = length(a)
+    I_g = length(b_g)
+    J_g = length(a_g)
+    N   = length(y)
+
+    b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
+    a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
+    y_grid    = permutedims(repeat(y, 1, I, J), [2 3 1])
+    r_b_grid  = r_b .* (b_grid .>= 0) + r_b_borr .* (b_grid .< 0)
+
+    dbf_grid            = Array{Float64}(undef, I,J,N)
+    dbb_grid            = Array{Float64}(undef, I,J,N)
+    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
+    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
+
+    daf_grid            = Array{Float64}(undef, I, J, N)
+    dab_grid            = Array{Float64}(undef, I, J, N)
+    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
+    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    dab_grid[:,1,:]     = dab_grid[:,2,:]
+
+    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
+    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
+    db_tilde[end] = 0.5*dbb_grid[end,1,1]
+    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
+    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
+    da_tilde[end] = 0.5*dab_grid[1,end,1]
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
+    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
+
+    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
+    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
+    y_g_grid     = permutedims(repeat(y, 1, I_g, J_g), [2 3 1])
+    r_b_g_grid   = r_b .* (b_g_grid .>= 0) + r_b_borr .* (b_g_grid .< 0)
+
+    dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
+    dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
+    dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
+
+    daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
+    dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
+
+    db_g_tilde       = 0.5*(dbb_g_grid[:,1,1] + dbf_g_grid[:,1,1])
+    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1,1]
+    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1,1]
+    da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
+    da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
+    da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+
+    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
+
+    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
+
+    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid
+end
+
+
+@inline function set_grids_lite(a, b, a_g, b_g, N)
+    I   = length(b)
+    J   = length(a)
+    I_g = length(b_g)
+    J_g = length(a_g)
+
+    b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
+    a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
+
+    dbf_grid            = Array{Float64}(undef, I,J,N)
+    dbb_grid            = Array{Float64}(undef, I,J,N)
+    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
+    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
+    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
+
+    daf_grid            = Array{Float64}(undef, I, J, N)
+    dab_grid            = Array{Float64}(undef, I, J, N)
+    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
+    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
+    dab_grid[:,1,:]     = dab_grid[:,2,:]
+
+    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
+    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
+    db_tilde[end] = 0.5*dbb_grid[end,1,1]
+    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
+    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
+    da_tilde[end] = 0.5*dab_grid[1,end,1]
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
+    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
+
+    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
+    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
+
+    dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
+    dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
+    dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
+    dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
+
+    daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
+    dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
+    dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
+    dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
+
+    db_g_tilde       = 0.5*(dbb_g_grid[:,1,1] + dbf_g_grid[:,1,1])
+    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1,1]
+    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1,1]
+    da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
+    da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
+    da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+
+    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
+    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
+
+    return dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde
+end
+
+
+@inline function set_grids_lite2(a, b, a_g, b_g)
+    I   = length(b)
+    J   = length(a)
+    I_g = length(b_g)
+    J_g = length(a_g)
+
+    b_grid    = repeat(b, 1, J)
+    a_grid    = permutedims(repeat(a, 1, I), [2 1])
+
+    dbf_grid            = Array{Float64}(undef, I, J)
+    dbb_grid            = Array{Float64}(undef, I, J)
+    dbf_grid[1:I-1,:] = b_grid[2:I,:] - b_grid[1:I-1,:]
+    dbf_grid[I,:]     = dbf_grid[I-1,:]
+    dbb_grid[2:I,:]   = b_grid[2:I,:] - b_grid[1:I-1,:]
+    dbb_grid[1,:]     = dbb_grid[2,:]
+
+    daf_grid            = Array{Float64}(undef, I, J)
+    dab_grid            = Array{Float64}(undef, I, J)
+    daf_grid[:,1:J-1] = a_grid[:,2:J] - a_grid[:,1:J-1]
+    daf_grid[:,J]     = daf_grid[:,J-1]
+    dab_grid[:,2:J]   = a_grid[:,2:J] - a_grid[:,1:J-1]
+    dab_grid[:,1]     = dab_grid[:,2]
+
+    db_tilde      = 0.5*(dbb_grid[:,1] + dbf_grid[:,1])
+    db_tilde[1]   = 0.5*dbf_grid[1,1]
+    db_tilde[end] = 0.5*dbb_grid[end,1]
+    da_tilde      = 0.5*(dab_grid[1,:] + daf_grid[1,:])
+    da_tilde[1]   = 0.5 * daf_grid[1,1]
+    da_tilde[end] = 0.5*dab_grid[1,end]
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(dab_tilde, I, J)
+    dab_tilde_mat  = spdiagm(0 => vec(dab_tilde))
+
+    b_g_grid     = repeat(b_g, 1, J_g)
+    a_g_grid     = permutedims(repeat(a_g, 1, I_g), [2 1])
+
+    dbf_g_grid = Array{Float64}(undef, I_g, J_g)
+    dbf_g_grid[1:I_g-1,:] = b_g_grid[2:I_g,:] - b_g_grid[1:I_g-1,:]
+    dbf_g_grid[I_g,:] = dbf_g_grid[I_g-1,:]
+    dbb_g_grid = Array{Float64}(undef, I_g, J_g)
+    dbb_g_grid[2:I_g,:] = b_g_grid[2:I_g,:] - b_g_grid[1:I_g-1,:]
+    dbb_g_grid[1,:] = dbb_g_grid[2,:]
+
+    daf_g_grid = Array{Float64}(undef, I_g, J_g)
+    daf_g_grid[:,1:J_g-1] = a_g_grid[:,2:J_g] - a_g_grid[:,1:J_g-1]
+    daf_g_grid[:,J_g]     = daf_g_grid[:,J_g-1]
+    dab_g_grid = Array{Float64}(undef, I_g, J_g)
+    dab_g_grid[:,2:J_g] = a_g_grid[:,2:J_g] - a_g_grid[:,1:J_g-1]
+    dab_g_grid[:,1]     = dab_g_grid[:,2]
+
+    db_g_tilde       = 0.5*(dbb_g_grid[:,1] + dbf_g_grid[:,1])
+    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1]
+    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1]
+    da_g_tilde       = 0.5*(dab_g_grid[1,:] + daf_g_grid[1,:])
+    da_g_tilde[1]    = 0.5*daf_g_grid[1,1]
+    da_g_tilde[end]  = 0.5*dab_g_grid[1,end]
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+
+    dab_g_tilde_grid = reshape(dab_g_tilde, I_g, J_g)
+    dab_g_tilde_mat  = spdiagm(0 => vec(dab_g_tilde))
+
+    return dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde
+end
+
+
+"""
+```
+@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
+```
+Instantiates necessary difference vectors.
+"""
+@inline function set_vectors(a::Vector{T}, b::Vector{T}, a_g::Vector{T}, b_g::Vector{T},
+                             N::Int) where {T<:Float64}
+
+    I, J     = length(b),   length(a)
+    I_g, J_g = length(b_g), length(a_g)
+
+    dbf = similar(b)
+    dbf[1:I-1] = b[2:I] - b[1:I-1]
+    dbf[I]     = dbf[I-1]
+
+    dbb = similar(b)
+    dbb[2:I] = b[2:I] - b[1:I-1]
+    dbb[1]   = dbb[2]
+
+    daf = similar(a)
+    daf[1:J-1] = a[2:J] - a[1:J-1]
+    daf[J]     = daf[J-1]
+
+    dab = similar(a)
+    dab[2:J] = a[2:J] - a[1:J-1]
+    dab[1]   = dab[2]
+
+    db_tilde = 0.5*(dbb + dbf)
+    db_tilde[1] = 0.5*(dbf[1])
+    db_tilde[end] = 0.5*(dbb[end])
+
+    da_tilde = 0.5*(dab + daf)
+    da_tilde[1] = 0.5*(daf[1])
+    da_tilde[end] = 0.5*(dab[end])
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
+    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
+
+    dbf_g = similar(b_g)
+    dbf_g[1:I_g-1] = b_g[2:I_g] - b_g[1:I_g-1]
+    dbf_g[I_g] = dbf_g[I_g-1]
+
+    dbb_g = similar(b_g)
+    dbb_g[2:I_g] = b_g[2:I_g] - b_g[1:I_g-1]
+    dbb_g[1] = dbb_g[2]
+
+    daf_g = similar(a_g)
+    daf_g[1:J_g-1] = a_g[2:J_g] - a_g[1:J_g-1]
+    daf_g[J_g] = daf_g[J_g-1]
+
+    dab_g = similar(a_g)
+    dab_g[2:J_g] = a_g[2:J_g] - a_g[1:J_g-1]
+    dab_g[1] = dab_g[2]
+
+    db_g_tilde       = 0.5*(dbb_g + dbf_g)
+    db_g_tilde[1]    = 0.5*dbf_g[1]
+    db_g_tilde[end]  = 0.5*dbb_g[end]
+
+    da_g_tilde       = 0.5*(dab_g + daf_g)
+    da_g_tilde[1]    = 0.5*daf_g[1]
+    da_g_tilde[end]  = 0.5*dab_g[end]
+
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
+    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
+
+    return dab, dab_g, dab_tilde, dab_g_tilde, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
+end
+
+"""
+```
+@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
+```
+Instantiates necessary difference vectors.
+"""
+@inline function set_vectors_lite(a, b, a_g, b_g, r_b, r_b_borr)
+    I, J = length(b), length(a)
+    I_g, J_g = length(b_g), length(a_g)
+
+    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
+    r_b_g_vec = r_b .* (b_g .>= 0) + r_b_borr .* (b_g .< 0)
+
+    dbf = similar(b)
+    dbf[1:I-1] = b[2:I] - b[1:I-1]
+    dbf[I]     = dbf[I-1]
+
+    dbb = similar(b)
+    dbb[2:I] = b[2:I] - b[1:I-1]
+    dbb[1]   = dbb[2]
+
+    daf = similar(a)
+    daf[1:J-1] = a[2:J] - a[1:J-1]
+    daf[J]     = daf[J-1]
+
+    dab = similar(a)
+    dab[2:J] = a[2:J] - a[1:J-1]
+    dab[1]   = dab[2]
+
+    db_tilde = 0.5*(dbb + dbf)
+    db_tilde[1] = 0.5*(dbf[1])
+    db_tilde[end] = 0.5*(dbb[end])
+
+    da_tilde = 0.5*(dab + daf)
+    da_tilde[1] = 0.5*(daf[1])
+    da_tilde[end] = 0.5*(dab[end])
+
+    dab_tilde      = kron(da_tilde, db_tilde)
+    dab_tilde_grid = reshape(dab_tilde, I, J)
+    dab_tilde_mat  = spdiagm(0 => vec(dab_tilde))
+
+    dbf_g = similar(b_g)
+    dbf_g[1:I_g-1] = b_g[2:I_g] - b_g[1:I_g-1]
+    dbf_g[I_g] = dbf_g[I_g-1]
+
+    dbb_g = similar(b_g)
+    dbb_g[2:I_g] = b_g[2:I_g] - b_g[1:I_g-1]
+    dbb_g[1] = dbb_g[2]
+
+    daf_g = similar(a_g)
+    daf_g[1:J_g-1] = a_g[2:J_g] - a_g[1:J_g-1]
+    daf_g[J_g] = daf_g[J_g-1]
+
+    dab_g = similar(a_g)
+    dab_g[2:J_g] = a_g[2:J_g] - a_g[1:J_g-1]
+    dab_g[1] = dab_g[2]
+
+    db_g_tilde       = 0.5*(dbb_g + dbf_g)
+    db_g_tilde[1]    = 0.5*dbf_g[1]
+    db_g_tilde[end]  = 0.5*dbb_g[end]
+
+    da_g_tilde       = 0.5*(dab_g + daf_g)
+    da_g_tilde[1]    = 0.5*daf_g[1]
+    da_g_tilde[end]  = 0.5*dab_g[end]
+
+    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+    dab_g_tilde_grid = reshape(dab_g_tilde,I_g, J_g)
+    dab_g_tilde_mat  = spdiagm(0 => vec(dab_g_tilde))
+
+    return r_b_vec, r_b_g_vec, daf, daf_g, dab, dab_g, dab_tilde, dab_g_tilde, dbf, dbf_g, dbb, dbb_g, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
+end
+
+
+@inline function transition(ddeath::S, pam::S, xxi::S, w::R, chi0::S, chi1::S, chi2::S, a_lb::S,
+                            r_a::R, y::Vector{T}, d::Union{Array{S,3},Array{T,3}},
+                            d_g::Union{Array{S,3},Array{T,3}},
+                            s::Union{Array{S,3},Array{T,3}}, s_g::Union{Array{S,3},Array{T,3}},
+                            a::Vector{S}, a_g::Vector{S}, b::Vector{S},
+                            b_g::Vector{S}) where {S<:AbstractFloat, R<:Number, T<:Number}
+    I, J, N  = size(d)
+    I_g, J_g = size(d_g)
+
+    chi  = Array{Float64,3}(undef, I,J,N)
+    yy   = Array{Float64,3}(undef, I,J,N)
+    zeta = Array{Float64,3}(undef, I,J,N)
+
+    X = Array{Float64,3}(undef, I,J,N)
+    Y = Array{Float64,3}(undef, I,J,N)
+    Z = Array{Float64,3}(undef, I,J,N)
+
+    chiu  = Array{Float64,3}(undef, I_g,J_g,N)
+    yyu   = Array{Float64,3}(undef, I_g,J_g,N)
+    zetau = Array{Float64,3}(undef, I_g,J_g,N)
+
+    Xu = Array{Float64,3}(undef, I_g,J_g,N)
+    Yu = Array{Float64,3}(undef, I_g,J_g,N)
+    Zu = Array{Float64,3}(undef, I_g,J_g,N)
+
+    α    = (r_a + ddeath*pam)
+    xxiw = xxi * w
+
+    for i=1:I, j=1:J, n=1:N
+        # compute all drifts
+        adrift = a[j] * α + xxiw * y[n]
+        bdrift = -d[i,j,n] - adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb)
+
+        chi[i,j,n]  = (j==1) ? 0.0 : -(min(d[i,j,n],0) + min(adrift, 0)) / (a[j] - a[j-1])
+        zeta[i,j,n] = (j==J) ? 0.0 :  (max(d[i,j,n],0) + max(adrift, 0)) / (a[j+1] - a[j])
+
+        X[i,j,n] = (i==1) ? 0.0 : -(min(bdrift, 0) + min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z[i,j,n] = (i==I) ? 0.0 :  (max(bdrift, 0) + max(s[i,j,n], 0)) / (b[i+1] - b[i])
+    end
+    yy = -chi .- zeta
+    Y  = -X .- Z
+
+    centdiag = reshape(yy,I*J,N)
+    lowdiag  = reshape(chi,I*J,N)
+    lowdiag  = circshift(lowdiag,-I)
+    updiag   = reshape(zeta,I*J,N)
+    updiag   = circshift(updiag,I)
+
+    centdiag = reshape(centdiag,I*J*N,1)
+    updiag   = reshape(updiag,I*J*N,1)
+    lowdiag  = reshape(lowdiag,I*J*N,1)
+
+    aa = spdiagm(-I => vec(lowdiag)[1:end-I], 0 => vec(centdiag), I => vec(updiag)[I+1:end])
+
+    centdiag = reshape(Y,I*J,N)
+    lowdiag  = reshape(X,I*J,N)
+    lowdiag  = circshift(lowdiag,-1)
+    updiag   = reshape(Z,I*J,N)
+    updiag   = circshift(updiag,1)
+
+    centdiag = reshape(centdiag,I*J*N,1)
+    updiag   = reshape(updiag,I*J*N,1)
+    lowdiag  = reshape(lowdiag,I*J*N,1)
+
+    bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
+
+    for i=1:I_g, j=1:J_g, n=1:N
+        audrift = d_g[i,j,n] + a_g[j] * α + xxiw * y[n]
+        budrift = s_g[i,j,n] - d_g[i,j,n] -
+            adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb)
+
+        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift,0) / (a_g[j] - a_g[j-1])
+        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift,0) / (a_g[j+1] - a_g[j])
+
+        Xu[i,j,n] = (i==1)      ? 0.0 : -min(budrift,0) / (b_g[i] - b_g[i-1])
+        Zu[i,j,n] = (i==I_g)    ? 0.0 :  max(budrift,0) / (b_g[i+1] - b_g[i])
+    end
+
+    yyu = -(chiu .+ zetau)
+    Yu  = -(Xu .+ Zu)
+
+    centdiagu = reshape(yyu, I_g * J_g, N)
+    lowdiagu  = reshape(chiu,I_g * J_g, N)
+    lowdiagu  = circshift(lowdiagu, -I_g)
+    updiagu   = reshape(zetau, I_g * J_g, N)
+    updiagu   = circshift(updiagu, I_g)
+
+    centdiagu = reshape(centdiagu,I_g * J_g * N, 1)
+    updiagu   = reshape(updiagu,  I_g * J_g * N, 1)
+    lowdiagu  = reshape(lowdiagu, I_g * J_g * N, 1)
+
+    aau = spdiagm(0 => vec(centdiagu), -I_g => vec(lowdiagu)[1:end-I_g],
+                  I_g => vec(updiagu)[I_g+1:end])
+
+    centdiagu = reshape(Yu,I_g*J_g,N)
+    lowdiagu = reshape(Xu,I_g*J_g,N)
+    lowdiagu = circshift(lowdiagu,-1)
+    updiagu = reshape(Zu,I_g*J_g,N)
+    updiagu = circshift(updiagu,1)
+
+    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
+    updiagu   = reshape(updiagu,I_g*J_g*N,1)
+    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
+
+    bbu = spdiagm(0 => vec(centdiagu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
+
+    return aa, bb, aau, bbu
+end
+
+@inline function transition_deriva2(perm::T, ddeath::R, pam::R, xxi::R, w::S,
+                                    a_lb::R, d, d_g, s, s_g, r_a, aggZ::S,
+                                    a, a_g, b, b_g, y, lambda,
+                                    cost, util, deposit) where {R<:AbstractFloat, S, T}
+    I, J, N  = size(d)
+    I_g, J_g = size(d_g)
+    permanent = (perm==1) ? true : false
+
+    # Compute drifts for HJB
+    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
+
+    X, Z = similar(d), similar(d)
+    #aa   = spzeros(eltype(d), I*J*N, I*J*N)
+    #bb   = spzeros(eltype(d), I*J*N, I*J*N)
+    #A   = kron(lambda, my_speye(eltype(d), I*J))
+    A = #=kron(lambda, my_speye(I*J))=#spzeros(eltype(d), I*J*N, I*J*N)
+    f_ind(x, my_J, n) = (x + (n-1)) % my_J + 1
+    #chi_dict  = Dict(f_ind.(1:J, J, 1)   .=> 1:J)
+    #zeta_dict = Dict(f_ind.(1:J, J, J-1) .=> 1:J)
+
+    #for n=1:N
+    #    A[1+(n-1)*I*J:n*I*J, 1+(n-1)*I*J:n*I*J] = lambda
+    #end
+
+    for i=1:I, j=1:J, n=1:N
+
+        α = a[j] * (r_a + perm_const) + (xxi * w * real(y[n]))
+
+        chi  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
+
+        ind      = (I*J)*(n-1) + I*(j-1) + i
+        chi_ind  = I*J*(n-1) + I*(f_ind(j,J,J-1) - 1) + i#(chi_dict[j]-1) + i
+        zeta_ind = I*J*(n-1) + I*(f_ind(j,J,1) - 1) + i#(zeta_dict[j]-1) + i
+
+        A[ind, ind] += -(chi + zeta)
+
+        if (chi_ind  <= I*J*N - I) A[chi_ind  + I, chi_ind]  += chi  end
+        if (zeta_ind >= I + 1)     A[zeta_ind - I, zeta_ind] += zeta end
+
+        #X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
+        #                          adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+        #                      min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        #Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
+        #                         adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
+        #                     max(s[i,j,n], 0)) / (b[i+1] - b[i])
+
+        X = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
+                              min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z = (i==I) ? 0.0 : (max(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
+                             max(s[i,j,n], 0)) / (b[i+1] - b[i])
+
+        A[ind, ind] += -(X + Z)
+
+        ind      = (I*J)*(n-1) + I*(j-1) + i
+        X_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,I*J-1) #I*(chi_dict[j]-1) + i
+        Z_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,1)     #I*(zeta_dict[j]-1) + i
+        if (X_ind <= I*J*N - 1) A[X_ind + 1, X_ind] += X end
+        if (Z_ind >= 2)         A[Z_ind - 1, Z_ind] += Z end
+    end
+#=
+    Y = -(X .+ Z)
+
+    X  = reshape(X, I*J, N)
+    X  = circshift(X, -1)
+    Z  = reshape(Z, I*J, N)
+    Z  = circshift(Z, 1)
+
+    bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
+    @assert bb == bb2
+=#
+    #aau = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
+    #bbu = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
+    AT = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
+
+    for i=1:I_g, j=1:J_g, n=1:N
+
+        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
+        audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
+            (permanent ? aggZ * a_g[j] : 0.0)
+
+        budrift = s_g[i,j,n] - d_g[i,j,n] - cost(d_g[i,j,n], max(a_g[j], a_lb)) -
+            (permanent ? aggZ * b_g[i] : 0.0)
+
+        chiu  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        zetau = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
+
+        ind       = (I_g*J_g)*(n-1) + I_g*(j-1) + i
+        chiu_ind  = I_g*J_g*(n-1) + I_g *(f_ind(j,J_g,J_g-1)-1) + i
+        zetau_ind = I_g*J_g*(n-1) + I_g*(f_ind(j,J_g,1)-1) + i
+
+        AT[ind, ind] = -(chiu + zetau)
+        if (chiu_ind  <= I_g*J_g*N - I_g) AT[chiu_ind  + I_g, chiu_ind]  = chiu  end
+        if (zetau_ind >= I_g + 1)         AT[zetau_ind - I_g, zetau_ind] = zetau end
+
+        Xu = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Zu = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
+
+        Xu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, I_g*J_g - 1)
+        Zu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, 1)
+
+        AT[ind, ind] += -(Xu + Zu)
+        if (Xu_ind <= I_g*J_g*N - 1) AT[Xu_ind + 1, Xu_ind] += Xu  end
+        if (Zu_ind >= 2)             AT[Zu_ind - 1, Zu_ind] += Zu end
+
+    end
+    return A, AT
+end
+
+@inline function transition_deriva(permanent::T, ddeath::R, pam::R, xxi::R, w::S,
+                                   a_lb::R, aggZ::S, d::Array{U,3}, d_g::Array{U,3},
+                                   s::Array{U,3}, s_g::Array{U,3},
+                                   r_a::U, a::Array{R,1}, a_g::Array{R,1}, b::Array{R,1},
+                                   b_g::Array{R,1}, y::Vector{U},
+                                   cost, util, deposit) where {R<:AbstractFloat, S<:Number,
+                                                               T<:Bool, U<:Number}
+    I, J, N     = size(d)
+    I_g, J_g, _ = size(d_g)
+
+    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
+
+    chi, zeta = similar(d), similar(d)
+    X, Z      = similar(d), similar(d)
+
+    for i=1:I, j=1:J, n=1:N
+        α = a[j] * (r_a + perm_const) + (xxi * w * real(y[n]))
+
+        chi[i,j,n]  = (j==1) ? 0.0 : -(min(d[i,j,n], 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta[i,j,n] = (j==J) ? 0.0 :  (max(d[i,j,n], 0) + max(α, 0)) / (a[j+1] - a[j])
+
+        X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
+                                    min(s[i,j,n], 0)) / (b[i] - b[i-1])
+        Z[i,j,n] = (i==I) ? 0.0 :  (max(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
+                                    max(s[i,j,n], 0)) / (b[i+1] - b[i])
+    end
+    yyy = -vec(X .+ Z .+ chi .+ zeta)
+
+    chi  = reshape(chi, I*J, N)
+    chi  = circshift(chi, -I)
+    zeta = reshape(zeta, I*J, N)
+    zeta = circshift(zeta, I)
+
+    X  = reshape(X, I*J, N)
+    X  = circshift(X, -1)
+    Z  = reshape(Z, I*J, N)
+    Z  = circshift(Z, 1)
+
+    A = spdiagm(0 => yyy, I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I],
+                          1 => vec(Z)[2:end],      -1 => vec(X)[1:end-1])
+
+    chiu, zetau = similar(d_g), similar(d_g)
+    Xu, Zu      = similar(d_g), similar(d_g)
+    for i=1:I_g, j=1:J_g, n=1:N
+        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
+        audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
+            (permanent == 1 ? aggZ * a_g[j] : 0.0)
+
+        budrift = s_g[i,j,n] - d_g[i,j,n] - cost(d_g[i,j,n], max(a_g[j], a_lb)) -
+            (permanent ? aggZ * b_g[i] : 0.0)
+
+        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
+
+        Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
+    end
+    yyyu  = -vec(chiu .+ zetau .+ Xu .+ Zu)
+
+    chiu  = reshape(chiu,I_g*J_g,N)
+    chiu  = circshift(chiu,-I_g)
+    zetau = reshape(zetau,I_g*J_g,N)
+    zetau = circshift(zetau,I_g)
+
+    Xu = reshape(Xu, I_g*J_g, N)
+    Xu = circshift(Xu, -1)
+    Zu = reshape(Zu, I_g*J_g, N)
+    Zu = circshift(Zu, 1)
+
+    AT = spdiagm(0 => yyyu, I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g],
+                            1 => vec(Zu)[2:end],          -1 => vec(Xu)[1:end-1])
+    return A, AT
+end
+
+@inline function transition_deriva_lite(permanent::T, ddeath::R, pam::R, xxi::R, w::S,
+                                        a_lb::R, aggZ::S, d::Array{U,2}, d_g::Array{U,2},
+                                        s::Array{U,2}, s_g::Array{U,2},
+                                        r_a::U, a::Array{R,1}, a_g::Array{R,1}, b::Array{R,1},
+                                        b_g::Array{R,1}, y::U,
+                                        cost, util, deposit) where {R<:AbstractFloat, S<:Number,
+                                                                    T<:Bool, U<:Number}
+    I, J = size(d)
+    I_g, J_g = size(d_g)
+
+    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
+
+    chi, zeta = similar(d), similar(d)
+    X, Z      = similar(d), similar(d)
+    for i=1:I, j=1:J
+        α = a[j] * (r_a + perm_const) + (xxi * w * real(y))
+
+        chi[i,j]  = (j==1) ? 0.0 : -(min(d[i,j], 0) + min(α, 0)) / (a[j]   - a[j-1])
+        zeta[i,j] = (j==J) ? 0.0 :  (max(d[i,j], 0) + max(α, 0)) / (a[j+1] - a[j])
+
+        X[i,j] = (i==1) ? 0.0 : -(min(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
+                                    min(s[i,j], 0)) / (b[i] - b[i-1])
+        Z[i,j] = (i==I) ? 0.0 :  (max(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
+                                    max(s[i,j], 0)) / (b[i+1] - b[i])
+    end
+    yyy = -vec(X .+ Z .+ chi .+ zeta)
+
+    chi  = reshape(chi, I*J)
+    chi  = circshift(chi, -I)
+    zeta = reshape(zeta, I*J)
+    zeta = circshift(zeta, I)
+
+    X  = reshape(X, I*J)
+    X  = circshift(X, -1)
+    Z  = reshape(Z, I*J)
+    Z  = circshift(Z, 1)
+
+    A = spdiagm(0 => yyy, I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I],
+                          1 => vec(Z)[2:end],      -1 => vec(X)[1:end-1])
+
+    chiu, zetau = similar(d_g), similar(d_g)
+    Xu, Zu      = similar(d_g), similar(d_g)
+    for i=1:I_g, j=1:J_g
+        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
+        audrift = d_g[i,j] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y -
+            (permanent == 1 ? aggZ * a_g[j] : 0.0)
+
+        budrift = s_g[i,j] - d_g[i,j] - cost(d_g[i,j], max(a_g[j], a_lb)) -
+            (permanent ? aggZ * b_g[i] : 0.0)
+
+        chiu[i,j]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
+        zetau[i,j] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
+
+        Xu[i,j] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
+        Zu[i,j] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
+    end
+    yyyu  = -vec(chiu .+ zetau .+ Xu .+ Zu)
+
+    chiu  = reshape(chiu,I_g*J_g)
+    chiu  = circshift(chiu,-I_g)
+    zetau = reshape(zetau,I_g*J_g)
+    zetau = circshift(zetau,I_g)
+
+    Xu = reshape(Xu, I_g*J_g)
+    Xu = circshift(Xu, -1)
+    Zu = reshape(Zu, I_g*J_g)
+    Zu = circshift(Zu, 1)
+
+    AT = spdiagm(0 => yyyu, I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g],
+                            1 => vec(Zu)[2:end],          -1 => vec(Xu)[1:end-1])
+    return A, AT
+end
+
+
+@inline function construct_problem_functions(γ::T, χ0::R, χ1::R, χ2::R,
+                                             a_lb::R) where {T<:Number,R<:Number}
+
+    @inline util(c::S) where {S<:Number} = 1.0 / (1.0 - γ) * (c ^ (1-γ) - 1.0)
+    if γ == 1.0
+        @inline util(c::S) where {S<:Number} = log(c)
+    end
+
+    @inline function deposit(Va, Vb, a)
+        indx_plus  = ((Va / Vb - 1 - χ0) > 0)
+        indx_minus = ((Va / Vb - 1 + χ0) < 0)
+        return χ1 * (max(Va / Vb - 1 - χ0, 0)) ^ (1/χ2) * a * indx_plus +
+            (-χ1) * (max(-(Va / Vb - 1) - χ0, 0)) ^ (1/χ2) * a * indx_minus
+    end
+
+    @inline function cost(d, a)
+        d_scaled = abs(d / max(a, a_lb))
+        return max(a, a_lb) * (χ0 * (d_scaled) + 1.0 / (1.0 + χ2) * ((d_scaled)^(1+χ2) * χ1^(-χ2)))
+    end
+    return util, deposit, cost
 end
 
 """
@@ -526,755 +1254,6 @@ Function to initialize liquid asset grid.
 
     return I_neg, bmin, bmax, b, b_g, b_g_0pos
 end
-
-@inline function set_grids(a, b, a_g, b_g, y, r_b, r_b_borr)
-    I   = length(b)
-    J   = length(a)
-    I_g = length(b_g)
-    J_g = length(a_g)
-    N   = length(y)
-
-    b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
-    a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
-    y_grid    = permutedims(repeat(y, 1, I, J), [2 3 1])
-    r_b_grid  = r_b .* (b_grid .>= 0) + r_b_borr .* (b_grid .< 0)
-
-    dbf_grid            = Array{Float64}(undef, I,J,N)
-    dbb_grid            = Array{Float64}(undef, I,J,N)
-    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
-    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
-
-    daf_grid            = Array{Float64}(undef, I, J, N)
-    dab_grid            = Array{Float64}(undef, I, J, N)
-    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
-    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    dab_grid[:,1,:]     = dab_grid[:,2,:]
-
-    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
-    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
-    db_tilde[end] = 0.5*dbb_grid[end,1,1]
-    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
-    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
-    da_tilde[end] = 0.5*dab_grid[1,end,1]
-
-    dab_tilde      = kron(da_tilde, db_tilde)
-    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
-    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
-
-    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
-    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
-    y_g_grid     = permutedims(repeat(y, 1, I_g, J_g), [2 3 1])
-    r_b_g_grid   = r_b .* (b_g_grid .>= 0) + r_b_borr .* (b_g_grid .< 0)
-
-    dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
-    dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
-    dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
-    dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
-    dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
-
-    daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
-    daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
-    dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
-    dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
-
-    db_g_tilde       = 0.5*(dbb_g_grid[:,1,1] + dbf_g_grid[:,1,1])
-    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1,1]
-    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1,1]
-    da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
-    da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
-    da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
-    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
-
-    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
-
-    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
-
-    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid
-end
-
-
-@inline function set_grids_lite(a, b, a_g, b_g, N)
-    I   = length(b)
-    J   = length(a)
-    I_g = length(b_g)
-    J_g = length(a_g)
-
-    b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
-    a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
-
-    dbf_grid            = Array{Float64}(undef, I,J,N)
-    dbb_grid            = Array{Float64}(undef, I,J,N)
-    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
-    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
-
-    daf_grid            = Array{Float64}(undef, I, J, N)
-    dab_grid            = Array{Float64}(undef, I, J, N)
-    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
-    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    dab_grid[:,1,:]     = dab_grid[:,2,:]
-
-    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
-    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
-    db_tilde[end] = 0.5*dbb_grid[end,1,1]
-    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
-    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
-    da_tilde[end] = 0.5*dab_grid[1,end,1]
-
-    dab_tilde      = kron(da_tilde, db_tilde)
-    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
-    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
-
-    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
-    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
-
-    dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
-    dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
-    dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
-    dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
-    dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
-
-    daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
-    daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
-    dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
-    dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
-    dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
-
-    db_g_tilde       = 0.5*(dbb_g_grid[:,1,1] + dbf_g_grid[:,1,1])
-    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1,1]
-    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1,1]
-    da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
-    da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
-    da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
-    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
-
-    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
-    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
-
-    return dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde
-end
-
-
-@inline function set_grids_lite2(a, b, a_g, b_g)
-    I   = length(b)
-    J   = length(a)
-    I_g = length(b_g)
-    J_g = length(a_g)
-
-    b_grid    = repeat(b, 1, J)
-    a_grid    = permutedims(repeat(a, 1, I), [2 1])
-
-    dbf_grid            = Array{Float64}(undef, I, J)
-    dbb_grid            = Array{Float64}(undef, I, J)
-    dbf_grid[1:I-1,:] = b_grid[2:I,:] - b_grid[1:I-1,:]
-    dbf_grid[I,:]     = dbf_grid[I-1,:]
-    dbb_grid[2:I,:]   = b_grid[2:I,:] - b_grid[1:I-1,:]
-    dbb_grid[1,:]     = dbb_grid[2,:]
-
-    daf_grid            = Array{Float64}(undef, I, J)
-    dab_grid            = Array{Float64}(undef, I, J)
-    daf_grid[:,1:J-1] = a_grid[:,2:J] - a_grid[:,1:J-1]
-    daf_grid[:,J]     = daf_grid[:,J-1]
-    dab_grid[:,2:J]   = a_grid[:,2:J] - a_grid[:,1:J-1]
-    dab_grid[:,1]     = dab_grid[:,2]
-
-    db_tilde      = 0.5*(dbb_grid[:,1] + dbf_grid[:,1])
-    db_tilde[1]   = 0.5*dbf_grid[1,1]
-    db_tilde[end] = 0.5*dbb_grid[end,1]
-    da_tilde      = 0.5*(dab_grid[1,:] + daf_grid[1,:])
-    da_tilde[1]   = 0.5 * daf_grid[1,1]
-    da_tilde[end] = 0.5*dab_grid[1,end]
-
-    dab_tilde      = kron(da_tilde, db_tilde)
-    dab_tilde_grid = reshape(dab_tilde, I, J)
-    dab_tilde_mat  = spdiagm(0 => vec(dab_tilde))
-
-    b_g_grid     = repeat(b_g, 1, J_g)
-    a_g_grid     = permutedims(repeat(a_g, 1, I_g), [2 1])
-
-    dbf_g_grid = Array{Float64}(undef, I_g, J_g)
-    dbf_g_grid[1:I_g-1,:] = b_g_grid[2:I_g,:] - b_g_grid[1:I_g-1,:]
-    dbf_g_grid[I_g,:] = dbf_g_grid[I_g-1,:]
-    dbb_g_grid = Array{Float64}(undef, I_g, J_g)
-    dbb_g_grid[2:I_g,:] = b_g_grid[2:I_g,:] - b_g_grid[1:I_g-1,:]
-    dbb_g_grid[1,:] = dbb_g_grid[2,:]
-
-    daf_g_grid = Array{Float64}(undef, I_g, J_g)
-    daf_g_grid[:,1:J_g-1] = a_g_grid[:,2:J_g] - a_g_grid[:,1:J_g-1]
-    daf_g_grid[:,J_g]     = daf_g_grid[:,J_g-1]
-    dab_g_grid = Array{Float64}(undef, I_g, J_g)
-    dab_g_grid[:,2:J_g] = a_g_grid[:,2:J_g] - a_g_grid[:,1:J_g-1]
-    dab_g_grid[:,1]     = dab_g_grid[:,2]
-
-    db_g_tilde       = 0.5*(dbb_g_grid[:,1] + dbf_g_grid[:,1])
-    db_g_tilde[1]    = 0.5*dbf_g_grid[1,1]
-    db_g_tilde[end]  = 0.5*dbb_g_grid[end,1]
-    da_g_tilde       = 0.5*(dab_g_grid[1,:] + daf_g_grid[1,:])
-    da_g_tilde[1]    = 0.5*daf_g_grid[1,1]
-    da_g_tilde[end]  = 0.5*dab_g_grid[1,end]
-    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
-
-    dab_g_tilde_grid = reshape(dab_g_tilde, I_g, J_g)
-    dab_g_tilde_mat  = spdiagm(0 => vec(dab_g_tilde))
-
-    return dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde
-end
-
-
-"""
-```
-@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
-```
-Instantiates necessary difference vectors.
-"""
-@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
-    I, J = length(b), length(a)
-    I_g, J_g = length(b_g), length(a_g)
-
-    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
-    r_b_g_vec = r_b .* (b_g .>= 0) + r_b_borr .* (b_g .< 0)
-
-    dbf = similar(b)
-    dbf[1:I-1] = b[2:I] - b[1:I-1]
-    dbf[I]     = dbf[I-1]
-
-    dbb = similar(b)
-    dbb[2:I] = b[2:I] - b[1:I-1]
-    dbb[1]   = dbb[2]
-
-    daf = similar(a)
-    daf[1:J-1] = a[2:J] - a[1:J-1]
-    daf[J]     = daf[J-1]
-
-    dab = similar(a)
-    dab[2:J] = a[2:J] - a[1:J-1]
-    dab[1]   = dab[2]
-
-    db_tilde = 0.5*(dbb + dbf)
-    db_tilde[1] = 0.5*(dbf[1])
-    db_tilde[end] = 0.5*(dbb[end])
-
-    da_tilde = 0.5*(dab + daf)
-    da_tilde[1] = 0.5*(daf[1])
-    da_tilde[end] = 0.5*(dab[end])
-
-    dab_tilde      = kron(da_tilde, db_tilde)
-    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
-    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
-
-    dbf_g = similar(b_g)
-    dbf_g[1:I_g-1] = b_g[2:I_g] - b_g[1:I_g-1]
-    dbf_g[I_g] = dbf_g[I_g-1]
-
-    dbb_g = similar(b_g)
-    dbb_g[2:I_g] = b_g[2:I_g] - b_g[1:I_g-1]
-    dbb_g[1] = dbb_g[2]
-
-    daf_g = similar(a_g)
-    daf_g[1:J_g-1] = a_g[2:J_g] - a_g[1:J_g-1]
-    daf_g[J_g] = daf_g[J_g-1]
-
-    dab_g = similar(a_g)
-    dab_g[2:J_g] = a_g[2:J_g] - a_g[1:J_g-1]
-    dab_g[1] = dab_g[2]
-
-    db_g_tilde       = 0.5*(dbb_g + dbf_g)
-    db_g_tilde[1]    = 0.5*dbf_g[1]
-    db_g_tilde[end]  = 0.5*dbb_g[end]
-
-    da_g_tilde       = 0.5*(dab_g + daf_g)
-    da_g_tilde[1]    = 0.5*daf_g[1]
-    da_g_tilde[end]  = 0.5*dab_g[end]
-
-    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
-    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
-    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
-
-    return r_b_vec, r_b_g_vec, daf, daf_g, dab, dab_g, dab_tilde, dab_g_tilde, dbf, dbf_g, dbb, dbb_g, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
-end
-
-"""
-```
-@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
-```
-Instantiates necessary difference vectors.
-"""
-@inline function set_vectors_lite(a, b, a_g, b_g, r_b, r_b_borr)
-    I, J = length(b), length(a)
-    I_g, J_g = length(b_g), length(a_g)
-
-    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
-    r_b_g_vec = r_b .* (b_g .>= 0) + r_b_borr .* (b_g .< 0)
-
-    dbf = similar(b)
-    dbf[1:I-1] = b[2:I] - b[1:I-1]
-    dbf[I]     = dbf[I-1]
-
-    dbb = similar(b)
-    dbb[2:I] = b[2:I] - b[1:I-1]
-    dbb[1]   = dbb[2]
-
-    daf = similar(a)
-    daf[1:J-1] = a[2:J] - a[1:J-1]
-    daf[J]     = daf[J-1]
-
-    dab = similar(a)
-    dab[2:J] = a[2:J] - a[1:J-1]
-    dab[1]   = dab[2]
-
-    db_tilde = 0.5*(dbb + dbf)
-    db_tilde[1] = 0.5*(dbf[1])
-    db_tilde[end] = 0.5*(dbb[end])
-
-    da_tilde = 0.5*(dab + daf)
-    da_tilde[1] = 0.5*(daf[1])
-    da_tilde[end] = 0.5*(dab[end])
-
-    dab_tilde      = kron(da_tilde, db_tilde)
-    dab_tilde_grid = reshape(dab_tilde, I, J)
-    dab_tilde_mat  = spdiagm(0 => vec(dab_tilde))
-
-    dbf_g = similar(b_g)
-    dbf_g[1:I_g-1] = b_g[2:I_g] - b_g[1:I_g-1]
-    dbf_g[I_g] = dbf_g[I_g-1]
-
-    dbb_g = similar(b_g)
-    dbb_g[2:I_g] = b_g[2:I_g] - b_g[1:I_g-1]
-    dbb_g[1] = dbb_g[2]
-
-    daf_g = similar(a_g)
-    daf_g[1:J_g-1] = a_g[2:J_g] - a_g[1:J_g-1]
-    daf_g[J_g] = daf_g[J_g-1]
-
-    dab_g = similar(a_g)
-    dab_g[2:J_g] = a_g[2:J_g] - a_g[1:J_g-1]
-    dab_g[1] = dab_g[2]
-
-    db_g_tilde       = 0.5*(dbb_g + dbf_g)
-    db_g_tilde[1]    = 0.5*dbf_g[1]
-    db_g_tilde[end]  = 0.5*dbb_g[end]
-
-    da_g_tilde       = 0.5*(dab_g + daf_g)
-    da_g_tilde[1]    = 0.5*daf_g[1]
-    da_g_tilde[end]  = 0.5*dab_g[end]
-
-    dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
-    dab_g_tilde_grid = reshape(dab_g_tilde,I_g, J_g)
-    dab_g_tilde_mat  = spdiagm(0 => vec(dab_g_tilde))
-
-    return r_b_vec, r_b_g_vec, daf, daf_g, dab, dab_g, dab_tilde, dab_g_tilde, dbf, dbf_g, dbb, dbb_g, dab_tilde_grid, dab_tilde_mat, dab_g_tilde_grid, dab_g_tilde_mat
-end
-
-
-@inline function transition(ddeath::S, pam::S, xxi::S, w::R, chi0::S, chi1::S, chi2::S, a_lb::S,
-                            r_a::R, y::Vector{T}, d::Union{Array{S,3},Array{T,3}},
-                            d_g::Union{Array{S,3},Array{T,3}},
-                            s::Union{Array{S,3},Array{T,3}}, s_g::Union{Array{S,3},Array{T,3}},
-                            a::Vector{S}, a_g::Vector{S}, b::Vector{S},
-                            b_g::Vector{S}) where {S<:AbstractFloat, R<:Number, T<:Number}
-    I, J, N  = size(d)
-    I_g, J_g = size(d_g)
-
-    chi  = Array{Float64,3}(undef, I,J,N)
-    yy   = Array{Float64,3}(undef, I,J,N)
-    zeta = Array{Float64,3}(undef, I,J,N)
-
-    X = Array{Float64,3}(undef, I,J,N)
-    Y = Array{Float64,3}(undef, I,J,N)
-    Z = Array{Float64,3}(undef, I,J,N)
-
-    chiu  = Array{Float64,3}(undef, I_g,J_g,N)
-    yyu   = Array{Float64,3}(undef, I_g,J_g,N)
-    zetau = Array{Float64,3}(undef, I_g,J_g,N)
-
-    Xu = Array{Float64,3}(undef, I_g,J_g,N)
-    Yu = Array{Float64,3}(undef, I_g,J_g,N)
-    Zu = Array{Float64,3}(undef, I_g,J_g,N)
-
-    α    = (r_a + ddeath*pam)
-    xxiw = xxi * w
-
-    for i=1:I, j=1:J, n=1:N
-        # compute all drifts
-        adrift = a[j] * α + xxiw * y[n]
-        bdrift = -d[i,j,n] - adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb)
-
-        chi[i,j,n]  = (j==1) ? 0.0 : -(min(d[i,j,n],0) + min(adrift, 0)) / (a[j] - a[j-1])
-        zeta[i,j,n] = (j==J) ? 0.0 :  (max(d[i,j,n],0) + max(adrift, 0)) / (a[j+1] - a[j])
-
-        X[i,j,n] = (i==1) ? 0.0 : -(min(bdrift, 0) + min(s[i,j,n], 0)) / (b[i] - b[i-1])
-        Z[i,j,n] = (i==I) ? 0.0 :  (max(bdrift, 0) + max(s[i,j,n], 0)) / (b[i+1] - b[i])
-    end
-    yy = -chi .- zeta
-    Y  = -X .- Z
-
-    centdiag = reshape(yy,I*J,N)
-    lowdiag  = reshape(chi,I*J,N)
-    lowdiag  = circshift(lowdiag,-I)
-    updiag   = reshape(zeta,I*J,N)
-    updiag   = circshift(updiag,I)
-
-    centdiag = reshape(centdiag,I*J*N,1)
-    updiag   = reshape(updiag,I*J*N,1)
-    lowdiag  = reshape(lowdiag,I*J*N,1)
-
-    aa = spdiagm(-I => vec(lowdiag)[1:end-I], 0 => vec(centdiag), I => vec(updiag)[I+1:end])
-
-    centdiag = reshape(Y,I*J,N)
-    lowdiag  = reshape(X,I*J,N)
-    lowdiag  = circshift(lowdiag,-1)
-    updiag   = reshape(Z,I*J,N)
-    updiag   = circshift(updiag,1)
-
-    centdiag = reshape(centdiag,I*J*N,1)
-    updiag   = reshape(updiag,I*J*N,1)
-    lowdiag  = reshape(lowdiag,I*J*N,1)
-
-    bb = spdiagm(0 => vec(centdiag), 1 => vec(updiag)[2:end], -1 => vec(lowdiag)[1:end-1])
-
-    for i=1:I_g, j=1:J_g, n=1:N
-        audrift = d_g[i,j,n] + a_g[j] * α + xxiw * y[n]
-        budrift = s_g[i,j,n] - d_g[i,j,n] -
-            adj_cost_fn(d_g[i,j,n], a_g[j], chi0, chi1, chi2, a_lb)
-
-        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift,0) / (a_g[j] - a_g[j-1])
-        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift,0) / (a_g[j+1] - a_g[j])
-
-        Xu[i,j,n] = (i==1)      ? 0.0 : -min(budrift,0) / (b_g[i] - b_g[i-1])
-        Zu[i,j,n] = (i==I_g)    ? 0.0 :  max(budrift,0) / (b_g[i+1] - b_g[i])
-    end
-
-    yyu = -(chiu .+ zetau)
-    Yu  = -(Xu .+ Zu)
-
-    centdiagu = reshape(yyu, I_g * J_g, N)
-    lowdiagu  = reshape(chiu,I_g * J_g, N)
-    lowdiagu  = circshift(lowdiagu, -I_g)
-    updiagu   = reshape(zetau, I_g * J_g, N)
-    updiagu   = circshift(updiagu, I_g)
-
-    centdiagu = reshape(centdiagu,I_g * J_g * N, 1)
-    updiagu   = reshape(updiagu,  I_g * J_g * N, 1)
-    lowdiagu  = reshape(lowdiagu, I_g * J_g * N, 1)
-
-    aau = spdiagm(0 => vec(centdiagu), -I_g => vec(lowdiagu)[1:end-I_g],
-                     I_g => vec(updiagu)[I_g+1:end])
-
-    centdiagu = reshape(Yu,I_g*J_g,N)
-    lowdiagu = reshape(Xu,I_g*J_g,N)
-    lowdiagu = circshift(lowdiagu,-1)
-    updiagu = reshape(Zu,I_g*J_g,N)
-    updiagu = circshift(updiagu,1)
-
-    centdiagu = reshape(centdiagu,I_g*J_g*N,1)
-    updiagu   = reshape(updiagu,I_g*J_g*N,1)
-    lowdiagu  = reshape(lowdiagu,I_g*J_g*N,1)
-
-    bbu = spdiagm(0 => vec(centdiagu), 1 => vec(updiagu)[2:end], -1 => vec(lowdiagu)[1:end-1])
-
-    return aa, bb, aau, bbu
-end
-
-@inline function transition_deriva2(perm::T, ddeath::R, pam::R, xxi::R, w::S,
-                                    a_lb::R, d, d_g, s, s_g, r_a, aggZ::S,
-                                    a, a_g, b, b_g, y, lambda,
-                                    cost, util, deposit) where {R<:AbstractFloat, S, T}
-    I, J, N  = size(d)
-    I_g, J_g = size(d_g)
-    permanent = (perm==1) ? true : false
-
-    # Compute drifts for HJB
-    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
-
-    X, Z = similar(d), similar(d)
-    #aa   = spzeros(eltype(d), I*J*N, I*J*N)
-    #bb   = spzeros(eltype(d), I*J*N, I*J*N)
-    #A   = kron(lambda, my_speye(eltype(d), I*J))
-    A = #=kron(lambda, my_speye(I*J))=#spzeros(eltype(d), I*J*N, I*J*N)
-    f_ind(x, my_J, n) = (x + (n-1)) % my_J + 1
-    #chi_dict  = Dict(f_ind.(1:J, J, 1)   .=> 1:J)
-    #zeta_dict = Dict(f_ind.(1:J, J, J-1) .=> 1:J)
-
-    #for n=1:N
-    #    A[1+(n-1)*I*J:n*I*J, 1+(n-1)*I*J:n*I*J] = lambda
-    #end
-
-    for i=1:I, j=1:J, n=1:N
-
-        α = a[j] * (r_a + perm_const) + (xxi * w * real(y[n]))
-
-        chi  = (j==1) ? 0.0 : -(min(norm(d[i,j,n]), 0) + min(α, 0)) / (a[j]   - a[j-1])
-        zeta = (j==J) ? 0.0 :  (max(norm(d[i,j,n]), 0) + max(α, 0)) / (a[j+1] - a[j])
-
-        ind      = (I*J)*(n-1) + I*(j-1) + i
-        chi_ind  = I*J*(n-1) + I*(f_ind(j,J,J-1) - 1) + i#(chi_dict[j]-1) + i
-        zeta_ind = I*J*(n-1) + I*(f_ind(j,J,1) - 1) + i#(zeta_dict[j]-1) + i
-
-        A[ind, ind] += -(chi + zeta)
-
-        if (chi_ind  <= I*J*N - I) A[chi_ind  + I, chi_ind]  += chi  end
-        if (zeta_ind >= I + 1)     A[zeta_ind - I, zeta_ind] += zeta end
-
-        #X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] -
-        #                          adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
-        #                      min(s[i,j,n], 0)) / (b[i] - b[i-1])
-        #Z[i,j,n] = (i==I) ? 0.0 : (max(-d[i,j,n] -
-        #                         adj_cost_fn(d[i,j,n], a[j], chi0, chi1, chi2, a_lb), 0) +
-        #                     max(s[i,j,n], 0)) / (b[i+1] - b[i])
-
-        X = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
-                              min(s[i,j,n], 0)) / (b[i] - b[i-1])
-        Z = (i==I) ? 0.0 : (max(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
-                             max(s[i,j,n], 0)) / (b[i+1] - b[i])
-
-        A[ind, ind] += -(X + Z)
-
-        ind      = (I*J)*(n-1) + I*(j-1) + i
-        X_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,I*J-1) #I*(chi_dict[j]-1) + i
-        Z_ind = I*J*(n-1) + f_ind(I*(j-1) + i, I*J,1)     #I*(zeta_dict[j]-1) + i
-        if (X_ind <= I*J*N - 1) A[X_ind + 1, X_ind] += X end
-        if (Z_ind >= 2)         A[Z_ind - 1, Z_ind] += Z end
-    end
-#=
-    Y = -(X .+ Z)
-
-    X  = reshape(X, I*J, N)
-    X  = circshift(X, -1)
-    Z  = reshape(Z, I*J, N)
-    Z  = circshift(Z, 1)
-
-    bb = spdiagm(0 => vec(Y), 1 => vec(Z)[2:end], -1 => vec(X)[1:end-1])
-    @assert bb == bb2
-=#
-    #aau = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
-    #bbu = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
-    AT = spzeros(eltype(d), I_g*J_g*N, I_g*J_g*N)
-
-    for i=1:I_g, j=1:J_g, n=1:N
-
-        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
-        audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
-            (permanent ? aggZ * a_g[j] : 0.0)
-
-        budrift = s_g[i,j,n] - d_g[i,j,n] - cost(d_g[i,j,n], max(a_g[j], a_lb)) -
-            (permanent ? aggZ * b_g[i] : 0.0)
-
-        chiu  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
-        zetau = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
-
-        ind       = (I_g*J_g)*(n-1) + I_g*(j-1) + i
-        chiu_ind  = I_g*J_g*(n-1) + I_g *(f_ind(j,J_g,J_g-1)-1) + i
-        zetau_ind = I_g*J_g*(n-1) + I_g*(f_ind(j,J_g,1)-1) + i
-
-        AT[ind, ind] = -(chiu + zetau)
-        if (chiu_ind  <= I_g*J_g*N - I_g) AT[chiu_ind  + I_g, chiu_ind]  = chiu  end
-        if (zetau_ind >= I_g + 1)         AT[zetau_ind - I_g, zetau_ind] = zetau end
-
-        Xu = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
-        Zu = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
-
-        Xu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, I_g*J_g - 1)
-        Zu_ind = I_g*J_g*(n-1) + f_ind(I_g*(j-1) + i, I_g*J_g, 1)
-
-        AT[ind, ind] += -(Xu + Zu)
-        if (Xu_ind <= I_g*J_g*N - 1) AT[Xu_ind + 1, Xu_ind] += Xu  end
-        if (Zu_ind >= 2)             AT[Zu_ind - 1, Zu_ind] += Zu end
-
-    end
-    return A, AT
-end
-
-@inline function transition_deriva(permanent::T, ddeath::R, pam::R, xxi::R, w::S,
-                                   a_lb::R, aggZ::S, d::Array{U,3}, d_g::Array{U,3},
-                                   s::Array{U,3}, s_g::Array{U,3},
-                                   r_a::U, a::Array{R,1}, a_g::Array{R,1}, b::Array{R,1},
-                                   b_g::Array{R,1}, y::Vector{U},
-                                   cost, util, deposit) where {R<:AbstractFloat, S<:Number,
-                                                               T<:Bool, U<:Number}
-    I, J, N     = size(d)
-    I_g, J_g, _ = size(d_g)
-
-    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
-
-    chi, zeta = similar(d), similar(d)
-    X, Z      = similar(d), similar(d)
-
-    for i=1:I, j=1:J, n=1:N
-        α = a[j] * (r_a + perm_const) + (xxi * w * real(y[n]))
-
-        chi[i,j,n]  = (j==1) ? 0.0 : -(min(d[i,j,n], 0) + min(α, 0)) / (a[j]   - a[j-1])
-        zeta[i,j,n] = (j==J) ? 0.0 :  (max(d[i,j,n], 0) + max(α, 0)) / (a[j+1] - a[j])
-
-        X[i,j,n] = (i==1) ? 0.0 : -(min(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
-                                    min(s[i,j,n], 0)) / (b[i] - b[i-1])
-        Z[i,j,n] = (i==I) ? 0.0 :  (max(-d[i,j,n] - cost(d[i,j,n], max(a[j], a_lb)), 0) +
-                                    max(s[i,j,n], 0)) / (b[i+1] - b[i])
-    end
-    yyy = -vec(X .+ Z .+ chi .+ zeta)
-
-    chi  = reshape(chi, I*J, N)
-    chi  = circshift(chi, -I)
-    zeta = reshape(zeta, I*J, N)
-    zeta = circshift(zeta, I)
-
-    X  = reshape(X, I*J, N)
-    X  = circshift(X, -1)
-    Z  = reshape(Z, I*J, N)
-    Z  = circshift(Z, 1)
-
-    A = spdiagm(0 => yyy, I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I],
-                          1 => vec(Z)[2:end],      -1 => vec(X)[1:end-1])
-
-    chiu, zetau = similar(d_g), similar(d_g)
-    Xu, Zu      = similar(d_g), similar(d_g)
-    for i=1:I_g, j=1:J_g, n=1:N
-
-        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
-        audrift = d_g[i,j,n] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y[n] -
-            (permanent == 1 ? aggZ * a_g[j] : 0.0)
-
-        budrift = s_g[i,j,n] - d_g[i,j,n] - cost(d_g[i,j,n], max(a_g[j], a_lb)) -
-            (permanent ? aggZ * b_g[i] : 0.0)
-
-        chiu[i,j,n]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
-        zetau[i,j,n] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
-
-        Xu[i,j,n] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
-        Zu[i,j,n] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
-    end
-    yyyu  = -vec(chiu .+ zetau .+ Xu .+ Zu)
-
-    chiu  = reshape(chiu,I_g*J_g,N)
-    chiu  = circshift(chiu,-I_g)
-    zetau = reshape(zetau,I_g*J_g,N)
-    zetau = circshift(zetau,I_g)
-
-    Xu = reshape(Xu, I_g*J_g, N)
-    Xu = circshift(Xu, -1)
-    Zu = reshape(Zu, I_g*J_g, N)
-    Zu = circshift(Zu, 1)
-    #=
-    diag_out = MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/diags.mat")
-    @show vec(diag_out["updiag_aa"]) ≈ vec(zetau)
-    @show vec(diag_out["lowdiag_aa"]) ≈ vec(chiu)
-    @show vec(diag_out["lowdiag_bb"]) ≈ vec(Xu)
-    @show vec(diag_out["updiag_bb"]) ≈ vec(Zu)
-    @show vec(diag_out["lowdiag"]) ≈ vec(X)
-    @show vec(diag_out["updiag"]) ≈ vec(Z)
-    @show vec(test_out["y_shock"]) ≈ y
-    =#
-    AT = spdiagm(0 => yyyu, I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g],
-                            1 => vec(Zu)[2:end],          -1 => vec(Xu)[1:end-1])
-    return A, AT
-end
-
-@inline function transition_deriva_lite(permanent::T, ddeath::R, pam::R, xxi::R, w::S,
-                                        a_lb::R, aggZ::S, d::Array{U,2}, d_g::Array{U,2},
-                                        s::Array{U,2}, s_g::Array{U,2},
-                                        r_a::U, a::Array{R,1}, a_g::Array{R,1}, b::Array{R,1},
-                                        b_g::Array{R,1}, y::U,
-                                        cost, util, deposit) where {R<:AbstractFloat, S<:Number,
-                                                                    T<:Bool, U<:Number}
-    I, J = size(d)
-    I_g, J_g = size(d_g)
-
-    perm_const = permanent ? ddeath * pam - aggZ : ddeath * pam
-
-    chi, zeta = similar(d), similar(d)
-    X, Z      = similar(d), similar(d)
-    for i=1:I, j=1:J
-        α = a[j] * (r_a + perm_const) + (xxi * w * real(y))
-
-        chi[i,j]  = (j==1) ? 0.0 : -(min(d[i,j], 0) + min(α, 0)) / (a[j]   - a[j-1])
-        zeta[i,j] = (j==J) ? 0.0 :  (max(d[i,j], 0) + max(α, 0)) / (a[j+1] - a[j])
-
-        X[i,j] = (i==1) ? 0.0 : -(min(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
-                                    min(s[i,j], 0)) / (b[i] - b[i-1])
-        Z[i,j] = (i==I) ? 0.0 :  (max(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
-                                    max(s[i,j], 0)) / (b[i+1] - b[i])
-    end
-    yyy = -vec(X .+ Z .+ chi .+ zeta)
-
-    chi  = reshape(chi, I*J)
-    chi  = circshift(chi, -I)
-    zeta = reshape(zeta, I*J)
-    zeta = circshift(zeta, I)
-
-    X  = reshape(X, I*J)
-    X  = circshift(X, -1)
-    Z  = reshape(Z, I*J)
-    Z  = circshift(Z, 1)
-
-    A = spdiagm(0 => yyy, I => vec(zeta)[I+1:end], -I => vec(chi)[1:end-I],
-                          1 => vec(Z)[2:end],      -1 => vec(X)[1:end-1])
-
-    chiu, zetau = similar(d_g), similar(d_g)
-    Xu, Zu      = similar(d_g), similar(d_g)
-    for i=1:I_g, j=1:J_g
-
-        # Compute drifts for KFE -- is it possible that below (ddeathpam) is incorrect?
-        audrift = d_g[i,j] + a_g[j] * (r_a + ddeath*pam) + xxi * w * y -
-            (permanent == 1 ? aggZ * a_g[j] : 0.0)
-
-        budrift = s_g[i,j] - d_g[i,j] - cost(d_g[i,j], max(a_g[j], a_lb)) -
-            (permanent ? aggZ * b_g[i] : 0.0)
-
-        chiu[i,j]  = (j==1)   ? 0.0 : -min(audrift, 0) / (a_g[j]   - a_g[j-1])
-        zetau[i,j] = (j==J_g) ? 0.0 :  max(audrift, 0) / (a_g[j+1] - a_g[j])
-
-        Xu[i,j] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i]   - b_g[i-1])
-        Zu[i,j] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
-    end
-    yyyu  = -vec(chiu .+ zetau .+ Xu .+ Zu)
-
-    chiu  = reshape(chiu,I_g*J_g)
-    chiu  = circshift(chiu,-I_g)
-    zetau = reshape(zetau,I_g*J_g)
-    zetau = circshift(zetau,I_g)
-
-    Xu = reshape(Xu, I_g*J_g)
-    Xu = circshift(Xu, -1)
-    Zu = reshape(Zu, I_g*J_g)
-    Zu = circshift(Zu, 1)
-
-    AT = spdiagm(0 => yyyu, I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g],
-                            1 => vec(Zu)[2:end],          -1 => vec(Xu)[1:end-1])
-    return A, AT
-end
-
-
-@inline function construct_problem_functions(γ::T, χ0::R, χ1::R, χ2::R,
-                                             a_lb::R) where {T<:Number,R<:Number}
-
-    @inline util(c::S) where {S<:Number} = 1.0 / (1.0 - γ) * (c ^ (1-γ) - 1.0)
-    if γ == 1.0
-        @inline util(c::S) where {S<:Number} = log(c)
-    end
-
-    @inline function deposit(Va, Vb, a)
-        indx_plus  = ((Va / Vb - 1 - χ0) > 0)
-        indx_minus = ((Va / Vb - 1 + χ0) < 0)
-        return χ1 * (max(Va / Vb - 1 - χ0, 0)) ^ (1/χ2) * a * indx_plus +
-            (-χ1) * (max(-(Va / Vb - 1) - χ0, 0)) ^ (1/χ2) * a * indx_minus
-    end
-
-    @inline function cost(d, a)
-        d_scaled = abs(d / max(a, a_lb))
-        return max(a, a_lb) * (χ0 * (d_scaled) + 1.0 / (1.0 + χ2) * ((d_scaled)^(1+χ2) * χ1^(-χ2)))
-    end
-    return util, deposit, cost
-end
-
 
 # This file contains additional helper functions for computing the steady state.
 
