@@ -113,8 +113,6 @@ function eqcond(m::TwoAssetHANK)
     dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde = set_grids_lite(a,
                                                                            b, a_g, b_g, N)
 
-    g_end = (1 - sum(g_SS .* vec(dab_g_tilde_grid)[1:end-1])) / dab_g_tilde_grid[I_g, J_g, N]
-
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
         # ------- Unpack variables -------
         V   = reshape(vars[1:n_v] .+ V_SS, I, J, N)  # value function
@@ -133,12 +131,13 @@ function eqcond(m::TwoAssetHANK)
             C_PHTM  = vars[n_v+n_g+4] + C_PHTM_SS    # consumption of poor hand-to-mouth
         end
         aggZ       = vars[n_v+n_g+n_p+1] + aggZ_SS   # aggregate Z
+        # Above is all in ^ Γ1.
+
         V_Dot      = vars[nVars + 1 : nVars + n_v]
         g_Dot      = vars[nVars + n_v + 1: nVars + n_v + n_g]
         aggZ_Dot   = vars[nVars + n_v + n_g + n_p + 1]
         VEErrors   = vars[2*nVars + 1 : 2 * nVars + n_v]
         aggZ_Shock = vars[2*nVars + nEErrors + 1]
-
         # ------- Unpack variables -------
 
         # Prices
@@ -162,7 +161,7 @@ function eqcond(m::TwoAssetHANK)
         dab_aux   = reshape(dab,   I*J*N,     1)
         dab_g_aux = reshape(dab_g, I_g*J_g*N, 1)
 
-        #g_end = (1 - sum(g_SS .* dab_g_aux[1:end-1])) / dab_g[I_g, J_g, N]
+        g_end = (1 - sum(g .* vec(dab_g_tilde_grid)[1:end-1])) / dab_g_tilde_grid[I_g, J_g, N]
         gg  = vcat(g, g_end)
 
         loc = findall(b .== 0)
@@ -216,7 +215,6 @@ function eqcond(m::TwoAssetHANK)
 
         # full transition matrix
         A  = A + cc
-        AT_T = AT + ccu
         AT = (AT + ccu)'
 
         #test_out = MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/mid_residuals.mat")
@@ -270,7 +268,7 @@ function eqcond(m::TwoAssetHANK)
 
         if aggregate_variables == 1
 
-            aggY_out = (K ^ aalpha) * (n_SS ^ (1 - aalpha))
+            aggY_out = (K ^ aalpha) * ((permanent==0) ? exp(aggZ) * n_SS : n_SS ) ^ (1 - aalpha)
             aggC_out = sum(vec(c_g) .* gg .* vec(dab_g))
 
         elseif distributional_variables == 1
@@ -367,11 +365,10 @@ function eqcond(m::TwoAssetHANK)
     end
 
     test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/data/eqcond_output_matlab.jld2")
-    @show test_out["g0"] == Γ0
-    @show isapprox(test_out["g1"], Γ1, atol=1e-4)
-    @show test_out["psi"] == Ψ
-    @show test_out["pi"] == Π
-    @show test_out["constant"] == C
+    @assert test_out["g0"] == Γ0
+    @assert test_out["g1"] ≈ Γ1
+    @assert test_out["psi"] == Ψ
+    @assert test_out["pi"] == Π
 
     return Γ0, Γ1, Ψ, Π, C
 end
