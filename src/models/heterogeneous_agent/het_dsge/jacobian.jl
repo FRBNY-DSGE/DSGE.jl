@@ -348,7 +348,7 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
             dF1_dELL[i,i] = -ell[i] - sumELL
             dF1_dRZ[i] = ell[i] - sumRZ
             dF1_dWHP[i] = -sumWH
-            dF1_dTTP[i] = sumTT
+            dF1_dTTP[i] = -sumTT
         end
     end
     return dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee
