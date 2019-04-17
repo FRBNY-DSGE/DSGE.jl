@@ -123,9 +123,10 @@ function init_model_indices!(m::HetDSGE)
                                  :z′_t1,:z′_t2,:z′_t3,:w′_t1,:I′_t1,:BP,:GP,:ZP,:MUP,:LAMWP,
                                  :LAMFP,:MONP,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
                                  :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t,
-                                 :LELL,:LM,:KK,:LRR,:LII,:LPI,:L2PI,:L3PI,:LY,:L2Y,:L3Y,:L4Y,:LZ,
-                                 :L2Z,:L3Z,:LW,:LX,:B,:G,:Z,:MU,:LAMW,:LAMF,:MON,:ELL,:M,:RR,:II,
-                                 :TT,:W,:HH,:PI,:PIW,:LAM,:Y,:X,:MC,:Q,:RK])
+                                 :l_t1L,:μ_t1,:k_t,:R_t1,:i_t1,:π_t1,:π_t2,:π_t3,:y_t1,:y_t2,
+                                 :y_t3,:y_t4,:z_t1,:z_t2,:z_t3,:w_t1,:I_t1,:B,:G,:Z,:MU,:LAMW,
+                                 :LAMF,:MON,:ELL,:μ_t,:R_t,:i_t,
+                                 :t_t,:w_t,:L_t,:π_t,:wageinflation_t,:mu_t,:y_t,:I_t,:mc_t,:Q_t,:capreturn_t])
 
     # Exogenous shocks
     exogenous_shocks = collect([])
@@ -202,45 +203,45 @@ function init_model_indices!(m::HetDSGE)
     nyscalars = 13 # num scalar jumps
     nxscalars = nscalars - nyscalars # num scalar states
 
-endo[:LELL] = endo[:l′_t1] .+ nvars
-endo[:LM] = endo[:μ′_t1] .+ nvars
-endo[:KK] = endo[:k′_t] .+ nvars
-endo[:LRR] = endo[:R′_t1] .+ nvars
-endo[:LII] = endo[:i′_t1] .+ nvars
-endo[:LPI] = endo[:π′_t1]  .+ nvars
-endo[:L2PI] = endo[:π′_t2]  .+ nvars
-endo[:L3PI] = endo[:π′_t3]  .+ nvars
-endo[:LY] = endo[:y′_t1] .+ nvars
-endo[:L2Y] = endo[:y′_t2] .+ nvars
-endo[:L3Y] = endo[:y′_t3] .+ nvars
-endo[:L4Y] = endo[:y′_t4] .+ nvars
-endo[:LZ] = endo[:z′_t1] .+ nvars
-endo[:L2Z] = endo[:z′_t2] .+ nvars
-endo[:L3Z] = endo[:z′_t3] .+ nvars
-endo[:LW] = endo[:w′_t1] .+ nvars
-endo[:LX] = endo[:I′_t1] .+ nvars
-endo[:B] = endo[:BP] .+ nvars
-endo[:G] = endo[:GP] .+ nvars
-endo[:Z] = endo[:ZP] .+ nvars
-endo[:MU] = endo[:MUP] .+ nvars
-endo[:LAMW] = endo[:LAMWP] .+ nvars
-endo[:LAMF] = endo[:LAMFP] .+ nvars
-endo[:MON] = endo[:MONP] .+ nvars
-endo[:ELL] = endo[:l′_t] .+ nvars
-endo[:M] = endo[:μ′_t] .+ nvars
-endo[:RR] = endo[:R′_t] .+ nvars
-endo[:II] = endo[:i′_t] .+ nvars
-endo[:TT] = endo[:t′_t]  .+ nvars
-endo[:W] = endo[:w′_t] .+ nvars
-endo[:HH] = endo[:L′_t] .+ nvars
-endo[:PI] = endo[:π′_t] .+ nvars
-endo[:PIW] = endo[:wageinflation′_t] .+ nvars
-endo[:LAM] = endo[:mu′_t] .+ nvars
-endo[:Y] = endo[:y′_t] .+ nvars
-endo[:X] = endo[:I′_t]  .+ nvars
-endo[:MC] = endo[:mc′_t]  .+ nvars
-endo[:Q] = endo[:Q′_t]  .+ nvars
-endo[:RK] = endo[:capreturn′_t] .+ nvars
+endo[:l_t1] = endo[:l′_t1] .+ nvars #LELL
+endo[:μ_t1] = endo[:μ′_t1] .+ nvars #LM
+endo[:k_t] = endo[:k′_t] .+ nvars #KK
+endo[:R_t1] = endo[:R′_t1] .+ nvars #LRR
+endo[:i_t1] = endo[:i′_t1] .+ nvars #LII
+endo[:π_t1] = endo[:π′_t1]  .+ nvars #LPI
+endo[:π_t2] = endo[:π′_t2]  .+ nvars #L2PI
+endo[:π_t3] = endo[:π′_t3]  .+ nvars #L3PI
+endo[:y_t1] = endo[:y′_t1] .+ nvars #LY
+endo[:y_t2] = endo[:y′_t2] .+ nvars #L2Y
+endo[:y_t3] = endo[:y′_t3] .+ nvars #l3Y
+endo[:y_t4] = endo[:y′_t4] .+ nvars #L4Y
+endo[:z_t1] = endo[:z′_t1] .+ nvars #LZ
+endo[:z_t2] = endo[:z′_t2] .+ nvars #L2Z
+endo[:z_t3] = endo[:z′_t3] .+ nvars #L3Z
+endo[:w_t1] = endo[:w′_t1] .+ nvars #LW
+endo[:I_t1] = endo[:I′_t1] .+ nvars #LX
+endo[:B] = endo[:BP] .+ nvars #B
+endo[:G] = endo[:GP] .+ nvars #G
+endo[:Z] = endo[:ZP] .+ nvars #Z
+endo[:MU] = endo[:MUP] .+ nvars #MU
+endo[:LAMW] = endo[:LAMWP] .+ nvars #LAMW
+endo[:LAMF] = endo[:LAMFP] .+ nvars #LAMF
+endo[:MON] = endo[:MONP] .+ nvars #MON
+endo[:ELL] = endo[:l′_t] .+ nvars #ELL
+endo[:μ_t] = endo[:μ′_t] .+ nvars #M
+endo[:R_t] = endo[:R′_t] .+ nvars #RR
+endo[:i_t] = endo[:i′_t] .+ nvars #II
+endo[:t_t] = endo[:t′_t]  .+ nvars #TT
+endo[:w_t] = endo[:w′_t] .+ nvars #W
+endo[:L_t] = endo[:L′_t] .+ nvars #HH
+endo[:π_t] = endo[:π′_t] .+ nvars #PI
+endo[:wageinflation_t] = endo[:wageinflation′_t] .+ nvars #PIW
+endo[:mu_t] = endo[:mu′_t] .+ nvars #LAM
+endo[:y_t] = endo[:y′_t] .+ nvars #Y
+endo[:I_t] = endo[:I′_t]  .+ nvars #X
+endo[:mc_t] = endo[:mc′_t]  .+ nvars #MC
+endo[:Q_t] = endo[:Q′_t]  .+ nvars #Q
+endo[:capreturn_t] = endo[:capreturn′_t] .+ nvars #RK
 
 # create objects needed for solve.jl
 # we will order function blocks as follows:
