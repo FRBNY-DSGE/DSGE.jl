@@ -460,42 +460,13 @@ end
 
 """
 ```
-@inline function set_vectors(a, b, a_g, b_g, N, r_b, r_b_borr)
+@inline function backward_difference(a_g::Vector{T}, b_g::Vector{T}) where {T<:Real}
 ```
-Instantiates necessary difference vectors.
+Instantiates necessary difference vector.
 """
-@inline function set_vectors_lite(a::Vector{T}, b::Vector{T},
-                                  a_g::Vector{T}, b_g::Vector{T}) where {T<:Real}
-    I, J = length(b), length(a)
+@inline function backward_difference(a_g::Vector{T}, b_g::Vector{T}) where {T<:Real}
+
     I_g, J_g = length(b_g), length(a_g)
-
-#    dbf = similar(b)
-#    dbf[1:I-1] = b[2:I] - b[1:I-1]
-#    dbf[I]     = dbf[I-1]
-
-#    dbb = similar(b)
-#    dbb[2:I] = b[2:I] - b[1:I-1]
-#    dbb[1]   = dbb[2]
-
-#    daf = similar(a)
-#    daf[1:J-1] = a[2:J] - a[1:J-1]
-#    daf[J]     = daf[J-1]
-
-#    dab = similar(a)
-#    dab[2:J] = a[2:J] - a[1:J-1]
-#    dab[1]   = dab[2]
-
-#    db_tilde = 0.5*(dbb + dbf)
-#    db_tilde[1] = 0.5*(dbf[1])
-#    db_tilde[end] = 0.5*(dbb[end])
-
-#    da_tilde = 0.5*(dab + daf)
-#    da_tilde[1] = 0.5*(daf[1])
-#    da_tilde[end] = 0.5*(dab[end])
-
-#    dab_tilde      = kron(da_tilde, db_tilde)
-#    dab_tilde_grid = reshape(dab_tilde, I, J)
-#    dab_tilde_mat  = spdiagm(0 => vec(dab_tilde))
 
     dbf_g = similar(b_g)
     dbf_g[1:I_g-1] = b_g[2:I_g] - b_g[1:I_g-1]
@@ -522,7 +493,6 @@ Instantiates necessary difference vectors.
     da_g_tilde[end]  = 0.5*dab_g[end]
 
     dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
-#    dab_g_tilde_grid = reshape(dab_g_tilde, I_g, J_g)
 
     return dab_g_tilde
 end
@@ -824,7 +794,7 @@ end
                                         a_lb::R, aggZ::S, d::Array{U,2}, d_g::Array{U,2},
                                         s::Array{U,2}, s_g::Array{U,2},
                                         r_a::U, a::Array{R,1}, a_g::Array{R,1}, b::Array{R,1},
-                                        b_g::Array{R,1}, y::U,
+                                        b_g::Array{R,1}, y::U, lambda_ii::R,
                                         cost, util, deposit) where {R<:AbstractFloat, S<:Number,
                                                                     U<:Number}
     I, J = size(d)
@@ -876,7 +846,7 @@ end
         Xu[i,j] = (i==1)   ? 0.0 : -min(budrift, 0) / (b_g[i] - b_g[i-1])
         Zu[i,j] = (i==I_g) ? 0.0 :  max(budrift, 0) / (b_g[i+1] - b_g[i])
     end
-    yyyu  = -vec(chiu .+ zetau .+ Xu .+ Zu)
+    yyyu  = -vec(chiu .+ zetau .+ Xu .+ Zu) .+ lambda_ii
 
     chiu  = reshape(chiu,I_g*J_g)
     chiu  = circshift(chiu,-I_g)
@@ -888,8 +858,8 @@ end
     Zu = reshape(Zu, I_g*J_g)
     Zu = circshift(Zu, 1)
 
-    AT = spdiagm(0 => yyyu, I_g => vec(zetau)[I_g+1:end], -I_g => vec(chiu)[1:end-I_g],
-                            1 => vec(Zu)[2:end],          -1 => vec(Xu)[1:end-1])
+    AT = spdiagm(0 => yyyu, -I_g => vec(zetau)[I_g+1:end], I_g => vec(chiu)[1:end-I_g],
+                            -1 => vec(Zu)[2:end],          1 => vec(Xu)[1:end-1])
     return A, AT
 end
 

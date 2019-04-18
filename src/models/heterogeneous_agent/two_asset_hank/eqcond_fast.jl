@@ -87,7 +87,7 @@ function eqcond_lite(m::TwoAssetHANK)
     nVars    = get_setting(m, :nVars)::Int64
     nEErrors = get_setting(m, :nEErrors)::Int64
 
-#    vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
+    #vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
     vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
     V_SS   = vars_SS[1:n_v]
     g_SS   = vars_SS[n_v + 1 : n_v + n_g]
@@ -153,7 +153,7 @@ function eqcond_lite(m::TwoAssetHANK)
         r_b_borr = r_b .+ borrwedge_SS
 
         # Set grids
-        dab_g_tilde = set_vectors_lite(a, b, a_g, b_g)
+        dab_g_tilde = backward_difference(a_g, b_g)
 
         dab_g_o = reshape(repeat(reshape(dab_g_tilde, I_g, J_g), N, 1),I_g,J_g,N)
         g_end = (1 - sum(g .* vec(dab_g_o)[1:end-1])) / dab_g_o[I_g, J_g, N]
@@ -186,20 +186,17 @@ function eqcond_lite(m::TwoAssetHANK)
         println("Timing: transition_deriva()")
         @time A, AT = transition_deriva_lite(permanent, ddeath, pam, xxi, w, a_lb, aggZ,
                                         d, d_g, s, s_g, r_a, a, a_g, b, b_g, y_shock[indx],
-                                        cost, util, deposit)
+                                        lambda[indx,indx], cost, util, deposit)
 
         my_inds = findall(x -> x != indx, 1:N)
         cc = sum([lambda[indx,kk]*(V_SS[:,kk] - V_SS[:,indx]) for kk in my_inds])
 
-        # full transition matrix
-        AT = add_diag(AT, lambda[indx,indx])'
         #----------------------------------------------------------------
         # KFE
         #----------------------------------------------------------------
         loc = findall(b .== 0)
         dab_g_tilde_inv       = vec(1.0 ./ dab_g_tilde)
-        dab_g_small           = dab_g_tilde
-        dab_g_small           = dab_g_small ./ dab_g_small[loc] * ddeath
+        dab_g_small           = dab_g_tilde ./ dab_g_tilde[loc] * ddeath
         dab_g_small[loc]     .= 0.0
         death_process         = -ddeath * my_speye(I_g * J_g)
         death_process[loc,:]  = vec(dab_g_small)
@@ -299,7 +296,6 @@ function eqcond_lite(m::TwoAssetHANK)
         #return [hjbResidual; gResidual; K_Residual; r_b_Residual; aggZ_Residual]
     end
 
-
     indx = 1
     n_v = Int(n_v/N)
     #n_g = Int((n_g + 1)/N)
@@ -314,12 +310,8 @@ function eqcond_lite(m::TwoAssetHANK)
 
     my_out = vec(DelimitedFiles.readdlm("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/my_residuals.csv", ','))
 
-    @show maximum(abs.(my_out[1:2000] - vec(out)[1:2000]))#, length(findall(x->x>1e-5, abs.(my_out - out)))
-    @show isapprox(my_out[60001:62250], vec(out)[2001:4250], rtol=1e-4)#maximum(abs.(my_out[60001:62250] - vec(out)[2001:4250]))
-    #@show length(findall(x->x>1e-7, abs.(my_out[60001:62250] - vec(out)[2001:4250])))
-    #@assert isapprox(my_out[1:2000], vec(out)[1:2000], rtol=1e-3)
-
-    #@time get_residuals_lite(zeros(Float64, 2 * nVars + nEErrors + 1))
+    @show maximum(abs.(my_out[1:2000] - vec(out)[1:2000]))
+    @show isapprox(my_out[60001:62250], vec(out)[2001:4250], rtol=1e-4)
 
     x = zeros(Float64, 2 * nVars + nEErrors + 1)
     @time derivs = ForwardDiff.sparse_jacobian(get_residuals_lite, x)
@@ -335,6 +327,8 @@ function eqcond_lite(m::TwoAssetHANK)
     Π  = -derivs[:, 2*nstates +           1:2 * nstates + n_s_exp]
     Ψ  = -derivs[:, 2*nstates + n_s_exp + 1:2 * nstates + n_s_exp + n_s_exo]
     C  =  spzeros(Float64, nstates)
+
+@show size(Γ1), size(Γ0),
 
     if typeof(Ψ) == Vector{Float64}
         Ψ = reshape(Ψ, length(Ψ), n_s_exo)
