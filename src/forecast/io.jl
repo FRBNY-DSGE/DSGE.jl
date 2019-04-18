@@ -457,7 +457,7 @@ end
 
 """
 ```
-read_forecast_series(file, filepath, class, product, var_name[, shock_name])
+read_forecast_series(filepath, product, var_ind)
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
