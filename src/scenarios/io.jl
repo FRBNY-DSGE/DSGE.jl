@@ -213,8 +213,13 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
     fcast_dates = map(x -> x[1], sort(collect(fcast_dates_dict), by = x->x[2]))
 
     jldopen(filename, "r") do file
+        # Get index corresponding to var_name
+        class_long = get_class_longname(class)
+        indices = FileIO.load(filename, "$(class_long)_indices")
+        var_ind = indices[var_name]
+
         # Read forecast outputs
-        fcast_series = read_forecast_series(file, class, product, var_name)
+        fcast_series = read_forecast_series(filename, product, var_ind)
 
         # Parse transform
         class_long = get_class_longname(class)

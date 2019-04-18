@@ -65,7 +65,8 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         params_new = load_draws(m_new, input_type, verbose = verbose)
         params_old = load_draws(m_old, input_type, verbose = verbose)
         decomps = f(params_new, params_old)
-        write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old,
+        write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps,
+                                     forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old,
                                      verbose = verbose)
 
     # Multiple-draw forecasts
@@ -90,7 +91,8 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             decomps = convert(Vector{Dict{Symbol, Array{Float64}}}, decomps)
             decomps = assemble_block_outputs(decomps)
             write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps,
-                                         block_number = Nullable(block), block_inds = block_inds_thin[block], forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old,
+                                         block_number = Nullable(block), block_inds = block_inds_thin[block],
+                                         forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old,
                                          verbose = verbose)
             gc()
 
@@ -110,6 +112,8 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     else
         error("Invalid input_type: $input_type. Must be in [:mode, :mean, :init, :full]")
     end
+
+    combine_raw_forecast_output_and_metadata(m_new, decomp_output_files, verbose = verbose)
 
     println(verbose, :low, "\nForecast decomposition complete: $(now())")
 end

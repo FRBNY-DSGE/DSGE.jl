@@ -77,11 +77,19 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
             end
 
             for key in loopkeys
+                # Get index corresponding to var_name
+                class_long = get_class_longname(class)
+                indices = FileIO.load(input_file, "$(class_long)_indices")
+                var_ind = indices[var]
+
                 # Read in raw output: ndraws x nperiods
                 decomp_series = if comp == :shockdec
-                    read_forecast_series(file, class, product, var, key)
+                    # Get index corresponding to shock_index
+                    shock_ind = shock_indices[key]
+
+                    read_forecast_series(input_file, var_ind, shock_ind)
                 else
-                    read_forecast_series(file, class, product, var)
+                    read_forecast_series(input_file, product, var_ind)
                 end
 
                 # Reverse transform

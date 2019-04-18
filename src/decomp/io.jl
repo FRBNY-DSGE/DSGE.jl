@@ -28,7 +28,8 @@ function get_decomp_output_files(m_new::M, m_old::M, input_type::Symbol,
             output_var = Symbol(product, class)
             output_files[output_var] =
                 get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old,
-                                    product, class, pathfcn = rawpath, fileformat = :jld2, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
+                                    product, class, pathfcn = rawpath, fileformat = :jld2,
+                                    forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
         end
     end
     return output_files
@@ -38,7 +39,8 @@ function get_decomp_mean_file(m_new::M, m_old::M, input_type::Symbol,
                               cond_new::Symbol, cond_old::Symbol,
                               class::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
     get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, :decomp, class,
-                        pathfcn = workpath, fileformat = :jld2, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
+                        pathfcn = workpath, fileformat = :jld2,
+                        forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
 end
 
 function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
@@ -54,13 +56,18 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
             prod = Symbol(:decomp, comp)
             var = Symbol(prod, class)
             filepath = decomp_output_files[var]
-            #@show "c"*filepath
             if isnull(block_number) || get(block_number) == 1
+                # Write forecast metadata to a jld2 and the raw forecast output
+                # to an h5. The data in the HDF5 will be transferred to the jld2
+                # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
+                # is executed.
                 JLD2.jldopen(filepath, "w") do file
                     # Write metadata
                     # Pass in m_old because its historical and forecast dates are used
                     write_forecast_metadata(m_old, file, var)
+                end
 
+                h5open(replace(filepath, "jld2" => "h5"), "w") do file
                     # Pre-allocate HDF5 dataset which will contain all draws
                     if !isnull(block_number) && get(block_number) == 1
                         # Determine forecast output size
@@ -80,7 +87,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                 end
             end
 
-            JLD2.jldopen(filepath, "r+") do file
+            h5open(replace(filepath, "jld2" => "h5"), "r+") do file
                 if isnull(block_number)
                     write(file, "arr", decomps[var])
                 else
