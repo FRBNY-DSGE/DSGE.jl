@@ -238,7 +238,7 @@ None. Output is saved to files returned by
 """
 function forecast_one(m::AbstractModel{Float64},
                       input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                      df::DataFrame = DataFrame(), subset_inds::Range{Int64} = 1:0,
+                      df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
                       forecast_string::String = "", verbose::Symbol = :low,
                       use_filtered_shocks_in_shockdec::Bool = false,
                       shock_name::Symbol = :none,

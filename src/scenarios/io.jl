@@ -229,8 +229,8 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
-    agg_draws = Vector{Matrix{Float64}}(nscens)
-    scen_dates = Vector{Date}(nscens)
+    agg_draws = Vector{Matrix{Float64}}(undef, nscens)
+    scen_dates = Vector{Date}(undef, nscens)
 
     # If not sampling, initialize vector to record number of draws in each
     # scenario in order to update `agg.proportions` and `agg.total_draws` at the
@@ -246,7 +246,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
     transform = identity
 
     for (i, scen) in enumerate(agg.scenarios)
-        if in(:scenarios, fieldnames(scen)) #length(scen.scenarios)>1
+        if in(:scenarios, fieldnames(typeof(scen))) #length(scen.scenarios)>1
             scen_draws, transform, scen_dates = read_scenario_output(m, m904, scen, class, product, var_name)
         else
             if scen.key==:bor8 || scen.key==:bor9 || scen.key==:bor8_02 || scen.key==:bor9_02
@@ -274,7 +274,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
                 else
                     quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
                     remainder = actual_ndraws % desired_ndraws
-                    vcat(repmat(1:actual_ndraws, quotient),
+                    vcat(repeat(1:actual_ndraws, quotient),
                          sample(1:actual_ndraws, remainder, replace = false))
                 end
             end
@@ -288,7 +288,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
     end
 
     # Stack draws from all component scenarios
-    fcast_series = cat(1, agg_draws...)
+    fcast_series = cat(agg_draws..., dims = 1)
 
     # If not sampling, update `agg.proportions` and `agg.total_draws`
     if !agg.sample
