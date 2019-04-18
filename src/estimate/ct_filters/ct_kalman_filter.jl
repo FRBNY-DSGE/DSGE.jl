@@ -45,7 +45,7 @@ function ct_kalman_filter(y::Matrix{S},
         end
 
         # Update and compute log-likelihood
-        update!(k, y[:, t]; return_loglh = return_loglh)
+        StateSpaceRoutines.update!(k, y[:, t]; return_loglh = return_loglh)
         if return_filt
             s_filt[:,    t] = k.s_t
             P_filt[:, :, t] = k.P_t
@@ -67,7 +67,7 @@ function ct_kalman_filter(y::Matrix{S},
 
     # Remove presample periods
     loglh, s_pred, P_pred, s_filt, P_filt =
-        remove_presample!(Nt0, loglh, s_pred, P_pred, s_filt, P_filt; outputs = outputs)
+        StateSpaceRoutines.remove_presample!(Nt0, loglh, s_pred, P_pred, s_filt, P_filt; outputs = outputs)
 
     return loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T
 end
@@ -121,7 +121,7 @@ function ct_kalman_filter(y::Matrix{S},
         end
 
         # Update and compute log-likelihood
-        update!(k, y[:, t]; return_loglh = return_loglh)
+        StateSpaceRoutines.update!(k, y[:, t]; return_loglh = return_loglh)
         if return_filt
             s_filt[:,    t] = k.s_t
             P_filt[:, :, t] = k.P_t
@@ -151,7 +151,7 @@ end
 """
 Forecast functions
 """
-function forecast!(k::StateSpaceRoutines.KalmanFilter{S}, tspan::Float64; method = Tsit5(),
+function forecast!(k::StateSpaceRoutines.KalmanFilter, tspan::Float64; method = Tsit5(),
                    reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
     T, R, Q = k.T, k.R, k.Q
     s0, P0 = k.s_t, k.P_t
@@ -162,8 +162,9 @@ function forecast!(k::StateSpaceRoutines.KalmanFilter{S}, tspan::Float64; method
     P_prob = ODEProblem(g, P0, tspan_int)
     s_sol = DifferentialEquations.solve(s_prob, method, reltol = reltol, abstol = abstol)
     P_sol = DifferentialEquations.solve(P_prob, method, reltol = reltol, abstol = abstol)
-    k.s_t = s_sol.u
-    k.P_t = P_sol.u
+
+    k.s_t = s_sol.u[end]
+    k.P_t = P_sol.u[end]
 end
 
 # INCOMPLETE
@@ -171,7 +172,7 @@ end
 # kind of recursion that I can do otherwise. Moreover, I effectively will get the
 # same predicted states regardless, so I'm not sure if this will improve the
 # measurement equation or accuracy.
-function forecast!(k::StateSpaceRoutines.KalmanFilter{S}, tspan::Float64, n_subinterval::Int64; method = Tsit5(),
+function forecast!(k::StateSpaceRoutines.KalmanFilter, tspan::Float64, n_subinterval::Int64; method = Tsit5(),
                    reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
     T, R, Q = k.T, k.R, k.Q
     s_filt, P0 = k.s_t, k.P_t

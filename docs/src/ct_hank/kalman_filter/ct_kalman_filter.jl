@@ -55,7 +55,7 @@ for n = 1:ntrials
         # Recompute steady state solution
         m[:σ_tfp] = σ_vec[i]
         steadystate!(m)
-        T, R, C, inverse_basis, basis = solve(m)
+        T, R, C, inverse_basis, basis = DSGE.solve(m)
 
         # Define measurement equation
         Δ_t = 1. # length of time traversed b/n observations
