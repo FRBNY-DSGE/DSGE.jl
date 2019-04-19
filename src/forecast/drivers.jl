@@ -271,7 +271,10 @@ function forecast_one(m::AbstractModel{Float64},
         elapsed_time = @elapsed let
             params = load_draws(m, input_type; verbose = verbose)
             forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                params, df, verbose = verbose)
+                                                params, df, verbose = verbose,
+                                                shock_name = shock_name,
+                                                shock_var_name = shock_var_name,
+                                                shock_var_value = shock_var_value)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -310,7 +313,10 @@ function forecast_one(m::AbstractModel{Float64},
 
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                                 param, df, verbose = verbose),
+                                                                 param, df, verbose = verbose,
+                                                                 shock_name = shock_name,
+                                                                 shock_var_name = shock_var_name,
+                                                                 shock_var_value = shock_var_value),
                                       params)
 
             # Assemble outputs from this block and write to file
@@ -400,7 +406,9 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 ```
 """
 function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_type::Symbol,
-    output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low)
+                           output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame;
+                           verbose::Symbol = :low, shock_name::Symbol = :none,
+                           shock_var_name::Symbol = :none, shock_var_value::Float64 = 0.0)
 
     ### Setup
 
@@ -602,7 +610,14 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     irfs_to_compute = intersect(output_vars, irf_vars)
 
     if !isempty(irfs_to_compute)
-        irfstates, irfobs, irfpseudo = impulse_responses(m, system)
+
+        if shock_name == :none && shock_var_name == :none && shock_var_value == 0.
+            irfstates, irfobs, irfpseudo = impulse_responses(m, system)
+        else # Compute a targeted IRF that moves `shock_var_name` by `shock_var_value` using `shock_name`
+            horizon = impulse_response_horizons(m)
+            irfstates, irfobs, irfpseudo = impulse_responses(m, system, horizon, shock_name,
+                                                             shock_var_name, shock_var_value)
+        end
 
         forecast_output[:irfstates] = irfstates
         forecast_output[:irfobs] = irfobs
