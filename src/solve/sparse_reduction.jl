@@ -34,33 +34,30 @@ function krylov_reduction(m::AbstractCTModel, Γ0::SparseMatrixCSC{Float64,Int64
 
     # Slice Γ1 into different parts. See Why Inequality matters paper.
     Γ1_full = Array{Float64}(Γ1)
-    B_pv    = -Γ1_full[n_total + 1:n_vars, n_total + 1:n_vars] \ Γ1_full[n_total + 1:n_vars, 1:n_jump_vars]
-    B_pg    = -Γ1_full[n_total + 1:n_vars, n_total + 1:n_vars] \
-           Γ1_full[n_total + 1:n_vars, n_jump_vars + 1:n_jump_vars + n_state_vars]
-    B_pZ    = -Γ1_full[n_total + 1:n_vars, n_total + 1:n_vars] \
-        Γ1_full[n_total+1:n_vars, n_jump_vars+n_state_vars+1:n_jump_vars+n_state_vars+n_state_vars_unreduce]
-    B_gg    = Γ1_full[n_jump_vars + 1:n_jump_vars + n_state_vars, n_jump_vars + 1:n_jump_vars + n_state_vars]
-    B_gv    = Γ1_full[n_jump_vars + 1:n_jump_vars + n_state_vars, 1:n_jump_vars]
-    B_gp    = Γ1_full[n_jump_vars + 1:n_jump_vars + n_state_vars, n_total + 1:n_vars]
-
+    B_pv    = -Γ1_full[n_total .+ 1:n_vars, n_total + 1:n_vars] \ Γ1_full[n_total .+ 1:n_vars, 1:n_jump_vars]
+    B_pg    = -Γ1_full[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \
+           Γ1_full[n_total .+ 1:n_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
+    B_pZ    = -Γ1_full[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \
+        Γ1_full[n_total+1:n_vars, n_jump_vars+n_state_vars .+ 1:n_jump_vars+n_state_vars+n_state_vars_unreduce]
+    B_gg    = Γ1_full[n_jump_vars .+ 1:n_jump_vars + n_state_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
+    B_gv    = Γ1_full[n_jump_vars .+ 1:n_jump_vars + n_state_vars, 1:n_jump_vars]
+    B_gp    = Γ1_full[n_jump_vars .+ 1:n_jump_vars .+ n_state_vars, n_total .+ 1:n_vars]
     # Drop redundant equations
     obs        = B_pg
     ~, d0, V_g = svd(obs)
     aux        = d0/d0[1]
     n_Bpg      = Int64(sum(aux .> 10*eps()))
     V_g        = V_g[:, 1:n_Bpg] .* aux[1:n_Bpg]'
-
     # Compute Krylov subspace
-    A(x::Matrix{Float64}) = (F == identity ? 0. : F(B_gv' * x)) + B_gg' * x + B_pg' * (B_gp' * x)
+    A(x::Matrix{Float64}) = (F == identity ? 0. : F(B_gv' * x)) .+ B_gg' * x + B_pg' * (B_gp' * x)
     V_g, ~, ~             = deflated_block_arnoldi(A, V_g, krylov_dim)
     n_state_vars_red      = size(V_g, 2) # number of state variables after reduction
-
     # Build state space reduction transform
     reduced_basis = spzeros(Float64, n_jump_vars+n_state_vars_red,n_vars)
     reduced_basis[1:n_jump_vars,1:n_jump_vars] = SparseMatrixCSC{Float64}(I, n_jump_vars, n_jump_vars)
-    reduced_basis[n_jump_vars+1:n_jump_vars+n_state_vars_red,n_jump_vars+1:n_jump_vars+n_state_vars] = V_g'
-    reduced_basis[n_jump_vars + n_state_vars_red + 1:n_jump_vars + n_state_vars_red + n_state_vars_unreduce,
-                  n_jump_vars + n_state_vars + 1:n_jump_vars + n_state_vars + n_state_vars_unreduce] =
+    reduced_basis[n_jump_vars .+ 1:n_jump_vars+n_state_vars_red,n_jump_vars .+ 1:n_jump_vars+n_state_vars] = V_g'
+    reduced_basis[n_jump_vars + n_state_vars_red .+ 1:n_jump_vars + n_state_vars_red + n_state_vars_unreduce,
+                  n_jump_vars + n_state_vars .+ 1:n_jump_vars + n_state_vars + n_state_vars_unreduce] =
                       Matrix{Float64}(I, n_state_vars_unreduce,
                                       n_state_vars_unreduce)
 
@@ -69,10 +66,9 @@ function krylov_reduction(m::AbstractCTModel, Γ0::SparseMatrixCSC{Float64,Int64
     inv_reduced_basis[1:n_jump_vars,1:n_jump_vars] = SparseMatrixCSC(I, n_jump_vars, n_jump_vars)
     inv_reduced_basis[n_jump_vars+1:n_jump_vars+n_state_vars,n_jump_vars+1:n_state_vars_red+n_jump_vars] = V_g
     inv_reduced_basis[n_total+1:n_vars,1:n_jump_vars] = B_pv
-    inv_reduced_basis[n_total+1:n_vars,n_jump_vars+1:n_jump_vars+n_state_vars_red] = B_pg * V_g
-    inv_reduced_basis[n_total+1:n_vars,n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = B_pZ
-    inv_reduced_basis[n_jump_vars+n_state_vars+1:n_total,n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = SparseMatrixCSC{Float64}(I, n_state_vars_unreduce, n_state_vars_unreduce)
-
+    inv_reduced_basis[n_total+1:n_vars,n_jump_vars+1:n_jump_vars .+ n_state_vars_red] = B_pg * V_g
+    inv_reduced_basis[n_total+1:n_vars,n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = B_pZ
+    inv_reduced_basis[n_jump_vars+n_state_vars .+ 1:n_total,n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = SparseMatrixCSC{Float64}(I, n_state_vars_unreduce, n_state_vars_unreduce)
     m <= Setting(:n_state_vars_red, n_state_vars_red + n_state_vars_unreduce,
                  "Number of state variables after reduction")
 
