@@ -148,6 +148,7 @@ shockdec
                                       mb_hist = hist, mb_forecast = forecast,
                                       detexify_shocks = false,
                                       groups = groups)
+
     dates = df[:date]
     xnums = (1:length(dates)) .- 0.5
 
@@ -160,6 +161,7 @@ shockdec
     # Set date axis limits
     x0 = xnums[findfirst(dates .== start_date)]
     x1 = xnums[findfirst(dates .== end_date)]
+
     xlims := (x0, x1)
 
     # Shock contributions
@@ -176,8 +178,9 @@ shockdec
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
         inds = findall(start_date .<= dates .<= end_date)
-        x = df[inds, :date]
+        x = xnums[inds]
         y = convert(Matrix{Float64}, df[inds, cat_names])
+
         StatsPlots.GroupedBar((x, y))
     end
 
