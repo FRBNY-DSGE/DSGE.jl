@@ -2,64 +2,109 @@ using JLD
 using DifferentialEquations
 using Plots
 using Printf
-include("../../../../src/estimate/kalman.jl")
-include("../../../../src/estimate/ct_filters/ct_kalman_filter_mdn.jl")
+include("../../../../src/estimate/ct_filters/ct_kalman_simple.jl")
+#include("../../../../src/estimate/kalman.jl")
+#include("../../../../src/estimate/ct_filters/ct_kalman_filter_mdn.jl")
 
 
-
-# start with AR(1) model
-
+EX =2
 # set up transition/meas eqs matrixes
-n_vars = 1
-n_states = 1
-n_shocks = 1
-T = Array{Float64}(undef,n_states,n_states)
-R = Array{Float64}(undef,n_states,n_shocks)
-Z = Array{Float64}(undef,n_vars,n_states)
-T = -10.0
-R = 1.0
-Z = 1.0
-
-
-# Set up SDE
-f(u,p,t) = T*u
-g(u,p,t) = R
-dt = 1.0/90.0 # daily frequency when one period is one quarter
-tspan = (0.0,200.) # 50 years of data
-u0 = zeros(Float64, n_states) #initial values
-W = WienerProcess(0.0, 0., 0.)
-prob = SDEProblem(f, g, u0, tspan, W)
-
-# generate data (solve using Euler-maruyama)
-     sol = solve(prob, EM(), dt = dt)
-
-   gr()
-    default(show = true)
-p = plot(sol)
-
-# created 50 years worth of daily data -> transform data sampled at quarterly frequency for discrete observations
-Delta_t = 1.0
-del_t = dt./Delta_t
-data_d = sol.u
-data = Array{Float64}(undef,round.(length(data_d)*dt./Delta_t;digits = 0))
-for i = 1:length(data)
-    data[i] =data_d[1+ (i-1)*90]
+if EX == 1
+    #  AR(1) model
+    n_vars = 1
+    n_states = 1
+    n_shocks = 1
+    T = Array{Float64}(undef,n_states,n_states)
+    T .= -10.0
+    R = Array{Float64}(undef,n_states,n_shocks)
+    R = 10.0
+    Z = Array{Float64}(undef,n_vars,n_states)
+    Z .= 1.0
+    
+elseif EX == 2
+    #  independent AR(1) models -- load only on the first one
+    n_vars = 1
+    n_states = 2
+    n_shocks = 1
+    T = Array{Float64}(undef,n_states,n_states)
+    T[1,1] = -10.0
+    T[2,2] = -10.0    
+    R = Array{Float64}(undef,n_states,n_shocks)
+    R .= 1.0
+    @show R    
+    Z = Array{Float64}(undef,n_vars,n_states)
+    Z[1,1] = 1.0
+    Z[1,2] = 0.0
 end
 
-E = zeros(n_vars, n_vars) * Delta_t # Shock is Browian motion -> variance is Δ_t b/c this is quarterly observation data
-Q = Matrix{Float64}(I,n_shocks,n_shocks) * dt    # Shock is Brownian motion -> variance is dt b/c this is state data
+# generate data (solve using Euler-maruyama)
+
+n_quarters = 200.
+global s_t = zeros(Float64, n_states) #initial values
+
+# #use Differential Equations
+# # Set up SDE
+# f(u,p,t) = T*u
+# g(u,p,t) = R
+# dt = 1.0/90.0 # daily frequency when one period is one quarter
+# tspan = (0.0,n_quarters) # 50 years of data
+# W = WienerProcess(0.0, 0., 0.)
+# prob = SDEProblem(f, g, s_t, tspan, W)
+#      sol = solve(prob, EM(), dt = dt)
+# s_1T = vcat(sol.u...)
+# data_d = s_1T*Z'
+
+#    gr()
+#     default(show = true)
+# p = plot(sol.t, data_d)
+# sleep(2)
+
+data_d = Array{Float64}(undef,Int(round(n_quarters/dt)),n_vars)
+time_d = Array{Float64}(undef,Int(round(n_quarters/dt)))
+n_step = 10.0
+for i_t = 1:Int(round(n_quarters/dt))
+    for i = 1:Int(n_step)
+        s_t = s_t + T*s_t*dt/n_step + sqrt(dt/n_step)*R*randn(n_shocks, 1);
+    end
+    data_d[i_t,:] = Z*s_t
+    time_d[i_t] = i_t*dt
+end
+
+gr()
+default(show = true)
+p = plot(time_d, data_d, color = :red)
+
+# created 50 years worth of daily data -> transform data sampled at quarterly frequency for discrete observations
+Delta_t = 1.0#1.0/90.0##1.0
+del_t = dt./Delta_t
 
 
 
-prob_out = ct_kalman_simple(T, Z, R*Q*R', E, mean_0, var_0, data_y, dt)
+@show n_y = Int(round.(length(data_d)*dt/Delta_t;digits = 0))
+data = Array{Float64}(undef,n_y,n_vars)
+for i = 1:n_y
+    data[i,:] .= data_d[1+(i-1)*Int(floor(Delta_t/dt)),:]
+end
 
+E = zeros(n_vars, n_vars) # meas error
+Q = Matrix{Float64}(I,n_shocks,n_shocks) # variance of shocks
+mean_0 = zeros(n_states,1) # intial state mean
+var_0 = 0.1*Matrix{Float64}(I,n_states,n_states) # initial state variance
+for sig = 0.1:0.1:2.0
+    prob_out = ct_kalman_simple(T, Z, R*(sig*Q)*R', E, mean_0, var_0, data, [Delta_t])
+    @show [sig prob_out]
+end
+
+# not sure the Delta_t abd dt are correct
+#E = zeros(n_vars, n_vars) * Delta_t # Shock is Browian motion -> variance is Δ_t b/c this is quarterly observation data
+#Q = Matrix{Float64}(I,n_shocks,n_shocks) * dt    # Shock is Brownian motion -> variance is dt b/c this is state data
 #out = ct_kalman_filter(data, T, R, C, Q, Z, D, E, Delta_t)
 #@show true_lik = sum(out[1])
 
 
 
 
- #   p = plot(ind_yy,yy[ind_yy], color = :red)#, label = "High vol",xlims=(glimpdf[1],glimpdf[2]))
+ #   #, label = "High vol",xlims=(glimpdf[1],glimpdf[2]))
 
 
 #=
