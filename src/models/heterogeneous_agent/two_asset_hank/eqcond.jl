@@ -176,9 +176,8 @@ function eqcond(m::TwoAssetHANK)
         y_shock      = real(y_shock ./ y_shock_mean .* y_mean)
 
         println("Timing: solve_hjb()")
-        @time c, s, d  = solve_hjb(V, I_g, J_g, a_lb, ggamma, permanent,
-                                   ddeath, pam, aggZ, xxi, tau_I, w, trans,
-                                   r_b_vec, y_shock, a, b, cost, util, deposit)
+        @time c, s, d  = solve_hjb(V, a_lb, ggamma, permanent, ddeath, pam, aggZ, xxi,
+                                   tau_I, w, trans, r_b_vec, y_shock, a, b, cost, util, deposit)
 
         interp_decision = kron(my_speye(N), interpTwoD(b_g, a_g, b, a))
         d_g = reshape(interp_decision * vec(d), I_g, J_g, N)

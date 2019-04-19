@@ -2,11 +2,11 @@
 Solves Hamilton-Jacobi-Bellman equation.
 
 """
-@inline function solve_hjb(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, a_lb::R, ggamma::R,
+@inline function solve_hjb(V::Union{Array{R},Array{S}}, a_lb::R, ggamma::R,
                            permanent::Bool, ddeath::R, pam::R, aggZ::Union{R,S}, xxi::R, tau_I::R,
                            w::Union{R,S}, trans::R, r_b_vec::Union{Vector{R},Vector{S}},
                            y::Vector{U}, a::Vector{R}, b::Vector{R}, cost, util, deposit;
-                           Vamin = 0.0, Vbmin = 1e-8) where {R<:Float64, S, T<:Int, U<:Number}
+                           Vamin = 0.0, Vbmin = 1e-8) where {R<:Float64, S, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -78,11 +78,11 @@ Solves Hamilton-Jacobi-Bellman equation.
     return c, s, d
 end
 
-@inline function solve_hjb_lite(V::Union{Array{R},Array{S}}, I_g::T, J_g::T, a_lb::R, ggamma::R,
+@inline function solve_hjb_lite(V::Union{Array{R},Array{S}}, a_lb::R, ggamma::R,
                            permanent::Bool, ddeath::R, pam::R, aggZ::Union{R,S}, xxi::R, tau_I::R,
-                           w::Union{R,S}, trans::R, r_b_vec::Union{Vector{R},Vector{S}},
+                           w::Union{R,S},trans::R, r_b::Union{R,S}, r_b_borr::Union{R,S},
                            y::U, a::Vector{R}, b::Vector{R}, cost, util, deposit;
-                           Vamin = 0.0, Vbmin = 1e-8) where {R<:Float64, S, T<:Int, U<:Number}
+                           Vamin = 0.0, Vbmin = 1e-8) where {R<:Float64, S, U<:Number}
     #----------------------------------------------------------------
     # HJB Equation
     #----------------------------------------------------------------
@@ -93,8 +93,7 @@ end
 
     c, s, d = similar(V), similar(V), similar(V)
     for i=1:I, j=1:J
-
-        c0 = c0_c * real(y) + b[i] * (r_b_vec[i] + perm_c) + trans
+        c0 = c0_c * real(y) + b[i] * (((b[i] >= 0) ? r_b : r_b_borr) + perm_c) + trans
 
         # ---- Liquid Assets, Forward + Backward Difference ----
         VaF = (j==J) ? 0.0 : max((V[i,j+1] - V[i,j]) / (a[j+1]-a[j]), Vamin)
@@ -154,6 +153,21 @@ end
     return c, s, d
 end
 
+@inline function solve_kfe(dab_g_tilde, b, g_inds, gg, ddeath, lambda, AT, indx, V_SS)
+    my_inds = findall(x -> x != indx, 1:size(lambda,1))
+
+    loc = findall(b .== 0)
+    dab_g_tilde_inv       = vec(1.0 ./ dab_g_tilde)
+    dab_g_small           = dab_g_tilde ./ dab_g_tilde[loc] * ddeath
+    dab_g_small[loc]     .= 0.0
+    death_process         = -ddeath * my_speye(length(gg))
+    death_process[loc,:]  = vec(dab_g_small)
+    gIntermediate = dab_g_tilde_inv .* ((AT * (dab_g_tilde .* gg)) +
+                        sum([lambda[kk,indx] .* dab_g_tilde .* g_inds[:,kk] for kk in my_inds])) +
+                                             death_process * gg
+    cc = sum([lambda[indx,kk]*(V_SS[:,kk] - V_SS[:,indx]) for kk in my_inds])
+    return gIntermediate, cc
+end
 
 @inline function add_diag(A::SparseMatrixCSC, c::AbstractFloat)
     for i=1:size(A,1)

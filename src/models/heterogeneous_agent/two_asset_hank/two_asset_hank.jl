@@ -475,8 +475,8 @@ function steadystate!(m::TwoAssetHANK)
     trans  = m[:trans].value
 
     # Set liquid rates
-    r_b_SS = m[:r_b_SS].value
-    r_b_borr_SS = m[:r_b_borr_SS].value
+    r_b_SS       = m[:r_b_SS].value
+    r_b_borr_SS  = m[:r_b_borr_SS].value
     borrwedge_SS = m[:borrwedge_SS].value
 
     lambda   = get_setting(m, :lambda)
