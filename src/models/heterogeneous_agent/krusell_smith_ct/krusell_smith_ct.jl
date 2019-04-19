@@ -379,7 +379,6 @@ function steadystate!(m::KrusellSmithCT)
     u::Array{Float64,2}         = similar(dVf) # flow utility across state space
     g::Array{Float64,2}         = similar(dVf) # distribution vector
     r::Float64                  = r0  # initial interest rate guess
-
     KD::Float64 = (((α) / (r + δ)) ^ (1 / (1 - α))) * z_avg # capital demand
     w::Float64  = (1 - α) * (KD ^ α) * ((z_avg) ^ (-α))     # wage rate
     v0::Array{Float64,2} = similar(dVf)                     # initial value function guess
@@ -480,7 +479,6 @@ function steadystate!(m::KrusellSmithCT)
             break
         end
     end
-
     return m
 end
 
