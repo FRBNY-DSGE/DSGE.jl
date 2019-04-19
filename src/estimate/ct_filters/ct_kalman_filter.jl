@@ -7,7 +7,7 @@ tspan - Number of time units betwen each observation
 function ct_kalman_filter(y::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Vector{S},
     Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, E::Matrix{S}, tspan::Float64,
-    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
+    s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
     outputs::Vector{Symbol} = [:loglh, :pred, :filt],
     Nt0::Int = 0, method = Tsit5(),
     reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
