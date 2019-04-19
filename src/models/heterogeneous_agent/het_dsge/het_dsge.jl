@@ -118,20 +118,28 @@ Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
 function init_model_indices!(m::HetDSGE)
     # Endogenous states
-    endogenous_states = collect([
-    # These states corresp. to the following in the original notation
-    #    MUP,   ZP,    MONP,    ELLP,  RRP
-        :μ′_t, :z′_t, :mon′_t, :l′_t, :R′_t,
-    #    IIP    WWP    PIP    TTP
-        :i′_t, :w′_t, :π′_t, :t′_t])
+    endogenous_states = collect([:l′_t1, :μ′_t1, :k′_t, :R′_t1, :i′_t1,
+                                 :π′_t1,:π′_t2,:π′_t3,:y′_t1,:y′_t2,:y′_t3, :y′_t4,
+                                 :z′_t1,:z′_t2,:z′_t3,:w′_t1,:I′_t1,:BP,:GP,:ZP,:MUP,:LAMWP,
+                                 :LAMFP,:MONP,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
+                                 :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t,
+                                 :l_t1L,:μ_t1,:k_t,:R_t1,:i_t1,:π_t1,:π_t2,:π_t3,:y_t1,:y_t2,
+                                 :y_t3,:y_t4,:z_t1,:z_t2,:z_t3,:w_t1,:I_t1,:B,:G,:Z,:MU,:LAMW,
+                                 :LAMF,:MON,:ELL,:μ_t,:R_t,:i_t,
+                                 :t_t,:w_t,:L_t,:π_t,:wageinflation_t,:mu_t,:y_t,:I_t,:mc_t,:Q_t,:capreturn_t])
 
     # Exogenous shocks
-    exogenous_shocks = collect([:z_sh, :mon_sh])
+    exogenous_shocks = collect([])
 
     # Equilibrium conditions
-    equilibrium_conditions = collect([
-        :eq_euler, :eq_kolmogorov_fwd, :eq_market_clearing, :eq_TFP,
-        :eq_phillips, :eq_taylor, :eq_fisher, :eq_transfers, :eq_monetary_policy])
+    equilibrium_conditions = collect([:eq_euler,:eq_kolmogorov_fwd,:eq_lag_ell,:eq_lag_wealth,
+                                      :eq_market_clearing,:eq_lambda, :eq_transfers,
+                                      :eq_investment,:eq_tobin_q,:eq_capital_accumulation,
+                                      :eq_wage_phillips,:eq_price_phillips,:eq_marginal_cost,
+                                      :eq_gdp,:eq_optimal_kl,:eq_taylor, :eq_fisher,
+                                      :eq_nominal_wage_inflation,:LR,:LI,:LPI,:L2PI,:L3PI,:LY,:L2Y,
+                                      :L3Y,:L4Y,:LZ,:L2Z,:L3Z,:LW,:LX,:F33,:F34,:F35,:F36,:F37,
+                                      :F38, :F39])
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -142,29 +150,155 @@ function init_model_indices!(m::HetDSGE)
     ns = get_setting(m, :ns)
     endo = m.endogenous_states_unnormalized
     eqconds = m.equilibrium_conditions
+    nxns = nx*ns
 
-    # State variables
-    endo[:μ′_t]   = 1:nx*ns
-    endo[:z′_t]   = nx*ns+1:nx*ns+1
-    endo[:mon′_t] = nx*ns+2:nx*ns+2
+    # Endogenous function-valued states
+    endo[:l′_t1]    = 1:nxns            # lagged ell function
+    endo[:μ′_t1]    = nxns+1:2*nxns     # lagged wealth distribution
+    #endogenous scalar-valued states
+    endo[:k′_t]  = 2*nxns+1:2*nxns+1             # capital –dont get confused with steadystate object K
+    endo[:R′_t1] = 2*nxns+2:2*nxns+2              # lagged real interest rate
+    endo[:i′_t1] = 2*nxns+3:2*nxns+3             # lagged nominal interest rate
+    endo[:π′_t1] = 2*nxns+4:2*nxns+4             # lagged inflation
+    endo[:π′_t2] = 2*nxns+5:2*nxns+5             # double-lagged inflation
+    endo[:π′_t3] = 2*nxns+6:2*nxns+6             # triple-lagged inflation
+    endo[:y′_t1] = 2*nxns+7:2*nxns+7             # lagged gdp
+    endo[:y′_t2] = 2*nxns+8:2*nxns+8             # double-lagged gdp
+    endo[:y′_t3] = 2*nxns+9:2*nxns+9             # triple-lagged gdp
+    endo[:y′_t4] = 2*nxns+10:2*nxns+10           # quad-lagged gdp
+    endo[:z′_t1] = 2*nxns+11:2*nxns+11           # lag tfp growth
+    endo[:z′_t2] = 2*nxns+12:2*nxns+12           # double-lag tfp growth
+    endo[:z′_t3] = 2*nxns+13:2*nxns+13           # triple-lag tfp growth
+    endo[:w′_t1] = 2*nxns+14:2*nxns+14           # lag real wages
+    endo[:I′_t1] = 2*nxns+15:2*nxns+15           # lag investment–don't get this confused with i, the nominal interest rate
+    # exogenous scalar-valued states:
+    endo[:BP]    = 2*nxns+16:2*nxns+16        # discount factor shock
+    endo[:GP]    = 2*nxns+17:2*nxns+17        # govt spending
+    endo[:ZP]    = 2*nxns+18:2*nxns+18        # tfp growth
+    endo[:MUP]   = 2*nxns+19:2*nxns+19        # investment shock
+    endo[:LAMWP] = 2*nxns+20:2*nxns+20        # wage markup
+    endo[:LAMFP] = 2*nxns+21:2*nxns+21        # price markup
+    endo[:MONP]  = 2*nxns+22:2*nxns+22        # monetary policy shock
 
-    # Jump variables
-    endo[:l′_t]   = nx*ns+3:2*nx*ns+2
-    endo[:R′_t]   = 2*nx*ns+3:2*nx*ns+3
-    endo[:i′_t]   = 2*nx*ns+4:2*nx*ns+4
-    endo[:w′_t]   = 2*nx*ns+5:2*nx*ns+5
-    endo[:π′_t]   = 2*nx*ns+6:2*nx*ns+6
-    endo[:t′_t]   = 2*nx*ns+7:2*nx*ns+7
+ # function-valued jumps
+    endo[:l′_t]  = 2*nxns+23:3*nxns+22 # ell function
+    endo[:μ′_t]  = 3*nxns+23:4*nxns+22 # wealth distribution
+    #scalar-valued jumps
+    endo[:R′_t]  = 4*nxns+23:4*nxns+23        # real interest rate
+    endo[:i′_t]  = 4*nxns+24:4*nxns+24        # nominal interest rate
+    endo[:t′_t]  = 4*nxns+25:4*nxns+25        # transfers + dividends
+    endo[:w′_t]  = 4*nxns+26:4*nxns+26        # real wage
+    endo[:L′_t]  = 4*nxns+27:4*nxns+27        # hours worked
+    endo[:π′_t]  = 4*nxns+28:4*nxns+28        # inflation
+    endo[:wageinflation′_t] = 4*nxns+29:4*nxns+29        # nominal wage inflation
+    endo[:mu′_t] =  4*nxns+30:4*nxns+30        # average marginal utility
+    endo[:y′_t]  = 4*nxns+31:4*nxns+31       # gdp
+    endo[:I′_t]  = 4*nxns+32:4*nxns+32        # investment
+    endo[:mc′_t] = 4*nxns+33:4*nxns+33        # marginal cost - this is ζ in HetDSGEₖd.pdf
+    endo[:Q′_t]  = 4*nxns+34:4*nxns+34        # Tobin's qfunction
+    endo[:capreturn′_t] = 4*nxns+35:4*nxns+35        # return on capital
 
-    eqconds[:eq_euler]              = 1:nx*ns
+    nvars = 4*nxns+35
+    nscalars = 35 # num eqs which output scalars
+    nyscalars = 13 # num scalar jumps
+    nxscalars = nscalars - nyscalars # num scalar states
+
+endo[:l_t1] = endo[:l′_t1] .+ nvars #LELL
+endo[:μ_t1] = endo[:μ′_t1] .+ nvars #LM
+endo[:k_t] = endo[:k′_t] .+ nvars #KK
+endo[:R_t1] = endo[:R′_t1] .+ nvars #LRR
+endo[:i_t1] = endo[:i′_t1] .+ nvars #LII
+endo[:π_t1] = endo[:π′_t1]  .+ nvars #LPI
+endo[:π_t2] = endo[:π′_t2]  .+ nvars #L2PI
+endo[:π_t3] = endo[:π′_t3]  .+ nvars #L3PI
+endo[:y_t1] = endo[:y′_t1] .+ nvars #LY
+endo[:y_t2] = endo[:y′_t2] .+ nvars #L2Y
+endo[:y_t3] = endo[:y′_t3] .+ nvars #l3Y
+endo[:y_t4] = endo[:y′_t4] .+ nvars #L4Y
+endo[:z_t1] = endo[:z′_t1] .+ nvars #LZ
+endo[:z_t2] = endo[:z′_t2] .+ nvars #L2Z
+endo[:z_t3] = endo[:z′_t3] .+ nvars #L3Z
+endo[:w_t1] = endo[:w′_t1] .+ nvars #LW
+endo[:I_t1] = endo[:I′_t1] .+ nvars #LX
+endo[:B] = endo[:BP] .+ nvars #B
+endo[:G] = endo[:GP] .+ nvars #G
+endo[:Z] = endo[:ZP] .+ nvars #Z
+endo[:MU] = endo[:MUP] .+ nvars #MU
+endo[:LAMW] = endo[:LAMWP] .+ nvars #LAMW
+endo[:LAMF] = endo[:LAMFP] .+ nvars #LAMF
+endo[:MON] = endo[:MONP] .+ nvars #MON
+endo[:ELL] = endo[:l′_t] .+ nvars #ELL
+endo[:μ_t] = endo[:μ′_t] .+ nvars #M
+endo[:R_t] = endo[:R′_t] .+ nvars #RR
+endo[:i_t] = endo[:i′_t] .+ nvars #II
+endo[:t_t] = endo[:t′_t]  .+ nvars #TT
+endo[:w_t] = endo[:w′_t] .+ nvars #W
+endo[:L_t] = endo[:L′_t] .+ nvars #HH
+endo[:π_t] = endo[:π′_t] .+ nvars #PI
+endo[:wageinflation_t] = endo[:wageinflation′_t] .+ nvars #PIW
+endo[:mu_t] = endo[:mu′_t] .+ nvars #LAM
+endo[:y_t] = endo[:y′_t] .+ nvars #Y
+endo[:I_t] = endo[:I′_t]  .+ nvars #X
+endo[:mc_t] = endo[:mc′_t]  .+ nvars #MC
+endo[:Q_t] = endo[:Q′_t]  .+ nvars #Q
+endo[:capreturn_t] = endo[:capreturn′_t] .+ nvars #RK
+
+# create objects needed for solve.jl
+# we will order function blocks as follows:
+# 1. all function blocks which output a function (first real eqs, then lags)
+# 2. all function blocks which map functions to scalars
+# 3. all scalar blocks involving endogenous vbls (first real eqs, then lags)
+# 4. shock processes
+funops = 1:4 # which operators output a function
+
+
+    # function blocks which output a function
+    eqconds[:eq_euler]              = 1:nxns
     eqconds[:eq_kolmogorov_fwd]     = nx*ns+1:2*nx*ns
-    eqconds[:eq_market_clearing]    = 2*nx*ns+1:2*nx*ns+1
-    eqconds[:eq_TFP]                = 2*nx*ns+2:2*nx*ns+2
-    eqconds[:eq_phillips]           = 2*nx*ns+3:2*nx*ns+3
-    eqconds[:eq_taylor]             = 2*nx*ns+4:2*nx*ns+4
-    eqconds[:eq_fisher]             = 2*nx*ns+5:2*nx*ns+5
-    eqconds[:eq_transfers]          = 2*nx*ns+6:2*nx*ns+6
-    eqconds[:eq_monetary_policy]    = 2*nx*ns+7:2*nx*ns+7
+    eqconds[:eq_lag_ell]            = 2*nxns+1:3*nxns
+    eqconds[:eq_lag_wealth]         = 3*nxns+1:4*nxns
+    # function blocks which map functions to scalars
+    eqconds[:eq_market_clearing]    = 4*nxns+1:4*nxns+1
+    eqconds[:eq_lambda]             = 4*nxns+2:4*nxns+2
+    #scalar blocks involving endogenous variables
+    eqconds[:eq_transfers]            = 4*nxns+3:4*nxns+3 # transfers
+    eqconds[:eq_investment]          = 4*nxns+4:4*nxns+4 # investment
+    eqconds[:eq_tobin_q]              = 4*nxns+5:4*nxns+5 # tobin's q
+    eqconds[:eq_capital_accumulation] = 4*nxns+6:4*nxns+6 # capital accumulation
+    eqconds[:eq_wage_phillips] = 4*nxns+7:4*nxns+7 # wage phillips curve
+    eqconds[:eq_price_phillips] = 4*nxns+8:4*nxns+8 # price phillips curve
+    eqconds[:eq_marginal_cost]  = 4*nxns+9:4*nxns+9 # marginal cost
+    eqconds[:eq_gdp]  = 4*nxns+10:4*nxns+10 # gdp
+    eqconds[:eq_optimal_kl] = 4*nxns+11:4*nxns+11 # optimal K/L ratio
+    eqconds[:eq_taylor] = 4*nxns+12:4*nxns+12 # taylor rule
+    eqconds[:eq_fisher] = 4*nxns+13:4*nxns+13 # fisher eqn
+    eqconds[:eq_nominal_wage_inflation] = 4*nxns+14:4*nxns+14 # nominal wage inflation
+    # lagged variables
+    eqconds[:LR] = 4*nxns+15:4*nxns+15 # LR
+    eqconds[:LI] = 4*nxns+16:4*nxns+16 # LI
+    eqconds[:LPI] = 4*nxns+17:4*nxns+17 # LPI
+    eqconds[:L2PI] = 4*nxns+18:4*nxns+18 # L2PI
+    eqconds[:L3PI] = 4*nxns+19:4*nxns+19 # L3PI
+    eqconds[:LY] = 4*nxns+20:4*nxns+20 # LY
+    eqconds[:L2Y] = 4*nxns+21:4*nxns+21 # L2Y
+    eqconds[:L3Y] = 4*nxns+22:4*nxns+22 # L3Y
+    eqconds[:L4Y] = 4*nxns+23:4*nxns+23 # L4Y
+    eqconds[:LZ]  = 4*nxns+24:4*nxns+24 # LZ
+    eqconds[:L2Z] = 4*nxns+25:4*nxns+25 # L2Z
+    eqconds[:L3Z] = 4*nxns+26:4*nxns+26 # L3Z
+    eqconds[:LW]  = 4*nxns+27:4*nxns+27 # LW
+    eqconds[:LX] = 4*nxns+28:4*nxns+28 # LX
+    # shocks
+    eqconds[:F33] = 4*nxns+29:4*nxns+29 # discount factor B
+    eqconds[:F34] = 4*nxns+30:4*nxns+30 # govt spending G
+    eqconds[:F35] = 4*nxns+31:4*nxns+31 # tfp growth Z
+    eqconds[:F36] = 4*nxns+32:4*nxns+32 # investment MU
+    eqconds[:F37] = 4*nxns+33:4*nxns+33 # wage mkup LAMW
+    eqconds[:F38] = 4*nxns+34:4*nxns+34 # price mkup LAMF
+    eqconds[:F39] = 4*nxns+35:4*nxns+35 # monetary policy MON
+
+
+
     ########################################################################################
 
     m.normalized_model_states = [:μ′_t]
@@ -230,8 +364,8 @@ function HetDSGE(subspec::String="ss0";
     # Initialize grids
     init_grids!(m)
 
-    # # Initialize model indices
-    # init_model_indices!(m)
+    # Initialize model indices
+    init_model_indices!(m)
 
     # # Solve for the steady state
     # steadystate!(m)
@@ -270,29 +404,28 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_sp: The standard deviation of the skill process.",
                    tex_label="\\sigma_{sp}")
-    m <= parameter(:γ, 0.0, fixed = true, description = "γ: TFP growth")
-    m <= parameter(:g, 0.18, fixed = true, description = "g: Steady-state government spending/gdp")
-    m <= parameter(:η, 0.1, fixed = true, description = "η: Borrowing constraint (normalized by TFP)")
+    m <= parameter(:γ, 0.0, description = "γ: TFP growth")
+    #GoverY = 0.01
+    m <= parameter(:g, 1/(1-0.01), description = "g: Steady-state government spending/gdp")
+    m <= parameter(:η, 0.1, description = "η: Borrowing constraint (normalized by TFP)")
 
-    # Other parameters that affect dynamics
-    m <= parameter(:spp, 4., fixed = true, description = "second derivative of investment adjustment cost")
-    m <= parameter(:lamw, 1.5, fixed = true,  description = "wage markup")
-    m <= parameter(:ϕh, 2., fixed = true, description = "inverse frisch elasticity")
-    m <= parameter(:Φw, 100., fixed = true, description = "rotemberg cost for wages")
-    m <= parameter(:lamf, 1.5, fixed = true, description = "price markup")
-    m <= parameter(:Φp, 100., fixed = true, description = "rotemberg cost for prices")
-    m <= parameter(:ρR, 0.75, fixed = true, description = "persistence in taylor rule")
-    m <= parameter(:ψπ, 10.5, fixed = true, description = "weight on inflation in taylor rule")
-    m <= parameter(:ψy, 0.5, fixed = true, description = "weight on output growth in taylor rule")
+    m <= parameter(:ρB, 0.5, description = "# persistence of discount factor shock")
+    m <= parameter(:ρG, 0.5, description = "# persistence of govt spending shock")
+    m <= parameter(:ρZ, 0.5, description = "# persistence of tfp growth shock")
+    m <= parameter(:ρμ, 0.5, description = " # persistence of investment shock")
+    m <= parameter(:ρlamw, 0.5, description = "# persistence of wage mkup shock")
+    m <= parameter(:ρlamf, 0.5, description = " # persistence of price mkup shock")
+    m <= parameter(:ρmon, 0.5, description = " # persistence of mon policy shock")
 
-    # Aggregate shocks
-    m <= parameter(:ρB, 0.5, fixed = true, description = " persistence of discount factor shock")
-    m <= parameter(:ρG, 0.5, fixed = true, description = "persistence of govt spending shock")
-    m <= parameter(:ρZ, 0.5, fixed = true, description = "persistence of tfp growth shock")
-    m <= parameter(:ρμ, 0.5, fixed = true, description = "persistence of investment shock")
-    m <= parameter(:ρlamw, 0.5, fixed = true, description = "persistence of wage mkup shock")
-    m <= parameter(:ρlamf, 0.5, fixed = true, description = "persistence of price mkup shock")
-    m <= parameter(:ρmon, 0.5, fixed = true, description = "persistence of mon policy shock")
+ m <= parameter(:spp, 4., description = "# second derivative of investment adjustment cost")
+ m <= parameter(:lamw, 1.5, description = "# wage markup")
+ m <= parameter(:ϕh , 2., description = "# inverse frisch elasticity")
+ m <= parameter(:Φw , 10., description = "# rotemberg cost for wages")
+ m <= parameter(:lamf, 1.5 , description = "# price markup")
+ m <= parameter(:Φp , 10., description = "# rotemberg cost for prices")
+ m <= parameter(:ρR , 0.75, description = "# persistence in taylor rule")
+ m <= parameter(:ψπ , 10.5, description = "# weight on inflation in taylor rule")
+ m <= parameter(:ψy , 0.5, description = "# weight on output growth in taylor rule")
 
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
@@ -317,7 +450,7 @@ Steady state of aggregate scalar variables (Break out the "analytic" steady-stat
 """
 function aggregate_steadystate!(m::HetDSGE)
     m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ], description = "Rental rate on capital", tex_label = "Rk_*")
-    m <= SteadyStateParameter(:ωstar, ((1-m[:α])^(1-m[:α])*(m[:α]^m[:α])*m[:Rkstar]^m[:α])^(1/(1-m[:α])), description = "Real wage", tex_label = "\\omega_*")
+    m <= SteadyStateParameter(:ωstar, (m[:α]^(m[:α]/(1-m[:α])))*(1-m[:α])*m[:Rkstar]^(-m[:α]/(1-m[:α])), description = "Real wage", tex_label = "\\omega_*")
     m <= SteadyStateParameter(:klstar, (m[:α]/(1-m[:α]))*(m[:ωstar]/m[:Rkstar])*exp(m[:γ]), description = "Capital/Labor ratio", tex_label = "kl_*")
     m <= SteadyStateParameter(:kstar, m[:klstar]*m[:H], description = "Capital", tex_label = "k_*")
     m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar], description = "Investment", tex_label = "x_*")
@@ -334,33 +467,44 @@ init_grids!(m::HetDSGE)
 """
 function init_grids!(m::HetDSGE)
 
-    # Calculate endogenous grid bounds (bounds are analytic functions of model parameters,
-    # which ensure there is no mass in the distributions across x where there shouldn't be)
-    # Calculate the lowest possible cash on hand in steady state
-    smin = exp(m[:μ_sp]/(1-m[:ρ_sp]) - get_setting(m, :λ)*sqrt(m[:σ_sp]^2/(1-m[:ρ_sp])^2))*get_setting(m, :zlo)
-    m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + 1e-6, "Lower bound on cash on hand")
-    m <= Setting(:xhi, get_setting(m, :xlo)*2, "Upper Bound on cash on hand")
-    m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
 
     nx      = get_setting(m, :nx)
-    xlo     = get_setting(m, :xlo)
-    xhi     = get_setting(m, :xhi)
-    xscale  = get_setting(m, :xscale)
     ns      = get_setting(m, :ns)
     λ       = get_setting(m, :λ)
 
     grids = OrderedDict()
 
+    # Skill grid
+    #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
+    sprob = [[0.9 0.1];[0.1 0.9]]
+    sgrid = [0.8;1.2]
+    (λs, vs) = eigen(Matrix{Float64}(sprob'))
+    order_λs = sortperm(λs, rev = true)
+    vs = vs[:,order_λs]
+    ss_skill_distr = vs[:,1]/sum(vs[:,1])
+    means = ss_skill_distr'*sgrid
+    meanz = (get_setting(m, :zhi)+get_setting(m, :zlo))/2.
+    sgrid = sgrid/(meanz*means) # so that skills integrate to 1
+    sscale = sgrid[2] - sgrid[1]
+    swts = (sscale/ns)*ones(ns)
+    #sgrid = exp.(lsgrid)
+    grids[:sgrid] = Grid(sgrid, swts, sscale)
+
+ # Calculate endogenous grid bounds (bounds are analytic functions of model parameters,
+    # which ensure there is no mass in the distributions across x where there shouldn't be)
+    # Calculate the lowest possible cash on hand in steady state
+    zlo = get_setting(m, :zlo)
+    smin = minimum(sgrid)*zlo #exp(m[:μ_sp]/(1-m[:ρ_sp]) - get_setting(m, :λ)*sqrt(m[:σ_sp]^2/(1-m[:ρ_sp])^2))*get_setting(m, :zlo)
+    m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + sgrid[1]*m[:ωstar]*m[:H]*0.05, "Lower bound on cash on hand")
+    m <= Setting(:xhi, max(get_setting(m, :xlo)*2, get_setting(m, :xlo)+5.), "Upper Bound on cash on hand")
+    m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
+    xlo     = get_setting(m, :xlo)
+    xhi     = get_setting(m, :xhi)
+    xscale  = get_setting(m, :xscale)
+
     # Cash on hand grid
     grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
 
-    # Skill grid
-    #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
-    f1 = [[0.9 0.1]; [0.2 0.1]]
-    sgrid = [0.8; 1.2] #sgrid = exp.(lsgrid)
-    sscale = sgrid[2] - sgrid[1]
-    swts = (sscale/ns)*ones(ns)
-    grids[:sgrid] = Grid(sgrid, swts, sscale)
 
     # Markov transition matrix for skill
     grids[:fgrid] = sprob./swts
@@ -431,6 +575,12 @@ function model_settings!(m::HetDSGE)
     # Total grid x*s
     m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
                  across grid dimensions.")
+
+    m <= Setting(:nvars, 4*get_setting(m, :n) +35, "num variables")
+    m <= Setting(:nscalars, 35, " # num eqs which output scalars")
+    m <= Setting(:nyscalars, 13, "num scalar jumps")
+    m <= Setting(:nxscalars, 35 - 13, "num scalar states")
+
 
     # Function-valued variables include distributional variables
     m <= Setting(:n_function_valued_backward_looking_states, 1, "Number of function-valued

@@ -31,14 +31,14 @@ function krylov_reduction(m::AbstractCTModel{Float64}, Γ0::Matrix{Float64}, Γ1
     n_state_vars          = n_state_vars - n_state_vars_unreduce
 
     # Slice Dynamic Equation Γ1 into different parts. See Why Inequality matters paper.
-    B_pv = -Γ1[n_total + 1:n_vars, n_total + 1:n_vars] \ Γ1[n_total + 1:n_vars, 1:n_jump_vars]
-    B_pg = -Γ1[n_total + 1:n_vars, n_total + 1:n_vars] \
-        Γ1[n_total + 1:n_vars, n_jump_vars + 1:n_jump_vars + n_state_vars]
-    B_pZ = -Γ1[n_total + 1:n_vars, n_total + 1:n_vars] \
-        Γ1[n_total + 1:n_vars, n_jump_vars + n_state_vars + 1:n_jump_vars + n_state_vars+n_state_vars_unreduce]
-    B_gg = Γ1[n_jump_vars + 1:n_jump_vars + n_state_vars, n_jump_vars + 1:n_jump_vars + n_state_vars]
-    B_gv = Γ1[n_jump_vars + 1:n_jump_vars + n_state_vars, 1:n_jump_vars]
-    B_gp = Γ1[n_jump_vars + 1:n_jump_vars + n_state_vars, n_total + 1:n_vars]
+    B_pv = -Γ1[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \ Γ1[n_total .+ 1:n_vars, 1:n_jump_vars]
+    B_pg = -Γ1[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \
+        Γ1[n_total .+ 1:n_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
+    B_pZ = -Γ1[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \
+        Γ1[n_total .+ 1:n_vars, n_jump_vars + n_state_vars .+ 1:n_jump_vars + n_state_vars+n_state_vars_unreduce]
+    B_gg = Γ1[n_jump_vars .+ 1:n_jump_vars + n_state_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
+    B_gv = Γ1[n_jump_vars .+ 1:n_jump_vars + n_state_vars, 1:n_jump_vars]
+    B_gp = Γ1[n_jump_vars .+ 1:n_jump_vars + n_state_vars, n_total .+ 1:n_vars]
 
     # Drop redundant equations in B_pg
     obs        = B_pg
@@ -55,17 +55,17 @@ function krylov_reduction(m::AbstractCTModel{Float64}, Γ0::Matrix{Float64}, Γ1
     # Build state space reduction transform
     reduced_basis = spzeros(Float64, n_jump_vars+n_state_vars_red,n_vars)
     reduced_basis[1:n_jump_vars,1:n_jump_vars] = speye(n_jump_vars)
-    reduced_basis[n_jump_vars+1:n_jump_vars+n_state_vars_red,n_jump_vars+1:n_jump_vars+n_state_vars] = V_g'
-    reduced_basis[n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce,n_jump_vars+n_state_vars+1:n_jump_vars+n_state_vars+n_state_vars_unreduce] = eye(n_state_vars_unreduce)
+    reduced_basis[n_jump_vars .+ 1:n_jump_vars+n_state_vars_red,n_jump_vars .+ 1:n_jump_vars+n_state_vars] = V_g'
+    reduced_basis[n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce,n_jump_vars+n_state_vars .+ 1:n_jump_vars+n_state_vars+n_state_vars_unreduce] = eye(n_state_vars_unreduce)
 
     # Build inverse transform
     inv_reduced_basis = spzeros(n_vars,n_jump_vars+n_state_vars_red)
     inv_reduced_basis[1:n_jump_vars,1:n_jump_vars] = speye(n_jump_vars)
     inv_reduced_basis[n_jump_vars+1:n_jump_vars+n_state_vars,n_jump_vars+1:n_state_vars_red+n_jump_vars] = V_g
-    inv_reduced_basis[n_total+1:n_vars,1:n_jump_vars] = B_pv
-    inv_reduced_basis[n_total+1:n_vars,n_jump_vars+1:n_jump_vars+n_state_vars_red] = B_pg*V_g
-    inv_reduced_basis[n_total+1:n_vars,n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = B_pZ
-    inv_reduced_basis[n_jump_vars+n_state_vars+1:n_total,n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = speye(n_state_vars_unreduce)
+    inv_reduced_basis[n_total .+ 1:n_vars,1:n_jump_vars] = B_pv
+    inv_reduced_basis[n_total .+ 1:n_vars,n_jump_vars .+ 1:n_jump_vars+n_state_vars_red] = B_pg*V_g
+    inv_reduced_basis[n_total .+ 1:n_vars,n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = B_pZ
+    inv_reduced_basis[n_jump_vars+n_state_vars .+ 1:n_total,n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = speye(n_state_vars_unreduce)
 
     m <= Setting(:n_state_vars_red, n_state_vars_red + n_state_vars_unreduce,
                  "Number of state variables after reduction")
@@ -134,7 +134,6 @@ function valuef_reduction(m::AbstractModel,
 
 # Look up the algorithm for this method.
 function deflated_block_arnoldi(A::Function, B::Matrix{Float64}, m::Int64)
-
     F = qr(B)
     Q = Matrix{Float64}(F.Q * Matrix{Float64}(I, size(B)))
     basis = Matrix{Float64}(undef, size(Q,1), 0)
@@ -226,7 +225,7 @@ function oneDquad_spline(x::Vector{Float64}, knots::Vector{Float64})
         spdiagm([2 ./ diff(knots); 1], 1, n_knots, n_knots + 1)
 
     # Return values
-    from_knots = first_interp_mat + aux_mat*(full(aux_mat2)\full(aux_mat3))
+    from_knots = first_interp_mat + aux_mat*(Matrix(aux_mat2)\Matrix(aux_mat3))
     to_knots = from_knots'*from_knots\(from_knots'*eye(n_a))
     return sparse(from_knots), sparse(to_knots)
 end
@@ -260,7 +259,7 @@ function spline_basis(x::Array{Float64}, knots::Dict{Int64,Vector{Float64}}, deg
     # the coefficient vector of knot points to the coefficient vector of the provided
     # state space array x, i.e. S*knots = x, where S is the spline basis matrix.
     from_knots = BasisMatrix(basis, Expanded(), x, 0).vals[1]
-    to_knots = full(from_knots'*from_knots) \ full(from_knots')
+    to_knots = Matrix(from_knots'*from_knots) \ Matrix(from_knots')
     return from_knots, sparse(to_knots)
 end
 
@@ -361,12 +360,12 @@ function solve_static_conditions(Γ0::SparseMatrixCSC{Float64, Int64},
     inv_state_red = nullspace(full(Γ1[redundant_list,:]))
     state_red = inv_state_red'
 
-    g0 = state_red * full(Γ0) * inv_state_red
-    g1 = state_red * full(Γ1) * inv_state_red
+    g0 = state_red * Matrix(Γ0) * inv_state_red
+    g1 = state_red * Matrix(Γ1) * inv_state_red
     g1 = g0 \ g1
-    Psi = g0 \ (state_red * full(Ψ))
-    Pi = g0 \ (state_red * full(Π))
-    c = g0 \ (state_red * full(C))
+    Psi = g0 \ (state_red * Matrix(Ψ))
+    Pi = g0 \ (state_red * Matrix(Π))
+    c = g0 \ (state_red * Vector(C))
 
     return g0, g1, c, Pi, Psi, state_red, inv_state_red
 end
@@ -382,12 +381,12 @@ function solve_static_conditions(Γ0::SparseMatrixCSC{Float64, Int64},
     inv_state_red = null(full(Γ1(redundant,:)))
     state_red = inv_state_red'
 
-    g0 = state_red * full(Γ0) * inv_state_red
-    g1 = state_red * full(Γ1) * inv_state_red
+    g0 = state_red * Matrix(Γ0) * inv_state_red
+    g1 = state_red * Matrix(Γ1) * inv_state_red
     g1 = g0 \ g1
-    Psi = g0 \ (state_red * full(Ψ))
-    Pi = g0 \ (state_red * full(Π))
-    c = g0 \ (state_red * full(C))
+    Psi = g0 \ (state_red * Matrix(Ψ))
+    Pi = g0 \ (state_red * Matrix(Π))
+    c = g0 \ (state_red * Vector(C))
 
     return g0, g1, c, Pi, Psi, state_red, inv_state_red
 end

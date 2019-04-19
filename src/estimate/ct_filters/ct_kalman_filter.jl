@@ -7,7 +7,7 @@ tspan - Number of time units betwen each observation
 function ct_kalman_filter(y::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Vector{S},
     Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, E::Matrix{S}, tspan::Float64,
-    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
+    s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
     outputs::Vector{Symbol} = [:loglh, :pred, :filt],
     Nt0::Int = 0, method = Tsit5(),
     reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
@@ -22,7 +22,7 @@ function ct_kalman_filter(y::Matrix{S},
     Nt = size(y, 2) # number of periods of data
 
     # Initialize inputs and outputs
-    k = KalmanFilter(T, R, C, Q, Z, D, E, s_0, P_0)
+    k = StateSpaceRoutines.KalmanFilter(T, R, C, Q, Z, D, E, s_0, P_0)
 
     mynan = convert(S, NaN)
     loglh  = return_loglh ? fill(mynan, Nt)         : Vector{S}(0)
@@ -45,7 +45,7 @@ function ct_kalman_filter(y::Matrix{S},
         end
 
         # Update and compute log-likelihood
-        update!(k, y[:, t]; return_loglh = return_loglh)
+        StateSpaceRoutines.update!(k, y[:, t]; return_loglh = return_loglh)
         if return_filt
             s_filt[:,    t] = k.s_t
             P_filt[:, :, t] = k.P_t
@@ -67,7 +67,7 @@ function ct_kalman_filter(y::Matrix{S},
 
     # Remove presample periods
     loglh, s_pred, P_pred, s_filt, P_filt =
-        remove_presample!(Nt0, loglh, s_pred, P_pred, s_filt, P_filt; outputs = outputs)
+        StateSpaceRoutines.remove_presample!(Nt0, loglh, s_pred, P_pred, s_filt, P_filt; outputs = outputs)
 
     return loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T
 end
@@ -98,7 +98,7 @@ function ct_kalman_filter(y::Matrix{S},
     Nt = size(y, 2) # number of periods of data
 
     # Initialize inputs and outputs
-    k = KalmanFilter(T, R, C, Q, Z, D, E, s_0, P_0)
+    k = StateSpaceRoutines.KalmanFilter(T, R, C, Q, Z, D, E, s_0, P_0)
 
     mynan = convert(S, NaN)
     loglh  = return_loglh ? fill(mynan, Nt)         : Vector{S}(0)
@@ -121,7 +121,7 @@ function ct_kalman_filter(y::Matrix{S},
         end
 
         # Update and compute log-likelihood
-        update!(k, y[:, t]; return_loglh = return_loglh)
+        StateSpaceRoutines.update!(k, y[:, t]; return_loglh = return_loglh)
         if return_filt
             s_filt[:,    t] = k.s_t
             P_filt[:, :, t] = k.P_t
@@ -151,19 +151,20 @@ end
 """
 Forecast functions
 """
-function forecast!(k::KalmanFilter{S}, tspan::Float64; method = Tsit5(),
+function forecast!(k::StateSpaceRoutines.KalmanFilter, tspan::Float64; method = Tsit5(),
                    reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
     T, R, Q = k.T, k.R, k.Q
     s0, P0 = k.s_t, k.P_t
     f(u,p,t) = T*u
     g(u,p,t) = T*u + u*T' + R*Q*R'
-    tspan_int = (0., span)
+    tspan_int = (0., tspan)
     s_prob = ODEProblem(f, s0, tspan_int)
     P_prob = ODEProblem(g, P0, tspan_int)
-    s_sol = solvect(s_prob, method, reltol = reltol, abstol = abstol)
-    P_sol = solvect(P_prob, method, reltol = reltol, abstol = abstol)
-    k.s_t = s_sol.u
-    k.P_t = P_sol.u
+    s_sol = DifferentialEquations.solve(s_prob, method, reltol = reltol, abstol = abstol)
+    P_sol = DifferentialEquations.solve(P_prob, method, reltol = reltol, abstol = abstol)
+
+    k.s_t = s_sol.u[end]
+    k.P_t = P_sol.u[end]
 end
 
 # INCOMPLETE
@@ -171,7 +172,7 @@ end
 # kind of recursion that I can do otherwise. Moreover, I effectively will get the
 # same predicted states regardless, so I'm not sure if this will improve the
 # measurement equation or accuracy.
-function forecast!(k::KalmanFilter{S}, tspan::Float64, n_subinterval::Int64; method = Tsit5(),
+function forecast!(k::StateSpaceRoutines.KalmanFilter, tspan::Float64, n_subinterval::Int64; method = Tsit5(),
                    reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
     T, R, Q = k.T, k.R, k.Q
     s_filt, P0 = k.s_t, k.P_t
