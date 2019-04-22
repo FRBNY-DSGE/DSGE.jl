@@ -3,9 +3,8 @@
 TwoAssetHANK{T} <: AbstractCTModel{T}
 ```
 
-The `TwoAssetHANK` type defines the structure of the one-asset HANK model
-originally written in MATLAB by Ben Moll and Se Hyoun Ahn at
-https://sehyoun.com/EXAMPLE_one_asset_HANK_web.html
+The `TwoAssetHANK` type defines the structure of the two-asset HANK model
+originally written in MATLAB by Ben Moll and Se Hyoun Ahn.
 
 ### Fields
 
@@ -1013,9 +1012,6 @@ end
 function model_settings!(m::TwoAssetHANK)
     default_settings!(m)
 
-    # TEMP SOLUTION
-    #m <= Setting(:incomegridroot, "SPECIFY")
-
     # Productivity shock properties
     m <= Setting(:permanent, false,
                  "Permanent or transitory shock. For permanent, use reduceDist_hor=400, r_b_fix=1.")
@@ -1093,7 +1089,7 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:b_g,      b_g, "b_g")
     m <= Setting(:b_g_0pos, b_g_0pos[1], "Points in liquid asset grid equal to 0")
 
-    m <= Setting(:interp_decision, kron(my_speye(get_setting(m, :N)), interpTwoD(b_g, a_g, b, a)),
+    m <= Setting(:interp_decision, kron(my_speye(get_setting(m, :N)), interp(b_g, a_g, b, a)),
                                         "interp_decision")
 
     m <= Setting(:n_v,      get_setting(m, :I) * get_setting(m, :J) * get_setting(m, :N),
@@ -1116,12 +1112,12 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:n_state_vars_unreduce,      1, "Number of aggregate shocks")
 
     # Steady state approximation
-    m <= Setting(:maxit_HJB, 100, "Max number of iterations for HJB")
+    m <= Setting(:maxit_HJB, 100,  "Max number of iterations for HJB")
     m <= Setting(:crit_HJB,  1e-6, "Tolerance for HJB error")
-    m <= Setting(:Delta,     1e6, "Multiplier for implicit upwind scheme of HJB")
+    m <= Setting(:Delta,     1e6,  "Multiplier for implicit upwind scheme of HJB")
 
-    m <= Setting(:maxit_HIS, 10, "Max allowable number of Howard improvement steps")
-    m <= Setting(:start_HIS, 2, "When in HJB loop should Howard improvement steps begin?")
+    m <= Setting(:maxit_HIS, 10,   "Max allowable number of Howard improvement steps")
+    m <= Setting(:start_HIS, 2,    "When in HJB loop should Howard improvement steps begin?")
     m <= Setting(:crit_HIS,  1e-5, "Critical value HIS")
 
     m <= Setting(:maxit_KFE, 1000, "Max allowable number of KFE iterations")
@@ -1130,7 +1126,7 @@ function model_settings!(m::TwoAssetHANK)
 
     m <= Setting(:maxit_KL,  1000, "Max number of iterations over capital-labor ratio")
     m <= Setting(:crit_KL,   1e-5, "Tolerance for KL error")
-    m <= Setting(:relax_KL,  0.1, "Updating speed (must lie within [0,1])")
+    m <= Setting(:relax_KL,  0.1,  "Updating speed (must lie within [0,1])")
 
     # Approximation Parameters
     m <= Setting(:KL_0, 43.8800, "Initial guess of capital to labor ratio")

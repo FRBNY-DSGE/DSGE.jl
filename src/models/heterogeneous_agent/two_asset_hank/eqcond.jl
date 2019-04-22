@@ -179,7 +179,7 @@ function eqcond(m::TwoAssetHANK)
         @time c, s, d  = solve_hjb(V, a_lb, ggamma, permanent, ddeath, pam, aggZ, xxi,
                                    tau_I, w, trans, r_b_vec, y_shock, a, b, cost, util, deposit)
 
-        interp_decision = kron(my_speye(N), interpTwoD(b_g, a_g, b, a))
+        interp_decision = kron(my_speye(N), interp(b_g, a_g, b, a))
         d_g = reshape(interp_decision * vec(d), I_g, J_g, N)
         s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
         c_g = reshape(interp_decision * vec(c), I_g, J_g, N)

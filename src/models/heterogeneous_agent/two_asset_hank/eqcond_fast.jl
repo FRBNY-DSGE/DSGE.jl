@@ -163,7 +163,7 @@ function eqcond_lite(m::TwoAssetHANK)
                                         xxi, tau_I, w, trans, r_b, r_b_borr, y_shock[indx],
                                         a, b, cost, util, deposit)
 
-        interp_decision = interpTwoD(b_g, a_g, b, a)
+        @time interp_decision = interp(b_g, a_g, b, a)
         d_g = reshape(interp_decision * vec(d), I_g, J_g)
         s_g = reshape(interp_decision * vec(s), I_g, J_g)
         c_g = reshape(interp_decision * vec(c), I_g, J_g)
