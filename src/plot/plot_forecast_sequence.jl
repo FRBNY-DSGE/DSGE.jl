@@ -79,24 +79,79 @@ function plot_forecast_sequence(mbs_forecast::Vector{MeansBands},
                                 filepath::String = "")
     n_forecasts = length(mbs_forecast)
 
-    # Construct realized series date indices
-    realized_date_range_raw = Base.filter(x -> start_date <= x <= end_date, mb_realized.means[:date])
-    realized_date_range = map(quarter_date_to_number, realized_date_range_raw)
-    date_inds  = findall(start_date .<= mb_realized.means[:date] .<= end_date)
+    df_realized = mb_realized.means
 
-    p = plot(realized_date_range, mb_realized.means[forecast_var][date_inds],
+    dfs_forecast = Vector{DataFrame}(undef, n_forecasts)
+    for i in 1:n_forecasts
+        dfs_forecast[i] = mbs_forecast[i].means
+    end
+
+    plot_forecast_sequence(dfs_forecast, df_realized, forecast_var;
+                           title = title, start_date = start_date,
+                           end_date = end_date, forecast_display_length = forecast_display_length,
+                           filepath = filepath)
+end
+
+function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
+                                df_realized::DataFrame,
+                                forecast_var::Symbol;
+                                title::String = string(forecast_var),
+                                start_date::Date = quartertodate("2014-Q4"),
+                                end_date::Date = quartertodate("2021-Q4"),
+                                forecast_display_length::Int = 4,
+                                plot_to_realized_end_date::Bool = false,
+                                filepath::String = "")
+    n_forecasts = length(dfs_forecast)
+
+    # Construct realized series date indices
+    realized_date_range_raw = Base.filter(x -> start_date <= x <= end_date, df_realized[:date])
+    realized_date_range = map(quarter_date_to_number, realized_date_range_raw)
+    date_inds  = findall(start_date .<= df_realized[:date] .<= end_date)
+
+    p = plot(realized_date_range, df_realized[forecast_var][date_inds],
              label = "Realized", title = title, linecolor = :gray, linestyle = :dash)
 
-    for (i, mb) in zip(1:n_forecasts, mbs_forecast)
-        # Construct forecast date indices
-        forecast_date_range_raw = Base.filter(x -> start_date <= x <= end_date,
-                                              mbs_forecast[i].means[:date])
-        forecast_date_range = map(quarter_date_to_number, forecast_date_range_raw)
-        date_inds = findall(start_date .<= mbs_forecast[i].means[:date] .<= end_date)
+    for (i, df) in zip(1:n_forecasts, dfs_forecast)
 
-        # Truncate
-        forecast_date_range = forecast_date_range[1:forecast_display_length]
-        date_inds = date_inds[1:forecast_display_length]
+        if plot_to_realized_end_date
+            realized_end_date = df_realized[:date][end]
+
+            # If `df[:date][1]` (the first forecast quarter)
+            # is less than `forecast_display_length` away from the
+            # realized_end_date, then plot the forecast up to
+            # `forecast_display_length` number of periods.
+            # Else, plot the forecast up to realized_end_date.
+            # E.g. For forecasts that originate close to (or past) realized_end_date,
+            # we still want to see a full forecast, but for forecasts that originate
+            # far earlier than the current realized_end_date, we want to see their
+            # forecast up to the realized_end_date.
+            if subtract_quarters(realized_end_date, df[:date][1]) < forecast_display_length
+                # Construct forecast date indices
+                forecast_date_range_raw = Base.filter(x -> start_date <= x <= end_date,
+                                                      dfs_forecast[i][:date])
+                forecast_date_range = map(quarter_date_to_number, forecast_date_range_raw)
+
+                # Truncate
+                forecast_date_range = forecast_date_range[1:forecast_display_length]
+                date_inds = findall(start_date .<= dfs_forecast[i][:date] .<= end_date)[1:forecast_display_length]
+            else
+                # Construct forecast date indices
+                forecast_date_range_raw = Base.filter(x -> start_date <= x <= realized_end_date,
+                                                      dfs_forecast[i][:date])
+                forecast_date_range = map(quarter_date_to_number, forecast_date_range_raw)
+
+                date_inds = findall(start_date .<= dfs_forecast[i][:date] .<= realized_end_date)
+            end
+        else
+            # Construct forecast date indices
+            forecast_date_range_raw = Base.filter(x -> start_date <= x <= end_date,
+                                                  dfs_forecast[i][:date])
+            forecast_date_range = map(quarter_date_to_number, forecast_date_range_raw)
+
+            # Truncate
+            forecast_date_range = forecast_date_range[1:forecast_display_length]
+            date_inds = date_inds[1:forecast_display_length]
+        end
 
         if i == 1
             label = "Forecast"
@@ -104,7 +159,7 @@ function plot_forecast_sequence(mbs_forecast::Vector{MeansBands},
             label = ""
         end
 
-        plot!(p, forecast_date_range, mb.means[forecast_var][date_inds],
+        plot!(p, forecast_date_range, dfs_forecast[i][forecast_var][date_inds],
               label = label, linecolor = :red, legend = :bottomright)
     end
 
