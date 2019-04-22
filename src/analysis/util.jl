@@ -202,7 +202,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
     # If no population forecast, use last period of population data instead
     if isempty(population_forecast)
-        population_forecast = population_data[end, :]
+        population_forecast = DataFrame(deepcopy(population_data[end, :]))
         last_forecast_date = iterate_quarters(last_historical_date, 1)
         population_forecast[1, :date] = last_forecast_date
     else
@@ -241,7 +241,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         padding, unpadded_data = reconcile_column_names(padding, unpadded_data)
         padded_data = vcat(padding, unpadded_data)
-        #na2nan!(padded_data)
+        # na2nan!(padded_data)
         padded_data
 
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
