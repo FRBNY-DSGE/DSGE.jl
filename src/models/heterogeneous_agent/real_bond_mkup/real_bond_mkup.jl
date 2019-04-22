@@ -508,4 +508,14 @@ function model_settings!(m::RealBondMkup)
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
+
+    # Reduction
+    m <= Setting(:reduce_state_vars, true, "Reduce state variables or not")
+    m <= Setting(:reduce_v, true, "Reduce value function or not")
+    m <= Setting(:krylov_dim, 5, "Krylov reduction dimension")
+    m <= Setting(:F, identity, "Function applied during block arnoldi deflation")
+    m <= Setting(:n_knots, 12, "Number of knot points")
+    m <= Setting(:c_power, 7, "Amount of bending of knot point locations to make them nonuniform")
+
+
 end
