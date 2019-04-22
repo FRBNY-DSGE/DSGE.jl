@@ -30,8 +30,10 @@ function krylov_reduction(m::AbstractCTModel{Float64}, Γ0::Matrix{Float64}, Γ1
     n_vars                = n_states(m)
     n_state_vars          = n_state_vars - n_state_vars_unreduce
 
+
     # Slice Dynamic Equation Γ1 into different parts. See Why Inequality matters paper.
     B_pv = -Γ1[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \ Γ1[n_total .+ 1:n_vars, 1:n_jump_vars]
+
     B_pg = -Γ1[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \
         Γ1[n_total .+ 1:n_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
     B_pZ = -Γ1[n_total .+ 1:n_vars, n_total .+ 1:n_vars] \
@@ -39,6 +41,12 @@ function krylov_reduction(m::AbstractCTModel{Float64}, Γ0::Matrix{Float64}, Γ1
     B_gg = Γ1[n_jump_vars .+ 1:n_jump_vars + n_state_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
     B_gv = Γ1[n_jump_vars .+ 1:n_jump_vars + n_state_vars, 1:n_jump_vars]
     B_gp = Γ1[n_jump_vars .+ 1:n_jump_vars + n_state_vars, n_total .+ 1:n_vars]
+
+    @show size(B_pv), size(B_pg), size(B_pZ), size(B_gg), size(B_gv), size(B_gp)
+    @show n_total .+ 1:n_vars
+    @show n_jump_vars .+ 1:n_jump_vars + n_state_vars
+    @show n_jump_vars + n_state_vars .+ 1:n_jump_vars + n_state_vars+n_state_vars_unreduce
+    @show n_jump_vars .+ 1:n_jump_vars + n_state_vars
 
     # Drop redundant equations in B_pg
     obs        = B_pg
@@ -75,6 +83,81 @@ function krylov_reduction(m::AbstractCTModel{Float64}, Γ0::Matrix{Float64}, Γ1
 
     return Γ0_kry, Γ1_kry, Ψ_kry, Π_kry, C_kry, reduced_basis, inv_reduced_basis
 end
+
+function krylov_reduction(m::AbstractModel{Float64}, JJ::Matrix{Float64}) #A::Matrix{Float64}, B::Matrix{Float64})
+
+    # Get Krylov subspace function
+    if !in(:F, keys(m.settings))
+        m <= Setting(:F, identity, "Function applied during Krylov reduction")
+    end
+    F = get_setting(m, :F)
+
+    # Grab Dimensions
+    n_state_vars_unreduce = 0 #Int64(get_setting(m, :n_model_states))
+    n_state_vars          = Int64(get_setting(m, :n_backward_looking_states)) #number of backward looking states
+    n_jump_vars           = Int64(get_setting(m, :n_jumps)) #number of jumps
+    krylov_dim            = Int64(get_setting(m, :krylov_dim))
+    n_total               = n_jump_vars + n_state_vars #number of jumps+states (should be number of model dates)
+    n_vars                = Int64(get_setting(m, :n_model_states)) #number of model states
+    n_state_vars          = n_state_vars - n_state_vars_unreduce #number of backward looking states
+
+    endo = m.endogenous_states
+    eq = m.equilibrium_conditions
+    exo_states_functions = [first(eq[:eq_TFP]),
+                            first(eq[:eq_monetary_policy]), first(eq[:eq_markup])]
+    exo_states = [first(endo[:z′_t]),
+                first(endo[:mon′_t]), first(endo[:mkp′_t])]
+
+
+    # Slice Dynamic Equation JJ into different parts. See Why Inequality matters paper.
+    @show -JJ[exo_states_functions, exo_states]
+    @show JJ[exo_states_functions, 1:n_jump_vars]
+    B_pv = -JJ[exo_states_functions, exo_states] \ JJ[exo_states, 1:n_jump_vars]
+    B_pg = -JJ[exo_states_functions, exo_states] \
+        JJ[exo_states_functions, (n_state_vars+1):(n_state_vars+n_jump_vars)]
+    B_pZ = -JJ[exo_states_functions, exo_states] \
+        JJ[exo_states, 2:1] #2:1 returns 0. this is what was being returned anyways
+    B_gg = JJ[(n_state_vars+1):(n_state_vars+n_jump_vars), (n_state_vars+1):(n_state_vars+n_jump_vars)]
+    B_gv = JJ[(n_state_vars+1):(n_state_vars+n_jump_vars), 1:n_state_vars]
+    B_gp = JJ[(n_state_vars+1):(n_state_vars+n_jump_vars), exo_states]
+
+    @show size(B_pv), size(B_pg), size(B_pZ), size(B_gg), size(B_gv), size(B_gp)
+    # Drop redundant equations in B_pg
+    obs        = B_pg
+    ~, d0, V_g = svd(obs)
+    aux        = d0/d0[1]
+    n_Bpg      = Int64(sum(aux .> 10*eps()))
+    V_g        = V_g[:, 1:n_Bpg] .* aux[1:n_Bpg]'
+
+    # Compute Krylov subspace
+    A(x::Matrix{Float64}) = (F == identity ? 0. : F(B_gv' * x)) + B_gg' * x + B_pg' * (B_gp' * x)
+    V_g, ~, ~             = deflated_block_arnoldi(A, V_g, krylov_dim)
+    n_state_vars_red      = size(V_g, 2) # number of state variables after reduction
+
+    # Build state space reduction transform
+    reduced_basis = spzeros(Float64, n_jump_vars+n_state_vars_red,n_vars)
+    reduced_basis[1:n_jump_vars,1:n_jump_vars] = speye(n_jump_vars)
+    reduced_basis[n_jump_vars .+ 1:n_jump_vars+n_state_vars_red,n_jump_vars .+ 1:n_jump_vars+n_state_vars] = V_g'
+    reduced_basis[n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce,n_jump_vars+n_state_vars .+ 1:n_jump_vars+n_state_vars+n_state_vars_unreduce] = eye(n_state_vars_unreduce)
+
+    # Build inverse transform
+    inv_reduced_basis = spzeros(n_vars,n_jump_vars+n_state_vars_red)
+    inv_reduced_basis[1:n_jump_vars,1:n_jump_vars] = speye(n_jump_vars)
+    inv_reduced_basis[n_jump_vars+1:n_jump_vars+n_state_vars,n_jump_vars+1:n_state_vars_red+n_jump_vars] = V_g
+    inv_reduced_basis[exo_states,1:n_jump_vars] = B_pv
+    inv_reduced_basis[exo_states,n_jump_vars .+ 1:n_jump_vars+n_state_vars_red] = B_pg*V_g
+    inv_reduced_basis[exo_states,n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = B_pZ
+    inv_reduced_basis[n_jump_vars+n_state_vars .+ 1:n_total,n_jump_vars+n_state_vars_red .+ 1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = speye(n_state_vars_unreduce)
+
+    m <= Setting(:n_state_vars_red, n_state_vars_red + n_state_vars_unreduce,
+                 "Number of state variables after reduction")
+
+    # change basis
+    JJ_kry = change_basis(reduced_basis, inv_reduced_basis, JJ; ignore_Γ0 = true)
+
+    return JJ_kry, reduced_basis, inv_reduced_basis
+end
+
 
 function valuef_reduction(m::AbstractModel,
                           Γ0::Array{Float64,2}, Γ1::Array{Float64,2}, Ψ::Array{Float64,2},
@@ -189,6 +272,15 @@ function change_basis(basis, inv_basis, Γ0::Matrix{Float64}, Γ1::Matrix{Float6
 
     return g0, g1, psi, Pi, c
 end
+
+# Just think through how matrices can be used to do a change of basis
+function change_basis(basis, inv_basis, JJ::Matrix{Float64};
+                      ignore_Γ0::Bool = false)
+    g1 = basis * JJ * inv_basis
+
+    return g1
+end
+
 
 # Creates a quadratic polynomial based spline basis reduction
 # QUASI - DEPRECATED: translation from SeHyoun's code but not used b/c not general, better
