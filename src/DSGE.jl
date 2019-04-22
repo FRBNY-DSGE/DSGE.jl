@@ -132,6 +132,7 @@ module DSGE
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
         plot_posterior_intervals, plot_posterior_interval_comparison, plot_forecast_decomposition,
+        plot_forecast_sequence,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
@@ -233,6 +234,7 @@ module DSGE
     include("plot/plot_altpolicies.jl")
     include("plot/plot_scenario.jl")
     include("plot/plot_forecast_decomposition.jl")
+    include("plot/plot_forecast_sequence.jl")
 
     include("models/financial_frictions.jl")
 
