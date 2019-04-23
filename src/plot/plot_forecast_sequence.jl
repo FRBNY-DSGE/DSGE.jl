@@ -47,7 +47,13 @@ function plot_forecast_sequence(models::AbstractVector,
                                 start_date::Date = quartertodate("2014-Q4"),
                                 end_date::Date = quartertodate("2021-Q4"),
                                 forecast_display_length::Int = 4,
-                                filepath::String = "")
+                                plot_to_realized_end_date::Bool = false,
+                                realized_linecolor::Symbol = :gray,
+                                realized_linestyle::Symbol = :dash,
+                                constant_to_plot::Float64 = Inf,
+                                constant_linecolor::Symbol = :black,
+                                ylims::Tuple = Tuple{}(),
+                                filepath::String = "", kwargs...)
     n_models = length(models)
     @assert length(input_types) == length(cond_types) == length(forecast_strings) == n_models
 
@@ -66,7 +72,10 @@ function plot_forecast_sequence(models::AbstractVector,
     plot_forecast_sequence(mbs_forecast, mb_realized, forecast_var;
                            title = title, start_date = start_date,
                            forecast_display_length = forecast_display_length,
-                           filepath = filepath)
+                           plot_to_realized_end_date = plot_to_realized_end_date,
+                           realized_linecolor = realized_linecolor, realized_linestyle = realized_linestyle,
+                           constant_to_plot = constant_to_plot, constant_linecolor = constant_linecolor,
+                           ylims = ylims, filepath = filepath)
 end
 
 function plot_forecast_sequence(mbs_forecast::Vector{MeansBands},
@@ -76,7 +85,13 @@ function plot_forecast_sequence(mbs_forecast::Vector{MeansBands},
                                 start_date::Date = quartertodate("2014-Q4"),
                                 end_date::Date = quartertodate("2021-Q4"),
                                 forecast_display_length::Int = 4,
-                                filepath::String = "")
+                                plot_to_realized_end_date::Bool = false,
+                                realized_linecolor::Symbol = :gray,
+                                realized_linestyle::Symbol = :dash,
+                                constant_to_plot::Float64 = Inf,
+                                constant_linecolor::Symbol = :black,
+                                ylims::Tuple = Tuple{}(),
+                                filepath::String = "", kwargs...)
     n_forecasts = length(mbs_forecast)
 
     df_realized = mb_realized.means
@@ -89,7 +104,10 @@ function plot_forecast_sequence(mbs_forecast::Vector{MeansBands},
     plot_forecast_sequence(dfs_forecast, df_realized, forecast_var;
                            title = title, start_date = start_date,
                            end_date = end_date, forecast_display_length = forecast_display_length,
-                           filepath = filepath)
+                           plot_to_realized_end_date = plot_to_realized_end_date,
+                           realized_linecolor = realized_linecolor, realized_linestyle = realized_linestyle,
+                           constant_to_plot = constant_to_plot, constant_linecolor = constant_linecolor,
+                           ylims = ylims, filepath = filepath)
 end
 
 function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
@@ -100,6 +118,11 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
                                 end_date::Date = quartertodate("2021-Q4"),
                                 forecast_display_length::Int = 4,
                                 plot_to_realized_end_date::Bool = false,
+                                realized_linecolor::Symbol = :gray,
+                                realized_linestyle::Symbol = :dash,
+                                constant_to_plot::Float64 = Inf,
+                                constant_linecolor::Symbol = :black,
+                                ylims::Tuple = Tuple{}(),
                                 filepath::String = "")
     n_forecasts = length(dfs_forecast)
 
@@ -108,9 +131,17 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
     realized_date_range = map(quarter_date_to_number, realized_date_range_raw)
     date_inds  = findall(start_date .<= df_realized[:date] .<= end_date)
 
+    # Plot realized
     p = plot(realized_date_range, df_realized[forecast_var][date_inds],
-             label = "Realized", title = title, linecolor = :gray, linestyle = :dash)
+             label = "Realized", title = title, linecolor = realized_linecolor,
+             linestyle = realized_linestyle, ylims = ylims)
 
+    if !isinf(constant_to_plot)
+        constant_start_ind   = realized_date_range[1]
+        constant_end_ind     = realized_date_range[end]
+    end
+
+    # Plot forecasts
     for (i, df) in zip(1:n_forecasts, dfs_forecast)
 
         if plot_to_realized_end_date
@@ -161,6 +192,17 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
 
         plot!(p, forecast_date_range, dfs_forecast[i][forecast_var][date_inds],
               label = label, linecolor = :red, legend = :bottomright)
+
+        if !isinf(constant_to_plot)
+            constant_end_ind = max(constant_end_ind, forecast_date_range[end])
+        end
+    end
+
+    # Plot the constant
+    if !isinf(constant_to_plot)
+        plot!(p, constant_start_ind:constant_end_ind,
+              fill(constant_to_plot, length(constant_start_ind:constant_end_ind)),
+              linecolor = constant_linecolor, label = "")
     end
 
     if !isempty(filepath)
