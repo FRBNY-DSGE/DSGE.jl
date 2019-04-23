@@ -63,13 +63,6 @@ function jacobian(m::HetDSGE)
     ns::Int = get_setting(m, :ns)
     nxns = nx*ns
 
-    zgrid = range(zlo,stop = zhi,length = nx)
-    zwts = (zhi-zlo)/nx
-    sumz=0.
-    for i=1:nx
-        sumz += mollifier_hetdsge(zgrid[i],zhi,zlo)*zwts
-    end
-
     qp(z) = dmollifier_hetdsge(z, zhi, zlo)
     qfunction_hetdsge(x) = mollifier_hetdsge(x, zhi, zlo) #/sumz
 
@@ -450,7 +443,7 @@ function truncate_distribution!(m::HetDSGE)
 
     if trunc_distr
         oldnx = nx
-        nx = maximum(find(μ[1:nx]+μ[nx+1:2*nx] .> mindens)) # used to be 1e-8
+        nx = maximum(findall(μ[1:nx]+μ[nx+1:2*nx] .> mindens)) # used to be 1e-8
         μ = μ[[1:nx;oldnx+1:oldnx+nx]]
         ell = ell[[1:nx;oldnx+1:oldnx+nx]]
         if rescale_weights
