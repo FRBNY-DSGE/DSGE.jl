@@ -6,17 +6,17 @@ function jacobian(m::RealBondMkup)
     eq   = m.equilibrium_conditions
 
     # Load in parameters, steady-state parameters, and grids
-    γ::Float64     = m[:γ].value
-    abar::Float64  = m[:abar].value
-    R::Float64     = m[:R].value
-    ν::Float64     = m[:ν].value
-    ρ_z::Float64    = m[:ρ_z].value
-    ρ_mon::Float64  = m[:ρ_mon].value
-    ρ_mkp::Float64  = m[:ρ_mkp].value
-    ρ_tay::Float64  = m[:ρ_tay].value
-    κ::Float64     = m[:κ].value
-    phipi::Float64 = m[:phipi].value
-    aborrow::Float64 = abar/R
+    γ::Float64       = m[:γ].value
+    abar::Float64    = m[:abar].value
+    R::Float64       = m[:R].value
+    ν::Float64       = m[:ν].value
+    ρ_z::Float64     = m[:ρ_z].value
+    ρ_mon::Float64   = m[:ρ_mon].value
+    ρ_mkp::Float64   = m[:ρ_mkp].value
+    ρ_tay::Float64   = m[:ρ_tay].value
+    κ::Float64       = m[:κ].value
+    phipi::Float64   = m[:phipi].value
+    aborrow::Float64 = abar / R
 
     ell::Vector{Float64}  = m[:lstar].value
     c::Vector{Float64}    = m[:cstar].value
@@ -71,27 +71,27 @@ function jacobian(m::RealBondMkup)
     JJ = zeros(2*nx*ns+9,4*nx*ns+18)
 
     # Euler equation
-    JJ[eq[:eq_euler], endo[:l′_t]]  = dF1_dELLP
+    JJ[eq[:eq_euler], endo[:l′_t]]         = dF1_dELLP
     JJ[eq[:eq_euler], first(endo[:R′_t])]  = dF1_dRRP
     JJ[eq[:eq_euler], first(endo[:w′_t])]  = dF1_dWWP
     JJ[eq[:eq_euler], first(endo[:t′_t])]  = dF1_dTTP
-    JJ[eq[:eq_euler], endo[:l_t]]   = dF1_dELL
+    JJ[eq[:eq_euler], endo[:l_t]]          = dF1_dELL
     JJ[eq[:eq_euler], first(endo[:R_t])]   = dF1_dRR
     JJ[eq[:eq_euler], first(endo[:w_t])]   = dF1_dWW
     JJ[eq[:eq_euler], first(endo[:t_t])]   = dF1_dTT
 
     # KF
-    JJ[eq[:eq_kolmogorov_fwd], endo[:μ′_t]] = -eye(nx*ns)
-    JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t]]  = dF2_dMU
-    JJ[eq[:eq_kolmogorov_fwd], endo[:l_t]]  = dF2_dELL
+    JJ[eq[:eq_kolmogorov_fwd], endo[:μ′_t]]        = -eye(nx*ns)
+    JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t]]         = dF2_dMU
+    JJ[eq[:eq_kolmogorov_fwd], endo[:l_t]]         = dF2_dELL
     JJ[eq[:eq_kolmogorov_fwd], first(endo[:w_t])]  = dF2_dWW
     JJ[eq[:eq_kolmogorov_fwd], first(endo[:R_t])]  = dF2_dRR
     JJ[eq[:eq_kolmogorov_fwd], first(endo[:t_t])]  = dF2_dTT
 
     # mkt ckr
-    JJ[first(eq[:eq_market_clearing]), endo[:μ_t]]  = dF3_dMU
+    JJ[first(eq[:eq_market_clearing]), endo[:μ_t]]         = dF3_dMU
     JJ[first(eq[:eq_market_clearing]), first(endo[:z_t])]  = GDP
-    JJ[first(eq[:eq_market_clearing]), endo[:l_t]]  = dF3_dELL
+    JJ[first(eq[:eq_market_clearing]), endo[:l_t]]         = dF3_dELL
     JJ[first(eq[:eq_market_clearing]), first(endo[:w_t])]  = dF3_dWW
     JJ[first(eq[:eq_market_clearing]), first(endo[:R_t])]  = dF3_dRR
     JJ[first(eq[:eq_market_clearing]), first(endo[:t_t])]  = dF3_dTT
@@ -101,10 +101,10 @@ function jacobian(m::RealBondMkup)
     JJ[first(eq[:eq_TFP]), first(endo[:z_t])]   = -ρ_z
 
     # Phillips
-    JJ[first(eq[:eq_phillips]), first(endo[:π′_t])] = -1.0/R
-    JJ[first(eq[:eq_phillips]), first(endo[:z_t])]  = κ
-    JJ[first(eq[:eq_phillips]), first(endo[:w_t])]  = -κ
-    JJ[first(eq[:eq_phillips]), first(endo[:π_t])]  = 1.0
+    JJ[first(eq[:eq_phillips]), first(endo[:π′_t])]  = -1.0/R
+    JJ[first(eq[:eq_phillips]), first(endo[:z_t])]   = κ
+    JJ[first(eq[:eq_phillips]), first(endo[:w_t])]   = -κ
+    JJ[first(eq[:eq_phillips]), first(endo[:π_t])]   = 1.0
     JJ[first(eq[:eq_phillips]), first(endo[:mkp_t])] = -1.0
 
     # taylor
@@ -135,9 +135,9 @@ function jacobian(m::RealBondMkup)
     JJ[first(eq[:eq_lagged_nominal_rate]), first(endo[:l_i′_t])] = 1.0
     JJ[first(eq[:eq_lagged_nominal_rate]), first(endo[:i_t])]    = -1.0
 
-    if !m.testing && get_setting(m, :normalize_distr_variables)
-        JJ = normalize(m, JJ)
-    end
+    #if !m.testing && get_setting(m, :normalize_distr_variables)
+    #    JJ = normalize(m, JJ)
+    #end
 
     return JJ
 end
