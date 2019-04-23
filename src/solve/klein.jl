@@ -5,7 +5,7 @@ function klein(m::AbstractModel)
     #################
     Jac1 = Matrix{Float64}(jacobian(m))
 
-    krylov_reduce = true
+    krylov_reduce = get_setting(m, :krylov_reduce)
     if krylov_reduce
         Jac1, reduce_basis, inv_reduced_basis = krylov_reduction(m, Jac1)
     end

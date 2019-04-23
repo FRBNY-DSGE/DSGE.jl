@@ -1,4 +1,5 @@
 function jacobian(m::HetDSGE)
+    truncate_distribution!(m)
 
     # Load in endogenous state and eq cond indices
     endo = m.endogenous_states #=augment_model_states(m.endogenous_states_unnormalized,
@@ -53,7 +54,6 @@ function jacobian(m::HetDSGE)
     sgrid::Vector{Float64} = m.grids[:sgrid].points
     swts::Vector{Float64}  = m.grids[:sgrid].weights
     fgrid::Matrix{Float64} = m.grids[:fgrid]
-
     xswts = kron(swts,xwts)
 
     zlo::Float64 = get_setting(m, :zlo)
@@ -71,18 +71,17 @@ function jacobian(m::HetDSGE)
     end
 
     qp(z) = dmollifier_hetdsge(z, zhi, zlo)
-    qfunction(x) = mollifier_hetdsge(x, zhi, zlo)/sumz
+    qfunction_hetdsge(x) = mollifier_hetdsge(x, zhi, zlo) #/sumz
 
     unc = 1 ./ ell .<= repeat(xgrid,ns) .+ η
 
-    # Euler Equation
     dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee =
-        euler_equation_hetdsge(nx, ns, qp, qfunction, xgrid, sgrid, fgrid, unc, xswts,
+        euler_equation_hetdsge(nx, ns, qp, qfunction_hetdsge, xgrid, sgrid, fgrid, unc, xswts,
                                R, γ, β, η, ell, T, ω, H)
 
     # KF Equation
-    dF2_dWH, dF2_dRZ, dF2_dTT,dF2_dELL, bigΨ =
-        kolmogorov_fwd_hetdsge(nx, ns, qfunction, qp, xgrid, sgrid, fgrid, unc, xswts,
+    dF2_dWH, dF2_dRZ, dF2_dTT,dF2_dELL, bigΨ, dF2_dM =
+        kolmogorov_fwd_hetdsge(nx, ns, qfunction_hetdsge, qp, xgrid, sgrid, fgrid, unc, xswts,
                                R, γ, ell, μ, η, T, ω, H, ee)
 
     # Market clearing, lambda function
@@ -90,6 +89,7 @@ function jacobian(m::HetDSGE)
     lam = (xswts.*μ)'*(1 ./ c) # average marginal utility which the union uses to set wages
     ϕ = lam*ω/(H^ϕh) # now that we know lam in steady state, choose disutility to target hours H
 
+    setup_indices!(m)
 
     nvars = get_setting(m, :nvars)
     # Make the Jacobian
@@ -106,11 +106,11 @@ function jacobian(m::HetDSGE)
     JJ[eq[:eq_euler],endo[:R_t]]   = dF1_dRZ
 
     # KF eqn
-    JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t1]]   = bigΨ
+    JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t1]]   = dF2_dM
     JJ[eq[:eq_kolmogorov_fwd],endo[:R_t1]]  = dF2_dRZ
     JJ[eq[:eq_kolmogorov_fwd],endo[:l_t1]] = dF2_dELL
     JJ[eq[:eq_kolmogorov_fwd],endo[:Z]]    = -dF2_dRZ
-    JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t]]    = -Matrix(Diagonal(μ))
+    JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t]]    = -eye(nxns)
     JJ[eq[:eq_kolmogorov_fwd],endo[:w_t]]    = dF2_dWH
     JJ[eq[:eq_kolmogorov_fwd],endo[:L_t]]   = dF2_dWH
     JJ[eq[:eq_kolmogorov_fwd],endo[:t_t]]   = dF2_dTT
@@ -128,11 +128,11 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_market_clearing]),first(endo[:G])]   = -ystar/g
     JJ[first(eq[:eq_market_clearing]),first(endo[:I_t])]   = -xstar
     JJ[eq[:eq_market_clearing],endo[:ELL]] = (μ.*unc.*xswts.*c)'
-    JJ[eq[:eq_market_clearing],endo[:μ_t]]   = -(μ.*xswts.*c)'
+    JJ[eq[:eq_market_clearing],endo[:μ_t]]   = -(xswts.*c)' # note, now we linearize
 
     # lambda = average marginal utility
     JJ[first(eq[:eq_lambda]),first(endo[:mu_t])] = lam
-    JJ[first(eq[:eq_lambda]),endo[:μ_t]]   = -(xswts.*μ./c)'
+    JJ[first(eq[:eq_lambda]),endo[:μ_t]]   = -(xswts./c)' # note, now we linearize
     JJ[first(eq[:eq_lambda]),endo[:ELL]] = -(xswts.*unc.*μ./c)'
 
     # transfer
@@ -142,7 +142,7 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_transfers]),first(endo[:Z])]  = Rk*kstar
     JJ[first(eq[:eq_transfers]),first(endo[:I_t])]   = xstar
     JJ[first(eq[:eq_transfers]),first(endo[:mc_t])]  = ystar
-    JJ[first(eq[:eq_transfers]),first(endo[:y_t])]   = (1-1/g)
+    JJ[first(eq[:eq_transfers]),first(endo[:y_t])]   = (1-1/g)*ystar
     JJ[first(eq[:eq_transfers]),first(endo[:G])]   = (ystar/g)
 
     # investment
@@ -300,7 +300,6 @@ function jacobian(m::HetDSGE)
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
     end
-
     return JJ
 end
 
@@ -338,7 +337,7 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
                     sumELL += ξ[i,ip]*R*(exp(-γ))*unc[i]/ell[i]
                     sumRZ  += ξ[i,ip]*R*(exp(-γ))*max(xgrid[ia] - 1/ell[i],-η)
                     dF1_dELLP[i,ip] = Ξ[i,ip]*unc[ip]
-                    sumWH  += Ξ[i,ip] + ξ[i,ip]*ee[i,ip]/(ω*H*sgrid[isp])
+                    sumWH  += Ξ[i,ip] + ξ[i,ip]*ee[i,ip]*(ω*H*sgrid[isp])
                     sumTT  += ξ[i,ip]*T
                 end
             end
@@ -360,9 +359,10 @@ function kolmogorov_fwd_hetdsge(nx::Int, ns::Int,
                                 ell::Vector{Float64}, μ::Vector{Float64},
                                 η::Float64, T::Float64, ω::Float64, H::Float64, ee::Matrix{Float64})
     nxns = nx*ns
-    bigΨ    = zeros(nxns,nxns) # this is also dF2_dM
+    bigΨ    = zeros(nxns,nxns)
     smallψ = zeros(nxns,nxns)
     dF2_dRZ = zeros(nxns)
+    dF2_dM = zeros(nxns,nxns)
     dF2_dELL = zeros(nxns,nxns)
     dF2_dWH = zeros(nxns)
     dF2_dTT = zeros(nxns)
@@ -378,10 +378,11 @@ function kolmogorov_fwd_hetdsge(nx::Int, ns::Int,
                     i = nx*(iss-1)+ia
                     bigΨ[ip,i] = xswts[i]*μ[i]*qfunction(ee[i,ip])*fgrid[iss,isp]/(ω*H*sgrid[isp])
                     smallψ[ip,i] = xswts[i]*μ[i]*qp(ee[i,ip])*fgrid[iss,isp]/((ω*H*sgrid[isp])^2)
-                    sumWH += bigΨ[ip,i] + smallψ[ip,i]*ee[i,ip]/(ω*H*sgrid[isp])
+                    sumWH += bigΨ[ip,i] + smallψ[ip,i]*ee[i,ip]*(ω*H*sgrid[isp])
                     sumRZ += smallψ[ip,i]*(R*exp(-γ))*max(xgrid[ia] - 1/ell[i],-η)
                     dF2_dELL[ip,i] = smallψ[ip,i]*(R*exp(-γ))*(unc[i]/ell[i])
                     sumTT += smallψ[ip,i]*T
+                    dF2_dM[ip,i] = xswts[i]*qfunction(ee[i,ip])*fgrid[iss,isp]/(ω*H*sgrid[isp]) # note, now we linearize
                 end
             end
             dF2_dWH[ip] = -sumWH
@@ -389,7 +390,7 @@ function kolmogorov_fwd_hetdsge(nx::Int, ns::Int,
             dF2_dTT[ip] = -sumTT
         end
     end
-    return dF2_dWH, dF2_dRZ, dF2_dTT, dF2_dELL, bigΨ
+    return dF2_dWH, dF2_dRZ, dF2_dTT, dF2_dELL, bigΨ, dF2_dM
 end
 
 function normalize(m::HetDSGE, JJ::Matrix{Float64})
@@ -433,4 +434,39 @@ function compose_normalization_matrices(m::HetDSGE)
     Qright    = sparse(cat(Qx',Qy',Qx',Qy', dims = [1,2]))
 
     return Qx, Qy, Qleft, Qright
+end
+
+function truncate_distribution!(m::HetDSGE)
+    mindens = get_setting(m, :mindens)
+    trunc_distr = get_setting(m, :trunc_distr)
+    rescale_weights = get_setting(m, :rescale_weights)
+
+    nx = get_setting(m, :nx)
+    μ = m[:μstar].value
+    ell = m[:lstar].value
+    xgrid = m.grids[:xgrid].points
+    xlo = get_setting(m, :xlo)
+    swts::Vector{Float64}  = m.grids[:sgrid].weights
+
+    if trunc_distr
+        oldnx = nx
+        nx = maximum(find(μ[1:nx]+μ[nx+1:2*nx] .> mindens)) # used to be 1e-8
+        μ = μ[[1:nx;oldnx+1:oldnx+nx]]
+        ell = ell[[1:nx;oldnx+1:oldnx+nx]]
+        if rescale_weights
+            #xgrid   = xgrid[1:nx] #Evenly spaced grid
+            xhi = xgrid[nx]
+            xscale = xhi-xlo
+            #xwts     = (xscale/nx)*ones(nx)          #quadrature weights
+            #xswts = kron(swts,xwts)
+        end
+        m <= Setting(:nx, nx)
+        m <= Setting(:xhi, xhi)
+        m <= Setting(:xscale, xscale)
+        m[:μstar] = μ
+        m[:lstar] = ell
+        m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
+
+        setup_indices!(m)
+    end
 end
