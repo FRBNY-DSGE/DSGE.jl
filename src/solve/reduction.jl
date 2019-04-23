@@ -1,3 +1,4 @@
+using SparseArrays
 """
 ```
 krylov_reduction(Γ0, Γ1, Ψ, Π, C; F = x -> x, n_Z = 0)
@@ -99,20 +100,42 @@ function krylov_reduction(m::AbstractModel{Float64}, JJ::Matrix{Float64}) #A::Ma
     krylov_dim            = Int64(get_setting(m, :krylov_dim))
     n_total               = n_jump_vars + n_state_vars #number of jumps+states (should be number of model dates)
     n_vars                = Int64(get_setting(m, :n_model_states)) #number of model states
-    n_state_vars          = n_state_vars - n_state_vars_unreduce #number of backward looking states
+    n_state_vars          = n_state_vars - n_state_vars_unreduce #number of backward looking states -> 302
 
-    endo = m.endogenous_states
+    @show n_state_vars, n_jump_vars, krylov_dim, n_total, n_vars, n_state_vars
+
+    endo = DSGE.augment_model_states(m.endogenous_states_unnormalized, DSGE.n_model_states_unnormalized(m))
     eq = m.equilibrium_conditions
-    exo_states_functions = [first(eq[:eq_TFP]),
-                            first(eq[:eq_monetary_policy]), first(eq[:eq_markup])]
-    exo_states = [first(endo[:z′_t]),
-                first(endo[:mon′_t]), first(endo[:mkp′_t])]
+    exo_states_functions = [first(eq[:eq_TFP]), first(eq[:eq_monetary_policy]), first(eq[:eq_markup])]
+    exo_states =           [first(endo[:z′_t]), first(endo[:mon′_t]),           first(endo[:mkp′_t])]
 
+    g_inds = [endo[:μ_t], endo[:l_t], endo[:w_t], endo[:R_t], endo[:t_t]]
+    #v_inds = [
 
     # Slice Dynamic Equation JJ into different parts. See Why Inequality matters paper.
-    @show -JJ[exo_states_functions, exo_states]
-    @show JJ[exo_states_functions, 1:n_jump_vars]
+    B_pv = -JJ[n_total .+ 1:n_vars, n_total .+ 1:n_vars] #\ JJ[n_total .+ 1:n_vars, 1:n_jump_vars]
+    B_pg = -JJ[n_total .+ 1:n_vars, n_total .+ 1:n_vars] #\ JJ[n_total .+ 1:n_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
+
+    B_pZ = -JJ[n_total .+ 1:n_vars, n_total .+ 1:n_vars] #\JJ[n_total .+ 1:n_vars, n_jump_vars + n_state_vars .+ 1:n_jump_vars + n_state_vars+n_state_vars_unreduce]
+
+    B_gg = JJ[n_jump_vars .+ 1:n_jump_vars + n_state_vars, n_jump_vars .+ 1:n_jump_vars + n_state_vars]
+
+    B_gv = JJ[n_jump_vars .+ 1:n_jump_vars + n_state_vars, 1:n_jump_vars]
+
+    B_gp = JJ[n_jump_vars .+ 1:n_jump_vars + n_state_vars, n_total .+ 1:n_vars]
+
+    @show size(B_pv), size(B_pg), size(B_pZ), size(B_gg), size(B_gv), size(B_gp)
+    @show n_total .+ 1:n_vars
+    @show n_jump_vars .+ 1:n_jump_vars + n_state_vars
+    @show n_jump_vars + n_state_vars .+ 1:n_jump_vars + n_state_vars+n_state_vars_unreduce
+    @show n_jump_vars .+ 1:n_jump_vars + n_state_vars
+
+    # Slice Dynamic Equation JJ into different parts. See Why Inequality matters paper.
+#    @show -JJ[exo_states_functions, exo_states]
+#    @show JJ[exo_states_functions, 1:n_jump_vars]
+#=    @show "A"
     B_pv = -JJ[exo_states_functions, exo_states] \ JJ[exo_states, 1:n_jump_vars]
+    @show "here"
     B_pg = -JJ[exo_states_functions, exo_states] \
         JJ[exo_states_functions, (n_state_vars+1):(n_state_vars+n_jump_vars)]
     B_pZ = -JJ[exo_states_functions, exo_states] \
@@ -122,9 +145,12 @@ function krylov_reduction(m::AbstractModel{Float64}, JJ::Matrix{Float64}) #A::Ma
     B_gp = JJ[(n_state_vars+1):(n_state_vars+n_jump_vars), exo_states]
 
     @show size(B_pv), size(B_pg), size(B_pZ), size(B_gg), size(B_gv), size(B_gp)
+=#
     # Drop redundant equations in B_pg
     obs        = B_pg
-    ~, d0, V_g = svd(obs)
+    F_svd      = svd(obs)
+    d0, V_g    = F_svd.S, F_svd.V
+    @show typeof(d0), d0, typeof(V_g), size(V_g), B_pg
     aux        = d0/d0[1]
     n_Bpg      = Int64(sum(aux .> 10*eps()))
     V_g        = V_g[:, 1:n_Bpg] .* aux[1:n_Bpg]'
