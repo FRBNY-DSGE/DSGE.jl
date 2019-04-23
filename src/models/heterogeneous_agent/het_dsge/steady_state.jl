@@ -27,14 +27,6 @@ function steadystate!(m::HetDSGE;
     xswts = m.grids[:weights_total]
     f     = m.grids[:fgrid]
 
-    # Construct qfunction arguments
-    zgrid = range(zlo, stop = zhi, length = nx)
-    zwts  = (zhi-zlo)/nx
-    sumz  = 0.
-    for i in 1:nx
-        sumz += mollifier_hetdsge(zgrid[i],zhi,zlo)*zwts
-    end
-
     if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
         βlo = βhi = m[:βstar]
     end
@@ -53,7 +45,7 @@ function steadystate!(m::HetDSGE;
         β = (βlo+βhi)/2.0
         Win_guess = ones(n)
 
-        c, bp, Win, KF = policy_hetdsge(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, sumz, xgrid, sgrid,
+        c, bp, Win, KF = policy_hetdsge(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                           xswts, Win_guess, f)
 
         LPMKF = xswts[1]*KF
@@ -91,7 +83,7 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
                         ω::AbstractFloat, H::AbstractFloat,
                         η::AbstractFloat, T::AbstractFloat,
                         γ::AbstractFloat, zhi::AbstractFloat,
-                        zlo::AbstractFloat, sumz::AbstractFloat,
+                        zlo::AbstractFloat,
                         xgrid::Vector{Float64}, sgrid::Vector{Float64},
                         xswts::Vector{Float64}, Win::Vector{Float64},
                         f::Array{Float64,2}, damp::Float64 = 0.5, dist::Float64 = 1.,
