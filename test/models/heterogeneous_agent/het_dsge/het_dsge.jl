@@ -173,7 +173,6 @@ if check_jacobian
     F38 = read(file, "F38")
     F39 = read(file, "F39")
     close(file)
-
     endo = m.endogenous_states
     eq = m.equilibrium_conditions
     @testset "Check indices" begin
@@ -510,7 +509,9 @@ if check_jacobian
 end
 
 if check_solution
+    nx_save = get_setting(m, :nx)
     m.testing = false
+    m <= Setting(:nx, nx_save)
     gx, hx = klein(m)
 
     file = jldopen("$path/reference/solve.jld2", "r")

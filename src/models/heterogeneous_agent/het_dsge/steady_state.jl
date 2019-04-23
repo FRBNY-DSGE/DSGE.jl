@@ -101,7 +101,7 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
     bp = Vector{Float64}(undef, n)      # savings
     counter = 1
     Wout = Vector{Float64}(undef, length(Win))
-    qfunction(x::Float64) = mollifier_hetdsge(x, zhi, zlo)/sumz
+    qfunction_hetdsge(x::Float64) = mollifier_hetdsge(x, zhi, zlo) #/sumz
     while dist>tol && counter<maxit # for debugging
         # compute c(w) given guess for Win = β*R*E[u'(c_{t+1})]
         for iss in 1:ns
@@ -110,7 +110,7 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
             end
         end
         bp = repeat(xgrid,ns) - c  # compute bp(w) given guess for Win
-        Wout = parameterized_expectations_hetdsge(nx,ns,β,R,ω,H,T,γ,qfunction,xgrid,sgrid,xswts,c,bp,f)
+        Wout = parameterized_expectations_hetdsge(nx,ns,β,R,ω,H,T,γ,qfunction_hetdsge,xgrid,sgrid,xswts,c,bp,f)
         dist = maximum(abs.(Wout-Win))
         Win = damp*Wout + (1.0-damp)*Win
         counter += 1
@@ -118,7 +118,7 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
     if counter == maxit
         @warn "Euler iteration did not converge"
     end
-    tr = kolmogorov_fwd_hetdsge(nx,ns,ω,H,T,R,γ,qfunction,xgrid,sgrid,bp,f)
+    tr = kolmogorov_fwd_hetdsge(nx,ns,ω,H,T,R,γ,qfunction_hetdsge,xgrid,sgrid,bp,f)
     return c, bp, Wout, tr
 end
 
