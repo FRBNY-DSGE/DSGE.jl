@@ -80,8 +80,8 @@ end
 function normalize(endo::OrderedDict{Symbol, UnitRange},
                    model_state_keys::Vector{Symbol},
                    normalized_model_state_inds::Vector{Int64},
-                   state_inds::UnitRange{Int64},
-                   jump_inds::UnitRange{Int64},
+                   state_inds::AbstractArray{Int64},
+                   jump_inds::AbstractArray{Int64},
                    state_normalization_factor::Int64,
                    jump_normalization_factor::Int64)
     n_model_state_vars = length(endo)
