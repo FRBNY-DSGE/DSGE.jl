@@ -120,10 +120,10 @@ function measurement(m::HetDSGE{T},
     QQ[exo[:z_sh], exo[:z_sh]]            = m[:σ_z]^2
     QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
     QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
-    QQ[exo[:MON_sh], exo[:MON_sh]]        = m[:MON_sh]^2
+    QQ[exo[:MON_sh], exo[:MON_sh]]        = m[:σ_MON]^2
 
     # These lines set the standard deviations for the anticipated shocks
-    for i = 1:n_anticipated_shocks(m)
+   #= for i = 1:n_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
         if subspec(m) == "ss11"
