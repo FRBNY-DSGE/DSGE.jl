@@ -19,7 +19,7 @@ function jacobian(m::HetDSGE)
     η::Float64     = m[:η].value
     ρ_B::Float64    = m[:ρ_B].value
     ρ_G::Float64    = m[:ρ_G].value
-    ρ_Z::Float64    = m[:ρ_Z].value
+    ρ_z::Float64    = m[:ρ_z].value
     ρ_μ::Float64    = m[:ρ_μ].value
     ρ_lamw::Float64 = m[:ρ_lamw].value
     ρ_lamf::Float64 = m[:ρ_lamf].value
@@ -273,7 +273,7 @@ function jacobian(m::HetDSGE)
 
     # tfp growth shock
     JJ[first(eq[:F35]),first(endo[:z′_t])] = 1.
-    JJ[first(eq[:F35]),first(endo[:z_t])]  = -ρ_Z
+    JJ[first(eq[:F35]),first(endo[:z_t])]  = -ρ_z
 
     # investment shock
     JJ[first(eq[:F36]),first(endo[:MU′])] = 1.
