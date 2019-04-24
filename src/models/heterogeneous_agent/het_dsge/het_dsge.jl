@@ -269,15 +269,15 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:η, 0.1, description = "η: Borrowing constraint (normalized by TFP)")
 
     m <= parameter(:ρ_B, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                     fixed=true, description = "# persistence of discount factor shock", tex_label = "\\rho_B")
+                     fixed=true, description = "ρ_B: Persistence of discount factor shock", tex_label = "\\rho_B")
     m <= parameter(:ρ_G, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                     fixed=true, description = "# persistence of govt spending shock", tex_label = "\\rho_G")
-    m <= parameter(:ρ_Z, 0.5,(1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                     fixed=true, description = "# persistence of tfp growth shock", tex_label = "\\rho_z")
+                     fixed=true, description = "ρ_G: Persistence of govt spending shock", tex_label = "\\rho_G")
+    m <= parameter(:ρ_z, 0.5,(1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = "ρ_z: Persistence of tfp growth shock", tex_label = "\\rho_z")
     m <= parameter(:ρ_μ, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                     fixed=true, description = " # persistence of investment shock", tex_label = "\\rho_\\mu")
+                     fixed=true, description = "ρ_μ: Persistence of investment shock", tex_label = "\\rho_\\mu")
     m <= parameter(:ρ_lamw, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
-                     fixed=true, description = "# persistence of wage mkup shock", tex_label = "\\rho_{\\lambda_w}")
+                     fixed=true, description = "ρ_λ_w: Persistence of wage mkup shock", tex_label = "\\rho_{\\lambda_w}")
     m <= parameter(:ρ_lamf, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                      fixed=true, description = " # persistence of price mkup shock", tex_label = "\\rho_{\\lambda_f}")
     m <= parameter(:ρ_mon, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
@@ -287,7 +287,7 @@ function init_parameters!(m::HetDSGE)
                    fixed=true, description = "# standard deviation of discount factor shock", tex_label = "\\sigma_B")
     m <= parameter(:σ_G, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = "# standard deviation of govt spending shock", tex_label = "\\sigma_G")
-    m <= parameter(:σ_Z, 0.5,(1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_z, 0.5,(1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
                    fixed=false, description = "# standard deviation of tfp growth shock", tex_label = "\\sigma_z")
     m <= parameter(:σ_μ, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = " # standard deviation of investment shock", tex_label = "\\sigma_\\mu")
