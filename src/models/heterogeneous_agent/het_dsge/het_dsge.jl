@@ -120,16 +120,18 @@ function init_model_indices!(m::HetDSGE)
     # Endogenous states
     endogenous_states = collect([:l′_t1, :μ′_t1, :k′_t, :R′_t1, :i′_t1,
                                  :π′_t1,:π′_t2,:π′_t3,:y′_t1,:y′_t2,:y′_t3, :y′_t4,
-                                 :z′_t1,:z′_t2,:z′_t3,:w′_t1,:I′_t1,:BP,:GP,:ZP,:MUP,:LAMWP,
-                                 :LAMFP,:MONP,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
-                                 :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t,
-                                 :l_t1L,:μ_t1,:k_t,:R_t1,:i_t1,:π_t1,:π_t2,:π_t3,:y_t1,:y_t2,
+                                 :z′_t1,:z′_t2,:z′_t3,:w′_t1,:I′_t1,:B′,:G′,:z′_t,:MU′,:LAMW′,
+                                 :LAMF′,:MON′,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
+                                 :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t])
+                                 #=:l_t1,:μ_t1,:k_t,:R_t1,:i_t1,:π_t1,:π_t2,:π_t3,:y_t1,:y_t2,
                                  :y_t3,:y_t4,:z_t1,:z_t2,:z_t3,:w_t1,:I_t1,:B,:G,:Z,:MU,:LAMW,
                                  :LAMF,:MON,:ELL,:μ_t,:R_t,:i_t,
-                                 :t_t,:w_t,:L_t,:π_t,:wageinflation_t,:mu_t,:y_t,:I_t,:mc_t,:Q_t,:capreturn_t])
+                                 :t_t,:w_t,:L_t,:π_t,:wageinflation_t,:mu_t,:y_t,:I_t,:mc_t,:Q_t,:capreturn_t]) =#
+
+    # endogenous scalar states: k_t, R_t1, i_t1, π_t1, π_t2, π_t3, y_t1, y_t2, y_t3, y_t4, z_1, z_2, z_3, w_t1, x_t1
 
     # Exogenous shocks
-    exogenous_shocks = collect([])
+    exogenous_shocks = collect([:B_sh,:G_sh,:z_sh,:MU_sh,:LAMW_sh, :LAMF_sh,:MON_sh])
 
     # Equilibrium conditions
     equilibrium_conditions = collect([:eq_euler,:eq_kolmogorov_fwd,:eq_lag_ell,:eq_lag_wealth,
@@ -153,9 +155,7 @@ function init_model_indices!(m::HetDSGE)
 
     ########################################################################################
 
-    m.normalized_model_states = [:μ′_t]
-    m.state_variables = m.endogenous_states.keys[get_setting(m, :state_indices)]
-    m.jump_variables = m.endogenous_states.keys[get_setting(m, :jump_indices)]
+    m.normalized_model_states = [:μ′_t1, :l′_t1]
 
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
@@ -196,15 +196,23 @@ function HetDSGE(subspec::String="ss0";
             testing,
             OrderedDict{Symbol,Observable}())
 
+    m <= Setting(:nx, 300)
+    m <= Setting(:ns, 2)
+
+    default_settings!(m)
+
+    # # Set observable transformations
+    init_observable_mappings!(m)
+
+    # Initialize model indices
+    init_model_indices!(m)
+
     # Set settings
     model_settings!(m)
     # default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
     end
-
-    # # Set observable transformations
-    # init_observable_mappings!(m)
 
     # Initialize parameters
     init_parameters!(m)
@@ -215,14 +223,14 @@ function HetDSGE(subspec::String="ss0";
     # Initialize grids
     init_grids!(m)
 
-    # Initialize model indices
-    init_model_indices!(m)
 
     # # Solve for the steady state
-    # steadystate!(m)
+    steadystate!(m)
 
     # # So that the indices of m.endogenous_states reflect the normalization
-    # normalize_model_state_indices!(m)
+    normalize_model_state_indices!(m)
+
+    init_subspec!(m)
 
     return m
 end
@@ -249,10 +257,10 @@ function init_parameters!(m::HetDSGE)
                    description = "δ: Depreciation rate", tex_label = "\\delta")
     m <= parameter(:μ_sp, 0.0, fixed = true, description = "μ_sp: The trend in the skill process",
                    tex_label = "\\mu_{sp}")
-    m <= parameter(:ρ_sp, 0.7, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_sp, 0.7, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                    description="ρ_sp: AR(1) coefficient in the skill process.",
                    tex_label="\\rho_{sp}")
-    m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=true,
                    description="σ_sp: The standard deviation of the skill process.",
                    tex_label="\\sigma_{sp}")
     m <= parameter(:γ, 0.0, description = "γ: TFP growth")
@@ -260,13 +268,36 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:g, 1/(1-0.01), description = "g: Steady-state government spending/gdp")
     m <= parameter(:η, 0.1, description = "η: Borrowing constraint (normalized by TFP)")
 
-    m <= parameter(:ρB, 0.5, description = "# persistence of discount factor shock")
-    m <= parameter(:ρG, 0.5, description = "# persistence of govt spending shock")
-    m <= parameter(:ρZ, 0.5, description = "# persistence of tfp growth shock")
-    m <= parameter(:ρμ, 0.5, description = " # persistence of investment shock")
-    m <= parameter(:ρlamw, 0.5, description = "# persistence of wage mkup shock")
-    m <= parameter(:ρlamf, 0.5, description = " # persistence of price mkup shock")
-    m <= parameter(:ρmon, 0.5, description = " # persistence of mon policy shock")
+    m <= parameter(:ρ_B, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = "# persistence of discount factor shock", tex_label = "\\rho_B")
+    m <= parameter(:ρ_G, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = "# persistence of govt spending shock", tex_label = "\\rho_G")
+    m <= parameter(:ρ_Z, 0.5,(1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = "# persistence of tfp growth shock", tex_label = "\\rho_z")
+    m <= parameter(:ρ_μ, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = " # persistence of investment shock", tex_label = "\\rho_\\mu")
+    m <= parameter(:ρ_lamw, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = "# persistence of wage mkup shock", tex_label = "\\rho_{\\lambda_w}")
+    m <= parameter(:ρ_lamf, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = " # persistence of price mkup shock", tex_label = "\\rho_{\\lambda_f}")
+    m <= parameter(:ρ_mon, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
+                     fixed=true, description = " # persistence of mon policy shock", tex_label = "\\rho_{mon}")
+
+    m <= parameter(:σ_B, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+                   fixed=true, description = "# standard deviation of discount factor shock", tex_label = "\\sigma_B")
+    m <= parameter(:σ_G, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+                   fixed=true, description = "# standard deviation of govt spending shock", tex_label = "\\sigma_G")
+    m <= parameter(:σ_Z, 0.5,(1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+                   fixed=false, description = "# standard deviation of tfp growth shock", tex_label = "\\sigma_z")
+    m <= parameter(:σ_μ, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+                   fixed=true, description = " # standard deviation of investment shock", tex_label = "\\sigma_\\mu")
+    m <= parameter(:σ_lamw, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+                   fixed=true, description = "# standard deviation of wage mkup shock", tex_label = "\\sigma_{\\lambda_w}")
+    m <= parameter(:σ_lamf, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+                   fixed=true, description = " # standard deviation of price mkup shock", tex_label = "\\sigma_{\\lambda_f}")
+    m <= parameter(:σ_mon, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+                   fixed=true, description = " # standard deviation of mon policy shock", tex_label = "\\sigma_{mon}")
+
 
  m <= parameter(:spp, 4., description = "# second derivative of investment adjustment cost")
  m <= parameter(:lamw, 1.5, description = "# wage markup")
@@ -408,10 +439,34 @@ function model_settings!(m::HetDSGE)
                  This set to 0 is just the default setting, since it will always be
                  overwritten once the Jacobian is calculated.")
 
-    m <= Setting(:state_indices, 1:3, "Which indices of m.endogenous_states correspond to
+    endo = m.endogenous_states_unnormalized
+    state_indices = [endo[:l′_t1]; endo[:μ′_t1];  endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];endo[:π′_t1];
+                     endo[:π′_t2];endo[:π′_t3];endo[:y′_t1];endo[:y′_t2];endo[:y′_t3];endo[:y′_t4];
+                     endo[:z′_t1];endo[:z′_t2];endo[:z′_t3];endo[:w′_t1];endo[:I′_t1];endo[:B′];
+                     endo[:G′];endo[:z′_t];endo[:MU′];endo[:LAMW′]; endo[:LAMF′];endo[:MON′]]
+                     #=endo[:l_t1];
+                     endo[:μ_t1];endo[:k_t];endo[:R_t1];endo[:i_t1]; endo[:π_t1];endo[:π_t2];
+                     endo[:π_t3]; endo[:y_t1];endo[:y_t2];endo[:y_t3]; endo[:y_t4];endo[:z_t1];
+                     endo[:z_t2]; endo[:z_t3];endo[:w_t1];endo[:I_t1]; endo[:B];endo[:G];endo[:Z];
+                     endo[:MU]; endo[:LAMW];endo[:LAMF];endo[:MON]]=#
+
+
+    jump_indices = [endo[:l′_t]; endo[:μ′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
+                    endo[:L′_t];endo[:π′_t];endo[:wageinflation′_t];endo[:mu′_t];endo[:y′_t];
+                    endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
+                    #=endo[:ELL];
+                    endo[:μ_t];endo[:R_t];endo[:i_t];endo[:t_t];endo[:w_t]; endo[:L_t];endo[:π_t];
+                    endo[:wageinflation_t];endo[:mu_t];endo[:y_t];endo[:I_t];endo[:mc_t];endo[:Q_t];
+                    endo[:capreturn_t]]=#
+
+
+    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
                  backward looking state variables")
-    m <= Setting(:jump_indices, 4:9, "Which indices of m.endogenous_states correspond to jump
+    m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
                  variables")
+    #m.state_variables = m.endogenous_states.keys[get_setting(m, :state_indices)]
+    #m.jump_variables = m.endogenous_states.keys[get_setting(m, :jump_indices)]
+
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
@@ -430,12 +485,12 @@ function model_settings!(m::HetDSGE)
     m <= Setting(:mindens, 1e-8)
 
     # Function-valued variables include distributional variables
-    m <= Setting(:n_function_valued_backward_looking_states, 1, "Number of function-valued
+    m <= Setting(:n_function_valued_backward_looking_states, 2, "Number of function-valued
                  backward looking state variables")
-    m <= Setting(:n_backward_looking_distributional_vars, 1, "Number of state variables that are
+    m <= Setting(:n_backward_looking_distributional_vars, 2, "Number of state variables that are
                  distributional variables.")
-    m <= Setting(:n_function_valued_jumps, 1, "Number of function-valued jump variables")
-    m <= Setting(:n_jump_distributional_vars, 0, "Number of jump variables that are distributional
+    m <= Setting(:n_function_valued_jumps, 2, "Number of function-valued jump variables")
+    m <= Setting(:n_jump_distributional_vars, 2, "Number of jump variables that are distributional
                  variables.")
 
     # Note, these settings assume normalization.
@@ -446,7 +501,7 @@ function model_settings!(m::HetDSGE)
     # hand), then one additional degree of freedom for each exogenous distribution (skill
     # distribution). Multiple endogenous distributions only permit removing a single degree
     # of freedom since it is then non-trivial to obtain the marginal distributions.
-    m <= Setting(:n_degrees_of_freedom_removed, 2, "Number of degrees of freedom from the
+    m <= Setting(:n_degrees_of_freedom_removed, 1, "Number of degrees of freedom from the
                  distributional variables to remove.")
     n_dof_removed = get_setting(m, :n_degrees_of_freedom_removed)
 
@@ -497,7 +552,7 @@ end
 function setup_indices!(m::HetDSGE)
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
-    endo = m.endogenous_states
+    endo = m.endogenous_states_unnormalized
     eqconds = m.equilibrium_conditions
     nxns = nx*ns
 
@@ -521,13 +576,13 @@ function setup_indices!(m::HetDSGE)
     endo[:w′_t1] = 2*nxns+14:2*nxns+14           # lag real wages
     endo[:I′_t1] = 2*nxns+15:2*nxns+15           # lag investment–don't get this confused with i, the nominal interest rate
     # exogenous scalar-valued states:
-    endo[:BP]    = 2*nxns+16:2*nxns+16        # discount factor shock
-    endo[:GP]    = 2*nxns+17:2*nxns+17        # govt spending
-    endo[:ZP]    = 2*nxns+18:2*nxns+18        # tfp growth
-    endo[:MUP]   = 2*nxns+19:2*nxns+19        # investment shock
-    endo[:LAMWP] = 2*nxns+20:2*nxns+20        # wage markup
-    endo[:LAMFP] = 2*nxns+21:2*nxns+21        # price markup
-    endo[:MONP]  = 2*nxns+22:2*nxns+22        # monetary policy shock
+    endo[:B′]    = 2*nxns+16:2*nxns+16        # discount factor shock
+    endo[:G′]    = 2*nxns+17:2*nxns+17        # govt spending
+    endo[:z′_t]    = 2*nxns+18:2*nxns+18        # tfp growth
+    endo[:MU′]   = 2*nxns+19:2*nxns+19        # investment shock
+    endo[:LAMW′] = 2*nxns+20:2*nxns+20        # wage markup
+    endo[:LAMF′] = 2*nxns+21:2*nxns+21        # price markup
+    endo[:MON′]  = 2*nxns+22:2*nxns+22        # monetary policy shock
 
  # function-valued jumps
     endo[:l′_t]  = 2*nxns+23:3*nxns+22 # ell function
@@ -552,7 +607,7 @@ function setup_indices!(m::HetDSGE)
     nyscalars = 13 # num scalar jumps
     nxscalars = nscalars - nyscalars # num scalar states
 
-endo[:l_t1] = endo[:l′_t1] .+ nvars #LELL
+#=endo[:l_t1] = endo[:l′_t1] .+ nvars #LELL
 endo[:μ_t1] = endo[:μ′_t1] .+ nvars #LM
 endo[:k_t] = endo[:k′_t] .+ nvars #KK
 endo[:R_t1] = endo[:R′_t1] .+ nvars #LRR
@@ -590,7 +645,7 @@ endo[:y_t] = endo[:y′_t] .+ nvars #Y
 endo[:I_t] = endo[:I′_t]  .+ nvars #X
 endo[:mc_t] = endo[:mc′_t]  .+ nvars #MC
 endo[:Q_t] = endo[:Q′_t]  .+ nvars #Q
-endo[:capreturn_t] = endo[:capreturn′_t] .+ nvars #RK
+endo[:capreturn_t] = endo[:capreturn′_t] .+ nvars #RK =#
 
 # create objects needed for solve.jl
 # we will order function blocks as follows:
@@ -654,5 +709,7 @@ m <= Setting(:nvars, 4*get_setting(m, :n) +35, "num variables")
 m <= Setting(:nscalars, 35, " # num eqs which output scalars")
 m <= Setting(:nyscalars, 13, "num scalar jumps")
 m <= Setting(:nxscalars, 35 - 13, "num scalar states")
+
+m.endogenous_states = deepcopy(endo)
 
 end
