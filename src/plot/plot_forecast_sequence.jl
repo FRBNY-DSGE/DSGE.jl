@@ -163,8 +163,9 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
                 forecast_date_range = map(quarter_date_to_number, forecast_date_range_raw)
 
                 # Truncate
-                forecast_date_range = forecast_date_range[1:forecast_display_length]
-                date_inds = findall(start_date .<= dfs_forecast[i][:date] .<= end_date)[1:forecast_display_length]
+                forecast_date_range = forecast_date_range[1:min(forecast_display_length, length(forecast_date_range))]
+                date_inds = findall(start_date .<= dfs_forecast[i][:date] .<= end_date)
+                date_inds = date_inds[1:min(forecast_display_length, length(forecast_date_range))]
             else
                 # Construct forecast date indices
                 forecast_date_range_raw = Base.filter(x -> start_date <= x <= realized_end_date,
@@ -180,8 +181,8 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
             forecast_date_range = map(quarter_date_to_number, forecast_date_range_raw)
 
             # Truncate
-            forecast_date_range = forecast_date_range[1:forecast_display_length]
-            date_inds = date_inds[1:forecast_display_length]
+            forecast_date_range = forecast_date_range[1:min(forecast_display_length, length(forecast_date_range))]
+            date_inds = date_inds[1:min(forecast_display_length, length(date_inds))]
         end
 
         if i == 1
