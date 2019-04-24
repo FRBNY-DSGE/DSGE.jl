@@ -363,6 +363,11 @@ module DSGE
     include("models/heterogeneous_agent/het_dsge/steady_state.jl")
     include("models/heterogeneous_agent/het_dsge/subspecs.jl")
     include("models/heterogeneous_agent/het_dsge/jacobian.jl")
+    include("models/heterogeneous_agent/het_dsge/shock_loading.jl")
+    include("models/heterogeneous_agent/het_dsge/observables.jl")
+    include("models/heterogeneous_agent/het_dsge/measurement.jl")
+    #include("models/heterogeneous_agent/het_dsge/augment_states.jl")
+
 #=
     include("models/heterogeneous_agent/het_dsge_simple_taylor/het_dsge_simple_taylor.jl")
     include("models/heterogeneous_agent/het_dsge_simple_taylor/steady_state.jl")

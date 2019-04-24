@@ -2,8 +2,8 @@ function jacobian(m::HetDSGE)
     truncate_distribution!(m)
 
     # Load in endogenous state and eq cond indices
-    endo = m.endogenous_states #=augment_model_states(m.endogenous_states_unnormalized,
-                                n_model_states_unnormalized(m)) =#
+    endo = augment_model_states(m.endogenous_states_unnormalized,
+                         n_model_states_unnormalized(m))
     eq   = m.equilibrium_conditions
 
     # Load in parameters, steady-state parameters, and grids
@@ -17,20 +17,20 @@ function jacobian(m::HetDSGE)
     γ::Float64     = m[:γ].value
     g::Float64     = m[:g].value
     η::Float64     = m[:η].value
-    ρB::Float64    = m[:ρB].value
-    ρG::Float64    = m[:ρG].value
-    ρZ::Float64    = m[:ρZ].value
-    ρμ::Float64    = m[:ρμ].value
-    ρlamw::Float64 = m[:ρlamw].value
-    ρlamf::Float64 = m[:ρlamf].value
-    ρmon::Float64  = m[:ρmon].value
+    ρ_B::Float64    = m[:ρ_B].value
+    ρ_G::Float64    = m[:ρ_G].value
+    ρ_Z::Float64    = m[:ρ_Z].value
+    ρ_μ::Float64    = m[:ρ_μ].value
+    ρ_lamw::Float64 = m[:ρ_lamw].value
+    ρ_lamf::Float64 = m[:ρ_lamf].value
+    ρ_mon::Float64  = m[:ρ_mon].value
     spp::Float64   = m[:spp].value
     lamw::Float64  = m[:lamw].value
     ϕh::Float64    = m[:ϕh].value
     Φw::Float64    = m[:Φw].value
     lamf::Float64  = m[:lamf].value
     Φp::Float64    = m[:Φp].value
-    ρR::Float64    = m[:ρR].value
+    ρ_R::Float64    = m[:ρR].value
     ψπ::Float64    = m[:ψπ].value
     ψy::Float64    = m[:ψy].value
 
@@ -83,6 +83,7 @@ function jacobian(m::HetDSGE)
     ϕ = lam*ω/(H^ϕh) # now that we know lam in steady state, choose disutility to target hours H
 
     setup_indices!(m)
+    normalize_model_state_indices!(m)
 
     nvars = get_setting(m, :nvars)
     # Make the Jacobian
@@ -90,19 +91,19 @@ function jacobian(m::HetDSGE)
 
     # Euler equation
     JJ[eq[:eq_euler],endo[:l′_t]] = dF1_dELLP
-    JJ[eq[:eq_euler],endo[:ZP]]   = -dF1_dRZ
+    JJ[eq[:eq_euler],endo[:z′_t]]   = -dF1_dRZ
     JJ[eq[:eq_euler],endo[:w′_t]]   = dF1_dWHP
     JJ[eq[:eq_euler],endo[:L′_t]]  = dF1_dWHP
     JJ[eq[:eq_euler],endo[:t′_t]]  = dF1_dTTP
     JJ[eq[:eq_euler],endo[:B]]    = ell
-    JJ[eq[:eq_euler],endo[:ELL]]  = dF1_dELL
+    JJ[eq[:eq_euler],endo[:l_t]]  = dF1_dELL
     JJ[eq[:eq_euler],endo[:R_t]]   = dF1_dRZ
 
     # KF eqn
     JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t1]]   = dF2_dM
     JJ[eq[:eq_kolmogorov_fwd],endo[:R_t1]]  = dF2_dRZ
     JJ[eq[:eq_kolmogorov_fwd],endo[:l_t1]] = dF2_dELL
-    JJ[eq[:eq_kolmogorov_fwd],endo[:Z]]    = -dF2_dRZ
+    JJ[eq[:eq_kolmogorov_fwd],endo[:z_t]]    = -dF2_dRZ
     JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t]]    = -eye(nxns)
     JJ[eq[:eq_kolmogorov_fwd],endo[:w_t]]    = dF2_dWH
     JJ[eq[:eq_kolmogorov_fwd],endo[:L_t]]   = dF2_dWH
@@ -110,7 +111,7 @@ function jacobian(m::HetDSGE)
 
     # update lagged ELL
     JJ[eq[:eq_lag_ell],endo[:l′_t1]] = Matrix{Float64}(I, nxns, nxns)
-    JJ[eq[:eq_lag_ell],endo[:ELL]]   = -Matrix{Float64}(I, nxns, nxns)
+    JJ[eq[:eq_lag_ell],endo[:l_t]]   = -Matrix{Float64}(I, nxns, nxns)
 
     # update lagged M
     JJ[eq[:eq_lag_wealth],endo[:μ′_t1]] = Matrix{Float64}(I, nxns, nxns)
@@ -120,19 +121,19 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_market_clearing]),first(endo[:y_t])]   = ystar/g
     JJ[first(eq[:eq_market_clearing]),first(endo[:G])]   = -ystar/g
     JJ[first(eq[:eq_market_clearing]),first(endo[:I_t])]   = -xstar
-    JJ[eq[:eq_market_clearing],endo[:ELL]] = (μ.*unc.*xswts.*c)'
+    JJ[eq[:eq_market_clearing],endo[:l_t]] = (μ.*unc.*xswts.*c)'
     JJ[eq[:eq_market_clearing],endo[:μ_t]]   = -(xswts.*c)' # note, now we linearize
 
     # lambda = average marginal utility
     JJ[first(eq[:eq_lambda]),first(endo[:mu_t])] = lam
     JJ[first(eq[:eq_lambda]),endo[:μ_t]]   = -(xswts./c)' # note, now we linearize
-    JJ[first(eq[:eq_lambda]),endo[:ELL]] = -(xswts.*unc.*μ./c)'
+    JJ[first(eq[:eq_lambda]),endo[:l_t]] = -(xswts.*unc.*μ./c)'
 
     # transfer
     JJ[first(eq[:eq_transfers]),first(endo[:t_t])]  = T
     JJ[first(eq[:eq_transfers]),first(endo[:capreturn_t])]  = -Rk*kstar
     JJ[first(eq[:eq_transfers]),first(endo[:k_t])]  = -Rk*kstar
-    JJ[first(eq[:eq_transfers]),first(endo[:Z])]  = Rk*kstar
+    JJ[first(eq[:eq_transfers]),first(endo[:z_t])]  = Rk*kstar
     JJ[first(eq[:eq_transfers]),first(endo[:I_t])]   = xstar
     JJ[first(eq[:eq_transfers]),first(endo[:mc_t])]  = ystar
     JJ[first(eq[:eq_transfers]),first(endo[:y_t])]   = (1-1/g)*ystar
@@ -142,10 +143,10 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_investment]),first(endo[:Q_t])]  = 1.
     JJ[first(eq[:eq_investment]),first(endo[:MU])] = 1.
     JJ[first(eq[:eq_investment]),first(endo[:I′_t])] = spp*(exp(3*γ))/R
-    JJ[first(eq[:eq_investment]),first(endo[:ZP])] = spp*(exp(3*γ))/R
+    JJ[first(eq[:eq_investment]),first(endo[:z′_t])] = spp*(exp(3*γ))/R
     JJ[first(eq[:eq_investment]),first(endo[:I_t])]  = -spp*(exp(3*γ))/R - spp*exp(2*γ)
     JJ[first(eq[:eq_investment]),first(endo[:I_t1])] = spp*exp(2*γ)
-    JJ[first(eq[:eq_investment]),first(endo[:Z])]  = -spp*exp(2*γ)
+    JJ[first(eq[:eq_investment]),first(endo[:z_t])]  = -spp*exp(2*γ)
 
     # tobin's q
     JJ[first(eq[:eq_tobin_q]),first(endo[:R_t])]  = R
@@ -156,7 +157,7 @@ function jacobian(m::HetDSGE)
     # capital accumulation
     JJ[first(eq[:eq_capital_accumulation]),first(endo[:k′_t])] = 1.
     JJ[first(eq[:eq_capital_accumulation]),first(endo[:k_t])]  = -(1-δ)
-    JJ[first(eq[:eq_capital_accumulation]),first(endo[:Z])]   = (1-δ)
+    JJ[first(eq[:eq_capital_accumulation]),first(endo[:z_t])]   = (1-δ)
     JJ[first(eq[:eq_capital_accumulation]),first(endo[:MU])]  = -xstar/kstar
     JJ[first(eq[:eq_capital_accumulation]),first(endo[:I_t])]   = -xstar/kstar
 
@@ -181,7 +182,7 @@ function jacobian(m::HetDSGE)
 
     # gdp
     JJ[first(eq[:eq_gdp]),first(endo[:y_t])]  = 1.
-    JJ[first(eq[:eq_gdp]),first(endo[:Z])]  = α
+    JJ[first(eq[:eq_gdp]),first(endo[:z_t])]  = α
     JJ[first(eq[:eq_gdp]),first(endo[:k_t])] = -α
     JJ[first(eq[:eq_gdp]),first(endo[:L_t])] = -(1-α)
 
@@ -190,21 +191,21 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_optimal_kl]),first(endo[:w_t])]  = -1.
     JJ[first(eq[:eq_optimal_kl]),first(endo[:L_t])] = -1.
     JJ[first(eq[:eq_optimal_kl]),first(endo[:k_t])] = 1.
-    JJ[first(eq[:eq_optimal_kl]),first(endo[:Z])]  = -1.
+    JJ[first(eq[:eq_optimal_kl]),first(endo[:z_t])]  = -1.
 
     # taylor rule
     JJ[first(eq[:eq_taylor]),first(endo[:i_t])]   = -1.
-    JJ[first(eq[:eq_taylor]),first(endo[:i_t1])]  = ρR
-    JJ[first(eq[:eq_taylor]),first(endo[:π_t])]   = (1-ρR)*ψπ
-    JJ[first(eq[:eq_taylor]),first(endo[:π_t1])]  = (1-ρR)*ψπ
-    JJ[first(eq[:eq_taylor]),first(endo[:π_t2])] = (1-ρR)*ψπ
-    JJ[first(eq[:eq_taylor]),first(endo[:π_t3])] = (1-ρR)*ψπ
-    JJ[first(eq[:eq_taylor]),first(endo[:y_t])]    = (1-ρR)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:y_t4])]  = -(1-ρR)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:Z])]    = (1-ρR)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:z_t1])]   = (1-ρR)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:z_t2])]  = (1-ρR)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:z_t3])]  = (1-ρR)*ψy
+    JJ[first(eq[:eq_taylor]),first(endo[:i_t1])]  = ρ_R
+    JJ[first(eq[:eq_taylor]),first(endo[:π_t])]   = (1-ρ_R)*ψπ
+    JJ[first(eq[:eq_taylor]),first(endo[:π_t1])]  = (1-ρ_R)*ψπ
+    JJ[first(eq[:eq_taylor]),first(endo[:π_t2])] = (1-ρ_R)*ψπ
+    JJ[first(eq[:eq_taylor]),first(endo[:π_t3])] = (1-ρ_R)*ψπ
+    JJ[first(eq[:eq_taylor]),first(endo[:y_t])]    = (1-ρ_R)*ψy
+    JJ[first(eq[:eq_taylor]),first(endo[:y_t4])]  = -(1-ρ_R)*ψy
+    JJ[first(eq[:eq_taylor]),first(endo[:z_t])]    = (1-ρ_R)*ψy
+    JJ[first(eq[:eq_taylor]),first(endo[:z_t1])]   = (1-ρ_R)*ψy
+    JJ[first(eq[:eq_taylor]),first(endo[:z_t2])]  = (1-ρ_R)*ψy
+    JJ[first(eq[:eq_taylor]),first(endo[:z_t3])]  = (1-ρ_R)*ψy
     JJ[first(eq[:eq_taylor]),first(endo[:MON])]  = 1.
 
     # fisher eqn
@@ -215,7 +216,7 @@ function jacobian(m::HetDSGE)
     # wage inflation
     JJ[first(eq[:eq_nominal_wage_inflation]),first(endo[:wageinflation_t])] = 1.
     JJ[first(eq[:eq_nominal_wage_inflation]),first(endo[:π_t])]  = -1.
-    JJ[first(eq[:eq_nominal_wage_inflation]),first(endo[:Z])]   = -1.
+    JJ[first(eq[:eq_nominal_wage_inflation]),first(endo[:z_t])]   = -1.
     JJ[first(eq[:eq_nominal_wage_inflation]),first(endo[:w_t])]   = -1.
     JJ[first(eq[:eq_nominal_wage_inflation]),first(endo[:w_t1])]  = 1.
 
@@ -248,7 +249,7 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:L4Y]),first(endo[:y_t3])]  = -1.
 
     JJ[first(eq[:LZ]),first(endo[:z′_t1])] = 1.
-    JJ[first(eq[:LZ]),first(endo[:Z])]   = -1.
+    JJ[first(eq[:LZ]),first(endo[:z_t])]   = -1.
 
     JJ[first(eq[:L2Z]),first(endo[:z′_t2])] = 1.
     JJ[first(eq[:L2Z]),first(endo[:z_t1])]   = -1.
@@ -263,32 +264,32 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:LX]),first(endo[:I_t])]   = -1.
 
     # discount factor shock
-    JJ[first(eq[:F33]),first(endo[:BP])] = 1.
-    JJ[first(eq[:F33]),first(endo[:B])]  = -ρB
+    JJ[first(eq[:F33]),first(endo[:B′])] = 1.
+    JJ[first(eq[:F33]),first(endo[:B])]  = -ρ_B
 
     # g/y shock
-    JJ[first(eq[:F34]),first(endo[:GP])] = 1.
-    JJ[first(eq[:F34]),first(endo[:G])]  = -ρG
+    JJ[first(eq[:F34]),first(endo[:G′])] = 1.
+    JJ[first(eq[:F34]),first(endo[:G])]  = -ρ_G
 
     # tfp growth shock
-    JJ[first(eq[:F35]),first(endo[:ZP])] = 1.
-    JJ[first(eq[:F35]),first(endo[:Z])]  = -ρZ
+    JJ[first(eq[:F35]),first(endo[:z′_t])] = 1.
+    JJ[first(eq[:F35]),first(endo[:z_t])]  = -ρ_Z
 
     # investment shock
-    JJ[first(eq[:F36]),first(endo[:MUP])] = 1.
-    JJ[first(eq[:F36]),first(endo[:MU])]  = -ρμ
+    JJ[first(eq[:F36]),first(endo[:MU′])] = 1.
+    JJ[first(eq[:F36]),first(endo[:MU])]  = -ρ_μ
 
     # wage mkup shock
-    JJ[first(eq[:F37]),first(endo[:LAMWP])] = 1.
-    JJ[first(eq[:F37]),first(endo[:LAMW])]  = -ρlamw
+    JJ[first(eq[:F37]),first(endo[:LAMW′])] = 1.
+    JJ[first(eq[:F37]),first(endo[:LAMW])]  = -ρ_lamw
 
     # price mkup shock
-    JJ[first(eq[:F38]),first(endo[:LAMFP])] = 1.
-    JJ[first(eq[:F38]),first(endo[:LAMF])]  = -ρlamf
+    JJ[first(eq[:F38]),first(endo[:LAMF′])] = 1.
+    JJ[first(eq[:F38]),first(endo[:LAMF])]  = -ρ_lamf
 
     # monetary policy shock
-    JJ[first(eq[:F39]),first(endo[:MONP])] = 1.
-    JJ[first(eq[:F39]),first(endo[:MON])]  = -ρmon
+    JJ[first(eq[:F39]),first(endo[:MON′])] = 1.
+    JJ[first(eq[:F39]),first(endo[:MON])]  = -ρ_mon
 
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
@@ -459,7 +460,45 @@ function truncate_distribution!(m::HetDSGE)
         m[:μstar] = μ
         m[:lstar] = ell
         m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
+        nxns = nx*get_setting(m, :ns)
+        m <= Setting(:n, nxns)
 
         setup_indices!(m)
+
+        endo = m.endogenous_states_unnormalized
+        state_indices = [endo[:l′_t1]; endo[:μ′_t1];  endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];endo[:π′_t1];
+                         endo[:π′_t2];endo[:π′_t3];endo[:y′_t1];endo[:y′_t2];endo[:y′_t3];endo[:y′_t4];
+                         endo[:z′_t1];endo[:z′_t2];endo[:z′_t3];endo[:w′_t1];endo[:I′_t1];endo[:B′];
+                         endo[:G′];endo[:z′_t];endo[:MU′];endo[:LAMW′]; endo[:LAMF′];endo[:MON′]]
+                         #=endo[:l_t1];
+                         endo[:μ_t1];endo[:k_t];endo[:R_t1];endo[:i_t1]; endo[:π_t1];endo[:π_t2];
+                         endo[:π_t3]; endo[:y_t1];endo[:y_t2];endo[:y_t3]; endo[:y_t4];endo[:z_t1];
+                         endo[:z_t2]; endo[:z_t3];endo[:w_t1];endo[:I_t1]; endo[:B];endo[:G];endo[:Z];
+                         endo[:MU]; endo[:LAMW];endo[:LAMF];endo[:MON]]=#
+
+        jump_indices = [endo[:l′_t]; endo[:μ′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
+                        endo[:L′_t];endo[:π′_t];endo[:wageinflation′_t];endo[:mu′_t];endo[:y′_t];
+                        endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
+                        #=endo[:ELL];
+                        endo[:μ_t];endo[:R_t];endo[:i_t];endo[:t_t];endo[:w_t]; endo[:L_t];endo[:π_t];
+                        endo[:wageinflation_t];endo[:mu_t];endo[:y_t];endo[:I_t];endo[:mc_t];endo[:Q_t];
+                        endo[:capreturn_t]]=#
+
+        m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
+                     backward looking state variables")
+        m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
+                     variables")
+
+        n_backward_looking_vars = length(get_setting(m, :state_indices))
+        n_backward_looking_function_valued_vars = get_setting(m, :n_function_valued_backward_looking_states)
+        n_backward_looking_scalar_vars = n_backward_looking_vars - 2*nxns #n_backward_looking_function_valued_vars
+        n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
+        m <= Setting(:n_backward_looking_states, nxns*n_backward_looking_distr_vars +
+                     n_backward_looking_scalar_vars - get_setting(m, :backward_looking_states_normalization_factor))
+        n_jump_vars = length(get_setting(m, :jump_indices))
+        n_jump_function_valued_vars = get_setting(m, :n_function_valued_jumps)
+        n_jump_scalar_vars = n_jump_vars - n_jump_function_valued_vars*nxns
+        m <= Setting(:n_jumps, nxns*n_jump_function_valued_vars + n_jump_scalar_vars - get_setting(m, :jumps_normalization_factor))
+        m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps))
     end
 end

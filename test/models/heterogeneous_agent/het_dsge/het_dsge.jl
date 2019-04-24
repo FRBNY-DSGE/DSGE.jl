@@ -173,7 +173,8 @@ if check_jacobian
     F38 = read(file, "F38")
     F39 = read(file, "F39")
     close(file)
-    endo = m.endogenous_states
+    endo = DSGE.augment_model_states(m.endogenous_states_unnormalized, DSGE.n_model_states_unnormalized(m))
+
     eq = m.equilibrium_conditions
     @testset "Check indices" begin
         @testset "function blocks which output a function" begin
@@ -198,13 +199,13 @@ if check_jacobian
             @test LXP   == first(endo[:I′_t1])
         end
         @testset "# exogenous scalar-valued states" begin
-            @test BP    == first(endo[:BP])
-            @test GP    == first(endo[:GP])
-            @test ZP    == first(endo[:ZP])
-            @test MUP   == first(endo[:MUP])
-            @test LAMWP == first(endo[:LAMWP])
-            @test LAMFP == first(endo[:LAMFP])
-            @test MONP  == first(endo[:MONP])
+            @test BP    == first(endo[:B′])
+            @test GP    == first(endo[:G′])
+            @test ZP    == first(endo[:z′_t])
+            @test MUP   == first(endo[:MU′])
+            @test LAMWP == first(endo[:LAMW′])
+            @test LAMFP == first(endo[:LAMF′])
+            @test MONP  == first(endo[:MON′])
         end
         @testset "function-valued jumps" begin
             @test ELLP  == endo[:l′_t]
@@ -243,12 +244,12 @@ if check_jacobian
             @test LX    == first(endo[:I_t1])
             @test B     == first(endo[:B])
             @test G     == first(endo[:G])
-            @test Z     == first(endo[:Z])
+            @test Z     == first(endo[:z_t])
             @test MU    == first(endo[:MU])
             @test LAMW  == first(endo[:LAMW])
             @test LAMF  == first(endo[:LAMF])
             @test MON   == first(endo[:MON])
-            @test ELL   == endo[:ELL]
+            @test ELL   == endo[:l_t]
             @test M     == endo[:μ_t]
             @test RR    == first(endo[:R_t])
             @test II    == first(endo[:i_t])
