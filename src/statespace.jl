@@ -169,22 +169,20 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
             throw(KleinError())
         end
 
-        # Transition
-#        @info "pre klein"
         TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
         CCC = zeros(n_model_states(m))
-#        @info "post kelin"
 
-        GDPeqn = construct_GDPeqn(m, TTT_jump)
+        if m.spec=="real_bond_mkup"
+            GDPeqn = construct_GDPeqn(m, TTT_jump)
+            TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
+            # Measurement (needs the additional TTT_jump argument)
+            measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
+        else
+            measurement_equation = measurement(m, TTT, RRR, CCC)
+        end
 
-        TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-#        @info "post aug"
         transition_equation = Transition(TTT, RRR, CCC)
-#        @info "post trans"
 
-        # Measurement (needs the additional TTT_jump argument)
-        measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-#        @info "post measure"
     else
         throw("solution_method provided does not exist.")
     end
