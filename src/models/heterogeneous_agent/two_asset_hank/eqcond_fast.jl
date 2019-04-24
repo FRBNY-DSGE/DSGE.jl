@@ -17,98 +17,98 @@ Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, an
 """
 function eqcond_lite(m::TwoAssetHANK)
     # Read in parameters
-    local aalpha = m[:aalpha].value::Float64
-    local ddelta = m[:ddelta].value::Float64
-    local ddeath = m[:ddeath].value::Float64
-    local rrho   = m[:rrho].value::Float64
-    local chi0   = m[:chi0].value::Float64
-    local chi1   = m[:chi1].value::Float64
-    local chi2   = m[:chi2].value::Float64
-    local a_lb   = m[:a_lb].value::Float64
-    local kappa  = m[:kappa].value::Float64
-    local pam    = m[:pam].value::Float64
-    local xxi    = m[:xxi].value::Float64
-    local ggamma = m[:ggamma].value::Float64
-    local tau_I  = m[:tau_I].value::Float64
-    local trans  = m[:trans].value::Float64
-    local n_SS   = m[:n_SS].value::Float64
+    aalpha = m[:aalpha].value::Float64
+    ddelta = m[:ddelta].value::Float64
+    ddeath = m[:ddeath].value::Float64
+    rrho   = m[:rrho].value::Float64
+    chi0   = m[:chi0].value::Float64
+    chi1   = m[:chi1].value::Float64
+    chi2   = m[:chi2].value::Float64
+    a_lb   = m[:a_lb].value::Float64
+    kappa  = m[:kappa].value::Float64
+    pam    = m[:pam].value::Float64
+    xxi    = m[:xxi].value::Float64
+    ggamma = m[:ggamma].value::Float64
+    tau_I  = m[:tau_I].value::Float64
+    trans  = m[:trans].value::Float64
+    n_SS   = m[:n_SS].value::Float64
 
-    local nnu_aggZ    = m[:nnu_aggZ].value::Float64
-    local ssigma_aggZ = m[:ssigma_aggZ].value::Float64
+    nnu_aggZ    = m[:nnu_aggZ].value::Float64
+    ssigma_aggZ = m[:ssigma_aggZ].value::Float64
 
     # Set liquid rates
-    local r_b_borr_SS  = m[:r_b_borr_SS].value::Float64
-    local borrwedge_SS = m[:borrwedge_SS].value::Float64
+    r_b_borr_SS  = m[:r_b_borr_SS].value::Float64
+    borrwedge_SS = m[:borrwedge_SS].value::Float64
 
-    local lambda::Matrix{Float64} = get_setting(m, :lambda)
+    lambda::Matrix{Float64} = get_setting(m, :lambda)
 
-    local K_liquid                   = get_setting(m, :K_liquid)::Bool
-    local aggregate_variables        = get_setting(m, :aggregate_variables)==1#::Bool
-    local distributional_variables   = get_setting(m, :distributional_variables)==1#::Int64
-    local distributional_variables_1 = get_setting(m, :distributional_variables_1)==1#::Int64
-    local permanent                  = get_setting(m, :permanent)::Bool
+    K_liquid                   = get_setting(m, :K_liquid)::Bool
+    aggregate_variables        = get_setting(m, :aggregate_variables)==1#::Bool
+    distributional_variables   = get_setting(m, :distributional_variables)==1#::Int64
+    distributional_variables_1 = get_setting(m, :distributional_variables_1)==1#::Int64
+    permanent                  = get_setting(m, :permanent)::Bool
 
-    local I      = get_setting(m, :I)::Int64
-    local J      = get_setting(m, :J)::Int64
-    local I_g    = get_setting(m, :I_g)::Int64
-    local J_g    = get_setting(m, :J_g)::Int64
-    local N      = get_setting(m, :N)::Int64
+    I      = get_setting(m, :I)::Int64
+    J      = get_setting(m, :J)::Int64
+    I_g    = get_setting(m, :I_g)::Int64
+    J_g    = get_setting(m, :J_g)::Int64
+    N      = get_setting(m, :N)::Int64
 
-    local a      = get_setting(m, :a)::Vector{Float64}
-    local b      = get_setting(m, :b)::Vector{Float64}
-    local a_g    = get_setting(m, :a_g)::Vector{Float64}
-    local b_g    = get_setting(m, :b_g)::Vector{Float64}
+    a      = get_setting(m, :a)::Vector{Float64}
+    b      = get_setting(m, :b)::Vector{Float64}
+    a_g    = get_setting(m, :a_g)::Vector{Float64}
+    b_g    = get_setting(m, :b_g)::Vector{Float64}
 
-    local agrid_new = get_setting(m, :agrid_new)::Int64
-    local bgrid_new = get_setting(m, :bgrid_new)::Int64
-    local ygrid_new = get_setting(m, :ygrid_new)::Int64
+    agrid_new = get_setting(m, :agrid_new)::Int64
+    bgrid_new = get_setting(m, :bgrid_new)::Int64
+    ygrid_new = get_setting(m, :ygrid_new)::Int64
 
-    local amin = get_setting(m, :amin)
-    local bmin = get_setting(m, :bmin)
-    local amax = get_setting(m, :amax)
-    local bmax = get_setting(m, :bmax)
+    amin = get_setting(m, :amin)
+    bmin = get_setting(m, :bmin)
+    amax = get_setting(m, :amax)
+    bmax = get_setting(m, :bmax)
 
-    local y      = vec(get_setting(m, :y))::Vector{Complex{Float64}}
-    local y_dist = get_setting(m, :y_dist)::Vector{Complex{Float64}}
-    local y_mean = get_setting(m, :y_mean)::Complex{Float64}
-    local KL      = get_setting(m, :KL_0)::Float64
-    local r_b_fix = get_setting(m, :r_b_fix) ? 1 : 0::Int64
+    y      = vec(get_setting(m, :y))::Vector{Complex{Float64}}
+    y_dist = get_setting(m, :y_dist)::Vector{Complex{Float64}}
+    y_mean = get_setting(m, :y_mean)::Complex{Float64}
+    KL      = get_setting(m, :KL_0)::Float64
+    r_b_fix = get_setting(m, :r_b_fix) ? 1 : 0::Int64
 
     #--- Taken from what used to be inside
     #a, a_g, a_g_0pos          = create_a_grid(agrid_new, J, J_g, amin, amax)
     #    _, _, _, b, b_g, b_g_0pos = create_b_grid(bgrid_new, I, I_g)
-    #local lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
+    #lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
 
-    local n_v = get_setting(m, :n_v)::Int64
-    local n_g = get_setting(m, :n_g)::Int64
-    local n_p = get_setting(m, :n_p)::Int64
-    local n_Z = get_setting(m, :n_Z)::Int64
-    local nVars    = get_setting(m, :nVars)::Int64
-    local nEErrors = get_setting(m, :nEErrors)::Int64
+    n_v = get_setting(m, :n_v)::Int64
+    n_g = get_setting(m, :n_g)::Int64
+    n_p = get_setting(m, :n_p)::Int64
+    n_Z = get_setting(m, :n_Z)::Int64
+    nVars    = get_setting(m, :nVars)::Int64
+    nEErrors = get_setting(m, :nEErrors)::Int64
 
-    #local vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
+    #vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
     vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
-    local V_SS   = reshape(vars_SS[1:n_v], I*J, N)
-    local g_SS   = vars_SS[n_v + 1 : n_v + n_g]
-    local K_SS   = vars_SS[n_v + n_g + 1]
-    local r_b_SS = vars_SS[n_v + n_g + 2]
+    V_SS   = reshape(vars_SS[1:n_v], I*J, N)
+    g_SS   = vars_SS[n_v + 1 : n_v + n_g]
+    K_SS   = vars_SS[n_v + n_g + 1]
+    r_b_SS = vars_SS[n_v + n_g + 2]
 
     # Aggregate output and aggregate consumption
-    local aggY_SS = aggregate_variables ? vars_SS[n_v+n_g+3] : 0.0 # aggregate output
-    local aggC_SS = aggregate_variables ? vars_SS[n_v+n_g+4] : 0.0 # aggregate consumption
+    aggY_SS = aggregate_variables ? vars_SS[n_v+n_g+3] : 0.0 # aggregate output
+    aggC_SS = aggregate_variables ? vars_SS[n_v+n_g+4] : 0.0 # aggregate consumption
 
     # Consumption and earnings inequality
-    local C_Var_SS    = distributional_variables ? vars_SS[n_v+n_g+3] : 0.0
-    local earn_Var_SS = distributional_variables ? vars_SS[n_v+n_g+4] : 0.0
+    C_Var_SS    = distributional_variables ? vars_SS[n_v+n_g+3] : 0.0
+    earn_Var_SS = distributional_variables ? vars_SS[n_v+n_g+4] : 0.0
 
     # Consumption of wealthy and poor hand-to-mouth
-    local C_WHTM_SS = distributional_variables_1 ? vars_SS[n_v+n_g+3] : 0.0
-    local C_PHTM_SS = distributional_variables_1 ? vars_SS[n_v+n_g+4] : 0.0
+    C_WHTM_SS = distributional_variables_1 ? vars_SS[n_v+n_g+3] : 0.0
+    C_PHTM_SS = distributional_variables_1 ? vars_SS[n_v+n_g+4] : 0.0
 
-    local aggZ_SS = vars_SS[n_v+n_g+n_p+1] # Aggregate Z
+    aggZ_SS = vars_SS[n_v+n_g+n_p+1] # Aggregate Z
 
     # Construct problem functions
-    local util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
+    util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
 
     @inline function get_residuals_lite(vars::Vector{T}) where {T<:Real}
         # ------- Unpack variables -------

@@ -119,9 +119,14 @@ Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
 function init_model_indices!(m::TwoAssetHANK)
+
+    n_v = get_setting(m, :n_v)
+    n_g = get_setting(m, :n_g)
+    n_p = get_setting(m, :n_p)
+    n_Z = get_setting(m, :n_Z)
+
     # Endogenous states
-    endogenous_states = collect([:value_function, :inflation, :distribution,
-                                 :monetary_policy, :w, :N, :C, :output, :B])
+    endogenous_states = collect([:value_function, :distribution, :K, :r_b, :Y, :C, :Z])
 
     # Exogenous shocks
     exogenous_shocks = collect([:mp_shock])
@@ -130,8 +135,7 @@ function init_model_indices!(m::TwoAssetHANK)
     expected_shocks = collect([:E_V, :E_π])
 
     # Equilibrium conditions
-    equilibrium_conditions = collect([:value_function, :inflation, :distribution,
-                                      :monetary_policy, :w, :N, :C, :Y, :B])
+    equilibrium_conditions = collect([:value_function, :distribution, :K, :r_b, :Y, :C, :Z])
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -144,17 +148,18 @@ function init_model_indices!(m::TwoAssetHANK)
     pseudo_observables = keys(m.pseudo_observable_mappings)
 
     # Assign dimensions
-    m.endogenous_states[:value_function]  = collect(1:200)      # size of state space grid
-    m.endogenous_states[:inflation]       = [201]               # inflation
-    m.endogenous_states[:distribution]    = collect(202:400)    # size of grid minus 1 for ...
-    m.endogenous_states[:monetary_policy] = [401]               # monetary policy shocks
-    m.endogenous_states[:w]               = [402]        # static conditions from market-clearing
-    m.endogenous_states[:N]               = [403]
-    m.endogenous_states[:C]               = [404]
-    m.endogenous_states[:output]          = [405]
-    m.endogenous_states[:B]               = [406]
+    m.endogenous_states[:value_function]  = collect(1:n_v)
+    m.endogenous_states[:distribution]    = collect(n_v + 1:n_v + n_g)
+    m.endogenous_states[:K]               = [n_v + n_g + 1]
+    m.endogenous_states[:r_b]             = [n_v + n_g + 2]
+
+    m.endogenous_states[:Y]               = [n_v + n_g + 3]
+    m.endogenous_states[:C]               = [n_v + n_g + 4]
+
+    m.endogenous_states[:Z]               = [n_v + n_g + n_p + 1]
+
     m.expected_shocks[:E_V]               = m.endogenous_states[:value_function]
-    m.expected_shocks[:E_π]               = m.endogenous_states[:inflation]
+    #m.expected_shocks[:E_π]               = m.endogenous_states[:inflation]
 
     for (i,k) in enumerate(endogenous_states_augmented)
         m.endogenous_states_augmented[k] = i + length(endogenous_states)
@@ -199,12 +204,13 @@ function TwoAssetHANK(subspec::String="ss0";
 
     # Initialize parameters
     init_parameters!(m)
-    init_model_indices!(m)
 
     # Set settings
     model_settings!(m)
     default_test_settings!(m)
     adjust_parameters!(m)
+
+    init_model_indices!(m)
 
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -334,7 +340,7 @@ function init_parameters!(m::TwoAssetHANK)
                    tex_label="xxi")
 
     # Perfect annuity markets
-    m <= parameter(:pam, 1.0, fixed=true, #RECA: maybe this is supposed to be a bool
+    m <= parameter(:pam, 1.0, fixed=true,
                    description="Perfect annuity markets",
                    tex_label="pam")
 
@@ -364,6 +370,8 @@ function init_parameters!(m::TwoAssetHANK)
     m <= parameter(:kappa, 10.0, fixed=true,
                    description="Household effects of TFP shock",
                    tex_label="kappa")
+
+    # Steady State Parameters
     m <= SteadyStateParameter(:KL_SS, NaN,
                                    description = "")
     m <= SteadyStateParameter(:r_a_SS, NaN,
@@ -430,21 +438,16 @@ function init_parameters!(m::TwoAssetHANK)
                                    description = "")
     m <= SteadyStateParameter(:C_PHTM_SS, NaN,
                                    description = "")
-   m <= SteadyStateParameterArray(:NHTM_indicator, Vector{Float64}(),
+    m <= SteadyStateParameterArray(:NHTM_indicator, Vector{Float64}(),
                                    description = "")
     m <= SteadyStateParameter(:NHTM_SS, NaN,
                                    description = "")
     m <= SteadyStateParameter(:C_NHTM_SS, NaN,
                                    description = "")
-
-    m <= SteadyStateParameterArray(:r_a_grid, Vector{Float64}(),
-                                   description = "")
-
     m <= SteadyStateParameterArray(:gg_SS, Vector{Float64}(),
                                    description = "")
     m <= SteadyStateParameter(:illiquid_wedge, NaN,
                                    description = "")
-
     m <= SteadyStateParameterArray(:vars_SS, Vector{Float64}(),
                                    description = "")
 end
@@ -1027,8 +1030,7 @@ function model_settings!(m::TwoAssetHANK)
 
 
     # Liquid asset suply
-    m <= Setting(:r_b_fix,  true,
-                 "Adjustment procedure 1: r_b is fixed")
+    m <= Setting(:r_b_fix,  true, "Adjustment procedure 1: r_b is fixed")
     m <= Setting(:r_b_phi,  false,
                  "Adjustment procedure 2: r_b is supplied elastically, with elasticity phi")
     m <= Setting(:B_fix,    false, "The total amount of the liquid asset is fixed at B")
@@ -1038,9 +1040,9 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:y_size, 30, "Model size: number of income states. Supported sizes: 2, 30, 33")
 
     # Distributional variables
-    m <= Setting(:aggregate_variables,        1, "Aggregate variables")
-    m <= Setting(:distributional_variables,   0, "Distributional_variables")
-    m <= Setting(:distributional_variables_1, 0, "Distributional_variables_1")
+    m <= Setting(:aggregate_variables,        true, "Aggregate variables")
+    m <= Setting(:distributional_variables,   false, "Distributional_variables")
+    m <= Setting(:distributional_variables_1, false, "Distributional_variables_1")
 
     # Parameterization
     m <= Setting(:para_new, 1, "Parameterization")
@@ -1104,12 +1106,13 @@ function model_settings!(m::TwoAssetHANK)
     m <= Setting(:nEErrors, get_setting(m, :n_v), "nEErrors")
     m <= Setting(:n_v_full, get_setting(m, :n_v), "n_v_Full")
     m <= Setting(:n_g_full, get_setting(m, :n_g), "n_g_Full")
+
     # Our syntax
     m <= Setting(:n_jump_vars,  get_setting(m, :I) * get_setting(m, :J) * get_setting(m, :N),
                  "Number of jump variables (value function entries)")
     m <= Setting(:n_state_vars, get_setting(m, :I_g)*get_setting(m, :J_g)*get_setting(m, :N)-1,
                  "Number of endogenous state variables (distribution)")
-    m <= Setting(:n_state_vars_unreduce,      1, "Number of aggregate shocks")
+    m <= Setting(:n_state_vars_unreduce, 1, "Number of aggregate shocks")
 
     # Steady state approximation
     m <= Setting(:maxit_HJB, 100,  "Max number of iterations for HJB")
@@ -1131,32 +1134,11 @@ function model_settings!(m::TwoAssetHANK)
     # Approximation Parameters
     m <= Setting(:KL_0, 43.8800, "Initial guess of capital to labor ratio")
 
-####### RECA
-#    m <= Setting(:,, "")
+    # TODO: Inserted from old code; not certain necessary
+    #=
 
-
-    # State space grid
-#=    m <= Setting(:agridparam, 1, "Bending coefficient: 1 for linear")
-      m <= Setting(:a, construct_asset_grid(get_setting(m,:I), get_setting(m, :agridparam),
-                        get_setting(m, :amin), get_setting(m,:amax)), "Asset grid")
-
-    m <= Setting(:ygrid_combined, [0.2, 1])
-    m <= Setting(:ymarkov_combined, [-0.5 0.5; 0.0376 -0.0376], "Markov transition parameters")
-
-    m <= Setting(:g_z, compute_stationary_income_distribution(get_setting(m, :ymarkov_combined),
-                       get_setting(m, :J)), "Stationary income distribution")
-    m <= Setting(:zz, construct_labor_income_grid(get_setting(m, :ygrid_combined),
-                       get_setting(m, :g_z), m[:meanlabeff].value, get_setting(m, :I)),
-                       "Labor income grid repeated across asset dimension")
-    m <= Setting(:z, get_setting(m, :zz)[1, :], "Labor income grid")
-
-    # Number of variables
-    m <= Setting(:n_jump_vars, get_setting(m, :I) * get_setting(m, :J) + 1, "Number of jump variables")
-    m <= Setting(:n_state_vars, get_setting(m, :I) * get_setting(m, :J), "Number of state variables")
-    m <= Setting(:n_state_vars_unreduce, 0, "Number of state variables not being reduced")
-    # R: Inserted from old code; not certain necessary
-    m <= Setting(:n_static_relations, 5, "Number of static relations: bond-market clearing, labor market
-                                          clearing, consumption, output, total assets")
+    m <= Setting(:n_static_relations, 5,
+                 "Number of static relations: bond-market clearing, labor market clearing, consumption, output, total assets")
     m <= Setting(:n_vars, get_setting(m, :n_jump_vars) + get_setting(m, :n_state_vars)
                  + get_setting(m, :n_static_relations),
                  "Number of variables, total")

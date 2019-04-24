@@ -24,8 +24,8 @@ function steadystate!(m::TwoAssetHANK)
     trans  = m[:trans].value
 
     # Set liquid rates
-    r_b_SS = m[:r_b_SS].value
-    r_b_borr_SS = m[:r_b_borr_SS].value
+    r_b_SS       = m[:r_b_SS].value
+    r_b_borr_SS  = m[:r_b_borr_SS].value
     borrwedge_SS = m[:borrwedge_SS].value
 
     lambda   = get_setting(m, :lambda)
@@ -36,21 +36,21 @@ function steadystate!(m::TwoAssetHANK)
     distributional_variables_1 = get_setting(m, :distributional_variables_1)
 
     # Read in approximation parameters
-    maxit_HJB  = get_setting(m, :maxit_HJB)
-    crit_HJB   = get_setting(m, :crit_HJB)
-    Delta      = get_setting(m, :Delta)
+    maxit_HJB = get_setting(m, :maxit_HJB)
+    crit_HJB  = get_setting(m, :crit_HJB)
+    Delta     = get_setting(m, :Delta)
 
-    maxit_HIS  = get_setting(m, :maxit_HIS)
-    crit_HIS   = get_setting(m, :crit_HIS)
-    start_HIS  = get_setting(m, :start_HIS)
+    maxit_HIS = get_setting(m, :maxit_HIS)
+    crit_HIS  = get_setting(m, :crit_HIS)
+    start_HIS = get_setting(m, :start_HIS)
 
-    maxit_KFE  = get_setting(m, :maxit_KFE)
-    crit_KFE   = get_setting(m, :crit_KFE)
-    Delta_KFE  = get_setting(m, :Delta_KFE)
+    maxit_KFE = get_setting(m, :maxit_KFE)
+    crit_KFE  = get_setting(m, :crit_KFE)
+    Δ_KFE     = get_setting(m, :Delta_KFE)
 
-    maxit_KL   = get_setting(m, :maxit_KL)
-    crit_KL    = get_setting(m, :crit_KL)
-    relax_KL   = get_setting(m, :relax_KL)
+    maxit_KL  = get_setting(m, :maxit_KL)
+    crit_KL   = get_setting(m, :crit_KL)
+    relax_KL  = get_setting(m, :relax_KL)
 
     # Read in grids
     I       = get_setting(m, :I)
@@ -62,7 +62,7 @@ function steadystate!(m::TwoAssetHANK)
     N       = get_setting(m, :N)
     a       = get_setting(m, :a)
     b       = get_setting(m, :b)
-    y       = get_setting(m, :y)
+    y       = real(vec(get_setting(m, :y)))
     y_dist  = get_setting(m, :y_dist)
     y_mean  = get_setting(m, :y_mean)
     KL      = get_setting(m, :KL_0)
@@ -77,11 +77,12 @@ function steadystate!(m::TwoAssetHANK)
     w	= (1 - aalpha) * (KL ^ aalpha)
     r_a	= aalpha * (KL ^ (aalpha - 1)) - ddelta
 
-    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
-    r_b_vec   = r_b .* (b   .>= 0) + r_b_borr .* (b   .< 0)
-
     # Construct problem functions
     util, deposit, cost = construct_problem_functions(ggamma, chi0, chi1, chi2, a_lb)
+
+    a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid = set_grids(a, b, a_g, b_g, vec(y), r_b, r_b_borr)
+
+    r_b_vec   = r_b .* (b .>= 0) + r_b_borr .* (b .< 0)
 
     # Initial consumption and value function
     c_0 = (1-xxi) * w * y_grid .+ (r_a + ddeath*pam) .* a_grid +
@@ -92,39 +93,33 @@ function steadystate!(m::TwoAssetHANK)
     gg0 = zeros(I_g, J_g, N)
     gg0[b .== 0, 1, :] = vec(y_dist)
     gg0 = gg0 ./ sum(gg0)
-    gg0 = gg0 ./ dab_g_tilde_grid 	# ensure integration to 1
-    gg0 = vec(gg0) #, I_g*J_g*N, 1)
+    gg0 = gg0 ./ dab_g_tilde_grid # ensure integration to 1
+    gg0 = vec(gg0)
     gg = gg0
 
-    aau = Array{Float64}(undef, 0, 0)
-    bbu = Array{Float64}(undef, 0, 0)
-    ccu = Array{Float64}(undef, 0, 0)
-
+    AT  = Array{Float64}(undef, 0, 0)
     Vn1 = Array{Float64}(undef, I, J, N)
     Vn  = Array{Float64}(undef, I, J, N)
 
     gg_tilde = Array{Float64}(undef, 0, 0)
 
-    g = Array{Float64}(undef, 0, 0)
-    c = Array{Float64}(undef, I, J, N)
-    s = Array{Float64}(undef, I, J, N)
-    u = Array{Float64}(undef, I, J, N)
-    d = Array{Float64}(undef, I, J, N)
-    c_g = Array{Float64}(undef, 0, 0)
-    #s_g = Array{Float64}(undef, 0, 0)
-    #d_g = Array{Float64}(undef, 0, 0)
+    g   = Array{Float64}(undef, 0, 0)
+    c   = Array{Float64,3}(undef, I, J, N)
+    s   = Array{Float64,3}(undef, I, J, N)
+    u   = Array{Float64,3}(undef, I, J, N)
+    d   = Array{Float64,3}(undef, I, J, N)
+    c_g = Array{Float64,3}(undef, I_g, J_g, N)
 
     K_supply  = 0.
     L_supply  = 0.
     KL_supply = 0.
-    Vamin     = 0.
-    Vbmin     = 1e-8
 
     #----------------------------------------------------------------
     # Iterate on KL to find steady state
     #----------------------------------------------------------------
     for ii = 1 : maxit_KL
-	    # Derive aggregates, given KL
+
+        # Derive aggregates, given KL
 	    w   = (1 - aalpha) * (KL ^ aalpha)
  	    r_a = aalpha * (KL ^ (aalpha - 1)) - ddelta
 
@@ -135,8 +130,8 @@ function steadystate!(m::TwoAssetHANK)
 	    # Solve HJB
 	    #----------------------------------------------------------------
         @time for nn = 1 : maxit_HJB
-            c, s, d = solve_hjb(Vn, I_g, J_g, a_lb, ggamma, 0, ddeath, pam, 0.0, xxi,
-                                tau_I, w, trans, r_b_vec, y, a, b, cost, util, deposit)
+            c, s, d = solve_hjb(Vn, a_lb, ggamma, ddeath, pam, trans, xxi,
+                                tau_I, 0.0, w, r_b_vec, y, a, b, cost, util, deposit)
             u = util.(c)
 
             # Interpolate
@@ -144,9 +139,8 @@ function steadystate!(m::TwoAssetHANK)
             s_g = reshape(interp_decision * vec(s), I_g, J_g, N)
             c_g = reshape(interp_decision * vec(c), I_g, J_g, N)
 
-            aa, bb, aau, bbu = transition(ddeath, pam, xxi, w, chi0, chi1, chi2, a_lb, r_a,
-                                          y, d, d_g, s, s_g, a, a_g, b, b_g)
-            A = aa + bb
+            A, AT = transition(ddeath, pam, xxi, w, a_lb, 0.0, d, d_g, s, s_g,
+                               r_a, a, a_g, b, b_g, y, cost)
 
             #------------------------------------------------------------
             # Update value function
@@ -157,9 +151,10 @@ function steadystate!(m::TwoAssetHANK)
             if nn >= start_HIS
                 for jj = 1:maxit_HIS
                     Vn2 = update_value_fn(A, Delta, lambda, I, J, N, u, Vn1, rrho, ddeath)
-                    VHIS_delta = Vn2 - Vn1
+
+                    VHIS_Δ = Vn2 - Vn1
                     Vn1  = Vn2
-                    dist = maximum(abs.(VHIS_delta))
+                    dist = maximum(abs.(VHIS_Δ))
                     if dist < crit_HIS
                         break
                     end
@@ -167,10 +162,10 @@ function steadystate!(m::TwoAssetHANK)
             end
 
             # Check for convergence
-            V_Delta = Vn1 - Vn
-            Vn      = Vn1
+            V_Δ = Vn1 - Vn
+            Vn  = Vn1
 
-            dist = maximum(abs.(V_Delta))
+            dist = maximum(abs.(V_Δ))
             @show dist
 
             if dist < crit_HJB
@@ -178,7 +173,6 @@ function steadystate!(m::TwoAssetHANK)
                 break
             end
         end
-
         # Store value function
         V_0 = Vn
 
@@ -187,7 +181,7 @@ function steadystate!(m::TwoAssetHANK)
         #----------------------------------------------------------------
 
         # Find new stationary distribution associated with decision rules
-        A   = aau + bbu
+        A   = AT # aau + bbu
         λ0  = lambda - diagm(0 => diag(lambda))  # transition matrix with diagonal killed
         λ0p = λ0'
 
@@ -214,13 +208,12 @@ function steadystate!(m::TwoAssetHANK)
 
                 death_inflow = reshape(death_inflow, I_g*J_g, 1)
 
-                gk_sum = sum(repeat(λ0p[kk,:]', I_g*J_g,1) .* reshape(gg_tilde,I_g*J_g,N), dims=2)
-                gg1[:,kk] = (my_speye(I_g*J_g) - Delta_KFE * Ak' - Delta_KFE *
+                gk_sum = sum(repeat(λ0p[kk,:]',I_g*J_g,1) .* reshape(gg_tilde,I_g*J_g,N), dims=2)
+                gg1[:,kk] = (my_speye(I_g*J_g) - Δ_KFE * Ak' - Δ_KFE *
                              (lambda[kk,kk] - ddeath) *
                              my_speye(I_g*J_g))\(gg_tilde[1+(kk-1)*(I_g*J_g):kk*(I_g*J_g)] +
-                                                 Delta_KFE*gk_sum + Delta_KFE*ddeath*death_inflow)
+                                                 Δ_KFE*gk_sum + Δ_KFE*ddeath*death_inflow)
             end
-
             gg1     = reshape(gg1, I_g*J_g*N,1)
             gg1     = gg1 ./ sum(gg1)
             gg1     = dab_g_tilde_mat \ gg1
@@ -245,7 +238,7 @@ function steadystate!(m::TwoAssetHANK)
         # Update guess of KL
         #------------------------------------------------------------
         # Capital supply
-        if K_liquid == 1
+        if K_liquid
             K_supply = sum(g .* (a_g_grid + b_g_grid) .* dab_tilde_grid)
         else
             K_supply = sum(g .* a_g_grid .* dab_g_tilde_grid)
@@ -272,7 +265,7 @@ function steadystate!(m::TwoAssetHANK)
 
     #compute_savings()
     ccu                  = kron(lambda, my_speye(I_g * J_g))
-    A                    = aau + bbu + ccu
+    A                    = AT + ccu # TODO: transposing inefficiency
     dab_small            = reshape(dab_g_tilde_grid[:,:,1], I_g*J_g, 1)
     loc                  = findall(!iszero, b .== 0)
     dab_small            = dab_small ./ dab_small[loc] * ddeath
@@ -286,9 +279,6 @@ function steadystate!(m::TwoAssetHANK)
     g_new = g_new + death_process * gg
     g_new = reshape(g_new ,I_g, J_g, N)
     g_new_a = sum(sum(g_new, dims=1), dims=3)
-    save_a = dot(g_new_a, a_g)
-    #g_new_b = sum(sum(g_new, dims=2), dims=3)
-    #save_b = dot(vec(g_new_b), b_g)
     #compute_savings()
 
     # Rename variables in steady state
@@ -306,7 +296,7 @@ function steadystate!(m::TwoAssetHANK)
     m[:C_SS]            = sum(g .* c_g .* dab_g_tilde_grid)
     m[:C_Var_SS]        = sum(g .* log.(c_g).^2 .* dab_g_tilde_grid) -
                                  sum(g .* log.(c_g) .* dab_g_tilde_grid)^2
-    m[:I_SS]            = save_a
+    m[:I_SS]            = dot(g_new_a, a_g)
     m[:B_SS]            = sum(g .* b_g_grid .* dab_g_tilde_grid)
     m[:Y_SS]            = real((K_supply ^ aalpha) * (L_supply ^ (1 - aalpha)))
     m[:n_SS]            = real(L_supply)
@@ -342,7 +332,6 @@ function steadystate!(m::TwoAssetHANK)
     m[:NHTM_SS]        = sum(g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:])
     m[:C_NHTM_SS]      = sum(c_g[:] .* g[:] .* NHTM_indicator[:] .* dab_g_tilde_grid[:]) /
         m[:NHTM_SS].value
-    m[:r_a_grid]       = repeat([r_a], I_g, J_g, N)
 
     n_v = get_setting(m, :n_v)
     n_g = get_setting(m, :n_g)
@@ -350,26 +339,24 @@ function steadystate!(m::TwoAssetHANK)
     n_Z = get_setting(m, :n_Z)
 
     # Collect variables into vector
-    vars_SS                  = zeros(n_v + n_g + n_p + n_Z, 1)
-    vars_SS[1:n_v]           = reshape(m[:V_SS].value, I*J*N, 1)
-
-    gg_SS                    = reshape(m[:g_SS].value, I_g*J_g*N, 1)
+    vars_SS                  = zeros(n_v + n_g + n_p + n_Z)
+    vars_SS[1:n_v]           = vec(m[:V_SS].value)
+    gg_SS                    = vec(m[:g_SS].value)
     m[:gg_SS]                = gg_SS
 
-    vars_SS[n_v+1:n_v+n_g,1] = gg_SS[1:I_g*J_g*N-1]
-    vars_SS[n_v+n_g+1,1]     = m[:K_SS].value
-    vars_SS[n_v+n_g+2,1]     = m[:r_b_SS].value
+    vars_SS[n_v+1:n_v+n_g] = gg_SS[1:I_g*J_g*N-1]
+    vars_SS[n_v+n_g+1]     = m[:K_SS].value
+    vars_SS[n_v+n_g+2]     = m[:r_b_SS].value
 
     if aggregate_variables == 1
-        vars_SS[n_v+n_g+3,1]         = m[:Y_SS].value
-        vars_SS[n_v+n_g+4,1]         = m[:C_SS].value
+        vars_SS[n_v+n_g+3] = m[:Y_SS].value
+        vars_SS[n_v+n_g+4] = m[:C_SS].value
     elseif distributional_variables == 1
-        vars_SS[n_v+n_g+3,1]        = m[:C_Var_SS].value
-        vars_SS[n_v+n_g+4,1]        = m[:earn_Var_SS].value
+        vars_SS[n_v+n_g+3] = m[:C_Var_SS].value
+        vars_SS[n_v+n_g+4] = m[:earn_Var_SS].value
     elseif distributional_variables_1 == 1
-        vars_SS[n_v+n_g+3,1]        = m[:C_WHTM_SS].value
-        vars_SS[n_v+n_g+4,1]        = m[:C_PHTM_SS]
-        #vars_SS[n_v+n_g+3,1]        = C_NHTM_SS
+        vars_SS[n_v+n_g+3] = m[:C_WHTM_SS].value
+        vars_SS[n_v+n_g+4] = m[:C_PHTM_SS].value
     end
     vars_SS[n_v+n_g+n_p+1,1] = 0.0
 
