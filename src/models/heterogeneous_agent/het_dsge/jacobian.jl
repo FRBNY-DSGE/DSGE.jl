@@ -366,7 +366,7 @@ function normalize(m::HetDSGE, JJ::Matrix{Float64})
 
     m <= Setting(:n_predetermined_variables, size(Qx, 1))
 
-	Jac1 = Qleft*sparse(JJ)*Qright
+	Jac1 = Qleft*JJ*Qright
 
     return Jac1
 end
@@ -391,10 +391,10 @@ function compose_normalization_matrices(m::HetDSGE)
 
     nxns = nx*ns
 
-    Qleft     = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,Matrix{Float64}(I, nscalars, nscalars), dims = [1 2]))
-    Qx        = sparse(cat(S,Matrix{Float64}(I, nxscalars, nxscalars), dims = [1 2]))
-    Qy        = sparse(cat(Matrix{Float64}(I, nxns, nxns),Matrix{Float64}(I, nyscalars, nyscalars), dims = [1 2]))
-    Qright    = sparse(cat(Qx',Qy',Qx',Qy', dims = [1,2]))
+    Qleft     = cat(Matrix{Float64}(I, nxns, nxns),S,Matrix{Float64}(I, nscalars, nscalars), dims = [1 2])
+    Qx        = cat(S,Matrix{Float64}(I, nxscalars, nxscalars), dims = [1 2])
+    Qy        = cat(Matrix{Float64}(I, nxns, nxns),Matrix{Float64}(I, nyscalars, nyscalars), dims = [1 2])
+    Qright    = cat(Qx',Qy',Qx',Qy', dims = [1,2])
 
     return Qx, Qy, Qleft, Qright
 end
