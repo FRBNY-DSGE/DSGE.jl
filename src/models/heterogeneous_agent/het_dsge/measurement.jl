@@ -40,12 +40,12 @@ function measurement(m::HetDSGE{T},
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     ## GDP growth - Quarterly!
-    ZZ[obs[:obs_gdp], endo[:y′_t]]          = 1.0
-    ZZ[obs[:obs_gdp], endo[:y′_t1]]     = -1.0
-    ZZ[obs[:obs_gdp], endo[:z′_t]]          = 1.0
+    ZZ[first(obs[:obs_gdp]), irst(endo[:y′_t])]          = 1.0
+    ZZ[first(obs[:obs_gdp]), first(endo[:y′_t1])]     = -1.0
+    ZZ[first(obs[:obs_gdp]), first(endo[:z′_t])]          = 1.0
     #ZZ[obs[:obs_gdp], endo_new[:e_gdp_t]]  = 1.0
     #ZZ[obs[:obs_gdp], endo_new[:e_gdp_t1]] = -m[:me_level]
-    DD[obs[:obs_gdp]]                      = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
+    DD[first(obs[:obs_gdp])]                      = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## GDI growth- Quarterly!
     #=ZZ[obs[:obs_gdi], endo[:y_t]]          = m[:γ_gdi]
