@@ -100,33 +100,35 @@ function jacobian(m::HetDSGE)
     JJ[eq[:eq_euler],endo[:R_t]]   = dF1_dRZ
 
     # KF eqn
-    JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t1]]   = dF2_dM
-    JJ[eq[:eq_kolmogorov_fwd],endo[:R_t1]]  = dF2_dRZ
-    JJ[eq[:eq_kolmogorov_fwd],endo[:l_t1]] = dF2_dELL
-    JJ[eq[:eq_kolmogorov_fwd],endo[:z_t]]    = -dF2_dRZ
-    JJ[eq[:eq_kolmogorov_fwd],endo[:μ_t]]    = -eye(nxns)
-    JJ[eq[:eq_kolmogorov_fwd],endo[:w_t]]    = dF2_dWH
-    JJ[eq[:eq_kolmogorov_fwd],endo[:L_t]]   = dF2_dWH
-    JJ[eq[:eq_kolmogorov_fwd],endo[:t_t]]   = dF2_dTT
-
-    # update lagged ELL
-    JJ[eq[:eq_lag_ell],endo[:l′_t1]] = Matrix{Float64}(I, nxns, nxns)
-    JJ[eq[:eq_lag_ell],endo[:l_t]]   = -Matrix{Float64}(I, nxns, nxns)
-
-    # update lagged M
-    JJ[eq[:eq_lag_wealth],endo[:μ′_t1]] = Matrix{Float64}(I, nxns, nxns)
-    JJ[eq[:eq_lag_wealth],endo[:μ_t]]   = -Matrix{Float64}(I, nxns, nxns)
+    JJ[eq[:eq_kolmogorov_fwd],endo[:kf′_t]]   = -Matrix{Float64}(I, nxns, nxns)
+    JJ[eq[:eq_kolmogorov_fwd],endo[:kf_t]]   = dF2_dM
+    JJ[eq[:eq_kolmogorov_fwd],endo[:l_t]] = dF2_dELL
+    JJ[eq[:eq_kolmogorov_fwd],endo[:R_t]] = dF2_dM*dF2_dRZ
+    JJ[eq[:eq_kolmogorov_fwd],endo[:z_t]]    = -dF2_dM*dF2_dRZ
+    JJ[eq[:eq_kolmogorov_fwd],endo[:w_t]]    = dF2_dM*dF2_dWH
+    JJ[eq[:eq_kolmogorov_fwd],endo[:L_t]]   = dF2_dM*dF2_dWH
+    JJ[eq[:eq_kolmogorov_fwd],endo[:t_t]]   = dF2_dM*dF2_dTT
 
     # mkt clearing
     JJ[first(eq[:eq_market_clearing]),first(endo[:y_t])]   = ystar/g
     JJ[first(eq[:eq_market_clearing]),first(endo[:G])]   = -ystar/g
     JJ[first(eq[:eq_market_clearing]),first(endo[:I_t])]   = -xstar
-    JJ[eq[:eq_market_clearing],endo[:l_t]] = (μ.*unc.*xswts.*c)'
-    JJ[eq[:eq_market_clearing],endo[:μ_t]]   = -(xswts.*c)' # note, now we linearize
+    JJ[first(eq[:eq_market_clearing]), endo[:l_t]] = (μ .*unc.*xswts.*c)'
+    JJ[first(eq[:eq_market_clearing]), endo[:kf_t]]   = -(xswts.*c)' # note, now we linearize
+    JJ[first(eq[:eq_market_clearing]),first(endo[:R_t])]   = -(xswts.*c)'*dF2_dRZ
+    JJ[first(eq[:eq_market_clearing]),first(endo[:z_t])]   = (xswts.*c)'*dF2_dRZ
+    JJ[first(eq[:eq_market_clearing]),first(endo[:w_t])]   = -(xswts.*c)'*dF2_dWH
+    JJ[first(eq[:eq_market_clearing]),first(endo[:L_t])]   = -(xswts.*c)'*dF2_dWH
+    JJ[first(eq[:eq_market_clearing]),first(endo[:t_t])]   = -(xswts.*c)'*dF2_dTT
 
     # lambda = average marginal utility
     JJ[first(eq[:eq_lambda]),first(endo[:mu_t])] = lam
-    JJ[first(eq[:eq_lambda]),endo[:μ_t]]   = -(xswts./c)' # note, now we linearize
+    JJ[first(eq[:eq_lambda]),endo[:kf_t]]   = -(xswts./c)' # note, now we linearize
+    JJ[first(eq[:eq_lambda]),first(endo[:R_t])]   = -(xswts./c)'*dF2_dRZ
+    JJ[first(eq[:eq_lambda]),first(endo[:z_t])]   = (xswts./c)'*dF2_dRZ
+    JJ[first(eq[:eq_lambda]),first(endo[:w_t])]   = -(xswts./c)'*dF2_dWH
+    JJ[first(eq[:eq_lambda]),first(endo[:L_t])]   = -(xswts./c)'*dF2_dWH
+    JJ[first(eq[:eq_lambda]),first(endo[:t_t])]   = -(xswts./c)'*dF2_dTT
     JJ[first(eq[:eq_lambda]),endo[:l_t]] = -(xswts.*unc.*μ./c)'
 
     # transfer
@@ -197,16 +199,10 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_taylor]),first(endo[:i_t])]   = -1.
     JJ[first(eq[:eq_taylor]),first(endo[:i_t1])]  = ρ_R
     JJ[first(eq[:eq_taylor]),first(endo[:π_t])]   = (1-ρ_R)*ψπ
-    JJ[first(eq[:eq_taylor]),first(endo[:π_t1])]  = (1-ρ_R)*ψπ
-    JJ[first(eq[:eq_taylor]),first(endo[:π_t2])] = (1-ρ_R)*ψπ
-    JJ[first(eq[:eq_taylor]),first(endo[:π_t3])] = (1-ρ_R)*ψπ
     JJ[first(eq[:eq_taylor]),first(endo[:y_t])]    = (1-ρ_R)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:y_t4])]  = -(1-ρ_R)*ψy
+    JJ[first(eq[:eq_taylor]),first(endo[:y_t1])]  = -(1-ρ_R)*ψy
     JJ[first(eq[:eq_taylor]),first(endo[:z_t])]    = (1-ρ_R)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:z_t1])]   = (1-ρ_R)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:z_t2])]  = (1-ρ_R)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:z_t3])]  = (1-ρ_R)*ψy
-    JJ[first(eq[:eq_taylor]),first(endo[:MON])]  = 1.
+    JJ[first(eq[:eq_taylor]),first(endo[:MON])] = 1.
 
     # fisher eqn
     JJ[first(eq[:eq_fisher]),first(endo[:R_t])]  = 1.
@@ -227,35 +223,8 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:LI]),first(endo[:i′_t1])] = 1.
     JJ[first(eq[:LI]),first(endo[:i_t])]   = -1.
 
-    JJ[first(eq[:LPI]),first(endo[:π′_t1])] = 1.
-    JJ[first(eq[:LPI]),first(endo[:π_t])]   = -1.
-
-    JJ[first(eq[:L2PI]),first(endo[:π′_t2])] = 1.
-    JJ[first(eq[:L2PI]),first(endo[:π_t1])]   = -1.
-
-    JJ[first(eq[:L3PI]),first(endo[:π′_t3])] = 1.
-    JJ[first(eq[:L3PI]),first(endo[:π_t2])]  = -1.
-
     JJ[first(eq[:LY]),first(endo[:y′_t1])] = 1.
     JJ[first(eq[:LY]),first(endo[:y_t])]   = -1.
-
-    JJ[first(eq[:L2Y]),first(endo[:y′_t2])] = 1.
-    JJ[first(eq[:L2Y]),first(endo[:y_t1])]   = -1.
-
-    JJ[first(eq[:L3Y]),first(endo[:y′_t3])] = 1.
-    JJ[first(eq[:L3Y]),first(endo[:y_t2])]  = -1.
-
-    JJ[first(eq[:L4Y]),first(endo[:y′_t4])] = 1.
-    JJ[first(eq[:L4Y]),first(endo[:y_t3])]  = -1.
-
-    JJ[first(eq[:LZ]),first(endo[:z′_t1])] = 1.
-    JJ[first(eq[:LZ]),first(endo[:z_t])]   = -1.
-
-    JJ[first(eq[:L2Z]),first(endo[:z′_t2])] = 1.
-    JJ[first(eq[:L2Z]),first(endo[:z_t1])]   = -1.
-
-    JJ[first(eq[:L3Z]),first(endo[:z′_t3])] = 1.
-    JJ[first(eq[:L3Z]),first(endo[:z_t2])]  = -1.
 
     JJ[first(eq[:LW]),first(endo[:w′_t1])] = 1.
     JJ[first(eq[:LW]),first(endo[:w_t])]   = -1.
@@ -315,6 +284,7 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
     dF1_dELLP = zeros(nxns,nxns)
     dF1_dWHP = zeros(nxns)
     dF1_dTTP = zeros(nxns)
+    ell_RHS = zeros(nxns)
     for iss=1:ns
         for ia=1:nx
             i  = nx*(iss-1)+ia
@@ -322,6 +292,7 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
             sumRZ  = 0.
             sumWH  = 0.
             sumTT  = 0.
+            sum_ellRHS = 0.
             for isp=1:ns
                 for iap=1:nx
                     ip = nx*(isp-1)+iap
@@ -333,10 +304,12 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
                     dF1_dELLP[i,ip] = Ξ[i,ip]*unc[ip]
                     sumWH  += Ξ[i,ip] + ξ[i,ip]*ee[i,ip]*(ω*H*sgrid[isp])
                     sumTT  += ξ[i,ip]*T
+                    sum_ellRHS += Ξ[i,ip]
                 end
             end
+            ellRHS[i] = sum_ellRHS
             dF1_dELL[i,i] = -ell[i] - sumELL
-            dF1_dRZ[i] = ell[i] - sumRZ
+            dF1_dRZ[i] = ellRHS[i] - sumRZ
             dF1_dWHP[i] = -sumWH
             dF1_dTTP[i] = -sumTT
         end
@@ -418,13 +391,9 @@ function compose_normalization_matrices(m::HetDSGE)
 
     nxns = nx*ns
 
-    Qleft     = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,
-                    Matrix{Float64}(I, nxns, nxns),S,
-                    Matrix{Float64}(I, nscalars, nscalars), dims = [1 2]))
-    Qx        = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,
-                    Matrix{Float64}(I, nxscalars, nxscalars), dims = [1 2]))
-    Qy        = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,
-                    Matrix{Float64}(I, nyscalars, nyscalars), dims = [1 2]))
+    Qleft     = sparse(cat(Matrix{Float64}(I, nxns, nxns),S,Matrix{Float64}(I, nscalars, nscalars), dims = [1 2]))
+    Qx        = sparse(cat(S,Matrix{Float64}(I, nxscalars, nxscalars), dims = [1 2]))
+    Qy        = sparse(cat(Matrix{Float64}(I, nxns, nxns),Matrix{Float64}(I, nyscalars, nyscalars), dims = [1 2]))
     Qright    = sparse(cat(Qx',Qy',Qx',Qy', dims = [1,2]))
 
     return Qx, Qy, Qleft, Qright
@@ -466,23 +435,14 @@ function truncate_distribution!(m::HetDSGE)
         setup_indices!(m)
 
         endo = m.endogenous_states_unnormalized
-        state_indices = [endo[:l′_t1]; endo[:μ′_t1];  endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];endo[:π′_t1];
-                         endo[:π′_t2];endo[:π′_t3];endo[:y′_t1];endo[:y′_t2];endo[:y′_t3];endo[:y′_t4];
-                         endo[:z′_t1];endo[:z′_t2];endo[:z′_t3];endo[:w′_t1];endo[:I′_t1];endo[:B′];
+        state_indices = [endo[:kf′_t]; endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];
+                         endo[:y′_t1];
+                         endo[:w′_t1];endo[:I′_t1];endo[:B′];
                          endo[:G′];endo[:z′_t];endo[:MU′];endo[:LAMW′]; endo[:LAMF′];endo[:MON′]]
-                         #=endo[:l_t1];
-                         endo[:μ_t1];endo[:k_t];endo[:R_t1];endo[:i_t1]; endo[:π_t1];endo[:π_t2];
-                         endo[:π_t3]; endo[:y_t1];endo[:y_t2];endo[:y_t3]; endo[:y_t4];endo[:z_t1];
-                         endo[:z_t2]; endo[:z_t3];endo[:w_t1];endo[:I_t1]; endo[:B];endo[:G];endo[:Z];
-                         endo[:MU]; endo[:LAMW];endo[:LAMF];endo[:MON]]=#
 
-        jump_indices = [endo[:l′_t]; endo[:μ′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
+        jump_indices = [endo[:l′_t]; endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
                         endo[:L′_t];endo[:π′_t];endo[:wageinflation′_t];endo[:mu′_t];endo[:y′_t];
                         endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
-                        #=endo[:ELL];
-                        endo[:μ_t];endo[:R_t];endo[:i_t];endo[:t_t];endo[:w_t]; endo[:L_t];endo[:π_t];
-                        endo[:wageinflation_t];endo[:mu_t];endo[:y_t];endo[:I_t];endo[:mc_t];endo[:Q_t];
-                        endo[:capreturn_t]]=#
 
         m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
                      backward looking state variables")
@@ -491,7 +451,7 @@ function truncate_distribution!(m::HetDSGE)
 
         n_backward_looking_vars = length(get_setting(m, :state_indices))
         n_backward_looking_function_valued_vars = get_setting(m, :n_function_valued_backward_looking_states)
-        n_backward_looking_scalar_vars = n_backward_looking_vars - 2*nxns #n_backward_looking_function_valued_vars
+        n_backward_looking_scalar_vars = n_backward_looking_vars - nxns #n_backward_looking_function_valued_vars
         n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
         m <= Setting(:n_backward_looking_states, nxns*n_backward_looking_distr_vars +
                      n_backward_looking_scalar_vars - get_setting(m, :backward_looking_states_normalization_factor))
