@@ -319,10 +319,10 @@ function init_parameters!(m::HetDSGE)
                    Normal(1.5, 0.25), fixed = false,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
-        # We only have ψ1, ψ2, ψ3 weights in the taylor rule corresp. to:
-        # inflation gap, output gap, Δoutput gap weights.
-        # No weight on output growth (even though there is a ψy term in the FRBNY DSGE staff report.
-        m <= parameter(:ψy , 0.5, description = "# weight on output growth in taylor rule")
+    m <= parameter(:ψy , 0.5, (-0.5, 0.5), (-0.5, 0.5), Untransformed(),
+                   Normal(0.12, 0.05), fixed = false,
+                   description = "ψy: Weight on output growth in monetary policy rule")
+
 
     # Exogenous processes - autocorrelation
     m <= parameter(:ρ_G, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
