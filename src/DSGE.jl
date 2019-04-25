@@ -151,7 +151,7 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide,
-        KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGESimpleTaylor,
+        KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGESimpleTaylor, HetDSGELag,
         eqcond, measurement, pseudo_measurement, shock_groupings, Grid,
 
         #### Continuous time
@@ -366,7 +366,14 @@ module DSGE
     include("models/heterogeneous_agent/het_dsge/shock_loading.jl")
     include("models/heterogeneous_agent/het_dsge/observables.jl")
     include("models/heterogeneous_agent/het_dsge/measurement.jl")
-    #include("models/heterogeneous_agent/het_dsge/augment_states.jl")
+
+    include("models/heterogeneous_agent/het_dsge_lag/het_dsge_lag.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/steady_state.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/subspecs.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/jacobian.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/shock_loading.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/observables.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/measurement.jl")
 
 #=
     include("models/heterogeneous_agent/het_dsge_simple_taylor/het_dsge_simple_taylor.jl")

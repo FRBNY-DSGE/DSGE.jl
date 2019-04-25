@@ -55,21 +55,11 @@ if check_jacobian
 
     file = jldopen("$path/reference/jacobian.jld2", "r")
     saved_JJ  = read(file, "JJ")
-    LELLP = read(file, "LELLP")
-    LMP = read(file, "LMP")
+    KFP = read(file, "KFP")
     KKP = read(file, "KKP")
     LRRP = read(file, "LRRP")
     LIIP = read(file, "LIIP")
-    LPIP = read(file, "LPIP")
-    L2PIP = read(file, "L2PIP")
-    L3PIP = read(file, "L3PIP")
     LYP = read(file, "LYP")
-    L2YP = read(file, "L2YP")
-    L3YP = read(file, "L3YP")
-    L4YP = read(file, "L4YP")
-    LZP = read(file, "LZP")
-    L2ZP = read(file, "L2ZP")
-    L3ZP = read(file, "L3ZP")
     LWP = read(file, "LWP")
     LXP = read(file, "LXP")
     BP = read(file, "BP")
@@ -80,7 +70,6 @@ if check_jacobian
     LAMFP = read(file, "LAMFP")
     MONP = read(file, "MONP")
     ELLP = read(file, "ELLP")
-    MP = read(file, "MP")
     RRP = read(file, "RRP")
     IIP = read(file, "IIP")
     TTP = read(file, "TTP")
@@ -94,21 +83,11 @@ if check_jacobian
     MCP = read(file, "MCP")
     QP = read(file, "QP")
     RKP = read(file, "RKP")
-    LELL = read(file, "LELL")
-    LM = read(file, "LM")
+    KF = read(file, "KF")
     KK = read(file, "KK")
     LRR = read(file, "LRR")
     LII = read(file, "LII")
-    LPI = read(file, "LPI")
-    L2PI = read(file, "L2PI")
-    L3PI = read(file, "L3PI")
     LY = read(file, "LY")
-    L2Y = read(file, "L2Y")
-    L3Y = read(file, "L3Y")
-    L4Y = read(file, "L4Y")
-    LZ = read(file, "LZ")
-    L2Z = read(file, "L2Z")
-    L3Z = read(file, "L3Z")
     LW = read(file, "LW")
     LX = read(file, "LX")
     B = read(file, "B")
@@ -119,7 +98,6 @@ if check_jacobian
     LAMF = read(file, "LAMF")
     MON = read(file, "MON")
     ELL = read(file, "ELL")
-    M = read(file, "M")
     RR = read(file, "RR")
     II = read(file, "II")
     TT = read(file, "TT")
@@ -135,8 +113,6 @@ if check_jacobian
     RK = read(file, "RK")
     F1 = read(file, "F1")
     F2 = read(file, "F2")
-    F3 = read(file, "F3")
-    F4 = read(file, "F4")
     F5 = read(file, "F5")
     F6 = read(file, "F6")
     F7 = read(file, "F7")
@@ -153,16 +129,7 @@ if check_jacobian
     F18 = read(file, "F18")
     F19 = read(file, "F19")
     F20 = read(file, "F20")
-    F21 = read(file, "F21")
-    F22 = read(file, "F22")
-    F23 = read(file, "F23")
     F24 = read(file, "F24")
-    F25 = read(file, "F25")
-    F26 = read(file, "F26")
-    F27 = read(file, "F27")
-    F28 = read(file, "F28")
-    F29 = read(file, "F29")
-    F30 = read(file, "F30")
     F31 = read(file, "F31")
     F32 = read(file, "F32")
     F33 = read(file, "F33")
@@ -178,23 +145,13 @@ if check_jacobian
     eq = m.equilibrium_conditions
     @testset "Check indices" begin
         @testset "function blocks which output a function" begin
-            @test LELLP == endo[:l′_t1]  ## lagged ell function
-            @test LMP   == endo[:μ′_t1]       ## lagged wealth distribution
+            @test KFP == endo[:kf′_t]  ## lagged ell function
         end
         @testset "endogenous scalar-valued states:" begin
             @test KKP   == first(endo[:k′_t])
             @test LRRP  == first(endo[:R′_t1])
             @test LIIP  == first(endo[:i′_t1])
-            @test LPIP  == first(endo[:π′_t1])
-            @test L2PIP == first(endo[:π′_t2])
-            @test L3PIP == first(endo[:π′_t3])
             @test LYP   == first(endo[:y′_t1])
-            @test L2YP  == first(endo[:y′_t2])
-            @test L3YP  == first(endo[:y′_t3])
-            @test L4YP  == first(endo[:y′_t4])
-            @test LZP   == first(endo[:z′_t1])
-            @test L2ZP  == first(endo[:z′_t2])
-            @test L3ZP  == first(endo[:z′_t3])
             @test LWP   == first(endo[:w′_t1])
             @test LXP   == first(endo[:I′_t1])
         end
@@ -209,7 +166,6 @@ if check_jacobian
         end
         @testset "function-valued jumps" begin
             @test ELLP  == endo[:l′_t]
-            @test MP    == endo[:μ′_t]
         end
         @testset "scalar-valued jumps" begin
             @test RRP   == first(endo[:R′_t])
@@ -225,21 +181,11 @@ if check_jacobian
             @test MCP   == first(endo[:mc′_t])
             @test QP    == first(endo[:Q′_t])
             @test RKP   == first(endo[:capreturn′_t])
-            @test LELL  == endo[:l_t1]
-            @test LM    == endo[:μ_t1]
+            @test KF    == endo[:kf_t]
             @test KK    == first(endo[:k_t])
             @test LRR   == first(endo[:R_t1])
             @test LII   == first(endo[:i_t1])
-            @test LPI   == first(endo[:π_t1])
-            @test L2PI  == first(endo[:π_t2])
-            @test L3PI  == first(endo[:π_t3])
             @test LY    == first(endo[:y_t1])
-            @test L2Y   == first(endo[:y_t2])
-            @test L3Y   == first(endo[:y_t3])
-            @test L4Y   == first(endo[:y_t4])
-            @test LZ    == first(endo[:z_t1])
-            @test L2Z   == first(endo[:z_t2])
-            @test L3Z   == first(endo[:z_t3])
             @test LW    == first(endo[:w_t1])
             @test LX    == first(endo[:I_t1])
             @test B     == first(endo[:B])
@@ -250,7 +196,6 @@ if check_jacobian
             @test LAMF  == first(endo[:LAMF])
             @test MON   == first(endo[:MON])
             @test ELL   == endo[:l_t]
-            @test M     == endo[:μ_t]
             @test RR    == first(endo[:R_t])
             @test II    == first(endo[:i_t])
             @test TT == first(endo[:t_t])
@@ -268,8 +213,6 @@ if check_jacobian
         @testset "function blocks" begin
             @test F1  == eq[:eq_euler]
             @test F2  == eq[:eq_kolmogorov_fwd]
-            @test F3  == eq[:eq_lag_ell]
-            @test F4  == eq[:eq_lag_wealth]
         end
         @testset "function blocks which map functions to scalars" begin
             @test F5  == eq[:eq_market_clearing]
@@ -292,16 +235,7 @@ if check_jacobian
         @testset "lagged variables" begin
             @test F19 == eq[:LR]
             @test F20 == eq[:LI]
-            @test F21 == eq[:LPI]
-            @test F22 == eq[:L2PI]
-            @test F23 == eq[:L3PI]
             @test F24 == eq[:LY]
-            @test F25 == eq[:L2Y]
-            @test F26 == eq[:L3Y]
-            @test F27 == eq[:L4Y]
-            @test F28 == eq[:LZ]
-            @test F29 == eq[:L2Z]
-            @test F30 == eq[:L3Z]
             @test F31 == eq[:LW]
             @test F32 == eq[:LX]
         end
@@ -328,33 +262,35 @@ if check_jacobian
             @test saved_JJ[F1,RR] ≈ JJ[F1,RR]
         end
         @testset "Check Kolmogorov Fwd Equation" begin
-            @test saved_JJ[F2,LM] ≈ JJ[F2,LM]
-            @test saved_JJ[F2,LRR] ≈ JJ[F2,LRR]
-            @test saved_JJ[F2,LELL] ≈ JJ[F2,LELL]
+            @test saved_JJ[F2,KFP] ≈ JJ[F2,KFP]
+            @test saved_JJ[F2,KF] ≈ JJ[F2,KF]
+            @test saved_JJ[F2,ELL] ≈ JJ[F2,ELL]
+            @test saved_JJ[F2,RR] ≈ JJ[F2,RR]
             @test saved_JJ[F2,Z] ≈ JJ[F2,Z]
-            @test saved_JJ[F2,M] ≈ JJ[F2,M]
             @test saved_JJ[F2,W] ≈ JJ[F2,W]
             @test saved_JJ[F2,HH] ≈ JJ[F2,HH]
             @test saved_JJ[F2,TT] ≈ JJ[F2,TT]
-        end
-        @testset "Check update lagged ELL" begin
-            @test saved_JJ[F3,LELLP] ≈ JJ[F3,LELLP]
-            @test saved_JJ[F3,ELL] ≈ JJ[F3,ELL]
-        end
-        @testset "Check update lagged M" begin
-            @test saved_JJ[F4,LMP] ≈ JJ[F4,LMP]
-            @test saved_JJ[F4,M] ≈ JJ[F4,M]
         end
         @testset "Check mkt clearing equation" begin
             @test saved_JJ[F5,Y] ≈ JJ[F5,Y]
             @test saved_JJ[F5,G] ≈ JJ[F5,G]
             @test saved_JJ[F5,X] ≈ JJ[F5,X]
             @test saved_JJ[F5,ELL] ≈ JJ[F5,ELL]
-            @test saved_JJ[F5,M] ≈ JJ[F5,M]
+            @test saved_JJ[F5,KF] ≈ JJ[F5,KF]
+            @test saved_JJ[F5,RR] ≈ JJ[F5,RR]
+            @test saved_JJ[F5,Z] ≈ JJ[F5,Z]
+            @test saved_JJ[F5,W] ≈ JJ[F5,W]
+            @test saved_JJ[F5,HH] ≈ JJ[F5,HH]
+            @test saved_JJ[F5,TT] ≈ JJ[F5,TT]
         end
         @testset "Check lambda = average marginal utility" begin
             @test saved_JJ[F6,LAM] ≈ JJ[F6,LAM]
-            @test saved_JJ[F6,M] ≈ JJ[F6,M]
+            @test saved_JJ[F6,KF]  ≈ JJ[F6,KF]
+            @test saved_JJ[F6,RR]  ≈ JJ[F6,RR]
+            @test saved_JJ[F6,Z]   ≈ JJ[F6,Z]
+            @test saved_JJ[F6,W]  ≈ JJ[F6,W]
+            @test saved_JJ[F6,HH]  ≈ JJ[F6,HH]
+            @test saved_JJ[F6,TT]  ≈ JJ[F6,TT]
             @test saved_JJ[F6,ELL] ≈ JJ[F6,ELL]
         end
         @testset "transfer equation" begin
@@ -425,15 +361,9 @@ if check_jacobian
             @test saved_JJ[F16,II] ≈ JJ[F16,II]
             @test saved_JJ[F16,LII] ≈ JJ[F16,LII]
             @test saved_JJ[F16,PI] ≈ JJ[F16,PI]
-            @test saved_JJ[F16,LPI] ≈ JJ[F16,LPI]
-            @test saved_JJ[F16,L2PI] ≈ JJ[F16,L2PI]
-            @test saved_JJ[F16,L3PI] ≈ JJ[F16,L3PI]
             @test saved_JJ[F16,Y] ≈ JJ[F16,Y]
-            @test saved_JJ[F16,L4Y] ≈ JJ[F16,L4Y]
+            @test saved_JJ[F16,LY] ≈ JJ[F16,LY]
             @test saved_JJ[F16,Z] ≈ JJ[F16,Z]
-            @test saved_JJ[F16,LZ] ≈ JJ[F16,LZ]
-            @test saved_JJ[F16,L2Z] ≈ JJ[F16,L2Z]
-            @test saved_JJ[F16,L3Z] ≈ JJ[F16,L3Z]
             @test saved_JJ[F16,MON] ≈ JJ[F16,MON]
         end
         @testset "fisher eqn" begin
@@ -453,26 +383,8 @@ if check_jacobian
             @test saved_JJ[F19,RR] ≈ JJ[F19,RR]
             @test saved_JJ[F20,LIIP] ≈ JJ[F20,LIIP]
             @test saved_JJ[F20,II] ≈ JJ[F20,II]
-            @test saved_JJ[F21,LPIP] ≈ JJ[F21,LPIP]
-            @test saved_JJ[F21,PI] ≈ JJ[F21,PI]
-            @test saved_JJ[F22,L2PIP] ≈ JJ[F22,L2PIP]
-            @test saved_JJ[F22,LPI] ≈ JJ[F22,LPI]
-            @test saved_JJ[F23,L3PIP] ≈ JJ[F23,L3PIP]
-            @test saved_JJ[F23,L2PI] ≈ JJ[F23,L2PI]
             @test saved_JJ[F24,LYP] ≈ JJ[F24,LYP]
             @test saved_JJ[F24,Y] ≈ JJ[F24,Y]
-            @test saved_JJ[F25,L2YP] ≈ JJ[F25,L2YP]
-            @test saved_JJ[F25,LY] ≈ JJ[F25,LY]
-            @test saved_JJ[F26,L3YP] ≈ JJ[F26,L3YP]
-            @test saved_JJ[F26,L2Y] ≈ JJ[F26,L2Y]
-            @test saved_JJ[F27,L4YP] ≈ JJ[F27,L4YP]
-            @test saved_JJ[F27,L3Y] ≈ JJ[F27,L3Y]
-            @test saved_JJ[F28,LZP] ≈ JJ[F28,LZP]
-            @test saved_JJ[F28,Z] ≈ JJ[F28,Z]
-            @test saved_JJ[F29,L2ZP] ≈ JJ[F29,L2ZP]
-            @test saved_JJ[F29,LZ] ≈ JJ[F29,LZ]
-            @test saved_JJ[F30,L3ZP] ≈ JJ[F30,L3ZP]
-            @test saved_JJ[F30,L2Z] ≈ JJ[F30,L2Z]
             @test saved_JJ[F31,LWP] ≈ JJ[F31,LWP]
             @test saved_JJ[F31,W] ≈ JJ[F31,W]
             @test saved_JJ[F32,LXP] ≈ JJ[F32,LXP]
