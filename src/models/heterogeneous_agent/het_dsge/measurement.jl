@@ -40,7 +40,7 @@ function measurement(m::HetDSGE{T},
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     ## GDP growth - Quarterly!
-    ZZ[first(obs[:obs_gdp]), irst(endo[:y′_t])]          = 1.0
+    ZZ[first(obs[:obs_gdp]), first(endo[:y′_t])]          = 1.0
     ZZ[first(obs[:obs_gdp]), first(endo[:y′_t1])]     = -1.0
     ZZ[first(obs[:obs_gdp]), first(endo[:z′_t])]          = 1.0
     #ZZ[obs[:obs_gdp], endo_new[:e_gdp_t]]  = 1.0
