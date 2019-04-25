@@ -18,7 +18,6 @@ function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_stat
         if i == 1
             @assert endo_ranges[1].start == 1
         else
-            #@show i, endo_ranges[i], endo_ranges[i-1]
             @assert endo_ranges[i].start == endo_ranges[i-1].stop + 1
         end
     end

@@ -155,7 +155,7 @@ function init_model_indices!(m::HetDSGE)
 
     ########################################################################################
 
-    m.normalized_model_states = [:μ′_t1, :l′_t1]
+    m.normalized_model_states = [:kf′_t]
 
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
@@ -491,16 +491,17 @@ function model_settings!(m::HetDSGE)
     # hand), then one additional degree of freedom for each exogenous distribution (skill
     # distribution). Multiple endogenous distributions only permit removing a single degree
     # of freedom since it is then non-trivial to obtain the marginal distributions.
-    m <= Setting(:n_degrees_of_freedom_removed, 1, "Number of degrees of freedom from the
-                 distributional variables to remove.")
-    n_dof_removed = get_setting(m, :n_degrees_of_freedom_removed)
+    m <= Setting(:n_degrees_of_freedom_removed_state, 2, "Number of degrees of freedom from the distributional variables to remove.")
+    m <= Setting(:n_degrees_of_freedom_removed_jump, 0, "Number of degrees of freedom from the distributional variables to remove.")
+    n_dof_removed_state = get_setting(m, :n_degrees_of_freedom_removed_state)
+    n_dof_removed_jump = get_setting(m, :n_degrees_of_freedom_removed_jump)
 
     ####################################################
     # Calculating the number of backward-looking states
     ####################################################
     n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
     m <= Setting(:backward_looking_states_normalization_factor,
-                 n_dof_removed*n_backward_looking_distr_vars, "The number of dimensions removed from the
+                 n_dof_removed_state*n_backward_looking_distr_vars, "The number of dimensions removed from the
                  backward looking state variables for the normalization.")
 
     n = get_setting(m, :nx)*get_setting(m, :ns)
@@ -520,7 +521,7 @@ function model_settings!(m::HetDSGE)
     ##################################
     n_jump_distr_vars = get_setting(m, :n_jump_distributional_vars)
     m <= Setting(:jumps_normalization_factor,
-                 n_dof_removed*n_jump_distr_vars, "The number of dimensions removed from the
+                 n_dof_removed_jump*n_jump_distr_vars, "The number of dimensions removed from the
                  jump variables for the normalization.")
 
     n_jump_vars = length(get_setting(m, :jump_indices))
