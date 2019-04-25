@@ -296,10 +296,10 @@ function init_parameters!(m::HetDSGE)
                    description = "λ_w: The wage markup, which affects the elasticity
                    of substitution between differentiated labor services.",
                    tex_label = "\\lambda_w")
-        # Related to ν_l parameter? "The 90% interval for hte prior distribution on
-        # ν_l implies that the Frisch labor supply elasticity lies between 0.3 and
-        # 1.3 ..."
-        m <= parameter(:ϕh , 2., description = "# inverse frisch elasticity")
+    m <= parameter(:ϕh , 2., (1e-5, 10.), (1e-5, 10.), Expontential(),
+                   Normal(2, 0.75), fixed = false,
+                   description = "# inverse frisch elasticity",
+                   tex_label = "\\phi_h")
         # We use Calvo instead of Rotemberg. Relevant parameter of comparison is
         # ζ_w, the probability that households can freely choose wages in each period.
         m <= parameter(:Φw , 10., description = "# rotemberg cost for wages")
