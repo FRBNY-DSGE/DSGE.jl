@@ -135,9 +135,9 @@ function jacobian(m::RealBondMkup)
     JJ[first(eq[:eq_lagged_nominal_rate]), first(endo[:l_i′_t])] = 1.0
     JJ[first(eq[:eq_lagged_nominal_rate]), first(endo[:i_t])]    = -1.0
 
-    #if !m.testing && get_setting(m, :normalize_distr_variables)
-    #    JJ = normalize(m, JJ)
-    #end
+    if !m.testing && get_setting(m, :normalize_distr_variables)
+        JJ = normalize(m, JJ)
+    end
 
     return JJ
 end
