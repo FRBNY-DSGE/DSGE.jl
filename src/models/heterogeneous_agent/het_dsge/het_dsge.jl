@@ -93,6 +93,7 @@ mutable struct HetDSGE{T} <: AbstractModel{T}
     exogenous_shocks::OrderedDict{Symbol,Int}              #
     expected_shocks::OrderedDict{Symbol,Int}               #
     equilibrium_conditions::OrderedDict{Symbol,UnitRange}  #
+    endogenous_states_augmented::OrderedDict{Symbol, Int}
     observables::OrderedDict{Symbol,Int}                   #
 
     spec::String                                           # Model specification number (eg "m990")
@@ -123,15 +124,10 @@ function init_model_indices!(m::HetDSGE)
                                  :w′_t1,:I′_t1,:B′,:G′,:z′_t,:MU′,:LAMW′,
                                  :LAMF′,:MON′,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
                                  :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t])
-                                 #=:l_t1,:μ_t1,:k_t,:R_t1,:i_t1,:π_t1,:π_t2,:π_t3,:y_t1,:y_t2,
-                                 :y_t3,:y_t4,:z_t1,:z_t2,:z_t3,:w_t1,:I_t1,:B,:G,:Z,:MU,:LAMW,
-                                 :LAMF,:MON,:ELL,:μ_t,:R_t,:i_t,
-                                 :t_t,:w_t,:L_t,:π_t,:wageinflation_t,:mu_t,:y_t,:I_t,:mc_t,:Q_t,:capreturn_t]) =#
-
-    # endogenous scalar states: k_t, R_t1, i_t1, π_t1, π_t2, π_t3, y_t1, y_t2, y_t3, y_t4, z_1, z_2, z_3, w_t1, x_t1
 
     # Exogenous shocks
-    exogenous_shocks = collect([:b_sh,:g_sh,:z_sh,:μ_sh,:λ_w_sh, :λ_f_sh,:MON_sh])
+    exogenous_shocks = collect([:b_sh,:g_sh,:z_sh,:μ_sh,:λ_w_sh, :λ_f_sh,:rm_sh,
+                                :lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh])
 
     # Equilibrium conditions
     equilibrium_conditions = collect([:eq_euler,:eq_kolmogorov_fwd,
@@ -142,6 +138,16 @@ function init_model_indices!(m::HetDSGE)
                                       :eq_nominal_wage_inflation,:LR,:LI,:LY,
                                       :LW,:LX,:F33,:F34,:F35,:F36,:F37,
                                       :F38, :F39])
+
+    # Additional states added after solving model
+    # Lagged states and observables measurement error
+    endogenous_states_augmented = [:i_t1]
+                                   #=:π_t1_dup, :L_t1,
+                                   :Et_π_t, :lr_t, :tfp_t,
+                                   :e_gdpdef_t, :e_corepce_t,
+                                   :e_gdp_t, :e_gdi_t, :e_gdp_t1,
+                                   :e_gdi_t1]=#
+
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -158,6 +164,7 @@ function init_model_indices!(m::HetDSGE)
     m.normalized_model_states = [:kf′_t]
 
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
@@ -186,7 +193,8 @@ function HetDSGE(subspec::String="ss0";
             # endogenous states unnormalized, endogenous states normalized
             OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
-            OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,Int}(),
+            OrderedDict{Symbol,UnitRange}(),
+            OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
 
             spec,
             subspec,
@@ -378,9 +386,91 @@ function init_parameters!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = false,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_MON, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
+
+m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
+               description="π_star: The steady-state rate of inflation.",
+               tex_label="\\pi_*")
+
+
+   m <= parameter(:ρ_lr, 0.6936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                   tex_label="\\rho_{10y}")
+
+  m <= parameter(:ρ_tfp, 0.1953, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                   tex_label="\\rho_{tfp}")
+
+    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                   tex_label="\\rho_{gdpdef}")
+
+    m <= parameter(:ρ_corepce, 0.2320, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                   tex_label="\\rho_{pce}")
+
+    m <= parameter(:ρ_gdp, 0., (-0.999, 0.999), (-0.999, 0.999), SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                   tex_label="\\rho_{gdp}")
+
+    m <= parameter(:ρ_gdi, 0., (-0.999, 0.999), (-0.999, 0.999), SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                   tex_label="\\rho_{gdi}")
+
+    m <= parameter(:ρ_gdpvar, 0., (-0.999, 0.999), (-0.999, 0.999), SquareRoot(), Normal(0.0, 0.4), fixed=false,
+                   tex_label="\\varrho_{gdp}")
+
+ m <= parameter(:me_level, 1., (-0.999, 0.999), (-0.999, 0.999), Untransformed(), Normal(0.0, 0.4), fixed=true,
+                   description="me_level: Indicator of cointegration of GDP and GDI.",
+                   tex_label="\\mathcal{C}_{me}")
+
+ m <= parameter(:σ_lr, 0.1766, (1e-8,10.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.75),
+                fixed=false, tex_label="\\sigma_{10y}")
+
+ m <= parameter(:σ_tfp, 0.9391, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{tfp}")
+
+    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdpdef}")
+
+    m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{pce}")
+
+    m <= parameter(:σ_gdp, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdp}")
+
+    m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdi}")
+    m <= parameter(:Iendoα, 0.0000, (0.000, 1.000), (0., 0.), Untransformed(), BetaAlt(0.50, 0.20),
+                   fixed=true,
+                   description="Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
+                   tex_label="I\\{\\alpha^{model}\\}")
+
+    m <= parameter(:Γ_gdpdef, 1.0354, (-10., 10.), (-10., -10.), Untransformed(), Normal(1.00, 2.), fixed=false,
+                   tex_label="\\gamma_{gdpdef}")
+
+    m <= parameter(:δ_gdpdef, 0.0181, (-10., 10.), (-10., -10.), Untransformed(), Normal(0.00, 2.), fixed=false,
+                   tex_label="\\delta_{gdpdef}")
+
+    m <= parameter(:γ_gdi, 1., (-10., 10.), (-10., -10.), Untransformed(), Normal(1., 2.), fixed=false,
+                   tex_label="\\gamma_{gdi}")
+
+    m <= parameter(:δ_gdi, 0., (-10., 10.), (-10., -10.), Untransformed(), Normal(0.00, 2.), fixed=false,
+                   tex_label="\\delta_{gdi}")
+
+    m <= parameter(:Lmean, -45.9364, (-1000., 1000.), (-1e3, 1e3), Untransformed(), Normal(-45., 5.), fixed=false,
+                   description="Lmean: Mean level of hours.",
+                   tex_label="\\bar{L}")
+ m <= parameter(:spr, 1.7444, (0., 100.), (1e-5, 0.), Exponential(), GammaAlt(2., 0.1),
+                fixed=false,
+                scaling = x -> (1 + x/100)^0.25,
+                description="spr_*: Steady-state level of spread.",
+                tex_label="SP_*")
+
+m <= parameter(:e_y, 0.0, fixed = true, description = "e_y: Measurement error on GDP", tex_label = "e_y")
+m <= parameter(:e_L, 0.0, fixed = true, description = "e_L: Measurement error on hours worked", tex_label = "e_L")
+m <= parameter(:e_w, 0.0, fixed = true, description = "e_w: Measurement error on wages", tex_label ="e_w")
+m <= parameter(:e_π, 0.0, fixed = true, description = "e_π: Measurement error on GDP deflator", tex_label = "e_π")
+m <= parameter(:e_R, 0.0, fixed = true, description = "e_R: Measurement error on nominal rate of interest", tex_label = "e_R")
+m <= parameter(:e_c, 0.0, fixed = true, description = "e_c: Measurement error on consumption", tex_label = "e_c")
+m <= parameter(:e_i, 0.0, fixed = true, description = "e_i: Measurement error on investment", tex_label = "e_i")
+
 
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
@@ -610,6 +700,8 @@ function model_settings!(m::HetDSGE)
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
+    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                 length(m.endogenous_states_augmented))
 end
 
 function setup_indices!(m::HetDSGE)
@@ -715,5 +807,21 @@ m <= Setting(:nyscalars, 13, "num scalar jumps")
 m <= Setting(:nxscalars, 26 - 13, "num scalar states")
 
 m.endogenous_states = deepcopy(endo)
+
+ #= endo = m.endogenous_states_unnormalized
+    state_indices = [endo[:kf′_t];  endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];
+                     endo[:y′_t1];
+                     endo[:w′_t1];endo[:I′_t1];endo[:B′];
+                     endo[:G′];endo[:z′_t];endo[:MU′];endo[:LAMW′]; endo[:LAMF′];endo[:MON′]]
+
+    jump_indices = [endo[:l′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
+                    endo[:L′_t];endo[:π′_t];endo[:wageinflation′_t];endo[:mu′_t];endo[:y′_t];
+                    endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
+
+    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
+                 backward looking state variables")
+    m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
+                 variables")=#
+
 
 end

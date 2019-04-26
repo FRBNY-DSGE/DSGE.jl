@@ -101,7 +101,7 @@ function ss1!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_MON, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 end
@@ -173,7 +173,7 @@ function ss2!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_MON, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 end
@@ -245,7 +245,7 @@ function ss3!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_MON, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 end
@@ -317,7 +317,7 @@ function ss4!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_MON, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 end
@@ -389,7 +389,7 @@ function ss5!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_MON, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 end
@@ -461,7 +461,7 @@ function ss6!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
                    tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_MON, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 end
