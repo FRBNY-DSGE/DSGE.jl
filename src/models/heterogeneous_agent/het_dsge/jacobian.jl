@@ -25,11 +25,7 @@ function jacobian(m::HetDSGE)
     ρ_lamf::Float64 = m[:ρ_lamf].value
     ρ_mon::Float64  = m[:ρ_mon].value
     spp::Float64   = m[:spp].value
-    lamw::Float64  = m[:lamw].value
     ϕh::Float64    = m[:ϕh].value
-    Φw::Float64    = m[:Φw].value
-    lamf::Float64  = m[:lamf].value
-    Φp::Float64    = m[:Φp].value
     ρ_R::Float64    = m[:ρR].value
     ψπ::Float64    = m[:ψπ].value
     ψy::Float64    = m[:ψy].value

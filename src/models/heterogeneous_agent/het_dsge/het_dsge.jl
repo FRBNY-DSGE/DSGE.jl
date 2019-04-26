@@ -300,24 +300,10 @@ function init_parameters!(m::HetDSGE)
                    Normal(4., 1.5), fixed = false,
                    description = "S'': The second derivative of households' cost of adjusting investment.",
                    tex_label = "S''")
-    m <= parameter(:lamw, 1.5, fixed = true,
-                   description = "λ_w: The wage markup, which affects the elasticity
-                   of substitution between differentiated labor services.",
-                   tex_label = "\\lambda_w")
-    m <= parameter(:ϕh , 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
-                   Normal(2, 0.75), fixed = false,
-                   description = "# inverse frisch elasticity",
+
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+                   Normal(2, 0.75), fixed = false, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
-        # We use Calvo instead of Rotemberg. Relevant parameter of comparison is
-        # ζ_w, the probability that households can freely choose wages in each period.
-        m <= parameter(:Φw , 10., description = "# rotemberg cost for wages")
-    m <= parameter(:lamf, 1.5, fixed = true,
-                   description = "λ_f: The price markup",
-                   tex_label = "\\lambda_f")
-        # We use Calvo instead of Rotemberg. Relevant parameter of comparison is
-        # ζ_p, the probability that intermediate goods producers
-        # can freely choose prices in each period.
-        m <= parameter(:Φp , 1., description = "# rotemberg cost for prices")
 
     m <= parameter(:κ_p, 0.5, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed = false, description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa")
     m <= parameter(:κ_w, 0.5, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed = false, description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa")
@@ -396,7 +382,6 @@ function init_parameters!(m::HetDSGE)
 m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
                description="π_star: The steady-state rate of inflation.",
                tex_label="\\pi_*")
-
 
    m <= parameter(:ρ_lr, 0.6936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    tex_label="\\rho_{10y}")
