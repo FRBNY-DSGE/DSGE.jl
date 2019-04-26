@@ -383,73 +383,10 @@ m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaA
                description="π_star: The steady-state rate of inflation.",
                tex_label="\\pi_*")
 
-   m <= parameter(:ρ_lr, 0.6936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                   tex_label="\\rho_{10y}")
-
-  m <= parameter(:ρ_tfp, 0.1953, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                   tex_label="\\rho_{tfp}")
-
-    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                   tex_label="\\rho_{gdpdef}")
-
-    m <= parameter(:ρ_corepce, 0.2320, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                   tex_label="\\rho_{pce}")
-
-    m <= parameter(:ρ_gdp, 0., (-0.999, 0.999), (-0.999, 0.999), SquareRoot(), Normal(0.0, 0.2), fixed=false,
-                   tex_label="\\rho_{gdp}")
-
-    m <= parameter(:ρ_gdi, 0., (-0.999, 0.999), (-0.999, 0.999), SquareRoot(), Normal(0.0, 0.2), fixed=false,
-                   tex_label="\\rho_{gdi}")
-
-    m <= parameter(:ρ_gdpvar, 0., (-0.999, 0.999), (-0.999, 0.999), SquareRoot(), Normal(0.0, 0.4), fixed=false,
-                   tex_label="\\varrho_{gdp}")
-
- m <= parameter(:me_level, 1., (-0.999, 0.999), (-0.999, 0.999), Untransformed(), Normal(0.0, 0.4), fixed=true,
-                   description="me_level: Indicator of cointegration of GDP and GDI.",
-                   tex_label="\\mathcal{C}_{me}")
-
- m <= parameter(:σ_lr, 0.1766, (1e-8,10.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.75),
-                fixed=false, tex_label="\\sigma_{10y}")
-
- m <= parameter(:σ_tfp, 0.9391, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                   tex_label="\\sigma_{tfp}")
-
-    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                   tex_label="\\sigma_{gdpdef}")
-
-    m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                   tex_label="\\sigma_{pce}")
-
-    m <= parameter(:σ_gdp, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2, 0.10), fixed=false,
-                   tex_label="\\sigma_{gdp}")
-
-    m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2, 0.10), fixed=false,
-                   tex_label="\\sigma_{gdi}")
-    m <= parameter(:Iendoα, 0.0000, (0.000, 1.000), (0., 0.), Untransformed(), BetaAlt(0.50, 0.20),
-                   fixed=true,
-                   description="Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
-                   tex_label="I\\{\\alpha^{model}\\}")
-
-    m <= parameter(:Γ_gdpdef, 1.0354, (-10., 10.), (-10., -10.), Untransformed(), Normal(1.00, 2.), fixed=false,
-                   tex_label="\\gamma_{gdpdef}")
-
-    m <= parameter(:δ_gdpdef, 0.0181, (-10., 10.), (-10., -10.), Untransformed(), Normal(0.00, 2.), fixed=false,
-                   tex_label="\\delta_{gdpdef}")
-
-    m <= parameter(:γ_gdi, 1., (-10., 10.), (-10., -10.), Untransformed(), Normal(1., 2.), fixed=false,
-                   tex_label="\\gamma_{gdi}")
-
-    m <= parameter(:δ_gdi, 0., (-10., 10.), (-10., -10.), Untransformed(), Normal(0.00, 2.), fixed=false,
-                   tex_label="\\delta_{gdi}")
 
     m <= parameter(:Lmean, -45.9364, (-1000., 1000.), (-1e3, 1e3), Untransformed(), Normal(-45., 5.), fixed=false,
                    description="Lmean: Mean level of hours.",
                    tex_label="\\bar{L}")
- m <= parameter(:spr, 1.7444, (0., 100.), (1e-5, 0.), Exponential(), GammaAlt(2., 0.1),
-                fixed=false,
-                scaling = x -> (1 + x/100)^0.25,
-                description="spr_*: Steady-state level of spread.",
-                tex_label="SP_*")
 
 m <= parameter(:e_y, 0.0, fixed = true, description = "e_y: Measurement error on GDP", tex_label = "e_y")
 m <= parameter(:e_L, 0.0, fixed = true, description = "e_L: Measurement error on hours worked", tex_label = "e_L")
