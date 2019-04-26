@@ -63,18 +63,18 @@ function jacobian(m::HetDSGELag)
     ns::Int = get_setting(m, :ns)
     nxns = nx*ns
 
-    qp(z) = dmollifier_hetdsge(z, zhi, zlo)
-    qfunction_hetdsge(x) = mollifier_hetdsge(x, zhi, zlo) #/sumz
+    qp(z) = dmollifier_hetdsge_lag(z, zhi, zlo)
+    qfunction_hetdsge_lag(x) = mollifier_hetdsge_lag(x, zhi, zlo) #/sumz
 
     unc = 1 ./ ell .<= repeat(xgrid,ns) .+ η
 
     dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee =
-        euler_equation_hetdsge(nx, ns, qp, qfunction_hetdsge, xgrid, sgrid, fgrid, unc, xswts,
+        euler_equation_hetdsge_lag(nx, ns, qp, qfunction_hetdsge_lag, xgrid, sgrid, fgrid, unc, xswts,
                                R, γ, β, η, ell, T, ω, H)
 
     # KF Equation
     dF2_dWH, dF2_dRZ, dF2_dTT,dF2_dELL, bigΨ, dF2_dM =
-        kolmogorov_fwd_hetdsge(nx, ns, qfunction_hetdsge, qp, xgrid, sgrid, fgrid, unc, xswts,
+        kolmogorov_fwd_hetdsge_lag(nx, ns, qfunction_hetdsge_lag, qp, xgrid, sgrid, fgrid, unc, xswts,
                                R, γ, ell, μ, η, T, ω, H, ee)
 
     # Market clearing, lambda function
@@ -297,7 +297,7 @@ function jacobian(m::HetDSGELag)
     return JJ
 end
 
-function euler_equation_hetdsge(nx::Int, ns::Int,
+function euler_equation_hetdsge_lag(nx::Int, ns::Int,
                                 qp::Function, qfunction::Function,
                                 xgrid::Vector{Float64}, sgrid::Vector{Float64},
                                 fgrid::Matrix{Float64},
@@ -344,7 +344,7 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
     return dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee
 end
 
-function kolmogorov_fwd_hetdsge(nx::Int, ns::Int,
+function kolmogorov_fwd_hetdsge_lag(nx::Int, ns::Int,
                                 qfunction::Function, qp::Function,
                                 xgrid::Vector{Float64}, sgrid::Vector{Float64},
                                 fgrid::Matrix{Float64}, unc::BitArray,

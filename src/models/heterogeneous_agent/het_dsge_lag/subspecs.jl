@@ -23,7 +23,6 @@ ss1!(m::HetDSGELag)
 Initializes subspec 1 of `HetDSGELag`.
 This shuts down all shocks except the technology process (z shock).
 """
-
 function ss1!(m::HetDSGELag)
 
 end

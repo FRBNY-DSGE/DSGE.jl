@@ -74,7 +74,7 @@ function measurement(m::RealBondMkup{T}, TTT::Matrix{T},
     return Measurement(ZZ, DD, QQ, EE)
 end
 
-function construct_GDPfn_realbond(nx::Int, ns::Int,
+function construct_GDPfn_realbondmkp(nx::Int, ns::Int,
                                   xgrid_total::Vector{Float64}, sgrid::Vector{Float64},
                                   xwts::Vector{Float64}, swts::Vector{Float64},
                                   γ::Float64, ν::Float64, abar::Float64,
@@ -141,7 +141,7 @@ function construct_GDPeqn(m::RealBondMkup, TTT_jump::Matrix{T}) where {T<:Abstra
 
     # Construct GDP
     dGDP_dMU, dGDP_dZ, dGDP_dELL, dGDP_dRR, dGDP_dWW, dGDP_dTT =
-        construct_GDPfn_realbond(nx, ns, xgrid_total, sgrid, xwts, swts,
+        construct_GDPfn_realbondmkp(nx, ns, xgrid_total, sgrid, xwts, swts,
                                  γ, ν, abar, R, aborrow, μ, c, η, ell, χss)
 
     GDPfn = zeros(n_model_states_unnormalized(m))

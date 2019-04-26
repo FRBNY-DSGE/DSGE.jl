@@ -68,7 +68,7 @@ function jacobian(m::HetDSGE)
     unc = 1 ./ ell .<= repeat(xgrid,ns) .+ η
 
     dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee =
-        euler_equation_hetdsge(nx, ns, qp, qfunction_hetdsge, xgrid, sgrid, fgrid, unc, xswts,
+        euler_equation_hetdsge_lag(nx, ns, qp, qfunction_hetdsge, xgrid, sgrid, fgrid, unc, xswts,
                                R, γ, β, η, ell, T, ω, H)
 
     # KF Equation
@@ -283,7 +283,6 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
     dF1_dELLP = zeros(nxns,nxns)
     dF1_dWHP = zeros(nxns)
     dF1_dTTP = zeros(nxns)
-    ell_RHS = zeros(nxns)
     for iss=1:ns
         for ia=1:nx
             i  = nx*(iss-1)+ia
@@ -291,7 +290,6 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
             sumRZ  = 0.
             sumWH  = 0.
             sumTT  = 0.
-            sum_ellRHS = 0.
             for isp=1:ns
                 for iap=1:nx
                     ip = nx*(isp-1)+iap
@@ -303,12 +301,10 @@ function euler_equation_hetdsge(nx::Int, ns::Int,
                     dF1_dELLP[i,ip] = Ξ[i,ip]*unc[ip]
                     sumWH  += Ξ[i,ip] + ξ[i,ip]*ee[i,ip]*(ω*H*sgrid[isp])
                     sumTT  += ξ[i,ip]*T
-                    sum_ellRHS += Ξ[i,ip]
                 end
             end
-            ellRHS[i] = sum_ellRHS
             dF1_dELL[i,i] = -ell[i] - sumELL
-            dF1_dRZ[i] = ellRHS[i] - sumRZ
+            dF1_dRZ[i] = ell[i] - sumRZ
             dF1_dWHP[i] = -sumWH
             dF1_dTTP[i] = -sumTT
         end
