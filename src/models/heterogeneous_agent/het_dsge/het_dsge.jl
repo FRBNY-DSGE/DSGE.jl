@@ -319,6 +319,9 @@ function init_parameters!(m::HetDSGE)
         # can freely choose prices in each period.
         m <= parameter(:Φp , 1., description = "# rotemberg cost for prices")
 
+    m <= parameter(:κ_p, 0.5, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed = false, description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa")
+    m <= parameter(:κ_w, 0.5, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed = false, description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa")
+
     m <= parameter(:ρR , 0.75, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.75, 0.10), fixed = false,
                    description = "ρ: The degree of inertia in the monetary policy rule.",

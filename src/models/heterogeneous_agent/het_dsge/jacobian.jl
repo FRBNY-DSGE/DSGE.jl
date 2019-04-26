@@ -33,6 +33,9 @@ function jacobian(m::HetDSGE)
     ρ_R::Float64    = m[:ρR].value
     ψπ::Float64    = m[:ψπ].value
     ψy::Float64    = m[:ψy].value
+    κ_p::Float64  = m[:κ_p].value
+    κ_w::Float64  = m[:κ_w].value
+
 
     R = 1 + r
 
@@ -165,16 +168,16 @@ function jacobian(m::HetDSGE)
 
     # wage phillips curve
     JJ[first(eq[:eq_wage_phillips]),first(endo[:wageinflation_t])]  = -1.
-    JJ[first(eq[:eq_wage_phillips]),first(endo[:LAMW])] = (ϕ*H^ϕh)/Φw
-    JJ[first(eq[:eq_wage_phillips]),first(endo[:L_t])]   = (ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)*ϕh
-    JJ[first(eq[:eq_wage_phillips]),first(endo[:mu_t])]  = -(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
-    JJ[first(eq[:eq_wage_phillips]),first(endo[:w_t])]    = -(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
+    JJ[first(eq[:eq_wage_phillips]),first(endo[:LAMW])] = 1. #(ϕ*H^ϕh)/Φw
+    JJ[first(eq[:eq_wage_phillips]),first(endo[:L_t])]   = κ_w*ϕh #(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)*ϕh
+    JJ[first(eq[:eq_wage_phillips]),first(endo[:mu_t])]  = -κ_w #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
+    JJ[first(eq[:eq_wage_phillips]),first(endo[:w_t])]    = -1. #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
     JJ[first(eq[:eq_wage_phillips]),first(endo[:wageinflation′_t])]  = β
 
     # price phillips curve
     JJ[first(eq[:eq_price_phillips]),first(endo[:π_t])]   = -1.
-    JJ[first(eq[:eq_price_phillips]),first(endo[:mc_t])]   =(1+lamf)/(lamf*Φp)
-    JJ[first(eq[:eq_price_phillips]),first(endo[:LAMF])] = 1/Φp
+    JJ[first(eq[:eq_price_phillips]),first(endo[:mc_t])]   = κ_p #(1+lamf)/(lamf*Φp)
+    JJ[first(eq[:eq_price_phillips]),first(endo[:LAMF])] = 1. #1/Φp
     JJ[first(eq[:eq_price_phillips]),first(endo[:π′_t])]  = 1/R
 
     # marginal cost
