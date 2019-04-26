@@ -366,6 +366,7 @@ module DSGE
     include("models/heterogeneous_agent/het_dsge/shock_loading.jl")
     include("models/heterogeneous_agent/het_dsge/observables.jl")
     include("models/heterogeneous_agent/het_dsge/measurement.jl")
+    include("models/heterogeneous_agent/het_dsge/augment_states.jl")
 
     include("models/heterogeneous_agent/het_dsge_lag/het_dsge_lag.jl")
     include("models/heterogeneous_agent/het_dsge_lag/steady_state.jl")

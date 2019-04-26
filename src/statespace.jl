@@ -178,6 +178,7 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
             # Measurement (needs the additional TTT_jump argument)
             measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
         else
+            TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
             measurement_equation = measurement(m, TTT, RRR, CCC)
         end
 

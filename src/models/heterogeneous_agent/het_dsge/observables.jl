@@ -6,7 +6,7 @@ function init_observable_mappings!(m::HetDSGE)
     ############################################################################
     ## 1. GDP
     ############################################################################
-    gdp_fwd_transform =  function (levels)
+    gdp_fwd_transform = function (levels)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
@@ -21,11 +21,11 @@ function init_observable_mappings!(m::HetDSGE)
                                        gdp_fwd_transform, gdp_rev_transform,
                                        "Real GDP Growth", "Real GDP Growth Per Capita")
 
-   #= ############################################################################
+    ############################################################################
     ## 2. Hours per-capita
     ############################################################################
 
-    hrs_fwd_transform =  function (levels)
+    hrs_fwd_transform = function (levels)
         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
         # TO:   log (3 * per-capita weekly hours / 100)
         # Note: Not sure why the 3 is there.
@@ -40,7 +40,6 @@ function init_observable_mappings!(m::HetDSGE)
     observables[:obs_hours] = Observable(:obs_hours, [:AWHNONAG__FRED, :CE16OV__FRED],
                                          hrs_fwd_transform, hrs_rev_transform,
                                          "Hours Per Capita", "Log Hours Per Capita")
-
 
     ############################################################################
     ## 3. Wages
@@ -64,7 +63,7 @@ function init_observable_mappings!(m::HetDSGE)
     ## 4. GDP Deflator
     ############################################################################
 
-    gdpdeflator_fwd_transform =  function (levels)
+    gdpdeflator_fwd_transform = function (levels)
         # FROM: GDP deflator (index)
         # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
         #       i.e.  quarterly gdp deflator inflation
@@ -81,27 +80,7 @@ function init_observable_mappings!(m::HetDSGE)
                                                "Q-to-Q Percent Change of GDP Deflator")
 
     ############################################################################
-    ## 5. Core PCE Inflation
-    ############################################################################
-
-    pce_fwd_transform = function (levels)
-        # FROM: Core PCE index
-        # INTO: Approximate quarter-to-quarter percent change of Core PCE,
-        # i.e. quarterly core pce inflation
-
-        oneqtrpctchange(levels[:PCEPILFE])
-    end
-
-    pce_rev_transform = loggrowthtopct_annualized
-
-    observables[:obs_corepce] = Observable(:obs_corepce, [:PCEPILFE__FRED],
-                                           pce_fwd_transform, pce_rev_transform,
-                                           "Core PCE Inflation",
-                                           "Core PCE Inflation")
-
-
-    ############################################################################
-    ## 6. Nominal short-term interest rate (3 months)
+    ## 5. Nominal short-term interest rate (3 months)
     ############################################################################
 
     nominalrate_fwd_transform = function (levels)
@@ -120,7 +99,7 @@ function init_observable_mappings!(m::HetDSGE)
                                                "Nominal Effective Fed Funds Rate")
 
     ############################################################################
-    ## 7. Consumption
+    ## 6. Consumption
     ############################################################################
 
     consumption_fwd_transform = function (levels)
@@ -140,9 +119,8 @@ function init_observable_mappings!(m::HetDSGE)
                                                "Consumption growth per capita",
                                                "Consumption growth adjusted for population filtering")
 
-
     ############################################################################
-    ## 8. Investment growth per capita
+    ## 7. Investment growth per capita
     ############################################################################
 
     investment_fwd_transform = function (levels)
@@ -162,131 +140,10 @@ function init_observable_mappings!(m::HetDSGE)
                                               "Real Investment per capita",
                                               "Real investment per capita, adjusted for population filtering")
 
-
     ############################################################################
-    ## 9. Spread: BAA-10yr TBill
+    # 8 - (8 + n_anticipated_shocks)
     ############################################################################
-
-    spread_fwd_transform = function (levels)
-        # FROM: Baa corporate bond yield (percent annualized), and 10-year
-        #       treasury note yield (percent annualized)
-        # TO:   Baa yield - 10T yield spread at a quarterly rate
-        # Note: Moody's corporate bond yields on the H15 are based on corporate
-        #       bonds with remaining maturities of at least 20 years.
-        #       The Moody's series (BAA) ends partway through 2016-Q4. Hence
-        #       beginning in 2016-Q4, we replace it with a similar series from
-        #       Bank of America (BAMLC8A0C15PYEY).
-
-        splice_date   = quartertodate("2016-Q4") # quarter at which we start using new series
-        old_series    = levels[levels[:date] .<  splice_date, :BAA]
-        new_series    = levels[levels[:date] .>= splice_date, :BAMLC8A0C15PYEY]
-        levels[:temp] = vcat(old_series, new_series)
-
-        annualtoquarter(levels[:temp] - levels[:GS10])
-    end
-
-    spread_rev_transform = quartertoannual
-
-    observables[:obs_spread] = Observable(:obs_spread, [:BAA__FRED, :BAMLC8A0C15PYEY__FRED, :GS10__FRED],
-                                          spread_fwd_transform, spread_rev_transform,
-                                          "BAA - 10yr Treasury Spread",
-                                          "BAA - 10yr Treasury Spread")
-
-
-    ############################################################################
-    # 10. Long term inflation expectations
-    ############################################################################
-
-    longinflation_fwd_transform = function (levels)
-        # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
-        # TO:   FROM, less 0.5
-        # Note: We subtract 0.5 because 0.5% inflation corresponds to
-        #       the assumed long-term rate of 2 percent inflation, but the
-        #       data are measuring expectations of actual inflation.
-
-        annualtoquarter(levels[:ASACX10]  .- 0.5)
-    end
-
-    longinflation_rev_transform = loggrowthtopct_annualized
-
-    observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__DLX],
-                                                 longinflation_fwd_transform, longinflation_rev_transform,
-                                                 "Long term inflation expectations",
-                                                 "10-year average yr/yr CPI inflation expectations")
-
-
-    ############################################################################
-    # 11. Long rate (10-year, zero-coupon)
-    ############################################################################
-    longrate_fwd_transform = function (levels)
-        # FROM: pre-computed long rate at an annual rate
-        # TO:   10T yield at a quarterly rate
-
-        annualtoquarter(levels[:FYCCZA])
-    end
-
-    longrate_rev_transform = quartertoannual
-
-    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__DLX],
-                                            longrate_fwd_transform, longrate_rev_transform,
-                                            "Long term interest rate expectations",
-                                            "10T yield")
-
-
-    ############################################################################
-    # 12. Fernald TFP
-    ############################################################################
-    tfp_fwd_transform =  function (levels)
-        # FROM: Fernald's unadjusted TFP series
-        # TO:   De-meaned unadjusted TFP series, adjusted by Fernald's
-        #       estimated alpha
-        # Note: We only want to calculate the mean of unadjusted TFP over the
-        #       periods between date_presample_start(m) - 1 and
-        #       date_mainsample_end(m), though we may end up transforming
-        #       additional periods of data.
-
-        start_date = Dates.lastdayofquarter(date_presample_start(m) - Dates.Month(3))
-        end_date   = date_mainsample_end(m)
-        date_range = start_date .<= levels[1:end, :date] .<= end_date
-        tfp_unadj_inrange = levels[date_range, :TFPKQ]
-
-        tfp_unadj      = levels[:TFPKQ]
-        tfp_unadj_inrange_nonmissing = tfp_unadj_inrange[.!ismissing.(tfp_unadj_inrange)]
-        tfp_unadj_mean = isempty(tfp_unadj_inrange_nonmissing) ? missing : mean(tfp_unadj_inrange_nonmissing)
-        (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[:TFPJQ]))
-    end
-
-    tfp_rev_transform = quartertoannual
-
-    observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__DLX, :TFPJQ__DLX],
-                                       tfp_fwd_transform, tfp_rev_transform,
-                                       "Total Factor Productivity",
-                                       "Fernald's TFP, adjusted by Fernald's estimated alpha")
-
-    ############################################################################
-    # 13. GDI
-    ############################################################################
-    gdi_fwd_transform = function (levels)
-        # FROM: level of real per-capita income (FRED mnemonic: GDI)
-        # TO:   approximate quarter-to-quarter percent change of real, per-capita income, adjusted
-        #       for population smoothing
-
-        levels[:temp] = percapita(m, :GDI, levels)
-        gdi = 1000 * nominal_to_real(:temp, levels)
-        oneqtrpctchange(gdi)
-    end
-
-    gdi_rev_transform = loggrowthtopct_annualized_percapita
-
-    observables[:obs_gdi] = Observable(:obs_gdi, [:GDI__FRED],
-                                       gdi_fwd_transform, gdi_rev_transform,
-                                       "Real GDI Growth",
-                                       "Real GDI Growth Per Capita")
-
-    ############################################################################
-    # Columns 14 - 14 + n_anticipated_shocks
-    ############################################################################
-
+#=
     for i = 1:n_anticipated_shocks(m)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
@@ -301,7 +158,7 @@ function init_observable_mappings!(m::HetDSGE)
                                                       ant_fwd_transform, ant_rev_transform,
                                                       "Anticipated Shock $i",
                                                       "$i-period ahead anticipated monetary policy shock")
-    end =#
+    end=#
 
     m.observable_mappings = observables
 end

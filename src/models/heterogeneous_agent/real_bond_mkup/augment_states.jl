@@ -43,7 +43,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
 """
 function augment_states(m::RealBondMkup, TTT::Matrix{T}, TTT_jump::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}, GDPeqn::AbstractMatrix{T}) where T<:AbstractFloat
     endo     = m.endogenous_states
-    endo_unnorm = m.endogenous_states_unnormalized
+    #endo_unnorm = m.endogenous_states_unnormalized
     endo_new = m.model_states_augmented
     exo      = m.exogenous_shocks
 

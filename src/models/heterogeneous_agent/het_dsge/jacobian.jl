@@ -460,5 +460,7 @@ function truncate_distribution!(m::HetDSGE)
         n_jump_scalar_vars = n_jump_vars - n_jump_function_valued_vars*nxns
         m <= Setting(:n_jumps, nxns*n_jump_function_valued_vars + n_jump_scalar_vars - get_setting(m, :jumps_normalization_factor))
         m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps))
+        m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                     length(m.endogenous_states_augmented))
     end
 end

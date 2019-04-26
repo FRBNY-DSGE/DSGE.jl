@@ -11,7 +11,7 @@ function shock_loading(m::HetDSGE, TTT_jump::Matrix{Float64})
     _RRR[endo[:MU′], exo[:μ_sh]] .= 1.
     _RRR[endo[:LAMW′], exo[:λ_w_sh]] .= 1.
     _RRR[endo[:LAMF′], exo[:λ_f_sh]] .= 1.
-    _RRR[endo[:MON′], exo[:MON_sh]] .= 1.
+    _RRR[endo[:MON′], exo[:rm_sh]] .= 1.
 
     # Loading on states and jumps
     RRR[1:n_backward_looking_states(m), :] = _RRR
