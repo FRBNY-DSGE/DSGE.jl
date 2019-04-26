@@ -43,7 +43,7 @@
         count += 1
     end
     if count == 5000
-        warn("Euler iteration did not converge")
+        @warn "Euler iteration did not converge"
     end
 
     # Equation (10)
@@ -103,7 +103,7 @@ function steadystate!(m::KrusellSmith, tol::Float64 = 1e-5, maxit::Int64 = 100, 
         D,V = eigen(wgrid.weights[1] * KF)
 
         if norm(D[1] - 1.0) > 2e-1 # that's the tolerance we are allowing
-            warn("your eigenvalue is too far from 1, something is wrong")
+            @warn "your eigenvalue is too far from 1, something is wrong"
         end
         μ = real(@view(V[:,1]))  # Pick the eigenvector associated with the largest
                                  # eigenvalue and moving it back to values

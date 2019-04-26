@@ -61,7 +61,7 @@ function filter(m::AbstractCTModel, data::Matrix{S}, system::System,
     if :track_lag in keys(m.settings)
         track_lag = get_setting(m, :track_lag)
     else
-        warn(":track_lag not found in settings. Assuming we don't track the last subinterval between observations when transforming transition matrices for filtering.")
+        @warn ":track_lag not found in settings. Assuming we don't track the last subinterval between observations when transforming transition matrices for filtering."
         track_lag = false
     end
 

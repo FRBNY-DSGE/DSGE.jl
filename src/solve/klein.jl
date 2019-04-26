@@ -33,9 +33,9 @@ function klein(m::AbstractModel)
     # Check that number of stable eigenvalues equals the number of predetermined state variables
 	nk = sum(eigselect)
 	if nk>NK
-	    warn("Equilibrium is locally indeterminate")
+	    @warn "Equilibrium is locally indeterminate"
 	elseif nk<NK
-	    warn("No local equilibrium exists")
+	    @warn "No local equilibrium exists"
 	end
 
 	U::Matrix{Float64} = QZ.Z'
@@ -93,7 +93,7 @@ function klein(m::AbstractModel)
 	eigst = eigvals(S11invT11)
     eighx = eigvals(hx_coef)
     if abs(norm(eighx, Inf) - norm(eigst, Inf)) > 1e-4
-		warn("max abs eigenvalue of S11invT11 and hx are different!")
+		@warn "max abs eigenvalue of S11invT11 and hx are different!"
 	end
 
 	# next, want to represent policy functions in terms of meaningful things

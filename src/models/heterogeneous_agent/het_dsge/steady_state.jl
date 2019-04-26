@@ -8,6 +8,7 @@ function steadystate!(m::HetDSGE;
     # Load settings
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
+
     xlo = get_setting(m, :xlo)
     xhi = get_setting(m, :xhi)
     zlo = get_setting(m, :zlo)
@@ -56,7 +57,7 @@ function steadystate!(m::HetDSGE;
         V = V[:,order_D]
         D = D[order_D]
         if abs(D[1]-1)>2e-1 # that's the tolerance we are allowing
-            warn("your eigenvalue is too far from 1, something is wrong")
+            @warn "your eigenvalue is too far from 1, something is wrong"
         end
 
         μ = real(V[:,1]) # Pick the eigen vector associated with the largest eigenvalue and moving it back to values
