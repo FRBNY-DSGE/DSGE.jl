@@ -304,7 +304,7 @@ function init_parameters!(m::HetDSGE)
                    description = "λ_w: The wage markup, which affects the elasticity
                    of substitution between differentiated labor services.",
                    tex_label = "\\lambda_w")
-    m <= parameter(:ϕh , 2., (1e-5, 10.), (1e-5, 10.), Expontential(),
+    m <= parameter(:ϕh , 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
                    Normal(2, 0.75), fixed = false,
                    description = "# inverse frisch elasticity",
                    tex_label = "\\phi_h")
