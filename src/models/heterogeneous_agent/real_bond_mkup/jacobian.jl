@@ -45,7 +45,7 @@ function jacobian(m::RealBondMkup)
     qp(x) = dmollifier_realbond(x,ehi,elo)
 
     # Jacobian stuff
-    chipW, chipR, chipX = construct_chip_realbond(xgrid_total, γ, ν, aborrow, abar, R, χss)
+    chipW, chipR, chipX = construct_chip_realbondmkup(xgrid_total, γ, ν, aborrow, abar, R, χss)
 
     # Create auxiliary variables
     # c = min.(ell.^(-1.0/γ),χss) # Consumption Decision Rule
@@ -53,7 +53,7 @@ function jacobian(m::RealBondMkup)
 
     # EE
     dF1_dELLP, dF1_dRRP, dF1_dWWP, dF1_dTTP, dF1_dELL, dF1_dWW, dF1_dRR, dF1_dTT, unc, a =
-    euler_equation_realbond(nx, ns, qp, qfunction, xgrid, sgrid, ggrid, sgrid_total, xwts, swts,
+    euler_equation_realbondmkup(nx, ns, qp, qfunction, xgrid, sgrid, ggrid, sgrid_total, xwts, swts,
                             chipR, chipW, chipX, R, γ, β, ν,
                             c, η, ell, χss)
 
@@ -64,7 +64,7 @@ function jacobian(m::RealBondMkup)
 
     # MKT clearing
     dF3_dMU, dF3_dELL, dF3_dWW, dF3_dRR, dF3_dTT, GDP =
-    market_clearing_realbond(nx, ns, xgrid, sgrid, xwts, swts,
+    market_clearing_realbondmkup(nx, ns, xgrid, sgrid, xwts, swts,
                              η, c, μ, ell, γ, ν, chipW, chipR, chipX, unc)
 
     # Make the Jacobian
@@ -142,7 +142,7 @@ function jacobian(m::RealBondMkup)
     return JJ
 end
 
-function construct_chip_realbond(xgrid_total::Vector{Float64},
+function construct_chip_realbondmkup(xgrid_total::Vector{Float64},
                                  γ::Float64, ν::Float64, aborrow::Float64,
                                  abar::Float64, R::Float64,
                                  χss::Vector{Float64})
@@ -153,7 +153,7 @@ function construct_chip_realbond(xgrid_total::Vector{Float64},
     return chipW, chipR, chipX
 end
 
-function euler_equation_realbond(nx::Int, ns::Int,
+function euler_equation_realbondmkup(nx::Int, ns::Int,
                                  qp::Function, qfunction::Function,
                                  xgrid::Vector{Float64}, sgrid::Vector{Float64},
                                  ggrid::Vector{Float64}, sgrid_total::Vector{Float64},
@@ -257,7 +257,7 @@ function kolmogorov_fwd_realbond(nx::Int, ns::Int,
     return dF2_dMU, dF2_dELL, dF2_dRR, dF2_dWW, dF2_dTT
 end
 
-function market_clearing_realbond(nx::Int, ns::Int,
+function market_clearing_realbondmkup(nx::Int, ns::Int,
                                   xgrid::Vector{Float64}, sgrid::Vector{Float64},
                                   xwts::Vector{Float64}, swts::Vector{Float64},
                                   η::Vector{Float64}, c::Vector{Float64},

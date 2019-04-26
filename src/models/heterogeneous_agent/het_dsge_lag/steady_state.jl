@@ -45,7 +45,7 @@ function steadystate!(m::HetDSGELag;
         β = (βlo+βhi)/2.0
         Win_guess = ones(n)
 
-        c, bp, Win, KF = policy_hetdsge(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
+        c, bp, Win, KF = policy_hetdsge_lag(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                           xswts, Win_guess, f)
 
         LPMKF = xswts[1]*KF
@@ -79,7 +79,7 @@ function steadystate!(m::HetDSGELag;
     nothing
 end
 
-function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
+function policy_hetdsge_lag(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
                         ω::AbstractFloat, H::AbstractFloat,
                         η::AbstractFloat, T::AbstractFloat,
                         γ::AbstractFloat, zhi::AbstractFloat,
@@ -93,7 +93,7 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
     bp = Vector{Float64}(undef, n)      # savings
     counter = 1
     Wout = Vector{Float64}(undef, length(Win))
-    qfunction_hetdsge(x::Float64) = mollifier_hetdsge(x, zhi, zlo) #/sumz
+    qfunction_hetdsge_lag(x::Float64) = mollifier_hetdsge_lag(x, zhi, zlo) #/sumz
     while dist>tol && counter<maxit # for debugging
         # compute c(w) given guess for Win = β*R*E[u'(c_{t+1})]
         for iss in 1:ns
@@ -102,7 +102,7 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
             end
         end
         bp = repeat(xgrid,ns) - c  # compute bp(w) given guess for Win
-        Wout = parameterized_expectations_hetdsge(nx,ns,β,R,ω,H,T,γ,qfunction_hetdsge,xgrid,sgrid,xswts,c,bp,f)
+        Wout = parameterized_expectations_hetdsge_lag(nx,ns,β,R,ω,H,T,γ,qfunction_hetdsge_lag,xgrid,sgrid,xswts,c,bp,f)
         dist = maximum(abs.(Wout-Win))
         Win = damp*Wout + (1.0-damp)*Win
         counter += 1
@@ -110,11 +110,11 @@ function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
     if counter == maxit
         @warn "Euler iteration did not converge"
     end
-    tr = kolmogorov_fwd_hetdsge(nx,ns,ω,H,T,R,γ,qfunction_hetdsge,xgrid,sgrid,bp,f)
+    tr = kolmogorov_fwd_hetdsge_lag(nx,ns,ω,H,T,R,γ,qfunction_hetdsge_lag,xgrid,sgrid,bp,f)
     return c, bp, Wout, tr
 end
 
-function parameterized_expectations_hetdsge(nx::Int,ns::Int, β::AbstractFloat, R::AbstractFloat, ω::AbstractFloat,
+function parameterized_expectations_hetdsge_lag(nx::Int,ns::Int, β::AbstractFloat, R::AbstractFloat, ω::AbstractFloat,
                                             H::AbstractFloat, T::AbstractFloat, γ::AbstractFloat,
                                             qfunc::Function,
                                             xgrid::Vector{Float64}, sgrid::Vector{Float64},
@@ -135,7 +135,7 @@ function parameterized_expectations_hetdsge(nx::Int,ns::Int, β::AbstractFloat, 
     return l_out
 end
 
-function kolmogorov_fwd_hetdsge(nx::Int, ns::Int, ω::AbstractFloat,
+function kolmogorov_fwd_hetdsge_lag(nx::Int, ns::Int, ω::AbstractFloat,
                                 H::AbstractFloat, T::AbstractFloat,
                                 R::AbstractFloat, γ::AbstractFloat,
                                 qfunc::Function,
@@ -154,7 +154,7 @@ function kolmogorov_fwd_hetdsge(nx::Int, ns::Int, ω::AbstractFloat,
     return tr
 end
 
-function mollifier_hetdsge(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
+function mollifier_hetdsge_lag(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
     # mollifier function
     In = 0.443993816237631
     if z<ehi && z>elo
@@ -167,11 +167,11 @@ function mollifier_hetdsge(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloa
     return out
 end
 
-function dmollifier_hetdsge(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
+function dmollifier_hetdsge_lag(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
     In = 0.443993816237631
     if x<ehi && x>elo
         temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
-        out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier_hetdsge(x, ehi, elo)
+        out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier_hetdsge_lag(x, ehi, elo)
     else
         out = 0.0
     end
