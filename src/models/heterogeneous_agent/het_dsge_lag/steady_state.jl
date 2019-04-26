@@ -56,7 +56,7 @@ function steadystate!(m::HetDSGELag;
         V = V[:,order_D]
         D = D[order_D]
         if abs(D[1]-1)>2e-1 # that's the tolerance we are allowing
-            warn("your eigenvalue is too far from 1, something is wrong")
+            @warn "your eigenvalue is too far from 1, something is wrong"
         end
 
         μ = real(V[:,1]) # Pick the eigen vector associated with the largest eigenvalue and moving it back to values

@@ -27,7 +27,6 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                                             verbose = verbose)
                     draw_logpost = prior(m)
                     if (draw_loglh == -Inf) | (draw_loglh===NaN)
-                        @show i
                         draw_logpost = -Inf
                         draw_loglh = -Inf
                     end
@@ -65,6 +64,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                                           use_chand_recursion = use_chand_recursion, verbose = verbose)
                     logpost[i] = prior(m)
                     if (loglh[i] == -Inf) | (loglh[i]===NaN)
+                        @show logpost[i]
                         logpost[i] = -Inf
                         loglh[i] = -Inf
                     end

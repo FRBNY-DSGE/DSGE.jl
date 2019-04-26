@@ -92,7 +92,7 @@ function steadystate!(m::RealBond;
         # find eigenvalue closest to 1
         (Dee,Vee) = eigen(LPMKF)
         if abs(Dee[1]-1)>2e-1 # that's the tolerance we are allowing
-            warn("your eigenvalue is ", Dee[1], " which is too far from 1, something is wrong")
+            @warn "your eigenvalue is ", Dee[1], " which is too far from 1, something is wrong"
         end
 
         μ = real(Vee[:,1]) # Pick the eigen vector associated with the largest
@@ -172,7 +172,7 @@ function policy_realbond(β::AbstractFloat, R::AbstractFloat,
     end
 
     if counter == maxit
-        warn("Euler iteration did not converge")
+        @warn "Euler iteration did not converge"
     end
 
     # c  = min.(l_in.^(-1.0/γ),χss)

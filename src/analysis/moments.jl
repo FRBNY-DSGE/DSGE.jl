@@ -99,8 +99,8 @@ end
 # Assumes n_parameters x n_draws
 function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64}, tex_labels::Vector{String}; weighted::Bool = true, load_bands::Bool = true)
     if size(params, 1) > size(params, 2)
-        warn("`params` argument to load_posterior_moments seems to be oriented incorrectly.
-        The argument should be n_params x n_draws. Currently, size(params) = ($(size(params, 1)), $(size(params, 2)))")
+        @warn "`params` argument to load_posterior_moments seems to be oriented incorrectly.
+        The argument should be n_params x n_draws. Currently, size(params) = ($(size(params, 1)), $(size(params, 2)))"
     end
     if weighted
         params_mean = vec(mean(params, Weights(weights), 2))

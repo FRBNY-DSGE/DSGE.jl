@@ -428,6 +428,7 @@ function truncate_distribution!(m::HetDSGE)
         m[:μstar] = μ
         m[:lstar] = ell
         m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
+        m.grids[:weights_total] = kron(swts, m.grids[:xgrid].weights)
         nxns = nx*get_setting(m, :ns)
         m <= Setting(:n, nxns)
 

@@ -258,7 +258,7 @@ function init_parameters!(m::HetDSGE)
     ######################################
     m <= parameter(:r, 0.01, fixed = true,
                    description = "r: Steady-state real interest rate.", tex_label = "r")
-    m <= parameter(:α, 0.3, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05),
+    m <= parameter(:α, 0.3, fixed = true, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05),
                    description = "α: Capital elasticity in the intermediate goods
                    sector's production function (also known as the capital share).",
                    tex_label = "\\alpha")
@@ -305,8 +305,8 @@ function init_parameters!(m::HetDSGE)
                    Normal(2, 0.75), fixed = false, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 
-    m <= parameter(:κ_p, 0.5, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed = false, description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa")
-    m <= parameter(:κ_w, 0.5, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed = false, description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa")
+    m <= parameter(:κ_p, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa")
+    m <= parameter(:κ_w, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa")
 
     m <= parameter(:ρR , 0.75, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.75, 0.10), fixed = false,
@@ -379,7 +379,7 @@ function init_parameters!(m::HetDSGE)
                    RootInverseGamma(2, 0.10), fixed = false,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 
-m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
                description="π_star: The steady-state rate of inflation.",
                tex_label="\\pi_*")
 

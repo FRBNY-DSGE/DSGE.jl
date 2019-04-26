@@ -208,10 +208,10 @@ function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}
         locs[sort_order[1:div]] = 0 # Set to zero the eigenvalues which are unstable
         FS = ordschur!(F, locs)     # Change F in place, FS creates reference to same object, so no copying
         if nunstab > div
-            warn("<gensysct>: There are more than div number of positive eigenvalues with smallest values:\n")
+            @warn "<gensysct>: There are more than div number of positive eigenvalues with smallest values:\n"
             println(g_eigs[sort_order][div + 1:nunstab])
         elseif nunstab < div
-            warn("<gensysct>: There are less than div number of positive eigenvalues:\n")
+            @warn "<gensysct>: There are less than div number of positive eigenvalues:\n"
             println(g_eigs[sort_order][nunstab + 1:div])
         end
         nunstab = div
@@ -236,7 +236,7 @@ function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}
         end
 
         if (eu[1] == 0 && (div == -1))
-            warn("<gensysct>: Solution does not exist")
+            @warn "<gensysct>: Solution does not exist"
         end
         impact = real(-Π * veta * (deta \ ueta') * uz * dz * vz' + Ψ)
     else
