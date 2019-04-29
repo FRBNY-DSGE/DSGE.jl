@@ -120,14 +120,12 @@ Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 function init_model_indices!(m::HetDSGE)
     # Endogenous states
     endogenous_states = collect([:kf′_t, :k′_t, :R′_t1, :i′_t1,
-                                 :y′_t1,
-                                 :w′_t1,:I′_t1,:B′,:G′,:z′_t,:MU′,:LAMW′,
+                                 :y′_t1, :w′_t1,:I′_t1,:B′,:G′,:z′_t,:MU′,:LAMW′,
                                  :LAMF′,:MON′,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
                                  :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t])
 
     # Exogenous shocks
-    exogenous_shocks = collect([:b_sh,:g_sh,:z_sh,:μ_sh,:λ_w_sh, :λ_f_sh,:rm_sh,
-                                :lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh])
+    exogenous_shocks = collect([:b_sh,:g_sh,:z_sh,:μ_sh,:λ_w_sh, :λ_f_sh,:rm_sh])
 
     # Equilibrium conditions
     equilibrium_conditions = collect([:eq_euler,:eq_kolmogorov_fwd,
