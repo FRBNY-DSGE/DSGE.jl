@@ -120,9 +120,9 @@ Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 function init_model_indices!(m::HetDSGE)
     # Endogenous states
     endogenous_states = collect([:kf′_t, :k′_t, :R′_t1, :i′_t1,
-                                 :y′_t1, :w′_t1,:I′_t1,:B′,:G′,:z′_t,:MU′,:LAMW′,
-                                 :LAMF′,:MON′,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
-                                 :wageinflation′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t])
+                                 :y′_t1, :w′_t1,:I′_t1,:b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t,
+                                 :λ_f′_t,:rm′_t,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
+                                 :π_w′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t])
 
     # Exogenous shocks
     exogenous_shocks = collect([:b_sh,:g_sh,:z_sh,:μ_sh,:λ_w_sh, :λ_f_sh,:rm_sh])
@@ -134,18 +134,12 @@ function init_model_indices!(m::HetDSGE)
                                       :eq_wage_phillips,:eq_price_phillips,:eq_marginal_cost,
                                       :eq_gdp,:eq_optimal_kl,:eq_taylor, :eq_fisher,
                                       :eq_nominal_wage_inflation,:LR,:LI,:LY,
-                                      :LW,:LX,:F33,:F34,:F35,:F36,:F37,
-                                      :F38, :F39])
+                                      :LW,:LX,:eq_b,:eq_g,:eq_z,:eq_μ,:eq_λ_w,
+                                      :eq_λ_f, :eq_rm])
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
     endogenous_states_augmented = [:i_t1]
-                                   #=:π_t1_dup, :L_t1,
-                                   :Et_π_t, :lr_t, :tfp_t,
-                                   :e_gdpdef_t, :e_corepce_t,
-                                   :e_gdp_t, :e_gdi_t, :e_gdp_t1,
-                                   :e_gdi_t1]=#
-
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -528,11 +522,11 @@ function model_settings!(m::HetDSGE)
     endo = m.endogenous_states_unnormalized
     state_indices = [endo[:kf′_t];  endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];
                      endo[:y′_t1];
-                     endo[:w′_t1];endo[:I′_t1];endo[:B′];
-                     endo[:G′];endo[:z′_t];endo[:MU′];endo[:LAMW′]; endo[:LAMF′];endo[:MON′]]
+                     endo[:w′_t1];endo[:I′_t1];endo[:b′_t];
+                     endo[:g′_t];endo[:z′_t];endo[:μ′_t];endo[:λ_w′_t]; endo[:λ_f′_t];endo[:rm′_t]]
 
     jump_indices = [endo[:l′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
-                    endo[:L′_t];endo[:π′_t];endo[:wageinflation′_t];endo[:mu′_t];endo[:y′_t];
+                    endo[:L′_t];endo[:π′_t];endo[:π_w′_t];endo[:mu′_t];endo[:y′_t];
                     endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
 
     m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
@@ -645,13 +639,13 @@ function setup_indices!(m::HetDSGE)
     endo[:w′_t1] = nxns+5:nxns+5           # lag real wages
     endo[:I′_t1] = nxns+6:nxns+6           # lag investment–don't get this confused with i, the nominal interest rate
     # exogenous scalar-valued states:
-    endo[:B′]    = nxns+7:nxns+7        # discount factor shock
-    endo[:G′]    = nxns+8:nxns+8        # govt spending
+    endo[:b′_t]    = nxns+7:nxns+7        # discount factor shock
+    endo[:g′_t]    = nxns+8:nxns+8        # govt spending
     endo[:z′_t]  = nxns+9:nxns+9        # tfp growth
-    endo[:MU′]   = nxns+10:nxns+10        # investment shock
-    endo[:LAMW′] = nxns+11:nxns+11        # wage markup
-    endo[:LAMF′] = nxns+12:nxns+12        # price markup
-    endo[:MON′]  = nxns+13:nxns+13        # monetary policy shock
+    endo[:μ′_t]   = nxns+10:nxns+10        # investment shock
+    endo[:λ_w′_t] = nxns+11:nxns+11        # wage markup
+    endo[:λ_f′_t] = nxns+12:nxns+12        # price markup
+    endo[:rm′_t]  = nxns+13:nxns+13        # monetary policy shock
 
     # function-valued jumps
     endo[:l′_t]  = nxns+14:2*nxns+13 # ell function
@@ -663,7 +657,7 @@ function setup_indices!(m::HetDSGE)
     endo[:w′_t]  = 2*nxns+17:2*nxns+17        # real wage
     endo[:L′_t]  = 2*nxns+18:2*nxns+18        # hours worked
     endo[:π′_t]  = 2*nxns+19:2*nxns+19        # inflation
-    endo[:wageinflation′_t] = 2*nxns+20:2*nxns+20        # nominal wage inflation
+    endo[:π_w′_t] = 2*nxns+20:2*nxns+20        # nominal wage inflation
     endo[:mu′_t] =  2*nxns+21:2*nxns+21        # average marginal utility
     endo[:y′_t]  = 2*nxns+22:2*nxns+22       # gdp
     endo[:I′_t]  = 2*nxns+23:2*nxns+23        # investment
@@ -712,17 +706,17 @@ funops = 1:2 # which operators output a function
     eqconds[:LW]  = 2*nxns+18:2*nxns+18 # LW
     eqconds[:LX] = 2*nxns+19:2*nxns+19 # LX
     # shocks
-    eqconds[:F33] = 2*nxns+20:2*nxns+20 # discount factor B
-    eqconds[:F34] = 2*nxns+21:2*nxns+21 # govt spending G
-    eqconds[:F35] = 2*nxns+22:2*nxns+22 # tfp growth Z
-    eqconds[:F36] = 2*nxns+23:2*nxns+23 # investment MU
-    eqconds[:F37] = 2*nxns+24:2*nxns+24 # wage mkup LAMW
-    eqconds[:F38] = 2*nxns+25:2*nxns+25 # price mkup LAMF
-    eqconds[:F39] = 2*nxns+26:2*nxns+26 # monetary policy MON
+    eqconds[:eq_b] = 2*nxns+20:2*nxns+20 # discount factor B
+    eqconds[:eq_g] = 2*nxns+21:2*nxns+21 # govt spending G
+    eqconds[:eq_z] = 2*nxns+22:2*nxns+22 # tfp growth Z
+    eqconds[:eq_μ] = 2*nxns+23:2*nxns+23 # investment MU
+    eqconds[:eq_λ_w] = 2*nxns+24:2*nxns+24 # wage mkup LAMW
+    eqconds[:eq_λ_f] = 2*nxns+25:2*nxns+25 # price mkup LAMF
+    eqconds[:eq_rm] = 2*nxns+26:2*nxns+26 # monetary policy MON
 
-# Total grid x*s
-m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
-                     across grid dimensions.")
+    # Total grid x*s
+    m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
+                         across grid dimensions.")
 
 m <= Setting(:nvars, 2*get_setting(m, :n) + 26, "num variables")
 m <= Setting(:nscalars, 26, " # num eqs which output scalars")
@@ -738,7 +732,7 @@ m.endogenous_states = deepcopy(endo)
                      endo[:G′];endo[:z′_t];endo[:MU′];endo[:LAMW′]; endo[:LAMF′];endo[:MON′]]
 
     jump_indices = [endo[:l′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
-                    endo[:L′_t];endo[:π′_t];endo[:wageinflation′_t];endo[:mu′_t];endo[:y′_t];
+                    endo[:L′_t];endo[:π′_t];endo[:π_w′_t];endo[:mu′_t];endo[:y′_t];
                     endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
 
     m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to

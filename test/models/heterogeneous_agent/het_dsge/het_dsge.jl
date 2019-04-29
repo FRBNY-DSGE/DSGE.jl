@@ -156,13 +156,13 @@ if check_jacobian
             @test LXP   == first(endo[:I′_t1])
         end
         @testset "# exogenous scalar-valued states" begin
-            @test BP    == first(endo[:B′])
-            @test GP    == first(endo[:G′])
+            @test BP    == first(endo[:b′_t])
+            @test GP    == first(endo[:g′_t])
             @test ZP    == first(endo[:z′_t])
-            @test MUP   == first(endo[:MU′])
-            @test LAMWP == first(endo[:LAMW′])
-            @test LAMFP == first(endo[:LAMF′])
-            @test MONP  == first(endo[:MON′])
+            @test MUP   == first(endo[:μ′_t])
+            @test LAMWP == first(endo[:λ_w′_t])
+            @test LAMFP == first(endo[:λ_f′_t])
+            @test MONP  == first(endo[:rm′_t])
         end
         @testset "function-valued jumps" begin
             @test ELLP  == endo[:l′_t]
@@ -174,7 +174,7 @@ if check_jacobian
             @test WP    == first(endo[:w′_t])
             @test HHP   == first(endo[:L′_t])
             @test PIP   == first(endo[:π′_t])
-            @test PIWP  == first(endo[:wageinflation′_t])
+            @test PIWP  == first(endo[:π_w′_t])
             @test LAMP  == first(endo[:mu′_t])
             @test YP    == first(endo[:y′_t])
             @test XP    == first(endo[:I′_t])
@@ -188,13 +188,13 @@ if check_jacobian
             @test LY    == first(endo[:y_t1])
             @test LW    == first(endo[:w_t1])
             @test LX    == first(endo[:I_t1])
-            @test B     == first(endo[:B])
-            @test G     == first(endo[:G])
+            @test B     == first(endo[:b_t])
+            @test G     == first(endo[:g_t])
             @test Z     == first(endo[:z_t])
-            @test MU    == first(endo[:MU])
-            @test LAMW  == first(endo[:LAMW])
-            @test LAMF  == first(endo[:LAMF])
-            @test MON   == first(endo[:MON])
+            @test MU    == first(endo[:μ_t])
+            @test LAMW  == first(endo[:λ_w_t])
+            @test LAMF  == first(endo[:λ_f_t])
+            @test MON   == first(endo[:rm_t])
             @test ELL   == endo[:l_t]
             @test RR    == first(endo[:R_t])
             @test II    == first(endo[:i_t])
@@ -202,7 +202,7 @@ if check_jacobian
             @test W == first(endo[:w_t])
             @test HH == first(endo[:L_t])
             @test PI == first(endo[:π_t])
-            @test PIW == first(endo[:wageinflation_t])
+            @test PIW == first(endo[:π_w_t])
             @test LAM == first(endo[:mu_t])
             @test Y == first(endo[:y_t])
             @test X == first(endo[:I_t])
@@ -240,13 +240,13 @@ if check_jacobian
             @test F32 == eq[:LX]
         end
         @testset "shocks" begin
-            @test F33 == eq[:F33]
-            @test F34 == eq[:F34]
-            @test F35 == eq[:F35]
-            @test F36 == eq[:F36]
-            @test F37 == eq[:F37]
-            @test F38 == eq[:F38]
-            @test F39 == eq[:F39]
+            @test F33 == eq[:eq_b]
+            @test F34 == eq[:eq_g]
+            @test F35 == eq[:eq_z]
+            @test F36 == eq[:eq_μ]
+            @test F37 == eq[:eq_λ_w]
+            @test F38 == eq[:eq_λ_f]
+            @test F39 == eq[:eq_rm]
         end
     end
 
