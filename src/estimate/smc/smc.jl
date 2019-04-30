@@ -274,11 +274,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                                       use_chand_recursion = use_chand_recursion,
                                       verbose = verbose) for k=1:n_parts]
         end
-    else
-        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                  c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion,
-                                  verbose = verbose, system = system) for j = 1:n_parts]
-    end
 
         cloud.particles = new_particles
         update_acceptance_rate!(cloud) # Update average acceptance rate
@@ -327,7 +322,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 end
 
-function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low, save_intermediate::Bool = false)
+function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
+             save_intermediate::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
     return smc(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,

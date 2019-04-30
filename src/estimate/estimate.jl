@@ -37,8 +37,8 @@ function estimate(m::AbstractModel, df::DataFrame;
                   filestring_addl::Vector{String} = Vector{String}(), save_intermediate::Bool = false)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
-             mle = mle, sampling = sampling
-	     save_intermediate = save_intermediate)
+             mle = mle, sampling = sampling,
+             save_intermediate = save_intermediate)
 end
 
 function estimate(m::AbstractModel;
@@ -295,11 +295,6 @@ function metropolis_hastings(propdist::Distribution,
         else
             para_old = rand(propdist, m; cc=cc0)
         end
-    end
-
-    # Setup the default system if not recomputing the transition equation
-    if !recompute_transition_equation
-        system = compute_system(m)
     end
 
     # Report number of blocks that will be used
