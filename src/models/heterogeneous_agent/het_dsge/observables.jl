@@ -98,7 +98,7 @@ function init_observable_mappings!(m::HetDSGE)
                                                "Nominal FFR",
                                                "Nominal Effective Fed Funds Rate")
 
- #=   ############################################################################
+    ############################################################################
     ## 6. Consumption
     ############################################################################
 
@@ -117,7 +117,7 @@ function init_observable_mappings!(m::HetDSGE)
     observables[:obs_consumption] = Observable(:obs_consumption, [:PCE__FRED, population_mnemonic],
                                                consumption_fwd_transform, consumption_rev_transform,
                                                "Consumption growth per capita",
-                                               "Consumption growth adjusted for population filtering") =#
+                                               "Consumption growth adjusted for population filtering")
 
     ############################################################################
     ## 7. Investment growth per capita
