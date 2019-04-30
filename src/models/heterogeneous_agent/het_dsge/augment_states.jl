@@ -1,5 +1,5 @@
-function augment_states(m::HetDSGE{T}, TTT::Matrix{T}, TTT_jump, RRR::Matrix{T},
-                        CCC::Vector{T}, C_eqn) where {T<:AbstractFloat}
+function augment_states(m::HetDSGE{T}, TTT::Matrix{T}, TTT_jump::Matrix{T}, RRR::Matrix{T},
+                        CCC::Vector{T}, C_eqn::Vector{T}) where {T<:AbstractFloat}
     endo     = m.endogenous_states #augment_model_states(m.endogenous_states, n_model_states(m))
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks

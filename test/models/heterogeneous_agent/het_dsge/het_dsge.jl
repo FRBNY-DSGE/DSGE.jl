@@ -425,7 +425,7 @@ if check_solution
     nx_save = get_setting(m, :nx)
     m.testing = false
     m <= Setting(:nx, nx_save)
-    gx, hx = klein(m)
+    gx, hx, _ = klein(m)
 
     file = jldopen("$path/reference/solve.jld2", "r")
     saved_gx   = read(file, "gx")

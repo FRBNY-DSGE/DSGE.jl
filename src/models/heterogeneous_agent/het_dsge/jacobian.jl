@@ -410,57 +410,24 @@ function truncate_distribution!(m::HetDSGE)
     if trunc_distr
         oldnx = nx
         nx = maximum(findall(μ[1:nx]+μ[nx+1:2*nx] .> mindens)) # used to be 1e-8
-        μ = μ[[1:nx;oldnx+1:oldnx+nx]]
-        ell = ell[[1:nx;oldnx+1:oldnx+nx]]
-        c = c[[1:nx;oldnx+1:oldnx+nx]]
+        m[:μstar] = μ[[1:nx;oldnx+1:oldnx+nx]]
+        m[:lstar] = ell[[1:nx;oldnx+1:oldnx+nx]]
+        m[:cstar] = c[[1:nx;oldnx+1:oldnx+nx]]
         if rescale_weights
-            #xgrid   = xgrid[1:nx] #Evenly spaced grid
             xhi = xgrid[nx]
             xscale = xhi-xlo
-            #xwts     = (xscale/nx)*ones(nx)          #quadrature weights
-            #xswts = kron(swts,xwts)
         end
         m <= Setting(:nx, nx)
         m <= Setting(:xhi, xhi)
         m <= Setting(:xscale, xscale)
-        m[:μstar] = μ
-        m[:lstar] = ell
-        m[:cstar] = c
         m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
         m.grids[:weights_total] = kron(swts, m.grids[:xgrid].weights)
         nxns = nx*get_setting(m, :ns)
         m <= Setting(:n, nxns)
+        m <= Setting(:nx, nx)
 
         setup_indices!(m)
 
-        endo = m.endogenous_states_unnormalized
-
-        state_indices = Vector{Int64}(undef, 0)
-        for i in getindex.(endo, get_setting(m, :states))
-            state_indices = [state_indices; i]
-        end
-        jump_indices = Vector{Int64}(undef, 0)
-        for i in getindex.(endo, get_setting(m, :jumps))
-            jump_indices = [jump_indices; i]
-        end
-
-        m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
-                     backward looking state variables")
-        m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
-                     variables")
-
-        n_backward_looking_vars = length(get_setting(m, :state_indices))
-        n_backward_looking_function_valued_vars = get_setting(m, :n_function_valued_backward_looking_states)
-        n_backward_looking_scalar_vars = n_backward_looking_vars - nxns #n_backward_looking_function_valued_vars
-        n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
-        m <= Setting(:n_backward_looking_states, nxns*n_backward_looking_distr_vars +
-                     n_backward_looking_scalar_vars - get_setting(m, :backward_looking_states_normalization_factor))
-        n_jump_vars = length(get_setting(m, :jump_indices))
-        n_jump_function_valued_vars = get_setting(m, :n_function_valued_jumps)
-        n_jump_scalar_vars = n_jump_vars - n_jump_function_valued_vars*nxns
-        m <= Setting(:n_jumps, nxns*n_jump_function_valued_vars + n_jump_scalar_vars - get_setting(m, :jumps_normalization_factor))
-        m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps))
-        m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
-                     length(m.endogenous_states_augmented))
+        init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
     end
 end

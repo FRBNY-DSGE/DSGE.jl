@@ -115,3 +115,18 @@ function normalize(endo::OrderedDict{Symbol, UnitRange},
 
     return endo
 end
+
+
+"""
+```
+stack_indices(key_dict::OrderedDict, keys::Vector{Symbol})
+```
+Stacks the indices of a OrderedDict{Symbol, AbstractRange} into a Vector of Ints defined by the Ranges in the dictionary.
+"""
+function stack_indices(key_dict::OrderedDict, keys::Vector{Symbol})
+    indices = Vector{Int64}(undef, 0)
+    for i in getindex.(key_dict, keys)
+        indices = [indices; i]
+    end
+    return indices
+end

@@ -21,7 +21,7 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::HetDSGE{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}, C_eqn) where {T<:AbstractFloat}
+                     CCC::Vector{T}, C_eqn::Vector{T}) where {T<:AbstractFloat}
     endo      = m.endogenous_states
     endo_new  = m.endogenous_states_augmented
     exo       = m.exogenous_shocks
@@ -114,7 +114,7 @@ function measurement(m::HetDSGE{T},
     return Measurement(ZZ, DD, QQ, EE)
 end
 
-function construct_consumption_partial(m::AbstractModel, dF2_dRZ, dF2_dWH, dF2_dTT)
+function construct_consumption_partial(m::AbstractModel, dF2_dRZ::Vector{Float64}, dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
 
     c = m[:cstar].value
     μ = m[:μstar].value
@@ -145,7 +145,7 @@ function construct_consumption_partial(m::AbstractModel, dF2_dRZ, dF2_dWH, dF2_d
     return dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT
 end
 
-function construct_consumption_eqn(m::AbstractModel, TTT_jump, dF2_dRZ, dF2_dWH, dF2_dTT)
+function construct_consumption_eqn(m::AbstractModel, TTT_jump::Matrix{Float64}, dF2_dRZ::Vector{Float64}, dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
 
     endo_unnorm = m.endogenous_states_unnormalized
 
@@ -165,5 +165,5 @@ function construct_consumption_eqn(m::AbstractModel, TTT_jump, dF2_dRZ, dF2_dWH,
     n_backward_looking_states_unnorm = n_backward_looking_states_unnormalized(m)
 
     C = C_eqn'*[Matrix{Float64}(I, n_backward_looking_states_unnorm, n_backward_looking_states_unnorm); gx2]*Qx'
-    return C
+    return vec(C)
 end

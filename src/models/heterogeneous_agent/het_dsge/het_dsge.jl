@@ -193,14 +193,17 @@ function HetDSGE(subspec::String="ss0";
             testing,
             OrderedDict{Symbol,Observable}())
 
-    m <= Setting(:nx, 300)
-    m <= Setting(:ns, 2)
-
     default_settings!(m)
 
     # # Set observable transformations
     init_observable_mappings!(m)
 
+    # Set settings
+    model_settings!(m)
+    # default_test_settings!(m)
+    for custom_setting in values(custom_settings)
+        m <= custom_setting
+    end
 
     # Endogenous states
     states = collect([:kf′_t,:k′_t, :R′_t1,:i′_t1, :y′_t1,:w′_t1,:I′_t1,
@@ -212,12 +215,8 @@ function HetDSGE(subspec::String="ss0";
     # Initialize model indices
     init_model_indices!(m, states, jumps)
 
-    # Set settings
-    model_settings!(m, states, jumps)
-    # default_test_settings!(m)
-    for custom_setting in values(custom_settings)
-        m <= custom_setting
-    end
+    # Init stuff that keeps track of number of states and jumps and states/jump indices (requires model indices first)
+    init_states_and_jumps!(m, states, jumps)
 
     # Initialize parameters
     init_parameters!(m)
@@ -255,16 +254,14 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:r, 0.01, fixed = true,
                    description = "r: Steady-state real interest rate.", tex_label = "r")
     m <= parameter(:α, 0.3, fixed = true, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05),
-                   description = "α: Capital elasticity in the intermediate goods
-                   sector's production function (also known as the capital share).",
+                   description = "α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label = "\\alpha")
-        # Check this: Previously the description was "Aggregate hours worked"
-        m <= parameter(:H, 1.0, (-1000., 1000.), (-1e3, 1e3), Untransformed(),
-                       Normal(-45., 5.), fixed = true,
-                       description = "Lmean: Mean level of hours", tex_label = "\\bar{L}")
+    # Check this: Previously the description was "Aggregate hours worked"
+    m <= parameter(:H, 1.0, (-1000., 1000.), (-1e3, 1e3), Untransformed(),
+                   Normal(-45., 5.), fixed = true,
+                   description = "Lmean: Mean level of hours", tex_label = "\\bar{L}")
     m <= parameter(:δ, 0.03, fixed = true,
                    description = "δ: The capital depreciation rate", tex_label = "\\delta")
-
     m <= parameter(:μ_sp, 0.0, fixed = true, description = "μ_sp: The trend in the skill process",
                    tex_label = "\\mu_{sp}")
     m <= parameter(:ρ_sp, 0.7, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
@@ -277,11 +274,11 @@ function init_parameters!(m::HetDSGE)
                    tex_label="\\sigma_{sp}")
 
     # Exogenous processes - level
-        # Uncomment scaling once adjusted properly in the code
-        m <= parameter(:γ, 0.0, (-5.0, 5.0), (-5., 5.), Untransformed(),
-                       Normal(0.4, 0.1), fixed = true, # scaling = x -> x/100,
-                       description = "γ: The log of the steady-state growth rate of technology",
-                       tex_label="100\\gamma")
+    # Uncomment scaling once adjusted properly in the code
+    m <= parameter(:γ, 0.0, (-5.0, 5.0), (-5., 5.), Untransformed(),
+                   Normal(0.4, 0.1), fixed = true, # scaling = x -> x/100,
+                   description = "γ: The log of the steady-state growth rate of technology",
+                   tex_label="100\\gamma")
     # Check this
     m <= parameter(:g, 1/(1-0.01), fixed = true,
                    description = "g_star: 1 - (c_star + i_star)/y_star",
@@ -384,13 +381,13 @@ function init_parameters!(m::HetDSGE)
                    description="Lmean: Mean level of hours.",
                    tex_label="\\bar{L}")
 
-m <= parameter(:e_y, 0.0, fixed = true, description = "e_y: Measurement error on GDP", tex_label = "e_y")
-m <= parameter(:e_L, 0.0, fixed = true, description = "e_L: Measurement error on hours worked", tex_label = "e_L")
-m <= parameter(:e_w, 0.0, fixed = true, description = "e_w: Measurement error on wages", tex_label ="e_w")
-m <= parameter(:e_π, 0.0, fixed = true, description = "e_π: Measurement error on GDP deflator", tex_label = "e_π")
-m <= parameter(:e_R, 0.0, fixed = true, description = "e_R: Measurement error on nominal rate of interest", tex_label = "e_R")
-m <= parameter(:e_c, 0.0, fixed = true, description = "e_c: Measurement error on consumption", tex_label = "e_c")
-m <= parameter(:e_i, 0.0, fixed = true, description = "e_i: Measurement error on investment", tex_label = "e_i")
+    m <= parameter(:e_y, 0.0, fixed = true, description = "e_y: Measurement error on GDP", tex_label = "e_y")
+    m <= parameter(:e_L, 0.0, fixed = true, description = "e_L: Measurement error on hours worked", tex_label = "e_L")
+    m <= parameter(:e_w, 0.0, fixed = true, description = "e_w: Measurement error on wages", tex_label ="e_w")
+    m <= parameter(:e_π, 0.0, fixed = true, description = "e_π: Measurement error on GDP deflator", tex_label = "e_π")
+    m <= parameter(:e_R, 0.0, fixed = true, description = "e_R: Measurement error on nominal rate of interest", tex_label = "e_R")
+    m <= parameter(:e_c, 0.0, fixed = true, description = "e_c: Measurement error on consumption", tex_label = "e_c")
+    m <= parameter(:e_i, 0.0, fixed = true, description = "e_i: Measurement error on investment", tex_label = "e_i")
 
 
     # Setting steady-state parameters
@@ -402,8 +399,8 @@ m <= parameter(:e_i, 0.0, fixed = true, description = "e_i: Measurement error on
                                   marginal utility of consumption", tex_label = "l_*")
     m <= SteadyStateParameterGrid(:cstar, fill(NaN, nx*ns), description = "Steady-state consumption",
                                   tex_label = "c_*")
-    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nx*ns), description = "Steady-state cross-sectional
-                                  density of cash on hand", tex_label = "\\mu_*")
+    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nx*ns), description = "Steady-state cross-sectional density of cash on hand",
+                                  tex_label = "\\mu_*")
     m <= SteadyStateParameter(:βstar, NaN, description = "Steady-state discount factor",
                               tex_label = "\\beta_*")
 end
@@ -456,7 +453,7 @@ function init_grids!(m::HetDSGE)
     #sgrid = exp.(lsgrid)
     grids[:sgrid] = Grid(sgrid, swts, sscale)
 
- # Calculate endogenous grid bounds (bounds are analytic functions of model parameters,
+    # Calculate endogenous grid bounds (bounds are analytic functions of model parameters,
     # which ensure there is no mass in the distributions across x where there shouldn't be)
     # Calculate the lowest possible cash on hand in steady state
     zlo = get_setting(m, :zlo)
@@ -471,7 +468,6 @@ function init_grids!(m::HetDSGE)
     # Cash on hand grid
     grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
 
-
     # Markov transition matrix for skill
     grids[:fgrid] = sprob./swts
 
@@ -483,7 +479,7 @@ function init_grids!(m::HetDSGE)
     m.grids = grids
 end
 
-function model_settings!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{Symbol})
+function model_settings!(m::HetDSGE)
     default_settings!(m)
 
     # Defaults
@@ -521,25 +517,6 @@ function model_settings!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{Symbo
                  This set to 0 is just the default setting, since it will always be
                  overwritten once the Jacobian is calculated.")
 
-    endo = m.endogenous_states_unnormalized
-
-    m <= Setting(:states, states)
-    m <= Setting(:jumps, jumps)
-    state_indices = Vector{Int64}(undef, 0)
-    for i in getindex.(endo, states)
-        state_indices = [state_indices; i]
-    end
-    jump_indices = Vector{Int64}(undef, 0)
-    for i in getindex.(endo, jumps)
-        jump_indices = [jump_indices; i]
-    end
-
-    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to backward looking state variables")
-    m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
-                 variables")
-    #m.state_variables = m.endogenous_states.keys[get_setting(m, :state_indices)]
-    #m.jump_variables = m.endogenous_states.keys[get_setting(m, :jump_indices)]
-
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
@@ -576,53 +553,7 @@ function model_settings!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{Symbo
     # of freedom since it is then non-trivial to obtain the marginal distributions.
     m <= Setting(:n_degrees_of_freedom_removed_state, 2, "Number of degrees of freedom from the distributional variables to remove.")
     m <= Setting(:n_degrees_of_freedom_removed_jump, 0, "Number of degrees of freedom from the distributional variables to remove.")
-    n_dof_removed_state = get_setting(m, :n_degrees_of_freedom_removed_state)
-    n_dof_removed_jump = get_setting(m, :n_degrees_of_freedom_removed_jump)
 
-    ####################################################
-    # Calculating the number of backward-looking states
-    ####################################################
-    n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
-    m <= Setting(:backward_looking_states_normalization_factor,
-                 n_dof_removed_state*n_backward_looking_distr_vars, "The number of dimensions removed from the
-                 backward looking state variables for the normalization.")
-
-    n = get_setting(m, :nx)*get_setting(m, :ns)
-    n_backward_looking_vars = length(get_setting(m, :state_indices))
-    n_backward_looking_function_valued_vars = get_setting(m, :n_function_valued_backward_looking_states)
-    n_backward_looking_scalar_vars = n_backward_looking_vars - n_backward_looking_function_valued_vars
-
-    m <= Setting(:n_backward_looking_states, n*n_backward_looking_distr_vars +
-                 n_backward_looking_scalar_vars - get_setting(m, :backward_looking_states_normalization_factor),
-                 "Number of state variables, in the true sense (fully
-                  backward looking) accounting for the discretization across the grid
-                  of function-valued variables and the normalization of
-                  distributional variables.")
-
-    ##################################
-    # Calculating the number of jumps
-    ##################################
-    n_jump_distr_vars = get_setting(m, :n_jump_distributional_vars)
-    m <= Setting(:jumps_normalization_factor,
-                 n_dof_removed_jump*n_jump_distr_vars, "The number of dimensions removed from the
-                 jump variables for the normalization.")
-
-    n_jump_vars = length(get_setting(m, :jump_indices))
-    n_jump_function_valued_vars = get_setting(m, :n_function_valued_jumps)
-    n_jump_scalar_vars = n_jump_vars - n_jump_function_valued_vars
-
-    m <= Setting(:n_jumps, n*n_jump_function_valued_vars +
-                 n_jump_scalar_vars - get_setting(m, :jumps_normalization_factor),
-                 "Number of jump variables (forward looking) accounting for
-                  the discretization across the grid of function-valued variables and the
-                  normalization of distributional variables.")
-
-    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps),
-                 "Number of 'states' in the state space model. Because backward and forward
-                 looking variables need to be explicitly tracked for the Klein solution
-                 method, we have n_states and n_jumps")
-    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
-                 length(m.endogenous_states_augmented))
 end
 
 function setup_indices!(m::HetDSGE)
@@ -722,27 +653,75 @@ funops = 1:2 # which operators output a function
     m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
                          across grid dimensions.")
 
-m <= Setting(:nvars, 2*get_setting(m, :n) + 26, "num variables")
-m <= Setting(:nscalars, 26, " # num eqs which output scalars")
-m <= Setting(:nyscalars, 13, "num scalar jumps")
-m <= Setting(:nxscalars, 26 - 13, "num scalar states")
+    m <= Setting(:nvars, 2*get_setting(m, :n) + 26, "num variables")
+    m <= Setting(:nscalars, 26, " # num eqs which output scalars")
+    m <= Setting(:nyscalars, 13, "num scalar jumps")
+    m <= Setting(:nxscalars, 26 - 13, "num scalar states")
 
-m.endogenous_states = deepcopy(endo)
+    m.endogenous_states = deepcopy(endo)
+end
 
- #= endo = m.endogenous_states_unnormalized
-    state_indices = [endo[:kf′_t];  endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];
-                     endo[:y′_t1];
-                     endo[:w′_t1];endo[:I′_t1];endo[:B′];
-                     endo[:G′];endo[:z′_t];endo[:MU′];endo[:LAMW′]; endo[:LAMF′];endo[:MON′]]
+function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps::Vector{Symbol})
+    endo = m.endogenous_states_unnormalized
 
-    jump_indices = [endo[:l′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
-                    endo[:L′_t];endo[:π′_t];endo[:π_w′_t];endo[:mu′_t];endo[:y′_t];
-                    endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
+    m <= Setting(:states, states)
+    m <= Setting(:jumps, jumps)
 
-    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
-                 backward looking state variables")
+    state_indices = stack_indices(endo, states)
+    jump_indices = stack_indices(endo, jumps)
+
+    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to backward looking state variables")
     m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
-                 variables")=#
+                 variables")
 
+    n_dof_removed_state = get_setting(m, :n_degrees_of_freedom_removed_state)
+    n_dof_removed_jump = get_setting(m, :n_degrees_of_freedom_removed_jump)
+
+
+    ####################################################
+    # Calculating the number of backward-looking states
+    ####################################################
+    n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
+    m <= Setting(:backward_looking_states_normalization_factor,
+                 n_dof_removed_state*n_backward_looking_distr_vars,
+                 "The number of dimensions removed from the backward looking state variables
+                    for the normalization.")
+
+    nxns = get_setting(m, :n) #nx)*get_setting(m, :ns)
+    n_backward_looking_vars = length(get_setting(m, :state_indices))
+    n_backward_looking_function_valued_vars = get_setting(m, :n_function_valued_backward_looking_states)
+    n_backward_looking_scalar_vars = n_backward_looking_vars - nxns*n_backward_looking_function_valued_vars  #n_backward_looking_function_valued_vars
+
+    m <= Setting(:n_backward_looking_states, nxns*n_backward_looking_distr_vars +
+                 n_backward_looking_scalar_vars - get_setting(m, :backward_looking_states_normalization_factor),
+                 "Number of state variables, in the true sense (fully
+                  backward looking) accounting for the discretization across the grid
+                  of function-valued variables and the normalization of
+                  distributional variables.")
+
+    ##################################
+    # Calculating the number of jumps
+    ##################################
+    n_jump_distr_vars = get_setting(m, :n_jump_distributional_vars)
+    m <= Setting(:jumps_normalization_factor,
+                 n_dof_removed_jump*n_jump_distr_vars, "The number of dimensions removed from the
+                 jump variables for the normalization.")
+
+    n_jump_vars = length(get_setting(m, :jump_indices))
+    n_jump_function_valued_vars = get_setting(m, :n_function_valued_jumps)
+    n_jump_scalar_vars = n_jump_vars - nxns*n_jump_function_valued_vars
+
+    m <= Setting(:n_jumps, nxns*n_jump_function_valued_vars +
+                 n_jump_scalar_vars - get_setting(m, :jumps_normalization_factor),
+                 "Number of jump variables (forward looking) accounting for
+                  the discretization across the grid of function-valued variables and the
+                  normalization of distributional variables.")
+
+    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps),
+                 "Number of 'states' in the state space model. Because backward and forward
+                 looking variables need to be explicitly tracked for the Klein solution
+                 method, we have n_states and n_jumps")
+    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                 length(m.endogenous_states_augmented))
 
 end
