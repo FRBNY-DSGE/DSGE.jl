@@ -58,6 +58,11 @@ mutable struct ParticleCloud
     total_sampling_time::Float64
 end
 
+# Implementing a sensible showing option for clouds within DataFrames
+function Base.show(io::IO, cloud::ParticleCloud)
+    @printf io "Particle Cloud: N_parts=%i, N_stages=%i" length(cloud) cloud.stage_index
+end
+
 # Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else
 # in the Particle object etc. to be empty
 function ParticleCloud(m::AbstractModel, n_parts::Int)
