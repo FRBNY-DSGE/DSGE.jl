@@ -113,7 +113,7 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_market_clearing]),first(endo[:g_t])]   = -ystar/g
     JJ[first(eq[:eq_market_clearing]),first(endo[:I_t])]   = -xstar
     JJ[first(eq[:eq_market_clearing]), endo[:l_t]] = (μ .*unc.*xswts.*c)'
-    JJ[first(eq[:eq_market_clearing]), endo[:kf_t]]   = -(xswts.*c)' # note, now we linearize
+    JJ[first(eq[:eq_market_clearing]), endo[:kf_t]] = -(xswts.*c)' # note, now we linearize
     JJ[first(eq[:eq_market_clearing]),first(endo[:R_t])]   = -(xswts.*c)'*dF2_dRZ
     JJ[first(eq[:eq_market_clearing]),first(endo[:z_t])]   = (xswts.*c)'*dF2_dRZ
     JJ[first(eq[:eq_market_clearing]),first(endo[:w_t])]   = -(xswts.*c)'*dF2_dWH
@@ -262,7 +262,7 @@ function jacobian(m::HetDSGE)
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
     end
-    return JJ
+    return JJ, dF2_dRZ, dF2_dWH, dF2_dTT
 end
 
 function euler_equation_hetdsge(nx::Int, ns::Int,
@@ -402,6 +402,7 @@ function truncate_distribution!(m::HetDSGE)
     nx = get_setting(m, :nx)
     μ = m[:μstar].value
     ell = m[:lstar].value
+    c = m[:cstar].value
     xgrid = m.grids[:xgrid].points
     xlo = get_setting(m, :xlo)
     swts::Vector{Float64}  = m.grids[:sgrid].weights
@@ -411,6 +412,7 @@ function truncate_distribution!(m::HetDSGE)
         nx = maximum(findall(μ[1:nx]+μ[nx+1:2*nx] .> mindens)) # used to be 1e-8
         μ = μ[[1:nx;oldnx+1:oldnx+nx]]
         ell = ell[[1:nx;oldnx+1:oldnx+nx]]
+        c = c[[1:nx;oldnx+1:oldnx+nx]]
         if rescale_weights
             #xgrid   = xgrid[1:nx] #Evenly spaced grid
             xhi = xgrid[nx]
@@ -423,6 +425,7 @@ function truncate_distribution!(m::HetDSGE)
         m <= Setting(:xscale, xscale)
         m[:μstar] = μ
         m[:lstar] = ell
+        m[:cstar] = c
         m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
         m.grids[:weights_total] = kron(swts, m.grids[:xgrid].weights)
         nxns = nx*get_setting(m, :ns)
@@ -431,14 +434,15 @@ function truncate_distribution!(m::HetDSGE)
         setup_indices!(m)
 
         endo = m.endogenous_states_unnormalized
-        state_indices = [endo[:kf′_t]; endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];
-                         endo[:y′_t1];
-                         endo[:w′_t1];endo[:I′_t1];endo[:b′_t];
-                         endo[:g′_t];endo[:z′_t];endo[:μ′_t];endo[:λ_w′_t]; endo[:λ_f′_t];endo[:rm′_t]]
 
-        jump_indices = [endo[:l′_t]; endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
-                        endo[:L′_t];endo[:π′_t];endo[:π_w′_t];endo[:mu′_t];endo[:y′_t];
-                        endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
+        state_indices = Vector{Int64}(undef, 0)
+        for i in getindex.(endo, get_setting(m, :states))
+            state_indices = [state_indices; i]
+        end
+        jump_indices = Vector{Int64}(undef, 0)
+        for i in getindex.(endo, get_setting(m, :jumps))
+            jump_indices = [jump_indices; i]
+        end
 
         m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
                      backward looking state variables")

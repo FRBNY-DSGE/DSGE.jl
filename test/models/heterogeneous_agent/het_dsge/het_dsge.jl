@@ -50,7 +50,7 @@ end
 
 if check_jacobian
     m.testing = true        # So that it will test against the unnormalized Jacobian
-    JJ = DSGE.jacobian(m)
+    JJ, _, _, _ = DSGE.jacobian(m)
     # @btime JJ = DSGE.jacobian(m)
 
     file = jldopen("$path/reference/jacobian.jld2", "r")
