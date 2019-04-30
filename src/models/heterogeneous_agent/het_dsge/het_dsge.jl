@@ -117,12 +117,9 @@ Arguments:
 Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
-function init_model_indices!(m::HetDSGE)
-    # Endogenous states
-    endogenous_states = collect([:kf′_t, :k′_t, :R′_t1, :i′_t1,
-                                 :y′_t1, :w′_t1,:I′_t1,:b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t,
-                                 :λ_f′_t,:rm′_t,:l′_t,:μ′_t,:R′_t,:i′_t,:t′_t,:w′_t,:L′_t,:π′_t,
-                                 :π_w′_t,:mu′_t,:y′_t,:I′_t,:mc′_t,:Q′_t,:capreturn′_t])
+function init_model_indices!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{Symbol})
+
+    endogenous_states = collect(vcat(states, jumps))
 
     # Exogenous shocks
     exogenous_shocks = collect([:b_sh,:g_sh,:z_sh,:μ_sh,:λ_w_sh, :λ_f_sh,:rm_sh])
@@ -139,7 +136,7 @@ function init_model_indices!(m::HetDSGE)
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
-    endogenous_states_augmented = [:i_t1]
+    endogenous_states_augmented = [:i_t1, :c_t]
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -204,11 +201,19 @@ function HetDSGE(subspec::String="ss0";
     # # Set observable transformations
     init_observable_mappings!(m)
 
+
+    # Endogenous states
+    states = collect([:kf′_t,:k′_t, :R′_t1,:i′_t1, :y′_t1,:w′_t1,:I′_t1,
+                      :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t])
+
+    jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:mu′_t,:y′_t, :I′_t,
+                      :mc′_t,:Q′_t,:capreturn′_t])
+
     # Initialize model indices
-    init_model_indices!(m)
+    init_model_indices!(m, states, jumps)
 
     # Set settings
-    model_settings!(m)
+    model_settings!(m, states, jumps)
     # default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -222,7 +227,6 @@ function HetDSGE(subspec::String="ss0";
 
     # Initialize grids
     init_grids!(m)
-
 
     # # Solve for the steady state
     steadystate!(m)
@@ -479,7 +483,7 @@ function init_grids!(m::HetDSGE)
     m.grids = grids
 end
 
-function model_settings!(m::HetDSGE)
+function model_settings!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{Symbol})
     default_settings!(m)
 
     # Defaults
@@ -496,8 +500,6 @@ function model_settings!(m::HetDSGE)
 
     # Solution method
     m <= Setting(:solution_method, :klein)
-
-    m <= Setting(:krylov_reduce, false)
 
     # Likelihood method
     m <= Setting(:use_chand_recursion, true)
@@ -520,17 +522,19 @@ function model_settings!(m::HetDSGE)
                  overwritten once the Jacobian is calculated.")
 
     endo = m.endogenous_states_unnormalized
-    state_indices = [endo[:kf′_t];  endo[:k′_t]; endo[:R′_t1];endo[:i′_t1];
-                     endo[:y′_t1];
-                     endo[:w′_t1];endo[:I′_t1];endo[:b′_t];
-                     endo[:g′_t];endo[:z′_t];endo[:μ′_t];endo[:λ_w′_t]; endo[:λ_f′_t];endo[:rm′_t]]
 
-    jump_indices = [endo[:l′_t];endo[:R′_t];endo[:i′_t];endo[:t′_t];endo[:w′_t];
-                    endo[:L′_t];endo[:π′_t];endo[:π_w′_t];endo[:mu′_t];endo[:y′_t];
-                    endo[:I′_t];endo[:mc′_t]; endo[:Q′_t];endo[:capreturn′_t]]
+    m <= Setting(:states, states)
+    m <= Setting(:jumps, jumps)
+    state_indices = Vector{Int64}(undef, 0)
+    for i in getindex.(endo, states)
+        state_indices = [state_indices; i]
+    end
+    jump_indices = Vector{Int64}(undef, 0)
+    for i in getindex.(endo, jumps)
+        jump_indices = [jump_indices; i]
+    end
 
-    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to
-                 backward looking state variables")
+    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to backward looking state variables")
     m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
                  variables")
     #m.state_variables = m.endogenous_states.keys[get_setting(m, :state_indices)]

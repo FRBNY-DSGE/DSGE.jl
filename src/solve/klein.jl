@@ -3,8 +3,8 @@ function klein(m::AbstractModel)
     #################
     # Linearization:
     #################
-    Jac1 = Matrix{Float64}(jacobian(m))
-
+    Jac1, dF2_dRZ, dF2_dWH, dF2_dTT = jacobian(m)
+    Jac1 = Matrix{Float64}(Jac1)
     ##################################################################################
     # Klein Solution Method---apply generalized Schur decomposition a la Klein (2000)
     ##################################################################################
@@ -100,7 +100,7 @@ function klein(m::AbstractModel)
 	# gx_fval = Qy'*gx_coef*Qx
 	# hx_fval = Qx'*hx_coef*Qx
 
-	return gx_coef, hx_coef, 0
+	return gx_coef, hx_coef, 0, dF2_dRZ, dF2_dWH, dF2_dTT
 end
 
 # Need an additional transition_equation function to properly stack the
