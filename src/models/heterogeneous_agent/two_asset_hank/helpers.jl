@@ -193,72 +193,57 @@ end
     return A
 end
 
-@inline function update_value_fn(A::SparseMatrixCSC, Delta::R, lambda::Matrix{R},
-                                 I::Int64, J::Int64, N::Int64,
-                                 u::Union{Array{T,3},Array{R,3}},
-                                 Vn::Union{Array{T,3},Array{R,3}},
-                                 rrho::R, ddeath::R) where {R<:Float64,T<:Complex}
-    Vn_new = Array{Float64,3}(undef,I,J,N)
+@inline function mul_diag(A::SparseMatrixCSC, c::AbstractFloat)
+    for i=1:size(A,1)
+        A[i,i] *= c
+    end
+    return A
+end
+
+"""
+```
+@inline function update_value_fn(A::SparseMatrixCSC, Vn::Union{Array{T,3},Array{R,3}},
+                                 lambda::Matrix{R},   u::Union{Array{T,3},Array{R,3}},
+                                 Delta::R, rrho::R, ddeath::R) where {R<:Float64, T<:Complex}
+```
+Update value function.
+"""
+@inline function update_value_fn(A::SparseMatrixCSC, Vn::Union{Array{T,3},Array{R,3}},
+                                 lambda::Matrix{R},   u::Union{Array{T,3},Array{R,3}},
+                                 Delta::R, rrho::R, ddeath::R) where {R<:Float64, T<:Complex}
+    I, J, N = size(Vn)
+    Vn_new = Array{Float64,3}(undef, I, J, N)
     for kk = 1:N
-        Ak    = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
-        Bk    = add_diag(-Delta*Ak, 1 + Delta*(rrho + ddeath) - Delta*lambda[kk,kk])
-        uk_stacked  = reshape(u[:,:,kk], I * J, 1)
-        Vk_stacked  = reshape(Vn[:,:,kk], I * J, 1)
-        indx_k      = 1:N .!= kk
-        Vkp_stacked = sum(broadcast(*,  lambda[kk, indx_k]',
+        indx_k = 1:N .!= kk
+        Ak = A[1+(kk-1)*(I*J):kk*(I*J), 1+(kk-1)*(I*J):kk*(I*J)]
+        Bk = add_diag(-Delta*Ak, 1 + Delta*(rrho + ddeath) - Delta*lambda[kk,kk])
+        uk_stacked   = vec(u[:,:,kk])
+        Vk_stacked   = vec(Vn[:,:,kk])
+        Vkp_stacked  = sum(broadcast(*,  lambda[kk, indx_k]',
                                     reshape(Vn[:,:,indx_k], I*J, N-1)), dims=2)
-        qk          = Delta .* uk_stacked + Vk_stacked + Delta .* Vkp_stacked
+        qk           = Delta .* uk_stacked + Vk_stacked + Delta .* Vkp_stacked
         Vn1k_stacked = Bk \ qk
-        Vn_new[:,:,kk]  = reshape(Vn1k_stacked, I, J, 1)
+        Vn_new[:,:,kk] = vec(Vn1k_stacked)
     end
     return Vn_new
 end
 
-@inline function set_grids(a, b, a_g, b_g, y, r_b, r_b_borr)
+@inline function set_grids(a, b, a_g, b_g, N)
     I   = length(b)
     J   = length(a)
     I_g = length(b_g)
     J_g = length(a_g)
-    N   = length(y)
 
-    b_grid    = permutedims(repeat(b, 1, J, N), [1 2 3])
-    a_grid    = permutedims(repeat(a, 1, I, N), [2 1 3])
-    y_grid    = permutedims(repeat(y, 1, I, J), [2 3 1])
-    r_b_grid  = r_b .* (b_grid .>= 0) + r_b_borr .* (b_grid .< 0)
+    #b_grid   = permutedims(repeat(b, 1, J, N), [1 2 3])
+    #a_grid   = permutedims(repeat(a, 1, I, N), [2 1 3])
 
-    dbf_grid            = Array{Float64}(undef, I,J,N)
-    dbb_grid            = Array{Float64}(undef, I,J,N)
-    dbf_grid[1:I-1,:,:] = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbf_grid[I,:,:]     = dbf_grid[I-1,:,:]
-    dbb_grid[2:I,:,:]   = b_grid[2:I,:,:] - b_grid[1:I-1,:,:]
-    dbb_grid[1,:,:]     = dbb_grid[2,:,:]
-
-    daf_grid            = Array{Float64}(undef, I, J, N)
-    dab_grid            = Array{Float64}(undef, I, J, N)
-    daf_grid[:,1:J-1,:] = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    daf_grid[:,J,:]     = daf_grid[:,J-1,:]
-    dab_grid[:,2:J,:]   = a_grid[:,2:J,:] - a_grid[:,1:J-1,:]
-    dab_grid[:,1,:]     = dab_grid[:,2,:]
-
-    db_tilde      = 0.5*(dbb_grid[:,1,1] + dbf_grid[:,1,1])
-    db_tilde[1]   = 0.5*dbf_grid[1,1,1]
-    db_tilde[end] = 0.5*dbb_grid[end,1,1]
-    da_tilde      = 0.5*(dab_grid[1,:,1] + daf_grid[1,:,1])
-    da_tilde[1]   = 0.5 * daf_grid[1,1,1]
-    da_tilde[end] = 0.5*dab_grid[1,end,1]
-
-    dab_tilde      = kron(da_tilde, db_tilde)
-    dab_tilde_grid = reshape(repeat(dab_tilde, N, 1), I, J, N)
-    dab_tilde_mat  = spdiagm(0 => vec(repeat(dab_tilde, N, 1)))
-
-    b_g_grid     = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
-    a_g_grid     = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
-    y_g_grid     = permutedims(repeat(y, 1, I_g, J_g), [2 3 1])
-    r_b_g_grid   = r_b .* (b_g_grid .>= 0) + r_b_borr .* (b_g_grid .< 0)
+    b_g_grid = permutedims(repeat(b_g, 1, J_g, N),  [1 2 3])
+    a_g_grid = permutedims(repeat(a_g, 1, I_g, N),  [2 1 3])
 
     dbf_g_grid = Array{Float64}(undef, I_g, J_g, N)
     dbf_g_grid[1:I_g-1,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
     dbf_g_grid[I_g,:,:] = dbf_g_grid[I_g-1,:,:]
+
     dbb_g_grid = Array{Float64}(undef, I_g,J_g,N)
     dbb_g_grid[2:I_g,:,:] = b_g_grid[2:I_g,:,:] - b_g_grid[1:I_g-1,:,:]
     dbb_g_grid[1,:,:] = dbb_g_grid[2,:,:]
@@ -266,6 +251,7 @@ end
     daf_g_grid = Array{Float64}(undef, I_g, J_g, N)
     daf_g_grid[:,1:J_g-1,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
     daf_g_grid[:,J_g,:] = daf_g_grid[:,J_g-1,:]
+
     dab_g_grid = Array{Float64}(undef, I_g, J_g, N)
     dab_g_grid[:,2:J_g,:] = a_g_grid[:,2:J_g,:] - a_g_grid[:,1:J_g-1,:]
     dab_g_grid[:,1,:] = dab_g_grid[:,2,:]
@@ -276,13 +262,11 @@ end
     da_g_tilde       = 0.5*(dab_g_grid[1,:,1] + daf_g_grid[1,:,1])
     da_g_tilde[1]    = 0.5*daf_g_grid[1,1,1]
     da_g_tilde[end]  = 0.5*dab_g_grid[1,end,1]
+
     dab_g_tilde      = kron(da_g_tilde, db_g_tilde)
+    dab_g_tilde_grid = reshape(repeat(dab_g_tilde, N, 1), I_g, J_g, N)
 
-    dab_g_tilde_grid = reshape(repeat(dab_g_tilde,N,1),I_g,J_g,N)
-
-    dab_g_tilde_mat  = spdiagm(0 => vec(repeat(dab_g_tilde,N,1)))
-
-    return a_grid, a_g_grid, b_grid, b_g_grid, y_grid, y_g_grid, r_b_grid, r_b_g_grid, daf_grid, daf_g_grid, dab_grid, dab_g_grid, dab_tilde_grid, dab_g_tilde_grid, dab_g_tilde_mat, dab_g_tilde, dbf_grid, dbf_g_grid, dbb_grid, dbb_g_grid
+    return a_g_grid, b_g_grid, dab_g_tilde_grid, dab_g_tilde
 end
 
 """
@@ -429,10 +413,10 @@ end
         χ[i,j] = (j==1) ? 0.0 : -(min(d[i,j], 0) + min(adrift, 0)) / (a[j] - a[j-1])
         ζ[i,j] = (j==J) ? 0.0 :  (max(d[i,j], 0) + max(adrift, 0)) / (a[j+1] - a[j])
 
-        X[i,j] = (i==1) ? 0.0 : -(min(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
-                                    min(s[i,j], 0)) / (b[i] - b[i-1])
-        Z[i,j] = (i==I) ? 0.0 :  (max(-d[i,j] - cost(d[i,j], max(a[j], a_lb)), 0) +
-                                    max(s[i,j], 0)) / (b[i+1] - b[i])
+        X[i,j] = (i==1) ? 0.0 : -(min(-d[i,j] - cost(d[i,j], a[j]), 0) +
+                                  min(s[i,j], 0)) / (b[i] - b[i-1])
+        Z[i,j] = (i==I) ? 0.0 :  (max(-d[i,j] - cost(d[i,j], a[j]), 0) +
+                                  max(s[i,j], 0)) / (b[i+1] - b[i])
     end
     yyy = -vec(X .+ Z .+ χ .+ ζ)
 

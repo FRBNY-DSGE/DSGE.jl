@@ -73,13 +73,6 @@ function eqcond(m::TwoAssetHANK)
 
     KL      = get_setting(m, :KL_0)::Float64
 
-    #--- Taken from what used to be inside
-    a, a_g, a_g_0pos_arr          = create_a_grid(agrid_new, J, J_g, amin, amax)
-    _, _, _, b, b_g, b_g_0pos_arr = create_b_grid(bgrid_new, I, I_g)
-    lambda, y, y_mean, y_dist, _ = create_y_grid(N, ygrid_new)
-    a_g_0pos = first(a_g_0pos_arr)
-    b_g_0pos = first(b_g_0pos_arr)
-
     n_v = get_setting(m, :n_v)::Int64
     n_g = get_setting(m, :n_g)::Int64
     n_p = get_setting(m, :n_p)::Int64
@@ -87,8 +80,18 @@ function eqcond(m::TwoAssetHANK)
     nVars    = get_setting(m, :nVars)::Int64
     nEErrors = get_setting(m, :nEErrors)::Int64
 
-    # vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
-    vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
+    #--- Taken from what used to be inside
+    a, a_g, a_g_0pos_arr          = create_a_grid(agrid_new, J, J_g, amin, amax)
+    _, _, _, b, b_g, b_g_0pos_arr = create_b_grid(bgrid_new, I, I_g)
+    lambda, y, y_mean, y_dist, _  = create_y_grid(N, ygrid_new)
+    a_g_0pos = first(a_g_0pos_arr)
+    b_g_0pos = first(b_g_0pos_arr)
+
+    # Construct problem functions
+    util, deposit, cost = construct_problem_functions(γ, χ0, χ1, χ2, a_lb)
+
+    vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
+    #vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
     V_SS   = vars_SS[1:n_v]
     g_SS   = vars_SS[n_v + 1 : n_v + n_g]
     K_SS   = vars_SS[n_v + n_g + 1]
@@ -107,9 +110,6 @@ function eqcond(m::TwoAssetHANK)
     C_PHTM_SS = distributional_variables_1 ? vars_SS[n_v+n_g+4] : 0.0
 
     aggZ_SS = vars_SS[n_v+n_g+n_p+1] # Aggregate Z
-
-    # Construct problem functions
-    util, deposit, cost = construct_problem_functions(γ, χ0, χ1, χ2, a_lb)
 
     @inline function get_residuals(vars::Vector{T}) where {T<:Real}
 
@@ -273,7 +273,7 @@ function eqcond(m::TwoAssetHANK)
     my_out = vec(DelimitedFiles.readdlm("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/my_residuals.csv", ','))
 
     @show maximum(abs.(my_out - vec(out)))#, length(findall(x->x>1e-5, abs.(my_out - out)))
-    @assert isapprox(my_out, vec(out), rtol=1e-4)
+    #@assert isapprox(my_out, vec(out), rtol=1e-4)
 
     nstates = nVars    # n_states(m)
     n_s_exp = nEErrors # n_shocks_expectational(m)
@@ -298,6 +298,7 @@ function eqcond(m::TwoAssetHANK)
 
     test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/data/eqcond_output_matlab.jld2")
     @assert test_out["g0"] == Γ0
+    @show maximum(abs.(test_out["g1"] - Γ1))
     @assert test_out["g1"] ≈ Γ1
     @assert test_out["psi"] == Ψ
     @assert test_out["pi"] == Π
