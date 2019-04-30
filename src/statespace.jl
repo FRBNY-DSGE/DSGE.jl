@@ -164,7 +164,11 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
         measurement_equation = measurement(m, TTT, RRR, CCC)
     elseif solution_method == :klein
         # Unpacking the method from solve to hang on to TTT_jump
-        TTT_jump, TTT_state, eu, dF2_dRZ, dF2_dWH, dF2_dTT = klein(m)
+        if m.spec == "het_dsge"
+            TTT_jump, TTT_state, eu, dF2_dRZ, dF2_dWH, dF2_dTT = klein(m)
+        else
+            TTT_jump, TTT_state, eu = klein(m)
+        end
         if eu==-1
             throw(KleinError())
         end
@@ -177,10 +181,10 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
             TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
             # Measurement (needs the additional TTT_jump argument)
             measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-        #=elseif m.spec == "het_dsge"
-            C_eqn = construct_consumption_eqn(m, dF2_dRZ, dF2_dWH, dF2_dTT)
+        elseif m.spec == "het_dsge"
+            C_eqn = construct_consumption_eqn(m, TTT_jump, dF2_dRZ, dF2_dWH, dF2_dTT)
             TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, C_eqn)
-            measurement_equation = measurement(m, TTT, RRR, CCC, C_eqn) =#
+            measurement_equation = measurement(m, TTT, RRR, CCC, C_eqn)
         else
             TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC,dF2_dRZ, dF2_dWH, dF2_dTT)
             measurement_equation = measurement(m, TTT, RRR, CCC)

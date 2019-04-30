@@ -136,7 +136,7 @@ function init_model_indices!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{S
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
-    endogenous_states_augmented = [:i_t1, :c_t]
+    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
 
     # Observables
     observables = keys(m.observable_mappings)

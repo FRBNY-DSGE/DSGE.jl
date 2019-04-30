@@ -166,7 +166,7 @@ function HetDSGELag(subspec::String="ss0";
                    testing = false)
 
     # Model-specific specifications
-    spec               = "het_dsge"
+    spec               = "het_dsge_lag"
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()

@@ -21,7 +21,7 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::HetDSGE{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}) where {T<:AbstractFloat}
+                     CCC::Vector{T}, C_eqn) where {T<:AbstractFloat}
     endo      = m.endogenous_states
     endo_new  = m.endogenous_states_augmented
     exo       = m.exogenous_shocks
@@ -63,11 +63,11 @@ function measurement(m::HetDSGE{T},
     ZZ[obs[:obs_nominalrate], first(endo[:R′_t])]       = 1.0
     DD[obs[:obs_nominalrate]]                   = 1 + m[:r] #m[:Rstarn]
 
-   #=  ## Consumption Growth
-    ZZ[obs[:obs_consumption], endo[:c_t]]       = 1.0
+    ## Consumption Growth
+    ZZ[obs[:obs_consumption], endo_new[:c_t]]       = 1.0
     ZZ[obs[:obs_consumption], endo_new[:c_t1]] = -1.0
-    ZZ[obs[:obs_consumption], endo[:z′_t]]       = 1.0
-    DD[obs[:obs_consumption]]                   = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1) =#
+    ZZ[obs[:obs_consumption], first(endo[:z′_t])]       = 1.0
+    DD[obs[:obs_consumption]]                   = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## Investment Growth
     ZZ[obs[:obs_investment], first(endo[:i′_t])]       = 1.0
@@ -81,8 +81,8 @@ function measurement(m::HetDSGE{T},
     EE[obs[:obs_wages],3] = m[:e_w]^2
     EE[obs[:obs_gdpdeflator],4] = m[:e_π]^2
     EE[obs[:obs_nominalrate],5] = m[:e_R]^2
-   # EE[obs[:obs_consumption],6] = m[:e_c]^2
-    EE[obs[:obs_investment],6] = m[:e_i]^2
+    EE[obs[:obs_consumption],6] = m[:e_c]^2
+    EE[obs[:obs_investment],7] = m[:e_i]^2
 
     #Variance of innovations
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
@@ -121,7 +121,12 @@ function construct_consumption_partial(m::AbstractModel, dF2_dRZ, dF2_dWH, dF2_d
     ω = m[:ωstar].value
     ell = m[:lstar].value
     η = m[:η].value
-    xgrid = m.grids[:xgrid].points
+    xgrid::Vector{Float64} = m.grids[:xgrid].points
+    xwts::Vector{Float64}  = m.grids[:xgrid].weights
+    sgrid::Vector{Float64} = m.grids[:sgrid].points
+    swts::Vector{Float64}  = m.grids[:sgrid].weights
+    fgrid::Matrix{Float64} = m.grids[:fgrid]
+    xswts = kron(swts,xwts)
 
     ns = get_setting(m, :ns)
 
@@ -140,25 +145,25 @@ function construct_consumption_partial(m::AbstractModel, dF2_dRZ, dF2_dWH, dF2_d
     return dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT
 end
 
-function construct_consumption_eqn(m::AbstractModel, dF2_dRZ, dF2_dWH, dF2_dTT)
+function construct_consumption_eqn(m::AbstractModel, TTT_jump, dF2_dRZ, dF2_dWH, dF2_dTT)
 
     endo_unnorm = m.endogenous_states_unnormalized
 
     dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT = construct_consumption_partial(m, dF2_dRZ, dF2_dWH, dF2_dTT)
     C_eqn = zeros(n_model_states_unnormalized(m))
-    C_eqn[endo[:l′_t]] = vec(dC_dELL)
-    C_eqn[endo[:kf′_t]] = vec(dC_dKF)
-    C_eqn[endo[:R′_t]] = dC_dR
-    C_eqn[endo[:z′_t]] = dC_dZ
-    C_eqn[endo[:w′_t]] = dC_dW
-    C_eqn[endo[:L′_t]] = dC_dL
-    C_eqn[endo[:t′_t]] = dC_dT
+    C_eqn[endo_unnorm[:l′_t]] = vec(dC_dELL)
+    C_eqn[endo_unnorm[:kf′_t]] = vec(dC_dKF)
+    C_eqn[first(endo_unnorm[:R′_t])] = dC_dR
+    C_eqn[first(endo_unnorm[:z′_t])] = dC_dZ
+    C_eqn[first(endo_unnorm[:w′_t])] = dC_dW
+    C_eqn[first(endo_unnorm[:L′_t])] = dC_dL
+    C_eqn[first(endo_unnorm[:t′_t])] = dC_dT
 
     Qx, Qy, _, _ = compose_normalization_matrices(m)
 
     gx2 = Qy'*TTT_jump*Qx
-    n_backward_looking_states_unnorm = n_backward_looking_states_unnormalized
+    n_backward_looking_states_unnorm = n_backward_looking_states_unnormalized(m)
 
-    C = GDPfun'*[Matrix{Float64}(I, n_bckward_looking_states_unnorm, n_backward_looking_states_unnorm); gx2]*Qx'
+    C = C_eqn'*[Matrix{Float64}(I, n_backward_looking_states_unnorm, n_backward_looking_states_unnorm); gx2]*Qx'
     return C
 end

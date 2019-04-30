@@ -1,6 +1,6 @@
-function augment_states(m::HetDSGE{T}, TTT::Matrix{T}, RRR::Matrix{T},
+function augment_states(m::HetDSGE{T}, TTT::Matrix{T}, TTT_jump, RRR::Matrix{T},
                         CCC::Vector{T}, C_eqn) where {T<:AbstractFloat}
-    endo     = augment_model_states(m.endogenous_states, n_model_states(m))
+    endo     = m.endogenous_states #augment_model_states(m.endogenous_states, n_model_states(m))
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
 
@@ -23,7 +23,8 @@ function augment_states(m::HetDSGE{T}, TTT::Matrix{T}, RRR::Matrix{T},
 
     # Track Lags
     TTT_aug[endo_new[:i_t1], first(endo[:i′_t])] = 1.0
-    #TTT_aug[endo_new[:c_t1], endo_new[:c_t]] = C_eqn
+    TTT_aug[endo_new[:c_t], 1:get_setting(m, :n_backward_looking_states)] = C_eqn
+    TTT_aug[endo_new[:c_t1], endo_new[:c_t]] = 1.0
    #= TTT_aug[endo_new[:i_t1], endo[:i_t]] = 1.0
     TTT_aug[endo_new[:w_t1], endo[:w_t]] = 1.0
     TTT_aug[endo_new[:π_t1], endo[:π_t]] = 1.0
