@@ -68,7 +68,11 @@ function klein(m::AbstractModel)
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of U22*U22'"
-            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
+            if m.spec == "het_dsge"
+                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1, dF2_dRZ, dF2_dWH, dF2_dTT
+            else
+                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
+            end
         else
             rethrow(ex)
         end
@@ -83,7 +87,11 @@ function klein(m::AbstractModel)
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of eye(NK) + gx_coef'*gx_+coef"
-            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
+            if m.spec == "het_dsge"
+                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1, dF2_dRZ, dF2_dWH, dF2_dTT
+            else
+                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
+            end
         else
             rethrow(ex)
         end
