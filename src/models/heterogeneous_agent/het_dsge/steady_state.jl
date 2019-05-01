@@ -32,13 +32,6 @@ function steadystate!(m::HetDSGE;
     βlo_temp = βlo
     βhi_temp = βhi
 
-    if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
-        βlo = βhi = m[:βstar].value
-    elseif !isnan(m[:βstar].value)
-        βlo_temp = m[:βstar].value - βband
-        βhi_temp = m[:βstar].value + βband
-    end
-
     counter = 1
     n  = ns*nx
     c  = zeros(n)
@@ -51,27 +44,34 @@ function steadystate!(m::HetDSGE;
     Win = Vector{Float64}(undef, n)
     Win_guess = ones(n)
 
-    c, bp, Win, KF = policy_hetdsge(nx, ns, βlo_temp, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
-                                    xswts, Win_guess, f)
-    excess_lo, μ = compute_excess(xswts, KF, bp)
+    if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
+        βlo = βhi = m[:βstar].value
+    elseif !isnan(m[:βstar].value)
+        βlo_temp = m[:βstar].value - βband
+        βhi_temp = m[:βstar].value + βband
 
-    if excess_lo < 0 && abs(excess_lo) > tol
-        βlo = βlo_temp
-        c, bp, Win, KF = policy_hetdsge(nx, ns, βhi_temp, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
+        c, bp, Win, KF = policy_hetdsge(nx, ns, βlo_temp, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                         xswts, Win_guess, f)
-        excess_hi, μ = compute_excess(xswts, KF, bp)
+        excess_lo, μ = compute_excess(xswts, KF, bp)
 
-        if excess_hi > 0
-            βhi = βhi_temp
+        if excess_lo < 0 && abs(excess_lo) > tol
+            βlo = βlo_temp
+            c, bp, Win, KF = policy_hetdsge(nx, ns, βhi_temp, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
+                                            xswts, Win_guess, f)
+            excess_hi, μ = compute_excess(xswts, KF, bp)
+
+            if excess_hi > 0
+                βhi = βhi_temp
+            end
+        elseif excess_lo >= 0
+            βhi = βlo_temp
         end
-    elseif excess_lo >= 0
-        βhi = βlo_temp
     end
 
     while abs(excess) > tol && counter < maxit # clearing markets
         β = (βlo + βhi) / 2.0
 
-        @show counter, β, βlo, βhi
+#        @show counter, β, βlo, βhi
         c, bp, Win, KF = policy_hetdsge(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                         xswts, Win_guess, f)
         excess, μ = compute_excess(xswts, KF, bp)
@@ -85,6 +85,9 @@ function steadystate!(m::HetDSGE;
             excess_lo = excess
         end
         counter += 1
+        if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
+            break
+        end
     end
 
     m[:lstar] = Win
