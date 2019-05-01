@@ -53,13 +53,13 @@ function steadystate!(m::HetDSGE;
 
     c, bp, Win, KF = policy_hetdsge(nx, ns, βlo_temp, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                     xswts, Win_guess, f)
-    excess_lo = compute_excess(xswts, KF, bp)
+    excess_lo, μ = compute_excess(xswts, KF, bp)
 
     if excess_lo < 0 && abs(excess_lo) > tol
         βlo = βlo_temp
         c, bp, Win, KF = policy_hetdsge(nx, ns, βhi_temp, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                         xswts, Win_guess, f)
-        excess_hi = compute_excess(xswts, KF, bp)
+        excess_hi, μ = compute_excess(xswts, KF, bp)
 
         if excess_hi > 0
             βhi = βhi_temp
@@ -71,10 +71,10 @@ function steadystate!(m::HetDSGE;
     while abs(excess) > tol && counter < maxit # clearing markets
         β = (βlo + βhi) / 2.0
 
-        @show β, βlo, βhi
+        @show counter, β, βlo, βhi
         c, bp, Win, KF = policy_hetdsge(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                         xswts, Win_guess, f)
-        excess = compute_excess(xswts, KF, bp)
+        excess, μ = compute_excess(xswts, KF, bp)
 
         # bisection
         if excess > 0
@@ -111,7 +111,7 @@ end
     μ = μ ./ dot(xswts, μ) # Scale of eigenvectors not determinate: rescale to integrate to 1
     excess = dot(xswts, (μ .* bp)) # compute excess supply of savings, which is a fn of w
 
-    return excess
+    return excess, μ
 end
 
 function policy_hetdsge(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
