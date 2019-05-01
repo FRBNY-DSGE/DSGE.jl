@@ -298,6 +298,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                 write(file, "w", w_matrix)
                 write(file, "W", W_matrix)
             end
+            aaa
         end
     end
 

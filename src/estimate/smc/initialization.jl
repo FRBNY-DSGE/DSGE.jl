@@ -59,7 +59,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             while !success
                 try
                     update!(m, draws[:, i])
-                @show draws[:, i]
+                    @show draws[:, i]
                     loglh[i] = likelihood(m, data, catch_errors = true,
                                           use_chand_recursion = use_chand_recursion, verbose = verbose)
                     logpost[i] = prior(m)
