@@ -125,14 +125,14 @@ function init_model_indices!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{S
     exogenous_shocks = collect([:b_sh,:g_sh,:z_sh,:μ_sh,:λ_w_sh, :λ_f_sh,:rm_sh])
 
     # Equilibrium conditions
-    equilibrium_conditions = collect([:eq_euler,:eq_kolmogorov_fwd,
+    equilibrium_conditions = collect([:eqeuler,:eq_kolmogorov_fwd,
                                       :eq_market_clearing,:eq_lambda, :eq_transfers,
                                       :eq_investment,:eq_tobin_q,:eq_capital_accumulation,
                                       :eq_wage_phillips,:eq_price_phillips,:eq_marginal_cost,
                                       :eq_gdp,:eq_optimal_kl,:eq_taylor, :eq_fisher,
                                       :eq_nominal_wage_inflation,:LR,:LI,:LY,
                                       :LW,:LX,:eq_b,:eq_g,:eq_z,:eq_μ,:eq_λ_w,
-                                      :eq_λ_f, :eq_rm])
+                                      :eq_λ_f, :eq_rm]) #, :eq_consumption])
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -153,7 +153,7 @@ function init_model_indices!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{S
     m.normalized_model_states = [:kf′_t]
 
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
-    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
+    #for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(get_setting(m, :state_indices)) end #length(endogenous_states) end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
@@ -207,16 +207,19 @@ function HetDSGE(subspec::String="ss0";
 
     # Endogenous states
     states = collect([:kf′_t,:k′_t, :R′_t1,:i′_t1, :y′_t1,:w′_t1,:I′_t1,
-                      :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t])
+                      :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t]) #, :c′_t1])
 
     jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:mu′_t,:y′_t, :I′_t,
-                      :mc′_t,:Q′_t,:capreturn′_t])
+                      :mc′_t,:Q′_t,:capreturn′_t]) #, :c′_t])
 
     # Initialize model indices
     init_model_indices!(m, states, jumps)
 
     # Init stuff that keeps track of number of states and jumps and states/jump indices (requires model indices first)
     init_states_and_jumps!(m, states, jumps)
+
+    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(get_setting(m, :state_indices)) end #length(endogenous_states) end
 
     # Initialize parameters
     init_parameters!(m)
@@ -581,6 +584,7 @@ function setup_indices!(m::HetDSGE)
     endo[:λ_w′_t] = nxns+11:nxns+11        # wage markup
     endo[:λ_f′_t] = nxns+12:nxns+12        # price markup
     endo[:rm′_t]  = nxns+13:nxns+13        # monetary policy shock
+    #endo[:c′_t1]  = nxns+14:nxns+14        # lagged consumption
 
     # function-valued jumps
     endo[:l′_t]  = nxns+14:2*nxns+13 # ell function
@@ -599,6 +603,7 @@ function setup_indices!(m::HetDSGE)
     endo[:mc′_t] = 2*nxns+24:2*nxns+24        # marginal cost - this is ζ in HetDSGEₖd.pdf
     endo[:Q′_t]  = 2*nxns+25:2*nxns+25        # Tobin's qfunction
     endo[:capreturn′_t] = 2*nxns+26:2*nxns+26        # return on capital
+    #endo[:c′_t] = 2*nxns+27:2*nxns+27        # consumption
 
     nvars = 2*nxns+26
     nscalars = 26 # num eqs which output scalars
@@ -648,6 +653,7 @@ funops = 1:2 # which operators output a function
     eqconds[:eq_λ_w] = 2*nxns+24:2*nxns+24 # wage mkup LAMW
     eqconds[:eq_λ_f] = 2*nxns+25:2*nxns+25 # price mkup LAMF
     eqconds[:eq_rm] = 2*nxns+26:2*nxns+26 # monetary policy MON
+    #eqconds[:eq_consumption] = 2*nxns+27:2*nxns+27 # monetary policy MON
 
     # Total grid x*s
     m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying

@@ -259,6 +259,15 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_rm]),first(endo[:rm′_t])] = 1.
     JJ[first(eq[:eq_rm]),first(endo[:rm_t])]  = -ρ_mon
 
+    #consumption
+    #=JJ[first(eq[:eq_consumption]), endo[:l_t]] = (μ .*unc.*xswts.*c)'
+    JJ[first(eq[:eq_consumption]), endo[:kf_t]] = -(xswts.*c)' # note, now we linearize
+    JJ[first(eq[:eq_consumption]),first(endo[:R_t])]   = -(xswts.*c)'*dF2_dRZ
+    JJ[first(eq[:eq_consumption]),first(endo[:z_t])]   = (xswts.*c)'*dF2_dRZ
+    JJ[first(eq[:eq_consumption]),first(endo[:w_t])]   = -(xswts.*c)'*dF2_dWH
+    JJ[first(eq[:eq_consumption]),first(endo[:L_t])]   = -(xswts.*c)'*dF2_dWH
+    JJ[first(eq[:eq_consumption]),first(endo[:t_t])]   = -(xswts.*c)'*dF2_dTT=#
+
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
     end
