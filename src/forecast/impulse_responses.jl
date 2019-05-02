@@ -25,10 +25,33 @@ where `S<:AbstractFloat`
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
   pseudo-observable impulse response functions
 """
-function impulse_responses(m::AbstractModel, system::System{S};
+function impulse_responses(m::AbstractRepModel, system::System{S};
                            flip_shocks::Bool = false) where {S<:AbstractFloat}
     horizon = impulse_response_horizons(m)
-    impulse_responses(system, horizon, flip_shocks = flip_shocks)
+    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+    return states, obs, pseudo
+end
+
+function impulse_responses(m::AbstractHetModel, system::System{S};
+                           flip_shocks::Bool = false) where {S<:AbstractFloat}
+    @show "het model"
+    horizon = impulse_response_horizons(m)
+    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+    Qx, Qy, _, _ = DSGE.compose_normalization_matrices(m)
+
+    # In this case, the length of state_indices and jump_indices seems to give the number of UNNORMALIZED states/jumps however I'm not sure if this will always be the case/if this is really what we want saved into these settings...so might need to modify in future.
+    states_unnormalized = Array{Float64}(length(get_setting(m, :state_indices)), horizon, size(states, 3))
+    jumps_unnormalized = Array{Float64}(length(get_setting(m, :jump_indices)), horizon, size(states, 3))
+    model_states_unnormalized = Array{Float64}(length(get_setting(m, :state_indices)) + length(get_setting(m, :jump_indices)), horizon, size(states, 3))
+    for i in 1:size(states, 3)
+        state_inds = 1:n_backward_looking_states(m)
+        states_unnormalized[:, :, i] = Matrix(Qx')*states[state_inds, :, i]
+        jump_inds = n_backward_looking_states(m)+1:n_backward_looking_states(m) + n_jumps(m)
+        jumps_unnormalized[:, :, i] = Matrix(Qy')*states[jump_inds, :, i]
+        @show size(vcat(states_unnormalized[:, :, i], jumps_unnormalized[:, :, i]))
+        model_states_unnormalized[:, :, i] = vcat(states_unnormalized[:, :, i], jumps_unnormalized[:, :, i])
+    end
+    return model_states_unnormalized, obs, pseudo
 end
 
 function impulse_responses(system::System{S}, horizon::Int;
