@@ -8,6 +8,7 @@ import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_state
 check_steady_state = true
 check_jacobian = true
 check_solution = true
+check_irfs = true
 
 path = dirname(@__FILE__)
 
@@ -435,5 +436,60 @@ if check_solution
     @testset "Check solve outputs" begin
         @test saved_gx  ≈ gx
         @test saved_hx  ≈ hx
+    end
+end
+
+if check_irfs
+
+    file = jldopen("$path/reference/irfs.jld2", "r")
+
+    IRFkf = read(file, "IRFkf")
+    IRFZ = read(file, "IRFZ")
+    IRFsh = read(file, "IRFsh")
+    IRFell = read(file, "IRFell")
+    IRFR = read(file, "IRFR")
+    IRFi = read(file, "IRFi")
+    IRFW = read(file, "IRFW")
+    IRFPI = read(file, "IRFPI")
+    IRFT = read(file, "IRFT")
+    IRFY = read(file, "IRFY")
+    IRFPIW = read(file, "IRFPIW")
+    IRFX = read(file, "IRFX")
+    IRFK = read(file, "IRFK")
+    IRFQ = read(file, "IRFQ")
+    IRFRK = read(file, "IRFRK")
+    IRFH = read(file, "IRFH")
+    IRFc = read(file, "IRFc")
+    IRFC = read(file, "IRFC")
+    IRFMC = read(file, "IRFMC")
+    IRFLAM = read(file, "IRFLAM")
+    IRFm = read(file, "IRFm")
+    close(file)
+
+    sys = compute_system(m)
+    states, obs, pseudo = impulse_responses(m, sys)
+    endo = m.endogenous_states_unnormalized
+
+    @testset "Check IRFs" begin
+        #Last entry is 3 because it's the third shock, the Z shock
+        @test IRFkf ≈ states[endo[:kf′_t], 1:20, 3]
+        @test IRFsh ≈ vec(states[endo[:z′_t], 1:20, 3])
+        @test IRFell ≈ states[endo[:l′_t], 1:20, 3]
+        @test IRFR ≈ vec(states[endo[:R′_t], 1:20, 3])
+        @test IRFi ≈ vec(states[endo[:i′_t], 1:20, 3])
+        @test IRFW ≈ vec(states[endo[:w′_t], 1:20, 3])
+        @test IRFPI ≈ vec(states[endo[:π′_t], 1:20, 3])
+        @test IRFT ≈ vec(states[endo[:t′_t], 1:20, 3])
+        @test IRFY ≈ vec(states[endo[:y′_t], 1:20, 3])
+        @test IRFPIW ≈ vec(states[endo[:π_w′_t], 1:20, 3])
+        @test IRFX ≈ vec(states[endo[:I′_t], 1:20, 3])
+        @test IRFK ≈ vec(states[endo[:k′_t], 1:20, 3])
+        @test IRFQ ≈ vec(states[endo[:Q′_t], 1:20, 3])
+        @test IRFRK ≈ vec(states[endo[:capreturn′_t], 1:20, 3])
+        @test IRFH ≈ vec(states[endo[:L′_t], 1:20, 3])
+        #@test IRFC ≈ vec(obs[m.observables[:obs_consumption], 1:20, 3])
+        @test IRFMC ≈ vec(states[endo[:mc′_t], 1:20, 3])
+        @test IRFLAM ≈ vec(states[endo[:mu′_t], 1:20, 3])
+        #@test IRFm ≈ vec(states[endo[:mu′_t], 1:20, 3])
     end
 end
