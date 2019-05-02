@@ -7,7 +7,7 @@ pc0_target      = 0.10 # fraction with zero bond holdings
 # parameters: pLH, pHL, zlo, sH/sL. We normalize so s and z both have mean 1.
 
 using Distributions
-using PyPlot
+#using PyPlot
 using Roots
 using JLD
 
@@ -73,14 +73,21 @@ function ssample(us::Array{Float64,2}, P::Array{Float64,2}, πss::AbstractArray,
 end
 
 function ln_annual_inc(zhist::Array{Float64,2}, us::Array{Float64,2}, zlo::AbstractFloat, P::Array{Float64,2}, πss::AbstractArray, sgrid::AbstractArray, ni::Int)
-	s_inds = ssample(us,P,πss,ni)
+  	s_inds = ssample(us,P,πss,ni)
 	linc1 = zeros(ni)
 	linc2 = zeros(ni)
 	for i=1:ni
 		inc1 = 0.
 		for t=1:4
+#            @show zhist[i, t]-1
+#            @show zlo
+#            @show sgrid[1]
+#            @show sgrid[2]
+#            @show s_inds[i,t]-1
 			zshock = 1. + (1. - zlo)*(zhist[i,t]-1.)
 			sshock = (sgrid[1] + (sgrid[2] - sgrid[1])*(s_inds[i,t] - 1.))
+#            @show zshock
+#            @show sshock
 			inc1 += zshock*sshock
 		end
 		inc2 = 0.
@@ -90,7 +97,7 @@ function ln_annual_inc(zhist::Array{Float64,2}, us::Array{Float64,2}, zlo::Abstr
 			inc2 += zshock*sshock
 		end
 		linc1[i] += log(inc1)
-		linc2[i] += log(inc2)
+     	linc2[i] += log(inc2)
 	end
 	return (linc1, linc2)
 end
@@ -102,6 +109,7 @@ function skill_moments(sH_by_sL::Real, zlo::Real, pLH::AbstractFloat, pHL::Abstr
 	slo = 1./(πL+(1-πL)*sH_by_sL)
 	shi = sH_by_sL*slo
 	sgrid = [slo; shi]
+    @show zlo
 	(linc1, linc2) = ln_annual_inc(zs,us,zlo,P,πss,sgrid,ni)
 	return (var(linc1), var(linc2 - linc1))
 end
@@ -166,13 +174,13 @@ function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::Abstra
 end
 
 loss(x::Vector{Float64}, target::Vector{Float64}) = sum(abs.(x-target))
-function grad(f, x::Vector{Float64}, h::Float64 = 0.001)
+function grad(f, x::Matrix{Float64}, h::Float64 = 0.001)
     N = length(x)
-    ∇fx = Vector{Float64}(undef, N)
-    fx = f(x)
+    ∇fx = Matrix{Float64}(undef, N, 2)
+    fx = [i for i in f(x)]
     for i=1:N
         x[i]  += h
-        ∇fx[i] = (f(x) - fx) / h
+        ∇fx[i, :] = ([i for i in f(x)] - fx) / h
         x[i]  -= h
     end
     return ∇fx, fx
@@ -184,14 +192,16 @@ function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::Abstra
     min_dist     = 20.0
 
     α0 = α
-    w  = initial_guess
+    w  = initial_guess #'; initial_guess']
+#    @show w
     iter_w_no_improv = 0
 
+    @show w[2]
     skill_moments_f(x) = skill_moments(x[1], x[2], pLH, pHL, zs, us)
 
     while iter_w_no_improv < max_iter
         ∇fx, fx = grad(skill_moments_f, w)
-
+        target = [varlinc_target; vardlinc_target]
         dist = loss(fx, target)
         if dist < min_dist
             min_dist = dist
@@ -202,7 +212,8 @@ function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::Abstra
             iter_w_no_improv += 1
             α0 *= 0.9
         end
-
+        #is the solution just to return the derivative from \grad fx?
+#        @show -η*∇fx
         w += -η*∇fx
 
         if w[1] < sH_by_sL_lo
