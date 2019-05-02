@@ -167,7 +167,7 @@ function jacobian(m::HetDSGE)
     JJ[first(eq[:eq_wage_phillips]),first(endo[:λ_w_t])] = 1. #(ϕ*H^ϕh)/Φw
     JJ[first(eq[:eq_wage_phillips]),first(endo[:L_t])]   = κ_w*ϕh #(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)*ϕh
     JJ[first(eq[:eq_wage_phillips]),first(endo[:mu_t])]  = -κ_w #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
-    JJ[first(eq[:eq_wage_phillips]),first(endo[:w_t])]    = -1. #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
+    JJ[first(eq[:eq_wage_phillips]),first(endo[:w_t])]    = -κ_w #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
     JJ[first(eq[:eq_wage_phillips]),first(endo[:π_w′_t])]  = β
 
     # price phillips curve
@@ -438,5 +438,12 @@ function truncate_distribution!(m::HetDSGE)
         setup_indices!(m)
 
         init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
+
+        normalize_model_state_indices!(m)
+
+        endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+        for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
+
+
     end
 end
