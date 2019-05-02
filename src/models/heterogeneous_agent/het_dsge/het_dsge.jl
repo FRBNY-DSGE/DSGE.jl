@@ -2,7 +2,7 @@ import DataStructures: OrderedDict
 
 """
 ```
-HetDSGE{T} <: AbstractModel{T}
+HetDSGE{T} <: AbstractHeterogeneousModel{T}
 ```
 
 ### Fields
@@ -69,7 +69,7 @@ equilibrium conditions.
   user. See `load_data` and `Observable` for further details.
 
 """
-mutable struct HetDSGE{T} <: AbstractModel{T}
+mutable struct HetDSGE{T} <: AbstractHetModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
 
@@ -219,7 +219,7 @@ function HetDSGE(subspec::String="ss0";
     init_states_and_jumps!(m, states, jumps)
 
     endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
-    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(get_setting(m, :state_indices)) end #length(endogenous_states) end
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
 
     # Initialize parameters
     init_parameters!(m)
