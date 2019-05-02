@@ -248,6 +248,25 @@ n_shocks_expectational(m::AbstractCTModel) = sum(map(i -> length(collect(m.expec
 
 """
 ```
+AbstractHetModel{T} <: AbstractModel{T}
+```
+
+The AbstractHetModel is defined as a subtype of AbstractModel to accomodate a bunch of stuff, but for now just different impulse response functions.
+"""
+abstract type AbstractHetModel{T} <: AbstractModel{T} end
+
+"""
+```
+AbstractRepModel{T} <: AbstractModel{T}
+```
+
+The AbstractRepresentativeModel is defined as a subtype of AbstractModel to accomodate a bunch of stuff, but for now just different impulse response functions.
+"""
+abstract type AbstractRepModel{T} <: AbstractModel{T} end
+
+
+"""
+```
 get_dict(m, class, index)
 ```
 """
