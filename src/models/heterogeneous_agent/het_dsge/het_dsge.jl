@@ -392,6 +392,8 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:e_c, 0.0, fixed = true, description = "e_c: Measurement error on consumption", tex_label = "e_c")
     m <= parameter(:e_i, 0.0, fixed = true, description = "e_i: Measurement error on investment", tex_label = "e_i")
 
+    m <= parameter(:β_save, NaN, fixed = true, description = "saving the betas per particle")
+
 
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
