@@ -490,7 +490,7 @@ function init_grids!(m::HetDSGEGovDebt)
         xlo_ss = ω*smin*H - (1+r)*η*e^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
 
         xlo = xlo_ss                    # lower bound on cash on hand - could be < xlo_ss
-        xhi = max(xlo*2,xlo+5.)                      # upper bound on cash on hand
+        xhi = max(xlo*2,xlo+8.)                      # upper bound on cash on hand
         xscale = (xhi-xlo)              # size of w grids
 
         # make grids
