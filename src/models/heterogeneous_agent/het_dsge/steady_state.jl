@@ -95,6 +95,8 @@ function steadystate!(m::HetDSGE;
     m[:μstar] = μ
     m[:βstar] = β
 
+    m[:β_save] = β
+
     #return Win, c, μ, β
     nothing
 end
