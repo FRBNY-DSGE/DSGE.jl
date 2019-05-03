@@ -34,10 +34,13 @@ function estimate(m::AbstractModel, df::DataFrame;
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
                   sampling::Bool = true,
-                  filestring_addl::Vector{String} = Vector{String}(), save_intermediate::Bool = false)
+                  filestring_addl::Vector{String} = Vector{String}(),
+                  intermediate_stage_increment::Int = 10,
+                  save_intermediate::Bool = false)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
+             intermediate_stage_increment = intermediate_stage_increment,
              save_intermediate = save_intermediate)
 end
 
@@ -47,12 +50,14 @@ function estimate(m::AbstractModel;
                   mle::Bool = false,
                   sampling::Bool = true,
                   filestring_addl::Vector{String} = Vector{String}(),
-		  save_intermediate::Bool = false)
+                  intermediate_stage_increment::Int = 10,
+		          save_intermediate::Bool = false)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
-	     save_intermediate = save_intermediate)
+             intermediate_stage_increment = intermediate_stage_increment,
+	         save_intermediate = save_intermediate)
 end
 
 function estimate(m::AbstractModel, data::AbstractArray;
@@ -61,7 +66,8 @@ function estimate(m::AbstractModel, data::AbstractArray;
                   mle::Bool = false,
                   sampling::Bool = true,
                   filestring_addl::Vector{String} = Vector{String}(),
-		  save_intermediate::Bool = false)
+                  intermediate_stage_increment::Int = 10,
+		          save_intermediate::Bool = false)
 
     if !(get_setting(m, :sampling_method) in [:SMC,:MH])
         error("method must be :SMC or :MH")
@@ -212,7 +218,9 @@ function estimate(m::AbstractModel, data::AbstractArray;
         ### of the posterior. Portions of this method are executed in
         ### parallel.
         ########################################################################################
-        smc(m, data; verbose = verbose, filestring_addl = filestring_addl)
+        smc(m, data; verbose = verbose, filestring_addl = filestring_addl,
+            save_intermediate = save_intermediate,
+            intermediate_stage_increment = intermediate_stage_increment)
     end
 
     ########################################################################################
