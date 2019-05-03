@@ -10,6 +10,7 @@ using Distributions
 #using PyPlot
 using Roots
 using JLD
+using Optim
 
 function mollifier(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
     # mollifier function
@@ -109,7 +110,6 @@ function skill_moments(sH_by_sL::Real, zlo::Real, pLH::AbstractFloat, pHL::Abstr
 	slo = 1./(πL+(1-πL)*sH_by_sL)
 	shi = sH_by_sL*slo
 	sgrid = [slo; shi]
-    @show zlo
 	(linc1, linc2) = ln_annual_inc(zs,us,zlo,P,πss,sgrid,ni)
 	return (var(linc1), var(linc2 - linc1))
 end
@@ -166,7 +166,6 @@ function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::Abstra
 			dist[i] = abs(varlinc[i] - varlinc_target) + abs(vardlinc[i] - vardlinc_target)
 		end
 	end
-    print(dist)
 	(mindist,imin) = findmin(dist)
 	i2 = mod(imin-1,n2)+1
 	i1 = Int((imin-i2)/n2 + 1)
@@ -174,61 +173,21 @@ function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::Abstra
 end
 
 loss(x::Vector{Float64}, target::Vector{Float64}) = sum(abs.(x-target))
-function grad(f, x::Matrix{Float64}, h::Float64 = 0.001)
-    N = length(x)
-    ∇fx = Matrix{Float64}(undef, N, 2)
-    fx = [i for i in f(x)]
-    for i=1:N
-        x[i]  += h
-        ∇fx[i, :] = ([i for i in f(x)] - fx) / h
-        x[i]  -= h
-    end
-    return ∇fx, fx
-end
-function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::AbstractFloat, vardlinc_target::AbstractFloat, sH_by_sL_lo::AbstractFloat, zlo_lo::AbstractFloat,
-                  zlo_hi::AbstractFloat, us::Array{Float64,2}, max_iter::Int = 50, initial_guess::Vector{Float64} = [6.3, 0.03], α::AbstractFloat=0.001, η::AbstractFloat = 0.1)
-	min_varlinc  = 0.0
-	min_vardlinc = 0.0
-    min_dist     = 20.0
 
-    α0 = α
-    w  = initial_guess #'; initial_guess']
-#    @show w
-    iter_w_no_improv = 0
+function best_fit(pLH::T, pHL::T, target::Vector{T},
+                  lower::Vector{T}, upper::Vector{T}, us::Array{Float64,2},
+                  max_iter::Int = 5, initial_guess::Vector{Float64} = [6.3, 0.03]) where T<:AbstractFloat
 
-    @show w[2]
-    skill_moments_f(x) = skill_moments(x[1], x[2], pLH, pHL, zs, us)
+    skill_moments_f(x) = loss(collect(skill_moments(x[1], x[2], pLH, pHL, zs, us)), target)
 
-    while iter_w_no_improv < max_iter
-        ∇fx, fx = grad(skill_moments_f, w)
-        target = [varlinc_target; vardlinc_target]
-        dist = loss(fx, target)
-        if dist < min_dist
-            min_dist = dist
-            min_varlinc, min_vardlinc = fx[1], fx[2]
-            iter_w_no_improv = 0
-            α0 = α
-        else
-            iter_w_no_improv += 1
-            α0 *= 0.9
-        end
-        #is the solution just to return the derivative from \grad fx?
-#        @show -η*∇fx
-        w += -η*∇fx
+    res = optimize(skill_moments_f, lower, upper, initial_guess, Fminbox(NelderMead()), Optim.Options(f_calls_limit = 300))
+    println(res)
 
-        if w[1] < sH_by_sL_lo
-            w[1] = sH_by_sL_lo
-        end
-        if w[2] < zlo_lo
-            w[2] = zlo_lo
-        elseif w[2] > zlo_hi
-            w[2] = zlo_hi
-        end
-    end
-    sH_by_sL_argmin = w[1]
-    zlo_argmin = w[2]
-    print(min_dist)
-
+    sH_by_sL_argmin, zlo_argmin = Optim.minimizer(res)
+    min_varlinc, min_vardlinc = skill_moments(sH_by_sL_argmin, zlo_argmin, pLH, pHL, zs, us)
+    println("(NEW) Minimum loss for pLH = ", pLH, ", pHL = ", pHL, ": ", Optim.minimum(res))
+    println("sH_by_sL_argmin = ", sH_by_sL_argmin, ", zlo_argmin = ", zlo_argmin)
+    println("min_varlinc = ", min_varlinc, ", min_vardlinc = ", min_vardlinc)
 	return (sH_by_sL_argmin, zlo_argmin, min_varlinc, min_vardlinc)
 end
 
@@ -265,14 +224,19 @@ pc0_grid  = zeros(nn)
 # RECA
 sH_by_sL_lo = 3.0
 sH_by_sL_hi = 9.0
-zlo_lo      = 0.+eps()
-zlo_hi      =  0.8-eps()
-@show "1=============================================================="
+zlo_lo      = 1e-18
+zlo_hi      = 0.8-eps()
+
+lower = [sH_by_sL_lo, zlo_lo]
+upper = [sH_by_sL_hi, zlo_hi]
+target = [varlinc_target, vardlinc_target]
+
 for iLH = 1:nLH
 	for iHL = 1:nHL
 		i = nHL*(iLH-1)+iHL
-        @time out = best_fit(pLH_grid[iLH], pHL_grid[iHL], varlinc_target, vardlinc_target, sH_by_sL_lo, zlo_lo, zlo_hi, us)
-@show "2=============================================================="
+
+        @time out = best_fit(pLH_grid[iLH], pHL_grid[iHL], target, lower, upper, us)
+        @show "Old Method"
 		@time (sH_by_sL_grid2[i], zlo_grid2[i], varlinc_grid[i], vardlinc_grid[i]) = best_fit(pLH_grid[iLH],pHL_grid[iHL],varlinc_target,vardlinc_target,sH_by_sL_grid, zlo_grid,np,np,zs,us)
 		(f, sgrid, swts) = persistent_skill_process(sH_by_sL_grid2[i], pLH_grid[iLH], pHL_grid[iHL], ns)
 		(agrid, awts) = cash_grid(sgrid, ω, H, r, η, γ, T, zlo, na)
