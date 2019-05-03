@@ -115,7 +115,7 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
                     tol::Float64 = 0.0,
                     verbose::Symbol = :high) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
-    use_penalty  =  get_setting(m, :use_penalty)
+    use_penalty  = get_setting(m, :use_penalty)
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if sampler
@@ -128,7 +128,7 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
     end
 
     # Likelihood penalties
-    ψ, penalty = 0.0, 1.0
+    ψ, penalty = 1.0, 0.0
     if use_penalty
         ψ           = get_setting(m, :ψ_likelihood)
         σt          = get_setting(m, :σt_penalty)
