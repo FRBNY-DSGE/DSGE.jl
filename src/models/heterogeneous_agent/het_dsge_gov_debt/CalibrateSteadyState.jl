@@ -249,3 +249,9 @@ for iLH = 1:nLH
 		pc0_grid[i] = frac_zero(m,c,agrid,aswts,ns)
 	end
 end
+
+
+m[:sH_by_sL_lo] = sH_by_sL_lo
+m[:sH_by_sL_hi] = sH_by_sL_hi
+zlo_lo      = 1e-18
+zlo_hi      = 0.8-eps()
