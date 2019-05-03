@@ -128,7 +128,8 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
     end
 
     # Likelihood penalties
-    ψ, penalty = 0.0, 1.0
+    ψ       = 1.
+    penalty = 0.
     if use_penalty
         ψ           = get_setting(m, :ψ_likelihood)
         σt          = get_setting(m, :σt_penalty)
@@ -160,7 +161,7 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
         if use_chand_recursion==false
             return ψ*sum(filter_likelihood(m, data, system;
                                            include_presample = false, tol = tol)) +
-                                               (1-ψ)*penalty
+                                           (1-ψ)*penalty
         else
             return ψ*chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
                                    system[:QQ], system[:ZZ], system[:DD], system[:EE];
