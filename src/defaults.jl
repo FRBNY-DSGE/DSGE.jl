@@ -149,6 +149,7 @@ function default_settings!(m::AbstractModel)
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
     settings[:resampler_smc] = Setting(:resampler_smc, :multinomial, "Which resampling method to use in SMC")
     settings[:mixture_proportion] = Setting(:mixture_proportion, 1., "The mixture proportion for the mutation step's proposal distribution")
+    settings[:use_penalty] = Setting(:use_penalty, false, "Whether or not to additionally include a penalty function in the likelihood evaluation")
 
     # Endogenous ϕ Schedule
     settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
