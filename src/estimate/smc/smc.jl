@@ -56,7 +56,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
              old_cloud::ParticleCloud = ParticleCloud(m, 0),
              recompute_transition_equation::Bool = true, run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
-	     save_intermediate::Bool = false)
+             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
     ########################################################################################
     ### Setting Parameters
     ##################################################################################
@@ -292,7 +292,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         if run_test && (i == 3)
             break
         end
-        if mod(cloud.stage_index,2)==0 && save_intermediate
+        if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
             jldopen(rawpath(m, "estimate", "smc_cloud_$(cloud.stage_index).jld2"), "w") do file
                 write(file, "cloud", cloud)
                 write(file, "w", w_matrix)
@@ -323,14 +323,15 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 end
 
 function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
-             save_intermediate::Bool = false,
+             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
     return smc(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
                filestring_addl = filestring_addl)
 end
 
-function smc(m::AbstractModel; verbose::Symbol=:low, save_intermediate::Bool = false,
+function smc(m::AbstractModel; verbose::Symbol=:low,
+             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
