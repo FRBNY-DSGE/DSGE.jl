@@ -82,7 +82,7 @@ function estimate(m::AbstractModel, data::AbstractArray;
     # Specify starting mode
 
     vint = get_setting(m, :data_vintage)
-    if reoptimize(m)
+    if reoptimize(m) && method == :MH
         println("Reoptimizing...")
 
         # Inputs to optimization algorithm
