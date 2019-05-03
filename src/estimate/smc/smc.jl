@@ -292,7 +292,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         if run_test && (i == 3)
             break
         end
-        if mod(cloud.stage_index, 10)==0 && save_intermediate
+        if mod(cloud.stage_index,2)==0 && save_intermediate
             jldopen(rawpath(m, "estimate", "smc_cloud_$(cloud.stage_index).jld2"), "w") do file
                 write(file, "cloud", cloud)
                 write(file, "w", w_matrix)
