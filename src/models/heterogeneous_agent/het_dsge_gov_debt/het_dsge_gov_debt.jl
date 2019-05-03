@@ -395,9 +395,9 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     m <= parameter(:β_save, NaN, fixed = true, description = "saving the betas per particle")
 
-    m <= parameter(:sH_over_sL, 1.2/0.8, fixed = true, description = "???")
-    m <= parameter(:pLH, 0.1, fixed = true, description = "prob of going from low to high persistent skill")
-    m <= parameter(:pHL, 0.1, fixed = true, description = "prob of going from ")
+    m <= parameter(:sH_over_sL, 7.18182, fixed = true, description = "???") #1.2/0.8
+    m <= parameter(:pLH, 0.01, fixed = true, description = "prob of going from low to high persistent skill")
+    m <= parameter(:pHL, 0.0325, fixed = true, description = "prob of going from ")
     m <= parameter(:BoverY, 0.26, fixed = true, description = "???")
     m <= parameter(:δb, 1., fixed = true, description = "=1 means balanced budget")
 
@@ -490,7 +490,7 @@ function init_grids!(m::HetDSGEGovDebt)
         xlo_ss = ω*smin*H - (1+r)*η*e^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
 
         xlo = xlo_ss                    # lower bound on cash on hand - could be < xlo_ss
-        xhi = max(xlo*2,xlo+8.)                      # upper bound on cash on hand
+        xhi = max(xlo*2,xlo+12.)                      # upper bound on cash on hand
         xscale = (xhi-xlo)              # size of w grids
 
         # make grids
@@ -571,7 +571,7 @@ function model_settings!(m::HetDSGEGovDebt)
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
-    m <= Setting(:zlo, 1/3, "Lower bound on second income shock to mollify actual income")
+    m <= Setting(:zlo, .145455, "Lower bound on second income shock to mollify actual income") #1/3
     m <= Setting(:zhi, 2-get_setting(m, :zlo), "Upper bound on second income shock to mollify actual income")
 
     # s: Skill Distribution/ "Units of effective labor" Grid Setup
