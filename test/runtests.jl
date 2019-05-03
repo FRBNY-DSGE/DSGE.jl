@@ -1,6 +1,7 @@
 using DSGE, JLD2, Distributions, PDMats, DataStructures, OrderedCollections, FileIO, Test, DataFrames, Dates, Nullables, Plots, Distributed, DelimitedFiles, Random
 
 my_tests = [
+            "models/heterogeneous_agent/het_dsge_gov_debt/het_dsge_gov_debt",
 #           "models/heterogeneous_agent/het_dsge_simple_taylor/het_dsge_simple_taylor",
            "models/heterogeneous_agent/het_dsge/het_dsge",
            #"models/heterogeneous_agent/het_dsge_lag/het_dsge_lag",
