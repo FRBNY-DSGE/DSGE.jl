@@ -48,7 +48,6 @@ function impulse_responses(m::AbstractHetModel, system::System{S};
         states_unnormalized[:, :, i] = Matrix(Qx')*states[state_inds, :, i]
         jump_inds = n_backward_looking_states(m)+1:n_backward_looking_states(m) + n_jumps(m)
         jumps_unnormalized[:, :, i] = Matrix(Qy')*states[jump_inds, :, i]
-        @show size(vcat(states_unnormalized[:, :, i], jumps_unnormalized[:, :, i]))
         model_states_unnormalized[:, :, i] = vcat(states_unnormalized[:, :, i], jumps_unnormalized[:, :, i])
     end
     return model_states_unnormalized, obs, pseudo
