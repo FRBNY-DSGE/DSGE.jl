@@ -86,52 +86,6 @@ function posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractAr
 
 end
 
-
-"""
-```
-likelihood(m::AbstractModel, data::Matrix{T};
-           sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
-```
-
-Evaluate the DSGE likelihood function; wrapper accomodates when one might wish to assign
-a "likelihood penalty" - in the case that ψ is 1, we call our standard likelihood function,
-and in the case ψ < 1, we weight it with a penalty function.
-
-### Arguments
-
-- `m`: The model object
-- `data`: matrix of data for observables
-- `ψ`: weight to be given to likelihood function; ψ must be in [0,1].
-
-### Optional Arguments
-- `sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the
-    transition matrices for the zero-lower-bound period are returned in a dictionary.
-- `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
-"""
-function likelihood(m::AbstractModel, data::AbstractMatrix, ψ::Float64,
-                    target::Float64, σt::Float64, var::Symbol;
-                    sampler::Bool = false, catch_errors::Bool = false,
-                    use_chand_recursion::Bool = false, tol::Float64 = 0.0,
-                    verbose::Symbol = :high) where {T<:AbstractFloat}
-
-    @assert 0 <= ψ && ψ <= 1
-    loglik  = 0.0
-    penalty = 0.0
-
-    if ψ > 0
-        loglik = likelihood(m, data; sampler=sampler, catch_errors=catch_errors,
-                            use_chand_recursion=use_chand_recursion, tol=tol,
-                            verbose=verbose)
-        if ψ == 1
-            return loglik
-        end
-    end
-    penalty = -0.5 * (log(target) - log(m[var].value))^2 / σt^2
-
-    return ψ*loglik + (1-ψ)*penalty
-end
-
-
 """
 ```
 likelihood(m::AbstractModel, data::Matrix{T};
@@ -161,6 +115,7 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
                     tol::Float64 = 0.0,
                     verbose::Symbol = :high) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
+    use_penalty  =  get_setting(m, :use_penalty)
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if sampler
@@ -169,6 +124,23 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
             if !θ.fixed && !(left <= θ.value <= right)
                 return -Inf
             end
+        end
+    end
+
+    # Likelihood penalties
+    ψ, penalty = 0.0, 1.0
+    if use_penalty
+        ψ           = get_setting(m, :ψ_likelihood)
+        σt          = get_setting(m, :σt_penalty)
+        target_vars = get_setting(m, :target_vars)
+        target_σt   = get_setting(m, :target_σt)
+        targets     = get_setting(m, :targets)
+
+        for (var, target, σt) in zip(target_vars, targets, target_σt)
+            penalty +=  -0.5 * (log(target) - log(m[var].value))^2 / σt^2
+        end
+        if ψ == 0
+            return penalty
         end
     end
 
@@ -186,13 +158,14 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
     # Return total log-likelihood, excluding the presample
     try
         if use_chand_recursion==false
-            return sum(filter_likelihood(m, data, system;
-                                         include_presample = false, tol = tol))
+            return ψ*sum(filter_likelihood(m, data, system;
+                                           include_presample = false, tol = tol)) +
+                                               (1-ψ)*penalty
         else
-            return chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
+            return ψ*chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
                                    system[:QQ], system[:ZZ], system[:DD], system[:EE];
                                    allout = true, Nt0 = n_presample_periods(m),
-                                   tol = tol)[1]
+                                   tol = tol)[1] + (1-ψ)*penalty
         end
     catch err
         if catch_errors && isa(err, DomainError)
