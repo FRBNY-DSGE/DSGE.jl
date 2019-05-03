@@ -56,7 +56,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
              old_cloud::ParticleCloud = ParticleCloud(m, 0),
              recompute_transition_equation::Bool = true, run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
-             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
+             continue_intermediate::Bool = false,
+             intermediate_stage_start::Int = 0,
+             save_intermediate::Bool = false,
+             intermediate_stage_increment::Int = 10)
     ########################################################################################
     ### Setting Parameters
     ##################################################################################
@@ -69,7 +72,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     n_steps  = get_setting(m, :n_mh_steps_smc)
 
     use_chand_recursion = get_setting(m, :use_chand_recursion)
-    @show use_chand_recursion
     if any(isnan.(data)) & use_chand_recursion
         error("Cannot use Chandrasekhar recursions with missing data")
     end
@@ -132,12 +134,14 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
         initialize_likelihoods!(m, data, cloud, parallel = parallel,
                                 verbose = verbose)
+    elseif continue_intermediate
+        loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl)
+        cloud = load(loadpath, "cloud")
     else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        @show parallel
         initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
 
@@ -152,16 +156,25 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 
     # Instantiate incremental and normalized weight matrices for logMDD calculation
-    w_matrix = zeros(n_parts, 1)
-    if tempered_update
-        W_matrix = similar(w_matrix)
-        for k in 1:n_parts
-            W_matrix[k] = cloud.particles[k].weight
-        end
+    if continue_intermediate
+        w_matrix = load(loadpath, "w")
+        W_matrix = load(loadpath, "W")
+        z_matrix = load(loadpath, "z")
+
+        i = cloud.stage_index
+        j = load(loadpath, "j")
     else
-        W_matrix = fill(1/n_parts, (n_parts,1))
+        w_matrix = zeros(n_parts, 1)
+        if tempered_update
+            W_matrix = similar(w_matrix)
+            for k in 1:n_parts
+                W_matrix[k] = cloud.particles[k].weight
+            end
+        else
+            W_matrix = fill(1/n_parts, (n_parts,1))
+        end
+        z_matrix = ones(1)
     end
-    z_matrix = ones(1)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         init_stage_print(cloud; verbose = verbose,
@@ -260,7 +273,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
-        @show parallel
         if parallel
             new_particles = @distributed (vcat) for k in 1:n_parts
                 mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
@@ -293,10 +305,12 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             break
         end
         if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
-            jldopen(rawpath(m, "estimate", "smc_cloud_$(cloud.stage_index).jld2"), "w") do file
+            jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"), true, true, true, IOStream) do file
                 write(file, "cloud", cloud)
                 write(file, "w", w_matrix)
                 write(file, "W", W_matrix)
+                write(file, "z", z_matrix)
+                write(file, "j", j)
             end
         end
     end
