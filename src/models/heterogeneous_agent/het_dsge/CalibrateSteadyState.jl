@@ -103,14 +103,16 @@ function ln_annual_inc(zhist::Array{Float64,2}, us::Array{Float64,2}, zlo::Abstr
 	return (linc1, linc2)
 end
 
-function skill_moments(sH_by_sL::Real, zlo::Real, pLH::AbstractFloat, pHL::AbstractFloat, zhist::Array{Float64,2}, us::Array{Float64,2}, ni::Int = 10000)
-	πL = pHL/(pLH+pHL)
-	πss = [πL;1-πL]
-	P = [[1.-pLH pLH];[pHL 1.-pHL]]
-	slo = 1./(πL+(1-πL)*sH_by_sL)
-	shi = sH_by_sL*slo
+function skill_moments(sH_by_sL::Real, zlo::Real, pLH::AbstractFloat,
+                       pHL::AbstractFloat, zhist::Array{Float64,2},
+                       us::Array{Float64,2}, ni::Int = 10000)
+	πL  = pHL / (pLH+pHL)
+	πss = [πL ; 1-πL]
+	P   = [[1.0 -pLH pLH] ; [pHL 1.0-pHL]]
+	slo = 1.0 / (πL + (1-πL) * sH_by_sL)
+	shi = sH_by_sL * slo
 	sgrid = [slo; shi]
-	(linc1, linc2) = ln_annual_inc(zs,us,zlo,P,πss,sgrid,ni)
+	(linc1, linc2) = ln_annual_inc(zs, us, zlo, P, πss, sgrid, ni)
 	return (var(linc1), var(linc2 - linc1))
 end
 
@@ -119,8 +121,10 @@ tic()
 toc()
 
 
-function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::AbstractFloat, vardlinc_target::AbstractFloat, sH_by_sL_grid::AbstractArray, zlo_grid::AbstractArray,
-				  n1::Int, n2::Int, zhist::Array{Float64,2}, us::Array{Float64,2}, ni::Int = 10000)
+function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::AbstractFloat,
+                  vardlinc_target::AbstractFloat, sH_by_sL_grid::AbstractArray,
+                  zlo_grid::AbstractArray, n1::Int, n2::Int, zhist::Array{Float64,2},
+                  us::Array{Float64,2}, ni::Int = 10000)
 	n = n1*n2
 	dist = zeros(n)
 	varlinc = zeros(n)
@@ -162,7 +166,6 @@ function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::Abstra
 		for i2=1:n2
 			i = n2*(i1-1)+i2
 			(varlinc[i], vardlinc[i]) = skill_moments(sH_by_sL_grid[i1], zlo_grid[i2], pLH, pHL, zs, us)
-
 			dist[i] = abs(varlinc[i] - varlinc_target) + abs(vardlinc[i] - vardlinc_target)
 		end
 	end
@@ -172,23 +175,25 @@ function best_fit(pLH::AbstractFloat, pHL::AbstractFloat, varlinc_target::Abstra
 	return (sH_by_sL_grid[i1], zlo_grid[i2], varlinc[imin], vardlinc[imin])
 end
 
+
+"""
+
+"""
 loss(x::Vector{Float64}, target::Vector{Float64}) = sum(abs.(x-target))
 
-function best_fit(pLH::T, pHL::T, target::Vector{T},
-                  lower::Vector{T}, upper::Vector{T}, us::Array{Float64,2},
-                  max_iter::Int = 5, initial_guess::Vector{Float64} = [6.3, 0.03]) where T<:AbstractFloat
+function best_fit(pLH::T, pHL::T, target::Vector{T}, lower::Vector{T},
+                  upper::Vector{T}, us::Array{Float64,2}, max_iter::Int = 300,
+                  initial_guess::Vector{Float64} = [6.3, 0.03]) where T<:AbstractFloat
 
     skill_moments_f(x) = loss(collect(skill_moments(x[1], x[2], pLH, pHL, zs, us)), target)
 
-    res = optimize(skill_moments_f, lower, upper, initial_guess, Fminbox(NelderMead()), Optim.Options(f_calls_limit = 300))
-    println(res)
+    res = optimize(skill_moments_f, lower, upper, initial_guess, Fminbox(NelderMead()),
+                   Optim.Options(f_calls_limit = max_iter))
 
     sH_by_sL_argmin, zlo_argmin = Optim.minimizer(res)
-    min_varlinc, min_vardlinc = skill_moments(sH_by_sL_argmin, zlo_argmin, pLH, pHL, zs, us)
-    println("(NEW) Minimum loss for pLH = ", pLH, ", pHL = ", pHL, ": ", Optim.minimum(res))
-    println("sH_by_sL_argmin = ", sH_by_sL_argmin, ", zlo_argmin = ", zlo_argmin)
-    println("min_varlinc = ", min_varlinc, ", min_vardlinc = ", min_vardlinc)
-	return (sH_by_sL_argmin, zlo_argmin, min_varlinc, min_vardlinc)
+    min_varlinc, min_vardlinc   = skill_moments(sH_by_sL_argmin, zlo_argmin, pLH, pHL, zs, us)
+
+    return (sH_by_sL_argmin, zlo_argmin, min_varlinc, min_vardlinc)
 end
 
 function ave_mpc(m::AbstractArray, c::AbstractArray, agrid::AbstractArray, aswts::AbstractArray, na::Int, ns::Int)
