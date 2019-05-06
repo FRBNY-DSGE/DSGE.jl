@@ -20,7 +20,7 @@ function steadystate!(m::HetDSGEGovDebt;
     uz = rand(ni, 8)
 
     zgrid  = collect(linspace(0.,2.,nz))
-    zprob  = [2*mollifier_hetdsgegovdebt(zgrid[i],2.,0.) / nz for i=1:nz]
+    zprob  = [2*mollifier_hetdsgegovdebt(zgrid[i], 2., 0.) / nz for i=1:nz]
     zprob /= sum(zprob)
 
     zcdf = cumsum(zprob)
@@ -33,7 +33,7 @@ function steadystate!(m::HetDSGEGovDebt;
     if get_setting(m, :steady_state_only)
         return
     else
-        @time sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
+        sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
                                                               target, lower, upper, us, zs)
         m[:sH_over_sL] = sH_over_sL
         m[:zlo] = zlo
@@ -59,7 +59,7 @@ function steadystate!(m::HetDSGEGovDebt;
         m.grids[:weights_total] = xswts
 
         # Call steadystate a final time
-        @time find_steadystate!(m; βlo = βlo, βhi = βhi,
+        find_steadystate!(m; βlo = βlo, βhi = βhi,
                           excess = excess, tol = tol, maxit = maxit,
                           βband = βband)
 
@@ -221,7 +221,7 @@ function ln_annual_inc(zhist::Array{Float64,2}, us::Array{Float64,2},
 		linc1[i] += log(inc1)
      	linc2[i] += log(inc2)
 	end
-	return (linc1, linc2)
+	return linc1, linc2
 end
 
 
@@ -232,8 +232,8 @@ function skill_moments(sH_over_sL::Real, zlo::Real, pLH::AbstractFloat, pHL::Abs
 	slo = 1.0/(πL+(1-πL)*sH_over_sL)
 	shi = sH_over_sL*slo
 	sgrid = [slo; shi]
-	(linc1, linc2) = ln_annual_inc(zs,us,zlo,P,πss,sgrid,ni)
-	return (var(linc1), var(linc2 - linc1))
+	linc1, linc2 = ln_annual_inc(zs,us,zlo,P,πss,sgrid,ni)
+	return var(linc1), var(linc2 - linc1)
 end
 
 
@@ -250,7 +250,7 @@ function best_fit(pLH::T, pHL::T, target::Vector{T}, lower::Vector{T}, upper::Ve
                    Optim.Options(f_calls_limit = 300))
     sH_over_sL_argmin, zlo_argmin = Optim.minimizer(res)
     min_varlinc, min_vardlinc = skill_moments(sH_over_sL_argmin, zlo_argmin, pLH, pHL, us, zs)
-    return (sH_over_sL_argmin, zlo_argmin, min_varlinc, min_vardlinc)
+    return sH_over_sL_argmin, zlo_argmin, min_varlinc, min_vardlinc
 end
 
 function zsample(uz::Array{Float64,2}, zgrid::AbstractArray, zcdf::AbstractArray,
