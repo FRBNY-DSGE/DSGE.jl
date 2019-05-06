@@ -494,27 +494,10 @@ function init_grids!(m::HetDSGEGovDebt)
     grids[:sgrid] = Grid(sgrid, swts, sscale)
     grids[:fgrid] = f
 
-<<<<<<< HEAD
-    function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat, r::AbstractFloat, η::AbstractFloat, γ::AbstractFloat,
-                       T::AbstractFloat, zlo::AbstractFloat, na::Int)
-        smin = minimum(sgrid)*zlo                           # lowest possible skill
-        xlo_ss = ω*smin*H - (1+r)*η*e^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
-
-        xlo = xlo_ss                    # lower bound on cash on hand - could be < xlo_ss
-        xhi = max(xlo*2,xlo+12.)                      # upper bound on cash on hand
-        xscale = (xhi-xlo)              # size of w grids
-
-        # make grids
-        xgrid    = collect(linspace(xlo,xhi,na)) #Evenly spaced grid
-        xwts = (xscale/na)*ones(na)          #quadrature weights
-        return xgrid, xwts, xlo, xhi, xscale
-    end
-    xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value, m[:r].value, m[:η].value, m[:γ].value, m[:Tstar].value, get_setting(m, :zlo), nx)
-=======
     xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value,
                                               m[:r].value, m[:η].value, m[:γ].value,
                                               m[:Tstar].value, m[:zlo].value, nx)
->>>>>>> Incorporate Keshav's changes to model, integrate new calibration method.
+
     grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
 
     m <= Setting(:xlo, xlo)
@@ -570,11 +553,6 @@ function model_settings!(m::HetDSGEGovDebt)
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
-<<<<<<< HEAD
-    m <= Setting(:zlo, .145455, "Lower bound on second income shock to mollify actual income") #1/3
-    m <= Setting(:zhi, 2-get_setting(m, :zlo), "Upper bound on second income shock to mollify actual income")
-=======
->>>>>>> Incorporate Keshav's changes to model, integrate new calibration method.
 
     # s: Skill Distribution/ "Units of effective labor" Grid Setup
     m <= Setting(:ns, 2, "Skill distribution grid points")
