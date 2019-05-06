@@ -35,6 +35,8 @@ function estimate(m::AbstractModel, df::DataFrame;
                   mle::Bool = false,
                   sampling::Bool = true,
                   filestring_addl::Vector{String} = Vector{String}(),
+                  continue_intermediate::Bool = false,
+                  intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
                   save_intermediate::Bool = false)
     data = df_to_matrix(m, df)
@@ -50,6 +52,8 @@ function estimate(m::AbstractModel;
                   mle::Bool = false,
                   sampling::Bool = true,
                   filestring_addl::Vector{String} = Vector{String}(),
+                  continue_intermediate::Bool = false,
+                  intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false)
     # Load data
@@ -66,6 +70,8 @@ function estimate(m::AbstractModel, data::AbstractArray;
                   mle::Bool = false,
                   sampling::Bool = true,
                   filestring_addl::Vector{String} = Vector{String}(),
+                  continue_intermediate::Bool = false,
+                  intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false)
 
@@ -219,6 +225,8 @@ function estimate(m::AbstractModel, data::AbstractArray;
         ### parallel.
         ########################################################################################
         smc(m, data; verbose = verbose, filestring_addl = filestring_addl,
+            continue_intermediate = continue_intermediate,
+            intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
             intermediate_stage_increment = intermediate_stage_increment)
     end
