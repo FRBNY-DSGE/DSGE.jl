@@ -393,9 +393,11 @@ end
 
 function normalize(m::HetDSGEGovDebt, JJ::Matrix{Float64})
 
-    Qx, _, Qleft, Qright = compose_normalization_matrices(m)
+    #Qx, _, Qleft, Qright = compose_normalization_matrices(m)
 
-    m <= Setting(:n_predetermined_variables, size(Qx, 1))
+    #m <= Setting(:n_predetermined_variables, size(Qx, 1))
+    Qleft = get_setting(m, :Qleft) #m[:Qleft].value
+    Qright = get_setting(m, :Qright) #m[:Qright].value
 
 	Jac1 = Qleft*JJ*Qright
 
@@ -417,7 +419,7 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
     P  = hcat(P1, P2)
 
     Q,R = qr(P)
-    Q = Array(Q)
+    #Q = Array(Q)
     S         = Q[:, ns+1:end]'
 
     nxns = nx*ns
