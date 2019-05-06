@@ -1,19 +1,19 @@
 using DSGE
 using Test, BenchmarkTools
 using JLD2
-
 import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_states
 
 # What do you want to do?
 check_steady_state = true
 check_jacobian = true
-check_solution = true
-check_irfs = true
+check_solution = false
+check_irfs = false
+check_steady_state_calibrate = true
 
 path = dirname(@__FILE__)
 
 m = HetDSGEGovDebt()
-
+m <= Setting(:steady_state_only, true)
 # Steady-state computation
 if check_steady_state
     steadystate!(m)
@@ -522,5 +522,39 @@ if check_irfs
         @test IRFMC ≈ vec(states[endo[:mc′_t], 1:20, 3])
         @test IRFLAM ≈ vec(states[endo[:mu′_t], 1:20, 3])
         #@test IRFm ≈ vec(states[endo[:mu′_t], 1:20, 3])
+    end
+end
+
+m <= Setting(:steady_state_only, false)
+# Steady-state computation
+if check_steady_state_calibrate
+    Random.seed!(0)
+    steadystate!(m)
+
+    #=
+    JLD2.jldopen("$path/reference/steady_state_calibration.jld2", "w") do file
+        file["c"] = m[:cstar].value
+        file["m"] = m[:μstar].value
+        file["mpc"] = m[:mpc].value
+        file["pc0"] = m[:pc0].value
+        file["beta"] = m[:βstar].value
+    end
+    =#
+
+    file = jldopen("$path/reference/steady_state_calibration.jld2", "r")
+    saved_c    = read(file, "c")
+    saved_μ    = read(file, "m")
+    saved_mpc  = read(file, "mpc")
+    saved_β    = read(file, "beta")
+    saved_pc0  = read(file, "pc0")
+    close(file)
+
+    @testset "Check steady state outputs" begin
+        @test saved_c   ≈ m[:cstar].value
+        @test saved_μ   ≈ m[:μstar].value
+        @test saved_pc0 ≈ m[:pc0].value
+        @test saved_mpc ≈ m[:mpc].value
+        # Tolerance of convergence of β is 1e-5
+        @test saved_β ≈ m[:βstar].value
     end
 end
