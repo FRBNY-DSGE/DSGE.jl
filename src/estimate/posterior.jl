@@ -128,10 +128,10 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
     end
 
     # Likelihood penalties
-    ψ, penalty = 1.0, 0.0
+    ψ_l, ψ_p, penalty = 1.0, 1.0, 0.0
     if use_penalty
-        ψ           = get_setting(m, :ψ_likelihood_penalty)
-        σt          = get_setting(m, :σt_likelihood_penalty)
+        ψ_l         = get_setting(m, :ψ_likelihood)
+        ψ_p         = get_setting(m, :ψ_penalty)
         target_vars = get_setting(m, :target_vars)
         target_σt   = get_setting(m, :target_σt)
         targets     = get_setting(m, :targets)
@@ -139,8 +139,8 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
         for (var, target, σt) in zip(target_vars, targets, target_σt)
             penalty +=  -0.5 * (log(target) - log(m[var].value))^2 / σt^2
         end
-        if ψ == 0
-            return penalty
+        if ψ_l == 0.0
+            return ψ_p * penalty
         end
     end
 
@@ -158,14 +158,14 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
     # Return total log-likelihood, excluding the presample
     try
         if use_chand_recursion==false
-            return ψ*sum(filter_likelihood(m, data, system;
-                                           include_presample = false, tol = tol)) +
-                                           (1-ψ)*penalty
+            return ψ_l * sum(filter_likelihood(m, data, system;
+                                               include_presample = false, tol = tol)) +
+                                                   ψ_p * penalty
         else
-            return ψ*chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
+            return ψ_l * chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
                                    system[:QQ], system[:ZZ], system[:DD], system[:EE];
                                    allout = true, Nt0 = n_presample_periods(m),
-                                   tol = tol)[1] + (1-ψ)*penalty
+                                   tol = tol)[1] + ψ_p * penalty
         end
     catch err
         if catch_errors && isa(err, DomainError)
