@@ -6,8 +6,8 @@ import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_state
 # What do you want to do?
 check_steady_state = true
 check_jacobian = true
-check_solution = false
-check_irfs = false
+check_solution = true
+check_irfs = true
 check_steady_state_calibrate = true
 write_steady_state_calibrate = false
 

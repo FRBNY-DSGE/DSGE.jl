@@ -158,10 +158,12 @@ function jacobian(m::HetDSGEGovDebt)
     JJ[first(eq[:eq_investment]),first(endo[:z_t])]  = -spp*exp(2*γ)
 
     # tobin's q
-    JJ[first(eq[:eq_tobin_q]),first(endo[:R_t])]  = R
-    JJ[first(eq[:eq_tobin_q]),first(endo[:Q_t])]   = R
-    JJ[first(eq[:eq_tobin_q]),first(endo[:capreturn′_t])] = -Rk
-    JJ[first(eq[:eq_tobin_q]),first(endo[:Q′_t])]  = -(1-δ)
+    JJ[first(eq[:eq_tobin_q]),first(endo[:mu_t])]  = 1.
+    JJ[first(eq[:eq_tobin_q]),first(endo[:mu′_t])] = -1.
+    JJ[first(eq[:eq_tobin_q]),first(endo[:Q_t])]    = 1.
+    JJ[first(eq[:eq_tobin_q]),first(endo[:z′_t])]   = 1.
+    JJ[first(eq[:eq_tobin_q]),first(endo[:capreturn′_t])]  = -Rk/R
+    JJ[first(eq[:eq_tobin_q]),first(endo[:Q′_t])]   = -(1-δ)/R
 
     # capital accumulation
     JJ[first(eq[:eq_capital_accumulation]),first(endo[:k′_t])] = 1.

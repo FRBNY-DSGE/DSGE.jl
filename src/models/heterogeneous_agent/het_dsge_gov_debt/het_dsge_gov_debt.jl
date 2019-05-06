@@ -395,15 +395,15 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     m <= parameter(:β_save, 0.0, fixed = true, description = "saving the betas per particle")
 
-    m <= parameter(:sH_over_sL, 7.18182, fixed = true, description = "Ratio of high to low earners")
+    m <= parameter(:sH_over_sL, 6.33333, fixed = true, description = "Ratio of high to low earners")
 
-    m <= parameter(:pLH, 0.01, fixed = true, description = "prob of going from low to high persistent skill")
-    m <= parameter(:pHL, 0.0325, fixed = true, description = "prob of going from ")
+    m <= parameter(:pLH, 0.01125, fixed = true, description = "prob of going from low to high persistent skill")
+    m <= parameter(:pHL, 0.03, fixed = true, description = "prob of going from ")
     m <= parameter(:BoverY, 0.26, fixed = true, description = "???")
     m <= parameter(:δb, 1., fixed = true, description = "=1 means balanced budget")
 
 
-    m <= parameter(:zlo, 0.145455, fixed = true,
+    m <= parameter(:zlo, 0.0323232, fixed = true,
                    description = "Lower bound on second income shock to mollify actual income")
     m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
                    description = "Upper bound on second income shock to mollify actual income")
