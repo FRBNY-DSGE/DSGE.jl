@@ -239,6 +239,11 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
     init_subspec!(m)
 
+    Qx, Qy, Qleft, Qright = compose_normalization_matrices(m)
+    m <= Setting(:n_predetermined_variables, size(Qx, 1))
+    m <= Setting(:Qleft, Qleft)
+    m <= Setting(:Qright, Qright)
+
     return m
 end
 
