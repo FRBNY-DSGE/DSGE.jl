@@ -114,7 +114,8 @@ function measurement(m::HetDSGEGovDebt{T},
     return Measurement(ZZ, DD, QQ, EE)
 end
 
-function construct_consumption_partial(m::AbstractModel, dF2_dRZ::Vector{Float64}, dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
+function construct_consumption_partial(m::HetDSGEGovDebt, dF2_dRZ::Vector{Float64},
+                                       dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
 
     c = m[:cstar].value
     μ = m[:μstar].value
@@ -145,7 +146,7 @@ function construct_consumption_partial(m::AbstractModel, dF2_dRZ::Vector{Float64
     return dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT
 end
 
-function construct_consumption_eqn(m::AbstractModel, TTT_jump::Matrix{Float64}, dF2_dRZ::Vector{Float64}, dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
+function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64}, dF2_dRZ::Vector{Float64}, dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
 
     endo_unnorm = m.endogenous_states_unnormalized
 

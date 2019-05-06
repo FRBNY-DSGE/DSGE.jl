@@ -62,8 +62,8 @@ function jacobian(m::HetDSGEGovDebt)
     fgrid::Matrix{Float64} = m.grids[:fgrid]
     xswts = kron(swts,xwts)
 
-    zlo::Float64 = get_setting(m, :zlo)
-    zhi::Float64 = get_setting(m, :zhi)
+    zlo::Float64 = m[:zlo].value
+    zhi::Float64 = m[:zhi].value
 
     nx::Int = get_setting(m, :nx)
     ns::Int = get_setting(m, :ns)
