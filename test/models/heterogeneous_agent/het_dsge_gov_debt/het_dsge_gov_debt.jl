@@ -9,7 +9,7 @@ check_jacobian = true
 check_solution = false
 check_irfs = false
 check_steady_state_calibrate = true
-write_steady_state_calibrate = true
+write_steady_state_calibrate = false
 
 path = dirname(@__FILE__)
 
@@ -51,7 +51,10 @@ if check_steady_state
 end
 
 if check_jacobian
+    @show m[:cstar].value
     m.testing = true        # So that it will test against the unnormalized Jacobian
+    m <= Setting(:steady_state_only, true)
+    steadystate!(m)
     JJ, _, _, _ = DSGE.jacobian(m)
     # @btime JJ = DSGE.jacobian(m)
 
