@@ -232,7 +232,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     init_grids!(m)
 
     # # Solve for the steady state
-    #steadystate!(m)
+    steadystate!(m)
 
     # # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
@@ -393,7 +393,7 @@ function init_parameters!(m::HetDSGEGovDebt)
     m <= parameter(:e_c, 0.0, fixed = true, description = "e_c: Measurement error on consumption", tex_label = "e_c")
     m <= parameter(:e_i, 0.0, fixed = true, description = "e_i: Measurement error on investment", tex_label = "e_i")
 
-    m <= parameter(:β_save, NaN, fixed = true, description = "saving the betas per particle")
+    m <= parameter(:β_save, 0.0, fixed = true, description = "saving the betas per particle")
 
     m <= parameter(:sH_over_sL, 7.18182, fixed = true, description = "Ratio of high to low earners")
 
@@ -408,8 +408,8 @@ function init_parameters!(m::HetDSGEGovDebt)
     m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
                    description = "Upper bound on second income shock to mollify actual income")
 
-    m <= parameter(:mpc, NaN, fixed = true)
-    m <= parameter(:pc0, NaN, fixed = true)
+    m <= parameter(:mpc, 0.0, fixed = true)
+    m <= parameter(:pc0, 0.0, fixed = true)
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
@@ -571,9 +571,9 @@ function model_settings!(m::HetDSGEGovDebt)
 
     # Important settings for likelihood penalty
     m <= Setting(:use_likelihood_penalty, true)
-    m <= Setting(:ψ_likelihood, 0,
+    m <= Setting(:ψ_likelihood, 0.0,
                  "Multiplier on likelihood in penalty function")
-    m <= Setting(:ψ_penalty, 0,
+    m <= Setting(:ψ_penalty, 0.0,
                  "Multiplier on likelihood in penalty function")
 
     m <= Setting(:target_vars, [:mpc, :pc0], "Symbols of variables we're targeting")
