@@ -27,13 +27,13 @@ function steadystate!(m::HetDSGEGovDebt;
     zave = 0.5 * zgrid[1:nz-1] + 0.5 * zgrid[2:nz]
     zs   = zsample(uz, zgrid, zcdf, ni, nz)
 
-    find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
-                      βband = βband)
+    #@time find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
+    #                  βband = βband)
 
     if get_setting(m, :steady_state_only)
         return
     else
-        sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
+        @time sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
                                                               target, lower, upper, us, zs)
         m[:sH_over_sL] = sH_over_sL
         m[:zlo] = zlo
@@ -59,12 +59,13 @@ function steadystate!(m::HetDSGEGovDebt;
         m.grids[:weights_total] = xswts
 
         # Call steadystate a final time
-        find_steadystate!(m; βlo = βlo, βhi = βhi,
+        @time find_steadystate!(m; βlo = βlo, βhi = βhi,
                           excess = excess, tol = tol, maxit = maxit,
                           βband = βband)
 
 	    m[:mpc] = ave_mpc(m[:μstar].value, m[:cstar].value, xgrid, xswts, nx, ns)
 	    m[:pc0] = frac_zero(m[:μstar].value, m[:cstar].value, xgrid, xswts, ns)
+
     end
 end
 
