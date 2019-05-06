@@ -9,6 +9,7 @@ check_jacobian = true
 check_solution = false
 check_irfs = false
 check_steady_state_calibrate = true
+write_steady_state_calibrate = true
 
 path = dirname(@__FILE__)
 
@@ -531,15 +532,15 @@ if check_steady_state_calibrate
     Random.seed!(0)
     steadystate!(m)
 
-    #=
-    JLD2.jldopen("$path/reference/steady_state_calibration.jld2", "w") do file
-        file["c"] = m[:cstar].value
-        file["m"] = m[:μstar].value
-        file["mpc"] = m[:mpc].value
-        file["pc0"] = m[:pc0].value
-        file["beta"] = m[:βstar].value
+    if write_steady_state_calibrate
+        JLD2.jldopen("$path/reference/steady_state_calibration.jld2", "w") do file
+            file["c"] = m[:cstar].value
+            file["m"] = m[:μstar].value
+            file["mpc"] = m[:mpc].value
+            file["pc0"] = m[:pc0].value
+            file["beta"] = m[:βstar].value
+        end
     end
-    =#
 
     file = jldopen("$path/reference/steady_state_calibration.jld2", "r")
     saved_c    = read(file, "c")
