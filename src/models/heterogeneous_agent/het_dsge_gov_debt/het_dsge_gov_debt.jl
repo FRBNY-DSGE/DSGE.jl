@@ -232,7 +232,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     init_grids!(m)
 
     # # Solve for the steady state
-    steadystate!(m)
+    #steadystate!(m)
 
     # # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
@@ -395,13 +395,21 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     m <= parameter(:β_save, NaN, fixed = true, description = "saving the betas per particle")
 
-    m <= parameter(:sH_over_sL, 7.18182, fixed = true, description = "???") #1.2/0.8
+    m <= parameter(:sH_over_sL, 7.18182, fixed = true, description = "Ratio of high to low earners")
+
     m <= parameter(:pLH, 0.01, fixed = true, description = "prob of going from low to high persistent skill")
     m <= parameter(:pHL, 0.0325, fixed = true, description = "prob of going from ")
     m <= parameter(:BoverY, 0.26, fixed = true, description = "???")
     m <= parameter(:δb, 1., fixed = true, description = "=1 means balanced budget")
 
 
+    m <= parameter(:zlo, 0.145455, fixed = true,
+                   description = "Lower bound on second income shock to mollify actual income")
+    m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
+                   description = "Upper bound on second income shock to mollify actual income")
+
+    m <= parameter(:mpc, NaN, fixed = true)
+    m <= parameter(:pc0, NaN, fixed = true)
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
@@ -444,6 +452,33 @@ end
 init_grids!(m::HetDSGEGovDebt)
 ```
 """
+function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat,
+                                  pHL::AbstractFloat, ns::Int)
+    f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
+    ss_skill_distr = [pHL/(pLH+pHL); pLH/(pLH+pHL)]
+    slo = 1.0 / (ss_skill_distr'*[1;sH_over_sL])
+    sgrid = slo*[1;sH_over_sL]
+    sscale = sgrid[2] - sgrid[1]
+    swts     = (sscale/ns)*ones(ns) #quadrature weights
+    f = f1 ./ repmat(swts',ns,1)
+    return f, sgrid, swts, sscale
+end
+function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat,
+                   r::AbstractFloat, η::AbstractFloat, γ::AbstractFloat,
+                   T::AbstractFloat, zlo::AbstractFloat, na::Int)
+    smin = minimum(sgrid)*zlo                           # lowest possible skill
+    xlo_ss = ω*smin*H - (1+r)*η*e^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
+
+    xlo = xlo_ss                    # lower bound on cash on hand - could be < xlo_ss
+    xhi = max(xlo*2, xlo + 12.0) # TODO       # upper bound on cash on hand
+    xscale = (xhi-xlo)              # size of w grids
+
+    # make grids
+    xgrid    = collect(linspace(xlo,xhi,na)) #Evenly spaced grid
+    xwts = (xscale/na)*ones(na)          #quadrature weights
+    return xgrid, xwts, xlo, xhi, xscale
+end
+
 function init_grids!(m::HetDSGEGovDebt)
 
 
@@ -454,36 +489,12 @@ function init_grids!(m::HetDSGEGovDebt)
     grids = OrderedDict()
 
     # Skill grid
-    #lsgrid, sprob, sscale = tauchen86(m[:μ_sp].value, m[:ρ_sp].value, m[:σ_sp].value, ns, λ)
-    #=sprob = [[0.9 0.1];[0.1 0.9]]
-    sgrid = [0.8;1.2]
-    (λs, vs) = eigen(Matrix{Float64}(sprob'))
-    order_λs = sortperm(λs, rev = true)
-    vs = vs[:,order_λs]
-    ss_skill_distr = vs[:,1]/sum(vs[:,1])
-    means = ss_skill_distr'*sgrid
-    meanz = (get_setting(m, :zhi)+get_setting(m, :zlo))/2.
-    sgrid = sgrid/(meanz*means) # so that skills integrate to 1
-    sscale = sgrid[2] - sgrid[1]
-    swts = (sscale/ns)*ones(ns)
-    #sgrid = exp.(lsgrid)
-    grids[:sgrid] = Grid(sgrid, swts, sscale) =#
-
-    function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat, pHL::AbstractFloat, ns::Int)
-        f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
-        ss_skill_distr = [pHL/(pLH+pHL); pLH/(pLH+pHL)]
-        slo = 1./(ss_skill_distr'*[1;sH_over_sL])
-        sgrid = slo*[1;sH_over_sL]
-        sscale = sgrid[2] - sgrid[1]
-        swts     = (sscale/ns)*ones(ns) #quadrature weights
-        f = f1./repmat(swts',ns,1)
-        return f, sgrid, swts, sscale
-    end
     f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value, m[:pHL].value, get_setting(m, :ns))
     # Markov transition matrix for skill
     grids[:sgrid] = Grid(sgrid, swts, sscale)
     grids[:fgrid] = f
 
+<<<<<<< HEAD
     function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat, r::AbstractFloat, η::AbstractFloat, γ::AbstractFloat,
                        T::AbstractFloat, zlo::AbstractFloat, na::Int)
         smin = minimum(sgrid)*zlo                           # lowest possible skill
@@ -499,28 +510,16 @@ function init_grids!(m::HetDSGEGovDebt)
         return xgrid, xwts, xlo, xhi, xscale
     end
     xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value, m[:r].value, m[:η].value, m[:γ].value, m[:Tstar].value, get_setting(m, :zlo), nx)
+=======
+    xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value,
+                                              m[:r].value, m[:η].value, m[:γ].value,
+                                              m[:Tstar].value, m[:zlo].value, nx)
+>>>>>>> Incorporate Keshav's changes to model, integrate new calibration method.
     grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
 
     m <= Setting(:xlo, xlo)
     m <= Setting(:xhi, xhi)
     m <= Setting(:xscale, xscale)
-    # Calculate endogenous grid bounds (bounds are analytic functions of model parameters,
-    # which ensure there is no mass in the distributions across x where there shouldn't be)
-    # Calculate the lowest possible cash on hand in steady state
-    #=zlo = get_setting(m, :zlo)
-    smin = minimum(sgrid)*zlo #exp(m[:μ_sp]/(1-m[:ρ_sp]) - get_setting(m, :λ)*sqrt(m[:σ_sp]^2/(1-m[:ρ_sp])^2))*get_setting(m, :zlo)
-    m <= Setting(:xlo, m[:ωstar]*smin*m[:H] - (1+m[:r])*m[:η]*exp(-m[:γ]) + m[:Tstar] + sgrid[1]*m[:ωstar]*m[:H]*0.05, "Lower bound on cash on hand")
-    m <= Setting(:xhi, max(get_setting(m, :xlo)*2, get_setting(m, :xlo)+5.), "Upper Bound on cash on hand")
-    m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
-    xlo     = get_setting(m, :xlo)
-    xhi     = get_setting(m, :xhi)
-    xscale  = get_setting(m, :xscale)
-
-    # Cash on hand grid
-    grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale) =#
-
-    # Markov transition matrix for skill
-    #grids[:fgrid] = sprob./swts
 
     # Total grid vectorized across both dimensions
     grids[:sgrid_total] = kron(sgrid, ones(nx))
@@ -571,8 +570,11 @@ function model_settings!(m::HetDSGEGovDebt)
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
+<<<<<<< HEAD
     m <= Setting(:zlo, .145455, "Lower bound on second income shock to mollify actual income") #1/3
     m <= Setting(:zhi, 2-get_setting(m, :zlo), "Upper bound on second income shock to mollify actual income")
+=======
+>>>>>>> Incorporate Keshav's changes to model, integrate new calibration method.
 
     # s: Skill Distribution/ "Units of effective labor" Grid Setup
     m <= Setting(:ns, 2, "Skill distribution grid points")
@@ -581,6 +583,27 @@ function model_settings!(m::HetDSGEGovDebt)
     # x: Cash on Hand Grid Setup
     m <= Setting(:nx, 300, "Cash on hand distribution grid points")
 
+    # Set targets
+    m <= Setting(:targets, [0.16, 0.10],
+                 "Targets for: [MPC, proportion of individuals with 0 income]")
+    m <= Setting(:calibration_targets, [0.7, 0.23],
+                 "Targets for: [var(log(annual income)), var(one year changes in log(annual income))]")
+    m <= Setting(:calibration_targets_lb, [3.0, 1e-18], "Lower bounds on [sH/sL, zlo]")
+    m <= Setting(:calibration_targets_ub, [9.0, 0.8-eps()], "Upper bounds on [sH/sL, zlo]")
+
+    # Important settings for likelihood penalty
+    m <= Setting(:use_likelihood_penalty, true)
+    m <= Setting(:ψ_likelihood, 0,
+                 "Multiplier on likelihood in penalty function")
+    m <= Setting(:ψ_penalty, 0,
+                 "Multiplier on likelihood in penalty function")
+
+    m <= Setting(:target_vars, [:mpc, :pc0], "Symbols of variables we're targeting")
+    m <= Setting(:target_σt, [0.2, 0.1], "Target \\sigma_t for MPC and pc0")
+
+    m <= Setting(:steady_state_only, false, "Testing setting")
+
+    # Misc
     m <= Setting(:trunc_distr, true)
     m <= Setting(:rescale_weights, true)
     m <= Setting(:mindens, 1e-8)
@@ -604,6 +627,8 @@ function model_settings!(m::HetDSGEGovDebt)
     # of freedom since it is then non-trivial to obtain the marginal distributions.
     m <= Setting(:n_degrees_of_freedom_removed_state, 2, "Number of degrees of freedom from the distributional variables to remove.")
     m <= Setting(:n_degrees_of_freedom_removed_jump, 0, "Number of degrees of freedom from the distributional variables to remove.")
+
+
 
 end
 
@@ -678,7 +703,7 @@ funops = 1:2 # which operators output a function
     eqconds[:eq_lambda]             = 2*nxns+2:2*nxns+2
     #scalar blocks involving endogenous variables
     eqconds[:eq_transfers]            = 2*nxns+3:2*nxns+3 # transfers
-    eqconds[:eq_investment]          = 2*nxns+4:2*nxns+4 # investment
+    eqconds[:eq_investment]           = 2*nxns+4:2*nxns+4 # investment
     eqconds[:eq_tobin_q]              = 2*nxns+5:2*nxns+5 # tobin's q
     eqconds[:eq_capital_accumulation] = 2*nxns+6:2*nxns+6 # capital accumulation
     eqconds[:eq_wage_phillips] = 2*nxns+7:2*nxns+7 # wage phillips curve
