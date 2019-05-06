@@ -232,7 +232,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     init_grids!(m)
 
     # # Solve for the steady state
-    steadystate!(m)
+    #steadystate!(m)
 
     # # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
@@ -405,7 +405,8 @@ function init_parameters!(m::HetDSGEGovDebt)
     m <= parameter(:pLH, 0.01125, fixed = true, description = "prob of going from low to high persistent skill")
     m <= parameter(:pHL, 0.03, fixed = true, description = "prob of going from ")
     m <= parameter(:BoverY, 0.26, fixed = true, description = "???")
-    m <= parameter(:δb, 1., fixed = true, description = "=1 means balanced budget")
+    m <= parameter(:δb, 1., (0.0, 1.0), (0.0, 1.0), Untransformed(),
+                   Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget")
 
 
     m <= parameter(:zlo, 0.0323232, fixed = true,
