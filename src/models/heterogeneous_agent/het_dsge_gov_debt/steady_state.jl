@@ -116,9 +116,9 @@ function find_steadystate!(m::HetDSGEGovDebt;
     Win = Vector{Float64}(undef, n)
     Win_guess = ones(n)
 
-    if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
+    if get_setting(m, :use_last_βstar) && m[:βstar].value!=0 #!isnan(m[:βstar].value)
         βlo = βhi = m[:βstar].value
-    elseif !isnan(m[:βstar].value)
+    elseif m[:βstar].value!=0 #!isnan(m[:βstar].value)
         βlo_temp = m[:βstar].value - βband
         βhi_temp = m[:βstar].value + βband
 
@@ -153,7 +153,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
             βlo = β
         end
         counter += 1
-        if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
+        if get_setting(m, :use_last_βstar) && m[:βstar].value!=0  #!isnan(m[:βstar].value)
             break
         end
     end
