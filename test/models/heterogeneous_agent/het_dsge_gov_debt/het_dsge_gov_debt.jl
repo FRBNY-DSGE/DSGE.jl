@@ -51,7 +51,6 @@ if check_steady_state
 end
 
 if check_jacobian
-    @show m[:cstar].value
     m.testing = true        # So that it will test against the unnormalized Jacobian
     m <= Setting(:steady_state_only, true)
     steadystate!(m)
