@@ -7,7 +7,6 @@ pc0_target      = 0.10 # fraction with zero bond holdings
 # parameters: pLH, pHL, zlo, sH/sL. We normalize so s and z both have mean 1.
 
 using Distributions
-#using PyPlot
 using Roots
 using JLD
 using Optim
@@ -191,7 +190,8 @@ function best_fit(pLH::T, pHL::T, target::Vector{T},
 	return (sH_by_sL_argmin, zlo_argmin, min_varlinc, min_vardlinc)
 end
 
-function ave_mpc(m::AbstractArray, c::AbstractArray, agrid::AbstractArray, aswts::AbstractArray, na::Int, ns::Int)
+function ave_mpc(m::AbstractArray, c::AbstractArray, agrid::AbstractArray,
+                 aswts::AbstractArray, na::Int, ns::Int)
 	mpc = 0.
 	for iss=1:ns
 		i = na*(iss-1)+1
@@ -204,8 +204,9 @@ function ave_mpc(m::AbstractArray, c::AbstractArray, agrid::AbstractArray, aswts
 	return mpc
 end
 
-function frac_zero(m::AbstractArray, c::AbstractArray, agrid::AbstractArray, aswts::AbstractArray, ns::Int)
-	return sum(aswts.*m.*(c.==repeat(agrid,ns)))
+function frac_zero(m::AbstractArray, c::AbstractArray, agrid::AbstractArray,
+                   aswts::AbstractArray, ns::Int)
+	return sum(aswts .* m .* (c .== repeat(agrid, ns)))
 end
 
 nLH = 2
@@ -231,13 +232,34 @@ lower = [sH_by_sL_lo, zlo_lo]
 upper = [sH_by_sL_hi, zlo_hi]
 target = [varlinc_target, vardlinc_target]
 
+# SAVING TEST OUTPUT
+@show 0.01, 0.0325, target, lower, upper
+(sH_by_sL, zlo, varlinc, vardlinc) = best_fit(0.01, 0.0325, target, lower, upper, us)
+@show sH_by_sL, zlo, varlinc, vardlinc
+(f, sgrid, swts) = persistent_skill_process(sH_by_sL, pLH, pHL, ns)
+(agrid, awts) = cash_grid(sgrid, ω, H, r, η, γ, T, zlo, na)
+aswts = kron(swts, awts)
+qfunction(x) = mollifier(x, 2. - zlo, zlo)
+(ell, c, m, β, report) = findss(na, ns, βlo, βhi, R, ω, H, η, T, γ, bg, qfunction, agrid, sgrid,aswts, Win, f)
+mpc  = ave_mpc(m,c,agrid,aswts,na,ns)
+pc0  = frac_zero(m,c,agrid,aswts,ns)
+
+file = JLD2.jldopen("steady_state_calibration.jld2", "w")
+write(file, "c", c)
+write(file, "m", m)
+write(file, "beta", β)
+write(file, "mpc", mpc)
+write(file, "pc0", pc0)
+close(file)
+
+error()
 for iLH = 1:nLH
 	for iHL = 1:nHL
 		i = nHL*(iLH-1)+iHL
 
-        @time out = best_fit(pLH_grid[iLH], pHL_grid[iHL], target, lower, upper, us)
-        @show "Old Method"
-		@time (sH_by_sL_grid2[i], zlo_grid2[i], varlinc_grid[i], vardlinc_grid[i]) = best_fit(pLH_grid[iLH],pHL_grid[iHL],varlinc_target,vardlinc_target,sH_by_sL_grid, zlo_grid,np,np,zs,us)
+        (sH_by_sL_grid2[i], zlo_grid2[i], varlinc_grid[i], vardlinc_grid[i]) = best_fit(pLH_grid[iLH], pHL_grid[iHL], target, lower, upper, us)
+        #@show "Old Method"
+		#@time (sH_by_sL_grid2[i], zlo_grid2[i], varlinc_grid[i], vardlinc_grid[i]) = best_fit(pLH_grid[iLH],pHL_grid[iHL],varlinc_target,vardlinc_target,sH_by_sL_grid, zlo_grid,np,np,zs,us)
 		(f, sgrid, swts) = persistent_skill_process(sH_by_sL_grid2[i], pLH_grid[iLH], pHL_grid[iHL], ns)
 		(agrid, awts) = cash_grid(sgrid, ω, H, r, η, γ, T, zlo, na)
 		aswts = kron(swts, awts)
