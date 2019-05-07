@@ -401,11 +401,11 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     m <= parameter(:sH_over_sL, 6.33333, fixed = true, description = "Ratio of high to low earners", tex_label = "s_H / s_L")
 
-    m <= parameter(:pLH, 0.01125, (0.005, 0.055), (0.005, 0.055), Untransformed(),
-                   Uniform(0.005, 0.055), fixed = false, description = "Prob of going from low to high persistent skill",
+    m <= parameter(:pLH, 0.01125, (0.005, 0.095), (0.005, 0.095), Untransformed(),
+                   Uniform(0.005, 0.095), fixed = false, description = "Prob of going from low to high persistent skill",
                    tex_label = "p(s_L \\mid s_H)")
-    m <= parameter(:pHL, 0.03, (0.005, 0.055), (0.005, 0.055), Untransformed(),
-                   Uniform(0.005, 0.055), fixed = false, description = "Prob of going from high to low persistent skill",
+    m <= parameter(:pHL, 0.03, (0.005, 0.095), (0.005, 0.095), Untransformed(),
+                   Uniform(0.005, 0.095), fixed = false, description = "Prob of going from high to low persistent skill",
                    tex_label = "p(s_H \\mid s_L)")
 
     m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
