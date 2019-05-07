@@ -270,7 +270,7 @@ function init_parameters!(m::HetDSGEGovDebt)
     # Check this: Previously the description was "Aggregate hours worked"
     m <= parameter(:H, 1.0, (-1000., 1000.), (-1e3, 1e3), Untransformed(),
                    Normal(-45., 5.), fixed = true,
-                   description = "Lmean: Mean level of hours", tex_label = "\\bar{L}")
+                   description = "Lmean: Mean level of hours", tex_label = "H")
     m <= parameter(:δ, 0.03, fixed = true,
                    description = "δ: The capital depreciation rate", tex_label = "\\delta")
     m <= parameter(:μ_sp, 0.0, fixed = true, description = "μ_sp: The trend in the skill process",
@@ -411,13 +411,13 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     m <= parameter(:zlo, 0.0323232, fixed = true,
                    description = "Lower bound on second income shock to mollify actual income",
-                   tex_label = "z_{lo}")
+                   tex_label = "\\underbar{z}")
     m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
                    description = "Upper bound on second income shock to mollify actual income",
-                   tex_label = "z_{hi}")
+                   tex_label = "\\bar{z}")
 
     m <= parameter(:mpc, 0.0, fixed = true, tex_label = "MPC")
-    m <= parameter(:pc0, 0.0, fixed = true, tex_label = "pc0")
+    m <= parameter(:pc0, 0.0, fixed = true, tex_label = "p(c_0)")
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
