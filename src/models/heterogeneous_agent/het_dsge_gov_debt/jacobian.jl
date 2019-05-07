@@ -416,7 +416,7 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
     P  = hcat(P1, P2)
 
     Q,R = qr(P)
-    #Q = Array(Q)
+    Q = Array(Q)
     S         = Q[:, ns+1:end]'
 
     nxns = nx*ns
