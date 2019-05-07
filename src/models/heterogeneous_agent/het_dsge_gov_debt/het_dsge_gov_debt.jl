@@ -577,9 +577,9 @@ function model_settings!(m::HetDSGEGovDebt)
 
     # Important settings for likelihood penalty
     m <= Setting(:use_likelihood_penalty, true)
-    m <= Setting(:ψ_likelihood, 0.0,
+    m <= Setting(:ψ_likelihood, 1.0,
                  "Multiplier on likelihood in penalty function")
-    m <= Setting(:ψ_penalty, 0.0,
+    m <= Setting(:ψ_penalty, 1.0,
                  "Multiplier on likelihood in penalty function")
 
     m <= Setting(:target_vars, [:mpc, :pc0], "Symbols of variables we're targeting")
