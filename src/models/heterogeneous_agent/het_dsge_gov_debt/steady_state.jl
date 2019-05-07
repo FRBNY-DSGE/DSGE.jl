@@ -1,6 +1,6 @@
 function steadystate!(m::HetDSGEGovDebt;
-                      βlo::Float64 = 0.5*exp(m[:γ])/(1 + m[:r]),
-                      βhi::Float64 = exp(m[:γ])/(1 + m[:r]),
+                      βlo::Float64 = 0.5*exp(m[:γ].value)/(1 + m[:r].value),
+                      βhi::Float64 = exp(m[:γ].value)/(1 + m[:r].value),
                       excess::Float64 = 5000.,
                       tol::Float64 = 1e-4,
                       maxit::Int64 = 20,
@@ -19,7 +19,7 @@ function steadystate!(m::HetDSGEGovDebt;
     us = rand(ni, 8)
     uz = rand(ni, 8)
 
-    zgrid  = collect(linspace(0.,2.,nz))
+    zgrid  = collect(range(0.,stop = 2., length = nz))
     zprob  = [2*mollifier_hetdsgegovdebt(zgrid[i], 2., 0.) / nz for i=1:nz]
     zprob /= sum(zprob)
 
@@ -72,8 +72,8 @@ function steadystate!(m::HetDSGEGovDebt;
 end
 
 function find_steadystate!(m::HetDSGEGovDebt;
-                           βlo::Float64 = 0.5*exp(m[:γ])/(1 + m[:r]),
-                           βhi::Float64 = exp(m[:γ])/(1 + m[:r]),
+                           βlo::Float64 = 0.5*exp(m[:γ].value)/(1 + m[:r].value),
+                           βhi::Float64 = exp(m[:γ].value)/(1 + m[:r].value),
                            excess::Float64 = 5000.,
                            tol::Float64 = 1e-4,
                            maxit::Int64 = 20,

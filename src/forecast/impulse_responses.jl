@@ -40,9 +40,9 @@ function impulse_responses(m::AbstractHetModel, system::System{S};
     Qx, Qy, _, _ = DSGE.compose_normalization_matrices(m)
 
     # In this case, the length of state_indices and jump_indices seems to give the number of UNNORMALIZED states/jumps however I'm not sure if this will always be the case/if this is really what we want saved into these settings...so might need to modify in future.
-    states_unnormalized = Array{Float64}(length(get_setting(m, :state_indices)), horizon, size(states, 3))
-    jumps_unnormalized = Array{Float64}(length(get_setting(m, :jump_indices)), horizon, size(states, 3))
-    model_states_unnormalized = Array{Float64}(length(get_setting(m, :state_indices)) + length(get_setting(m, :jump_indices)), horizon, size(states, 3))
+    states_unnormalized = Array{Float64}(undef, length(get_setting(m, :state_indices)), horizon, size(states, 3))
+    jumps_unnormalized = Array{Float64}(undef, length(get_setting(m, :jump_indices)), horizon, size(states, 3))
+    model_states_unnormalized = Array{Float64}(undef, length(get_setting(m, :state_indices)) + length(get_setting(m, :jump_indices)), horizon, size(states, 3))
     for i in 1:size(states, 3)
         state_inds = 1:n_backward_looking_states(m)
         states_unnormalized[:, :, i] = Matrix(Qx')*states[state_inds, :, i]
