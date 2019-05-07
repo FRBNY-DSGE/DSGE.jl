@@ -271,6 +271,7 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
 ```
 """
 function prior_table(m::AbstractModel; subset_string::String = "",
+                     caption = true, outdir = "",
              groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
@@ -510,9 +511,10 @@ Produces a table of prior means, prior standard deviations, posterior means, and
 90% bands for posterior draws.
 """
 function prior_posterior_moments_table(m::AbstractModel,
-                 post_means::Vector, post_bands::Matrix;
-                 percent::AbstractFloat = 0.9,
-                 subset_string::String = "",
+                                       post_means::Vector, post_bands::Matrix;
+                                       percent::AbstractFloat = 0.9,
+                                       subset_string::String = "",
+                                       caption = true, outdir = "",
                  groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
@@ -615,6 +617,7 @@ Produce a table of prior means and posterior means or mode.
 function prior_posterior_table(m::AbstractModel, post_values::Vector;
                                subset_string::String = "",
                                groupings::AbstractDict{String,Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                               caption = true, outdir = "",
                                use_mode::Bool = false)
 
     if isempty(groupings)
