@@ -562,6 +562,7 @@ function model_settings!(m::HetDSGEGovDebt)
                  This set to 0 is just the default setting, since it will always be
                  overwritten once the Jacobian is calculated.")
 
+    m <= Setting(:policy_damp, 0.5, "Dampening parameter for policy function iteration")
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")

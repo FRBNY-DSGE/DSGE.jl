@@ -125,13 +125,13 @@ function find_steadystate!(m::HetDSGEGovDebt;
         βhi_temp = m[:βstar].value + βband
 
         c, bp, Win, KF = policy_hetdsgegovdebt(nx, ns, βlo_temp, R, ω, H, η, T, γ,
-                                        zhi, zlo, xgrid, sgrid, xswts, Win_guess, f)
+                                        zhi, zlo, xgrid, sgrid, xswts, Win_guess, f, damp = get_setting(m, :policy_damp))
         excess_lo, μ = compute_excess(xswts, KF, bp, bg)
 
         if excess_lo < 0 && abs(excess_lo) > tol
             βlo = βlo_temp
             c, bp, Win, KF = policy_hetdsgegovdebt(nx, ns, βhi_temp, R, ω, H, η, T, γ, zhi,
-                                            zlo, xgrid, sgrid, xswts, Win_guess, f)
+                                            zlo, xgrid, sgrid, xswts, Win_guess, f, damp = get_setting(m, :policy_damp))
             excess_hi, μ = compute_excess(xswts, KF, bp, bg)
 
             if excess_hi > 0
@@ -145,7 +145,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
     while abs(excess) > tol && counter < maxit # clearing markets
         β = (βlo + βhi) / 2.0
         c, bp, Win, KF = policy_hetdsgegovdebt(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
-                                               xswts, Win_guess, f)
+                                               xswts, Win_guess, f, damp = get_setting(m, :policy_damp))
         excess, μ = compute_excess(xswts, KF, bp, bg)
 
         # bisection
@@ -297,8 +297,8 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::AbstractFloat, R::AbstractF
                         zlo::AbstractFloat,
                         xgrid::Vector{Float64}, sgrid::Vector{Float64},
                         xswts::Vector{Float64}, Win::Vector{Float64},
-                        f::Array{Float64,2}, damp::Float64 = 0.5, dist::Float64 = 1.,
-                        tol::Float64 = 1e-4, maxit::Int64 = 500)
+                        f::Array{Float64,2}, dist::Float64 = 1.,
+                        tol::Float64 = 1e-4, maxit::Int64 = 500; damp::Float64 = 0.5)
     n    = nx*ns
     c    = zeros(n)                # consumption
     bp   = Vector{Float64}(undef, n)      # savings
