@@ -30,7 +30,7 @@ function klein(m::AbstractModel)
     # Reorder so that stable comes first
     alpha::Vector{complex(promote_type(eltype(A), eltype(B)))} = QZ.α
     beta::Vector{complex(promote_type(eltype(A), eltype(B)))} = QZ.β
-	eigs = real(QZ.β ./ QZ.α)
+	eigs = QZ.β ./ QZ.α #real(QZ.β ./ QZ.α)
 	eigselect::AbstractArray{Bool} = abs.(eigs) .< 1 # returns false for NaN gen. eigenvalue which is correct here bc they are > 1
 	ordschur!(QZ, eigselect)
 
