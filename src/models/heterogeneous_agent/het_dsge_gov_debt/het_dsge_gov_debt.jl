@@ -264,7 +264,7 @@ function init_parameters!(m::HetDSGEGovDebt)
                    GammaAlt(0.25, .1), fixed = false, scaling = x -> x/100 + .4/100,
                    description="r: Quarterly steady-state real interest rate.",
                    tex_label="100*(r^{HetDSGE}-\\gamma^{FRBNY})")
-    m <= parameter(:α, 0.3, fixed = true, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05),
+    m <= parameter(:α, 0.3, fixed = false, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05),
                    description = "α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label = "\\alpha")
     # Check this: Previously the description was "Aggregate hours worked"
