@@ -503,7 +503,7 @@ function init_grids!(m::HetDSGEGovDebt)
     grids[:fgrid] = f
 
     xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value,
-                                              m[:r].value, m[:η].value, m[:γ].scaledvalue,
+                                              m[:r].scaledvalue, m[:η].value, m[:γ].scaledvalue,
                                               m[:Tstar].value, m[:zlo].value, nx)
 
     grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
