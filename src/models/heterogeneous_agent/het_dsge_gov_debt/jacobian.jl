@@ -7,7 +7,7 @@ function jacobian(m::HetDSGEGovDebt)
     eq   = m.equilibrium_conditions
 
     # Load in parameters, steady-state parameters, and grids
-    r::Float64     = m[:r].value
+    r::Float64     = m[:r].scaledvalue
     α::Float64     = m[:α].value
     H::Float64     = m[:H].value
     δ::Float64     = m[:δ].value
