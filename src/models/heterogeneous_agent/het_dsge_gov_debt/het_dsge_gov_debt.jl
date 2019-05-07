@@ -279,7 +279,7 @@ function init_parameters!(m::HetDSGEGovDebt)
     # Exogenous processes - level
     # Uncomment scaling once adjusted properly in the code
     m <= parameter(:γ, 0.0, (-5.0, 5.0), (-5., 5.), Untransformed(),
-                   Normal(0.4, 0.1), fixed = true, # scaling = x -> x/100,
+                   Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
                    description = "γ: The log of the steady-state growth rate of technology",
                    tex_label="100\\gamma")
     # Check this
@@ -447,7 +447,7 @@ function aggregate_steadystate!(m::HetDSGEGovDebt)
     m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar], description = "Investment", tex_label = "x_*")
     m <= SteadyStateParameter(:ystar, (exp(-m[:α]*m[:γ])*(m[:kstar]^m[:α])*m[:H]^(1-m[:α])), description = "GDP", tex_label = "y_*")
 
-    m <= SteadyStateParameter(:bg, m[:BoverY]*m[:ystar], description = "Govt Debt", tex_label = "bg")
+    m <= SteadyStateParameter(:bg, m[:BoverY]*m[:ystar]*exp(m[:γ]), description = "Govt Debt", tex_label = "bg")
     m <= SteadyStateParameter(:Tg, (exp(-m[:γ]) - 1/(1+m[:r]))*m[:bg] + (1-(1/m[:g]))*m[:ystar], description = "Net lump sump taxes", tex_label = "Tg")
 
     m <= SteadyStateParameter(:Tstar, m[:Rkstar]*m[:kstar]*exp(-m[:γ]) - m[:xstar] - m[:Tg], description = "Net transfer to households", tex_label = "T_*")
@@ -503,7 +503,7 @@ function init_grids!(m::HetDSGEGovDebt)
     grids[:fgrid] = f
 
     xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value,
-                                              m[:r].value, m[:η].value, m[:γ].value,
+                                              m[:r].value, m[:η].value, m[:γ].scaledvalue,
                                               m[:Tstar].value, m[:zlo].value, nx)
 
     grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)

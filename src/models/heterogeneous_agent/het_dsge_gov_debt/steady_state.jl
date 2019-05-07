@@ -1,6 +1,6 @@
 function steadystate!(m::HetDSGEGovDebt;
-                      βlo::Float64 = 0.5*exp(m[:γ].value)/(1 + m[:r].value),
-                      βhi::Float64 = exp(m[:γ].value)/(1 + m[:r].value),
+                      βlo::Float64 = 0.5*exp(m[:γ].scaledvalue)/(1 + m[:r].value),
+                      βhi::Float64 = exp(m[:γ].scaledvalue)/(1 + m[:r].value),
                       excess::Float64 = 5000.,
                       tol::Float64 = 1e-4,
                       maxit::Int64 = 20,
@@ -48,7 +48,7 @@ function steadystate!(m::HetDSGEGovDebt;
         m.grids[:fgrid] = f
 
         xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value,
-                                                  m[:r].value, m[:η].value, m[:γ].value,
+                                                  m[:r].value, m[:η].value, m[:γ].scaledvalue,
                                                   m[:Tstar].value, m[:zlo].value, nx)
 
         m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
@@ -72,8 +72,8 @@ function steadystate!(m::HetDSGEGovDebt;
 end
 
 function find_steadystate!(m::HetDSGEGovDebt;
-                           βlo::Float64 = 0.5*exp(m[:γ].value)/(1 + m[:r].value),
-                           βhi::Float64 = exp(m[:γ].value)/(1 + m[:r].value),
+                           βlo::Float64 = 0.5*exp(m[:γ].scaledvalue)/(1 + m[:r].value),
+                           βhi::Float64 = exp(m[:γ].scaledvalue)/(1 + m[:r].value),
                            excess::Float64 = 5000.,
                            tol::Float64 = 1e-4,
                            maxit::Int64 = 20,
@@ -92,7 +92,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
     R = 1 + m[:r].value
     H = m[:H].value
     η = m[:η].value
-    γ = m[:γ].value
+    γ = m[:γ].scaledvalue
     ω = m[:ωstar].value
     T = m[:Tstar].value
     bg = m[:bg].value
