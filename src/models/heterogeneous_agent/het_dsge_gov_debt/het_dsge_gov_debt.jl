@@ -400,10 +400,14 @@ function init_parameters!(m::HetDSGEGovDebt)
     m <= parameter(:β_save, 0.0, fixed = true, description = "saving the betas per particle")
 
     m <= parameter(:sH_over_sL, 6.33333, fixed = true, description = "Ratio of high to low earners", tex_label = "s_H / s_L")
-    m <= parameter(:pLH, 0.01125, fixed = true, description = "prob of going from low to high persistent skill",
+
+    m <= parameter(:pLH, 0.01125, (0.005, 0.055), (0.005, 0.055), Untransformed(),
+                   Uniform(0.005, 0.055), fixed = false, description = "Prob of going from low to high persistent skill",
                    tex_label = "p(s_L \\mid s_H)")
-    m <= parameter(:pHL, 0.03, fixed = true, description = "prob of going from high to low persistent skill",
+    m <= parameter(:pHL, 0.03, (0.005, 0.055), (0.005, 0.055), Untransformed(),
+                   Uniform(0.005, 0.055), fixed = false, description = "Prob of going from high to low persistent skill",
                    tex_label = "p(s_H \\mid s_L)")
+
     m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
     m <= parameter(:δb, 1., (0.0, 1.0), (0.0, 1.0), Untransformed(),
                    Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget", tex_label = "\\delta_b")
