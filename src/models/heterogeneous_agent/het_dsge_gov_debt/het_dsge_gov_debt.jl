@@ -275,14 +275,6 @@ function init_parameters!(m::HetDSGEGovDebt)
                    description = "δ: The capital depreciation rate", tex_label = "\\delta")
     m <= parameter(:μ_sp, 0.0, fixed = true, description = "μ_sp: The trend in the skill process",
                    tex_label = "\\mu_{sp}")
-    #=m <= parameter(:ρ_sp, 0.7, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
-                   BetaAlt(0.5, 0.2), fixed = true,
-                   description="ρ_sp: AR(1) coefficient in the skill process.",
-                   tex_label="\\rho_{sp}")
-    m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), Exponential(),
-                   RootInverseGamma(2, 0.10), fixed = true,
-                   description="σ_sp: The standard deviation of the skill process.",
-                   tex_label="\\sigma_{sp}")=#
 
     # Exogenous processes - level
     # Uncomment scaling once adjusted properly in the code
@@ -295,7 +287,7 @@ function init_parameters!(m::HetDSGEGovDebt)
                    description = "g_star: 1 - (c_star + i_star)/y_star",
                    tex_label = "g_*")
     # Not in m1002
-    m <= parameter(:η, 0.0, description = "η: Borrowing constraint (normalized by TFP)")
+    m <= parameter(:η, 0.0, description = "η: Borrowing constraint (normalized by TFP)", tex_label = "\\eta")
 
     ####################################################
     # Parameters that affect dynamics (not steady-state)
@@ -309,8 +301,10 @@ function init_parameters!(m::HetDSGEGovDebt)
                    Normal(2, 0.75), fixed = false, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 
-    m <= parameter(:κ_p, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa")
-    m <= parameter(:κ_w, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa")
+    m <= parameter(:κ_p, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false,
+                   description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa_p")
+    m <= parameter(:κ_w, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false,
+                   description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa_w")
 
     m <= parameter(:ρR , 0.75, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.75, 0.10), fixed = false,
@@ -322,7 +316,8 @@ function init_parameters!(m::HetDSGEGovDebt)
                    tex_label = "\\psi_1")
     m <= parameter(:ψy , 0.5, (-0.5, 0.5), (-0.5, 0.5), Untransformed(),
                    Normal(0.12, 0.05), fixed = false,
-                   description = "ψy: Weight on output growth in monetary policy rule")
+                   description = "ψy: Weight on output growth in monetary policy rule",
+                   tex_label = "\\psi_y")
 
 
     # Exogenous processes - autocorrelation
@@ -332,7 +327,7 @@ function init_parameters!(m::HetDSGEGovDebt)
                    tex_label = "\\rho_g")
     m <= parameter(:ρ_B, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_b: AR(1) coefficient in the intertemporal preference shifter process.",
+                   description = "ρ_b: AR(1) coefficient in intertemporal preference shift process.",
                    tex_label = "\\rho_B")
     m <= parameter(:ρ_μ, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = false,
@@ -392,8 +387,10 @@ function init_parameters!(m::HetDSGEGovDebt)
                    description="Lmean: Mean level of hours.",
                    tex_label="\\bar{L}")
 
-    m <= parameter(:e_y, 0.0, fixed = true, description = "e_y: Measurement error on GDP", tex_label = "e_y")
-    m <= parameter(:e_L, 0.0, fixed = true, description = "e_L: Measurement error on hours worked", tex_label = "e_L")
+    m <= parameter(:e_y, 0.0, fixed = true,
+                   description = "e_y: Measurement error on GDP", tex_label = "e_y")
+    m <= parameter(:e_L, 0.0, fixed = true,
+                   description = "e_L: Measurement error on hours worked", tex_label = "e_L")
     m <= parameter(:e_w, 0.0, fixed = true, description = "e_w: Measurement error on wages", tex_label ="e_w")
     m <= parameter(:e_π, 0.0, fixed = true, description = "e_π: Measurement error on GDP deflator", tex_label = "e_π")
     m <= parameter(:e_R, 0.0, fixed = true, description = "e_R: Measurement error on nominal rate of interest", tex_label = "e_R")
@@ -402,22 +399,25 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     m <= parameter(:β_save, 0.0, fixed = true, description = "saving the betas per particle")
 
-    m <= parameter(:sH_over_sL, 6.33333, fixed = true, description = "Ratio of high to low earners")
-
-    m <= parameter(:pLH, 0.01125, fixed = true, description = "prob of going from low to high persistent skill")
-    m <= parameter(:pHL, 0.03, fixed = true, description = "prob of going from ")
-    m <= parameter(:BoverY, 0.26, fixed = true, description = "???")
+    m <= parameter(:sH_over_sL, 6.33333, fixed = true, description = "Ratio of high to low earners", tex_label = "s_H / s_L")
+    m <= parameter(:pLH, 0.01125, fixed = true, description = "prob of going from low to high persistent skill",
+                   tex_label = "p(s_L \\mid s_H)")
+    m <= parameter(:pHL, 0.03, fixed = true, description = "prob of going from high to low persistent skill",
+                   tex_label = "p(s_H \\mid s_L)")
+    m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
     m <= parameter(:δb, 1., (0.0, 1.0), (0.0, 1.0), Untransformed(),
-                   Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget")
+                   Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget", tex_label = "\\delta_b")
 
 
     m <= parameter(:zlo, 0.0323232, fixed = true,
-                   description = "Lower bound on second income shock to mollify actual income")
+                   description = "Lower bound on second income shock to mollify actual income",
+                   tex_label = "z_{lo}")
     m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
-                   description = "Upper bound on second income shock to mollify actual income")
+                   description = "Upper bound on second income shock to mollify actual income",
+                   tex_label = "z_{hi}")
 
-    m <= parameter(:mpc, 0.0, fixed = true)
-    m <= parameter(:pc0, 0.0, fixed = true)
+    m <= parameter(:mpc, 0.0, fixed = true, tex_label = "MPC")
+    m <= parameter(:pc0, 0.0, fixed = true, tex_label = "pc0")
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
