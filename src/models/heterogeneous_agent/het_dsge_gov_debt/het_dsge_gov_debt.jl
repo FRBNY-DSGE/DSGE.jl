@@ -1,5 +1,4 @@
 import DataStructures: OrderedDict
-
 """
 ```
 HetDSGEGovDebt{T} <: AbstractHeterogeneousModel{T}
@@ -70,39 +69,38 @@ equilibrium conditions.
 
 """
 mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
-    parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
-    steady_state::ParameterVector{T}                       # model steady-state values
+    parameters::ParameterVector{T}               # vector of all time-invariant model parameters
+    steady_state::ParameterVector{T}             # model steady-state values
 
     # Temporary to get it to work. Need to
     # figure out a more flexible way to define
     # "grids" that are not necessarily quadrature
     # grids within the model
     grids::OrderedDict{Symbol,Union{Grid, Array}}
+    keys::OrderedDict{Symbol,Int}                    # Human-readable names for all the model
+                                                     # parameters and steady-states
 
-    keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
-                                                           # parameters and steady-states
+    state_variables::Vector{Symbol}                  # Vector of symbols of the state variables
+    jump_variables::Vector{Symbol}                   # Vector of symbols of the jump variables
+    normalized_model_states::Vector{Symbol}          # All of the distributional model
+                                                     # state variables that need to be normalized
+    # Vector of unnormalized ranges of indices
+    endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange}
+    # Vector of ranges corresponding to normalized (post Klein solution) indices
+    endogenous_states::OrderedDict{Symbol,UnitRange}
 
-    state_variables::Vector{Symbol}                        # Vector of symbols of the state variables
-    jump_variables::Vector{Symbol}                         # Vector of symbols of the jump variables
-    normalized_model_states::Vector{Symbol}                # All of the distributional model
-                                                           # state variables that need to be normalized
-    endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange} # Vector of unnormalized
-                                                           # ranges of indices
-    endogenous_states::OrderedDict{Symbol,UnitRange}       # Vector of ranges corresponding
-                                                           # to normalized (post Klein solution) indices
-    exogenous_shocks::OrderedDict{Symbol,Int}              #
-    expected_shocks::OrderedDict{Symbol,Int}               #
-    equilibrium_conditions::OrderedDict{Symbol,UnitRange}  #
+    exogenous_shocks::OrderedDict{Symbol,Int}
+    expected_shocks::OrderedDict{Symbol,Int}
+    equilibrium_conditions::OrderedDict{Symbol,UnitRange}
     endogenous_states_augmented::OrderedDict{Symbol, Int}
-    observables::OrderedDict{Symbol,Int}                   #
+    observables::OrderedDict{Symbol,Int}
 
-    spec::String                                           # Model specification number (eg "m990")
-    subspec::String                                        # Model subspecification (eg "ss0")
-    settings::Dict{Symbol,Setting}                         # Settings/flags for computation
-    test_settings::Dict{Symbol,Setting}                    # Settings/flags for testing mode
-    rng::MersenneTwister                                   # Random number generator
-    testing::Bool                                          # Whether we are in testing mode or not
-
+    spec::String                                     # Model specification number (eg "m990")
+    subspec::String                                  # Model subspecification (eg "ss0")
+    settings::Dict{Symbol,Setting}                   # Settings/flags for computation
+    test_settings::Dict{Symbol,Setting}              # Settings/flags for testing mode
+    rng::MersenneTwister                             # Random number generator
+    testing::Bool                                    # Whether we are in testing mode or not
     observable_mappings::OrderedDict{Symbol, Observable}
 end
 
@@ -148,14 +146,12 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
     setup_indices!(m)
     endo = m.endogenous_states_unnormalized
     eqcond = equilibrium_conditions
-
     ########################################################################################
 
     m.normalized_model_states = [:kf′_t]
 
-    for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
-    #for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(get_setting(m, :state_indices)) end #length(endogenous_states) end
-    for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
+    for (i,k) in enumerate(exogenous_shocks); m.exogenous_shocks[k] = i end
+    for (i,k) in enumerate(observables);      m.observables[k]      = i end
 end
 
 function HetDSGEGovDebt(subspec::String="ss0";
@@ -208,19 +204,22 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
     # Endogenous states
     states = collect([:kf′_t,:k′_t, :R′_t1,:i′_t1, :y′_t1,:w′_t1,:I′_t1, :bg′_t,
-                      :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t]) #, :c′_t1])
+                      :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t])
 
     jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:mu′_t,:y′_t, :I′_t,
-                      :mc′_t,:Q′_t,:capreturn′_t, :tg′_t]) #, :c′_t])
+                     :mc′_t,:Q′_t,:capreturn′_t, :tg′_t])
 
     # Initialize model indices
     init_model_indices!(m, states, jumps)
 
-    # Init stuff that keeps track of number of states and jumps and states/jump indices (requires model indices first)
+    # Init what will keep track of # of states, jumps, and states/jump indices
+    # (need model indices first)
     init_states_and_jumps!(m, states, jumps)
 
     endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
-    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
+    for (i,k) in enumerate(endogenous_states_augmented)
+        m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
+    end
 
     # Initialize parameters
     init_parameters!(m)
@@ -243,7 +242,6 @@ function HetDSGEGovDebt(subspec::String="ss0";
     m <= Setting(:n_predetermined_variables, size(Qx, 1))
     m <= Setting(:Qleft, Qleft)
     m <= Setting(:Qright, Qright)
-
     return m
 end
 
@@ -262,10 +260,12 @@ function init_parameters!(m::HetDSGEGovDebt)
     ######################################
     m <= parameter(:r, 0.6, (1e-5, 10.0), (1e-5, 10.), Exponential(),
                    GammaAlt(0.25, .1), fixed = false, scaling = x -> x/100 + .4/100,
-                   description="r: Quarterly steady-state real interest rate.",
-                   tex_label="100*(r^{HetDSGE}-\\gamma^{FRBNY})")
-    m <= parameter(:α, 0.3, fixed = false, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05),
-                   description = "α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
+                   description= "r: Quarterly steady-state real interest rate.",
+                   tex_label= "100*(r^{HetDSGE}-\\gamma^{FRBNY})")
+    m <= parameter(:α, 0.3, fixed = false, (1e-5, 0.999), (1e-5, 0.999),
+                   SquareRoot(), Normal(0.30, 0.05),
+                   description = "α: Capital elasticity in the intermediate goods" *
+                   "sector's production function (also known as the capital share).",
                    tex_label = "\\alpha")
     # Check this: Previously the description was "Aggregate hours worked"
     m <= parameter(:H, 1.0, (-1000., 1000.), (-1e3, 1e3), Untransformed(),
@@ -273,7 +273,8 @@ function init_parameters!(m::HetDSGEGovDebt)
                    description = "Lmean: Mean level of hours", tex_label = "H")
     m <= parameter(:δ, 0.03, fixed = true,
                    description = "δ: The capital depreciation rate", tex_label = "\\delta")
-    m <= parameter(:μ_sp, 0.0, fixed = true, description = "μ_sp: The trend in the skill process",
+    m <= parameter(:μ_sp, 0.0, fixed = true,
+                   description = "μ_sp: The trend in the skill process",
                    tex_label = "\\mu_{sp}")
 
     # Exogenous processes - level
@@ -287,24 +288,27 @@ function init_parameters!(m::HetDSGEGovDebt)
                    description = "g_star: 1 - (c_star + i_star)/y_star",
                    tex_label = "g_*")
     # Not in m1002
-    m <= parameter(:η, 0.0, description = "η: Borrowing constraint (normalized by TFP)", tex_label = "\\eta")
+    m <= parameter(:η, 0.0, description = "η: Borrowing constraint (normalized by TFP)",
+                   tex_label = "\\eta")
 
     ####################################################
     # Parameters that affect dynamics (not steady-state)
     ####################################################
     m <= parameter(:spp, 4., (-15., 15.), (-15., 15.), Untransformed(),
                    Normal(4., 1.5), fixed = false,
-                   description = "S'': The second derivative of households' cost of adjusting investment.",
-                   tex_label = "S''")
+                   description = "S'': The second derivative of households' cost " *
+                   "of adjusting investment.", tex_label = "S''")
 
     m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
                    Normal(2, 0.75), fixed = false, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 
-    m <= parameter(:κ_p, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false,
-                   description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa_p")
-    m <= parameter(:κ_w, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false,
-                   description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa_w")
+    m <= parameter(:κ_p, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3),
+                   fixed = false, description = "κ_p : The slope of the Price Phillips curve",
+                   tex_label = "\\kappa_p")
+    m <= parameter(:κ_w, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3),
+                   fixed = false, description = "κ_w: The slope of the Wage Phillips curve",
+                   tex_label = "\\kappa_w")
 
     m <= parameter(:ρR , 0.75, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.75, 0.10), fixed = false,
@@ -319,7 +323,6 @@ function init_parameters!(m::HetDSGEGovDebt)
                    description = "ψy: Weight on output growth in monetary policy rule",
                    tex_label = "\\psi_y")
 
-
     # Exogenous processes - autocorrelation
     m <= parameter(:ρ_G, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = false,
@@ -327,8 +330,8 @@ function init_parameters!(m::HetDSGEGovDebt)
                    tex_label = "\\rho_g")
     m <= parameter(:ρ_B, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_b: AR(1) coefficient in intertemporal preference shift process.",
-                   tex_label = "\\rho_B")
+                   description = "ρ_b: AR(1) coefficient in intertemporal preference " *
+                   "shift process.", tex_label = "\\rho_B")
     m <= parameter(:ρ_μ, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_μ: AR(1) coefficient in capital adjustment cost process.",
@@ -352,66 +355,77 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     m <= parameter(:σ_g, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
-                   description = "σ_g: The standard deviation of the government spending process.",
+                   description = "σ_g: standard dev. of the government spending process.",
                    tex_label = "\\sigma_{g}")
     m <= parameter(:σ_b, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
-                   description = "σ_b: The standard deviation of the intertemporal preference shifter process.",
-                   tex_label = "\\sigma_{b}")
+                   description = "σ_b: standard dev. of the intertemporal preference " *
+                   "shifter process.", tex_label = "\\sigma_{b}")
     m <= parameter(:σ_μ, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
-                   description = "σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
-                   tex_label = "\\sigma_{\\mu}")
+                   description = "σ_μ: standard dev. of the exogenous marginal efficiency" *
+                   " of investment shock process.", tex_label = "\\sigma_{\\mu}")
     m <= parameter(:σ_z, 0.15,(1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
-                   description = "σ_z: The standard deviation of the process describing the stationary component of productivity.",
-                   tex_label = "\\sigma_z")
+                   description = "σ_z: standard dev. of the process describing the " *
+                   "stationary component of productivity.", tex_label = "\\sigma_z")
     m <= parameter(:σ_λ_f, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
-                   description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
-                   tex_label = "\\sigma_{\\lambda_f}")
+                   description = "σ_λ_f: mean of the process that generates the price " *
+                   "elasticity of the composite good. Specifically, the elasticity is " *
+                   "(1+λ_{f,t})/(λ_{f,t}).", tex_label = "\\sigma_{\\lambda_f}")
     m <= parameter(:σ_λ_w, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
-                   description = "σ_λ_w",
-                   tex_label = "\\sigma_{\\lambda_w}")
+                   description = "σ_λ_w", tex_label = "\\sigma_{\\lambda_w}")
     m <= parameter(:σ_rm, 0.15, (1e-8, 5.), (1e-8, 5.), Exponential(),
                    RootInverseGamma(2, 0.10), fixed = false,
-                   description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
+                   description = "σ_r_m: standard dev. of the monetary policy shock.",
+                   tex_label = "\\sigma_{r^m}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
-               description="π_star: The steady-state rate of inflation.",
-               tex_label="\\pi_*")
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+                   GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
+                   description="π_star: steady-state rate of inflation.",
+                   tex_label="\\pi_*")
 
 
-    m <= parameter(:Lmean, -45.9364, (-1000., 1000.), (-1e3, 1e3), Untransformed(), Normal(-45., 5.), fixed=false,
-                   description="Lmean: Mean level of hours.",
-                   tex_label="\\bar{L}")
+    m <= parameter(:Lmean, -45.9364, (-1000., 1000.), (-1e3, 1e3), Untransformed(),
+                   Normal(-45., 5.), fixed=false,
+                   description="Lmean: Mean level of hours.", tex_label="\\bar{L}")
 
     m <= parameter(:e_y, 0.0, fixed = true,
                    description = "e_y: Measurement error on GDP", tex_label = "e_y")
     m <= parameter(:e_L, 0.0, fixed = true,
                    description = "e_L: Measurement error on hours worked", tex_label = "e_L")
-    m <= parameter(:e_w, 0.0, fixed = true, description = "e_w: Measurement error on wages", tex_label ="e_w")
-    m <= parameter(:e_π, 0.0, fixed = true, description = "e_π: Measurement error on GDP deflator", tex_label = "e_π")
-    m <= parameter(:e_R, 0.0, fixed = true, description = "e_R: Measurement error on nominal rate of interest", tex_label = "e_R")
-    m <= parameter(:e_c, 0.0, fixed = true, description = "e_c: Measurement error on consumption", tex_label = "e_c")
-    m <= parameter(:e_i, 0.0, fixed = true, description = "e_i: Measurement error on investment", tex_label = "e_i")
+    m <= parameter(:e_w, 0.0, fixed = true, description = "e_w: Measurement error on wages",
+                   tex_label ="e_w")
+    m <= parameter(:e_π, 0.0, fixed = true,
+                   description = "e_π: Measurement error on GDP deflator", tex_label = "e_π")
+    m <= parameter(:e_R, 0.0, fixed = true,
+                   description = "e_R: Measurement error on nominal rate of interest",
+                   tex_label = "e_R")
+    m <= parameter(:e_c, 0.0, fixed = true,
+                   description = "e_c: Measurement error on consumption", tex_label = "e_c")
+    m <= parameter(:e_i, 0.0, fixed = true,
+                   description = "e_i: Measurement error on investment", tex_label = "e_i")
 
-    m <= parameter(:β_save, 0.0, fixed = true, description = "saving the betas per particle")
-
-    m <= parameter(:sH_over_sL, 6.33333, fixed = true, description = "Ratio of high to low earners", tex_label = "s_H / s_L")
+    m <= parameter(:β_save, 0.0, fixed = true,
+                   description = "saving the betas per particle")
+    m <= parameter(:sH_over_sL, 6.33333, fixed = true,
+                   description = "Ratio of high to low earners", tex_label = "s_H / s_L")
 
     m <= parameter(:pLH, 0.01125, (0.005, 0.095), (0.005, 0.095), Untransformed(),
-                   Uniform(0.005, 0.095), fixed = false, description = "Prob of going from low to high persistent skill",
+                   Uniform(0.005, 0.095), fixed = false,
+                   description = "Prob of going from low to high persistent skill",
                    tex_label = "p(s_L \\mid s_H)")
     m <= parameter(:pHL, 0.03, (0.005, 0.095), (0.005, 0.095), Untransformed(),
-                   Uniform(0.005, 0.095), fixed = false, description = "Prob of going from high to low persistent skill",
+                   Uniform(0.005, 0.095), fixed = false,
+                   description = "Prob of going from high to low persistent skill",
                    tex_label = "p(s_H \\mid s_L)")
 
     m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
     m <= parameter(:δb, 1., (0.0, 1.0), (0.0, 1.0), Untransformed(),
-                   Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget", tex_label = "\\delta_b")
-
+                   Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget",
+                   tex_label = "\\delta_b")
 
     m <= parameter(:zlo, 0.0323232, fixed = true,
                    description = "Lower bound on second income shock to mollify actual income",
@@ -427,11 +441,13 @@ function init_parameters!(m::HetDSGEGovDebt)
     ns = get_setting(m, :ns)
 
     # Steady state grids for functional/distributional variables and market-clearing discount rate
-    m <= SteadyStateParameterGrid(:lstar, fill(NaN, nx*ns), description = "Steady-state expected discounted
+    m <= SteadyStateParameterGrid(:lstar, fill(NaN, nx*ns),
+                                  description = "Steady-state expected discounted
                                   marginal utility of consumption", tex_label = "l_*")
-    m <= SteadyStateParameterGrid(:cstar, fill(NaN, nx*ns), description = "Steady-state consumption",
-                                  tex_label = "c_*")
-    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nx*ns), description = "Steady-state cross-sectional density of cash on hand",
+    m <= SteadyStateParameterGrid(:cstar, fill(NaN, nx*ns),
+                                  description = "Steady-state consumption", tex_label = "c_*")
+    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nx*ns), description = "Steady-state" *
+                                  " cross-sectional density of cash on hand",
                                   tex_label = "\\mu_*")
     m <= SteadyStateParameter(:βstar, NaN, description = "Steady-state discount factor",
                               tex_label = "\\beta_*")
@@ -444,19 +460,53 @@ aggregate_steadystate!(m::HetDSGEGovDebt)
 Steady state of aggregate scalar variables (Break out the "analytic" steady-state solution here instead of in steadystate!() since some of these parameters are required to construct the grids that are used in the functional/distributional steady state variable calculation (where init_grids! is called before steadystate! in model construction).
 """
 function aggregate_steadystate!(m::HetDSGEGovDebt)
-    m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ], description = "Rental rate on capital", tex_label = "Rk_*")
-    m <= SteadyStateParameter(:ωstar, (m[:α]^(m[:α]/(1-m[:α])))*(1-m[:α])*m[:Rkstar]^(-m[:α]/(1-m[:α])), description = "Real wage", tex_label = "\\omega_*")
-    m <= SteadyStateParameter(:klstar, (m[:α]/(1-m[:α]))*(m[:ωstar]/m[:Rkstar])*exp(m[:γ]), description = "Capital/Labor ratio", tex_label = "kl_*")
-    m <= SteadyStateParameter(:kstar, m[:klstar]*m[:H], description = "Capital", tex_label = "k_*")
-    m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar], description = "Investment", tex_label = "x_*")
-    m <= SteadyStateParameter(:ystar, (exp(-m[:α]*m[:γ])*(m[:kstar]^m[:α])*m[:H]^(1-m[:α])), description = "GDP", tex_label = "y_*")
-
-    m <= SteadyStateParameter(:bg, m[:BoverY]*m[:ystar]*exp(m[:γ]), description = "Govt Debt", tex_label = "bg")
-    m <= SteadyStateParameter(:Tg, (exp(-m[:γ]) - 1/(1+m[:r]))*m[:bg] + (1-(1/m[:g]))*m[:ystar], description = "Net lump sump taxes", tex_label = "Tg")
-
-    m <= SteadyStateParameter(:Tstar, m[:Rkstar]*m[:kstar]*exp(-m[:γ]) - m[:xstar] - m[:Tg], description = "Net transfer to households", tex_label = "T_*")
-
+    m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ],
+                              description = "Rental rate on capital", tex_label = "Rk_*")
+    m <= SteadyStateParameter(:ωstar,
+                              (m[:α]^(m[:α]/(1-m[:α])))*(1-m[:α])*m[:Rkstar]^(-m[:α]/(1-m[:α])),
+                              description = "Real wage", tex_label = "\\omega_*")
+    m <= SteadyStateParameter(:klstar, (m[:α]/(1-m[:α]))*(m[:ωstar]/m[:Rkstar])*exp(m[:γ]),
+                              description = "Capital/Labor ratio", tex_label = "kl_*")
+    m <= SteadyStateParameter(:kstar, m[:klstar]*m[:H], description = "Capital",
+                              tex_label = "k_*")
+    m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar],
+                              description = "Investment", tex_label = "x_*")
+    m <= SteadyStateParameter(:ystar, (exp(-m[:α]*m[:γ])*(m[:kstar]^m[:α])*m[:H]^(1-m[:α])),
+                              description = "GDP", tex_label = "y_*")
+    m <= SteadyStateParameter(:bg, m[:BoverY]*m[:ystar]*exp(m[:γ]), description = "Govt Debt",
+                              tex_label = "bg")
+    m <= SteadyStateParameter(:Tg, (exp(-m[:γ]) - 1/(1+m[:r]))*m[:bg] + (1-(1/m[:g]))*m[:ystar],
+                              description = "Net lump sump taxes", tex_label = "Tg")
+    m <= SteadyStateParameter(:Tstar, m[:Rkstar]*m[:kstar]*exp(-m[:γ]) - m[:xstar] - m[:Tg],
+                              description = "Net transfer to households", tex_label = "T_*")
     return m
+end
+
+function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat,
+                                  pHL::AbstractFloat, ns::Int)
+    f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
+    ss_skill_distr = [pHL/(pLH+pHL); pLH/(pLH+pHL)]
+    slo    = 1.0 / (ss_skill_distr'*[1;sH_over_sL])
+    sgrid  = slo*[1;sH_over_sL]
+    sscale = sgrid[2] - sgrid[1]
+    swts   = (sscale/ns)*ones(ns) # Quadrature weights
+    f      = f1 ./ repeat(swts',ns,1)
+    return f, sgrid, swts, sscale
+end
+function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat,
+                   r::AbstractFloat, η::AbstractFloat, γ::AbstractFloat,
+                   T::AbstractFloat, zlo::AbstractFloat, na::Int)
+    smin = minimum(sgrid)*zlo                                   # lowest possible skill
+    xlo_ss = ω*smin*H - (1+r)*η*exp(-γ) + T + sgrid[1]*ω*H*0.05 # lowest SS possible cash on hand
+
+    xlo = xlo_ss                        # lower bound on cash on hand - could be < xlo_ss
+    xhi = max(xlo*2, xlo + 12.0) # TODO # upper bound on cash on hand
+    xscale = (xhi-xlo)                  # size of w grids
+
+    # Make grids
+    xgrid = collect(range(xlo,stop = xhi, length = na)) # Evenly spaced grid
+    xwts  = (xscale/na)*ones(na)          # Quadrature weights
+    return xgrid, xwts, xlo, xhi, xscale
 end
 
 """
@@ -464,33 +514,6 @@ end
 init_grids!(m::HetDSGEGovDebt)
 ```
 """
-function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat,
-                                  pHL::AbstractFloat, ns::Int)
-    f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
-    ss_skill_distr = [pHL/(pLH+pHL); pLH/(pLH+pHL)]
-    slo = 1.0 / (ss_skill_distr'*[1;sH_over_sL])
-    sgrid = slo*[1;sH_over_sL]
-    sscale = sgrid[2] - sgrid[1]
-    swts     = (sscale/ns)*ones(ns) #quadrature weights
-    f = f1 ./ repeat(swts',ns,1)
-    return f, sgrid, swts, sscale
-end
-function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat,
-                   r::AbstractFloat, η::AbstractFloat, γ::AbstractFloat,
-                   T::AbstractFloat, zlo::AbstractFloat, na::Int)
-    smin = minimum(sgrid)*zlo                           # lowest possible skill
-    xlo_ss = ω*smin*H - (1+r)*η*exp(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
-
-    xlo = xlo_ss                    # lower bound on cash on hand - could be < xlo_ss
-    xhi = max(xlo*2, xlo + 12.0) # TODO       # upper bound on cash on hand
-    xscale = (xhi-xlo)              # size of w grids
-
-    # make grids
-    xgrid    = collect(range(xlo,stop = xhi, length = na)) #Evenly spaced grid
-    xwts = (xscale/na)*ones(na)          #quadrature weights
-    return xgrid, xwts, xlo, xhi, xscale
-end
-
 function init_grids!(m::HetDSGEGovDebt)
 
 
@@ -501,7 +524,8 @@ function init_grids!(m::HetDSGEGovDebt)
     grids = OrderedDict()
 
     # Skill grid
-    f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value, m[:pHL].value, get_setting(m, :ns))
+    f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value,
+                                                      m[:pHL].value, get_setting(m, :ns))
     # Markov transition matrix for skill
     grids[:sgrid] = Grid(sgrid, swts, sscale)
     grids[:fgrid] = f
@@ -569,7 +593,7 @@ function model_settings!(m::HetDSGEGovDebt)
 
     # s: Skill Distribution/ "Units of effective labor" Grid Setup
     m <= Setting(:ns, 2, "Skill distribution grid points")
-    m <= Setting(:λ, 2.0, "The λ parameter in the Tauchen distribution calculation")
+    m <= Setting(:λ, 2.0, "λ parameter in the Tauchen distribution calculation")
 
     # x: Cash on Hand Grid Setup
     m <= Setting(:nx, 300, "Cash on hand distribution grid points")
@@ -578,7 +602,8 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:targets, [0.16, 0.10],
                  "Targets for: [MPC, proportion of individuals with 0 income]")
     m <= Setting(:calibration_targets, [0.7, 0.23],
-                 "Targets for: [var(log(annual income)), var(one year changes in log(annual income))]")
+                 "Targets for: [var(log(annual income)), var(one year changes in " *
+                 "log(annual income))]")
     m <= Setting(:calibration_targets_lb, [3.0, 1e-18], "Lower bounds on [sH/sL, zlo]")
     m <= Setting(:calibration_targets_ub, [9.0, 0.8-eps()], "Upper bounds on [sH/sL, zlo]")
 
@@ -600,13 +625,13 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:mindens, 1e-8)
 
     # Function-valued variables include distributional variables
-    m <= Setting(:n_function_valued_backward_looking_states, 1, "Number of function-valued
-                 backward looking state variables")
-    m <= Setting(:n_backward_looking_distributional_vars, 1, "Number of state variables that are
-                 distributional variables.")
+    m <= Setting(:n_function_valued_backward_looking_states, 1, "Number of function-valued" *
+                 " backward looking state variables")
+    m <= Setting(:n_backward_looking_distributional_vars, 1,
+                 "Number of state variables that are distributional variables.")
     m <= Setting(:n_function_valued_jumps, 1, "Number of function-valued jump variables")
-    m <= Setting(:n_jump_distributional_vars, 1, "Number of jump variables that are distributional
-                 variables.")
+    m <= Setting(:n_jump_distributional_vars, 1,
+                 "Number of jump variables that are distributional variables.")
 
     # Note, these settings assume normalization.
     # The n degrees of freedom removed depends on the distributions/dimensions
@@ -616,11 +641,10 @@ function model_settings!(m::HetDSGEGovDebt)
     # hand), then one additional degree of freedom for each exogenous distribution (skill
     # distribution). Multiple endogenous distributions only permit removing a single degree
     # of freedom since it is then non-trivial to obtain the marginal distributions.
-    m <= Setting(:n_degrees_of_freedom_removed_state, 2, "Number of degrees of freedom from the distributional variables to remove.")
-    m <= Setting(:n_degrees_of_freedom_removed_jump, 0, "Number of degrees of freedom from the distributional variables to remove.")
-
-
-
+    m <= Setting(:n_degrees_of_freedom_removed_state, 2,
+                 "Number of degrees of freedom from the distributional variables to remove.")
+    m <= Setting(:n_degrees_of_freedom_removed_jump, 0,
+                 "Number of degrees of freedom from the distributional variables to remove.")
 end
 
 function setup_indices!(m::HetDSGEGovDebt)
@@ -634,17 +658,17 @@ function setup_indices!(m::HetDSGEGovDebt)
     endo[:kf′_t]    = 1:nxns    #  combination of lagged ell function and lagged m function that predicts m
 
     #endogenous scalar-valued states
-    endo[:k′_t]  = nxns+1:nxns+1             # capital –dont get confused with steadystate object K
-    endo[:R′_t1] = nxns+2:nxns+2              # lagged real interest rate
-    endo[:i′_t1] = nxns+3:nxns+3             # lagged nominal interest rate
-    endo[:y′_t1] = nxns+4:nxns+4             # lagged gdp
-    endo[:w′_t1] = nxns+5:nxns+5           # lag real wages
-    endo[:I′_t1] = nxns+6:nxns+6           # lag investment–don't get this confused with i, the nominal interest rate
+    endo[:k′_t]   = nxns+1:nxns+1             # capital –dont get confused with steadystate object K
+    endo[:R′_t1]  = nxns+2:nxns+2              # lagged real interest rate
+    endo[:i′_t1]  = nxns+3:nxns+3             # lagged nominal interest rate
+    endo[:y′_t1]  = nxns+4:nxns+4             # lagged gdp
+    endo[:w′_t1]  = nxns+5:nxns+5           # lag real wages
+    endo[:I′_t1]  = nxns+6:nxns+6           # lag investment–don't get this confused with i, the nominal interest rate
     endo[:bg′_t]  = nxns+7:nxns+7        # govt debt
     # exogenous scalar-valued states:
-    endo[:b′_t]    = nxns+8:nxns+8        # discount factor shock
-    endo[:g′_t]    = nxns+9:nxns+9        # govt spending
-    endo[:z′_t]  = nxns+10:nxns+10        # tfp growth
+    endo[:b′_t]   = nxns+8:nxns+8        # discount factor shock
+    endo[:g′_t]   = nxns+9:nxns+9        # govt spending
+    endo[:z′_t]   = nxns+10:nxns+10        # tfp growth
     endo[:μ′_t]   = nxns+11:nxns+11        # investment shock
     endo[:λ_w′_t] = nxns+12:nxns+12        # wage markup
     endo[:λ_f′_t] = nxns+13:nxns+13        # price markup
@@ -655,18 +679,18 @@ function setup_indices!(m::HetDSGEGovDebt)
     endo[:l′_t]  = nxns+15:2*nxns+14 # ell function
 
     #scalar-valued jumps
-    endo[:R′_t]  = 2*nxns+15:2*nxns+15        # real interest rate
-    endo[:i′_t]  = 2*nxns+16:2*nxns+16        # nominal interest rate
-    endo[:t′_t]  = 2*nxns+17:2*nxns+17        # transfers + dividends
-    endo[:w′_t]  = 2*nxns+18:2*nxns+18        # real wage
-    endo[:L′_t]  = 2*nxns+19:2*nxns+19        # hours worked
-    endo[:π′_t]  = 2*nxns+20:2*nxns+20        # inflation
+    endo[:R′_t]   = 2*nxns+15:2*nxns+15        # real interest rate
+    endo[:i′_t]   = 2*nxns+16:2*nxns+16        # nominal interest rate
+    endo[:t′_t]   = 2*nxns+17:2*nxns+17        # transfers + dividends
+    endo[:w′_t]   = 2*nxns+18:2*nxns+18        # real wage
+    endo[:L′_t]   = 2*nxns+19:2*nxns+19        # hours worked
+    endo[:π′_t]   = 2*nxns+20:2*nxns+20        # inflation
     endo[:π_w′_t] = 2*nxns+21:2*nxns+21        # nominal wage inflation
-    endo[:mu′_t] =  2*nxns+22:2*nxns+22        # average marginal utility
-    endo[:y′_t]  = 2*nxns+23:2*nxns+23       # gdp
-    endo[:I′_t]  = 2*nxns+24:2*nxns+24        # investment
-    endo[:mc′_t] = 2*nxns+25:2*nxns+25        # marginal cost - this is ζ in HetDSGEGovDebtₖd.pdf
-    endo[:Q′_t]  = 2*nxns+26:2*nxns+26        # Tobin's qfunction
+    endo[:mu′_t]  = 2*nxns+22:2*nxns+22        # average marginal utility
+    endo[:y′_t]   = 2*nxns+23:2*nxns+23       # gdp
+    endo[:I′_t]   = 2*nxns+24:2*nxns+24        # investment
+    endo[:mc′_t]  = 2*nxns+25:2*nxns+25        # marginal cost - this is ζ in HetDSGEGovDebtₖd.pdf
+    endo[:Q′_t]   = 2*nxns+26:2*nxns+26        # Tobin's qfunction
     endo[:capreturn′_t] = 2*nxns+27:2*nxns+27        # return on capital
     endo[:tg′_t] = 2*nxns+28:2*nxns+28
     #endo[:c′_t] = 2*nxns+27:2*nxns+27        # consumption
@@ -676,14 +700,13 @@ function setup_indices!(m::HetDSGEGovDebt)
     nyscalars = 14 # num scalar jumps
     nxscalars = nscalars - nyscalars # num scalar states
 
-# create objects needed for solve.jl
-# we will order function blocks as follows:
-# 1. all function blocks which output a function (first real eqs, then lags)
-# 2. all function blocks which map functions to scalars
-# 3. all scalar blocks involving endogenous vbls (first real eqs, then lags)
-# 4. shock processes
-funops = 1:2 # which operators output a function
-
+    # create objects needed for solve.jl
+    # we will order function blocks as follows:
+    # 1. all function blocks which output a function (first real eqs, then lags)
+    # 2. all function blocks which map functions to scalars
+    # 3. all scalar blocks involving endogenous vbls (first real eqs, then lags)
+    # 4. shock processes
+    funops = 1:2 # which operators output a function
 
     # function blocks which output a function
     eqconds[:eq_euler]              = 1:nxns
@@ -725,14 +748,13 @@ funops = 1:2 # which operators output a function
     #eqconds[:eq_consumption] = 2*nxns+27:2*nxns+27 # monetary policy MON
 
     # Total grid x*s
-    m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
-                         across grid dimensions.")
-
+    m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns),
+                 "Total grid size, multiplying across grid dimensions.")
     m <= Setting(:nvars, 2*get_setting(m, :n) + 28, "num variables")
     m <= Setting(:nscalars, 28, " # num eqs which output scalars")
     m <= Setting(:nyscalars, 14, "num scalar jumps")
-    m <= Setting(:nxscalars, get_setting(m, :nscalars) - get_setting(m, :nyscalars), "num scalar states")
-
+    m <= Setting(:nxscalars, get_setting(m, :nscalars) - get_setting(m, :nyscalars),
+                 "num scalar states")
     m.endogenous_states = deepcopy(endo)
 end
 
@@ -745,12 +767,14 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
     state_indices = stack_indices(endo, states)
     jump_indices = stack_indices(endo, jumps)
 
-    m <= Setting(:state_indices, state_indices, "Which indices of m.endogenous_states correspond to backward looking state variables")
-    m <= Setting(:jump_indices, jump_indices, "Which indices of m.endogenous_states correspond to jump
+    m <= Setting(:state_indices, state_indices, "Indices of m.endogenous_states " *
+                 "corresponding to backward-looking state variables")
+    m <= Setting(:jump_indices, jump_indices, "Indices of m.endogenous_states " *
+                 "corresponding to jump
                  variables")
 
     n_dof_removed_state = get_setting(m, :n_degrees_of_freedom_removed_state)
-    n_dof_removed_jump = get_setting(m, :n_degrees_of_freedom_removed_jump)
+    n_dof_removed_jump  = get_setting(m, :n_degrees_of_freedom_removed_jump)
 
 
     ####################################################
@@ -759,16 +783,19 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
     n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
     m <= Setting(:backward_looking_states_normalization_factor,
                  n_dof_removed_state*n_backward_looking_distr_vars,
-                 "The number of dimensions removed from the backward looking state variables
-                    for the normalization.")
+                 "Number of dimensions removed from the backward looking state variables
+                  for the normalization.")
 
     nxns = get_setting(m, :n) #nx)*get_setting(m, :ns)
     n_backward_looking_vars = length(get_setting(m, :state_indices))
-    n_backward_looking_function_valued_vars = get_setting(m, :n_function_valued_backward_looking_states)
-    n_backward_looking_scalar_vars = n_backward_looking_vars - nxns*n_backward_looking_function_valued_vars  #n_backward_looking_function_valued_vars
+    n_backward_looking_function_valued_vars = get_setting(m,
+                                               :n_function_valued_backward_looking_states)
+    n_backward_looking_scalar_vars = n_backward_looking_vars -
+        nxns*n_backward_looking_function_valued_vars  #n_backward_looking_function_valued_vars
 
     m <= Setting(:n_backward_looking_states, nxns*n_backward_looking_distr_vars +
-                 n_backward_looking_scalar_vars - get_setting(m, :backward_looking_states_normalization_factor),
+                 n_backward_looking_scalar_vars -
+                 get_setting(m, :backward_looking_states_normalization_factor),
                  "Number of state variables, in the true sense (fully
                   backward looking) accounting for the discretization across the grid
                   of function-valued variables and the normalization of
@@ -779,8 +806,8 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
     ##################################
     n_jump_distr_vars = get_setting(m, :n_jump_distributional_vars)
     m <= Setting(:jumps_normalization_factor,
-                 n_dof_removed_jump*n_jump_distr_vars, "The number of dimensions removed from the
-                 jump variables for the normalization.")
+                 n_dof_removed_jump*n_jump_distr_vars, "number of dimensions removed from" *
+                 " the jump variables for the normalization.")
 
     n_jump_vars = length(get_setting(m, :jump_indices))
     n_jump_function_valued_vars = get_setting(m, :n_function_valued_jumps)
@@ -792,11 +819,11 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
                   the discretization across the grid of function-valued variables and the
                   normalization of distributional variables.")
 
-    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps),
+    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) +
+                 get_setting(m, :n_jumps),
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
     m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                  length(m.endogenous_states_augmented))
-
 end

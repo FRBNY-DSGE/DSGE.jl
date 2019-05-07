@@ -6,7 +6,6 @@ function steadystate!(m::HetDSGEGovDebt;
                       maxit::Int64 = 20,
                       βband::Float64 = 1e-2)
 
-
     target = get_setting(m, :calibration_targets)
     lower  = get_setting(m, :calibration_targets_lb)
     upper  = get_setting(m, :calibration_targets_ub)
@@ -26,9 +25,6 @@ function steadystate!(m::HetDSGEGovDebt;
     zcdf = cumsum(zprob)
     zave = 0.5 * zgrid[1:nz-1] + 0.5 * zgrid[2:nz]
     zs   = zsample(uz, zgrid, zcdf, ni, nz)
-
-    #@time find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
-    #                  βband = βband)
 
     if get_setting(m, :steady_state_only)
         find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
@@ -67,7 +63,6 @@ function steadystate!(m::HetDSGEGovDebt;
 
 	    m[:mpc] = ave_mpc(m[:μstar].value, m[:cstar].value, xgrid, xswts, nx, ns)
 	    m[:pc0] = frac_zero(m[:μstar].value, m[:cstar].value, xgrid, xswts, ns)
-
     end
 end
 
@@ -124,14 +119,16 @@ function find_steadystate!(m::HetDSGEGovDebt;
         βlo_temp = m[:βstar].value - βband
         βhi_temp = m[:βstar].value + βband
 
-        c, bp, Win, KF = policy_hetdsgegovdebt(nx, ns, βlo_temp, R, ω, H, η, T, γ,
-                                        zhi, zlo, xgrid, sgrid, xswts, Win_guess, f, damp = get_setting(m, :policy_damp))
+        c, bp, Win, KF, reject = policy_hetdsgegovdebt(nx, ns, βlo_temp, R, ω, H, η, T, γ,
+                                               zhi, zlo, xgrid, sgrid, xswts,
+                                               Win_guess, f, damp = get_setting(m, :policy_damp))
         excess_lo, μ = compute_excess(xswts, KF, bp, bg)
 
         if excess_lo < 0 && abs(excess_lo) > tol
             βlo = βlo_temp
-            c, bp, Win, KF = policy_hetdsgegovdebt(nx, ns, βhi_temp, R, ω, H, η, T, γ, zhi,
-                                            zlo, xgrid, sgrid, xswts, Win_guess, f, damp = get_setting(m, :policy_damp))
+            c, bp, Win, KF, reject = policy_hetdsgegovdebt(nx, ns, βhi_temp, R, ω, H, η, T, γ, zhi,
+                                                   zlo, xgrid, sgrid, xswts, Win_guess, f,
+                                                   damp = get_setting(m, :policy_damp))
             excess_hi, μ = compute_excess(xswts, KF, bp, bg)
 
             if excess_hi > 0
@@ -144,10 +141,9 @@ function find_steadystate!(m::HetDSGEGovDebt;
 
     while abs(excess) > tol && counter < maxit # clearing markets
         β = (βlo + βhi) / 2.0
-        c, bp, Win, KF = policy_hetdsgegovdebt(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
+        c, bp, Win, KF, reject = policy_hetdsgegovdebt(nx, ns, β, R, ω, H, η, T, γ, zhi, zlo, xgrid, sgrid,
                                                xswts, Win_guess, f, damp = get_setting(m, :policy_damp))
         excess, μ = compute_excess(xswts, KF, bp, bg)
-
         # bisection
         if excess > 0
             βhi = β
@@ -227,14 +223,16 @@ function ln_annual_inc(zhist::Array{Float64,2}, us::Array{Float64,2},
 end
 
 
-function skill_moments(sH_over_sL::Real, zlo::Real, pLH::AbstractFloat, pHL::AbstractFloat, us::Array{Float64,2}, zs::Array{Float64,2}, ni::Int = 10000)
+function skill_moments(sH_over_sL::Real, zlo::Real, pLH::AbstractFloat,
+                       pHL::AbstractFloat, us::Array{Float64,2},
+                       zs::Array{Float64,2}, ni::Int = 10000)
 	πL = pHL/(pLH+pHL)
 	πss = [πL;1.0-πL]
 	P = [[1.0-pLH pLH];[pHL 1.0-pHL]]
 	slo = 1.0/(πL+(1-πL)*sH_over_sL)
 	shi = sH_over_sL*slo
 	sgrid = [slo; shi]
-	linc1, linc2 = ln_annual_inc(zs,us,zlo,P,πss,sgrid,ni)
+	linc1, linc2 = ln_annual_inc(zs, us, zlo, P, πss, sgrid, ni)
 	return var(linc1), var(linc2 - linc1)
 end
 
@@ -291,20 +289,21 @@ end
 end
 
 function policy_hetdsgegovdebt(nx::Int, ns::Int, β::AbstractFloat, R::AbstractFloat,
-                        ω::AbstractFloat, H::AbstractFloat,
-                        η::AbstractFloat, T::AbstractFloat,
-                        γ::AbstractFloat, zhi::AbstractFloat,
-                        zlo::AbstractFloat,
-                        xgrid::Vector{Float64}, sgrid::Vector{Float64},
-                        xswts::Vector{Float64}, Win::Vector{Float64},
-                        f::Array{Float64,2}, dist::Float64 = 1.,
-                        tol::Float64 = 1e-4, maxit::Int64 = 500; damp::Float64 = 0.5)
+                               ω::AbstractFloat, H::AbstractFloat,
+                               η::AbstractFloat, T::AbstractFloat,
+                               γ::AbstractFloat, zhi::AbstractFloat,
+                               zlo::AbstractFloat,
+                               xgrid::Vector{Float64}, sgrid::Vector{Float64},
+                               xswts::Vector{Float64}, Win::Vector{Float64},
+                               f::Array{Float64,2}, dist::Float64 = 1.,
+                               tol::Float64 = 1e-4, maxit::Int64 = 500; damp::Float64 = 0.5)
     n    = nx*ns
-    c    = zeros(n)                # consumption
-    bp   = Vector{Float64}(undef, n)      # savings
+    c    = zeros(n)                  # consumption
+    bp   = Vector{Float64}(undef, n) # savings
     Wout = Vector{Float64}(undef, length(Win))
     counter = 1
-    qfunction_hetdsgegovdebt(x::Float64) = mollifier_hetdsgegovdebt(x, zhi, zlo) #/sumz
+    reject = false
+    qfunction(x::Float64) = mollifier_hetdsgegovdebt(x, zhi, zlo) #/sumz
 
     while dist>tol && counter<maxit # for debugging
         # compute c(w) given guess for Win = β*R*E[u'(c_{t+1})]
@@ -315,18 +314,18 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::AbstractFloat, R::AbstractF
         end
         bp = repeat(xgrid, ns) - c  # compute bp(w) given guess for Win
         Wout = parameterized_expectations_hetdsgegovdebt(nx, ns, β, R, ω, H, T, γ,
-                                                         qfunction_hetdsgegovdebt, xgrid,
+                                                         qfunction, xgrid,
                                                          sgrid, xswts, c, bp, f)
-
         dist = maximum(abs.(Wout - Win))
         Win  = damp*Wout + (1.0-damp) * Win
         counter += 1
     end
     if counter == maxit
         @warn "Euler iteration did not converge"
+        reject = true
     end
-    tr = kolmogorov_fwd_hetdsgegovdebt(nx, ns, ω, H, T, R, γ, qfunction_hetdsgegovdebt, xgrid, sgrid, bp, f)
-    return c, bp, Wout, tr
+    @time tr = kolmogorov_fwd_hetdsgegovdebt(nx, ns, ω, H, T, R, γ, qfunction, xgrid, sgrid, bp, f)
+    return c, bp, Wout, tr, reject
 end
 
 @inline function parameterized_expectations_hetdsgegovdebt(nx::Int, ns::Int, β::AbstractFloat,
