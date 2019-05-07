@@ -785,4 +785,12 @@ function ss8!(m::HetDSGEGovDebt)
                    Normal(0.30, 0.05),
                    description = "α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label = "\\alpha")
+
+    m <= parameter(:pLH, 0.01125, (0.005, 0.055), (0.005, 0.055), Untransformed(),
+                   Uniform(0.005, 0.055), fixed = true, description = "Prob of going from low to high persistent skill",
+                   tex_label = "p(s_L \\mid s_H)")
+    m <= parameter(:pHL, 0.03, (0.005, 0.055), (0.005, 0.055), Untransformed(),
+                   Uniform(0.005, 0.055), fixed = true, description = "Prob of going from high to low persistent skill",
+                   tex_label = "p(s_H \\mid s_L)")
+
 end
