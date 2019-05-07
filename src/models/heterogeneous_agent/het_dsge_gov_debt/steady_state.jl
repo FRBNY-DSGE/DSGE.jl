@@ -31,6 +31,8 @@ function steadystate!(m::HetDSGEGovDebt;
     #                  βband = βband)
 
     if get_setting(m, :steady_state_only)
+        find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
+                          βband = βband)
         return
     else
         sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
@@ -116,9 +118,9 @@ function find_steadystate!(m::HetDSGEGovDebt;
     Win = Vector{Float64}(undef, n)
     Win_guess = ones(n)
 
-    if get_setting(m, :use_last_βstar) && m[:βstar].value!=0 #!isnan(m[:βstar].value)
+    if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
         βlo = βhi = m[:βstar].value
-    elseif m[:βstar].value!=0 #!isnan(m[:βstar].value)
+    elseif !isnan(m[:βstar].value)
         βlo_temp = m[:βstar].value - βband
         βhi_temp = m[:βstar].value + βband
 
@@ -153,7 +155,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
             βlo = β
         end
         counter += 1
-        if get_setting(m, :use_last_βstar) && m[:βstar].value!=0  #!isnan(m[:βstar].value)
+        if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
             break
         end
     end

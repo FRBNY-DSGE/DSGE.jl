@@ -2,9 +2,6 @@ function jacobian(m::HetDSGEGovDebt)
     truncate_distribution!(m)
 
     # Load in endogenous state and eq cond indices
-    @show m.endogenous_states_unnormalized
-    @show n_model_states_unnormalized(m)
-
     endo = augment_model_states(m.endogenous_states_unnormalized,
                          n_model_states_unnormalized(m))
     eq   = m.equilibrium_conditions
