@@ -239,7 +239,13 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                         subset_string = subset_string, groupings = groupings,
                         caption = caption, outdir = outdir)
     end
-
+    #=
+    if :mean_mode_moments in tables
+        mean_mode_moments_table(m, post_means, post_bands; percent = percent,
+                                subset_string = subset_string, groupings = groupings,
+                                caption = caption, outdir = outdir)
+    end
+    =#
     println(verbose, :low, "Tables are saved as " * tablespath(m, "estimate", "*.tex"))
 end
 
