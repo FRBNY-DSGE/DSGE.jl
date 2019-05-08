@@ -216,10 +216,6 @@ function HetDSGEGovDebt(subspec::String="ss0";
     # (need model indices first)
     init_states_and_jumps!(m, states, jumps)
 
-    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
-    for (i,k) in enumerate(endogenous_states_augmented)
-        m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
-    end
 
     # Initialize parameters
     init_parameters!(m)
@@ -235,6 +231,14 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
     # # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
+
+    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    for (i,k) in enumerate(endogenous_states_augmented)
+        m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
+    end
+
+    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                 length(m.endogenous_states_augmented))
 
     init_subspec!(m)
 
@@ -797,6 +801,5 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
-    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
-                 length(m.endogenous_states_augmented))
+
 end
