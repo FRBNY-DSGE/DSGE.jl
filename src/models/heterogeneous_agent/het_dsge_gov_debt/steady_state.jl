@@ -31,8 +31,10 @@ function steadystate!(m::HetDSGEGovDebt;
                           βband = βband)
         return
     else
-        sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
+        @time sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
                                                               target, lower, upper, us, zs)
+        @show sH_over_sL, zlo, min_varlinc, min_vardlinc
+
         m[:sH_over_sL] = sH_over_sL
         m[:zlo] = zlo
         m[:zhi] = 2.0 - zlo
@@ -241,11 +243,10 @@ end
 loss(x::Vector{S}, target::Vector{S}) where {S<:AbstractFloat} = sum(abs.(x-target))
 
 function best_fit(pLH::S, pHL::S, target::Vector{S}, lower::Vector{S}, upper::Vector{S},
-                  us::Matrix{S}, zs::Matrix{S}, max_iter::Int = 300,
+                  us::Matrix{S}, zs::Matrix{S}, max_iter::Int = 20,
                   initial_guess::Vector{S} = [6.3, 0.03]) where {S<:AbstractFloat}
 
-    skill_moments_f(x) = loss(collect(skill_moments(x[1], x[2],
-                                                    pLH, pHL, us, zs)), target)
+    skill_moments_f(x) = loss(collect(skill_moments(x[1], x[2], pLH, pHL, us, zs)), target)
 
     res = optimize(skill_moments_f, lower, upper, initial_guess, Fminbox(NelderMead()),
                    Optim.Options(f_calls_limit = max_iter))
