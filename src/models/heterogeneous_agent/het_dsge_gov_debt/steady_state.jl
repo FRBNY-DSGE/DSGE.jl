@@ -239,7 +239,6 @@ function skill_moments(sH_over_sL::Real, zlo::Real, pLH::S, pHL::S, us::Matrix{S
 	return var(linc1), var(linc2 - linc1)
 end
 
-
 loss(x::Vector{S}, target::Vector{S}) where {S<:AbstractFloat} = sum(abs.(x-target))
 
 function best_fit(pLH::S, pHL::S, target::Vector{S}, lower::Vector{S}, upper::Vector{S},
