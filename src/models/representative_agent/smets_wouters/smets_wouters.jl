@@ -1,5 +1,5 @@
 """
-SmetsWouters{T} <: AbstractModel{T}
+SmetsWouters{T} <: AbstractRepModel{T}
 
 The `SmetsWouters` type defines the structure of the New York Fed DSGE
 model.
@@ -79,7 +79,7 @@ the model.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-mutable struct SmetsWouters{T} <: AbstractModel{T}
+mutable struct SmetsWouters{T} <: AbstractRepModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model

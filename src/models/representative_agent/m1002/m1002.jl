@@ -1,6 +1,6 @@
 """
 ```
-Model1002{T} <: AbstractModel{T}
+Model1002{T} <: AbstractRepModel{T}
 ```
 
 The `Model1002` type defines the structure of Model1002 (same as
@@ -80,7 +80,7 @@ equilibrium conditions.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-mutable struct Model1002{T} <: AbstractModel{T}
+mutable struct Model1002{T} <: AbstractRepModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
