@@ -216,7 +216,6 @@ function HetDSGEGovDebt(subspec::String="ss0";
     # (need model indices first)
     init_states_and_jumps!(m, states, jumps)
 
-
     # Initialize parameters
     init_parameters!(m)
 
@@ -226,17 +225,16 @@ function HetDSGEGovDebt(subspec::String="ss0";
     # Initialize grids
     init_grids!(m)
 
-    # # Solve for the steady state
+    # Solve for the steady state
     #steadystate!(m)
 
-    # # So that the indices of m.endogenous_states reflect the normalization
+    # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
 
     endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
     for (i,k) in enumerate(endogenous_states_augmented)
         m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
     end
-
     m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                  length(m.endogenous_states_augmented))
 
