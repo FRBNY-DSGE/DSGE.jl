@@ -1,6 +1,6 @@
 """
 ```
-Model1010{T} <: AbstractModel{T}
+Model1010{T} <: AbstractRepModel{T}
 ```
 
 The `Model1010` type defines the structure of Model1010.
@@ -79,7 +79,7 @@ equilibrium conditions.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-mutable struct Model1010{T} <: AbstractModel{T}
+mutable struct Model1010{T} <: AbstractRepModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
