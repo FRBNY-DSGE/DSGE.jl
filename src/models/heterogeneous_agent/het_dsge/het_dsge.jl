@@ -301,8 +301,8 @@ function init_parameters!(m::HetDSGE)
                    Normal(2, 0.75), fixed = false, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 
-    m <= parameter(:κ_p, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa")
-    m <= parameter(:κ_w, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa")
+    m <= parameter(:κ_p, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_p : The slope of the Price Phillips curve", tex_label = "\\kappa_p")
+    m <= parameter(:κ_w, 0.5, (1e-5, 5.), (1e-5, 5.), SquareRoot(), GammaAlt(0.5, 0.3), fixed = false, description = "κ_w: The slope of the Wage Phillips curve", tex_label = "\\kappa_w")
 
     m <= parameter(:ρR , 0.75, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.75, 0.10), fixed = false,
@@ -311,11 +311,11 @@ function init_parameters!(m::HetDSGE)
     m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
                    Normal(1.5, 0.25), fixed = false,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
-                   tex_label = "\\psi_1")
+                   tex_label = "\\psi_\\pi")
     m <= parameter(:ψy , 0.5, (-0.5, 0.5), (-0.5, 0.5), Untransformed(),
                    Normal(0.12, 0.05), fixed = false,
-                   description = "ψy: Weight on output growth in monetary policy rule")
-
+                   description = "ψy: Weight on output growth in monetary policy rule",
+                   tex_label = "\\psi_y")
 
     # Exogenous processes - autocorrelation
     m <= parameter(:ρ_G, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
