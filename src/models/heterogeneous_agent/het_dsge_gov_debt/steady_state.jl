@@ -102,6 +102,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
     βlo_temp = βlo
     βhi_temp = βhi
 
+    reject  = false
     counter = 1
     n  = ns*nx
     c  = zeros(n)
@@ -157,6 +158,10 @@ function find_steadystate!(m::HetDSGEGovDebt;
             break
         end
     end
+    # CHECK THIS
+    @show reject
+    m <= Setting(:auto_reject, reject)
+
     m[:lstar]  = Win
     m[:cstar]  = c
     m[:μstar]  = μ
