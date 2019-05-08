@@ -218,9 +218,6 @@ function HetDSGE(subspec::String="ss0";
     # Init stuff that keeps track of number of states and jumps and states/jump indices (requires model indices first)
     init_states_and_jumps!(m, states, jumps)
 
-    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
-    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
-
     # Initialize parameters
     init_parameters!(m)
 
@@ -230,11 +227,16 @@ function HetDSGE(subspec::String="ss0";
     # Initialize grids
     init_grids!(m)
 
-    # # Solve for the steady state
+    # Solve for the steady state
     steadystate!(m)
 
-    # # So that the indices of m.endogenous_states reflect the normalization
+    # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
+
+    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
+    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                 length(m.endogenous_states_augmented))
 
     init_subspec!(m)
 
