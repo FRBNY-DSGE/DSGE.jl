@@ -116,6 +116,12 @@ function likelihood(m::AbstractModel, data::AbstractMatrix;
                     verbose::Symbol = :high) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
     use_penalty  = try get_setting(m, :use_likelihood_penalty) catch; false end
+    auto_reject  = try get_setting(m, :auto_reject) catch; false end
+
+    if auto_reject
+        m <= Setting(:auto_reject, false)
+        return -Inf
+    end
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if sampler

@@ -595,6 +595,7 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:target_σt, [0.2, 0.1], "Target \\sigma_t for MPC and pc0")
 
     m <= Setting(:steady_state_only, false, "Testing setting")
+    m <= Setting(:auto_reject, false, "This flag is set when policy function doesn't converge")
 
     # Misc
     m <= Setting(:trunc_distr, true)
