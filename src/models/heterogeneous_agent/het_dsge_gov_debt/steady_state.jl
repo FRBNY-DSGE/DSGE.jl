@@ -31,10 +31,8 @@ function steadystate!(m::HetDSGEGovDebt;
                           βband = βband)
         return
     else
-        @time sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
+        sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
                                                               target, lower, upper, us, zs)
-        @show sH_over_sL, zlo, min_varlinc, min_vardlinc
-
         m[:sH_over_sL] = sH_over_sL
         m[:zlo] = zlo
         m[:zhi] = 2.0 - zlo
