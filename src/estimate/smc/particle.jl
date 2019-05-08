@@ -92,7 +92,7 @@ function get_old_loglh(c::ParticleCloud)
 end
 
 function get_logpost(c::ParticleCloud)
-    return map(p -> p.logpost, c.particles)
+    return map(p -> p.logpost + p.loglh, c.particles)
 end
 
 function get_likeliest_particle_value(c::ParticleCloud)
