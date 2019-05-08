@@ -471,6 +471,8 @@ function truncate_distribution!(m::HetDSGEGovDebt)
         endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
         for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
 
+        m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                     length(m.endogenous_states_augmented))
 
     end
 end

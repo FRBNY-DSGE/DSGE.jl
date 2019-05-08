@@ -72,7 +72,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                         logpost[i] = -Inf
                         loglh[i] = -Inf
                     else
-                        throw(err)
+                        rethrow(err)
                     end
                 end
                 if isinf(loglh[i])
