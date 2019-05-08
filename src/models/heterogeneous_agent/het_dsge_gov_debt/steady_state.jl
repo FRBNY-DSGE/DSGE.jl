@@ -158,8 +158,8 @@ function find_steadystate!(m::HetDSGEGovDebt;
             break
         end
     end
+
     # CHECK THIS
-    @show reject
     m <= Setting(:auto_reject, reject)
 
     m[:lstar]  = Win
