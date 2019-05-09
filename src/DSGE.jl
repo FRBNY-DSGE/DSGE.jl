@@ -157,7 +157,7 @@ module DSGE
         #### Continuous time
         # models
         solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT, SteadyStateParameterArray,
-        OneAssetHANK,
+        OneAssetHANK, calibrate_pLH_pHL,
 
         # solve/
         gensysct, gensysct!, new_divct, decomposition_svdct!, <,
