@@ -394,3 +394,20 @@ end
     end
     return out
 end
+
+function calibrate_pLH_pHL(m::HetDSGEGovDebt)
+    target_mpc, target_pc0 = get_setting(m, :targets)
+    σt_mpc, σt_pc0 = get_setting(m, :target_σt)
+
+    function minimize_penalty(m, pLHpHL::Vector{Float64})
+        m[:pLH] = pLHpHL[1]
+        m[:pHL] = pLHpHL[2]
+        steadystate!(m)
+        return 0.5*((log(m[:mpc])-log(target_mpc))^2/σt_mpc +
+                    (log(m[:pc0].value)-log(target_pc0))^2/σt_pc0^2)
+    end
+    minimize_me(x) = minimize_penalty(m, x)
+    res = optimize(minimize_me, [0.005, 0.005], [0.095, 0.095], [0.01125, 0.03],
+                   Fminbox(Optim.NelderMead()), Optim.Options(f_calls_limit=300))
+    println(res)
+end
