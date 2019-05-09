@@ -32,6 +32,9 @@ function init_subspec!(m::HetDSGEGovDebt)
     # All but steady state parameters
     elseif subspec(m) == "ss8"
         return ss8!(m)
+    # Subspec 0, except r has higher prior mean
+    elseif subspec(m) == "ss9"
+        return ss9!(m)
     else
         error("This subspec should be a 0")
     end
@@ -793,4 +796,19 @@ function ss8!(m::HetDSGEGovDebt)
                    Uniform(0.005, 0.055), fixed = true, description = "Prob of going from high to low persistent skill",
                    tex_label = "p(s_H \\mid s_L)")
 
+end
+
+"""
+```
+ss9!(m::HetDSGEGovDebt)
+```
+
+Initializes subspec 9 of `HetDSGEGovDebt`.
+Is subspec 0 except with higher prior mean on r.
+"""
+function ss9!(m::HetDSGEGovDebt)
+    m <= parameter(:r, 0.6, (1e-5, 10.0), (1e-5, 10.), Exponential(),
+                   GammaAlt(0.6, .1), fixed = true, scaling = x -> x/100 + .4/100,
+                   description="r: Quarterly steady-state real interest rate.",
+                   tex_label="100*(r^{HetDSGE}-\\gamma^{FRBNY})")
 end
