@@ -35,6 +35,9 @@ function init_subspec!(m::HetDSGEGovDebt)
     # Subspec 0, except r has higher prior mean
     elseif subspec(m) == "ss9"
         return ss9!(m)
+    # Subspec 8, but with γ = 0.5
+    elseif subspec(m) == "ss10"
+        return ss10!(m)
     else
         error("This subspec should be a 0")
     end
@@ -811,4 +814,21 @@ function ss9!(m::HetDSGEGovDebt)
                    GammaAlt(1.0, 0.5), fixed = false, scaling = x -> x/100,
                    description= "r: Quarterly steady-state real interest rate.",
                    tex_label= "100*r^{HetDSGE}")
+end
+
+
+"""
+```
+ss10!(m::HetDSGEGovDebt)
+```
+
+Initializes subspec 10 of `HetDSGEGovDebt`.
+Is subspec 8 except with γ = 0.5.
+"""
+function ss10!(m::HetDSGEGovDebt)
+    ss8!(m)
+    m <= parameter(:γ, 0.5, (-5.0, 5.0), (-5., 5.), Untransformed(),
+                   Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
+                   description = "γ: The log of the steady-state growth rate of technology",
+                   tex_label="100\\gamma")
 end
