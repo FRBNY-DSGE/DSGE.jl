@@ -439,7 +439,7 @@ function init_parameters!(m::HetDSGEGovDebt)
                    tex_label = "\\bar{z}")
 
     m <= parameter(:mpc, 0.0, fixed = true, tex_label = "MPC")
-    m <= parameter(:pc0, 0.0, fixed = true, tex_label = "p(c_0)")
+    m <= parameter(:pc0, 0.0, fixed = true, tex_label = "pc0")
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
