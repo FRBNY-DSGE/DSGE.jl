@@ -260,10 +260,6 @@ function init_parameters!(m::HetDSGEGovDebt)
     ######################################
     # Parameters that affect steady-state
     ######################################
-    m <= parameter(:r, 0.6, (1e-5, 10.0), (1e-5, 10.), Exponential(),
-                   GammaAlt(0.25, .1), fixed = false, scaling = x -> x/100 + .4/100,
-                   description= "r: Quarterly steady-state real interest rate.",
-                   tex_label= "100*(r^{HetDSGE}-\\gamma^{FRBNY})")
     m <= parameter(:α, 0.3, fixed = false, (1e-5, 0.999), (1e-5, 0.999),
                    SquareRoot(), Normal(0.30, 0.05),
                    description = "α: Capital elasticity in the intermediate goods" *
@@ -285,10 +281,48 @@ function init_parameters!(m::HetDSGEGovDebt)
                    Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
                    description = "γ: The log of the steady-state growth rate of technology",
                    tex_label="100\\gamma")
-    # Check this
+
+    m <= parameter(:r, 1.0, (1e-5, 10.0), (1e-5, 10.0), Exponential(),
+                   GammaAlt(0.5, 0.5), fixed = false, scaling = x -> x/100,
+                   description= "r: Quarterly steady-state real interest rate.",
+                   tex_label= "100*r^{HetDSGE}")
+    #=
+    m <= parameter(:r, 0.6, (1e-5, 10.0), (1e-5, 10.), Exponential(),
+                   GammaAlt(0.25, .1), fixed = false, scaling = x -> x/100 + .4/100,
+                   description= "r: Quarterly steady-state real interest rate.",
+                   tex_label= "100*(r^{HetDSGE}-\\gamma^{FRBNY})")
+    =#
+
     m <= parameter(:g, 1/(1-0.01), fixed = true,
                    description = "g_star: 1 - (c_star + i_star)/y_star",
                    tex_label = "g_*")
+
+    m <= parameter(:β_save, 0.0, fixed = true,
+                   description = "saving the betas per particle")
+    m <= parameter(:sH_over_sL, 6.33333, fixed = true,
+                   description = "Ratio of high to low earners", tex_label = "s_H / s_L")
+
+    m <= parameter(:pLH, 0.01125, (0.005, 0.095), (0.005, 0.095), Untransformed(),
+                   Uniform(0.005, 0.095), fixed = false,
+                   description = "Prob of going from low to high persistent skill",
+                   tex_label = "p(s_L \\mid s_H)")
+    m <= parameter(:pHL, 0.03, (0.005, 0.095), (0.005, 0.095), Untransformed(),
+                   Uniform(0.005, 0.095), fixed = false,
+                   description = "Prob of going from high to low persistent skill",
+                   tex_label = "p(s_H \\mid s_L)")
+
+    m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
+
+    m <= parameter(:zlo, 0.0323232, fixed = true,
+                   description = "Lower bound on second income shock to mollify actual income",
+                   tex_label = "\\underbar{z}")
+    m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
+                   description = "Upper bound on second income shock to mollify actual income",
+                   tex_label = "\\bar{z}")
+
+    m <= parameter(:mpc, 0.23395, fixed = true, tex_label = "MPC")
+    m <= parameter(:pc0, 0.071893, fixed = true, tex_label = "pc0")
+
     # Not in m1002
     m <= parameter(:η, 0.0, description = "η: Borrowing constraint (normalized by TFP)",
                    tex_label = "\\eta")
@@ -324,6 +358,10 @@ function init_parameters!(m::HetDSGEGovDebt)
                    Normal(0.12, 0.05), fixed = false,
                    description = "ψy: Weight on output growth in monetary policy rule",
                    tex_label = "\\psi_y")
+
+    m <= parameter(:δb, 1., (0.0, 1.0), (0.0, 1.0), Untransformed(),
+                   Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget",
+                   tex_label = "\\delta_b")
 
     # Exogenous processes - autocorrelation
     m <= parameter(:ρ_G, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
@@ -410,34 +448,6 @@ function init_parameters!(m::HetDSGEGovDebt)
     m <= parameter(:e_i, 0.0, fixed = true,
                    description = "e_i: Measurement error on investment", tex_label = "e_i")
 
-    m <= parameter(:β_save, 0.0, fixed = true,
-                   description = "saving the betas per particle", tex_label = "\\beta_{save}")
-    m <= parameter(:sH_over_sL, 6.33333, fixed = true,
-                   description = "Ratio of high to low earners", tex_label = "s_H / s_L")
-
-    m <= parameter(:pLH, 0.01125, (0.005, 0.095), (0.005, 0.095), Untransformed(),
-                   Uniform(0.005, 0.095), fixed = false,
-                   description = "Prob of going from low to high persistent skill",
-                   tex_label = "p(s_L \\mid s_H)")
-    m <= parameter(:pHL, 0.03, (0.005, 0.095), (0.005, 0.095), Untransformed(),
-                   Uniform(0.005, 0.095), fixed = false,
-                   description = "Prob of going from high to low persistent skill",
-                   tex_label = "p(s_H \\mid s_L)")
-
-    m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
-    m <= parameter(:δb, 1., (0.0, 1.0), (0.0, 1.0), Untransformed(),
-                   Uniform(0.0, 1.0), fixed = false, description = "=1 means balanced budget",
-                   tex_label = "\\delta_b")
-
-    m <= parameter(:zlo, 0.0323232, fixed = true,
-                   description = "Lower bound on second income shock to mollify actual income",
-                   tex_label = "\\underbar{z}")
-    m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
-                   description = "Upper bound on second income shock to mollify actual income",
-                   tex_label = "\\bar{z}")
-
-    m <= parameter(:mpc, 0.0, fixed = true, tex_label = "MPC")
-    m <= parameter(:pc0, 0.0, fixed = true, tex_label = "pc0")
     # Setting steady-state parameters
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
@@ -462,6 +472,11 @@ aggregate_steadystate!(m::HetDSGEGovDebt)
 Steady state of aggregate scalar variables (Break out the "analytic" steady-state solution here instead of in steadystate!() since some of these parameters are required to construct the grids that are used in the functional/distributional steady state variable calculation (where init_grids! is called before steadystate! in model construction).
 """
 function aggregate_steadystate!(m::HetDSGEGovDebt)
+    # FOR POSTERITY
+    #=m <= SteadyStateParameter(:rprior, 100*(m[:r] - m[:γ]),
+                              description= "100*(r* - γ)",
+                              tex_label= "100*(r^{HetDSGE}-\\gamma^{FRBNY})")
+    =#
     m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ],
                               description = "Rental rate on capital", tex_label = "Rk_*")
     m <= SteadyStateParameter(:ωstar,
