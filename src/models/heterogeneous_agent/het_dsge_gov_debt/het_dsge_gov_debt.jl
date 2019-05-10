@@ -277,12 +277,12 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     # Exogenous processes - level
     # Uncomment scaling once adjusted properly in the code
-    m <= parameter(:γ, 0.0, (-5.0, 5.0), (-5., 5.), Untransformed(),
+    m <= parameter(:γ, 0.5, (-5.0, 5.0), (-5., 5.), Untransformed(),
                    Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
                    description = "γ: The log of the steady-state growth rate of technology",
                    tex_label="100\\gamma")
 
-    m <= parameter(:r, 1.0, (1e-5, 10.0), (1e-5, 10.0), Exponential(),
+    m <= parameter(:r, 0.5, (1e-5, 10.0), (1e-5, 10.0), Exponential(),
                    GammaAlt(0.5, 0.5), fixed = false, scaling = x -> x/100,
                    description= "r: Quarterly steady-state real interest rate.",
                    tex_label= "100*r^{HetDSGE}")
@@ -302,12 +302,12 @@ function init_parameters!(m::HetDSGEGovDebt)
     m <= parameter(:sH_over_sL, 6.33333, fixed = true,
                    description = "Ratio of high to low earners", tex_label = "s_H / s_L")
 
-    m <= parameter(:pLH, 0.01125, (0.005, 0.095), (0.005, 0.095), Untransformed(),
+    m <= parameter(:pLH, 0.005, (0.0025, 0.095), (0.0025, 0.095), Untransformed(),
                    Uniform(0.005, 0.095), fixed = false,
                    description = "Prob of going from low to high persistent skill",
                    tex_label = "p(s_L \\mid s_H)")
-    m <= parameter(:pHL, 0.03, (0.005, 0.095), (0.005, 0.095), Untransformed(),
-                   Uniform(0.005, 0.095), fixed = false,
+    m <= parameter(:pHL, 0.03, (0.0025, 0.095), (0.0025, 0.095), Untransformed(),
+                   Uniform(0.0025, 0.095), fixed = false,
                    description = "Prob of going from high to low persistent skill",
                    tex_label = "p(s_H \\mid s_L)")
 

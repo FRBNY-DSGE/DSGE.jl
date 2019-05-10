@@ -17,7 +17,7 @@ function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat,
     xlo_ss = ω*smin*H - (1+r)*η*exp(-γ) + T + sgrid[1]*ω*H*0.05 # lowest SS possible cash on hand
 
     xlo = xlo_ss                        # lower bound on cash on hand - could be < xlo_ss
-    xhi = max(xlo*2, xlo + 12.0) # TODO # upper bound on cash on hand
+    xhi = max(xlo*2, xlo + 12.0)         # upper bound on cash on hand
     xscale = (xhi-xlo)                  # size of w grids
 
     # Make grids
