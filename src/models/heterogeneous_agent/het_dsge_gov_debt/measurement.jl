@@ -40,49 +40,49 @@ function measurement(m::HetDSGEGovDebt{T},
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     ## Output growth - Quarterly!
-    ZZ[obs[:obs_gdp], first(endo[:y′_t])]       = 1.0
+    ZZ[obs[:obs_gdp], first(endo[:y′_t])]  = 1.0
     ZZ[obs[:obs_gdp], first(endo[:y′_t1])] = -1.0
-    ZZ[obs[:obs_gdp], first(endo[:z′_t])]       = 1.0
-    DD[obs[:obs_gdp]]                   = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_gdp], first(endo[:z′_t])]  = 1.0
+    DD[obs[:obs_gdp]]                      = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## Hours growth
     ZZ[obs[:obs_hours], first(endo[:L′_t])] = 1.0
-    DD[obs[:obs_hours]]             = m[:Lmean]
+    DD[obs[:obs_hours]]                     = m[:Lmean]
 
     ## Labor Share/real wage growth
     ZZ[obs[:obs_wages], first(endo[:w′_t])]       = 1.0
-    ZZ[obs[:obs_wages], first(endo[:w′_t1])] = -1.0
+    ZZ[obs[:obs_wages], first(endo[:w′_t1])]      = -1.0
     ZZ[obs[:obs_wages], first(endo[:z′_t])]       = 1.0
-    DD[obs[:obs_wages]]                   = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
+    DD[obs[:obs_wages]]                           = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## Inflation (GDP Deflator)
-    ZZ[obs[:obs_gdpdeflator], first(endo[:π′_t])]  = 1.0
-    DD[obs[:obs_gdpdeflator]]              = 100*(m[:π_star]-1)
+    ZZ[obs[:obs_gdpdeflator], first(endo[:π′_t])] = 1.0
+    DD[obs[:obs_gdpdeflator]]                     = 100*(m[:π_star]-1)
 
     ## Nominal interest rate
-    ZZ[obs[:obs_nominalrate], first(endo[:R′_t])]       = 1.0
-    DD[obs[:obs_nominalrate]]                   = 1 + m[:r] #m[:Rstarn]
+    ZZ[obs[:obs_nominalrate], first(endo[:R′_t])] = 1.0
+    DD[obs[:obs_nominalrate]]                     = 1 + m[:r] #m[:Rstarn]
 
     ## Consumption Growth
-    ZZ[obs[:obs_consumption], endo_new[:c_t]]       = 1.0
-    ZZ[obs[:obs_consumption], endo_new[:c_t1]] = -1.0
-    ZZ[obs[:obs_consumption], first(endo[:z′_t])]       = 1.0
-    DD[obs[:obs_consumption]]                   = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_consumption], endo_new[:c_t]]     = -C_eqn
+    ZZ[obs[:obs_consumption], endo_new[:c_t1]]    = -1.0
+    ZZ[obs[:obs_consumption], first(endo[:z′_t])] = 1.0
+    DD[obs[:obs_consumption]]                     = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## Investment Growth
-    ZZ[obs[:obs_investment], first(endo[:i′_t])]       = 1.0
-    ZZ[obs[:obs_investment], endo_new[:i_t1]] = -1.0
-    ZZ[obs[:obs_investment], first(endo[:z′_t])]       = 1.0
-    DD[obs[:obs_investment]]                   = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_investment], first(endo[:i′_t])]  = 1.0
+    ZZ[obs[:obs_investment], endo_new[:i_t1]]     = -1.0
+    ZZ[obs[:obs_investment], first(endo[:z′_t])]  = 1.0
+    DD[obs[:obs_investment]]                      = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     #Measurement error
-    EE[obs[:obs_gdp],1] = m[:e_y]^2
-    EE[obs[:obs_hours],2] = m[:e_L]^2
-    EE[obs[:obs_wages],3] = m[:e_w]^2
+    EE[obs[:obs_gdp],1]         = m[:e_y]^2
+    EE[obs[:obs_hours],2]       = m[:e_L]^2
+    EE[obs[:obs_wages],3]       = m[:e_w]^2
     EE[obs[:obs_gdpdeflator],4] = m[:e_π]^2
     EE[obs[:obs_nominalrate],5] = m[:e_R]^2
     EE[obs[:obs_consumption],6] = m[:e_c]^2
-    EE[obs[:obs_investment],7] = m[:e_i]^2
+    EE[obs[:obs_investment],7]  = m[:e_i]^2
 
     #Variance of innovations
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
