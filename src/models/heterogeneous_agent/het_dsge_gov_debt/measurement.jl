@@ -64,7 +64,7 @@ function measurement(m::HetDSGEGovDebt{T},
     DD[obs[:obs_nominalrate]]                     = 1 + m[:r] #m[:Rstarn]
 
     ## Consumption Growth
-    ZZ[obs[:obs_consumption], endo_new[:c_t]]     = -C_eqn
+    ZZ[obs[:obs_consumption], 1:get_setting(m, :n_backward_looking_states)] = -C_eqn
     ZZ[obs[:obs_consumption], endo_new[:c_t1]]    = -1.0
     ZZ[obs[:obs_consumption], first(endo[:z′_t])] = 1.0
     DD[obs[:obs_consumption]]                     = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
