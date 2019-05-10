@@ -298,7 +298,7 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S
                                T::S, γ::S, zhi::S, zlo::S, xgrid::Vector{S},
                                sgrid::Vector{S}, xswts::Vector{S}, Win::Vector{S},
                                f::Matrix{S}, dist::S = 1., tol::S = 1e-4,
-                               maxit::Int64 = 60; damp::S = 0.5) where {S<:AbstractFloat}
+                               maxit::Int64 = 500; damp::S = 0.5) where {S<:AbstractFloat}
     n    = nx*ns
     c    = zeros(n)                  # consumption
     bp   = Vector{Float64}(undef, n) # savings
@@ -397,12 +397,20 @@ end
 
 function calibrate_pLH_pHL(m::HetDSGEGovDebt)
     target_mpc, target_pc0 = get_setting(m, :targets)
-    σt_mpc, σt_pc0 = get_setting(m, :target_σt)
+    σt_mpc, σt_pc0         = get_setting(m, :target_σt)
 
     function minimize_penalty(m, pLHpHL::Vector{Float64})
         m[:pLH] = pLHpHL[1]
         m[:pHL] = pLHpHL[2]
         steadystate!(m)
+        if get_setting(m, :auto_reject)
+            m <= Setting(:auto_reject, false)
+            @show pLHpHL, Inf
+            return Inf
+        end
+        @show pLHpHL, m[:mpc].value, m[:pc0].value
+        println(0.5*((log(m[:mpc])-log(target_mpc))^2/σt_mpc +
+                    (log(m[:pc0].value)-log(target_pc0))^2/σt_pc0^2))
         return 0.5*((log(m[:mpc])-log(target_mpc))^2/σt_mpc +
                     (log(m[:pc0].value)-log(target_pc0))^2/σt_pc0^2)
     end
@@ -410,4 +418,5 @@ function calibrate_pLH_pHL(m::HetDSGEGovDebt)
     res = optimize(minimize_me, [0.005, 0.005], [0.095, 0.095], [0.01125, 0.03],
                    Fminbox(Optim.NelderMead()), Optim.Options(f_calls_limit=300))
     println(res)
+    return res
 end
