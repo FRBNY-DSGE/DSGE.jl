@@ -106,6 +106,10 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                     prior_new = -Inf
                     like_new = -Inf
                     like_old_data = -Inf
+                elseif isa(err, LinearAlgebra.LAPACKException)
+                    prior_new = -Inf
+                    like_new = -Inf
+                    like_old_data = -Inf
                 else
                     throw(err)
                 end
