@@ -285,7 +285,7 @@ end
     D = D[max_D]
 
     if abs(D - 1) > 2e-1 # that's the tolerance we are allowing
-        @warn "Your eigenvalue is too far from 1, something is wrong."
+        #@warn "Your eigenvalue is too far from 1, something is wrong."
     end
     # Pick eigenvector associated w/ largest eigenvalue and moving it back to values
     μ = real(V[:,max_D])
@@ -325,7 +325,7 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S
         counter += 1
     end
     if counter == maxit
-        @warn "Euler iteration did not converge"
+        #@warn "Euler iteration did not converge"
         reject = true
         return c, bp, Wout, zeros(n,n), reject
     end
