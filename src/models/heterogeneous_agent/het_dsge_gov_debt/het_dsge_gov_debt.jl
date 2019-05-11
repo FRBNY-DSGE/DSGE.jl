@@ -88,6 +88,7 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange}
     # Vector of ranges corresponding to normalized (post Klein solution) indices
     endogenous_states::OrderedDict{Symbol,UnitRange}
+    endogenous_states_original::OrderedDict{Symbol,UnitRange}
 
     exogenous_shocks::OrderedDict{Symbol,Int}
     expected_shocks::OrderedDict{Symbol,Int}
@@ -145,6 +146,7 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
 
     setup_indices!(m)
     endo = m.endogenous_states_unnormalized
+    m.endogenous_states_original = deepcopy(endo)
     eqcond = equilibrium_conditions
     ########################################################################################
 
@@ -179,7 +181,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
             # endogenous states unnormalized, endogenous states normalized
             OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
-            OrderedDict{Symbol,UnitRange}(),
+            OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
 
             spec,
@@ -240,10 +242,10 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
     init_subspec!(m)
 
-    Qx, Qy, Qleft, Qright = compose_normalization_matrices(m)
+    #=Qx, Qy, Qleft, Qright = compose_normalization_matrices(m)
     m <= Setting(:n_predetermined_variables, size(Qx, 1))
     m <= Setting(:Qleft, Qleft)
-    m <= Setting(:Qright, Qright)
+    m <= Setting(:Qright, Qright)=#
     return m
 end
 
@@ -449,7 +451,8 @@ function init_parameters!(m::HetDSGEGovDebt)
                    description = "e_i: Measurement error on investment", tex_label = "e_i")
 
     # Setting steady-state parameters
-    nx = get_setting(m, :nx)
+    #nx = get_setting(m, :nx)
+    nx = get_setting(m, :nx1) + get_setting(m, :nx2)
     ns = get_setting(m, :ns)
 
     # Steady state grids for functional/distributional variables and market-clearing discount rate
@@ -586,7 +589,11 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:λ, 2.0, "λ parameter in the Tauchen distribution calculation")
 
     # x: Cash on Hand Grid Setup
+    m <= Setting(:nx1, 300, "Cash on hand distribution grid points (Lo)")
+    m <= Setting(:nx2, 300, "Cash on hand distribution grid points (hi)")
     m <= Setting(:nx, 300, "Cash on hand distribution grid points")
+
+    m <= Setting(:poor_man_reduc, true)
 
     # Set targets
     m <= Setting(:targets, [0.16, 0.10],
@@ -643,7 +650,7 @@ function setup_indices!(m::HetDSGEGovDebt)
     ns = get_setting(m, :ns)
     endo = m.endogenous_states_unnormalized
     eqconds = m.equilibrium_conditions
-    nxns = nx*ns
+    nxns = (get_setting(m, :nx1) + get_setting(m, :nx2)) #*ns
 
     # Endogenous function-valued states
     endo[:kf′_t]    = 1:nxns    #  combination of lagged ell function and lagged m function that predicts m
@@ -739,7 +746,7 @@ function setup_indices!(m::HetDSGEGovDebt)
     #eqconds[:eq_consumption] = 2*nxns+27:2*nxns+27 # monetary policy MON
 
     # Total grid x*s
-    m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns),
+    m <= Setting(:n, (get_setting(m, :nx1) +get_setting(m, :nx2)),
                  "Total grid size, multiplying across grid dimensions.")
     m <= Setting(:nvars, 2*get_setting(m, :n) + 28, "num variables")
     m <= Setting(:nscalars, 28, " # num eqs which output scalars")
@@ -777,14 +784,16 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
                  "Number of dimensions removed from the backward looking state variables
                   for the normalization.")
 
-    nxns = get_setting(m, :n) #nx)*get_setting(m, :ns)
+    nxns = (get_setting(m, :nx1) + get_setting(m, :nx2))*get_setting(m, :ns)#get_setting(m, :n) #nx)*get_setting(m, :ns)
+    nx1 = get_setting(m, :nx1)
+    nx2 = get_setting(m, :nx2)
     n_backward_looking_vars = length(get_setting(m, :state_indices))
     n_backward_looking_function_valued_vars = get_setting(m,
                                                :n_function_valued_backward_looking_states)
-    n_backward_looking_scalar_vars = n_backward_looking_vars -
-        nxns*n_backward_looking_function_valued_vars  #n_backward_looking_function_valued_vars
+    n_backward_looking_scalar_vars = get_setting(m, :nxscalars) #=n_backward_looking_vars -
+        (nx1 + nx2)*n_backward_looking_function_valued_vars =# #n_backward_looking_function_valued_vars
 
-    m <= Setting(:n_backward_looking_states, nxns*n_backward_looking_distr_vars +
+    m <= Setting(:n_backward_looking_states, (nx1 + nx2)*n_backward_looking_distr_vars +
                  n_backward_looking_scalar_vars -
                  get_setting(m, :backward_looking_states_normalization_factor),
                  "Number of state variables, in the true sense (fully
@@ -802,9 +811,9 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
 
     n_jump_vars = length(get_setting(m, :jump_indices))
     n_jump_function_valued_vars = get_setting(m, :n_function_valued_jumps)
-    n_jump_scalar_vars = n_jump_vars - nxns*n_jump_function_valued_vars
+    n_jump_scalar_vars = get_setting(m, :nyscalars) #n_jump_vars - (nx1+nx2)*n_jump_function_valued_vars
 
-    m <= Setting(:n_jumps, nxns*n_jump_function_valued_vars +
+    m <= Setting(:n_jumps, (nx1+nx2)*n_jump_function_valued_vars +
                  n_jump_scalar_vars - get_setting(m, :jumps_normalization_factor),
                  "Number of jump variables (forward looking) accounting for
                   the discretization across the grid of function-valued variables and the
@@ -815,5 +824,27 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
+
+end
+
+function reset_grids!(m)
+    m <= Setting(:nx1, 300)
+    m <= Setting(:nx2, 300)
+
+
+    setup_indices!(m)
+
+    init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
+    init_grids!(m)
+
+    # So that the indices of m.endogenous_states reflect the normalization
+    normalize_model_state_indices!(m)
+
+    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    for (i,k) in enumerate(endogenous_states_augmented)
+        m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
+    end
+    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                 length(m.endogenous_states_augmented))
 
 end

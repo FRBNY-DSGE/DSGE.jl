@@ -135,8 +135,9 @@ function construct_consumption_partial(m::HetDSGEGovDebt, dF2_dRZ::Vector{Float6
 
     denominator = sum(μ .* ω .* c)
 
-    dC_dELL = (μ .* unc .* xswts .*c)' ./ denominator
-    dC_dKF = -(xswts .* c)' ./ denominator
+    dC_dELL = ((μ .* unc .* xswts .*c)' ./ denominator)
+
+    dC_dKF = (-(xswts .* c)' ./ denominator)
     dC_dR = -(xswts .* c)' * dF2_dRZ ./ denominator
     dC_dZ = (xswts .* c)' * dF2_dRZ ./ denominator
     dC_dW = -(xswts .* c)' * dF2_dWH ./ denominator
@@ -151,20 +152,24 @@ function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64},
     endo_unnorm = m.endogenous_states_unnormalized
 
     dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT = construct_consumption_partial(m, dF2_dRZ, dF2_dWH, dF2_dTT)
-    C_eqn = zeros(n_model_states_unnormalized(m))
-    C_eqn[endo_unnorm[:l′_t]] = vec(dC_dELL)
-    C_eqn[endo_unnorm[:kf′_t]] = vec(dC_dKF)
-    C_eqn[first(endo_unnorm[:R′_t])] = dC_dR
-    C_eqn[first(endo_unnorm[:z′_t])] = dC_dZ
-    C_eqn[first(endo_unnorm[:w′_t])] = dC_dW
-    C_eqn[first(endo_unnorm[:L′_t])] = dC_dL
-    C_eqn[first(endo_unnorm[:t′_t])] = dC_dT
 
-    Qx, Qy, _, _ = compose_normalization_matrices(m)
+    endo_orig = m.endogenous_states_original
+    C_eqn = zeros(first(endo_orig[collect(keys(endo_orig))[end]])) #n_model_states_unnormalized(m))
+
+    C_eqn[endo_orig[:l′_t]] = vec(dC_dELL)
+    C_eqn[endo_orig[:kf′_t]] = vec(dC_dKF)
+    C_eqn[first(endo_orig[:R′_t])] = dC_dR
+    C_eqn[first(endo_orig[:z′_t])] = dC_dZ
+    C_eqn[first(endo_orig[:w′_t])] = dC_dW
+    C_eqn[first(endo_orig[:L′_t])] = dC_dL
+    C_eqn[first(endo_orig[:t′_t])] = dC_dT
+
+    Qx, Qy, _, _, Reduc = compose_normalization_matrices(m)
 
     gx2 = Qy'*TTT_jump*Qx
     n_backward_looking_states_unnorm = n_backward_looking_states_unnormalized(m)
 
-    C = C_eqn'*[Matrix{Float64}(I, n_backward_looking_states_unnorm, n_backward_looking_states_unnorm); gx2]*Qx'
+    n_backward_looking_states_orig = length(stack_indices(m.endogenous_states_original, get_setting(m, :states)))
+    C = C_eqn'*[Matrix{Float64}(I, n_backward_looking_states_orig, n_backward_looking_states_orig); gx2]*Qx'
     return vec(C)
 end

@@ -5,6 +5,7 @@ function steadystate!(m::HetDSGEGovDebt;
                       tol::S = 1e-4,
                       maxit::Int64 = 20,
                       βband::S = 1e-2) where {S<:AbstractFloat}
+    reset_grids!(m)
 
     target = get_setting(m, :calibration_targets)
     lower  = get_setting(m, :calibration_targets_lb)
@@ -314,6 +315,7 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S
                 c[nx*(iss-1)+ia] = min(1/Win[nx*(iss-1)+ia],xgrid[ia]+η)
             end
         end
+
         bp = repeat(xgrid, ns) - c  # compute bp(w) given guess for Win
         Wout = parameterized_expectations_hetdsgegovdebt(nx, ns, β, R, ω, H, T, γ,
                                                          qfunction, xgrid,
