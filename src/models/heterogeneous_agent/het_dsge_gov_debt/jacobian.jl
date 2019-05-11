@@ -1,5 +1,6 @@
 function jacobian(m::HetDSGEGovDebt)
-    truncate_distribution!(m)
+    reset_grids!(m)
+    #truncate_distribution!(m)
 
     # Load in endogenous state and eq cond indices
     endo = augment_model_states(m.endogenous_states_unnormalized,
@@ -390,11 +391,11 @@ end
 
 function normalize(m::HetDSGEGovDebt, JJ::Matrix{Float64})
 
-    #Qx, _, Qleft, Qright = compose_normalization_matrices(m)
+    Qx, _, Qleft, Qright, Reduc = compose_normalization_matrices(m)
 
-    #m <= Setting(:n_predetermined_variables, size(Qx, 1))
-    Qleft = get_setting(m, :Qleft) #m[:Qleft].value
-    Qright = get_setting(m, :Qright) #m[:Qright].value
+    m <= Setting(:n_predetermined_variables, size(Qx, 1))
+    #Qleft = get_setting(m, :Qleft) #m[:Qleft].value
+    #Qright = get_setting(m, :Qright) #m[:Qright].value
 
 	Jac1 = Qleft*JJ*Qright
 
@@ -402,11 +403,70 @@ function normalize(m::HetDSGEGovDebt, JJ::Matrix{Float64})
 end
 
 function compose_normalization_matrices(m::HetDSGEGovDebt)
-    nx::Int = get_setting(m, :nx)
-    ns::Int = get_setting(m, :ns)
-    nscalars::Int = get_setting(m, :nscalars)
-    nyscalars::Int = get_setting(m, :nyscalars)
-    nxscalars::Int = get_setting(m, :nxscalars)
+
+if get_setting(m, :poor_man_reduc)
+    nx = get_setting(m, :nx)
+    ns = get_setting(m, :ns)
+    n = nx*ns #get_setting(m, :nx1) + get_setting(m, :nx2) #
+    nscalars = get_setting(m, :nscalars)
+    nyscalars = get_setting(m, :nyscalars)
+    nxscalars = get_setting(m, :nxscalars)
+    mindens = get_setting(m, :mindens)
+    μ = m[:μstar].value
+
+##################
+# POOR MAN REDUC
+##################
+    ### NEED TO RESET BACKWARD LOOOKING STATES INDICES
+    nx1 = maximum(findall(μ[1:nx].>mindens))
+    m <= Setting(:nx1, nx1)
+    setup_indices!(m)
+    init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
+    normalize_model_state_indices!(m)
+    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
+
+    m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
+                 length(m.endogenous_states_augmented))
+
+Reduc = eye(n)
+Reduc=Reduc[[1:nx1;nx+1:n],:]
+
+# S         = QQQ[:,ns+1:end]'; #
+
+PL1 = ones(nx1,1)
+PLtemp = eye(nx1)
+PLtemp = PLtemp[:,2:end]
+PL2 = PLtemp
+PL = [PL1 PL2]
+(QQQL,Rjunk)=qr(PL)
+QQQL = Matrix(QQQL)
+SL         = QQQL[:,2:end]'
+PH1 = ones(nx,1)
+PHtemp = eye(nx)
+PHtemp = PHtemp[:,2:end]
+PH2 = PHtemp
+PH = [PH1 PH2]
+(QQQH,Rjunk)=qr(PH)
+QQQH = Matrix(QQQH)
+SH         = QQQH[:,2:end]'
+S = cat([1,2],SL,SH)
+###########################
+
+    nxns = nx*ns
+    Qleft     = cat(Reduc,S*Reduc,eye(nscalars), dims = [1 2])
+    Qx        = cat(S*Reduc,eye(nxscalars), dims = [1 2])
+    Qy        = cat(Reduc,eye(nyscalars), dims = [1 2])
+    Qright    = cat(Qx',Qy',Qx',Qy', dims = [1,2])
+
+    return Qx, Qy, Qleft, Qright, Reduc
+
+else
+    nx = get_setting(m, :nx)
+    ns = get_setting(m, :ns)
+    nscalars = get_setting(m, :nscalars)
+    nyscalars = get_setting(m, :nyscalars)
+    nxscalars = get_setting(m, :nxscalars)
 
     # Create PPP matrix
     P1 = kron(Matrix{Float64}(I, ns,ns),ones(nx,1))
@@ -426,7 +486,11 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
     Qy        = cat(Matrix{Float64}(I, nxns, nxns),Matrix{Float64}(I, nyscalars, nyscalars), dims = [1 2])
     Qright    = cat(Qx',Qy',Qx',Qy', dims = [1,2])
 
-    return Qx, Qy, Qleft, Qright
+    return Qx, Qy, Qleft, Qright, Matrix{Float64}()
+
+
+end
+
 end
 
 function truncate_distribution!(m::HetDSGEGovDebt)

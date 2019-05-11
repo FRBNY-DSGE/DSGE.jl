@@ -457,6 +457,9 @@ if check_jacobian
 end
 
 if check_solution
+    if !check_steady_state
+        steadystate!(m)
+    end
     nx_save = get_setting(m, :nx)
     m.testing = false
     m <= Setting(:nx, nx_save)
@@ -474,6 +477,9 @@ if check_solution
 end
 
 if check_irfs
+    #if check_steady_state==false
+        steadystate!(m)
+    #end
 
     file = jldopen("$path/reference/irfs.jld2", "r")
 
@@ -502,7 +508,7 @@ if check_irfs
 
     sys = compute_system(m)
     states, obs, pseudo = impulse_responses(m, sys)
-    endo = m.endogenous_states_unnormalized
+    endo = m.endogenous_states_original
 
     @testset "Check IRFs" begin
         #Last entry is 3 because it's the third shock, the Z shock
