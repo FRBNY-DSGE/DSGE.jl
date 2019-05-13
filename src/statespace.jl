@@ -165,7 +165,7 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
     elseif solution_method == :klein
         # Unpacking the method from solve to hang on to TTT_jump
         if m.spec == "het_dsge"
-            TTT_jump, TTT_state, eu, dF2_dRZ, dF2_dWH, dF2_dTT = klein(m)
+            TTT_jump, TTT_state, eu, dF2_dRZ, dF2_dWH, dF2_dTT  = klein(m)
         else
             TTT_jump, TTT_state, eu = klein(m)
         end
