@@ -164,7 +164,11 @@ function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64},
     C_eqn[first(endo_orig[:L′_t])] = dC_dL
     C_eqn[first(endo_orig[:t′_t])] = dC_dT
 
-    Qx, Qy, _, _, Reduc = compose_normalization_matrices(m)
+    #cant do this anymore because the fnction makes everything smaller no matter what!!!
+   # Qx, Qy, _, _  = compose_normalization_matrices(m)
+
+    Qx = get_setting(m, :Qx)
+    Qy = get_setting(m, :Qy)
 
     gx2 = Qy'*TTT_jump*Qx
     n_backward_looking_states_unnorm = n_backward_looking_states_unnormalized(m)

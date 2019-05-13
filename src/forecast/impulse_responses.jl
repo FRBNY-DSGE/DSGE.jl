@@ -37,7 +37,11 @@ function impulse_responses(m::AbstractHetModel, system::System{S};
     @show "het model"
     horizon = impulse_response_horizons(m)
     states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
-    Qx, Qy, _, _, Reduc = DSGE.compose_normalization_matrices(m)
+
+    #can't do this anymore because now it always makes everything smaller!!!
+    #Qx, Qy, _, _  = DSGE.compose_normalization_matrices(m)
+    Qx = get_setting(m, :Qx)
+    Qy = get_setting(m, :Qy)
 
     state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
     jump_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
