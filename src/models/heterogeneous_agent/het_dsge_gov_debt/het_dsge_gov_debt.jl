@@ -300,7 +300,8 @@ function init_parameters!(m::HetDSGEGovDebt)
                    tex_label = "g_*")
 
     m <= parameter(:β_save, 0.0, fixed = true,
-                   description = "saving the betas per particle")
+                   description = "saving the betas per particle",
+                   tex_label = "\\beta_save")
     m <= parameter(:sH_over_sL, 6.33333, fixed = true,
                    description = "Ratio of high to low earners", tex_label = "s_H / s_L")
 
