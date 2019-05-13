@@ -103,10 +103,10 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
         The argument should be n_params x n_draws. Currently, size(params) = ($(size(params, 1)), $(size(params, 2)))"
     end
     if weighted
-        params_mean = vec(mean(params, Weights(weights), 2))
+        params_mean = vec(mean(params, Weights(weights), dims = 2))
         params_std = vec(std(params, Weights(weights), 2, corrected = false))
     else
-        params_mean = vec(mean(params, 2))
+        params_mean = vec(mean(params, dims = 2))
         params_std  = vec(std(params, 2))
     end
 
