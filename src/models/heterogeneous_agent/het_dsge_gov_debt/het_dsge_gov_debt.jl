@@ -158,7 +158,7 @@ end
 
 function HetDSGEGovDebt(subspec::String="ss0";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
-                   testing = false)
+                   testing = false, testing_gamma::Bool = false)
 
     # Model-specific specifications
     spec               = "het_dsge"
@@ -219,7 +219,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     init_states_and_jumps!(m, states, jumps)
 
     # Initialize parameters
-    init_parameters!(m)
+    init_parameters!(m, testing_gamma)
 
     # Initialize aggregate steady state parameters (necessary for grid construction)
     aggregate_steadystate!(m)
@@ -258,7 +258,7 @@ Initializes the model's parameters, as well as empty values for the steady-state
 parameters (in preparation for `steadystate!(m)` being called to initialize
 those).
 """
-function init_parameters!(m::HetDSGEGovDebt)
+function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
     ######################################
     # Parameters that affect steady-state
     ######################################
@@ -279,10 +279,17 @@ function init_parameters!(m::HetDSGEGovDebt)
 
     # Exogenous processes - level
     # Uncomment scaling once adjusted properly in the code
-    m <= parameter(:γ, 0.5, (-5.0, 5.0), (-5., 5.), Untransformed(),
-                   Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
-                   description = "γ: The log of the steady-state growth rate of technology",
-                   tex_label="100\\gamma")
+    if testing_gamma == true
+        m <= parameter(:γ, 0.0, (-5.0, 5.0), (-5., 5.), Untransformed(),
+                       Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
+                       description = "γ: The log of the steady-state growth rate of technology",
+                       tex_label="100\\gamma")
+    else
+        m <= parameter(:γ, 0.5, (-5.0, 5.0), (-5., 5.), Untransformed(),
+                       Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
+                       description = "γ: The log of the steady-state growth rate of technology",
+                       tex_label="100\\gamma")
+    end
 
     m <= parameter(:r, 0.5, (1e-5, 10.0), (1e-5, 10.0), Exponential(),
                    GammaAlt(0.5, 0.5), fixed = false, scaling = x -> x/100,
