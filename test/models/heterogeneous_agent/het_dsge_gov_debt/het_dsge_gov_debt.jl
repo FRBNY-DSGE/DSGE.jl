@@ -13,8 +13,9 @@ write_steady_state_calibrate = false
 
 path = dirname(@__FILE__)
 
-m = HetDSGEGovDebt()
+m = HetDSGEGovDebt(testing_gamma = true)
 m <= Setting(:steady_state_only, true)
+
 # Steady-state computation
 if check_steady_state
     steadystate!(m)
