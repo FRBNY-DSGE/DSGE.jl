@@ -165,6 +165,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         i = cloud.stage_index
         j = load(loadpath, "j")
+
+        ϕ_prop = proposed_fixed_schedule[j]
     else
         w_matrix = zeros(n_parts, 1)
         if tempered_update
