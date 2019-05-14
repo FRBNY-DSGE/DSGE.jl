@@ -89,6 +89,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
 
             try
                 update!(m, para_new)
+                para_new = [θ.value for θ in m.parameters]
                 prior_new = prior(m)
                 like_new = likelihood(m, data; sampler = true,
                                       use_chand_recursion = use_chand_recursion,
