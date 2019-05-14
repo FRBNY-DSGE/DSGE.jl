@@ -177,7 +177,7 @@ end
 end
 
 function weighted_mean(c::ParticleCloud)
-    return dropdims(mean(get_vals(c), Weights(get_weights(c)), 2), dims = 2)
+    return dropdims(mean(get_vals(c), Weights(get_weights(c)), dims = 2), dims = 2)
 end
 
 function weighted_quantile(c::ParticleCloud, i::Int64)
