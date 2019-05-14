@@ -162,12 +162,13 @@ function find_steadystate!(m::HetDSGEGovDebt;
 
     # CHECK THIS
     m <= Setting(:auto_reject, reject)
-
-    m[:lstar]  = Win
-    m[:cstar]  = c
-    m[:μstar]  = μ
-    m[:βstar]  = β
-    m[:β_save] = β
+    if !reject
+        m[:lstar]  = Win
+        m[:cstar]  = c
+        m[:μstar]  = μ
+        m[:βstar]  = β
+        m[:β_save] = β
+    end
     nothing
 end
 
