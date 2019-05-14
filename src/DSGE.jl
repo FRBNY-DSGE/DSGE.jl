@@ -151,7 +151,8 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide,
-        KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt, HetDSGESimpleTaylor, HetDSGELag,
+        KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
+        RepDSGEGovDebt, HetDSGESimpleTaylor, HetDSGELag,
         eqcond, measurement, pseudo_measurement, shock_groupings, Grid,
 
         #### Continuous time
@@ -377,6 +378,8 @@ module DSGE
     include("models/heterogeneous_agent/het_dsge_gov_debt/observables.jl")
     include("models/heterogeneous_agent/het_dsge_gov_debt/measurement.jl")
     include("models/heterogeneous_agent/het_dsge_gov_debt/augment_states.jl")
+
+    include("models/representative_agent/rep_dsge_gov_debt/rep_dsge_gov_debt.jl")
 
     include("models/heterogeneous_agent/het_dsge_lag/het_dsge_lag.jl")
     include("models/heterogeneous_agent/het_dsge_lag/steady_state.jl")
