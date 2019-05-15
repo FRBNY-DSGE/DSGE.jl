@@ -126,7 +126,7 @@ function jacobian(m::HetDSGEGovDebt)
     JJ[first(eq[:eq_market_clearing]),first(endo[:t_t])]   = -(xswts.*c)'*dF2_dTT
 
     # lambda = average marginal utility
-    JJ[first(eq[:eq_lambda]),first(endo[:mu_t])] = lam
+    JJ[first(eq[:eq_lambda]),first(endo[:margutil_t])] = lam
     JJ[first(eq[:eq_lambda]),endo[:kf_t]]   = -(xswts./c)' # note, now we linearize
     JJ[first(eq[:eq_lambda]),first(endo[:R_t])]   = -(xswts./c)'*dF2_dRZ
     JJ[first(eq[:eq_lambda]),first(endo[:z_t])]   = (xswts./c)'*dF2_dRZ
@@ -156,8 +156,8 @@ function jacobian(m::HetDSGEGovDebt)
     JJ[first(eq[:eq_investment]),first(endo[:z_t])]  = -spp*exp(2*γ)
 
     # tobin's q
-    JJ[first(eq[:eq_tobin_q]),first(endo[:mu_t])]  = 1.
-    JJ[first(eq[:eq_tobin_q]),first(endo[:mu′_t])] = -1.
+    JJ[first(eq[:eq_tobin_q]),first(endo[:margutil_t])]  = 1.
+    JJ[first(eq[:eq_tobin_q]),first(endo[:margutil′_t])] = -1.
     JJ[first(eq[:eq_tobin_q]),first(endo[:Q_t])]    = 1.
     JJ[first(eq[:eq_tobin_q]),first(endo[:z′_t])]   = 1.
     JJ[first(eq[:eq_tobin_q]),first(endo[:capreturn′_t])]  = -Rk/R
@@ -174,7 +174,7 @@ function jacobian(m::HetDSGEGovDebt)
     JJ[first(eq[:eq_wage_phillips]),first(endo[:π_w_t])]  = -1.
     JJ[first(eq[:eq_wage_phillips]),first(endo[:λ_w_t])] = 1. #(ϕ*H^ϕh)/Φw
     JJ[first(eq[:eq_wage_phillips]),first(endo[:L_t])]   = κ_w*ϕh #(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)*ϕh
-    JJ[first(eq[:eq_wage_phillips]),first(endo[:mu_t])]  = -κ_w #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
+    JJ[first(eq[:eq_wage_phillips]),first(endo[:margutil_t])]  = -κ_w #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
     JJ[first(eq[:eq_wage_phillips]),first(endo[:w_t])]    = -κ_w #-(ϕ*(H^ϕh)*(1+lamw)/lamw*Φw)
     JJ[first(eq[:eq_wage_phillips]),first(endo[:π_w′_t])]  = β
 
