@@ -381,6 +381,7 @@ module DSGE
 
     include("models/representative_agent/rep_dsge_gov_debt/rep_dsge_gov_debt.jl")
     include("models/representative_agent/rep_dsge_gov_debt/jacobian.jl")
+    include("models/representative_agent/rep_dsge_gov_debt/shock_loading.jl")
 
     include("models/heterogeneous_agent/het_dsge_lag/het_dsge_lag.jl")
     include("models/heterogeneous_agent/het_dsge_lag/steady_state.jl")
