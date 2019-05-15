@@ -58,7 +58,6 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
             het.observable_mappings)
 
     # Set settings
-    default_settings!(m)
     model_settings!(m, het)
 
     # Initialize model indices
@@ -80,7 +79,9 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
 end
 
 function model_settings!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
-    m.settings = het.settings
+    for (key, setting) in het.settings
+        m <= setting
+    end
 
     # Total grid x*s
     # Not sure what to do with the below line. Leave commented for now
@@ -145,7 +146,7 @@ function init_parameters!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
 end
 
 function init_grids!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
-    m.grids = het.grids
+    m.grids = deepcopy(het.grids)
 end
 
 function steadystate!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
