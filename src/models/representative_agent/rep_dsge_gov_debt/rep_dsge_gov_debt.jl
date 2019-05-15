@@ -121,103 +121,15 @@ function init_model_indices!(m::RepDSGEGovDebt)
     # Lagged states and observables measurement error
     endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
 
-    # Observables
     observables = keys(m.observable_mappings)
-
-    ########################################################################################
-    # Setting indices of endogenous_states and equilibrium conditions manually for now
-
-    # ATTN: Probably unnecessary. Can do it the enumerate way (below) since it's RANK
-    # Delete when comfortable
-    # setup_indices!(m)
     endo   = m.endogenous_states
     eqcond = equilibrium_conditions
-    ########################################################################################
 
     for (i,k) in enumerate(endogenous_states);m.endogenous_states[k] = i end
     for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
     for (i,k) in enumerate(exogenous_shocks); m.exogenous_shocks[k]  = i end
     for (i,k) in enumerate(observables);      m.observables[k]       = i end
     for (i,k) in enumerate(equilibrium_conditions);      m.equilibrium_conditions[k]      = i end
-end
-
-# ATTN: Probably unneeded
-function setup_indices!(m::RepDSGEGovDebt)
-    nx = get_setting(m, :nx)
-    ns = get_setting(m, :ns)
-    endo = m.endogenous_states
-    eqconds = m.equilibrium_conditions
-
-    # endogenous scalar-valued states
-    endo[:k′_t]   = 1             # capital –dont get confused with steadystate object K
-    endo[:R′_t1]  = 2             # lagged real interest rate
-    endo[:i′_t1]  = 3             # lagged nominal interest rate
-    endo[:y′_t1]  = 4             # lagged gdp
-    endo[:w′_t1]  = 5             # lag real wages
-    endo[:I′_t1]  = 6             # lag investment–don't get this confused with i, the nominal interest rate
-    endo[:bg′_t]  = 7             # govt debt
-
-    # exogenous scalar-valued states:
-    endo[:b′_t]   = 8             # discount factor shock
-    endo[:g′_t]   = 9             # govt spending
-    endo[:z′_t]   = 10            # tfp growth
-    endo[:μ′_t]   = 11            # investment shock
-    endo[:λ_w′_t] = 12            # wage markup
-    endo[:λ_f′_t] = 13            # price markup
-    endo[:rm′_t]  = 14            # monetary policy shock
-    # endo[:c′_t1]  = 14            # lagged consumption
-
-    # scalar-valued jumps
-    endo[:R′_t]   = 15            # real interest rate
-    endo[:i′_t]   = 16            # nominal interest rate
-    endo[:t′_t]   = 17            # transfers + dividends
-    endo[:w′_t]   = 18            # real wage
-    endo[:L′_t]   = 19            # hours worked
-    endo[:π′_t]   = 20            # inflation
-    endo[:π_w′_t] = 21            # nominal wage inflation
-    endo[:mu′_t]  = 22            # average marginal utility
-    endo[:y′_t]   = 23            # gdp
-    endo[:I′_t]   = 24            # investment
-    endo[:mc′_t]  = 25            # marginal cost - this is ζ in HetDSGEGovDebtₖd.pdf
-    endo[:Q′_t]   = 26            # Tobin's qfunction
-    endo[:capreturn′_t] = 27      # return on capital
-    endo[:l′_t]   = 28            # marginal utility, now a scalar
-    endo[:tg′_t]  = 29 # lump sum tax
-
-    eqconds[:eq_euler]                = 1
-    eqconds[:eq_market_clearing]      = 2
-    eqconds[:eq_lambda]               = 3
-    eqconds[:eq_transfers]            = 4
-    eqconds[:eq_investment]           = 5
-    eqconds[:eq_tobin_q]              = 6
-    eqconds[:eq_capital_accumulation] = 7
-    eqconds[:eq_wage_phillips]        = 8
-    eqconds[:eq_price_phillips]       = 9
-    eqconds[:eq_marginal_cost]        = 10
-    eqconds[:eq_gdp]                  = 11
-    eqconds[:eq_optimal_kl]           = 12
-    eqconds[:eq_taylor]               = 13
-    eqconds[:eq_fisher]               = 14
-    eqconds[:eq_nominal_wage_inflation] = 15
-    eqconds[:eq_fiscal_rule]          = 16
-    eqconds[:eq_g_budget_constraint]  = 17
-
-    # lagged variables
-    eqconds[:LR] = 18
-    eqconds[:LI] = 19
-    eqconds[:LY] = 20
-    eqconds[:LW] = 21
-    eqconds[:LX] = 22
-    # shocks
-    eqconds[:eq_b]   = 23
-    eqconds[:eq_g]   = 24
-    eqconds[:eq_z]   = 25
-    eqconds[:eq_μ]   = 26
-    eqconds[:eq_λ_w] = 27
-    eqconds[:eq_λ_f] = 28
-    eqconds[:eq_rm]  = 29
-
-    m.endogenous_states = deepcopy(endo)
 end
 
 function init_parameters!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
