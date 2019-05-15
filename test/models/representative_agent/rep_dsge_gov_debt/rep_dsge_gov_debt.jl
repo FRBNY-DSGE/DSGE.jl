@@ -5,6 +5,7 @@ using JLD2
 # What do you want to do?
 check_steady_state = false
 check_jacobian     = true
+check_solution     = true
 
 path = dirname(@__FILE__)
 
@@ -55,7 +56,7 @@ if check_jacobian
     steadystate!(m, het)
     JJ = DSGE.jacobian(m)
 
-    file = jldopen("reference/jacobian.jld2", "r")
+    file = jldopen("$path/reference/jacobian.jld2", "r")
     saved_JJ = read(file, "JJ")
 
     nvars = read(file, "nvars")
@@ -338,5 +339,21 @@ if check_jacobian
     @testset "monetary policy shock" begin
         @test saved_JJ[F39,MONP] ≈ JJ[F39,MONP]
         @test saved_JJ[F39,MON]  ≈ JJ[F39,MON]
+    end
+end
+
+# Solution
+if check_solution
+    steadystate!(m, het)
+    gx, hx, _ = klein(m)
+
+    file = jldopen("$path/reference/solve.jld2", "r")
+    saved_gx   = read(file, "gx")
+    saved_hx   = read(file, "hx")
+    close(file)
+
+    @testset "Check solve outputs" begin
+        @test saved_gx  ≈ gx
+        @test saved_hx  ≈ hx
     end
 end
