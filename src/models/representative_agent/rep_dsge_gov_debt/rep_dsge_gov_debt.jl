@@ -72,8 +72,8 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
     # initialize subspec from het
     init_subspec!(m, het)
 
-    # # Solve for the steady state
-    # steadystate!(m, het)
+    # Solve for the steady state
+    steadystate!(m, het)
 
     return m
 end
