@@ -629,7 +629,7 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:auto_reject, false, "This flag is set when policy function doesn't converge")
 
     # Misc
-    m <= Setting(:trunc_distr, true)
+    m <= Setting(:trunc_distr, false)
     m <= Setting(:rescale_weights, true)
     m <= Setting(:mindens, 1e-8)
 
