@@ -84,11 +84,13 @@ function model_settings!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
     # m <= Setting(:n, (get_setting(m, :nx1) +get_setting(m, :nx2)),
                  # "Total grid size, multiplying across grid dimensions.")
     # The rest of these lines were taken directly from the rank_irfs.jl file
-    m <= Setting(:nvars, 29, "num variables")
-    m <= Setting(:nscalars, 29, " # num eqs which output scalars")
-    m <= Setting(:nyscalars, 15, "num scalar jumps")
-    m <= Setting(:nxscalars, get_setting(m, :nscalars) - get_setting(m, :nyscalars),
-                 "num scalar states")
+    m <= Setting(:n_jumps, 15, "num scalar jumps")
+    m <= Setting(:n_backward_looking_states, 14, "num scalar states")
+    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) +
+                 get_setting(m, :n_jumps),
+                 "Number of 'states' in the state space model. Because backward and forward
+                 looking variables need to be explicitly tracked for the Klein solution
+                 method, we have n_states and n_jumps")
 end
 
 function init_model_indices!(m::RepDSGEGovDebt)

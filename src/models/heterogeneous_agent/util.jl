@@ -25,6 +25,17 @@ function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_stat
     return endo_aug
 end
 
+# For the RANK equivalent of the HANK models
+function augment_model_states(endo::OrderedDict{Symbol, Int64}, n_model_states::Int64)
+    endo_aug = deepcopy(endo)
+    for (state::Symbol, ind::Int) in endo
+        unprimed_state           = unprime(state)
+        endo_aug[unprimed_state] = ind + n_model_states
+    end
+
+    return endo_aug
+end
+
 # The reason for this function is that the canonical form for the Klein solution method is
 # as follows:
 # E_t A([x_{t+1}, y_{t+1}]) = B[x_t, y_t]
