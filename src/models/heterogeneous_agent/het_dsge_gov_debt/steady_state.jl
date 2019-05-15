@@ -5,66 +5,73 @@ function steadystate!(m::HetDSGEGovDebt;
                       tol::S = 1e-4,
                       maxit::Int64 = 20,
                       βband::S = 1e-2) where {S<:AbstractFloat}
-    reset_grids!(m)
-
-    target = get_setting(m, :calibration_targets)
-    lower  = get_setting(m, :calibration_targets_lb)
-    upper  = get_setting(m, :calibration_targets_ub)
-    nx = get_setting(m, :nx)
-    ns = get_setting(m, :ns)
-
-    # FML fix this
-    ni = 10000
-    nz = 1000
-    us = rand(ni, 8)
-    uz = rand(ni, 8)
-
-    zgrid  = collect(range(0., stop = 2., length = nz))
-    zprob  = [2*mollifier_hetdsgegovdebt(zgrid[i], 2., 0.) / nz for i=1:nz]
-    zprob /= sum(zprob)
-
-    zcdf = cumsum(zprob)
-    zave = 0.5 * zgrid[1:nz-1] + 0.5 * zgrid[2:nz]
-    zs   = zsample(uz, zgrid, zcdf, ni, nz)
-
-    if get_setting(m, :steady_state_only)
-        find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
-                          βband = βband)
+    # If we have already solved for βstar (i.e. it's not NaN) and we only want to
+    # estimate the non steady state parameters, there's no need to recompute
+    # zlo/zhi, etc.
+    if !isnan(m[:βstar].value) && get_setting(m, :estimate_only_non_steady_state_parameters)
         return
     else
-        sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
-                                                              target, lower, upper, us, zs)
-        m[:sH_over_sL] = sH_over_sL
-        m[:zlo] = zlo
-        m[:zhi] = 2.0 - zlo
+        reset_grids!(m)
 
-        f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value,
-                                                          m[:pHL].value, get_setting(m, :ns))
-        # Markov transition matrix for skill
-        m.grids[:sgrid] = Grid(sgrid, swts, sscale)
-        m.grids[:fgrid] = f
+        target = get_setting(m, :calibration_targets)
+        lower  = get_setting(m, :calibration_targets_lb)
+        upper  = get_setting(m, :calibration_targets_ub)
+        nx = get_setting(m, :nx)
+        ns = get_setting(m, :ns)
 
-        xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value,
-                                                  m[:r].scaledvalue, m[:η].value,
-                                                  m[:γ].scaledvalue,
-                                                  m[:Tstar].value, m[:zlo].value, nx)
+        # FML fix this
+        ni = 10000
+        nz = 1000
+        us = rand(ni, 8)
+        uz = rand(ni, 8)
 
-        m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
+        zgrid  = collect(range(0., stop = 2., length = nz))
+        zprob  = [2*mollifier_hetdsgegovdebt(zgrid[i], 2., 0.) / nz for i=1:nz]
+        zprob /= sum(zprob)
 
-        m <= Setting(:xlo, xlo)
-        m <= Setting(:xhi, xhi)
-        m <= Setting(:xscale, xscale)
+        zcdf = cumsum(zprob)
+        zave = 0.5 * zgrid[1:nz-1] + 0.5 * zgrid[2:nz]
+        zs   = zsample(uz, zgrid, zcdf, ni, nz)
 
-	    xswts = kron(swts, xwts)
-        m.grids[:weights_total] = xswts
+        if get_setting(m, :steady_state_only)
+            find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
+                              βband = βband)
+            return
+        else
+            sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
+                                                                  target, lower, upper, us, zs)
+            m[:sH_over_sL] = sH_over_sL
+            m[:zlo] = zlo
+            m[:zhi] = 2.0 - zlo
 
-        # Call steadystate a final time
-        find_steadystate!(m; βlo = βlo, βhi = βhi,
-                          excess = excess, tol = tol, maxit = maxit,
-                          βband = βband)
+            f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value,
+                                                              m[:pHL].value, get_setting(m, :ns))
+            # Markov transition matrix for skill
+            m.grids[:sgrid] = Grid(sgrid, swts, sscale)
+            m.grids[:fgrid] = f
 
-	    m[:mpc] = ave_mpc(m[:μstar].value, m[:cstar].value, xgrid, xswts, nx, ns)
-	    m[:pc0] = frac_zero(m[:μstar].value, m[:cstar].value, xgrid, xswts, ns)
+            xgrid, xwts, xlo, xhi, xscale = cash_grid(sgrid, m[:ωstar].value, m[:H].value,
+                                                      m[:r].scaledvalue, m[:η].value,
+                                                      m[:γ].scaledvalue,
+                                                      m[:Tstar].value, m[:zlo].value, nx)
+
+            m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
+
+            m <= Setting(:xlo, xlo)
+            m <= Setting(:xhi, xhi)
+            m <= Setting(:xscale, xscale)
+
+            xswts = kron(swts, xwts)
+            m.grids[:weights_total] = xswts
+
+            # Call steadystate a final time
+            find_steadystate!(m; βlo = βlo, βhi = βhi,
+                              excess = excess, tol = tol, maxit = maxit,
+                              βband = βband)
+
+            m[:mpc] = ave_mpc(m[:μstar].value, m[:cstar].value, xgrid, xswts, nx, ns)
+            m[:pc0] = frac_zero(m[:μstar].value, m[:cstar].value, xgrid, xswts, ns)
+        end
     end
 end
 
