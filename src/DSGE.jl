@@ -380,6 +380,7 @@ module DSGE
     include("models/heterogeneous_agent/het_dsge_gov_debt/augment_states.jl")
 
     include("models/representative_agent/rep_dsge_gov_debt/rep_dsge_gov_debt.jl")
+    include("models/representative_agent/rep_dsge_gov_debt/jacobian.jl")
 
     include("models/heterogeneous_agent/het_dsge_lag/het_dsge_lag.jl")
     include("models/heterogeneous_agent/het_dsge_lag/steady_state.jl")
