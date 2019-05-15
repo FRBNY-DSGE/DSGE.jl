@@ -133,7 +133,7 @@ function construct_consumption_partial(m::HetDSGEGovDebt, dF2_dRZ::Vector{Float6
 
     unc = 1 ./ ell .<= repeat(xgrid,ns) .+ η
 
-    denominator = sum(μ .* ω .* c)
+    denominator = sum(μ .* xswts .* c)
 
     dC_dELL = ((μ .* unc .* xswts .*c)' ./ denominator)
 
