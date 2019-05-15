@@ -209,7 +209,7 @@ function HetDSGE(subspec::String="ss0";
     states = collect([:kf′_t,:k′_t, :R′_t1,:i′_t1, :y′_t1,:w′_t1,:I′_t1,
                       :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t]) #, :c′_t1])
 
-    jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:mu′_t,:y′_t, :I′_t,
+    jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:margutil′_t,:y′_t, :I′_t,
                       :mc′_t,:Q′_t,:capreturn′_t]) #, :c′_t])
 
     # Initialize model indices
@@ -601,7 +601,7 @@ function setup_indices!(m::HetDSGE)
     endo[:L′_t]  = 2*nxns+18:2*nxns+18        # hours worked
     endo[:π′_t]  = 2*nxns+19:2*nxns+19        # inflation
     endo[:π_w′_t] = 2*nxns+20:2*nxns+20        # nominal wage inflation
-    endo[:mu′_t] =  2*nxns+21:2*nxns+21        # average marginal utility
+    endo[:margutil′_t] =  2*nxns+21:2*nxns+21        # average marginal utility
     endo[:y′_t]  = 2*nxns+22:2*nxns+22       # gdp
     endo[:I′_t]  = 2*nxns+23:2*nxns+23        # investment
     endo[:mc′_t] = 2*nxns+24:2*nxns+24        # marginal cost - this is ζ in HetDSGEₖd.pdf
