@@ -208,7 +208,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     states = collect([:kf′_t,:k′_t, :R′_t1,:i′_t1, :y′_t1,:w′_t1,:I′_t1, :bg′_t,
                       :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t])
 
-    jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:mu′_t,:y′_t, :I′_t,
+    jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:margutil′_t,:y′_t, :I′_t,
                      :mc′_t,:Q′_t,:capreturn′_t, :tg′_t])
 
     # Initialize model indices
@@ -696,7 +696,7 @@ function setup_indices!(m::HetDSGEGovDebt)
     endo[:L′_t]   = nxns_state+nxns_jump+19:nxns_state+nxns_jump+19        # hours worked
     endo[:π′_t]   = nxns_state+nxns_jump+20:nxns_state+nxns_jump+20        # inflation
     endo[:π_w′_t] = nxns_state+nxns_jump+21:nxns_state+nxns_jump+21        # nominal wage inflation
-    endo[:mu′_t]  = nxns_state+nxns_jump+22:nxns_state+nxns_jump+22        # average marginal utility
+    endo[:margutil′_t]  = nxns_state+nxns_jump+22:nxns_state+nxns_jump+22        # average marginal utility
     endo[:y′_t]   = nxns_state+nxns_jump+23:nxns_state+nxns_jump+23       # gdp
     endo[:I′_t]   = nxns_state+nxns_jump+24:nxns_state+nxns_jump+24        # investment
     endo[:mc′_t]  = nxns_state+nxns_jump+25:nxns_state+nxns_jump+25        # marginal cost - this is ζ in HetDSGEGovDebtₖd.pdf
