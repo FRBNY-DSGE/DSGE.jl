@@ -578,6 +578,10 @@ function model_settings!(m::HetDSGEGovDebt)
 
     # Whether one wishes to re-compute βstar
     m <= Setting(:use_last_βstar, false, "Flag to avoid recomputing steady-state.")
+    m <= Setting(:estimate_only_non_steady_state_parameters, false, "Whether one wants
+                 to only estimate parameters that do not affect the steady state. Note,
+                 this setting is set automatically in subspec 11, and should not be set to
+                 true otherwise.")
 
     # Number of states and jumps
     m <= Setting(:normalize_distr_variables, true, "Whether or not to perform the

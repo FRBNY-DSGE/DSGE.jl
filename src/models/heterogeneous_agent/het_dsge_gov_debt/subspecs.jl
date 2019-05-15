@@ -29,7 +29,9 @@ function init_subspec!(m::HetDSGEGovDebt)
     # All but rm_shock
     elseif subspec(m) == "ss7"
         return ss7!(m)
-    # All but steady state parameters
+    # Fix all steady state relevant parameters
+    # in order to estimate non-steady state parameters
+    # γ = 0.0
     elseif subspec(m) == "ss8"
         return ss8!(m)
     # Subspec 0, except r has higher prior mean
@@ -778,27 +780,53 @@ ss8!(m::HetDSGEGovDebt)
 ```
 
 Initializes subspec 8 of `HetDSGEGovDebt`.
-Estimates all non-steadystate parameters.
-Right now it's empty becaus we do this by default
+Fixes all parameters relevant to calculating the steady state,
+so we can estimate HetDSGEGovDebt at a fixed steady state.
 """
 function ss8!(m::HetDSGEGovDebt)
-    m <= parameter(:r, 1.0, (1e-5, 10.0), (1e-5, 10.0), Exponential(),
-                   GammaAlt(0.5, 0.5), fixed = true, scaling = x -> x/100,
+    # Even though some of these are already fixed (and thus redundant
+    # to include in this subspec) all are included for the sake of
+    # being as explicit as possible about which parameters affect
+    # the steady state and thus should be fixed.
+    m <= parameter(:α, 0.3, fixed = true,
+                   description = "α: Capital elasticity in the intermediate goods" *
+                   "sector's production function (also known as the capital share).",
+                   tex_label = "\\alpha")
+    m <= parameter(:H, 1.0, fixed = true,
+                   description = "Aggregate hours worked", tex_label = "H")
+    m <= parameter(:δ, 0.03, fixed = true,
+                   description = "δ: The capital depreciation rate", tex_label = "\\delta")
+    m <= parameter(:μ_sp, 0.0, fixed = true,
+                   description = "μ_sp: The trend in the skill process",
+                   tex_label = "\\mu_{sp}")
+
+    m <= parameter(:γ, 0.0, fixed = true, scaling = x -> x/100,
+                   description = "γ: The log of the steady-state growth rate of technology",
+                   tex_label="100\\gamma")
+
+    m <= parameter(:r, 0.5, fixed = true, scaling = x -> x/100,
                    description= "r: Quarterly steady-state real interest rate.",
                    tex_label= "100*r^{HetDSGE}")
-
-    m <= parameter(:α, 0.3, fixed = true, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
-                   Normal(0.30, 0.05),
-                   description = "α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
-                   tex_label = "\\alpha")
-
-    m <= parameter(:pLH, 0.01125, (0.005, 0.055), (0.005, 0.055), Untransformed(),
-                   Uniform(0.005, 0.055), fixed = true, description = "Prob of going from low to high persistent skill",
+    m <= parameter(:g, 1/(1-0.01), fixed = true,
+                   description = "g_star: 1 - (c_star + i_star)/y_star",
+                   tex_label = "g_*")
+    m <= parameter(:sH_over_sL, 6.33333, fixed = true,
+                   description = "Ratio of high to low earners", tex_label = "s_H / s_L")
+    m <= parameter(:pLH, 0.005, fixed = true,
+                   description = "Prob of going from low to high persistent skill",
                    tex_label = "p(s_L \\mid s_H)")
-    m <= parameter(:pHL, 0.03, (0.005, 0.055), (0.005, 0.055), Untransformed(),
-                   Uniform(0.005, 0.055), fixed = true, description = "Prob of going from high to low persistent skill",
+    m <= parameter(:pHL, 0.03, fixed = true,
+                   description = "Prob of going from high to low persistent skill",
                    tex_label = "p(s_H \\mid s_L)")
 
+    m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
+
+    # Not in m1002
+    m <= parameter(:η, 0.0, fixed = true,
+                   description = "η: Borrowing constraint (normalized by TFP)",
+                   tex_label = "\\eta")
+
+    m <= Setting(:estimate_only_non_steady_state_parameters, true)
 end
 
 """
@@ -828,7 +856,7 @@ Is subspec 8 except with γ = 0.5.
 function ss10!(m::HetDSGEGovDebt)
     ss8!(m)
     m <= parameter(:γ, 0.5, (-5.0, 5.0), (-5., 5.), Untransformed(),
-                   Normal(0.4, 0.1), fixed = false, scaling = x -> x/100,
+                   Normal(0.4, 0.1), fixed = true, scaling = x -> x/100,
                    description = "γ: The log of the steady-state growth rate of technology",
                    tex_label="100\\gamma")
 end
