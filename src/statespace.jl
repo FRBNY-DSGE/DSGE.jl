@@ -186,7 +186,7 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
             TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, C_eqn)
             measurement_equation = measurement(m, TTT, RRR, CCC, C_eqn)
         else
-            TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC,dF2_dRZ, dF2_dWH, dF2_dTT)
+            TTT, RRR, CCC        = augment_states(m, TTT, RRR, CCC)
             measurement_equation = measurement(m, TTT, RRR, CCC)
         end
 
