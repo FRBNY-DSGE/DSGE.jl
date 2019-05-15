@@ -70,6 +70,9 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
     # Initialize grids
     init_grids!(m, het)
 
+    # initialize subspec from het
+    init_subspec!(m, het)
+
     # # Solve for the steady state
     # steadystate!(m, het)
 
