@@ -3,9 +3,10 @@ using Test, BenchmarkTools
 using JLD2
 
 # What do you want to do?
-check_steady_state = false
+check_steady_state = true
 check_jacobian     = true
 check_solution     = true
+check_irfs         = true
 
 path = dirname(@__FILE__)
 
@@ -355,5 +356,67 @@ if check_solution
     @testset "Check solve outputs" begin
         @test saved_gx  ≈ gx
         @test saved_hx  ≈ hx
+    end
+end
+
+# IRFs
+if check_irfs
+    endo = m.endogenous_states
+    endo_aug = m.endogenous_states_augmented
+    exo  = m.exogenous_shocks
+    system = compute_system(m)
+    states, obs, pseudo = impulse_responses(m, system, flip_shocks = true)
+
+    file = jldopen("$path/reference/irfs.jld2", "r")
+    IRFxp = read(file, "IRFxp")
+    IRFC  = read(file, "IRFC")
+    IRFyp = read(file, "IRFyp")
+
+    nkp  = read(file, "nkp")
+    ZP   = read(file, "ZP")
+    ELLP = read(file, "ELLP")
+    RRP  = read(file, "RRP")
+    IIP  = read(file, "IIP")
+    WP   = read(file, "WP")
+    PIP  = read(file, "PIP")
+    TTP  = read(file, "TTP")
+    YP   = read(file, "YP")
+    PIWP = read(file, "PIWP")
+    XP   = read(file, "XP")
+    KKP  = read(file, "KKP")
+    QP   = read(file, "QP")
+    RKP  = read(file, "RKP")
+    HHP  = read(file, "HHP")
+    TGP  = read(file, "TGP")
+    BGP  = read(file, "BGP")
+    MCP  = read(file, "MCP")
+    LAMP = read(file, "LAMP")
+    close(file)
+
+    @testset "Check IRFs" begin
+        @test states[endo[:z′_t], :, exo[:z_sh]] ≈ IRFxp[ZP, :]
+        @test states[endo[:l′_t], :, exo[:z_sh]] ≈ IRFyp[ELLP - nkp, :]
+        @test states[endo[:R′_t], :, exo[:z_sh]] ≈ IRFyp[RRP  - nkp, :]
+        @test states[endo[:i′_t], :, exo[:z_sh]] ≈ IRFyp[IIP  - nkp, :]
+        @test states[endo[:w′_t], :, exo[:z_sh]] ≈ IRFyp[WP   - nkp, :]
+        @test states[endo[:π′_t], :, exo[:z_sh]] ≈ IRFyp[PIP  - nkp, :]
+        @test states[endo[:t′_t], :, exo[:z_sh]] ≈ IRFyp[TTP  - nkp, :]
+        @test states[endo[:y′_t], :, exo[:z_sh]] ≈ IRFyp[YP   - nkp, :]
+        @test states[endo[:π_w′_t], :, exo[:z_sh]] ≈ IRFyp[PIWP - nkp, :]
+        @test states[endo[:I′_t], :, exo[:z_sh]] ≈ IRFyp[XP   - nkp, :]
+        @test states[endo[:k′_t], :, exo[:z_sh]] ≈ IRFxp[KKP, :]
+        @test states[endo[:Q′_t], :, exo[:z_sh]] ≈ IRFyp[QP   - nkp, :]
+        @test states[endo[:capreturn′_t], :, exo[:z_sh]] ≈ IRFyp[RKP - nkp, :]
+        @test states[endo[:L′_t], :, exo[:z_sh]] ≈ IRFyp[HHP  - nkp, :]
+        @test states[endo[:tg′_t], :, exo[:z_sh]] ≈ IRFyp[TGP - nkp, :]
+        @test states[endo[:bg′_t], :, exo[:z_sh]] ≈ IRFxp[BGP, :]
+
+        # Consumption IRF tests
+        # contemporaneous consumption is the same as -l′_t
+        @test states[endo[:l′_t], :, exo[:z_sh]] ≈ -IRFC
+        @test states[endo_aug[:c_t1], :, exo[:z_sh]][2:end] ≈ IRFC[1:end-1]
+
+        @test states[endo[:mc′_t], :, exo[:z_sh]] ≈ IRFyp[MCP - nkp, :]
+        @test states[endo[:mu′_t], :, exo[:z_sh]] ≈ IRFyp[LAMP - nkp, :]
     end
 end
