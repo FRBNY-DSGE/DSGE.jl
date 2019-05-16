@@ -73,6 +73,7 @@ function impulse_responses_augmented(m::AbstractHetModel, system::System{S};
         states_unnormalized[:, :, i] = Matrix(Qx')*states[state_inds, :, i]
         jump_inds = n_backward_looking_states(m)+1:n_backward_looking_states(m) + n_jumps(m)
         jumps_unnormalized[:, :, i] = Matrix(Qy')*states[jump_inds, :, i]
+
         augmented_states = states[n_backward_looking_states(m) + n_jumps(m) + 1 : end, :, i]
         model_states_unnormalized[:, :, i] = vcat(states_unnormalized[:, :, i],
                                                   jumps_unnormalized[:, :, i],
