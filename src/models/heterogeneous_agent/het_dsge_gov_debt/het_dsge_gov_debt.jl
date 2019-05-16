@@ -321,7 +321,7 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
                    description = "Prob of going from high to low persistent skill",
                    tex_label = "p(s_H \\mid s_L)")
 
-    m <= parameter(:BoverY, 0.26, fixed = true, description = "???", tex_label = "B / Y")
+    m <= parameter(:BoverY, 0.26, fixed = true, description = "B / Y", tex_label = "B / Y")
 
     m <= parameter(:zlo, 0.0323232, fixed = true,
                    description = "Lower bound on second income shock to mollify actual income",
@@ -330,8 +330,9 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
                    description = "Upper bound on second income shock to mollify actual income",
                    tex_label = "\\bar{z}")
 
-    m <= parameter(:mpc, 0.23395, fixed = true, tex_label = "MPC")
-    m <= parameter(:pc0, 0.071893, fixed = true, tex_label = "pc0")
+    m <= parameter(:mpc, 0.23395,  fixed = true, tex_label = "MPC")
+    m <= parameter(:pc0, 0.071893, fixed = true, description = "Number of people at 0 income",
+                   tex_label = "pc0")
 
     # Not in m1002
     m <= parameter(:η, 0.0, description = "η: Borrowing constraint (normalized by TFP)",
@@ -611,8 +612,6 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:poor_man_reduc, true) #note that we're actually doing more than the "poor man reduction" now however this turns ont both poorman truncation and binning reduction
 
     # Set targets
-    m <= Setting(:targets, [0.16, 0.10],
-                 "Targets for: [MPC, proportion of individuals with 0 income]")
     m <= Setting(:calibration_targets, [0.7, 0.23],
                  "Targets for: [var(log(annual income)), var(one year changes in " *
                  "log(annual income))]")
@@ -626,9 +625,12 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:ψ_penalty, 1.0,
                  "Multiplier on likelihood in penalty function")
 
+    m <= Setting(:targets, [0.16, 0.10],
+                 "Targets for: [MPC, proportion of individuals with 0 income]")
     m <= Setting(:target_vars, [:mpc, :pc0], "Symbols of variables we're targeting")
     m <= Setting(:target_σt, [0.2, 0.1], "Target \\sigma_t for MPC and pc0")
 
+    m <= Setting(:calibrate_income_targets, true, "Calibrate for varlinc and vardlinc")
     m <= Setting(:steady_state_only, false, "Testing setting")
     m <= Setting(:auto_reject, false, "This flag is set when policy function doesn't converge")
 
