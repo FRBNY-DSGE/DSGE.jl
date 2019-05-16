@@ -157,8 +157,9 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
 end
 
 function HetDSGEGovDebt(subspec::String="ss0";
-                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
-                   testing = false, testing_gamma::Bool = false)
+                        custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                        testing = false, testing_gamma::Bool = false,
+                        ref_dir = "")
 
     # Model-specific specifications
     spec               = "het_dsge"
@@ -193,6 +194,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
             OrderedDict{Symbol,Observable}())
 
     default_settings!(m)
+    m <= Setting(:ref_dir, ref_dir, "Absolute filepath to reference directory")
 
     # # Set observable transformations
     init_observable_mappings!(m)
@@ -333,6 +335,12 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
     m <= parameter(:mpc, 0.23395,  fixed = true, tex_label = "MPC")
     m <= parameter(:pc0, 0.071893, fixed = true, description = "Number of people at 0 income",
                    tex_label = "pc0")
+
+    # Give model new parameters
+    m <= parameter(:varlinc, 0.0, fixed = true, tex_label = "varlinc",
+                   description = "var(log(annual income))")
+    m <= parameter(:vardlinc, 0.0, fixed = true, tex_label = "vardlinc",
+                   description = "var(log(deviations in annual income))")
 
     # Not in m1002
     m <= parameter(:η, 0.0, description = "η: Borrowing constraint (normalized by TFP)",
@@ -634,8 +642,8 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:steady_state_only, false, "Testing setting")
     m <= Setting(:auto_reject, false, "This flag is set when policy function doesn't converge")
 
-    m <= Setting(:us, load("$HETDSGEGOVDEBT/reference/us_zs.jld2","us"))
-    m <= Setting(:zs, load("$HETDSGEGOVDEBT/reference/us_zs.jld2","zs"))
+    m <= Setting(:us, load(get_setting(m, :ref_dir) * "/us_zs.jld2","us"))
+    m <= Setting(:zs, load(get_setting(m, :ref_dir) * "/us_zs.jld2","zs"))
 
     # Misc
     m <= Setting(:trunc_distr, false)
