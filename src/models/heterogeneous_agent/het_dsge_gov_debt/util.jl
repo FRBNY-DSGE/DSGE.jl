@@ -25,3 +25,32 @@ function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat,
     xwts  = (xscale/na)*ones(na)          # Quadrature weights
     return xgrid, xwts, xlo, xhi, xscale
 end
+
+"""
+```
+generate_us_and_zs(ni, nz)
+```
+
+There is no need to recall this function, unless one wants to undo the seeding
+in all past saved output.
+"""
+function generate_us_and_zs(ni, nz)
+    us = rand(ni, 8)
+    uz = rand(ni, 8)
+
+    zgrid  = collect(range(0., stop = 2., length = nz))
+    zprob  = [2*mollifier_hetdsgegovdebt(zgrid[i], 2., 0.) / nz for i=1:nz]
+    zprob /= sum(zprob)
+
+    zcdf = cumsum(zprob)
+    zave = 0.5 * zgrid[1:nz-1] + 0.5 * zgrid[2:nz]
+    zs   = zsample(uz, zgrid, zcdf, ni, nz)
+
+    return us, zs
+    #=
+    JLD2.jldopen("$HETDSGEGOVDEBT/reference/us_zs.jld2", true, true, true, IOStream) do file
+        file["us"] = us
+        file["zs"] = zs
+    end
+    =#
+end

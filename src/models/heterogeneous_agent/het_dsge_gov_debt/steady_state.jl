@@ -22,27 +22,24 @@ function steadystate!(m::HetDSGEGovDebt;
         # FML fix this
         ni = 10000
         nz = 1000
-        us = rand(ni, 8)
-        uz = rand(ni, 8)
-
-        zgrid  = collect(range(0., stop = 2., length = nz))
-        zprob  = [2*mollifier_hetdsgegovdebt(zgrid[i], 2., 0.) / nz for i=1:nz]
-        zprob /= sum(zprob)
-
-        zcdf = cumsum(zprob)
-        zave = 0.5 * zgrid[1:nz-1] + 0.5 * zgrid[2:nz]
-        zs   = zsample(uz, zgrid, zcdf, ni, nz)
+        us, zs = get_setting(m, :us), get_setting(m, :zs)
+        # If you wanted to be truly random, to regenerate these, call:
+        # us, zs = generate_us_and_zs(ni, nz) # lives in util.jl
 
         if get_setting(m, :steady_state_only)
             find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
                               βband = βband)
             return
         else
-            sH_over_sL, zlo, min_varlinc, min_vardlinc = best_fit(m[:pLH].value, m[:pHL].value,
-                                                                  target, lower, upper, us, zs)
-            m[:sH_over_sL] = sH_over_sL
-            m[:zlo] = zlo
-            m[:zhi] = 2.0 - zlo
+            if get_setting(m, :calibrate_income_targets)
+                m[:sH_over_sL], m[:zlo], _, _ = best_fit(m[:pLH].value, m[:pHL].value,
+                                                         target, lower, upper, us, zs)
+            else
+                m[:varlinc], m[:vardlinc] = skill_moments(m[:sH_over_sL].value, m[:zlo].value,
+                                                          m[:pLH].value, m[:pHL].value,
+                                                          us, zs, ni)
+            end
+            m[:zhi] = 2.0 - m[:zlo].value
 
             f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value,
                                                               m[:pHL].value, get_setting(m, :ns))
@@ -69,7 +66,7 @@ function steadystate!(m::HetDSGEGovDebt;
                               excess = excess, tol = tol, maxit = maxit,
                               βband = βband)
 
-            m[:mpc] = ave_mpc(m[:μstar].value, m[:cstar].value, xgrid, xswts, nx, ns)
+            m[:mpc] = ave_mpc(m[:μstar].value,   m[:cstar].value, xgrid, xswts, nx, ns)
             m[:pc0] = frac_zero(m[:μstar].value, m[:cstar].value, xgrid, xswts, ns)
         end
     end
