@@ -888,9 +888,11 @@ function ss11!(m::HetDSGEGovDebt)
                    description = "var(log(deviations in annual income))")
 
     # Since not calibrating, we let zlo and s_H / s_L be free parameters
-    m <= parameter(:zlo, 1.035e-8, fixed = false,
+    m <= parameter(:zlo, 1.035e-8, (1e-18, 0.8-eps()), (1e-18, 0.8-eps()), Untransformed(),
+                   Uniform(1e-18, 0.8-eps()), fixed = true,
                    description = "Lower bound on second income shock to mollify actual income",
                    tex_label = "\\underbar{z}")
-    m <= parameter(:sH_over_sL, 8.99999, fixed = false,
+    m <= parameter(:sH_over_sL, 8.99999, (3.0, 9.0), (3.0, 9.0), Untransformed(),
+                   Uniform(3.0, 9.0), fixed = true,
                    description = "Ratio of high to low earners", tex_label = "s_H / s_L")
 end
