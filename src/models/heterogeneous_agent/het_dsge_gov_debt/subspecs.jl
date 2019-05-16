@@ -40,6 +40,9 @@ function init_subspec!(m::HetDSGEGovDebt)
     # Subspec 8, but with γ = 0.5
     elseif subspec(m) == "ss10"
         return ss10!(m)
+    # Do not calibrate for s_H / s_L and zlo
+    elseif subspec(m) == "ss11"
+        return ss11!(m)
     else
         error("This subspec should be a 0")
     end
@@ -859,4 +862,35 @@ function ss10!(m::HetDSGEGovDebt)
                    Normal(0.4, 0.1), fixed = true, scaling = x -> x/100,
                    description = "γ: The log of the steady-state growth rate of technology",
                    tex_label="100\\gamma")
+end
+
+"""
+```
+ss11!(m::HetDSGEGovDebt)
+```
+
+Initializes model for run when we don't calibrate for varlinc and vardlinc.
+"""
+function ss11!(m::HetDSGEGovDebt)
+    m <= Setting(:calibrate_income_targets, false, "Calibrate for varlinc and vardlinc")
+
+    # Set targets
+    m <= Setting(:targets, [0.16, 0.10, 0.7, 0.23], "Targets for [MPC, pc0, varlinc, vardlinc]")
+    m <= Setting(:target_vars, [:mpc, :pc0, :varlinc, :vardlinc],
+                 "Symbols of variables we're targeting")
+    m <= Setting(:target_σt, [0.2, 0.1, 0.05, 0.05],
+                 "Target \\sigma_t for MPC, pc0, varlinc, and vardlinc")
+
+    # Give model new parameters
+    m <= parameter(:varlinc, 0.0, fixed = true, tex_label = "varlinc",
+                   description = "var(log(annual income))")
+    m <= parameter(:vardlinc, 0.0, fixed = true, tex_label = "vardlinc",
+                   description = "var(log(deviations in annual income))")
+
+    # Since not calibrating, we let zlo and s_H / s_L be free parameters
+    m <= parameter(:zlo, 0.0323232, fixed = false,
+                   description = "Lower bound on second income shock to mollify actual income",
+                   tex_label = "\\underbar{z}")
+    m <= parameter(:sH_over_sL, 6.33333, fixed = false,
+                   description = "Ratio of high to low earners", tex_label = "s_H / s_L")
 end
