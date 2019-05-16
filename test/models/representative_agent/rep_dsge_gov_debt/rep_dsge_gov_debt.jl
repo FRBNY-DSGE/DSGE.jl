@@ -10,7 +10,7 @@ check_irfs         = true
 
 path = dirname(@__FILE__)
 
-het = HetDSGEGovDebt(testing_gamma = true)
+het = HetDSGEGovDebt(testing_gamma = true, ref_dir = HETDSGEGOVDEBT)
 het <= Setting(:steady_state_only, true)
 steadystate!(het)
 
