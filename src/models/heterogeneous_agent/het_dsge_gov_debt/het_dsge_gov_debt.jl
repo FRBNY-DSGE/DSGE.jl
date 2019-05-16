@@ -311,7 +311,8 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
     m <= parameter(:β_save, 0.0, fixed = true,
                    description = "saving the betas per particle",
                    tex_label = "\\beta_save")
-    m <= parameter(:sH_over_sL, 6.33333, fixed = true,
+    m <= parameter(:sH_over_sL, 6.33333, (3.0, 9.0), (3.0, 9.0), Untransformed(),
+                   Uniform(3.0, 9.0), fixed = true,
                    description = "Ratio of high to low earners", tex_label = "s_H / s_L")
 
     m <= parameter(:pLH, 0.005, (0.0025, 0.095), (0.0025, 0.095), Untransformed(),
@@ -325,9 +326,11 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
 
     m <= parameter(:BoverY, 0.26, fixed = true, description = "B / Y", tex_label = "B / Y")
 
-    m <= parameter(:zlo, 0.0323232, fixed = true,
+    m <= parameter(:zlo, 0.0323232, (1e-18, 0.8-eps()), (1e-18, 0.8-eps()), Untransformed(),
+                   Uniform(1e-18, 0.8-eps()), fixed = true,
                    description = "Lower bound on second income shock to mollify actual income",
                    tex_label = "\\underbar{z}")
+
     m <= parameter(:zhi, 2-m[:zlo].value, fixed = true,
                    description = "Upper bound on second income shock to mollify actual income",
                    tex_label = "\\bar{z}")
