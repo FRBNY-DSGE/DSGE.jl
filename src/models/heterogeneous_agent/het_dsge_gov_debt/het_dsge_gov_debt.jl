@@ -634,6 +634,9 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:steady_state_only, false, "Testing setting")
     m <= Setting(:auto_reject, false, "This flag is set when policy function doesn't converge")
 
+    m <= Setting(:us, load("$HETDSGEGOVDEBT/reference/us_zs.jld2","us"))
+    m <= Setting(:zs, load("$HETDSGEGOVDEBT/reference/us_zs.jld2","zs"))
+
     # Misc
     m <= Setting(:trunc_distr, false)
     m <= Setting(:rescale_weights, true)
@@ -847,7 +850,6 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps:
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
-
 end
 
 function reset_grids!(m)
@@ -855,7 +857,6 @@ function reset_grids!(m)
     m <= Setting(:nx2_state, 300)
     m <= Setting(:nx1_jump, 300)
     m <= Setting(:nx2_jump, 300)
-
 
     setup_indices!(m)
 
