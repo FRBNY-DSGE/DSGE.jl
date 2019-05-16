@@ -165,6 +165,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         i = cloud.stage_index
         j = load(loadpath, "j")
+        c = cloud.c
 
         ϕ_prop = proposed_fixed_schedule[j]
     else
