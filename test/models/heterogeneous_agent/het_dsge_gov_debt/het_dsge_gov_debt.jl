@@ -188,7 +188,7 @@ if check_jacobian
             @test HHP   == first(endo[:L′_t])
             @test PIP   == first(endo[:π′_t])
             @test PIWP  == first(endo[:π_w′_t])
-            @test LAMP  == first(endo[:mu′_t])
+            @test LAMP  == first(endo[:margutil′_t])
             @test YP    == first(endo[:y′_t])
             @test XP    == first(endo[:I′_t])
             @test MCP   == first(endo[:mc′_t])
@@ -216,7 +216,7 @@ if check_jacobian
             @test HH == first(endo[:L_t])
             @test PI == first(endo[:π_t])
             @test PIW == first(endo[:π_w_t])
-            @test LAM == first(endo[:mu_t])
+            @test LAM == first(endo[:margutil_t])
             @test Y == first(endo[:y_t])
             @test X == first(endo[:I_t])
             @test MC == first(endo[:mc_t])
@@ -508,7 +508,7 @@ if check_irfs
     close(file)
 
     sys = compute_system(m)
-    states, obs, pseudo = impulse_responses(m, sys)
+    states, obs, pseudo = impulse_responses(m, sys, use_augmented_states = true)
     endo = m.endogenous_states_original
 
     @testset "Check IRFs" begin
@@ -530,8 +530,8 @@ if check_irfs
         @test IRFH ≈ vec(states[endo[:L′_t], 1:20, 3])
         #@test IRFC ≈ vec(obs[m.observables[:obs_consumption], 1:20, 3])
         @test IRFMC ≈ vec(states[endo[:mc′_t], 1:20, 3])
-        @test IRFLAM ≈ vec(states[endo[:mu′_t], 1:20, 3])
-        #@test IRFm ≈ vec(states[endo[:mu′_t], 1:20, 3])
+        @test IRFLAM ≈ vec(states[endo[:margutil′_t], 1:20, 3])
+        #@test IRFm ≈ vec(states[endo[:margutil′_t], 1:20, 3])
     end
 end
 
