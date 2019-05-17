@@ -12,26 +12,30 @@ function steadystate!(m::HetDSGEGovDebt;
         return
     else
         reset_grids!(m)
-
-        target = get_setting(m, :calibration_targets)
-        lower  = get_setting(m, :calibration_targets_lb)
-        upper  = get_setting(m, :calibration_targets_ub)
         nx = get_setting(m, :nx)
         ns = get_setting(m, :ns)
+        ni = get_setting(m, :ni)
+        nz = get_setting(m, :nz)
 
-        # FML fix this
-        ni = 10000
-        nz = 1000
-        us, zs = get_setting(m, :us), get_setting(m, :zs)
-        # If you wanted to be truly random, to regenerate these, call:
-        # us, zs = generate_us_and_zs(ni, nz) # lives in util.jl
+        # Determines whether random or not
+        us, zs = if get_setting(m, :fix_random_matrices)
+            get_setting(m, :us), get_setting(m, :zs)
+        else
+            generate_us_and_zs(ni, nz)
+        end
 
+        # This is a test setting; TODO: Remove because now we can just fix the randomness
         if get_setting(m, :steady_state_only)
             find_steadystate!(m; βlo = βlo, βhi = βhi, excess = excess, tol = tol, maxit = maxit,
                               βband = βband)
             return
         else
+            # Do you want to calibrate for matching the income moments?
             if get_setting(m, :calibrate_income_targets)
+
+                target = get_setting(m, :calibration_targets)
+                lower  = get_setting(m, :calibration_targets_lb)
+                upper  = get_setting(m, :calibration_targets_ub)
                 m[:sH_over_sL], m[:zlo], _, _ = best_fit(m[:pLH].value, m[:pHL].value,
                                                          target, lower, upper, us, zs)
             else
@@ -39,11 +43,12 @@ function steadystate!(m::HetDSGEGovDebt;
                                                           m[:pLH].value, m[:pHL].value,
                                                           us, zs, ni)
             end
+            # Whether one calibrates or not, zhi needs to be updated here
             m[:zhi] = 2.0 - m[:zlo].value
 
+            # Construct Markov transition matrix for skill
             f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value,
                                                               m[:pHL].value, get_setting(m, :ns))
-            # Markov transition matrix for skill
             m.grids[:sgrid] = Grid(sgrid, swts, sscale)
             m.grids[:fgrid] = f
 
@@ -53,19 +58,16 @@ function steadystate!(m::HetDSGEGovDebt;
                                                       m[:Tstar].value, m[:zlo].value, nx)
 
             m.grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
-
             m <= Setting(:xlo, xlo)
             m <= Setting(:xhi, xhi)
             m <= Setting(:xscale, xscale)
-
             xswts = kron(swts, xwts)
             m.grids[:weights_total] = xswts
 
-            # Call steadystate a final time
+            # Once have updated grids, can call steady state and compute other two moments
             find_steadystate!(m; βlo = βlo, βhi = βhi,
                               excess = excess, tol = tol, maxit = maxit,
                               βband = βband)
-
             m[:mpc] = ave_mpc(m[:μstar].value,   m[:cstar].value, xgrid, xswts, nx, ns)
             m[:pc0] = frac_zero(m[:μstar].value, m[:cstar].value, xgrid, xswts, ns)
         end
@@ -90,12 +92,12 @@ function find_steadystate!(m::HetDSGEGovDebt;
     zhi = m[:zhi].value
 
     # Load parameters
-    R = 1 + m[:r].scaledvalue
-    H = m[:H].value
-    η = m[:η].value
-    γ = m[:γ].scaledvalue
-    ω = m[:ωstar].value
-    T = m[:Tstar].value
+    R  = 1 + m[:r].scaledvalue
+    H  = m[:H].value
+    η  = m[:η].value
+    γ  = m[:γ].scaledvalue
+    ω  = m[:ωstar].value
+    T  = m[:Tstar].value
     bg = m[:bg].value
 
     # Load grids
@@ -109,6 +111,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
 
     reject  = false
     counter = 1
+
     n  = ns*nx
     c  = zeros(n)
     bp = zeros(n)
@@ -121,8 +124,12 @@ function find_steadystate!(m::HetDSGEGovDebt;
     Win_guess = ones(n)
 
     if get_setting(m, :use_last_βstar) && !isnan(m[:βstar].value)
+
+        # This short-circuits computation of the policy function
         βlo = βhi = m[:βstar].value
     elseif !isnan(m[:βstar].value)
+
+        # If one has computed β* before, we first bisect into a neighborhood around it
         βlo_temp = m[:βstar].value - βband
         βhi_temp = m[:βstar].value + βband
 
@@ -164,15 +171,13 @@ function find_steadystate!(m::HetDSGEGovDebt;
         end
     end
 
-    # CHECK THIS
+    # If policy function does not converge, we signal to likelihood that should reject
     m <= Setting(:auto_reject, reject)
-
     m[:lstar]  = Win
     m[:cstar]  = c
     m[:μstar]  = μ
     m[:βstar]  = β
     m[:β_save] = β
-
     nothing
 end
 
@@ -238,18 +243,34 @@ end
 
 function skill_moments(sH_over_sL::Real, zlo::Real, pLH::S, pHL::S, us::Matrix{S},
                        zs::Matrix{S}, ni::Int = 10000) where {S<:AbstractFloat}
-	πL = pHL/(pLH+pHL)
-	πss = [πL;1.0-πL]
-	P = [[1.0-pLH pLH];[pHL 1.0-pHL]]
-	slo = 1.0/(πL+(1-πL)*sH_over_sL)
-	shi = sH_over_sL*slo
+	πL    = pHL / (pLH + pHL)
+	πss   = [πL; 1.0-πL]
+	P     = [[1.0-pLH pLH]; [pHL 1.0-pHL]]
+	slo   = 1.0 / (πL + (1-πL) * sH_over_sL)
+	shi   = sH_over_sL * slo
 	sgrid = [slo; shi]
 	linc1, linc2 = ln_annual_inc(zs, us, zlo, P, πss, sgrid, ni)
 	return var(linc1), var(linc2 - linc1)
 end
 
+"""
+```
+function loss(x::Vector{S}, target::Vector{S}) where {S<:AbstractFloat}
+```
+
+Computes for given vector and target vector, the sum of absolute loss.
+"""
 loss(x::Vector{S}, target::Vector{S}) where {S<:AbstractFloat} = sum(abs.(x-target))
 
+"""
+```
+function best_fit(pLH::S, pHL::S, target::Vector{S}, lower::Vector{S}, upper::Vector{S},
+                  us::Matrix{S}, zs::Matrix{S}, max_iter::Int = 20,
+                  initial_guess::Vector{S} = [6.3, 0.03]) where {S<:AbstractFloat}
+```
+
+Uses Nelder-Mead (gradient descent algorithm) to optimize for income moments.
+"""
 function best_fit(pLH::S, pHL::S, target::Vector{S}, lower::Vector{S}, upper::Vector{S},
                   us::Matrix{S}, zs::Matrix{S}, max_iter::Int = 20,
                   initial_guess::Vector{S} = [6.3, 0.03]) where {S<:AbstractFloat}
@@ -258,6 +279,7 @@ function best_fit(pLH::S, pHL::S, target::Vector{S}, lower::Vector{S}, upper::Ve
 
     res = optimize(skill_moments_f, lower, upper, initial_guess, Fminbox(NelderMead()),
                    Optim.Options(f_calls_limit = max_iter))
+
     sH_over_sL_argmin, zlo_argmin = Optim.minimizer(res)
     min_varlinc, min_vardlinc = skill_moments(sH_over_sL_argmin,
                                               zlo_argmin, pLH, pHL, us, zs)
@@ -281,22 +303,24 @@ function zsample(uz::Matrix{S}, zgrid::AbstractArray, zcdf::AbstractArray,
 end
 
 
-@inline function compute_excess(xswts::Vector{S}, KF::Matrix{S},
-                                bp::Vector{S}, bg::S) where {S<:Float64}
+@inline function compute_excess(xswts::Vector{S}, KF::Matrix{S}, bp::Vector{S},
+                                bg::S; print_warning::Bool = false,
+                                tol::S = 2e-1) where {S<:Float64}
     LPMKF = xswts[1] * KF
+
     # Find eigenvalue closest to 1
     (D,V) = (eigen(LPMKF)...,)
     max_D = argmax(abs.(D))
     D = D[max_D]
 
-    if abs(D - 1) > 2e-1 # that's the tolerance we are allowing
-        #@warn "Your eigenvalue is too far from 1, something is wrong."
+    if abs(D - 1) > tol && print_warning
+        @warn "Your eigenvalue is too far from 1, something is wrong."
     end
+
     # Pick eigenvector associated w/ largest eigenvalue and moving it back to values
     μ = real(V[:,max_D])
     μ = μ ./ dot(xswts, μ) # Scale of eigenvectors not determinate: rescale to integrate to 1
-    excess = dot(xswts, (μ .* bp)) - bg # compute excess supply of savings, which is a fn of w
-
+    excess = dot(xswts, (μ .* bp)) - bg # Compute excess supply of savings, which is a fn of w
     return excess, μ
 end
 

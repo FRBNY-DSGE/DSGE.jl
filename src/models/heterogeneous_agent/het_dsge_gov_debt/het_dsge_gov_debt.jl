@@ -645,6 +645,10 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:steady_state_only, false, "Testing setting")
     m <= Setting(:auto_reject, false, "This flag is set when policy function doesn't converge")
 
+    # Steady state constants
+    m <= Setting(:ni, 10000)
+    m <= Setting(:nz, 1000)
+    m <= Setting(:fix_random_matrices, true, "Determines if use fixed matrices")
     m <= Setting(:us, load(get_setting(m, :ref_dir) * "/us_zs.jld2","us"))
     m <= Setting(:zs, load(get_setting(m, :ref_dir) * "/us_zs.jld2","zs"))
 
