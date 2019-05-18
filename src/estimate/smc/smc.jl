@@ -136,8 +136,18 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         initialize_likelihoods!(m, data, cloud, parallel = parallel,
                                 verbose = verbose)
     elseif continue_intermediate
-        loadpath = rawpath(m, "estimate",
-                           "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl)
+        loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl)
+        cloud = load(loadpath, "cloud")
+        if length(cloud.particles[1].keys)==48
+            @show "reset length"
+            for i=1:length(cloud.particles)
+                cloud.particles[i].value = vcat(cloud.particles[i].value[1:m.keys[:pc0]],
+                                                [0., 0.], cloud.particles[i].value[m.keys[:pc0]+1:end])
+                cloud.particles[i].keys = vcat(cloud.particles[i].keys[1:m.keys[:pc0]], [:varlinc, :vardlinc], cloud.particles[i].keys[m.keys[:pc0]+1:end])
+            end
+        end
+    elseif continue_intermediate_w_fixed
+        loadpath = isempty(loadpath_override) ? rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl) : loadpath_override
         cloud = load(loadpath, "cloud")
     else
         # Instantiating ParticleCloud object
