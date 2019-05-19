@@ -50,10 +50,10 @@ function measurement(m::HetDSGEGovDebt{T},
     DD[obs[:obs_hours]]                     = m[:Lmean]
 
     ## Labor Share/real wage growth
-    ZZ[obs[:obs_wages], first(endo[:w′_t])]       = 1.0
-    ZZ[obs[:obs_wages], first(endo[:w′_t1])]      = -1.0
-    ZZ[obs[:obs_wages], first(endo[:z′_t])]       = 1.0
-    DD[obs[:obs_wages]]                           = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_wages], first(endo[:w′_t])]  = 1.0
+    ZZ[obs[:obs_wages], first(endo[:w′_t1])] = -1.0
+    ZZ[obs[:obs_wages], first(endo[:z′_t])]  = 1.0
+    DD[obs[:obs_wages]]                      = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## Inflation (GDP Deflator)
     ZZ[obs[:obs_gdpdeflator], first(endo[:π′_t])] = 1.0
@@ -61,7 +61,7 @@ function measurement(m::HetDSGEGovDebt{T},
 
     ## Nominal interest rate
     ZZ[obs[:obs_nominalrate], first(endo[:i′_t])] = 1.0
-    DD[obs[:obs_nominalrate]]                     = 1 + m[:r] #m[:Rstarn]
+    DD[obs[:obs_nominalrate]]                     = 1 + (100*(m[:r] * m[:π_star] - 1)) #m[:Rstarn]
 
     ## Consumption Growth
     ZZ[obs[:obs_consumption], 1:get_setting(m, :n_backward_looking_states)] = -C_eqn
