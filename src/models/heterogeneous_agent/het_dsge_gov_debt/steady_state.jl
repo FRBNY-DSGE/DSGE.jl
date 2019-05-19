@@ -281,8 +281,8 @@ function best_fit(pLH::S, pHL::S, target::Vector{S}, lower::Vector{S}, upper::Ve
                    Optim.Options(f_calls_limit = max_iter))
 
     sH_over_sL_argmin, zlo_argmin = Optim.minimizer(res)
-    min_varlinc, min_vardlinc = skill_moments(sH_over_sL_argmin,
-                                              zlo_argmin, pLH, pHL, us, zs)
+    min_varlinc, min_vardlinc = skill_moments(sH_over_sL_argmin, zlo_argmin, pLH,
+                                              pHL, us, zs)
     return sH_over_sL_argmin, zlo_argmin, min_varlinc, min_vardlinc
 end
 

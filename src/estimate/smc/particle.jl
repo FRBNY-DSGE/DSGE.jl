@@ -146,7 +146,6 @@ function update_mutation!(p::Particle, para::Array{Float64,1},
     p.accept = accept
 end
 
-
 function update_mutation!(p::Particle, para::Array{Float64,1},
                           like::Float64, post::Float64, old_like::Float64, accept::Float64)
     p.value = para
