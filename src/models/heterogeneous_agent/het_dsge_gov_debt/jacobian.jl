@@ -445,7 +445,7 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
         setup_indices!(m)
         init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
         normalize_model_state_indices!(m)
-        endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+        endogenous_states_augmented = [:I_t1, :c_t, :c_t1]
         for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
 
         m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
@@ -464,7 +464,7 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
         setup_indices!(m)
         init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
         normalize_model_state_indices!(m)
-        endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+        endogenous_states_augmented = [:I_t1, :c_t, :c_t1]
         for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
 
         m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
@@ -553,7 +553,7 @@ function truncate_distribution!(m::HetDSGEGovDebt)
 
         normalize_model_state_indices!(m)
 
-        endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+        endogenous_states_augmented = [:I_t1, :c_t, :c_t1]
         for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
 
         m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +

@@ -136,7 +136,7 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
-    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    endogenous_states_augmented = [:I_t1, :c_t, :c_t1]
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -235,7 +235,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
 
-    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    endogenous_states_augmented = [:I_t1, :c_t, :c_t1]
     for (i,k) in enumerate(endogenous_states_augmented)
         m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
     end
@@ -881,7 +881,7 @@ function reset_grids!(m)
     # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
 
-    endogenous_states_augmented = [:i_t1, :c_t, :c_t1]
+    endogenous_states_augmented = [:I_t1, :c_t, :c_t1]
     for (i,k) in enumerate(endogenous_states_augmented)
         m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
     end
