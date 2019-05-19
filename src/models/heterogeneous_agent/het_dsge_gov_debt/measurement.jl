@@ -60,7 +60,7 @@ function measurement(m::HetDSGEGovDebt{T},
     DD[obs[:obs_gdpdeflator]]                     = 100*(m[:π_star]-1)
 
     ## Nominal interest rate
-    ZZ[obs[:obs_nominalrate], first(endo[:R′_t])] = 1.0
+    ZZ[obs[:obs_nominalrate], first(endo[:i′_t])] = 1.0
     DD[obs[:obs_nominalrate]]                     = 1 + m[:r] #m[:Rstarn]
 
     ## Consumption Growth
@@ -70,8 +70,8 @@ function measurement(m::HetDSGEGovDebt{T},
     DD[obs[:obs_consumption]]                     = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## Investment Growth
-    ZZ[obs[:obs_investment], first(endo[:i′_t])]  = 1.0
-    ZZ[obs[:obs_investment], endo_new[:i_t1]]     = -1.0
+    ZZ[obs[:obs_investment], first(endo[:I′_t])]  = 1.0
+    ZZ[obs[:obs_investment], endo_new[:I_t1]]     = -1.0
     ZZ[obs[:obs_investment], first(endo[:z′_t])]  = 1.0
     DD[obs[:obs_investment]]                      = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 

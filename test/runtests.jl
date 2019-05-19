@@ -1,5 +1,7 @@
 using DSGE, JLD2, Distributions, PDMats, DataStructures, OrderedCollections, FileIO, Test, DataFrames, Dates, Nullables, Plots, Distributed, DelimitedFiles, Random
 
+HETDSGEGOVDEBT = "/home/rceexm14/.julia/dev/DSGE/src/models/heterogeneous_agent/het_dsge_gov_debt/reference"
+
 my_tests = [
             "models/heterogeneous_agent/het_dsge_gov_debt/het_dsge_gov_debt",
             "models/representative_agent/rep_dsge_gov_debt/rep_dsge_gov_debt",
