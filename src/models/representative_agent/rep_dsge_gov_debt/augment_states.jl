@@ -23,7 +23,6 @@ function augment_states(m::RepDSGEGovDebt{T}, TTT::Matrix{T},
     ### TTT modifications
 
     # Track Lags
-    TTT_aug[endo_new[:i_t1], endo[:i′_t]] = 1.0
     TTT_aug[endo_new[:c_t1], endo[:l′_t]] = -1.0
 
     return TTT_aug, RRR_aug, CCC_aug
