@@ -27,7 +27,8 @@ end
 
 description(m::RepDSGEGovDebt) = "RepDSGEGovDebt, $(m.subspec)"
 
-function RepDSGEGovDebt(het::HetDSGEGovDebt)
+function RepDSGEGovDebt(het::HetDSGEGovDebt;
+                        custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}())
 
     @assert !isnan(het[:βstar].value) "Must have already called steadystate! on `het` before instantiating a RepDSGEGovDebt model"
 
@@ -59,6 +60,9 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
 
     # Set settings
     model_settings!(m, het)
+    for custom_setting in values(custom_settings)
+        m <= custom_setting
+    end
 
     # Initialize model indices
     init_model_indices!(m)
@@ -73,7 +77,7 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
     init_subspec!(m, het)
 
     # Solve for the steady state
-    steadystate!(m, het)
+    steadystate!(m, het, same_beta = get_setting(m, :use_same_beta_as_hank))
 
     return m
 end
@@ -98,6 +102,8 @@ function model_settings!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
     m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                  length([:c_t1]),
                  "The number of 'states' in the augmented state space model.")
+
+    m <= Setting(:use_same_beta_as_hank, false)
 end
 
 function init_model_indices!(m::RepDSGEGovDebt)
@@ -149,34 +155,56 @@ function init_grids!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
     m.grids = deepcopy(het.grids)
 end
 
-function steadystate!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
+function steadystate!(m::RepDSGEGovDebt, het::HetDSGEGovDebt;
+                      same_beta::Bool = true)
     ns = get_setting(m, :ns)
 
-    m <= SteadyStateParameter(:cstar, (m.grids[:weights_total].*het[:μstar].value)'*(min.(1./het[:lstar].value, repeat(m.grids[:xgrid].points, ns) .+ m[:η])),
-                              description = "Steady-state consumption", tex_label = "c_*")
+    if same_beta
+        m <= SteadyStateParameter(:βstar, het[:βstar].value, description = "Steady-state discount factor", tex_label = "\\beta_*")
+        m[:r] = exp(m[:γ])/m[:βstar]
+        m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ],
+                                  description = "Rental rate on capital", tex_label = "Rk_*")
+        m <= SteadyStateParameter(:ωstar,
+                                  (m[:α]^(m[:α]/(1-m[:α])))*(1-m[:α])*m[:Rkstar]^(-m[:α]/(1-m[:α])),
+                                  description = "Real wage", tex_label = "\\omega_*")
+        m <= SteadyStateParameter(:klstar, (m[:α]/(1-m[:α]))*(m[:ωstar]/m[:Rkstar])*exp(m[:γ]),
+                                  description = "Capital/Labor ratio", tex_label = "kl_*")
+        m <= SteadyStateParameter(:kstar, m[:klstar]*m[:H], description = "Capital",
+                                  tex_label = "k_*")
+        m <= SteadyStateParameter(:ystar, (exp(-m[:α]*m[:γ])*(m[:kstar]^m[:α])*m[:H]^(1-m[:α])),
+                                  description = "GDP", tex_label = "y_*")
+        m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar],
+                                  description = "Investment", tex_label = "x_*")
+        m <= SteadyStateParameter(:cstar, m[:ystar]/m[:g] - m[:xstar],
+                                  description = "Steady-state consumption", tex_label = "c_*")
+    else
+        m <= SteadyStateParameter(:βstar, exp(m[:γ])/(1 + m[:r]), description = "Steady-state discount factor",
+                                  tex_label = "\\beta_*")
+        m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ],
+                                  description = "Rental rate on capital", tex_label = "Rk_*")
+        m <= SteadyStateParameter(:ωstar,
+                                  (m[:α]^(m[:α]/(1-m[:α])))*(1-m[:α])*m[:Rkstar]^(-m[:α]/(1-m[:α])),
+                                  description = "Real wage", tex_label = "\\omega_*")
+        m <= SteadyStateParameter(:klstar, (m[:α]/(1-m[:α]))*(m[:ωstar]/m[:Rkstar])*exp(m[:γ]),
+                                  description = "Capital/Labor ratio", tex_label = "kl_*")
+        m <= SteadyStateParameter(:kstar, m[:klstar]*m[:H], description = "Capital",
+                                  tex_label = "k_*")
+        m <= SteadyStateParameter(:ystar, (exp(-m[:α]*m[:γ])*(m[:kstar]^m[:α])*m[:H]^(1-m[:α])),
+                                  description = "GDP", tex_label = "y_*")
+        m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar],
+                                  description = "Investment", tex_label = "x_*")
+        m <= SteadyStateParameter(:cstar, (m.grids[:weights_total].*het[:μstar].value)'*(min.(1./het[:lstar].value, repeat(m.grids[:xgrid].points, ns) .+ m[:η])),
+                                  description = "Steady-state consumption", tex_label = "c_*")
+    end
     m <= SteadyStateParameter(:lstar, 1/m[:cstar],
                               description = "Steady-state expected discounted
                               marginal utility of consumption", tex_label = "l_*")
-    m <= SteadyStateParameter(:βstar, exp(m[:γ])/(1 + m[:r]), description = "Steady-state discount factor",
-                              tex_label = "\\beta_*")
-    m <= SteadyStateParameter(:Rkstar, m[:r] + m[:δ],
-                              description = "Rental rate on capital", tex_label = "Rk_*")
-    m <= SteadyStateParameter(:ωstar,
-                              (m[:α]^(m[:α]/(1-m[:α])))*(1-m[:α])*m[:Rkstar]^(-m[:α]/(1-m[:α])),
-                              description = "Real wage", tex_label = "\\omega_*")
-    m <= SteadyStateParameter(:klstar, (m[:α]/(1-m[:α]))*(m[:ωstar]/m[:Rkstar])*exp(m[:γ]),
-                              description = "Capital/Labor ratio", tex_label = "kl_*")
-    m <= SteadyStateParameter(:kstar, m[:klstar]*m[:H], description = "Capital",
-                              tex_label = "k_*")
-    m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar],
-                              description = "Investment", tex_label = "x_*")
-    m <= SteadyStateParameter(:ystar, (exp(-m[:α]*m[:γ])*(m[:kstar]^m[:α])*m[:H]^(1-m[:α])),
-                              description = "GDP", tex_label = "y_*")
     m <= SteadyStateParameter(:bg, m[:BoverY]*m[:ystar]*exp(m[:γ]), description = "Govt Debt",
                               tex_label = "bg")
     m <= SteadyStateParameter(:Tg, (exp(-m[:γ]) - 1/(1+m[:r]))*m[:bg] + (1-(1/m[:g]))*m[:ystar],
                               description = "Net lump sump taxes", tex_label = "Tg")
     m <= SteadyStateParameter(:Tstar, m[:Rkstar]*m[:kstar]*exp(-m[:γ]) - m[:xstar] - m[:Tg],
                               description = "Net transfer to households", tex_label = "T_*")
+
     return m
 end
