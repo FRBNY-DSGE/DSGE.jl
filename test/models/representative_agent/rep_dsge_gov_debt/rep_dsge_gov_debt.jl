@@ -417,6 +417,6 @@ if check_irfs
         @test states[endo_aug[:c_t1], :, exo[:z_sh]][2:end] ≈ IRFC[1:end-1]
 
         @test states[endo[:mc′_t], :, exo[:z_sh]] ≈ IRFyp[MCP - nkp, :]
-        @test states[endo[:mu′_t], :, exo[:z_sh]] ≈ IRFyp[LAMP - nkp, :]
+        @test states[endo[:margutil′_t], :, exo[:z_sh]] ≈ IRFyp[LAMP - nkp, :]
     end
 end
