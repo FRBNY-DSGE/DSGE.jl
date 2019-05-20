@@ -146,9 +146,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                 cloud.particles[i].keys = vcat(cloud.particles[i].keys[1:m.keys[:pc0]], [:varlinc, :vardlinc], cloud.particles[i].keys[m.keys[:pc0]+1:end])
             end
         end
-    elseif continue_intermediate_w_fixed
-        loadpath = isempty(loadpath_override) ? rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl) : loadpath_override
-        cloud = load(loadpath, "cloud")
     else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
