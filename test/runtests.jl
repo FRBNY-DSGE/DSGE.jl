@@ -3,6 +3,7 @@ using DSGE, JLD2, Distributions, PDMats, DataStructures, OrderedCollections, Fil
 HETDSGEGOVDEBT = "/home/rceexm14/.julia/dev/DSGE/src/models/heterogeneous_agent/het_dsge_gov_debt/reference"
 
 my_tests = [
+            "models/heterogeneous_agent/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
             "models/heterogeneous_agent/het_dsge_gov_debt/het_dsge_gov_debt",
             "models/representative_agent/rep_dsge_gov_debt/rep_dsge_gov_debt",
             # "models/heterogeneous_agent/het_dsge_simple_taylor/het_dsge_simple_taylor",

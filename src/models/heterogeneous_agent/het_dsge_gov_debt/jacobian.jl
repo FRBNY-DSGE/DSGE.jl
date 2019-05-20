@@ -461,6 +461,10 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
         (ProxH, n_newH, n_noagH, n_gpsH) = avg_prox(nx, binsize,minn_noag)
         m <= Setting(:nx1_state, n_newL)
         m <= Setting(:nx2_state, n_newH)
+        if get_setting(m, :reduce_ell)
+            m <= Setting(:nx1_jump, n_newL)
+            m <= Setting(:nx2_jump, n_newH)
+        end
         setup_indices!(m)
         init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
         normalize_model_state_indices!(m)
@@ -476,9 +480,15 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
         SH = make_S(n_newH, n_noagH, binsize)
         S = cat(SL, SH, dims = [1 2])
 
-        Qleft     = cat(Reduc,S*Prox*Reduc,eye(nscalars), dims = [1 2])
-        Qx        = cat(S*Prox*Reduc,eye(nxscalars), dims = [1 2])
-        Qy        = cat(Reduc,eye(nyscalars), dims = [1 2])
+        if get_setting(m, :reduce_ell)
+            Qleft     = cat(Prox*Reduc,S*Prox*Reduc,eye(nscalars), dims = [1 2])
+            Qx        = cat(S*Prox*Reduc,eye(nxscalars), dims = [1 2])
+            Qy        = cat(Prox*Reduc,eye(nyscalars), dims = [1 2])
+        else
+            Qleft     = cat(Reduc,S*Prox*Reduc,eye(nscalars), dims = [1 2])
+            Qx        = cat(S*Prox*Reduc,eye(nxscalars), dims = [1 2])
+            Qy        = cat(Reduc,eye(nyscalars), dims = [1 2])
+        end
 
         Qright    = cat(Qx',Qy',Qx',Qy', dims = [1,2])
 

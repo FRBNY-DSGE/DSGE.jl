@@ -8,7 +8,7 @@ check_steady_state = true
 check_jacobian = true
 check_solution = true
 check_irfs = true
-check_steady_state_calibrate = true
+check_steady_state_calibrate = false
 write_steady_state_calibrate = false
 
 path = dirname(@__FILE__)
