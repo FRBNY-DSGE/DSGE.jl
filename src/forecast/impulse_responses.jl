@@ -153,8 +153,8 @@ end
 
 # Method for specifying the subset of shocks, and the size of each shock
 function impulse_responses(m::AbstractModel, system::System{S},
-                                             horizon::Int, shock_names::Vector{Symbol},
-                                             shock_values::Vector{Float64}) where S<:AbstractFloat
+                           horizon::Int, shock_names::Vector{Symbol},
+                           shock_values::Vector{Float64}) where S<:AbstractFloat
 
     # Must provide a name and value for each shock
     @assert length(shock_names) == length(shock_values)
@@ -191,8 +191,8 @@ end
 # observed variable using that shock. (Omitting the feature to do pseudo-observables
 # now, for simplicity)
 function impulse_responses(m::AbstractModel, system::System{S},
-                                             horizon::Int, shock_name::Symbol,
-                                             var_name::Symbol, var_value::Float64) where S<:AbstractFloat
+                           horizon::Int, shock_name::Symbol,
+                           var_name::Symbol, var_value::Float64) where S<:AbstractFloat
 
 
     # Setup
