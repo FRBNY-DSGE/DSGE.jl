@@ -33,8 +33,8 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
 
     # Model-specific specifications
     spec               = "rep_dsge"
-    subspec            = het.subspec
-    settings           = het.settings
+    subspec            = deepcopy(het.subspec)
+    settings           = deepcopy(het.settings)
 
     # initialize empty model
     m = RepDSGEGovDebt{Float64}(
@@ -54,8 +54,8 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
             spec,
             subspec,
             settings,
-            het.testing,
-            het.observable_mappings)
+            deepcopy(het.testing),
+            deepcopy(het.observable_mappings))
 
     # Set settings
     model_settings!(m, het)
@@ -79,7 +79,7 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt)
 end
 
 function model_settings!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
-    for (key, setting) in het.settings
+    for (key, setting) in deepcopy(het.settings)
         m <= setting
     end
 
@@ -140,7 +140,7 @@ function init_model_indices!(m::RepDSGEGovDebt)
 end
 
 function init_parameters!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
-    for param in het.parameters
+    for param in deepcopy(het.parameters)
         m <= param
     end
 end
