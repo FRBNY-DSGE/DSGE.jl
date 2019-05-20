@@ -112,7 +112,7 @@ function init_model_indices!(m::RepDSGEGovDebt)
     states = collect([:k′_t, :R′_t1, :i′_t1, :y′_t1, :w′_t1, :I′_t1, :bg′_t,
                       :b′_t, :g′_t, :z′_t, :μ′_t, :λ_w′_t, :λ_f′_t, :rm′_t])
 
-    jumps = collect([:R′_t, :i′_t, :t′_t, :w′_t, :L′_t, :π′_t, :π_w′_t, :mu′_t, :y′_t, :I′_t,
+    jumps = collect([:R′_t, :i′_t, :t′_t, :w′_t, :L′_t, :π′_t, :π_w′_t, :margutil′_t, :y′_t, :I′_t,
                      :mc′_t, :Q′_t, :capreturn′_t, :l′_t, :tg′_t])
 
     endogenous_states = collect(vcat(states, jumps))
@@ -156,7 +156,7 @@ function init_grids!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
 end
 
 function steadystate!(m::RepDSGEGovDebt, het::HetDSGEGovDebt;
-                      same_beta::Bool = true)
+                      same_beta::Bool = false)
     ns = get_setting(m, :ns)
 
     if same_beta

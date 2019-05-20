@@ -55,7 +55,7 @@ function jacobian(m::RepDSGEGovDebt)
     JJ[eq[:eq_market_clearing],endo[:l_t]] = c_scalar
 
     # lambda = average marginal utility
-    JJ[eq[:eq_lambda],endo[:mu_t]] = lam
+    JJ[eq[:eq_lambda],endo[:margutil_t]] = lam
     JJ[eq[:eq_lambda],endo[:l_t]] = -1/c_scalar
 
     # transfer
@@ -77,8 +77,8 @@ function jacobian(m::RepDSGEGovDebt)
     JJ[eq[:eq_investment],endo[:z_t]]  = -spp*exp(2*γ)
 
     # tobin's q
-    JJ[eq[:eq_tobin_q],endo[:mu_t]]  = 1.
-    JJ[eq[:eq_tobin_q],endo[:mu′_t]] = -1.
+    JJ[eq[:eq_tobin_q],endo[:margutil_t]]  = 1.
+    JJ[eq[:eq_tobin_q],endo[:margutil′_t]] = -1.
     JJ[eq[:eq_tobin_q],endo[:Q_t]]    = 1.
     JJ[eq[:eq_tobin_q],endo[:z′_t]]   = 1.
     JJ[eq[:eq_tobin_q],endo[:capreturn′_t]]  = -Rk/R
@@ -97,7 +97,7 @@ function jacobian(m::RepDSGEGovDebt)
     JJ[eq[:eq_wage_phillips],endo[:L_t]]   = κw*ϕh
     JJ[eq[:eq_wage_phillips],endo[:w_t]]    = -κw
     JJ[eq[:eq_wage_phillips],endo[:π_w′_t]]  = βrank
-    JJ[eq[:eq_wage_phillips],endo[:mu_t]]  = -κw
+    JJ[eq[:eq_wage_phillips],endo[:margutil_t]]  = -κw
 
     # price phillips curve
     JJ[eq[:eq_price_phillips],endo[:π_t]]   = -1.
