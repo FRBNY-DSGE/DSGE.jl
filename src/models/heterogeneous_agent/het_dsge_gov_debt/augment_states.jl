@@ -24,7 +24,7 @@ function augment_states(m::HetDSGEGovDebt{T}, TTT::Matrix{T}, TTT_jump::Matrix{T
     # Track Lags
     #TTT_aug[endo_new[:I_t1], first(endo[:I′_t])] = 1.0
     #TTT_aug[endo_new[:c_t1], endo_new[:c_t]] = 1.0 #1:get_setting(m, :n_backward_looking_states)] = C_eqn
-    TTT_aug[endo_new[:c_t1], 1:get_setting(m, :n_backward_looking_states)] = -C_eqn  #endo_new[:c_t]] = 1.0
+    TTT_aug[endo_new[:c_t1], 1:get_setting(m, :n_backward_looking_states)] = -C_eqn #endo_new[:c_t]] = 1.0
 
    #= TTT_aug[endo_new[:i_t1], endo[:i_t]] = 1.0
     TTT_aug[endo_new[:w_t1], endo[:w_t]] = 1.0
