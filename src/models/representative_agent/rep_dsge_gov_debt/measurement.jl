@@ -61,7 +61,7 @@ function measurement(m::RepDSGEGovDebt{T},
 
     ## Nominal interest rate
     ZZ[obs[:obs_nominalrate], endo[:R′_t]] = 1.0
-    DD[obs[:obs_nominalrate]]              = 1 + m[:r] #m[:Rstarn]
+    DD[obs[:obs_nominalrate]]              = 100 * ((1+m[:r]) * m[:π_star] - 1) #m[:Rstarn]
 
     ## Consumption Growth
     ZZ[obs[:obs_consumption], endo[:l′_t]]        = -1.0
@@ -70,8 +70,8 @@ function measurement(m::RepDSGEGovDebt{T},
     DD[obs[:obs_consumption]]                     = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
     ## Investment Growth
-    ZZ[obs[:obs_investment], endo[:i′_t]]       = 1.0
-    ZZ[obs[:obs_investment], endo_new[:i_t1]]   = -1.0
+    ZZ[obs[:obs_investment], endo[:I′_t]]       = 1.0
+    ZZ[obs[:obs_investment], endo[:I′_t1]]      = -1.0
     ZZ[obs[:obs_investment], endo[:z′_t]]       = 1.0
     DD[obs[:obs_investment]]                    = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 

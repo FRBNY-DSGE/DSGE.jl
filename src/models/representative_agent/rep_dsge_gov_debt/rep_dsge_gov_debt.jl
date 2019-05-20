@@ -96,7 +96,7 @@ function model_settings!(m::RepDSGEGovDebt, het::HetDSGEGovDebt)
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
     m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
-                 length([:i_t1, :c_t1]),
+                 length([:c_t1]),
                  "The number of 'states' in the augmented state space model.")
 end
 
@@ -126,7 +126,7 @@ function init_model_indices!(m::RepDSGEGovDebt)
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
-    endogenous_states_augmented = [:i_t1, :c_t1]
+    endogenous_states_augmented = [:c_t1]
 
     observables = keys(m.observable_mappings)
     endo   = m.endogenous_states
