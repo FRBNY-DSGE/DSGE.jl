@@ -71,7 +71,7 @@ function measurement(m::HetDSGEGovDebt{T},
 
     ## Investment Growth
     ZZ[obs[:obs_investment], first(endo[:I′_t])]  = 1.0
-    ZZ[obs[:obs_investment], endo_new[:I_t1]]     = -1.0
+    ZZ[obs[:obs_investment], first(endo[:I′_t1])] = -1.0
     ZZ[obs[:obs_investment], first(endo[:z′_t])]  = 1.0
     DD[obs[:obs_investment]]                      = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
