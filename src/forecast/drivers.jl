@@ -111,15 +111,23 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
 
     # Load single draw
     if input_type in [:mean, :mode]
-
-        params = convert(Vector{Float64}, h5read(input_file_name, "params"))
-
+        if get_setting(m, :sampling_method) == :MH
+            params = convert(Vector{Float64}, h5read(input_file_name, "params"))
+        elseif get_setting(m, :sampling_method) == :SMC
+            cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
+            params = cloud.particles[argmax(get_logpost(cloud))].value
+            #params = map(Float64, h5read(input_file_name, "smcparams"))
+        else
+            throw("Invalid :sampling method specification. Change in setting :sampling_method")
+        end
     # Load full distribution
     elseif input_type == :full
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
-            params = map(Float64, h5read(input_file_name, "smcparams"))
+            cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "smcsave" => "smc_cloud"), "cloud")
+            params = get_vals(cloud)
+            #params = map(Float64, h5read(input_file_name, "smcparams"))
         else
             throw("Invalid :sampling method specification. Change in setting :sampling_method")
         end
