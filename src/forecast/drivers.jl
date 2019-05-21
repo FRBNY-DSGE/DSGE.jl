@@ -150,7 +150,11 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     # Return initial parameters of model object
     elseif input_type == :init
 
-        init_parameters!(m)
+        if m.spec == "het_dsge"
+            init_parameters!(m, true)
+        else
+            init_parameters!(m)
+        end
         tmp = map(α -> α.value, m.parameters)
         params = convert(Vector{Float64}, tmp)
 
