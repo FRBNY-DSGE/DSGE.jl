@@ -151,7 +151,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     elseif input_type == :init
 
         if m.spec == "het_dsge"
-            init_parameters!(m, true)
+            init_parameters!(m, false)
         else
             init_parameters!(m)
         end
