@@ -35,7 +35,6 @@ end
 function impulse_responses_augmented(m::AbstractHetModel, system::System{S};
                                      flip_shocks::Bool = false,
                                      use_alternate_consumption = false) where {S<:AbstractFloat}
-    @show "Impulse Responses: Het Model, Augmented"
     horizon = impulse_response_horizons(m)
     Qx = get_setting(m, :Qx)
     Qy = get_setting(m, :Qy)
@@ -82,17 +81,14 @@ function impulse_responses_augmented(m::AbstractHetModel, system::System{S};
     end
 
     if use_alternate_consumption
-        print("using alternate consumption inside augmented function")
-
         endo = m.endogenous_states_original
-        @show endo
         c_implied = (m[:ystar]/m[:g]) - m[:xstar]
         IRFC_implied = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t], :, :]  - model_states_unnormalized[endo[:g′_t], :, :]) - (m[:xstar]/c_implied)*model_states_unnormalized[endo[:I′_t], :, :]
         model_states_unnormalized[1229, :, :] = IRFC_implied
 
         z_consumption = model_states_unnormalized[endo[:z′_t], :, :]
         g_lag = cat(0, model_states_unnormalized[endo[:g′_t], :, :], dims = 2)[:, 1:40, :]
-        IRFC_implied_lag = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t1], :, :]  - g_lag) - (m[:xstar]/c_implied)*model_states_unnormalized[endo[:I′_t1], :, :] #cat(0, IRFC_implied, dims = 2)[:, 1:40, :]
+        IRFC_implied_lag = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t1], :, :]  - g_lag) - (m[:xstar]/c_implied)*model_states_unnormalized[endo[:I′_t1], :, :]
         IRF_observable_implied = IRFC_implied - IRFC_implied_lag .+ z_consumption
         obs[m.observables[:obs_consumption], :, :] = IRF_observable_implied
     end
@@ -105,13 +101,10 @@ function impulse_responses(m::AbstractHetModel, system::System{S};
                            use_augmented_states::Bool = true,
                            use_alternate_consumption::Bool = false) where {S<:AbstractFloat}
     if use_augmented_states
-        @show "Using augmented function"
         return impulse_responses_augmented(m, system, flip_shocks = flip_shocks,
                                            use_alternate_consumption = use_alternate_consumption)
     end
 
-
-    @show "Impulse Responses: Het Model"
     horizon = impulse_response_horizons(m)
     Qx = get_setting(m, :Qx)
     Qy = get_setting(m, :Qy)
