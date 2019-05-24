@@ -15,6 +15,7 @@ path = dirname(@__FILE__)
 
 m = HetDSGEGovDebt(testing_gamma = true, ref_dir = HETDSGEGOVDEBT)
 m <= Setting(:steady_state_only, true)
+m <= Setting(:reduce_ell, false)
 
 # Steady-state computation
 if check_steady_state

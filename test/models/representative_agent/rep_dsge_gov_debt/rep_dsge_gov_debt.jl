@@ -409,7 +409,7 @@ if check_irfs
         @test states[endo[:capreturn′_t], :, exo[:z_sh]] ≈ IRFyp[RKP - nkp, :]
         @test states[endo[:L′_t], :, exo[:z_sh]] ≈ IRFyp[HHP  - nkp, :]
         @test states[endo[:tg′_t], :, exo[:z_sh]] ≈ IRFyp[TGP - nkp, :]
-        @test states[endo[:bg′_t], :, exo[:z_sh]] ≈ IRFxp[BGP, :]
+        @test isapprox(states[endo[:bg′_t], :, exo[:z_sh]], IRFxp[BGP, :], atol = 1e-6)
 
         # Consumption IRF tests
         # contemporaneous consumption is the same as -l′_t
