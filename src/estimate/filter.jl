@@ -36,7 +36,7 @@ where `S<:AbstractFloat`.
 - `kal::Kalman`: see `?Kalman`
 """
 function filter(m::AbstractModel, df::DataFrame, system::System{S},
-    s_0::Vector{S} = Vector{S}(), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
+    s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
     cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true,
     outputs::Vector{Symbol} = [:loglh, :pred, :filt]) where {S<:AbstractFloat}
 
@@ -46,7 +46,7 @@ function filter(m::AbstractModel, df::DataFrame, system::System{S},
            include_presample = include_presample, outputs = outputs)
 end
 
-function filter(m::AbstractModel, data::AbstractArray{Union{S, Missing}}, system::System,
+function filter(m::AbstractModel, data::AbstractArray, system::System,
     s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
     start_date::Dates.Date = date_presample_start(m), include_presample::Bool = true,
     outputs::Vector{Symbol} = [:loglh, :pred, :filt]) where {S<:AbstractFloat}
