@@ -154,14 +154,14 @@ function fix_all_except_sigmas!(m::HetDSGEGovDebt)
                    tex_label = "\\delta_b")
 
     # Exogenous processes - autocorrelation
-    m <= parameter(:ρ_G, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
+    m <= parameter(:ρ_g, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = true,
                    description = "ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label = "\\rho_g")
-    m <= parameter(:ρ_B, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
+    m <= parameter(:ρ_b, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = true,
                    description = "ρ_b: AR(1) coefficient in intertemporal preference " *
-                   "shift process.", tex_label = "\\rho_B")
+                   "shift process.", tex_label = "\\rho_b")
     m <= parameter(:ρ_μ, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = true,
                    description = "ρ_μ: AR(1) coefficient in capital adjustment cost process.",
