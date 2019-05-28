@@ -149,12 +149,10 @@ end
 
 function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64}, dF2_dRZ::Vector{Float64}, dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
 
-    endo_unnorm = m.endogenous_states_unnormalized
-
     dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT = construct_consumption_partial(m, dF2_dRZ, dF2_dWH, dF2_dTT)
 
     endo_orig = m.endogenous_states_original
-    C_eqn = zeros(first(endo_orig[collect(keys(endo_orig))[end]])) #n_model_states_unnormalized(m))
+    C_eqn = zeros(first(endo_orig[collect(keys(endo_orig))[end]]))
 
     C_eqn[endo_orig[:l′_t]] = vec(dC_dELL)
     C_eqn[endo_orig[:kf′_t]] = vec(dC_dKF)

@@ -3,8 +3,8 @@ function jacobian(m::HetDSGEGovDebt)
     #truncate_distribution!(m)
 
     # Load in endogenous state and eq cond indices
-    endo = augment_model_states(m.endogenous_states_unnormalized,
-                         n_model_states_unnormalized(m))
+    endo = augment_model_states(m.endogenous_states_original,#m.endogenous_states_unnormalized,
+                         n_model_states_original(m))
     eq   = m.equilibrium_conditions
 
     # Load in parameters, steady-state parameters, and grids

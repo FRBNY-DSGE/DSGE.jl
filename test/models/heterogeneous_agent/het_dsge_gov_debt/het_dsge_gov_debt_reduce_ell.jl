@@ -10,6 +10,8 @@ check_solution = true
 check_irfs = true
 check_steady_state_calibrate = false
 write_steady_state_calibrate = false
+check_likelihood = true
+write_likelihood = false
 
 path = dirname(@__FILE__)
 
@@ -568,5 +570,21 @@ if check_steady_state_calibrate
         @test saved_mpc ≈ m[:mpc].value
         # Tolerance of convergence of β is 1e-5
         @test saved_β ≈ m[:βstar].value
+    end
+end
+
+if check_likelihood
+    data = Matrix{Float64}(readdlm("$path/../../../reference/YY.txt")')
+
+    if write_likelihood
+        jldopen("$path/reference/likelihood_reduce_ell.jld2", "w") do file
+            file["likelihood"] = likelihood(m, data)
+        end
+    end
+
+    lik_save = load("$path/reference/likelihood_reduce_ell.jld2", "likelihood")
+
+    @testset begin
+        @test likelihood(m, data) ≈ lik_save
     end
 end

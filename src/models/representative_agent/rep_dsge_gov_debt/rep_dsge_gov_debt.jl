@@ -193,7 +193,7 @@ function steadystate!(m::RepDSGEGovDebt, het::HetDSGEGovDebt;
                                   description = "GDP", tex_label = "y_*")
         m <= SteadyStateParameter(:xstar, (1-(1-m[:δ])*exp(-m[:γ]))*m[:kstar],
                                   description = "Investment", tex_label = "x_*")
-        m <= SteadyStateParameter(:cstar, (m.grids[:weights_total].*het[:μstar].value)'*(min.(1./het[:lstar].value, repeat(m.grids[:xgrid].points, ns) .+ m[:η])),
+        m <= SteadyStateParameter(:cstar, (m.grids[:weights_total].*het[:μstar].value)'*(min.(1 ./ het[:lstar].value, repeat(m.grids[:xgrid].points, ns) .+ m[:η])),
                                   description = "Steady-state consumption", tex_label = "c_*")
     end
     m <= SteadyStateParameter(:lstar, 1/m[:cstar],
