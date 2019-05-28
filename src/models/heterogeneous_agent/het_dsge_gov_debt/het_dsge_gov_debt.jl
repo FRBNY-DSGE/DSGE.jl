@@ -85,7 +85,7 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     normalized_model_states::Vector{Symbol}          # All of the distributional model
                                                      # state variables that need to be normalized
     # Vector of unnormalized ranges of indices
-    endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange}
+   # endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange}
     # Vector of ranges corresponding to normalized (post Klein solution) indices
     endogenous_states::OrderedDict{Symbol,UnitRange}
     endogenous_states_original::OrderedDict{Symbol,UnitRange}
@@ -145,7 +145,7 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
     # Setting indices of endogenous_states and equilibrium conditions manually for now
 
     setup_indices!(m)
-    endo = m.endogenous_states_unnormalized
+    endo = m.endogenous_states #_unnormalized
     m.endogenous_states_original = deepcopy(endo)
     m <= Setting(:n_model_states_original, first(collect(values(m.endogenous_states_original))[end]))
     eqcond = equilibrium_conditions
@@ -183,7 +183,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
             # endogenous states unnormalized, endogenous states normalized
             OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
-            OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
+            OrderedDict{Symbol,UnitRange}(), # OrderedDict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
 
             spec,
@@ -387,11 +387,11 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
                    tex_label = "\\delta_b")
 
     # Exogenous processes - autocorrelation
-    m <= parameter(:ρ_G, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
+    m <= parameter(:ρ_g, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label = "\\rho_g")
-    m <= parameter(:ρ_B, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
+    m <= parameter(:ρ_b, 0.5, (1e-5, 1 - 1e-5), (1e-5, 1-1e-5), SquareRoot(),
                    BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_b: AR(1) coefficient in intertemporal preference " *
                    "shift process.", tex_label = "\\rho_B")
@@ -687,7 +687,7 @@ end
 function setup_indices!(m::HetDSGEGovDebt)
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
-    endo = m.endogenous_states_unnormalized
+    endo = m.endogenous_states #_unnormalized
     eqconds = m.equilibrium_conditions
     nxns_state = (get_setting(m, :nx1_state) + get_setting(m, :nx2_state)) #*ns
     nxns_jump = (get_setting(m, :nx1_jump) + get_setting(m, :nx2_jump)) #*ns
@@ -795,11 +795,11 @@ m <= Setting(:n_jump, (get_setting(m, :nx1_jump) +get_setting(m, :nx2_jump)),
     m <= Setting(:nyscalars, 14, "num scalar jumps")
     m <= Setting(:nxscalars, get_setting(m, :nscalars) - get_setting(m, :nyscalars),
                  "num scalar states")
-    m.endogenous_states = deepcopy(endo)
+    #m.endogenous_states = deepcopy(endo)
 end
 
 function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps::Vector{Symbol}, states_only::Bool = false)
-    endo = m.endogenous_states_unnormalized
+    endo = m.endogenous_states #_unnormalized
 
     m <= Setting(:states, states)
     m <= Setting(:jumps, jumps)
