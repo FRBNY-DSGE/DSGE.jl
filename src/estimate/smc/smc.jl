@@ -239,8 +239,8 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
         ##############################################################################
 
         # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
-        c = c*(0.95 + 0.10*exp(16 .*(cloud.accept - target)) / (1.
-                                     + exp(16 .*(cloud.accept - target))))
+        c = c*(0.95 + 0.10*exp(16 .*(cloud.accept - target)) /
+               (1. + exp(16 .*(cloud.accept - target))))
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
@@ -259,8 +259,8 @@ function smc(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol = :low,
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
         if parallel
-            new_particles = @distributed (vcat) for k in 1:n_parts
-                mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
+            new_particles = @distributed (vcat) for p in cloud.particles # 1:n_parts
+                mutation(m, data, p, d, blocks_free, blocks_all,
                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose)
             end
