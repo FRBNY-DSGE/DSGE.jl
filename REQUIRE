@@ -15,10 +15,8 @@ QuantEcon
 Missings
 Nullables
 Plots
-Printf
 RecipesBase
 Roots
-SparseArrays
 SpecialFunctions
 StateSpaceRoutines
 StatsPlots
