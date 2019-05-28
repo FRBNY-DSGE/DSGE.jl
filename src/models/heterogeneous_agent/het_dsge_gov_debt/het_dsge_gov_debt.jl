@@ -147,6 +147,7 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
     setup_indices!(m)
     endo = m.endogenous_states_unnormalized
     m.endogenous_states_original = deepcopy(endo)
+    m <= Setting(:n_model_states_original, first(collect(values(m.endogenous_states_original))[end]))
     eqcond = equilibrium_conditions
     ########################################################################################
 
