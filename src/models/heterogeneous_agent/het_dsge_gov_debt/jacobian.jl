@@ -22,9 +22,9 @@ function jacobian(m::HetDSGEGovDebt)
     ρ_G::Float64    = m[:ρ_G].value
     ρ_z::Float64    = m[:ρ_z].value
     ρ_μ::Float64    = m[:ρ_μ].value
-    ρ_lamw::Float64 = m[:ρ_lamw].value
-    ρ_lamf::Float64 = m[:ρ_lamf].value
-    ρ_mon::Float64  = m[:ρ_mon].value
+    ρ_lamw::Float64 = m[:ρ_λ_w].value
+    ρ_lamf::Float64 = m[:ρ_λ_f].value
+    ρ_mon::Float64  = m[:ρ_rm].value
     spp::Float64   = m[:spp].value
     ϕh::Float64    = m[:ϕh].value
     ρ_R::Float64    = m[:ρR].value
