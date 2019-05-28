@@ -132,7 +132,7 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
                                       :eq_nominal_wage_inflation, :eq_fiscal_rule,
                                       :eq_g_budget_constraint, :LR,:LI,:LY,
                                       :LW,:LX,:eq_b,:eq_g,:eq_z,:eq_μ,:eq_λ_w,
-                                      :eq_λ_f, :eq_rm]) #, :eq_consumption])
+                                      :eq_λ_f, :eq_rm])
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -245,10 +245,6 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
     init_subspec!(m)
 
-    #=Qx, Qy, Qleft, Qright = compose_normalization_matrices(m)
-    m <= Setting(:n_predetermined_variables, size(Qx, 1))
-    m <= Setting(:Qleft, Qleft)
-    m <= Setting(:Qright, Qright)=#
     return m
 end
 
@@ -298,12 +294,6 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
                    GammaAlt(0.5, 0.5), fixed = false, scaling = x -> x/100,
                    description= "r: Quarterly steady-state real interest rate.",
                    tex_label= "100*r^{HetDSGE}")
-    #=
-    m <= parameter(:r, 0.6, (1e-5, 10.0), (1e-5, 10.), Exponential(),
-                   GammaAlt(0.25, .1), fixed = false, scaling = x -> x/100 + .4/100,
-                   description= "r: Quarterly steady-state real interest rate.",
-                   tex_label= "100*(r^{HetDSGE}-\\gamma^{FRBNY})")
-    =#
 
     m <= parameter(:g, 1/(1-0.01), fixed = true,
                    description = "g_star: 1 - (c_star + i_star)/y_star",
@@ -472,7 +462,6 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
                    description = "e_i: Measurement error on investment", tex_label = "e_i")
 
     # Setting steady-state parameters
-    #nx = get_setting(m, :nx)
     nx = get_setting(m, :nx1_state) + get_setting(m, :nx2_state)
     ns = get_setting(m, :ns)
 
@@ -486,7 +475,7 @@ function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
                                   " cross-sectional density of cash on hand",
                                   tex_label = "\\mu_*")
     m <= SteadyStateParameter(:βstar, NaN, description = "Steady-state discount factor",
-                              tex_label = "\\beta_*")
+                                  tex_label = "\\beta_*")
 end
 
 """
@@ -687,7 +676,7 @@ end
 function setup_indices!(m::HetDSGEGovDebt)
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
-    endo = m.endogenous_states #_unnormalized
+    endo = m.endogenous_states
     eqconds = m.equilibrium_conditions
     nxns_state = (get_setting(m, :nx1_state) + get_setting(m, :nx2_state)) #*ns
     nxns_jump = (get_setting(m, :nx1_jump) + get_setting(m, :nx2_jump)) #*ns
@@ -711,7 +700,6 @@ function setup_indices!(m::HetDSGEGovDebt)
     endo[:λ_w′_t] = nxns_state+12:nxns_state+12        # wage markup
     endo[:λ_f′_t] = nxns_state+13:nxns_state+13        # price markup
     endo[:rm′_t]  = nxns_state+14:nxns_state+14        # monetary policy shock
-    #endo[:c′_t1]  = nxns+14:nxns+14        # lagged consumption
 
     # function-valued jumps
     endo[:l′_t]  = nxns_state+15:nxns_state+nxns_jump+14 # ell function
@@ -731,20 +719,6 @@ function setup_indices!(m::HetDSGEGovDebt)
     endo[:Q′_t]   = nxns_state+nxns_jump+26:nxns_state+nxns_jump+26        # Tobin's qfunction
     endo[:capreturn′_t] = nxns_state+nxns_jump+27:nxns_state+nxns_jump+27        # return on capital
     endo[:tg′_t] = nxns_state+nxns_jump+28:nxns_state+nxns_jump+28
-    #endo[:c′_t] = 2*nxns+27:2*nxns+27        # consumption
-
-    nvars = 2*nxns_jump+28
-    nscalars = 28 # num eqs which output scalars
-    nyscalars = 14 # num scalar jumps
-    nxscalars = nscalars - nyscalars # num scalar states
-
-    # create objects needed for solve.jl
-    # we will order function blocks as follows:
-    # 1. all function blocks which output a function (first real eqs, then lags)
-    # 2. all function blocks which map functions to scalars
-    # 3. all scalar blocks involving endogenous vbls (first real eqs, then lags)
-    # 4. shock processes
-    funops = 1:2 # which operators output a function
 
     # function blocks which output a function
     eqconds[:eq_euler]              = 1:nxns_state
@@ -783,19 +757,17 @@ function setup_indices!(m::HetDSGEGovDebt)
     eqconds[:eq_λ_w] = 2*nxns_state+26:2*nxns_state+26 # wage mkup LAMW
     eqconds[:eq_λ_f] = 2*nxns_state+27:2*nxns_state+27 # price mkup LAMF
     eqconds[:eq_rm] = 2*nxns_state+28:2*nxns_state+28 # monetary policy MON
-    #eqconds[:eq_consumption] = 2*nxns+27:2*nxns+27 # monetary policy MON
 
     # Total grid x*s
     m <= Setting(:n_state, (get_setting(m, :nx1_state) +get_setting(m, :nx2_state)),
                  "Total grid size, multiplying across grid dimensions.")
-m <= Setting(:n_jump, (get_setting(m, :nx1_jump) +get_setting(m, :nx2_jump)),
+    m <= Setting(:n_jump, (get_setting(m, :nx1_jump) +get_setting(m, :nx2_jump)),
              "Total grid size, multiplying across grid dimensions.")
     m <= Setting(:nvars, 2*get_setting(m, :n_state) + 28, "num variables")
     m <= Setting(:nscalars, 28, " # num eqs which output scalars")
     m <= Setting(:nyscalars, 14, "num scalar jumps")
     m <= Setting(:nxscalars, get_setting(m, :nscalars) - get_setting(m, :nyscalars),
                  "num scalar states")
-    #m.endogenous_states = deepcopy(endo)
 end
 
 function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps::Vector{Symbol}, states_only::Bool = false)
