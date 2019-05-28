@@ -174,7 +174,7 @@ shockdec
         x = df[inds, :date]
         y = convert(Array, df[inds, cat_names])
 
-        StatPlots.GroupedBar((x, y))
+        StatsPlots.GroupedBar((x, y))
     end
 
     seriestype := :line
