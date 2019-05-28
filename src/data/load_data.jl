@@ -245,13 +245,10 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
-            #DSGE.na2nan!(pop_forecast)
             DSGE.format_dates!(:date, pop_forecast)
 
             cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
 
-            # Turn NAs into NaNs
-            #na2nan!(cond_df)
             sort!(cond_df, :date)
 
             return cond_df
