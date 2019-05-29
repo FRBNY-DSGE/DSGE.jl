@@ -36,6 +36,9 @@ function prepare_forecast_inputs!(m::AbstractModel{S},
 
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars)
+    if input_type == :prior
+        output_vars = setdiff(output_vars, [:bddforecastobs])
+    end
 
     # Get products and classes computed
     output_prods   = unique(map(get_product, output_vars))
@@ -150,7 +153,8 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
                 throw("Invalid :sampling method specification. Change in setting :sampling_method")
             end
         end
-
+    elseif input_type == :prior
+        params = rand(m.parameters, n_forecast_draws(m, :prior))
     # Return initial parameters of model object
     elseif input_type == :init
 
@@ -190,6 +194,26 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
             end
             return params
         end
+    elseif input_type == :prior
+        ndraws = length(block_inds)
+        params = Vector{Vector{Float64}}(undef, ndraws)
+        @show block_inds
+        for (i, j) in zip(1:ndraws, block_inds)
+            try_again = true
+            param_try = vec(rand(m.parameters, ndraws)[:, i])
+            while try_again
+                param_try = vec(rand(m.parameters, ndraws)[:, i])
+                try
+                    update!(m, param_try)
+                    likelihood(m, rand(length(m.observables), 100))
+                    try_again = false
+                catch
+                    try_again = true
+                end
+            end
+            params[i] = param_try
+        end
+        return params
     else
         error("This load_draws method can only be called with input_type in [:full, :subset]")
     end
@@ -296,7 +320,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     ### Multiple-Draw Forecasts
 
-    elseif input_type in [:full, :subset]
+    elseif input_type in [:full, :subset, :prior]
 
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
@@ -431,7 +455,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     # Decide whether to draw states/shocks in smoother/forecast
     uncertainty_override = forecast_uncertainty_override(m)
     uncertainty = if Nullables.isnull(uncertainty_override)
-        if input_type in [:init, :mode, :mean]
+        if input_type in [:init, :mode, :mean, :prior]
             false
         elseif input_type in [:full, :subset]
             true
