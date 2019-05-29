@@ -1,5 +1,5 @@
 using DSGE
-using Test, Distributions, InteractiveUtils, Nullables
+using Test, Distributions, Nullables
 
 @testset "Ensure transformations to the real line/model space are valid" begin
     for T in subtypes(Transform)
