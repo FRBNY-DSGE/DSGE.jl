@@ -222,7 +222,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     init_states_and_jumps!(m, states, jumps)
 
     # Initialize parameters
-    init_parameters!(m, testing_gamma)
+    init_parameters!(m, testing_gamma = testing_gamma)
 
     # Initialize aggregate steady state parameters (necessary for grid construction)
     aggregate_steadystate!(m)
@@ -257,7 +257,7 @@ Initializes the model's parameters, as well as empty values for the steady-state
 parameters (in preparation for `steadystate!(m)` being called to initialize
 those).
 """
-function init_parameters!(m::HetDSGEGovDebt, testing_gamma::Bool)
+function init_parameters!(m::HetDSGEGovDebt; testing_gamma::Bool = false)
     ######################################
     # Parameters that affect steady-state
     ######################################
