@@ -46,7 +46,9 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
         output_vars = add_requisite_output_vars(output_vars)
-
+        if input_type == :prior
+            output_vars = setdiff(output_vars, [:bddforecastobs])
+        end
         # Load population data and main dataset (required for some transformations)
         if all(var -> get_product(var) == :irf, output_vars)
             population_data, population_forecast = DataFrame(), DataFrame()

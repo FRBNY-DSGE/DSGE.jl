@@ -36,6 +36,8 @@ function get_forecast_input_file(m, input_type;
         return workpath(m,"estimate","paramsmean.h5", filestring_addl)
     elseif input_type == :init
         return ""
+    elseif input_type == :prior
+        return ""
     elseif input_type in [:full, :subset]
         if get_setting(m, :sampling_method) == :MH
             return rawpath(m, "estimate", "mhsave.h5", filestring_addl)
