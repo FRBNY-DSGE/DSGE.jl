@@ -58,12 +58,21 @@ function filter(m::AbstractModel, data::Matrix{S}, system::System,
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
                 tol::Float64 = 0.0) where {S<:AbstractFloat}
 
+    T = size(data, 2)
+
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
     regime_inds = zlb_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system, start_date)
+
+    # If the end of the first regime is assumed to be later than the data provided
+    # change the regime to be up to the length of the data
+    if regime_inds[1][end] > T
+        regime_inds = [1:T]
+        TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = [TTTs[1]], [RRRs[1]], [CCCs[1]], [QQs[1]], [ZZs[1]], [DDs[1]], [EEs[1]]
+    end
 
     # If s_0 and P_0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P_0
