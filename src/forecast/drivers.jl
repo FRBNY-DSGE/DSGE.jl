@@ -194,6 +194,9 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
             end
             return params
         end
+    elseif input_type == :init_draw_shocks
+        ndraws = length(block_inds)
+        params = repeat([map(x -> x.value, m.parameters)], ndraws)
     elseif input_type == :prior
         ndraws = length(block_inds)
         params = Vector{Vector{Float64}}(undef, ndraws)
@@ -320,7 +323,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     ### Multiple-Draw Forecasts
 
-    elseif input_type in [:full, :subset, :prior]
+    elseif input_type in [:full, :subset, :prior, :init_draw_shocks]
 
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
@@ -338,7 +341,7 @@ function forecast_one(m::AbstractModel{Float64},
 
             # Get to work!
             params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
-
+            @show size(params)
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                  param, df, verbose = verbose),

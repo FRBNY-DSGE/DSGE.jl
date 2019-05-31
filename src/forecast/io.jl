@@ -34,7 +34,7 @@ function get_forecast_input_file(m, input_type;
         return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
     elseif input_type == :mean
         return workpath(m,"estimate","paramsmean.h5", filestring_addl)
-    elseif input_type == :init
+    elseif input_type == :init || input_type == :init_draw_shocks
         return ""
     elseif input_type == :prior
         return ""
