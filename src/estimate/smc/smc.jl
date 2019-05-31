@@ -54,12 +54,12 @@ SMC is broken up into three main steps:
 function smc(m::AbstractModel, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-             old_cloud::ParticleCloud = ParticleCloud(m, 0),
+             old_cloud::ParticleCloud  = ParticleCloud(m, 0),
              recompute_transition_equation::Bool = true, run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
-             continue_intermediate::Bool = false,
-             intermediate_stage_start::Int = 0,
-             save_intermediate::Bool = false,
+             continue_intermediate::Bool     = false,
+             intermediate_stage_start::Int   = 0,
+             save_intermediate::Bool         = false,
              intermediate_stage_increment::Int = 10)
     ########################################################################################
     ### Setting Parameters
@@ -136,14 +136,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         initialize_likelihoods!(m, data, cloud, parallel = parallel,
                                 verbose = verbose)
     elseif continue_intermediate
-        loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl)
+        loadpath = rawpath(m, "estimate",
+                           "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl)
         cloud = load(loadpath, "cloud")
         if length(cloud.particles[1].keys)==48
             @show "reset length"
             for i=1:length(cloud.particles)
                 cloud.particles[i].value = vcat(cloud.particles[i].value[1:m.keys[:pc0]],
                                                 [0., 0.], cloud.particles[i].value[m.keys[:pc0]+1:end])
-                cloud.particles[i].keys = vcat(cloud.particles[i].keys[1:m.keys[:pc0]], [:varlinc, :vardlinc], cloud.particles[i].keys[m.keys[:pc0]+1:end])
+                cloud.particles[i].keys = vcat(cloud.particles[i].keys[1:m.keys[:pc0]],
+                                               [:varlinc, :vardlinc],
+                                               cloud.particles[i].keys[m.keys[:pc0]+1:end])
             end
         end
     else
@@ -177,13 +180,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ϕ_prop = proposed_fixed_schedule[j]
     else
         w_matrix = zeros(n_parts, 1)
-        if tempered_update
-            W_matrix = similar(w_matrix)
-            for k in 1:n_parts
-                W_matrix[k] = cloud.particles[k].weight
-            end
+        W_matrix = if tempered_update
+            [cloud.particles[k].weight for k in 1:n_parts]
         else
-            W_matrix = fill(1/n_parts, (n_parts,1))
+            fill(1/n_parts, (n_parts,1))
         end
         z_matrix = ones(1)
     end
@@ -266,8 +266,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ##############################################################################
 
         # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
-        c = c*(0.95 + 0.10*exp(16 .*(cloud.accept - target)) / (1.
-                                     + exp(16 .*(cloud.accept - target))))
+        c = c*(0.95 + 0.10*exp(16 .*(cloud.accept - target)) /
+               (1. + exp(16 .*(cloud.accept - target))))
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
@@ -287,7 +287,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         if parallel
             new_particles = @distributed (vcat) for k in 1:n_parts
-                mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
+                 mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose)
             end
