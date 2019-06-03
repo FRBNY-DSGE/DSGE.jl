@@ -81,8 +81,8 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                         chunk_dims[1] = block_size
 
                         # Initialize dataset
-                        pfile = file.plain
-                        HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                        # pfile = file.plain
+                        HDF5.d_create(file, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
                     end
                 end
             end
