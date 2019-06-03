@@ -51,7 +51,7 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis
     Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix{Float64};
+function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud  = ParticleCloud(m, 0),
@@ -193,6 +193,12 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          use_fixed_schedule = use_fixed_schedule)
     end
 
+    # Create a closure of mutation method so we can cache data on workers.
+    my_mutation(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0) = mutation(msettings, data, p, d,
+                      blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
+                      use_chand_recursion = use_chand_recursion, verbose = verbose)
+
+
     #################################################################################
     ### Recursion
     #################################################################################
@@ -286,17 +292,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
         if parallel
-            new_particles = @distributed (vcat) for k in 1:n_parts
-                 mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
-                         ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
-                         use_chand_recursion = use_chand_recursion, verbose = verbose)
+            @time new_particles = @distributed (vcat) for p in cloud.particles
+                 my_mutation(p, d, blocks_free, blocks_all,
+                         ϕ_n, ϕ_n1; c = c)#, α = α, old_data = old_data,
+                         #use_chand_recursion = use_chand_recursion, verbose = verbose)
             end
         else
-            new_particles = [mutation(m, data, cloud.particles[k], d, blocks_free,
+            new_particles = [mutation(msettings, data, p, d, blocks_free,
                                       blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
                                       old_data = old_data,
                                       use_chand_recursion = use_chand_recursion,
-                                      verbose = verbose) for k=1:n_parts]
+                                      verbose = verbose) for p in cloud.particles]
         end
 
         cloud.particles = new_particles

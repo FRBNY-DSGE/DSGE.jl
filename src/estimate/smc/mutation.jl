@@ -25,12 +25,18 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `p::Particle`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
 
 """
-function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distribution,
+function mutation(#m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distribution,
+                  msettings::Dict{Symbol, Setting}, data::Matrix{Float64}, p::Particle, d::Distribution,
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
                   ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
                   old_data::T = T(undef, size(data, 1), 0),
                   use_chand_recursion::Bool = false,
                   verbose::Symbol = :low) where {T <: AbstractMatrix}
+
+    m = HetDSGEGovDebt("ss11"; ref_dir = msettings[:ref_dir].value)
+    for key in keys(msettings)
+        m <= msettings[key]
+    end
 
     n_steps     = get_setting(m, :n_mh_steps_smc)
     n_free_para = length([!θ.fixed for θ in m.parameters])
