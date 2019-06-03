@@ -1,5 +1,5 @@
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
-                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol}; forecast_string_new = "", forecast_string_old = "",
+                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
     println(verbose, :low, )
@@ -7,13 +7,13 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     println(verbose, :low, "Start time: " * string(now()))
     begin_time = time_ns()
 
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
     for class in classes
         print(verbose, :high, "Computing " * string(class) * "...")
 
         # Read metadata
-        variable_names = JLD2.jldopen(input_files[Symbol(:decomptotal, class)]) do file
+        variable_names = jldopen(input_files[Symbol(:decomptotal, class)]) do file
             class_long = get_class_longname(class)
             collect(keys(read(file, string(class_long) * "_indices")))
         end
@@ -21,7 +21,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         # Get to work!
         mapfcn = use_parallel_workers(m_new) ? pmap : map
         decomp_vec = mapfcn(var -> decomposition_means(m_new, m_old, input_type,
-                                                       cond_new, cond_old, class, var, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old),
+                                                       cond_new, cond_old, class, var),
                             variable_names)
         decomps = OrderedDict{Symbol, DataFrame}()
         for (var, decomp) in zip(variable_names, decomp_vec)
@@ -29,10 +29,10 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         end
 
         # Write to file
-        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
+        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
         output_dir = dirname(output_file)
         isdir(output_dir) || mkpath(output_dir)
-        JLD2.jldopen(output_file, "w") do file
+        jldopen(output_file, true, true, true, IOStream) do file
             write(file, "decomps", decomps)
         end
         println(verbose, :high, "wrote " * basename(output_file))
@@ -48,11 +48,11 @@ end
 
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
-                             class::Symbol, var::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
+                             class::Symbol, var::Symbol) where M<:AbstractModel
     # Read in dates
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class], forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class])
     input_file = input_files[Symbol(:decomptotal, class)]
-    dates = JLD2.jldopen(input_file, "r") do file
+    dates = jldopen(input_file, "r") do file
         sort(collect(keys(read(file, "date_indices"))))
     end
 
@@ -62,7 +62,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         product = Symbol(:decomp, comp)
 
         input_file = input_files[Symbol(product, class)]
-        JLD2.jldopen(input_file, "r") do file
+        jldopen(input_file, "r") do file
             # Parse transform
             class_long = get_class_longname(class)
             transforms = read(file, string(class_long) * "_revtransforms")
@@ -77,19 +77,11 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
             end
 
             for key in loopkeys
-                # Get index corresponding to var_name
-                class_long = get_class_longname(class)
-                indices = FileIO.load(input_file, "$(class_long)_indices")
-                var_ind = indices[var]
-
                 # Read in raw output: ndraws x nperiods
                 decomp_series = if comp == :shockdec
-                    # Get index corresponding to shock_index
-                    shock_ind = shock_indices[key]
-
-                    read_forecast_series(input_file, var_ind, shock_ind)
+                    read_forecast_series(file, class, product, var, key)
                 else
-                    read_forecast_series(input_file, product, var_ind)
+                    read_forecast_series(file, class, product, var)
                 end
 
                 # Reverse transform
