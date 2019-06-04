@@ -29,7 +29,8 @@ function impulse_responses(m::AbstractModel, system::System{S}) where {S<:Abstra
     impulse_responses(system, horizon)
 end
 
-function impulse_responses(system::System{S}, horizon::Int) where {S<:AbstractFloat}
+function impulse_responses(system::System{S}, horizon::Int;
+                           flip_shocks::Bool = false) where {S<:AbstractFloat}
     # Setup
     nshocks      = size(system[:RRR], 2)
     nstates      = size(system[:TTT], 1)
