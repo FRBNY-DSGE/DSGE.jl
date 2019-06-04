@@ -4,7 +4,7 @@
 # model state variables after the transition equation has been solved for
 # but rather, augmenting the model states with lags prior to solution since the
 # solution method requires lags
-function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_states::Int64)
+function augment_model_states(endo::Dict{Symbol, UnitRange}, n_model_states::Int64)
     endo_aug = deepcopy(endo)
     for (state::Symbol, inds::UnitRange) in endo
         unprimed_state = unprime(state)
@@ -14,19 +14,19 @@ function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_stat
 
     # Ensure all ranges are consecutive
     endo_ranges = endo_aug.vals
-    for i in 1:length(endo_ranges)
+  #=  for i in 1:length(endo_ranges)
         if i == 1
             @assert endo_ranges[1].start == 1
         else
             @assert endo_ranges[i].start == endo_ranges[i-1].stop + 1
         end
-    end
+    end =#
 
     return endo_aug
 end
 
 # For the RANK equivalent of the HANK models
-function augment_model_states(endo::OrderedDict{Symbol, Int64}, n_model_states::Int64)
+function augment_model_states(endo::Dict{Symbol, Int64}, n_model_states::Int64)
     endo_aug = deepcopy(endo)
     for (state::Symbol, ind::Int) in endo
         unprimed_state           = unprime(state)
@@ -88,7 +88,7 @@ function shift(inds::UnitRange, increment::Int64; first_range::Bool = false)
 end
 
 # normalize the distributional states located in indices specified by normalized_state_inds
-function normalize(endo::OrderedDict{Symbol, UnitRange},
+function normalize(endo::Dict{Symbol, UnitRange},
                    model_state_keys::Vector{Symbol},
                    normalized_model_state_inds::Vector{Int64},
                    state_inds::AbstractArray{Int64},
@@ -116,13 +116,13 @@ function normalize(endo::OrderedDict{Symbol, UnitRange},
 
     # Ensure all ranges are consecutive
     endo_ranges = endo.vals
-    for i in 1:n_model_state_vars
+   #= for i in 1:n_model_state_vars
         if i == 1
             @assert endo_ranges[1].start == 1
         else
             @assert endo_ranges[i].start == endo_ranges[i-1].stop + 1
         end
-    end
+    end =#
 
     return endo
 end
@@ -134,7 +134,7 @@ stack_indices(key_dict::OrderedDict, keys::Vector{Symbol})
 ```
 Stacks the indices of a OrderedDict{Symbol, AbstractRange} into a Vector of Ints defined by the Ranges in the dictionary.
 """
-function stack_indices(key_dict::OrderedDict, keys::Vector{Symbol})
+function stack_indices(key_dict::Dict, keys::Vector{Symbol})
     indices = Vector{Int64}(undef, 0)
     for i in getindex.(key_dict, keys)
         indices = [indices; i]
