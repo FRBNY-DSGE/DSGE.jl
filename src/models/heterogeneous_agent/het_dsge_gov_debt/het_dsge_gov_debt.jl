@@ -87,8 +87,8 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     # Vector of unnormalized ranges of indices
    # endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange}
     # Vector of ranges corresponding to normalized (post Klein solution) indices
-    endogenous_states::OrderedDict{Symbol,UnitRange}
-    endogenous_states_original::OrderedDict{Symbol,UnitRange}
+    endogenous_states::Dict{Symbol,UnitRange}
+    endogenous_states_original::Dict{Symbol,UnitRange}
 
     exogenous_shocks::OrderedDict{Symbol,Int}
     expected_shocks::OrderedDict{Symbol,Int}
@@ -181,7 +181,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
             # model indices
             # endogenous states unnormalized, endogenous states normalized
-            OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
+            Dict{Symbol,UnitRange}(), Dict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
             OrderedDict{Symbol,UnitRange}(), # OrderedDict{Symbol,UnitRange}(),
             OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
@@ -238,7 +238,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
     endogenous_states_augmented = [:c_t1]
     for (i,k) in enumerate(endogenous_states_augmented)
-        m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
+        m.endogenous_states_augmented[k] = i + first(m.endogenous_states[get_setting(m, :jumps)[end]])#first(collect(values(m.endogenous_states))[end])
     end
     m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                  length(m.endogenous_states_augmented))
@@ -859,7 +859,7 @@ function reset_grids!(m)
 
     endogenous_states_augmented = [:c_t1]
     for (i,k) in enumerate(endogenous_states_augmented)
-        m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end])
+        m.endogenous_states_augmented[k] = i + first(m.endogenous_states[get_setting(m, :jumps)[end]]) #first(collect(values(m.endogenous_states))[end])
     end
     m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                  length(m.endogenous_states_augmented))

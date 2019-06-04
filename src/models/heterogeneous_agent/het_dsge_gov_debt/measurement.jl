@@ -152,7 +152,7 @@ function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64},
     dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT = construct_consumption_partial(m, dF2_dRZ, dF2_dWH, dF2_dTT)
 
     endo_orig = m.endogenous_states_original
-    C_eqn = zeros(first(endo_orig[collect(keys(endo_orig))[end]]))
+    C_eqn = zeros(first(get_setting(m, :jumps)[end])) #first(endo_orig[collect(keys(endo_orig))[end]]))
 
     C_eqn[endo_orig[:l′_t]] = vec(dC_dELL)
     C_eqn[endo_orig[:kf′_t]] = vec(dC_dKF)
@@ -173,5 +173,6 @@ function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64},
 
     n_backward_looking_states_orig = length(stack_indices(m.endogenous_states_original, get_setting(m, :states)))
     C = C_eqn'*[Matrix{Float64}(I, n_backward_looking_states_orig, n_backward_looking_states_orig); gx2]*Qx'
+    #C = reorder(C)
     return vec(C)
 end
