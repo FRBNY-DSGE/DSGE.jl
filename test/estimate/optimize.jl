@@ -38,7 +38,7 @@ end=#
 
 @testset "Check optimize minimizers are the same" begin
     @test @test_matrix_approx_eq minimizer out.minimizer
-    @test minimum ≈ out.minimum atol=5e-7
+    @test minimum ≈ out.minimum atol=1e-6
     @test @test_matrix_approx_eq H_expected H
 end
 
