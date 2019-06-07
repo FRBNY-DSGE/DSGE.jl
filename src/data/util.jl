@@ -159,8 +159,10 @@ function missing_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol =
 
         # Make non-conditional variables missing
         cond_names_missing = setdiff(names(df), [cond_names; :date])
-        T = eltype(df[cond_names_missing])
-        df[df[:date] .>= date_forecast_start(m), cond_names_missing] = convert(T, missing)
+        for var_name in cond_names_missing
+            df[var_name] = convert(Vector{Union{Missing, eltype(df[var_name])}}, df[var_name])
+            df[df[:date] .>= date_forecast_start(m), var_name] = missing
+        end
 
         # Warn if any conditional variables are missing
         for var in cond_names
