@@ -767,7 +767,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         df[Symbol(group.name)] = shock_sum
 
         # Delete original (ungrouped) shocks from df
-        delete!(df, group.shocks)
+        deletecols!(df, group.shocks)
     end
 
     # Remove Unicode characters from shock names
