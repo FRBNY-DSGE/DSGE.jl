@@ -1,7 +1,7 @@
 name    = "DSGE"
 uuid    = "6cf23378-2c47-544c-b0c3-6efefe57ca11"
 authors = ["Michael Cai <michael.cai@ny.frb.org>", "Ethan Matlin <ethan.matlin@ny.frb.org>", "Rebecca Sarfati <rebecca.sarfati@ny.frb.org>"]
-version = "v0.5.0"
+version = "v0.5.1"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -18,7 +18,6 @@ FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 FredData = "6e85b7ee-7d24-5488-b1b7-e4f4198c51ac"
 GR = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
-InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
@@ -39,7 +38,13 @@ StateSpaceRoutines = "261fd431-d7e4-51f7-86ab-ce9e57fc1fff"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
+
+[extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+
+[targets]
+test = ["Test", "InteractiveUtils"]
 
 [compat]
 julia = "0.7, 1.0"
