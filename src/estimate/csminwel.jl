@@ -74,7 +74,7 @@ function call
 function csminwel(fcn::Function,
                   grad::Function,
                   x0::Vector,
-                  H0::Matrix=1e-5.*eye(length(x0)),
+                  H0::Matrix=Matrix(1e-5*I, length(x0), length(x0)),
                   args...;
                   xtol::Real           = 1e-32,  # default from Optim.jl
                   ftol::Float64        = 1e-14,  # Default from csminwel
@@ -162,7 +162,7 @@ function csminwel(fcn::Function,
             # perturbing search direction if problem not 1D
             if wall1 && (length(H) > 1)
 
-                Hcliff = H + diagm(diag(H).*rand(rng, nx))
+                Hcliff = H + diagm(0 => diag(H).*rand(rng, nx))
 
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
                     println("Cliff. Perturbing search direction.")
