@@ -154,7 +154,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             end
 
             # Read in dataset and check that the file contains data for the proper dates
-            addl_data = CSV.read(file)
+            addl_data = CSV.read(file, copycols=true)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
@@ -233,7 +233,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         end
 
         # Read data
-        cond_df = CSV.read(file)
+        cond_df = CSV.read(file, copycols=true)
         format_dates!(:date, cond_df)
 
         date_cond_end = cond_df[end, :date]
@@ -241,7 +241,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         # Use population forecast as population data
         population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
         if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
-            pop_forecast = CSV.read(population_forecast_file)
+            pop_forecast = CSV.read(population_forecast_file, copycols=true)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
@@ -295,7 +295,7 @@ Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
 function read_data(m::AbstractModel; cond_type::Symbol = :none)
     filename = get_data_filename(m, cond_type)
-    df       = CSV.read(filename)
+    df       = CSV.read(filename, copycols=true)
 
     # Convert date column from string to Date
     df[:date] = map(Date, df[:date])
@@ -476,7 +476,7 @@ function read_population_data(filename::String; verbose::Symbol = :low)
         println("Reading population data from $filename...")
     end
 
-    df = CSV.read(filename)
+    df = CSV.read(filename, copycols=true)
     DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
@@ -513,7 +513,7 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
             println("Loading population forecast from $filename...")
         end
 
-        df = CSV.read(filename)
+        df = CSV.read(filename, copycols=true)
         rename!(df, :POPULATION => population_mnemonic)
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
