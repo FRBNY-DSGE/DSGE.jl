@@ -3,7 +3,8 @@ os:
     - osx
     - linux
 julia:
-    - 0.7.0
+    - 0.7
+    - 1.0
 notifications:
     email: false
 addons:

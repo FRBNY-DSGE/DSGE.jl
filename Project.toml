@@ -42,4 +42,4 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-julia = "0.7, 1"
+julia = "0.7, 1.0"
