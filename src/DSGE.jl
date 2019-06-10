@@ -1,6 +1,7 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
+    using MPI
     using Dates, Test, BenchmarkTools
     using CSV, DataFrames, DataStructures, OrderedCollections
     using BasisMatrices, ColorTypes, Distributed, Distributions, FileIO, FFTW, FredData, HDF5, JLD2
@@ -99,7 +100,7 @@ module DSGE
         filter, filter_likelihood, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
-        compute_moments, find_density_bands, mutation, resample, smc,
+        compute_moments, find_density_bands, mutation, resample, smc, smc_mpi,
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
         initial_draw!, ParticleCloud, Particle,
 
@@ -229,6 +230,8 @@ module DSGE
     include("estimate/smc/mutation.jl")
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
+
+    include("estimate/smc/smc_mpi.jl")
 
     # CT HANK code
     include("estimate/filter_hank.jl")
