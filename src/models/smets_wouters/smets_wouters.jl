@@ -465,6 +465,41 @@ end
 
 """
 ```
+parameter_groupings(m::SmetsWouters)
+```
+
+Returns an `OrderedDict{String, Vector{Parameter}}` mapping descriptions of
+parameter groupings (e.g. \"Policy Parameters\") to vectors of
+`Parameter`s. This dictionary is passed in as a keyword argument to
+`prior_table`.
+"""
+function parameter_groupings(m::SmetsWouters)
+    policy     = [:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm, :σ_rm]
+    sticky     = [:ζ_p, :ι_p, :ϵ_p, :ζ_w, :ι_w, :ϵ_w]
+    other_endo = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Φ, :S′′, :ppsi,
+                  :Lmean, :λ_w, :π_star, :g_star]
+    processes  = [:ρ_g, :ρ_b, :ρ_μ, :ρ_z, :ρ_λ_f, :ρ_λ_w, :η_λ_f, :η_λ_w,
+                  :σ_g, :σ_b, :σ_μ, :σ_z, :σ_λ_f, :σ_λ_w, :η_gz]
+
+    all_keys     = Vector[policy, sticky, other_endo, processes]
+    all_params   = map(keys -> [m[θ]::Parameter for θ in keys], all_keys)
+    descriptions = ["Policy", "Nominal Rigidities",
+                    "Other Endogenous Propagation and Steady State",
+                    "Exogenous Process"]
+
+    groupings = OrderedDict{String, Vector{Parameter}}(zip(descriptions, all_params))
+
+    # Ensure no parameters missing
+    incl_params = vcat(collect(values(groupings))...)
+    excl_params = [m[θ] for θ in [:Upsilon, :e_y, :e_L, :e_w, :e_π, :e_R, :e_c, :e_i]]
+    @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
+    @assert isempty(setdiff(vcat(incl_params, excl_params), m.parameters))
+
+    return groupings
+end
+
+"""
+```
 shock_groupings(m::SmetsWouters)
 ```
 
