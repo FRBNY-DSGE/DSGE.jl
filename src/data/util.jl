@@ -84,9 +84,9 @@ function vinttodate(vint)
 Return the string given by data_vintage(m), which is in the format YYYYMMDD, to a Date object.
 """
 function vinttodate(vint::String)
-    year  = parse("20"*vint[1:2])
-    month = parse(vint[3:4])
-    day   = parse(vint[5:6])
+    year  = Meta.parse("20"*vint[1:2])
+    month = Meta.parse(vint[3:4])
+    day   = Meta.parse(vint[5:6])
     return Date(year, month, day)
 end
 
