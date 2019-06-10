@@ -137,18 +137,9 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
                                 verbose = verbose)
     elseif continue_intermediate
         loadpath = rawpath(m, "estimate",
-                           "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl)
+                           "smc_cloud_stage=$(intermediate_stage_start).jld2",
+                           filestring_addl)
         cloud = load(loadpath, "cloud")
-        if length(cloud.particles[1].keys)==48
-            @show "reset length"
-            for i=1:length(cloud.particles)
-                cloud.particles[i].value = vcat(cloud.particles[i].value[1:m.keys[:pc0]],
-                                                [0., 0.], cloud.particles[i].value[m.keys[:pc0]+1:end])
-                cloud.particles[i].keys = vcat(cloud.particles[i].keys[1:m.keys[:pc0]],
-                                               [:varlinc, :vardlinc],
-                                               cloud.particles[i].keys[m.keys[:pc0]+1:end])
-            end
-        end
     else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
@@ -169,9 +160,9 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
 
     # Instantiate incremental and normalized weight matrices for logMDD calculation
     if continue_intermediate
+        z_matrix = load(loadpath, "z")
         w_matrix = load(loadpath, "w")
         W_matrix = load(loadpath, "W")
-        z_matrix = load(loadpath, "z")
 
         i = cloud.stage_index
         j = load(loadpath, "j")
@@ -179,13 +170,13 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
 
         ϕ_prop = proposed_fixed_schedule[j]
     else
+        z_matrix = ones(1)
         w_matrix = zeros(n_parts, 1)
         W_matrix = if tempered_update
             [cloud.particles[k].weight for k in 1:n_parts]
         else
-            fill(1/n_parts, (n_parts,1))
+            fill(1/n_parts, (n_parts, 1))
         end
-        z_matrix = ones(1)
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -194,7 +185,8 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
     end
 
     # Create a closure of mutation method so we can cache data on workers.
-    my_mutation(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0) = mutation(msettings, data, p, d,
+    my_mutation(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0) = mutation(msettings,
+                                                                              data, p, d,
                       blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
 
@@ -272,8 +264,8 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
         ##############################################################################
 
         # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
-        c = c*(0.95 + 0.10*exp(16 .*(cloud.accept - target)) /
-               (1. + exp(16 .*(cloud.accept - target))))
+        c = c * (0.95 + 0.10 * exp(16 .* (cloud.accept - target)) /
+               (1. + exp(16 .* (cloud.accept - target))))
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
@@ -323,7 +315,8 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
             break
         end
         if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
-            jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"), true, true, true, IOStream) do file
+            jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"),
+                    true, true, true, IOStream) do file
                 write(file, "cloud", cloud)
                 write(file, "w", w_matrix)
                 write(file, "W", W_matrix)
@@ -345,7 +338,8 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl), true, true, true, IOStream) do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl), true,
+                true, true, IOStream) do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
