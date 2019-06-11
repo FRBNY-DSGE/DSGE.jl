@@ -152,7 +152,7 @@ function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64},
     dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT = construct_consumption_partial(m, dF2_dRZ, dF2_dWH, dF2_dTT)
 
     endo_orig = m.endogenous_states_original
-    C_eqn = zeros(first(get_setting(m, :jumps)[end])) #first(endo_orig[collect(keys(endo_orig))[end]]))
+    C_eqn = zeros(last(endo_orig[first(get_setting(m, :jumps)[end])])) #first(endo_orig[collect(keys(endo_orig))[end]]))
 
     C_eqn[endo_orig[:l′_t]] = vec(dC_dELL)
     C_eqn[endo_orig[:kf′_t]] = vec(dC_dKF)
