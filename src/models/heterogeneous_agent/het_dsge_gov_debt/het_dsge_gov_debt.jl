@@ -1,4 +1,3 @@
-import DataStructures: OrderedDict
 """
 ```
 HetDSGEGovDebt{T} <: AbstractHeterogeneousModel{T}
@@ -76,8 +75,8 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     # figure out a more flexible way to define
     # "grids" that are not necessarily quadrature
     # grids within the model
-    grids::OrderedDict{Symbol,Union{Grid, Array}}
-    keys::OrderedDict{Symbol,Int}                    # Human-readable names for all the model
+    grids::Dict{Symbol,Union{Grid, Array}}
+    keys::Dict{Symbol,Int}                    # Human-readable names for all the model
                                                      # parameters and steady-states
 
     state_variables::Vector{Symbol}                  # Vector of symbols of the state variables
@@ -90,11 +89,11 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     endogenous_states::Dict{Symbol,UnitRange}
     endogenous_states_original::Dict{Symbol,UnitRange}
 
-    exogenous_shocks::OrderedDict{Symbol,Int}
-    expected_shocks::OrderedDict{Symbol,Int}
-    equilibrium_conditions::OrderedDict{Symbol,UnitRange}
-    endogenous_states_augmented::OrderedDict{Symbol, Int}
-    observables::OrderedDict{Symbol,Int}
+    exogenous_shocks::Dict{Symbol,Int}
+    expected_shocks::Dict{Symbol,Int}
+    equilibrium_conditions::Dict{Symbol,UnitRange}
+    endogenous_states_augmented::Dict{Symbol, Int}
+    observables::Dict{Symbol,Int}
 
     spec::String                                     # Model specification number (eg "m990")
     subspec::String                                  # Model subspecification (eg "ss0")
@@ -102,7 +101,7 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     test_settings::Dict{Symbol,Setting}              # Settings/flags for testing mode
     rng::MersenneTwister                             # Random number generator
     testing::Bool                                    # Whether we are in testing mode or not
-    observable_mappings::OrderedDict{Symbol, Observable}
+    observable_mappings::Dict{Symbol, Observable}
 end
 
 description(m::HetDSGEGovDebt) = "HetDSGEGovDebt, $(m.subspec)"
@@ -147,14 +146,21 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
     setup_indices!(m)
     endo = m.endogenous_states #_unnormalized
     m.endogenous_states_original = deepcopy(endo)
-    m <= Setting(:n_model_states_original, first(collect(values(m.endogenous_states_original))[end]))
+    m <= Setting(:n_model_states_original, m.endogenous_states_original[jumps[end]][end])#first(collect(values(m.endogenous_states_original))[end]))
     eqcond = equilibrium_conditions
     ########################################################################################
 
     m.normalized_model_states = [:kf′_t]
 
     for (i,k) in enumerate(exogenous_shocks); m.exogenous_shocks[k] = i end
-    for (i,k) in enumerate(observables);      m.observables[k]      = i end
+    m.observables[:obs_gdp]         = 1
+    m.observables[:obs_hours]       = 2
+    m.observables[:obs_wages]       = 3
+    m.observables[:obs_gdpdeflator] = 4
+    m.observables[:obs_nominalrate] = 5
+    m.observables[:obs_consumption] = 6
+    m.observables[:obs_investment] = 7
+    #for (i,k) in enumerate(observables);      m.observables[k]      = i end
 end
 
 function HetDSGEGovDebt(subspec::String="ss0";
@@ -174,7 +180,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
             # model parameters and steady state values
             Vector{AbstractParameter{Float64}}(), Vector{Float64}(),
             # grids and keys
-            OrderedDict{Symbol,Union{Grid, Array}}(), OrderedDict{Symbol,Int}(),
+            Dict{Symbol,Union{Grid, Array}}(), Dict{Symbol,Int}(),
 
             # normalized_model_states, state_inds, jump_inds
             Vector{Symbol}(), Vector{Symbol}(), Vector{Symbol}(),
@@ -182,9 +188,9 @@ function HetDSGEGovDebt(subspec::String="ss0";
             # model indices
             # endogenous states unnormalized, endogenous states normalized
             Dict{Symbol,UnitRange}(), Dict{Symbol,UnitRange}(),
-            OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
-            OrderedDict{Symbol,UnitRange}(), # OrderedDict{Symbol,UnitRange}(),
-            OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
+            Dict{Symbol,Int}(), Dict{Symbol,Int}(),
+            Dict{Symbol,UnitRange}(), # OrderedDict{Symbol,UnitRange}(),
+            Dict{Symbol,Int}(), Dict{Symbol,Int}(),
 
             spec,
             subspec,
@@ -192,7 +198,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
             test_settings,
             rng,
             testing,
-            OrderedDict{Symbol,Observable}())
+            Dict{Symbol,Observable}())
 
     default_settings!(m)
     m <= Setting(:ref_dir, ref_dir, "Absolute filepath to reference directory")
@@ -524,7 +530,7 @@ function init_grids!(m::HetDSGEGovDebt)
     ns      = get_setting(m, :ns)
     λ       = get_setting(m, :λ)
 
-    grids = OrderedDict()
+    grids = Dict()
 
     # Skill grid
     f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value,

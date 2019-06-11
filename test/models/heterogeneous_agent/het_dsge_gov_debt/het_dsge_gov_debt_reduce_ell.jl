@@ -577,6 +577,7 @@ if check_likelihood
     data = Matrix{Float64}(readdlm("$path/../../../reference/YY.txt")')
 
     if write_likelihood
+        print("Overwriting likelihood")
         jldopen("$path/reference/likelihood_reduce_ell.jld2", "w") do file
             file["likelihood"] = likelihood(m, data)
         end
