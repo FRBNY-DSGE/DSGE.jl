@@ -799,17 +799,29 @@ function write_table_preamble(fid::IOStream)
     @printf fid "\\usepackage[justification=centering]{caption}\n"
     @printf fid "\\usepackage[margin=1in]{geometry}\n"
     @printf fid "\\usepackage{longtable}\n"
+    @printf fid "\\usepackage{graphicx}\n"
+    @printf fid "\\usepackage{cellspace}\n"
+    @printf fid "\\setlength\\cellspacetoplimit{7pt}\n"
+    @printf fid "\\setlength\\cellspacebottomlimit{7pt}\n"
     @printf fid "\\begin{document}\n"
     @printf fid "\\pagestyle{empty}\n"
 end
 
 # `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
 # the table is enclosed by "\small{}")
-function write_table_postamble(fid::IOStream; small::Bool=false)
+function write_table_postamble(fid::IOStream; small::Bool=false, tabular::Bool=false)
     if small
-        @printf fid "\\end{longtable}}\n"
+        if tabular
+            @printf fid "\\end{tabular}}\n"
+        else
+            @printf fid "\\end{longtable}}\n"
+        end
     else
-        @printf fid "\\end{longtable}\n"
+        if tabular
+            @printf fid "\\end{tabular}\n"
+        else
+            @printf fid "\\end{longtable}\n"
+        end
     end
 
     @printf fid "\\end{document}"
