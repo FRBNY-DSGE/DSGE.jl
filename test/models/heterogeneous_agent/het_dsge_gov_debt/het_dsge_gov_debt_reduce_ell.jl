@@ -66,7 +66,6 @@ if check_jacobian
     saved_JJ  = read(file, "JJ")
     KFP = read(file, "KFP")
     KKP = read(file, "KKP")
-    LRRP = read(file, "LRRP")
     LIIP = read(file, "LIIP")
     LYP = read(file, "LYP")
     LWP = read(file, "LWP")
@@ -79,6 +78,7 @@ if check_jacobian
     LAMFP = read(file, "LAMFP")
     MONP = read(file, "MONP")
     ELLP = read(file, "ELLP")
+    CP = read(file, "CP")
     RRP = read(file, "RRP")
     IIP = read(file, "IIP")
     TTP = read(file, "TTP")
@@ -94,7 +94,6 @@ if check_jacobian
     RKP = read(file, "RKP")
     KF = read(file, "KF")
     KK = read(file, "KK")
-    LRR = read(file, "LRR")
     LII = read(file, "LII")
     LY = read(file, "LY")
     LW = read(file, "LW")
@@ -107,6 +106,7 @@ if check_jacobian
     LAMF = read(file, "LAMF")
     MON = read(file, "MON")
     ELL = read(file, "ELL")
+    C = read(file, "C")
     RR = read(file, "RR")
     II = read(file, "II")
     TT = read(file, "TT")
@@ -140,7 +140,6 @@ if check_jacobian
     F16 = read(file, "F16")
     F17 = read(file, "F17")
     F18 = read(file, "F18")
-    F19 = read(file, "F19")
     F20 = read(file, "F20")
     F24 = read(file, "F24")
     F31 = read(file, "F31")
@@ -154,6 +153,7 @@ if check_jacobian
     F39 = read(file, "F39")
     F40 = read(file, "F40")
     F41 = read(file, "F41")
+    F42 = read(file, "F42")
     close(file)
     endo = DSGE.augment_model_states(m.endogenous_states_original, DSGE.n_model_states_original(m))
 
@@ -164,7 +164,6 @@ if check_jacobian
         end
         @testset "endogenous scalar-valued states:" begin
             @test KKP   == first(endo[:k′_t])
-            @test LRRP  == first(endo[:R′_t1])
             @test LIIP  == first(endo[:i′_t1])
             @test LYP   == first(endo[:y′_t1])
             @test LWP   == first(endo[:w′_t1])
@@ -185,6 +184,7 @@ if check_jacobian
             @test ELLP  == endo[:l′_t]
         end
         @testset "scalar-valued jumps" begin
+            @test CP   == first(endo[:C′_t])
             @test RRP   == first(endo[:R′_t])
             @test IIP   == first(endo[:i′_t])
             @test TTP   == first(endo[:t′_t])
@@ -200,7 +200,6 @@ if check_jacobian
             @test RKP   == first(endo[:capreturn′_t])
             @test KF    == endo[:kf_t]
             @test KK    == first(endo[:k_t])
-            @test LRR   == first(endo[:R_t1])
             @test LII   == first(endo[:i_t1])
             @test LY    == first(endo[:y_t1])
             @test LW    == first(endo[:w_t1])
@@ -213,6 +212,7 @@ if check_jacobian
             @test LAMF  == first(endo[:λ_f_t])
             @test MON   == first(endo[:rm_t])
             @test ELL   == endo[:l_t]
+            @test C     == first(endo[:C_t])
             @test RR    == first(endo[:R_t])
             @test II    == first(endo[:i_t])
             @test TT == first(endo[:t_t])
@@ -234,7 +234,7 @@ if check_jacobian
             @test F2  == eq[:eq_kolmogorov_fwd]
         end
         @testset "function blocks which map functions to scalars" begin
-            @test F5  == eq[:eq_market_clearing]
+            @test F5  == eq[:eq_agg_consumption]
             @test F6  == eq[:eq_lambda]
         end
         @testset "# scalar blocks involving endogenous variables" begin
@@ -252,7 +252,6 @@ if check_jacobian
             @test F18 == eq[:eq_nominal_wage_inflation]
         end
         @testset "lagged variables" begin
-            @test F19 == eq[:LR]
             @test F20 == eq[:LI]
             @test F24 == eq[:LY]
             @test F31 == eq[:LW]
@@ -270,6 +269,7 @@ if check_jacobian
         @testset "new eqns" begin
             @test F40 == eq[:eq_fiscal_rule]
             @test F41 == eq[:eq_g_budget_constraint]
+            @test F42 == eq[:eq_resource_constraint]
         end
     end
 
@@ -294,13 +294,10 @@ if check_jacobian
             @test saved_JJ[F2,HH] ≈ JJ[F2,HH]
             @test saved_JJ[F2,TT] ≈ JJ[F2,TT]
         end
-        @testset "Check mkt clearing equation" begin
-            @test saved_JJ[F5,Y] ≈ JJ[F5,Y]
-            @test saved_JJ[F5,G] ≈ JJ[F5,G]
-            @test saved_JJ[F5,X] ≈ JJ[F5,X]
+        @testset "Check aggregate consumption" begin
+            @test saved_JJ[F5,C] ≈ JJ[F5,C]
             @test saved_JJ[F5,ELL] ≈ JJ[F5,ELL]
             @test saved_JJ[F5,KF] ≈ JJ[F5,KF]
-            @test saved_JJ[F5,RR] ≈ JJ[F5,RR]
             @test saved_JJ[F5,Z] ≈ JJ[F5,Z]
             @test saved_JJ[F5,W] ≈ JJ[F5,W]
             @test saved_JJ[F5,HH] ≈ JJ[F5,HH]
@@ -419,8 +416,6 @@ if check_jacobian
            @test saved_JJ[F41,TG] ≈ JJ[F41,TG]
        end
        @testset "update lagged variables" begin
-            @test saved_JJ[F19,LRRP] ≈ JJ[F19,LRRP]
-            @test saved_JJ[F19,RR] ≈ JJ[F19,RR]
             @test saved_JJ[F20,LIIP] ≈ JJ[F20,LIIP]
             @test saved_JJ[F20,II] ≈ JJ[F20,II]
             @test saved_JJ[F24,LYP] ≈ JJ[F24,LYP]

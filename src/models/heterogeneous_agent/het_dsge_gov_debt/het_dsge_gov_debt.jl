@@ -129,13 +129,13 @@ function init_model_indices!(m::HetDSGEGovDebt, states::Vector{Symbol}, jumps::V
                                       :eq_wage_phillips,:eq_price_phillips,:eq_marginal_cost,
                                       :eq_gdp,:eq_optimal_kl,:eq_taylor, :eq_fisher,
                                       :eq_nominal_wage_inflation, :eq_fiscal_rule,
-                                      :eq_g_budget_constraint, :LR,:LI,:LY,
+                                      :eq_g_budget_constraint, :LI,:LY,
                                       :LW,:LX,:eq_b,:eq_g,:eq_z,:eq_μ,:eq_λ_w,
                                       :eq_λ_f, :eq_rm])
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
-    endogenous_states_augmented = [:c_t1]
+    endogenous_states_augmented = [:C_t1]
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -214,10 +214,10 @@ function HetDSGEGovDebt(subspec::String="ss0";
     end
 
     # Endogenous states
-    states = collect([:kf′_t,:k′_t, :R′_t1,:i′_t1, :y′_t1,:w′_t1,:I′_t1, :bg′_t,
+    states = collect([:kf′_t,:k′_t,:i′_t1, :y′_t1,:w′_t1,:I′_t1, :bg′_t,
                       :b′_t,:g′_t,:z′_t,:μ′_t,:λ_w′_t, :λ_f′_t,:rm′_t])
 
-    jumps = collect([:l′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:margutil′_t,:y′_t, :I′_t,
+    jumps = collect([:l′_t,:C′_t,:R′_t,:i′_t,:t′_t,:w′_t, :L′_t,:π′_t,:π_w′_t,:margutil′_t,:y′_t, :I′_t,
                      :mc′_t,:Q′_t,:capreturn′_t, :tg′_t])
 
     # Initialize model indices
@@ -242,7 +242,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
     # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
 
-    endogenous_states_augmented = [:c_t1]
+    endogenous_states_augmented = [:C_t1]
     for (i,k) in enumerate(endogenous_states_augmented)
         m.endogenous_states_augmented[k] = i + first(m.endogenous_states[get_setting(m, :jumps)[end]])#first(collect(values(m.endogenous_states))[end])
     end
@@ -692,25 +692,25 @@ function setup_indices!(m::HetDSGEGovDebt)
 
     #endogenous scalar-valued states
     endo[:k′_t]   = nxns_state+1:nxns_state+1             # capital –dont get confused with steadystate object K
-    endo[:R′_t1]  = nxns_state+2:nxns_state+2              # lagged real interest rate
-    endo[:i′_t1]  = nxns_state+3:nxns_state+3             # lagged nominal interest rate
-    endo[:y′_t1]  = nxns_state+4:nxns_state+4             # lagged gdp
-    endo[:w′_t1]  = nxns_state+5:nxns_state+5           # lag real wages
-    endo[:I′_t1]  = nxns_state+6:nxns_state+6           # lag investment–don't get this confused with i, the nominal interest rate
-    endo[:bg′_t]  = nxns_state+7:nxns_state+7        # govt debt
+    endo[:i′_t1]  = nxns_state+2:nxns_state+2             # lagged nominal interest rate
+    endo[:y′_t1]  = nxns_state+3:nxns_state+3             # lagged gdp
+    endo[:w′_t1]  = nxns_state+4:nxns_state+4           # lag real wages
+    endo[:I′_t1]  = nxns_state+5:nxns_state+5           # lag investment–don't get this confused with i, the nominal interest rate
+    endo[:bg′_t]  = nxns_state+6:nxns_state+6        # govt debt
     # exogenous scalar-valued states:
-    endo[:b′_t]   = nxns_state+8:nxns_state+8        # discount factor shock
-    endo[:g′_t]   = nxns_state+9:nxns_state+9        # govt spending
-    endo[:z′_t]   = nxns_state+10:nxns_state+10        # tfp growth
-    endo[:μ′_t]   = nxns_state+11:nxns_state+11        # investment shock
-    endo[:λ_w′_t] = nxns_state+12:nxns_state+12        # wage markup
-    endo[:λ_f′_t] = nxns_state+13:nxns_state+13        # price markup
-    endo[:rm′_t]  = nxns_state+14:nxns_state+14        # monetary policy shock
+    endo[:b′_t]   = nxns_state+7:nxns_state+7        # discount factor shock
+    endo[:g′_t]   = nxns_state+8:nxns_state+8        # govt spending
+    endo[:z′_t]   = nxns_state+9:nxns_state+9        # tfp growth
+    endo[:μ′_t]   = nxns_state+10:nxns_state+10        # investment shock
+    endo[:λ_w′_t] = nxns_state+11:nxns_state+11        # wage markup
+    endo[:λ_f′_t] = nxns_state+12:nxns_state+12        # price markup
+    endo[:rm′_t]  = nxns_state+13:nxns_state+13        # monetary policy shock
 
     # function-valued jumps
-    endo[:l′_t]  = nxns_state+15:nxns_state+nxns_jump+14 # ell function
+    endo[:l′_t]  = nxns_state+14:nxns_state+nxns_jump+13 # ell function
 
     #scalar-valued jumps
+    endo[:C′_t]   = nxns_state+nxns_jump+14:nxns_state+nxns_jump+14        # real interest rate
     endo[:R′_t]   = nxns_state+nxns_jump+15:nxns_state+nxns_jump+15        # real interest rate
     endo[:i′_t]   = nxns_state+nxns_jump+16:nxns_state+nxns_jump+16        # nominal interest rate
     endo[:t′_t]   = nxns_state+nxns_jump+17:nxns_state+nxns_jump+17        # transfers + dividends
@@ -731,7 +731,7 @@ function setup_indices!(m::HetDSGEGovDebt)
     eqconds[:eq_kolmogorov_fwd]     = nxns_state+1:2*nxns_state
 
     # function blocks which map functions to scalars
-    eqconds[:eq_market_clearing]    = 2*nxns_state+1:2*nxns_state+1
+    eqconds[:eq_agg_consumption]    = 2*nxns_state+1:2*nxns_state+1
     eqconds[:eq_lambda]             = 2*nxns_state+2:2*nxns_state+2
     #scalar blocks involving endogenous variables
     eqconds[:eq_transfers]            = 2*nxns_state+3:2*nxns_state+3 # transfers
@@ -748,6 +748,7 @@ function setup_indices!(m::HetDSGEGovDebt)
     eqconds[:eq_nominal_wage_inflation] = 2*nxns_state+14:2*nxns_state+14 # nominal wage inflation
     eqconds[:eq_fiscal_rule] = 2*nxns_state+15:2*nxns_state+15
     eqconds[:eq_g_budget_constraint] = 2*nxns_state+16:2*nxns_state+16
+    eqconds[:eq_resource_constraint] = 2*nxns_state+17:2*nxns_state+17
 
     # lagged variables
     eqconds[:LR] = 2*nxns_state+17:2*nxns_state+17 # LR
@@ -771,7 +772,7 @@ function setup_indices!(m::HetDSGEGovDebt)
              "Total grid size, multiplying across grid dimensions.")
     m <= Setting(:nvars, 2*get_setting(m, :n_state) + 28, "num variables")
     m <= Setting(:nscalars, 28, " # num eqs which output scalars")
-    m <= Setting(:nyscalars, 14, "num scalar jumps")
+    m <= Setting(:nyscalars, 15, "num scalar jumps")
     m <= Setting(:nxscalars, get_setting(m, :nscalars) - get_setting(m, :nyscalars),
                  "num scalar states")
 end
@@ -863,7 +864,7 @@ function reset_grids!(m)
     # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
 
-    endogenous_states_augmented = [:c_t1]
+    endogenous_states_augmented = [:C_t1]
     for (i,k) in enumerate(endogenous_states_augmented)
         m.endogenous_states_augmented[k] = i + first(m.endogenous_states[get_setting(m, :jumps)[end]]) #first(collect(values(m.endogenous_states))[end])
     end
