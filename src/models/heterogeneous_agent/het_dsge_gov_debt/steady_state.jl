@@ -345,7 +345,7 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S
             end
         end
 
-        bp = repeat(xgrid, ns) - c  # compute bp(w) given guess for Win
+        bp = R*(exp(-γ))*(repeat(xgrid, ns) - c)  # compute bp(w) given guess for Win
         Wout = parameterized_expectations_hetdsgegovdebt(nx, ns, β, R, ω, H, T, γ,
                                                          qfunction, xgrid,
                                                          sgrid, xswts, c, bp, f)
@@ -375,7 +375,7 @@ end
             for isp=1:ns
                 for iap=1:nx
                     sumn += (xswts[nx*(isp-1)+iap]/c[nx*(isp-1)+iap]) *
-                        qfunc((xgrid[iap] - R*(exp(-γ))*bp[nx*(iss-1)+ia] - T) /
+                        qfunc((xgrid[iap] - bp[nx*(iss-1)+ia] - T) /
                               (ω*H*sgrid[isp])) * f[iss,isp] ./ sgrid[isp]
                 end
             end
@@ -394,7 +394,7 @@ end
         for ia=1:nx
             for isp=1:ns
                 for iap=1:nx
-                    tr[nx*(isp-1)+iap, nx*(iss-1)+ia] = qfunc((xgrid[iap] - R*(exp(-γ)) *
+                    tr[nx*(isp-1)+iap, nx*(iss-1)+ia] = qfunc((xgrid[iap] -
                                                                bp[nx*(iss-1)+ia] - T) /
                                                               (ω*H*sgrid[isp])) * f[iss,isp] ./
                                                               (ω * H * sgrid[isp])
