@@ -86,8 +86,17 @@ function get_old_loglh(c::ParticleCloud)
     return map(p -> p.old_loglh, c.particles)
 end
 
+function get_accept(c::ParticleCloud)
+    return map(p -> p.accept, c.particles)
+end
+
 function get_logpost(c::ParticleCloud)
     return map(p -> p.logpost + p.loglh, c.particles)
+end
+
+# TODO: This is not a typo, it has to do with our porting from Fortran - should be renamed
+function get_logprior(c::ParticleCloud)
+    return map(p -> p.logpost, c.particles)
 end
 
 function get_likeliest_particle_value(c::ParticleCloud)
@@ -115,14 +124,26 @@ function update_weights!(c::ParticleCloud, incweight::Array{Float64,1})
 end
 
 function update_loglh!(c::ParticleCloud, loglh::Array{Float64,1})
-    for (p,l) in zip(c.particles,loglh)
+    for (p,l) in zip(c.particles, loglh)
         p.loglh = l
     end
 end
 
 function update_logpost!(c::ParticleCloud, logpost::Array{Float64,1})
-    for (p,l) in zip(c.particles,logpost)
+    for (p,l) in zip(c.particles, logpost)
         p.logpost = l
+    end
+end
+
+function update_old_loglh!(c::ParticleCloud, old_loglh::Array{Float64,1})
+    for (p,l) in zip(c.particles, old_loglh)
+        p.old_loglh = l
+    end
+end
+
+function update_accept!(c::ParticleCloud, accept::Array{Float64,1})
+    for (p,l) in zip(c.particles, accept)
+        p.accept = l
     end
 end
 

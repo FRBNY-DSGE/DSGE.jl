@@ -67,6 +67,7 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
     MPI.Init()
     comm = MPI.COMM_WORLD
     root = 0
+    is_root_process = (MPI.Comm_rank(comm) == root)
 
     # General
     parallel = get_setting(m, :use_parallel_workers)
@@ -76,14 +77,25 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
     n_steps  = get_setting(m, :n_mh_steps_smc)
 
     n_procs = MPI.Comm_size(comm)
+    is_root_process && @assert n_parts % n_procs == 0 "No. workers must divide no. processes"
 
-    @assert n_parts % n_procs == 0 "Number of workers must divide number of processes"
     count = Int(n_parts / n_procs)
+    # worker_particles = Vector{Float64}(undef, count)
+    node_p_values    = Vector{Float64}(undef, count * n_params)
+    node_p_loglh     = Vector{Float64}(undef, count)
+    node_p_logpost   = Vector{Float64}(undef, count)
+    node_p_old_loglh = Vector{Float64}(undef, count)
+    node_p_accept    = Vector{Float64}(undef, count)
 
-    worker_particles = Vector{Particles}(count)
+    p_values    = Vector{Float64}(undef, n_parts * n_params)
+    p_loglh     = Vector{Float64}(undef, n_parts)
+    p_logpost   = Vector{Float64}(undef, n_parts)
+    p_old_loglh = Vector{Float64}(undef, n_parts)
+    p_accept    = Vector{Float64}(undef, n_parts)
+
 
     use_chand_recursion = get_setting(m, :use_chand_recursion)
-    if any(isnan.(data)) & use_chand_recursion
+    if is_root_process & any(isnan.(data)) & use_chand_recursion
         error("Cannot use Chandrasekhar recursions with missing data")
     end
 
@@ -93,7 +105,7 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
     # Check that if there's a tempered update, old and current vintages are different
     if tempered_update
         old_vintage = get_setting(m, :previous_data_vintage)
-        @assert old_vintage != data_vintage(m)
+        is_root_process && @assert old_vintage != data_vintage(m)
     end
 
     # Step 0 (ϕ schedule) settings
@@ -125,7 +137,7 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
     ### Initialize Algorithm: Draws from prior
     #################################################################################
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
+    if (VERBOSITY[verbose] >= VERBOSITY[:low]) & is_root_process
         if m.testing
             println("\n\n SMC testing starts ....  \n\n  ")
         else
@@ -189,111 +201,113 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
         end
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
+    if (VERBOSITY[verbose] >= VERBOSITY[:low]) & is_root_process
         init_stage_print(cloud; verbose = verbose,
                          use_fixed_schedule = use_fixed_schedule)
     end
 
     # Create a closure of mutation method so we can cache data on workers.
-    my_mutation(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0) = mutation(msettings,
-                      data, p, d,
+    my_mutation!(p_value, p_loglh, p_logpost, p_old_loglh, p_accept, d, blocks_free,
+                blocks_all, ϕ_n, ϕ_n1; c = 1.0) = mutation!(msettings,
+                      data, p_value, p_loglh, p_logpost, p_old_loglh, p_accept, d,
                       blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
-
 
     #################################################################################
     ### Recursion
     #################################################################################
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
+    if (VERBOSITY[verbose] >= VERBOSITY[:low]) & is_root_process
         println("\n\n SMC recursion starts \n\n")
     end
 
     while ϕ_n < 1.
-        if MPI.Comm_rank(comm) == root
-            start_time = time_ns()
-            cloud.stage_index = i += 1
 
-            #############################################################################
-            ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
-            #############################################################################
-            ϕ_n1 = cloud.tempering_schedule[i-1]
+        start_time = time_ns()
+        cloud.stage_index = i += 1
 
-            if use_fixed_schedule
-                ϕ_n = cloud.tempering_schedule[i]
-            else
-                ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud,
-                                                                         proposed_fixed_schedule,
-                                                                         i, j, ϕ_prop, ϕ_n1,
-                                                                         tempering_target,
-                                                                         resampled_last_period)
-            end
+        #############################################################################
+        ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
+        #############################################################################
+        ϕ_n1 = cloud.tempering_schedule[i-1]
 
-            #############################################################################
-            ### Step 1: Correction
-            #############################################################################
-            # Calculate incremental weights (if no old data, get_old_loglh(cloud) = 0)
-            incremental_weights = exp.((ϕ_n1 - ϕ_n) * get_old_loglh(cloud) +
-                                       (ϕ_n - ϕ_n1) * get_loglh(cloud))
-
-            # Update weights
-            update_weights!(cloud, incremental_weights)
-            mult_weights = get_weights(cloud)
-
-            # Normalize weights
-            normalize_weights!(cloud)
-            normalized_weights = get_weights(cloud)
-
-            push!(z_matrix, sum(mult_weights))
-            w_matrix = hcat(w_matrix, incremental_weights)
-            W_matrix = hcat(W_matrix, normalized_weights)
-
-            ##############################################################################
-            ### Step 2: Selection
-            ##############################################################################
-
-            # Calculate the degeneracy/effective sample size metric
-            push!(cloud.ESS, 1/sum(normalized_weights.^2))
-
-            # If this assertion does not hold then there are likely too few particles
-            @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
-
-            # Resample if degeneracy/ESS metric falls below the accepted threshold
-            if (cloud.ESS[i] < threshold)
-                new_inds = resample(normalized_weights; method = resampling_method)
-                # update parameters/logpost/loglh with resampled values
-                # reset the weights to 1/n_parts
-                cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
-                reset_weights!(cloud) # reset the weights to 1/n_parts
-                cloud.resamples += 1
-                resampled_last_period = true
-                W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
-            end
-
-            ##############################################################################
-            ### Step 3: Mutation
-            ##############################################################################
-
-            # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
-            c = c * (0.95 + 0.10 * exp(16 .* (cloud.accept - target)) /
-                     (1. + exp(16 .* (cloud.accept - target))))
-            cloud.c = c
-
-            θ_bar = weighted_mean(cloud)
-            R     = weighted_cov(cloud)
-
-            # Ensures marix is positive semi-definite symmetric
-            # (not off due to numerical error) and values haven't changed
-            R_fr = (R[free_para_inds, free_para_inds] +
-                    R[free_para_inds, free_para_inds]') / 2
-
-            # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
-            d = MvNormal(θ_bar[free_para_inds], R_fr)
-
-            # New way of generating blocks
-            blocks_free = generate_free_blocks(n_free_para, n_blocks)
-            blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
+        if use_fixed_schedule
+            ϕ_n = cloud.tempering_schedule[i]
+        else
+            ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud,
+                                                                     proposed_fixed_schedule,
+                                                                     i, j, ϕ_prop, ϕ_n1,
+                                                                     tempering_target,
+                                                                     resampled_last_period)
         end
 
+        #############################################################################
+        ### Step 1: Correction
+        #############################################################################
+        # Calculate incremental weights (if no old data, get_old_loglh(cloud) = 0)
+        incremental_weights = exp.((ϕ_n1 - ϕ_n) * get_old_loglh(cloud) +
+                                   (ϕ_n - ϕ_n1) * get_loglh(cloud))
+
+        # Update weights
+        update_weights!(cloud, incremental_weights)
+        mult_weights = get_weights(cloud)
+
+        # Normalize weights
+        normalize_weights!(cloud)
+        normalized_weights = get_weights(cloud)
+
+        push!(z_matrix, sum(mult_weights))
+        w_matrix = hcat(w_matrix, incremental_weights)
+        W_matrix = hcat(W_matrix, normalized_weights)
+
+        ##############################################################################
+        ### Step 2: Selection
+        ##############################################################################
+
+        # Calculate the degeneracy/effective sample size metric
+        push!(cloud.ESS, 1/sum(normalized_weights.^2))
+
+        # If this assertion does not hold then there are likely too few particles
+        is_root_process && @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
+
+        # Resample if degeneracy/ESS metric falls below the accepted threshold
+        if (cloud.ESS[i] < threshold)
+            new_inds = resample(normalized_weights; method = resampling_method)
+            # update parameters/logpost/loglh with resampled values
+            # reset the weights to 1/n_parts
+            cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
+            reset_weights!(cloud) # reset the weights to 1/n_parts
+            cloud.resamples += 1
+            resampled_last_period = true
+            W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
+        end
+
+        ##############################################################################
+        ### Step 3: Mutation
+        ##############################################################################
+
+        # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
+        c = c * (0.95 + 0.10 * exp(16 .* (cloud.accept - target)) /
+                 (1. + exp(16 .* (cloud.accept - target))))
+        cloud.c = c
+
+        θ_bar = weighted_mean(cloud)
+        R     = weighted_cov(cloud)
+
+        # Ensures marix is positive semi-definite symmetric
+        # (not off due to numerical error) and values haven't changed
+        R_fr = (R[free_para_inds, free_para_inds] +
+                R[free_para_inds, free_para_inds]') / 2
+
+        # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
+        d = MvNormal(θ_bar[free_para_inds], R_fr)
+
+        # New way of generating blocks
+        blocks_free = generate_free_blocks(n_free_para, n_blocks)
+        blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
+
+        t0 = time_ns()
+
+        # Broadcast information from root to worker processes
         MPI.bcast(d,           root, comm)
         MPI.bcast(blocks_free, root, comm)
         MPI.bcast(blocks_all,  root, comm)
@@ -301,34 +315,44 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
         MPI.bcast(ϕ_n1,        root, comm)
         MPI.bcast(c,           root, comm)
 
-        MPI.Scatter(cloud.particles, worker_particles, count, root, comm)
-        MPI.Barrier(comm)
-        #=
-        if parallel
-            @time new_particles = @distributed (vcat) for p in cloud.particles
-                 my_mutation(p, d, blocks_free, blocks_all,
-                         ϕ_n, ϕ_n1; c = c)#, α = α, old_data = old_data,
-                         #use_chand_recursion = use_chand_recursion, verbose = verbose)
-            end
-        else
-            new_particles = [mutation(msettings, data, p, d, blocks_free,
-                                      blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
-                                      old_data = old_data,
-                                      use_chand_recursion = use_chand_recursion,
-                                      verbose = verbose) for p in cloud.particles]
-        end
-        =#
-        new_particles = [my_mutation(p, d, blocks_free, blocks_all,
-                                     ϕ_n, ϕ_n1; c = c) for p in worker_particles]
+        # Gives jth chunk of data to each worker
+        MPI.Scatter!(vec(get_vals(cloud)), node_p_values, count * n_params, root, comm)
+        MPI.Scatter!(get_loglh(cloud),     node_p_loglh,     count, root, comm)
+        MPI.Scatter!(get_logprior(cloud),  node_p_logpost,   count, root, comm)
+        MPI.Scatter!(get_old_loglh(cloud), node_p_old_loglh, count, root, comm)
+        MPI.Scatter!(get_accept(cloud),    node_p_accept,    count, root, comm)
 
-        # Need processes to halt while root process gathers particles
-        MPI.Barrier(comm)
-        if MPI.Comm_rank(comm) == root
-            MPI.Gather(new_particles, cloud.particles, count, root, comm)
-        end
+        # Wait for all broadcasting to finish
         MPI.Barrier(comm)
 
-        if MPI.Comm_rank(comm) == root
+        # Each worker iterates over their own chunk, mutating values in place
+        for ind = 1:count
+            my_mutation!(node_p_values[1 + (ind - 1) * n_params : ind * n_params],
+                         node_p_loglh[ind], node_p_logpost[ind], node_p_old_loglh[ind],
+                         node_p_accept[ind], d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c)
+        end
+
+        # Wait until all workers have finished mutating
+        MPI.Barrier(comm)
+
+        # If root process, consolidate worker-level information, update cloud
+        is_root_process && println("Time Elapsed in mutation: ", (time_ns() - t0) / 1e9, " s")
+
+        MPI.Gather!(node_p_values, p_values, count, root, comm)
+        MPI.Gather!(node_p_loglh, p_loglh, count, root, comm)
+        MPI.Gather!(node_p_logpost, p_logpost, count, root, comm)
+        MPI.Gather!(node_p_old_loglh, p_old_loglh, count, root, comm)
+        MPI.Gather!(node_p_accept, p_accept, count, root, comm)
+
+        update_draws!(cloud, reshape(p_values, n_params, n_parts))
+        update_loglh!(cloud, p_loglh)
+        update_logpost!(cloud, p_logpost)
+        update_old_loglh!(cloud, p_old_loglh)
+        update_accept!(cloud, p_accept)
+
+        MPI.Barrier(comm)
+
+        if is_root_process
             #cloud.particles = new_particles
             update_acceptance_rate!(cloud) # Update average acceptance rate
 
@@ -343,10 +367,10 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
                                 use_fixed_schedule = use_fixed_schedule)
             end
 
-            if run_test && (i == 3)
+            if run_test & (i == 3)
                 break
             end
-            if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
+            if mod(cloud.stage_index, intermediate_stage_increment) == 0 & save_intermediate
                 jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"),
                         true, true, true, IOStream) do file
                             write(file, "cloud", cloud)
@@ -362,7 +386,7 @@ function smc_mpi(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matri
     ##################################################################################
     ### Saving data
     ##################################################################################
-    if MPI.Comm_rank(comm) == root
+    if is_root_process
         if !m.testing
             simfile = h5open(rawpath(m, "estimate", "smcsave.h5", filestring_addl), "w")
             particle_store = d_create(simfile, "smcparams", datatype(Float64),
