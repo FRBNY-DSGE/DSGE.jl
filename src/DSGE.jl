@@ -100,7 +100,7 @@ module DSGE
         filter, filter_likelihood, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
-        compute_moments, find_density_bands, mutation, resample, smc, smc_mpi,
+        compute_moments, find_density_bands, mutation, resample, smc, smc_mpi, mutation!,
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
         initial_draw!, ParticleCloud, Particle,
 
@@ -232,6 +232,7 @@ module DSGE
     include("estimate/smc/smc.jl")
 
     include("estimate/smc/smc_mpi.jl")
+    include("estimate/smc/mutation_mpi.jl")
 
     # CT HANK code
     include("estimate/filter_hank.jl")
