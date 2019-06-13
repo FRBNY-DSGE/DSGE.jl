@@ -51,7 +51,7 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis
     Hastings algorithm.
 """
-function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Float64};
+function smc(m::AbstractModel, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud  = ParticleCloud(m, 0),
@@ -185,11 +185,9 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
     end
 
     # Create a closure of mutation method so we can cache data on workers.
-    my_mutation(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0) = mutation(msettings,
-                                                                              data, p, d,
+    my_mutation(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0) = mutation(m, data, p, d,
                       blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
-
 
     #################################################################################
     ### Recursion
@@ -290,7 +288,7 @@ function smc(m::AbstractModel, msettings::Dict{Symbol, Setting}, data::Matrix{Fl
                          #use_chand_recursion = use_chand_recursion, verbose = verbose)
             end
         else
-            new_particles = [mutation(msettings, data, p, d, blocks_free,
+            new_particles = [mutation(m, data, p, d, blocks_free,
                                       blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
                                       old_data = old_data,
                                       use_chand_recursion = use_chand_recursion,
