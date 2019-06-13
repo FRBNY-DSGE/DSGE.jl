@@ -8,7 +8,7 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 ### Arguments:
 - `m::AbstractModel`: Model of type AbstractModel being estimated.
 - `data::Matrix{Float64}`: Matrix of data
-- `p::Particle`: Initial particle value
+- `p::Vector`: Initial particle value
 - `d::Distribution`: A distribution with μ = the weighted mean, and Σ = the weighted variance/covariance matrix
 - `blocks_free::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of free parameters only (e.g. all the indices will be ∈ 1:n_free_parameters)
 - `blocks_all::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of all parameters (e.g. all the indices will be in ∈ 1:n_para, free and fixed)
@@ -25,29 +25,20 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `p::Particle`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
 
 """
-function mutation!(#m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distribution,
-                   msettings::Dict{Symbol, Setting}, data::Matrix{S},
-                   p_value::Vector{S}, p_loglh::S, p_logpost::S,
-                   p_old_loglh::S, p_accept::S, d::Distribution,
+function mutation!(m::AbstractModel, data::Matrix{S}, p::Vector{S}, d::Distribution,
                    blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
-                   ϕ_n::S, ϕ_n1::S; c::S = 1., α::S = 1.,
-                   old_data::T = T(undef, size(data, 1), 0),
+                   ϕ_n::S, ϕ_n1::S; c::S = 1., α::S = 1., old_data::T = T(undef, size(data, 1), 0),
                    use_chand_recursion::Bool = false,
                    verbose::Symbol = :low) where {S <: Float64, T <: AbstractMatrix}
-
-    m = HetDSGEGovDebt("ss11"; ref_dir = msettings[:ref_dir].value)
-    for key in keys(msettings)
-        m <= msettings[key]
-    end
 
     n_steps     = get_setting(m, :n_mh_steps_smc)
     n_free_para = length([!θ.fixed for θ in m.parameters])
     step_prob   = rand() # Draw initial step probability
 
-    para = p_value#p.value
-    like = p_loglh#p.loglh
-    post_init = p_logpost#p.logpost
-    like_prev = p_old_loglh#p.old_loglh # The likelihood evaluated at the old data (for time tempering)
+    para = p[1:length(m.parameters)]
+    like = p[end-3]
+    post_init = p[end-2]
+    like_prev = p[end-1] # The likelihood evaluated at the old data (for time tempering)
 
     # Previous posterior needs to be updated (due to tempering)
     post = post_init #+ (ϕ_n - ϕ_n1) * like
@@ -55,7 +46,6 @@ function mutation!(#m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Dis
 
     for step in 1:n_steps
         for (block_f, block_a) in zip(blocks_free, blocks_all)
-
             # Index out the parameters corresponding to a given random block
             # And also create a distribution centered at the weighted mean
             # and with Σ corresponding to the same random block
@@ -81,19 +71,16 @@ function mutation!(#m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Dis
                 ind_pdf = ind_pdf / (sigi * sqrt(2.0 * π)) * exp(-0.5 * zstat ^ 2)
             end
 
-            q0 = q0 + (1. - α) / 2. * ind_pdf
-            q1 = q1 + (1. - α) / 2. * ind_pdf
-
-            q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
+            q0 += (1. - α) / 2. * ind_pdf
+            q1 += (1. - α) / 2. * ind_pdf
+            q0 += (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
                                                  para_subset))
-            q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
+            q1 += (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
                                                  para_draw))
             q0 = log(q0)
             q1 = log(q1)
 
-            like_new      = -Inf
-            prior_new     = -Inf
-            like_old_data = -Inf
+            like_new, prior_new, like_old_data = -Inf, -Inf, -Inf
 
             try
                 update!(m, para_new)
@@ -106,8 +93,8 @@ function mutation!(#m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Dis
                     prior_new = like_old_data = -Inf
                 end
                 like_old_data = isempty(old_data) ? 0. : likelihood(m, old_data; sampler = true,
-                                                                    use_chand_recursion = use_chand_recursion,
-                                                                    verbose = verbose)
+                                                      use_chand_recursion = use_chand_recursion,
+                                                      verbose = verbose)
             catch err
                 if isa(err, ParamBoundsError)
                     prior_new = like_new = like_old_data = -Inf
@@ -141,13 +128,11 @@ function mutation!(#m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Dis
             step_prob = rand()
         end
     end
-    #p = Particle(weight, m.keys, para, like, post, like_prev, accept / n_free_para)
     #update_mutation!(p, para, like, post, like_prev, accept / n_free_para)
-    #return p
-    p_value     = para
-    p_loglh     = like
-    p_logpost   = post
-    p_old_loglh = like_prev
-    p_accept    = accept / n_free_para
-    nothing
+    p[1:length(m.parameters)] = para
+    p[end-3] = like
+    p[end-2] = post
+    p[end-1] = like_prev
+    p[end]   = accept / n_free_para
+    return p
 end
