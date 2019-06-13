@@ -285,9 +285,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
+        particle_array = hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), get_logpost(cloud), get_old_loglh(cloud), map(x -> x.accept, cloud.particles))
+
         if parallel
-            new_particles = @distributed (vcat) for k in 1:n_parts
-                mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all,
+            new_particles = @distributed (hcat) for k in 1:n_parts
+                mutation(m, data, particle_array[k, :], d, blocks_free, blocks_all,
                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose)
             end
@@ -299,7 +301,16 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                                       verbose = verbose) for k=1:n_parts]
         end
 
-        cloud.particles = new_particles
+        for k in 1:n_parts
+            cloud.particles[k].value = new_particles[1:length(m.parameters), k]
+            cloud.particles[k].loglh = new_particles[end-3, k]
+            cloud.particles[k].logpost = new_particles[end-2, k]
+            cloud.particles[k].old_loglh = new_particles[end-1, k]
+            cloud.particles[k].accept = new_particles[end, k]
+        end
+
+
+        #cloud.particles = new_particles
         update_acceptance_rate!(cloud) # Update average acceptance rate
 
         ##############################################################################
