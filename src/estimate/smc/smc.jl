@@ -285,7 +285,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
-        particle_array = hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), get_logpost(cloud), get_old_loglh(cloud), map(x -> x.accept, cloud.particles))
+        particle_array = hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), map(x -> x.logpost, cloud.particles), get_old_loglh(cloud), map(x -> x.accept, cloud.particles))
 
         if parallel
             new_particles = @distributed (hcat) for k in 1:n_parts
