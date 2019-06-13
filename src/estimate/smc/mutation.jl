@@ -25,7 +25,7 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `p::Particle`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
 
 """
-function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distribution,
+function mutation(m::AbstractModel, data::Matrix{Float64}, p::Vector{Float64}, d::Distribution,
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
                   ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
                   old_data::T = T(undef, size(data, 1), 0),
@@ -36,10 +36,10 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
     n_free_para = length([!θ.fixed for θ in m.parameters])
     step_prob   = rand() # Draw initial step probability
 
-    para = p.value
-    like = p.loglh
-    post_init = p.logpost
-    like_prev = p.old_loglh # The likelihood evaluated at the old data (for time tempering)
+    para = p[1:length(m.parameters)]
+    like = p[end-3]
+    post_init = p[end-2]
+    like_prev = p[end-1]    # The likelihood evaluated at the old data (for time tempering)
 
     # Previous posterior needs to be updated (due to tempering)
     post = post_init #+ (ϕ_n - ϕ_n1) * like
@@ -133,6 +133,11 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             step_prob = rand()
         end
     end
-    update_mutation!(p, para, like, post, like_prev, accept / n_free_para)
+    #update_mutation!(p, para, like, post, like_prev, accept / n_free_para)
+    p[1:length(m.parameters)] = para
+    p[end-3] = like
+    p[end-2] = post
+    p[end-1] = like_prev
+    p[end]   = accept / n_free_para
     return p
 end
