@@ -90,7 +90,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         @assert old_vintage != data_vintage(m)
     end
 
-    # Step 0 (ϕ schedule) settings
+    # Step 1 (ϕ schedule) settings
     i = 1                   # Index tracking the stage of the algorithm
     j = 2                   # Index tracking the fixed_schedule entry ϕ_prop is set as
     resampled_last_period = false # Ensures proper resetting of ESS_bar after resample
@@ -114,6 +114,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     fixed_para_inds = findall([θ.fixed for θ in m.parameters])
     free_para_inds  = findall([!θ.fixed for θ in m.parameters])
     n_free_para     = length(free_para_inds)
+
+    # Step 4 (Initialization of Particle Array Cloud)
+    particle_array = Matrix{Float64}(undef, n_parts, n_params + 4)
 
     #################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -140,16 +143,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         initialize_likelihoods!(m, data, cloud, parallel = parallel,
                                 verbose = verbose)
     elseif continue_intermediate
-        loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2", filestring_addl)
+        loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2",
+                           filestring_addl)
         cloud = load(loadpath, "cloud")
-        if length(cloud.particles[1].keys)==48
-            @show "reset length"
-            for i=1:length(cloud.particles)
-                cloud.particles[i].value = vcat(cloud.particles[i].value[1:m.keys[:pc0]],
-                                                [0., 0.], cloud.particles[i].value[m.keys[:pc0]+1:end])
-                cloud.particles[i].keys = vcat(cloud.particles[i].keys[1:m.keys[:pc0]], [:varlinc, :vardlinc], cloud.particles[i].keys[m.keys[:pc0]+1:end])
-            end
-        end
     else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
@@ -170,9 +166,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # Instantiate incremental and normalized weight matrices for logMDD calculation
     if continue_intermediate
+        z_matrix = load(loadpath, "z")
         w_matrix = load(loadpath, "w")
         W_matrix = load(loadpath, "W")
-        z_matrix = load(loadpath, "z")
 
         i = cloud.stage_index
         j = load(loadpath, "j")
@@ -180,6 +176,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         ϕ_prop = proposed_fixed_schedule[j]
     else
+        z_matrix = ones(1)
         w_matrix = zeros(n_parts, 1)
         if tempered_update
             W_matrix = similar(w_matrix)
@@ -189,7 +186,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         else
             W_matrix = fill(1/n_parts, (n_parts,1))
         end
-        z_matrix = ones(1)
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -205,7 +201,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 
     while ϕ_n < 1.
-
         start_time = time_ns()
         cloud.stage_index = i += 1
 
@@ -256,10 +251,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Resample if degeneracy/ESS metric falls below the accepted threshold
         if (cloud.ESS[i] < threshold)
             new_inds = resample(normalized_weights; method = resampling_method)
-            # update parameters/logpost/loglh with resampled values
-            # reset the weights to 1/n_parts
+            # Update parameters/logpost/loglh with resampled values
             cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
-            reset_weights!(cloud) # reset the weights to 1/n_parts
+            reset_weights!(cloud) # Uniformly reset all weights to 1/n_parts
             cloud.resamples += 1
             resampled_last_period = true
             W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
@@ -295,24 +289,24 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             new_particles = @distributed (hcat) for k in 1:n_parts
                 mutation(model_function, data, particle_array[k, :], d, blocks_free, blocks_all,
                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
-                         use_chand_recursion = use_chand_recursion, verbose = verbose)
+                         use_chand_recursion = use_chand_recursion, verbose = verbose)'
             end
         else
-            new_particles = [mutation(m, data, cloud.particles[k], d, blocks_free,
+            new_particles = [mutation(m, data, particle_array[k, :], d, blocks_free,
                                       blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
                                       old_data = old_data,
                                       use_chand_recursion = use_chand_recursion,
                                       verbose = verbose) for k=1:n_parts]
         end
 
+        particle_array = new_particles
         for k in 1:n_parts
-            cloud.particles[k].value = new_particles[1:length(m.parameters), k]
-            cloud.particles[k].loglh = new_particles[end-3, k]
-            cloud.particles[k].logpost = new_particles[end-2, k]
-            cloud.particles[k].old_loglh = new_particles[end-1, k]
-            cloud.particles[k].accept = new_particles[end, k]
+            cloud.particles[k].value     = new_particles[k, 1:n_para]
+            cloud.particles[k].loglh     = new_particles[k, end-4]
+            cloud.particles[k].logpost   = new_particles[k, end-3]
+            cloud.particles[k].old_loglh = new_particles[k, end-2]
+            cloud.particles[k].accept    = new_particles[k, end-1]
         end
-
 
         #cloud.particles = new_particles
         update_acceptance_rate!(cloud) # Update average acceptance rate
@@ -332,7 +326,15 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             break
         end
         if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
-            jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"), true, true, true, IOStream) do file
+            for k in 1:n_parts
+                cloud.particles[k].value     = new_particles[k, 1:n_para]
+                cloud.particles[k].loglh     = new_particles[k, end-4]
+                cloud.particles[k].logpost   = new_particles[k, end-3]
+                cloud.particles[k].old_loglh = new_particles[k, end-2]
+                cloud.particles[k].accept    = new_particles[k, end-1]
+            end
+            jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"),
+                    true, true, true, IOStream) do file
                 write(file, "cloud", cloud)
                 write(file, "w", w_matrix)
                 write(file, "W", W_matrix)

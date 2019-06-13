@@ -8,7 +8,7 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 ### Arguments:
 - `m::AbstractModel`: Model of type AbstractModel being estimated.
 - `data::Matrix{Float64}`: Matrix of data
-- `p::Particle`: Initial particle value
+- `p::Vector{Float64}`: Initial particle value
 - `d::Distribution`: A distribution with μ = the weighted mean, and Σ = the weighted variance/covariance matrix
 - `blocks_free::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of free parameters only (e.g. all the indices will be ∈ 1:n_free_parameters)
 - `blocks_all::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of all parameters (e.g. all the indices will be in ∈ 1:n_para, free and fixed)
@@ -22,15 +22,15 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 
 ### Outputs:
 
-- `p::Particle`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
+- `p::Vector{Float64}`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
 
 """
 function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Float64}, d::Distribution,
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
-                  ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
+                  ϕ_n::S, ϕ_n1::S; c::S = 1., α::S = 1.,
                   old_data::T = T(undef, size(data, 1), 0),
                   use_chand_recursion::Bool = false,
-                  verbose::Symbol = :low) where {T <: AbstractMatrix}
+                  verbose::Symbol = :low) where {S <: Float64, T <: AbstractMatrix}
     m = model_function()
     n_steps     = get_setting(m, :n_mh_steps_smc)
     n_free_para = length([!θ.fixed for θ in m.parameters])
