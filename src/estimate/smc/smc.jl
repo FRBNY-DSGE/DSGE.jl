@@ -136,6 +136,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
             cloud = load(loadpath, "cloud")
+            cloud_array = cloud_to_array(cloud)
         else
             cloud = old_cloud
         end
