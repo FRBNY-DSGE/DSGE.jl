@@ -13,7 +13,7 @@ The `Particle` type contains the values and weight of a given vector of paramete
 - `logpost::Float64`: The log-posterior of the Particle
 - `old_loglh::Float64`: The log-likelihood of the Particle evaluated at the old data (only non-zero during time tempering)
 - `old_logpost::Float64`: The log-posterior of the Particle evaluated at the old data (only non-zero during time tempering)
-- `accept::Bool`: Whether or not the mutation of the particle was accepted in the previous period
+- `accept::Float64`: Acceptance rate of Metropolis-Hastings steps in the mutation of the particle in the previous period
 """
 mutable struct Particle
     weight::Float64
@@ -58,68 +58,171 @@ mutable struct ParticleCloud
     total_sampling_time::Float64
 end
 
-# Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else
-# in the Particle object etc. to be empty
+"""
+```
+function ParticleCloud(m::AbstractModel, n_parts::Int)
+```
+Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
+"""
 function ParticleCloud(m::AbstractModel, n_parts::Int)
     return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
                          zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
                          zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
 end
 
+"""
+Find correct indices for accessing columns of cloud array.
+"""
+ind_para_end(N::Int)  = N-5
+ind_loglh(N::Int)     = N-4
+ind_logpost(N::Int)   = N-3
+ind_logprior(N::Int)  = N-3 # TODO: Fix logprior/logpost shenanigans
+ind_old_loglh(N::Int) = N-2
+ind_accept(N::Int)    = N-1
+ind_weight(N::Int)    = N
+
+"""
+```
+function get_weights(c::ParticleCloud)
+function get_weights(c::Matrix{Float64})
+```
+Returns Vector{Float64}(n_parts) of weights of particles in cloud.
+"""
 function get_weights(c::ParticleCloud)
     return map(p -> p.weight, c.particles)
 end
 @inline function get_weights(c::Matrix{Float64})
-    return c[:,end]
+    return c[:, ind_weight(size(c,2))]
 end
 
+"""
+```
+function get_vals(c::ParticleCloud)
+```
+Returns Matrix{Float64}(n_params, n_parts) of parameter values in particle cloud.
+NOTE: Output is transpose of get_vals(c::Matrix{Float64}).
+"""
 function get_vals(c::ParticleCloud)
     return hcat(map(p -> p.value, c.particles)...)
 end
+"""
+```
+function get_vals(c::Matrix{Float64})
+```
+Returns Matrix{Float64}(n_parts, n_params) of parameter values in particle cloud.
+NOTE: Output is transpose of get_vals(c::ParticleCloud).
+"""
 @inline function get_vals(c::Matrix{Float64})
-    return c[:, 1:end-5]
+    return c[:, 1:ind_para_end(size(c,2))]
 end
 
+"""
+```
+function get_loglh(c::ParticleCloud)
+function get_loglh(c::Matrix{Float64})
+```
+Returns Vector{Float64}(n_parts) of log-likelihood of particles in cloud.
+"""
 function get_loglh(c::ParticleCloud)
     return map(p -> p.loglh, c.particles)
 end
 @inline function get_loglh(c::Matrix{Float64})
-    return c[:, 1:end-4]
+    return c[:, ind_loglh(size(c,2))]
 end
 
+"""
+```
+function cloud_isempty(c::ParticleCloud)
+function cloud_isempty(c::Matrix{Float64})
+```
+Check if cloud has no particles.
+"""
 function cloud_isempty(c::ParticleCloud)
     return isempty(c.particles)
 end
+function cloud_isempty(c::Matrix{Float64})
+    return isempty(c)
+end
 
+"""
+```
+function get_old_loglh(c::ParticleCloud)
+function get_old_loglh(c::Matrix{Float64})
+```
+Returns Vector{Float64}(n_parts) of old log-likelihood of particles in cloud.
+"""
 function get_old_loglh(c::ParticleCloud)
     return map(p -> p.old_loglh, c.particles)
 end
 @inline function get_old_loglh(c::Matrix{Float64})
-    return c[:,end-2]
+    return c[:, ind_old_loglh(size(c,2))]
 end
 
+"""
+```
+function get_logpost(c::ParticleCloud)
+function get_logpost(c::Matrix{Float64})
+```
+Returns Vector{Float64}(n_parts) of log-posterior of particles in cloud.
+"""
 function get_logpost(c::ParticleCloud)
     return map(p -> p.logpost + p.loglh, c.particles)
 end
 @inline function get_logpost(c::Matrix{Float64})
-    return c[:,end-3] .+ c[:,end-4]
+    return c[:, ind_loglh(size(c,2))] .+ c[:, ind_logprior(size(c,2))]
 end
 
-#TODO: Fix logpost/logprior confusion
+"""
+```
+function get_logprior(c::ParticleCloud)
+function get_logprior(c::Matrix{Float64})
+```
+Returns Vector{Float64}(n_parts) of log-prior of particles in cloud.
+"""
 function get_logpprior(c::ParticleCloud)
+    #TODO: Fix logpost/logprior confusion
     return map(p -> p.logpost, c.particles)
 end
 @inline function get_logprior(c::Matrix{Float64})
-    return c[:,end-3]
+    return c[:, ind_logprior(size(c,2))]
 end
 
+"""
+```
+function get_accept(c::ParticleCloud)
+function get_accept(c::Matrix{Float64})
+```
+Returns Vector{Float64}(n_parts) of old log-likelihood of particles in cloud.
+"""
+function get_accept(c::ParticleCloud)
+    return map(p -> p.accept, c.particles)
+end
+@inline function get_accept(c::Matrix{Float64})
+    return c[:, ind_accept(size(c,2))]
+end
+
+"""
+```
+function get_likeliest_particle_value(c::ParticleCloud)
+function get_likeliest_particle_value(c::Matrix{Float64})
+```
+Return parameter vector of particle with highest log-likelihood.
+"""
 function get_likeliest_particle_value(c::ParticleCloud)
     return c.particles[indmax(get_loglh(c))].value
 end
 @inline function get_likeliest_particle_value(c::Matrix{Float64})
-    return c[indmax(get_loglh(c)), 1:end-4]
+    return c[indmax(get_loglh(c)), 1:ind_para_end(size(c,2))]
 end
 
+"""
+```
+function update_draws!(c::ParticleCloud, draws::Matrix{Float64})
+function update_draws!(c::ParticleCloud, draws::Array{Particle,1})
+@inline function update_draws!(c::Matrix{Float64}, draws::Matrix{Float64})
+```
+Update parameter draws in cloud.
+"""
 function update_draws!(c::ParticleCloud, draws::Matrix{Float64})
     @assert size(draws) == (length(c.particles[1]),length(c))
     for (i,p) in enumerate(c.particles)
@@ -132,26 +235,41 @@ function update_draws!(c::ParticleCloud, draws::Array{Particle,1})
     end
 end
 @inline function update_draws!(c::Matrix{Float64}, draws::Matrix{Float64})
-    @assert size(draws) == (size(c,1), size(c,2)-5) "Draws are incorrectly sized"
+    @assert size(draws) == (size(c,1), ind_para_end(size(c,2))) "Draws are incorrectly sized"
     I, J = size(draws)
     for i = 1:I, j=1:J
         c[i, j] = draws[i,j]
     end
 end
 
+"""
+```
 function update_weights!(c::ParticleCloud, incweight::Vector{Float64})
-    new_weights = get_weights(c).*incweight
+@inline function update_weights!(c::Matrix{Float64}, incweight::Vector{Float64})
+```
+Update weights in cloud.
+"""
+function update_weights!(c::ParticleCloud, incweight::Vector{Float64})
+    new_weights = get_weights(c) .* incweight
     for (p,w) in zip(c.particles, new_weights)
         update_weight!(p, w)
     end
 end
 @inline function update_weights!(c::Matrix{Float64}, incweight::Vector{Float64})
     @assert size(c, 1) == length(incweight) "Dimensional mismatch in inc. weights"
+    N = ind_weight(size(c,2))
     for i=1:length(incweight)
-        c[i,end] *= incweight[i]
+        c[i, N] *= incweight[i]
     end
 end
 
+"""
+```
+function update_loglh!(c::ParticleCloud, incweight::Vector{Float64})
+@inline function update_loglh!(c::Matrix{Float64}, incweight::Vector{Float64})
+```
+Update log-likelihood in cloud.
+"""
 function update_loglh!(c::ParticleCloud, loglh::Vector{Float64})
     for (p,l) in zip(c.particles,loglh)
         p.loglh = l
@@ -159,11 +277,19 @@ function update_loglh!(c::ParticleCloud, loglh::Vector{Float64})
 end
 @inline function update_loglh!(c::Matrix{Float64}, loglh::Vector{Float64})
     @assert size(c, 1) == length(loglh) "Dimensional mismatch"
+    N = ind_loglh(size(c,2))
     for i=1:length(loglh)
-        c[i, end-4] = loglh[i]
+        c[i, N] = loglh[i]
     end
 end
 
+"""
+```
+function update_logpost!(c::ParticleCloud, incweight::Vector{Float64})
+@inline function update_logpost!(c::Matrix{Float64}, incweight::Vector{Float64})
+```
+Update log-posterior in cloud.
+"""
 function update_logpost!(c::ParticleCloud, logpost::Vector{Float64})
     for (p,l) in zip(c.particles,logpost)
         p.logpost = l
@@ -171,11 +297,19 @@ function update_logpost!(c::ParticleCloud, logpost::Vector{Float64})
 end
 @inline function update_logpost!(c::Matrix{Float64}, logpost::Vector{Float64})
     @assert size(c, 1) == length(logpost) "Dimensional mismatch"
+    N = ind_logpost(size(c,2))
     for i=1:length(logpost)
-        c[i, end-3] = logpost[i]
+        c[i, N] = logpost[i]
     end
 end
 
+"""
+```
+function normalize_weights!(c::ParticleCloud)
+function normalize_weights!(c::Matrix{Float64})
+```
+Normalize weights in cloud.
+"""
 function normalize_weights!(c::ParticleCloud)
     new_weights = get_weights(c) / sum(get_weights(c))
     for (p,w) in zip(c.particles, new_weights)
@@ -184,15 +318,22 @@ function normalize_weights!(c::ParticleCloud)
 end
 @inline function normalize_weights!(c::Matrix{Float64})
     sum_weights = sum(get_weights(c))
-    c[:, end] /= sum_weights
+    c[:, ind_weight(size(c,2))] /= sum_weights
 end
 
+"""
+```
 function reset_weights!(c::ParticleCloud)
-    map(p->update_weight!(p,1/length(c)),c.particles)
+function reset_weights!(c::Matrix{Float64})
+```
+Uniformly reset weights of all particles to 1/n_parts.
+"""
+function reset_weights!(c::ParticleCloud)
+    map(p->update_weight!(p,1/length(c)), c.particles)
 end
 @inline function reset_weights!(c::Matrix{Float64})
     n_parts = size(c, 1)
-    c[:, end] .= 1.0 / n_parts
+    c[:, ind_weight(size(c,2))] .= 1.0 / n_parts
 end
 
 """
@@ -210,6 +351,16 @@ function update_mutation!(p::Particle, para::Vector{Float64},
     p.old_loglh = old_like
     p.accept = accept
 end
+
+"""
+```
+function update_mutation!(p::Particle, para::Vector{Float64},
+                          like::Float64, post::Float64, old_like::Float64, accept::Float64)
+function update_mutation!(p::Vector{Float64}, para::Vector{Float64},
+                          like::Float64, post::Float64, old_like::Float64, accept::Float64)
+```
+Update a particle's parameter vector, log-likelihood, log-posteriod, old log-likelihood, and acceptance rate at the end of mutation.
+"""
 function update_mutation!(p::Particle, para::Vector{Float64},
                           like::Float64, post::Float64, old_like::Float64, accept::Float64)
     p.value = para
@@ -220,33 +371,89 @@ function update_mutation!(p::Particle, para::Vector{Float64},
 end
 @inline function update_mutation!(p::Vector{Float64}, para::Vector{Float64}, like::Float64,
                                   post::Float64, old_like::Float64, accept::Float64)
-    p[1:end-5] = para
-    p[end-4]   = like
-    p[end-3]   = post
-    p[end-2]   = old_like
-    p[end-1]   = accept
+    N = length(p)
+    p[1:ind_para_end(N)] = para
+    p[ind_loglh(N)]      = like
+    p[ind_logpost(N)]    = post
+    p[ind_old_loglh(N)]  = old_like
+    p[ind_accept(N)]     = accept
 end
 
+"""
+```
+function update_cloud!(cloud::ParticleCloud, new_particles::Matrix{Float64})
+```
+Updates cloud values with those of new particles in particle array.
+"""
+function update_cloud!(cloud::ParticleCloud, new_particles::Matrix{Float64})
+    N = size(new_particles, 2)
+    for k=1:length(cloud.particles)
+        cloud.particles[k].value     = new_particles[k, 1:ind_para_end(N)]
+        cloud.particles[k].loglh     = new_particles[k, ind_loglh(N)]
+        cloud.particles[k].logpost   = new_particles[k, ind_logpost(N)]
+        cloud.particles[k].old_loglh = new_particles[k, ind_old_loglh(N)]
+        cloud.particles[k].accept    = new_particles[k, ind_accept(N)]
+    end
+end
+
+"""
+```
+function cloud_to_array(c::ParticleCloud)
+```
+Returns a particle array in the place of a ParticleCloud.
+"""
+function cloud_to_array(c::ParticleCloud)
+    return hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(c), get_logprior(c),
+                get_old_loglh(c), get_accept(c), get_weights(c))
+end
+
+"""
+```
+function update_val!(p::Particle, val::Vector{Float64})
+@inline function update_val!(p::Vector{Float64}, val::Vector{Float64})
+```
+Update parameter vector of particle.
+"""
 function update_val!(p::Particle, val::Vector{Float64})
     p.value = val
 end
 @inline function update_val!(p::Vector{Float64}, val::Vector{Float64})
-    @assert length(p)-5 == length(val) "Parameter vector length is wrong!"
+    @assert ind_para_end(length(p)) == length(val) "Parameter vector length is wrong!"
     p[1:length(val)] = val
 end
 
+"""
+```
+function update_weight!(p::Particle, weight::Vector{Float64})
+@inline function update_weight!(p::Vector{Float64}, weight::Vector{Float64})
+```
+Update weight of particle.
+"""
 function update_weight!(p::Particle, weight::Float64)
     p.weight = weight
 end
 @inline function update_weight!(p::Vector{Float64}, weight::Float64)
-    p[end] = weight
+    p[ind_weight(length(p))] = weight
 end
 
+"""
+```
+function update_acceptance_rate!(c::ParticleCloud)
+```
+Update cloud's acceptance rate with the mean of its particle acceptance rates.
+"""
 function update_acceptance_rate!(c::ParticleCloud)
     c.accept = mean(map(p -> p.accept, c.particles))
 end
+
+"""
+```
 @inline function mean_acceptance_rate(c::Matrix{Float64})
-    return mean(c[:,end-1])
+```
+Return mean of particle acceptance rates.
+"""
+@inline function mean_acceptance_rate(c::Matrix{Float64})
+    return mean(c[:, ind_accept(size(c,2))])
 end
 
 # TODO: Check this never gets called on new Particle type
@@ -257,24 +464,47 @@ end
     return length(p.value)
 end
 
+"""
+```
 function weighted_mean(c::ParticleCloud)
+function weighted_mean(c::Matrix{Float64})
+```
+Compute weighted mean of particle cloud.
+"""
+function weighted_mean(c::ParticleCloud)
+    # TODO: why not? return get_vals(c) * get_weights(c)
     return dropdims(mean(get_vals(c), Weights(get_weights(c)), dims = 2), dims = 2)
 end
 @inline function weighted_mean(c::Matrix{Float64})
-    return dropdims(mean(get_vals(c), Weights(get_weights(c)), dims = 2), dims = 2)
+    return get_vals(c)' * get_weights(c)
 end
 
+"""
+```
+function weighted_quantile(c::ParticleCloud, i::Int64)
+@inline function weighted_quantile(c::Matrix{Float64}, i::Int64)
+```
+Compute weighted quantiles of particle cloud for input parameter, indexed by i.
+"""
 function weighted_quantile(c::ParticleCloud, i::Int64)
     lb = quantile(get_vals(c)[i, :], Weights(get_weights(c)), .05)
     ub = quantile(get_vals(c)[i, :], Weights(get_weights(c)), .95)
     return lb, ub
 end
 @inline function weighted_quantile(c::Matrix{Float64}, i::Int64)
-    lb = quantile(c[:, i], Weights(c[:,end]), .05)
-    ub = quantile(c[:, i], Weights(c[:,end]), .95)
+    @assert i <= ind_end_para(size(c,2)) "Parameter index invalid."
+    lb = quantile(c[:, i], Weights(get_weights(c)), .05)
+    ub = quantile(c[:, i], Weights(get_weights(c)), .95)
     return lb, ub
 end
 
+"""
+```
+function weighted_std(c::ParticleCloud)
+@inline function weighted_std(c::Matrix{Float64})
+```
+Compute weighted standard deviation of particle cloud.
+"""
 function weighted_std(c::ParticleCloud)
     return sqrt.(diag(weighted_cov(c)))
 end
@@ -282,11 +512,18 @@ end
     return sqrt.(diag(weighted_cov(c)))
 end
 
+"""
+```
+function weighted_cov(c::ParticleCloud)
+@inline function weighted_cov(c::Matrix{Float64})
+```
+Compute weighted covariance of particle cloud.
+"""
 function weighted_cov(c::ParticleCloud)
     return cov(Matrix(get_vals(c)'), Weights(get_weights(c)), corrected = false)
 end
 @inline function weighted_cov(c::Matrix{Float64})
-    return cov(Matrix(get_vals(c)), Weights(get_weights(c)), corrected = false)
+    return cov(get_vals(c), Weights(get_weights(c)), corrected = false)
 end
 
 for op in (:(Base.:+),

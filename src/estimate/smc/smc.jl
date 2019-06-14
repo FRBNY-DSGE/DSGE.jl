@@ -300,13 +300,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         end
 
         particle_array = new_particles
-        for k in 1:n_parts
-            cloud.particles[k].value     = new_particles[k, 1:n_para]
-            cloud.particles[k].loglh     = new_particles[k, end-4]
-            cloud.particles[k].logpost   = new_particles[k, end-3]
-            cloud.particles[k].old_loglh = new_particles[k, end-2]
-            cloud.particles[k].accept    = new_particles[k, end-1]
-        end
+        update_cloud!(cloud, new_particles)
 
         #cloud.particles = new_particles
         update_acceptance_rate!(cloud) # Update average acceptance rate
@@ -326,13 +320,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             break
         end
         if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
-            for k in 1:n_parts
-                cloud.particles[k].value     = new_particles[k, 1:n_para]
-                cloud.particles[k].loglh     = new_particles[k, end-4]
-                cloud.particles[k].logpost   = new_particles[k, end-3]
-                cloud.particles[k].old_loglh = new_particles[k, end-2]
-                cloud.particles[k].accept    = new_particles[k, end-1]
-            end
+            update_cloud!(cloud, particle_array)
+
             jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"),
                     true, true, true, IOStream) do file
                 write(file, "cloud", cloud)
