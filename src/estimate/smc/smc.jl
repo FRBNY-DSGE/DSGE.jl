@@ -114,11 +114,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     fixed_para_inds = findall([θ.fixed for θ in m.parameters])
     free_para_inds  = findall([!θ.fixed for θ in m.parameters])
     n_free_para     = length(free_para_inds)
+    para_symbols    = [θ.key for θ in m.parameters]
 
     # Step 4 (Initialization of Particle Array Cloud)
     particle_array = Matrix{Float64}(undef, n_parts, n_params + 5)
-    cloud_array    = Matrix{Float64}(undef, n_parts, n_params + 5)
-    cloud_settings = CloudSettings(m, n_parts)
+    cloud_new = Cloud(m, n_parts)
 
     #################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -226,6 +226,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         init_stage_print(cloud; verbose = verbose,
                          use_fixed_schedule = use_fixed_schedule)
+        # New
+        init_stage_print(cloud_array, cloud_settings, para_symbols; verbose = verbose,
+                         use_fixed_schedule = use_fixed_schedule)
     end
 
     #################################################################################
@@ -238,14 +241,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     while ϕ_n < 1.
         start_time = time_ns()
         cloud.stage_index = i += 1
+        cloud_settings.stage_index = i += 1
 
         #############################################################################
         ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
         #############################################################################
         ϕ_n1 = cloud.tempering_schedule[i-1]
+        ϕ_n1 = cloud_settings.tempering_schedule[i-1]
 
         if use_fixed_schedule
             ϕ_n = cloud.tempering_schedule[i]
+            ϕ_n = cloud_settings.tempering_schedule[i]
         else
             ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud,
                                                        proposed_fixed_schedule,

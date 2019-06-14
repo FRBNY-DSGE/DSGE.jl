@@ -22,7 +22,7 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 
 ### Outputs:
 
-- `p::Vector{Float64}`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
+- `p::Vector{Float64}`: An updated particle containing updated parameter values, log-likelihood, prior, and acceptance indicator.
 
 """
 function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Float64}, d::Distribution,
@@ -36,31 +36,29 @@ function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Flo
     n_free_para = length([!θ.fixed for θ in m.parameters])
     step_prob   = rand() # Draw initial step probability
 
-    para = p[1:length(m.parameters)]
-    like = p[end-3]
-    post_init = p[end-2]
-    like_prev = p[end-1]    # The likelihood evaluated at the old data (for time tempering)
-
-    # Previous posterior needs to be updated (due to tempering)
-    post = post_init #+ (ϕ_n - ϕ_n1) * like
-    accept = 0.0
+    N         = length(p)
+    para      = p[1:n_parameters(m)]
+    like      = p[ind_loglh(N)]
+    prior     = p[ind_logprior(N)]
+    like_prev = p[ind_old_loglh(N)] # Likelihood evaluated at the old data (for time tempering)
+    accept    = 0.0
 
     for step in 1:n_steps
         for (block_f, block_a) in zip(blocks_free, blocks_all)
 
-            # Index out the parameters corresponding to a given random block
-            # And also create a distribution centered at the weighted mean
-            # and with Σ corresponding to the same random block
+            # Index out the parameters corresponding to a given random block,
+            # then create a distribution centered at the weighted mean
+            # with Σ corresponding to the same random block
             para_subset = para[block_a]
             d_subset    = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
             para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
-                                                                                  d_subset; c = c, α = α)
+                                                                       d_subset; c = c, α = α)
             para_new = deepcopy(para)
             para_new[block_a] = para_draw
 
             lik0 = like
-            pr0  = post
+            pr0  = prior
 
             q0 = α * exp(logpdf(MvNormal(para_draw,   c^2 * d_subset.Σ.mat), para_subset))
             q1 = α * exp(logpdf(MvNormal(para_subset, c^2 * d_subset.Σ.mat), para_draw))
@@ -73,12 +71,12 @@ function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Flo
                 ind_pdf = ind_pdf / (sigi * sqrt(2.0 * π)) * exp(-0.5 * zstat ^ 2)
             end
 
-            q0 = q0 + (1. - α) / 2. * ind_pdf
-            q1 = q1 + (1. - α) / 2. * ind_pdf
+            q0 += (1. - α) / 2. * ind_pdf
+            q1 += (1. - α) / 2. * ind_pdf
 
-            q0 = q0 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
+            q0 += (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
                                                  para_subset))
-            q1 = q1 + (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
+            q1 += (1. - α) / 2. * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
                                                  para_draw))
             q0 = log(q0)
             q1 = log(q1)
@@ -86,7 +84,6 @@ function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Flo
             like_new      = -Inf
             prior_new     = -Inf
             like_old_data = -Inf
-
             try
                 update!(m, para_new)
                 para_new = [θ.value for θ in m.parameters]
@@ -98,8 +95,8 @@ function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Flo
                     prior_new = like_old_data = -Inf
                 end
                 like_old_data = isempty(old_data) ? 0. : likelihood(m, old_data; sampler = true,
-                                                                    use_chand_recursion = use_chand_recursion,
-                                                                    verbose = verbose)
+                                                      use_chand_recursion = use_chand_recursion,
+                                                      verbose = verbose)
             catch err
                 if isa(err, ParamBoundsError)
                     prior_new = like_new = like_old_data = -Inf
@@ -125,7 +122,7 @@ function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Flo
             if step_prob < η
                 para      = para_new
                 like      = like_new
-                post      = prior_new
+                prior     = prior_new
                 like_prev = like_old_data
                 accept   += length(block_a)
             end
@@ -133,11 +130,6 @@ function mutation(model_function::Function, data::Matrix{Float64}, p::Vector{Flo
             step_prob = rand()
         end
     end
-    #update_mutation!(p, para, like, post, like_prev, accept / n_free_para)
-    p[1:length(m.parameters)] = para
-    p[end-3] = like
-    p[end-2] = post
-    p[end-1] = like_prev
-    p[end]   = accept / n_free_para
+    update_mutation!(p, para, like, prior, like_prev, accept / n_free_para)
     return p
 end
