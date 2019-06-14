@@ -22,7 +22,7 @@ mutable struct Particle
     loglh::Float64
     logpost::Float64
     old_loglh::Float64
-    accept::Float64 #Bool # TO MATCH FORTRAN
+    accept::Float64
 end
 
 """
@@ -472,8 +472,7 @@ function weighted_mean(c::Matrix{Float64})
 Compute weighted mean of particle cloud.
 """
 function weighted_mean(c::ParticleCloud)
-    # TODO: why not? return get_vals(c) * get_weights(c)
-    return dropdims(mean(get_vals(c), Weights(get_weights(c)), dims = 2), dims = 2)
+    return get_vals(c) * get_weights(c)
 end
 @inline function weighted_mean(c::Matrix{Float64})
     return get_vals(c)' * get_weights(c)
@@ -531,7 +530,6 @@ for op in (:(Base.:+),
            :(Base.:*),
            :(Base.:/),
            :(Base.:^))
-
     @eval ($op)(p::Particle, q::Particle)   = ($op)(p.value,q.value)
     @eval ($op)(p::Particle, x::Integer)    = ($op)(p.value,x)
     @eval ($op)(p::Particle, x::Number)     = ($op)(p.value,x)
