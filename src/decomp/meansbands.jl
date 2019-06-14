@@ -57,41 +57,46 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     end
 
     decomp = DataFrame(date = dates)
-
     for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         product = Symbol(:decomp, comp)
 
         input_file = input_files[Symbol(product, class)]
-        jldopen(input_file, "r") do file
-            # Parse transform
-            class_long = get_class_longname(class)
-            transforms = read(file, string(class_long) * "_revtransforms")
-            transform = parse_transform(transforms[var])
+        #jldopen(input_file, "r") do file
+        # Parse transform
+        class_long = get_class_longname(class)
+        transforms = load(input_file, string(class_long) * "_revtransforms")
+        transform = parse_transform(transforms[var])
 
-            # If shockdec, loop over shocks
-            loopkeys = if comp == :shockdec
-                shock_indices = read(file, "shock_indices")
-                collect(keys(shock_indices))
+        # If shockdec, loop over shocks
+        loopkeys = if comp == :shockdec
+            shock_indices = load(input_file, "shock_indices")
+            collect(keys(shock_indices))
+        else
+            [comp]
+        end
+
+        if comp == :shockdec
+            shock_indices = load(input_file, "shock_indices")
+        end
+
+        indices = load(input_file, "$(class_long)_indices")
+        var_ind = indices[var]
+        for key in loopkeys
+            # Read in raw output: ndraws x nperiods
+            decomp_series = if comp == :shockdec
+                @show key
+                shock_key = shock_indices[key]
+                read_forecast_series(input_file, var_ind, shock_key)
             else
-                [comp]
+                read_forecast_series(input_file, product, var_ind)
             end
 
-            for key in loopkeys
-                # Read in raw output: ndraws x nperiods
-                decomp_series = if comp == :shockdec
-                    read_forecast_series(file, class, product, var, key)
-                else
-                    read_forecast_series(file, class, product, var)
-                end
+            # Reverse transform
+            transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
 
-                # Reverse transform
-                transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
-
-                # Compute mean and add to DataFrame
-                decomp[key] = vec(mean(transformed_decomp, dims = 1))
-            end
+            # Compute mean and add to DataFrame
+            decomp[key] = vec(mean(transformed_decomp, dims = 1))
         end
     end
-
     return decomp
 end
