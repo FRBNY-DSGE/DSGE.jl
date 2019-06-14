@@ -60,6 +60,37 @@ end
 
 """
 ```
+CloudSettings
+```
+
+The `CloudSettings` type contains all of the relevant information for a given cloud of particles
+in the SMC algorithm. Information for a single iteration is stored at any given time (and thus
+the final output will be the final cloud of particles, of which only the particle values will be saved).
+
+### Fields
+- `tempering_schedule::Vector{Float64}`: The vector of ϕ_ns (tempering factors)
+- `ESS::Vector{Float64}`: The vector of effective sample sizes (resample if ESS falls under the threshold)
+- `stage_index::Int`: The current iteration index of the algorithm
+- `n_Φ::Int`: The total number of stages of in the fixed tempering schedule
+    (if the algorithm is run with an adaptive ϕ schedule then this is used to calibrate the ϕ_prop)
+- `resamples::Int`: The number of times the particle population was resampled
+- `c::Float64`: The mutation step size
+- `accept::Float64`: The average acceptance rate of mutation steps
+- `total_sampling_time::Float64`: The total amount of time that the smc algorith took to execute
+"""
+mutable struct CloudSettings
+    tempering_schedule::Vector{Float64}
+    ESS::Vector{Float64}
+    stage_index::Int
+    n_Φ::Int
+    resamples::Int
+    c::Float64
+    accept::Float64
+    total_sampling_time::Float64
+end
+
+"""
+```
 function ParticleCloud(m::AbstractModel, n_parts::Int)
 ```
 Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
@@ -68,6 +99,17 @@ function ParticleCloud(m::AbstractModel, n_parts::Int)
     return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
                          zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
                          zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
+end
+
+
+"""
+```
+function CloudSettings(m::AbstractModel, n_parts::Int)
+```
+Easier constructor for CloudSettings, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
+"""
+function CloudSettings(m::AbstractModel, n_parts::Int)
+    return CloudSettings(zeros(1), zeros(1), 1, 0, 0, 0.0, 0.25, 0.0)
 end
 
 """
@@ -305,6 +347,26 @@ end
 
 """
 ```
+function update_old_loglh!(c::ParticleCloud, incweight::Vector{Float64})
+@inline function update_old_loglh!(c::Matrix{Float64}, incweight::Vector{Float64})
+```
+Update log-likelihood in cloud.
+"""
+function update_old_loglh!(c::ParticleCloud, old_loglh::Vector{Float64})
+    for (p,l) in zip(c.particles,old_loglh)
+        p.old_loglh = l
+    end
+end
+@inline function update_old_loglh!(c::Matrix{Float64}, old_loglh::Vector{Float64})
+    @assert size(c, 1) == length(old_loglh) "Dimensional mismatch"
+    N = ind_old_loglh(size(c,2))
+    for i=1:length(old_loglh)
+        c[i, N] = old_loglh[i]
+    end
+end
+
+"""
+```
 function normalize_weights!(c::ParticleCloud)
 function normalize_weights!(c::Matrix{Float64})
 ```
@@ -398,13 +460,25 @@ end
 
 """
 ```
-function cloud_to_array(c::ParticleCloud)
+function get_cloud_array(c::ParticleCloud)
 ```
 Returns a particle array in the place of a ParticleCloud.
 """
-function cloud_to_array(c::ParticleCloud)
+function get_cloud_array(c::ParticleCloud)
     return hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(c), get_logprior(c),
                 get_old_loglh(c), get_accept(c), get_weights(c))
+end
+
+"""
+```
+function get_cloud_settings(c::ParticleCloud)
+```
+Returns a particle array in the place of a ParticleCloud.
+"""
+function get_cloud_settings(c::ParticleCloud)
+    return CloudSettings(cloud.tempering_schedule, cloud.ESS, cloud.stage_index,
+                         cloud.n_Φ, cloud.resamples, cloud.c, cloud.accept,
+                         cloud.total_sampling_time)
 end
 
 """
