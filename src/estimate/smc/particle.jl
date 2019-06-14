@@ -60,14 +60,27 @@ end
 
 """
 ```
-CloudSettings
+function ParticleCloud(m::AbstractModel, n_parts::Int)
+```
+Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
+"""
+function ParticleCloud(m::AbstractModel, n_parts::Int)
+    return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
+                         zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
+                         zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
+end
+
+"""
+```
+Cloud
 ```
 
-The `CloudSettings` type contains all of the relevant information for a given cloud of particles
+The `Cloud` type contains all of the relevant information for a given cloud of particles
 in the SMC algorithm. Information for a single iteration is stored at any given time (and thus
 the final output will be the final cloud of particles, of which only the particle values will be saved).
 
 ### Fields
+- `particles::Matrix{Float64}`: The vector of particles (which contain weight, keys, and value information)
 - `tempering_schedule::Vector{Float64}`: The vector of ϕ_ns (tempering factors)
 - `ESS::Vector{Float64}`: The vector of effective sample sizes (resample if ESS falls under the threshold)
 - `stage_index::Int`: The current iteration index of the algorithm
@@ -78,7 +91,8 @@ the final output will be the final cloud of particles, of which only the particl
 - `accept::Float64`: The average acceptance rate of mutation steps
 - `total_sampling_time::Float64`: The total amount of time that the smc algorith took to execute
 """
-mutable struct CloudSettings
+mutable struct Cloud
+    particles::Matrix{Float64}
     tempering_schedule::Vector{Float64}
     ESS::Vector{Float64}
     stage_index::Int
@@ -91,25 +105,13 @@ end
 
 """
 ```
-function ParticleCloud(m::AbstractModel, n_parts::Int)
+function Cloud(m::AbstractModel, n_parts::Int)
 ```
-Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
+Easier constructor for Cloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
 """
-function ParticleCloud(m::AbstractModel, n_parts::Int)
-    return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
-                         zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
-                         zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
-end
-
-
-"""
-```
-function CloudSettings(m::AbstractModel, n_parts::Int)
-```
-Easier constructor for CloudSettings, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
-"""
-function CloudSettings(m::AbstractModel, n_parts::Int)
-    return CloudSettings(zeros(1), zeros(1), 1, 0, 0, 0.0, 0.25, 0.0)
+function Cloud(m::AbstractModel, n_parts::Int)
+    return Cloud(Matrix{Float64}(undef, n_parts, n_parameters(m) + 5),
+                 zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
 end
 
 """
@@ -126,6 +128,7 @@ ind_weight(N::Int)    = N
 """
 ```
 function get_weights(c::ParticleCloud)
+function get_weights(c::Cloud)
 function get_weights(c::Matrix{Float64})
 ```
 Returns Vector{Float64}(n_parts) of weights of particles in cloud.
@@ -135,6 +138,9 @@ function get_weights(c::ParticleCloud)
 end
 @inline function get_weights(c::Matrix{Float64})
     return c[:, ind_weight(size(c,2))]
+end
+@inline function get_weights(c::Cloud)
+    return c.particles[:, ind_weight(size(c.particles,2))]
 end
 
 """
@@ -150,6 +156,7 @@ end
 """
 ```
 function get_vals(c::Matrix{Float64})
+function get_vals(c::Cloud)
 ```
 Returns Matrix{Float64}(n_parts, n_params) of parameter values in particle cloud.
 NOTE: Output is transpose of get_vals(c::ParticleCloud).
@@ -157,11 +164,15 @@ NOTE: Output is transpose of get_vals(c::ParticleCloud).
 @inline function get_vals(c::Matrix{Float64})
     return c[:, 1:ind_para_end(size(c,2))]
 end
+@inline function get_vals(c::Cloud)
+    return c.particles[:, 1:ind_para_end(size(c.particles,2))]
+end
 
 """
 ```
 function get_loglh(c::ParticleCloud)
 function get_loglh(c::Matrix{Float64})
+function get_loglh(c::Cloud)
 ```
 Returns Vector{Float64}(n_parts) of log-likelihood of particles in cloud.
 """
@@ -171,11 +182,15 @@ end
 @inline function get_loglh(c::Matrix{Float64})
     return c[:, ind_loglh(size(c,2))]
 end
+@inline function get_loglh(c::Cloud)
+    return c.particles[:, ind_loglh(size(c.particles,2))]
+end
 
 """
 ```
 function cloud_isempty(c::ParticleCloud)
 function cloud_isempty(c::Matrix{Float64})
+function cloud_isempty(c::Cloud)
 ```
 Check if cloud has no particles.
 """
@@ -185,11 +200,17 @@ end
 function cloud_isempty(c::Matrix{Float64})
     return isempty(c)
 end
+function cloud_isempty(c::Cloud)
+    println("TODO: 'ISEMPTY' IS INCOMPATIBLE WITH INITIALIZATION")
+    return isempty(c.particles)
+end
+
 
 """
 ```
 function get_old_loglh(c::ParticleCloud)
 function get_old_loglh(c::Matrix{Float64})
+function get_old_loglh(c::Cloud)
 ```
 Returns Vector{Float64}(n_parts) of old log-likelihood of particles in cloud.
 """
@@ -199,11 +220,15 @@ end
 @inline function get_old_loglh(c::Matrix{Float64})
     return c[:, ind_old_loglh(size(c,2))]
 end
+@inline function get_old_loglh(c::Cloud)
+    return c.particles[:, ind_old_loglh(size(c.particles,2))]
+end
 
 """
 ```
 function get_logpost(c::ParticleCloud)
 function get_logpost(c::Matrix{Float64})
+function get_logpost(c::Cloud)
 ```
 Returns Vector{Float64}(n_parts) of log-posterior of particles in cloud.
 """
@@ -213,11 +238,16 @@ end
 @inline function get_logpost(c::Matrix{Float64})
     return c[:, ind_loglh(size(c,2))] .+ c[:, ind_logprior(size(c,2))]
 end
+@inline function get_logpost(c::Cloud)
+    return c.particles[:, ind_loglh(size(c.particles,2))] .+
+        c.particles[:, ind_logprior(size(c.particles,2))]
+end
 
 """
 ```
 function get_logprior(c::ParticleCloud)
 function get_logprior(c::Matrix{Float64})
+function get_logprior(c::Cloud)
 ```
 Returns Vector{Float64}(n_parts) of log-prior of particles in cloud.
 """
@@ -228,11 +258,15 @@ end
 @inline function get_logprior(c::Matrix{Float64})
     return c[:, ind_logprior(size(c,2))]
 end
+@inline function get_logprior(c::Cloud)
+    return c.particles[:, ind_logprior(size(c.particles,2))]
+end
 
 """
 ```
 function get_accept(c::ParticleCloud)
 function get_accept(c::Matrix{Float64})
+function get_accept(c::Cloud)
 ```
 Returns Vector{Float64}(n_parts) of old log-likelihood of particles in cloud.
 """
@@ -242,11 +276,15 @@ end
 @inline function get_accept(c::Matrix{Float64})
     return c[:, ind_accept(size(c,2))]
 end
+@inline function get_accept(c::Cloud)
+    return c.particles[:, ind_accept(size(c.particles,2))]
+end
 
 """
 ```
 function get_likeliest_particle_value(c::ParticleCloud)
 function get_likeliest_particle_value(c::Matrix{Float64})
+function get_likeliest_particle_value(c::Cloud)
 ```
 Return parameter vector of particle with highest log-likelihood.
 """
@@ -255,6 +293,9 @@ function get_likeliest_particle_value(c::ParticleCloud)
 end
 @inline function get_likeliest_particle_value(c::Matrix{Float64})
     return c[indmax(get_loglh(c)), 1:ind_para_end(size(c,2))]
+end
+@inline function get_likeliest_particle_value(c::Cloud)
+    return c.particles[indmax(get_loglh(c)), 1:ind_para_end(size(c.particles,2))]
 end
 
 """
@@ -283,11 +324,15 @@ end
         c[i, j] = draws[i,j]
     end
 end
+@inline function update_draws!(c::Cloud, draws::Matrix{Float64})
+    update_draws!(c.particles, draws)
+end
 
 """
 ```
 function update_weights!(c::ParticleCloud, incweight::Vector{Float64})
 @inline function update_weights!(c::Matrix{Float64}, incweight::Vector{Float64})
+@inline function update_weights!(c::Cloud, weights::Vector{Float64})
 ```
 Update weights in cloud.
 """
@@ -304,11 +349,15 @@ end
         c[i, N] *= incweight[i]
     end
 end
+@inline function update_weights!(c::Cloud, weights::Vector{Float64})
+    update_weights!(c.particles, weights)
+end
 
 """
 ```
 function update_loglh!(c::ParticleCloud, incweight::Vector{Float64})
 @inline function update_loglh!(c::Matrix{Float64}, incweight::Vector{Float64})
+@inline function update_loglh!(c::Cloud, loglh::Vector{Float64})
 ```
 Update log-likelihood in cloud.
 """
@@ -324,11 +373,15 @@ end
         c[i, N] = loglh[i]
     end
 end
+@inline function update_loglh!(c::Cloud, loglh::Vector{Float64})
+    update_loglh!(c.particles, loglh)
+end
 
 """
 ```
 function update_logpost!(c::ParticleCloud, incweight::Vector{Float64})
 @inline function update_logpost!(c::Matrix{Float64}, incweight::Vector{Float64})
+@inline function update_logpost!(c::Cloud, logpost::Vector{Float64})
 ```
 Update log-posterior in cloud.
 """
@@ -344,11 +397,16 @@ end
         c[i, N] = logpost[i]
     end
 end
+@inline function update_logpost!(c::Cloud, logpost::Vector{Float64})
+    update_logpost!(c.particles, logpost)
+end
+
 
 """
 ```
 function update_old_loglh!(c::ParticleCloud, incweight::Vector{Float64})
 @inline function update_old_loglh!(c::Matrix{Float64}, incweight::Vector{Float64})
+@inline function update_old_loglh!(c::Cloud, old_loglh::Vector{Float64})
 ```
 Update log-likelihood in cloud.
 """
@@ -364,11 +422,15 @@ end
         c[i, N] = old_loglh[i]
     end
 end
+@inline function update_old_loglh!(c::Cloud, old_loglh::Vector{Float64})
+    update_old_loglh!(c.particles, old_loglh)
+end
 
 """
 ```
 function normalize_weights!(c::ParticleCloud)
 function normalize_weights!(c::Matrix{Float64})
+@inline function normalize_weights!(c::Cloud)
 ```
 Normalize weights in cloud.
 """
@@ -382,11 +444,15 @@ end
     sum_weights = sum(get_weights(c))
     c[:, ind_weight(size(c,2))] /= sum_weights
 end
+@inline function normalize_weights!(c::Cloud)
+    normalize_weights!(c.particles)
+end
 
 """
 ```
 function reset_weights!(c::ParticleCloud)
 function reset_weights!(c::Matrix{Float64})
+function reset_weights!(c::Cloud)
 ```
 Uniformly reset weights of all particles to 1/n_parts.
 """
@@ -396,6 +462,9 @@ end
 @inline function reset_weights!(c::Matrix{Float64})
     n_parts = size(c, 1)
     c[:, ind_weight(size(c,2))] .= 1.0 / n_parts
+end
+function reset_weights!(c::Cloud)
+    reset_weights!(c.particles)
 end
 
 """
@@ -465,20 +534,21 @@ function get_cloud_array(c::ParticleCloud)
 Returns a particle array in the place of a ParticleCloud.
 """
 function get_cloud_array(c::ParticleCloud)
-    return hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(c), get_logprior(c),
+    return hcat(Matrix{Float64}(get_vals(c)'), get_loglh(c), get_logprior(c),
                 get_old_loglh(c), get_accept(c), get_weights(c))
 end
 
 """
 ```
-function get_cloud_settings(c::ParticleCloud)
+function old_to_new_cloud(c::ParticleCloud)
 ```
 Returns a particle array in the place of a ParticleCloud.
 """
-function get_cloud_settings(c::ParticleCloud)
-    return CloudSettings(cloud.tempering_schedule, cloud.ESS, cloud.stage_index,
-                         cloud.n_Φ, cloud.resamples, cloud.c, cloud.accept,
-                         cloud.total_sampling_time)
+function old_to_new_cloud(cloud::ParticleCloud)
+    return Cloud(hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), get_logprior(cloud),
+                      get_old_loglh(cloud), get_accept(cloud), get_weights(cloud)),
+                 cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
+                 cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling.time)
 end
 
 """
@@ -513,26 +583,23 @@ end
 """
 ```
 function update_acceptance_rate!(c::ParticleCloud)
+function update_acceptance_rate!(c::Cloud)
 ```
 Update cloud's acceptance rate with the mean of its particle acceptance rates.
 """
 function update_acceptance_rate!(c::ParticleCloud)
     c.accept = mean(map(p -> p.accept, c.particles))
 end
-
-"""
-```
-@inline function mean_acceptance_rate(c::Matrix{Float64})
-```
-Return mean of particle acceptance rates.
-"""
-@inline function mean_acceptance_rate(c::Matrix{Float64})
-    return mean(c[:, ind_accept(size(c,2))])
+function update_acceptance_rate!(c::Cloud)
+    c.accept = mean(get_accept(c))
 end
 
 # TODO: Check this never gets called on new Particle type
 @inline function Base.length(c::ParticleCloud)
         return length(c.particles)
+end
+@inline function Base.length(c::Cloud)
+        return size(c.particles, 1)
 end
 @inline function Base.length(p::Particle)
     return length(p.value)
@@ -541,6 +608,7 @@ end
 """
 ```
 function weighted_mean(c::ParticleCloud)
+function weighted_mean(c::Cloud)
 function weighted_mean(c::Matrix{Float64})
 ```
 Compute weighted mean of particle cloud.
@@ -551,11 +619,15 @@ end
 @inline function weighted_mean(c::Matrix{Float64})
     return get_vals(c)' * get_weights(c)
 end
+function weighted_mean(c::Cloud)
+    return weighted_mean(c.particles)
+end
 
 """
 ```
 function weighted_quantile(c::ParticleCloud, i::Int64)
 @inline function weighted_quantile(c::Matrix{Float64}, i::Int64)
+function weighted_quantile(c::Cloud, i::Int64)
 ```
 Compute weighted quantiles of particle cloud for input parameter, indexed by i.
 """
@@ -570,10 +642,14 @@ end
     ub = quantile(c[:, i], Weights(get_weights(c)), .95)
     return lb, ub
 end
+function weighted_quantile(c::Cloud, i::Int64)
+    return weighted_quantile(c.particles, i)
+end
 
 """
 ```
 function weighted_std(c::ParticleCloud)
+function weighted_std(c::Cloud)
 @inline function weighted_std(c::Matrix{Float64})
 ```
 Compute weighted standard deviation of particle cloud.
@@ -584,10 +660,14 @@ end
 @inline function weighted_std(c::Matrix{Float64})
     return sqrt.(diag(weighted_cov(c)))
 end
+function weighted_std(c::Cloud)
+    return weighted_std(c.particles)
+end
 
 """
 ```
 function weighted_cov(c::ParticleCloud)
+function weighted_cov(c::Cloud)
 @inline function weighted_cov(c::Matrix{Float64})
 ```
 Compute weighted covariance of particle cloud.
@@ -597,6 +677,9 @@ function weighted_cov(c::ParticleCloud)
 end
 @inline function weighted_cov(c::Matrix{Float64})
     return cov(get_vals(c), Weights(get_weights(c)), corrected = false)
+end
+@inline function weighted_cov(c::Cloud)
+    return weighted_cov(c.particles)
 end
 
 for op in (:(Base.:+),
