@@ -108,15 +108,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # Step 3 (Mutation) settings
     c      = get_setting(m, :step_size_smc)
-    target = accept = get_setting(m, :target_accept)
     α      = get_setting(m, :mixture_proportion)
+    target = accept = get_setting(m, :target_accept)
 
     fixed_para_inds = findall([θ.fixed for θ in m.parameters])
     free_para_inds  = findall([!θ.fixed for θ in m.parameters])
     n_free_para     = length(free_para_inds)
 
     # Step 4 (Initialization of Particle Array Cloud)
-    particle_array = Matrix{Float64}(undef, n_parts, n_params + 4)
+    particle_array = Matrix{Float64}(undef, n_parts, n_params + 5)
+    cloud_array    = Matrix{Float64}(undef, n_parts, n_params + 5)
+    cloud_settings = CloudSettings(m, n_parts)
 
     #################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -136,10 +138,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
             cloud = load(loadpath, "cloud")
-            cloud_array = cloud_to_array(cloud)
         else
             cloud = old_cloud
         end
+        ### NEW ###
+        cloud_array    = get_cloud_array(cloud)
+        cloud_settings = get_cloud_settings(cloud)
+        initialize_cloud_settings!(m, cloud_settings; tempered_update = tempered_update)
+        initialize_likelihoods!(m, data, cloud_array, parallel = parallel,
+                                verbose = verbose)
+        ### NEW ###
+
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
         initialize_likelihoods!(m, data, cloud, parallel = parallel,
                                 verbose = verbose)
@@ -147,20 +156,41 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2",
                            filestring_addl)
         cloud = load(loadpath, "cloud")
+
+        ### NEW ###
+        cloud_array    = get_cloud_array(cloud)
+        cloud_settings = get_cloud_settings(cloud)
     else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
+
+        ### NEW ###
+        cloud_array    = get_cloud_array(cloud)
+        cloud_settings = get_cloud_settings(cloud)
+
+        # Modifies the cloud object in place to update draws, loglh, & logpost
+        initial_draw!(m, data, cloud_array, parallel = parallel,
+                      use_chand_recursion = use_chand_recursion, verbose = verbose)
+
+        initialize_cloud_settings!(m, cloud_settings; tempered_update = tempered_update)
+        ### NEW ###
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
         initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
 
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
+
+        # TODO: since draw was random, we want these to be consistent
+        cloud_array    = get_cloud_array(cloud)
+        cloud_settings = get_cloud_settings(cloud)
     end
 
     # Fixed schedule for construction of ϕ_prop
     if use_fixed_schedule
         cloud.tempering_schedule = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
+        # NEW
+        cloud_settings.tempering_schedule = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
     else
         proposed_fixed_schedule  = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
     end
@@ -175,6 +205,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         j = load(loadpath, "j")
         c = cloud.c
 
+        #= NEW
+        i = cloud_settings.stage_index
+        j = cloud_settings.c
+        =#
         ϕ_prop = proposed_fixed_schedule[j]
     else
         z_matrix = ones(1)
