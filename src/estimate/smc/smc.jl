@@ -72,9 +72,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     # General
     parallel = get_setting(m, :use_parallel_workers)
     n_parts  = get_setting(m, :n_particles)
-    n_params = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
     n_steps  = get_setting(m, :n_mh_steps_smc)
+    n_params = n_parameters(m)
 
     use_chand_recursion = get_setting(m, :use_chand_recursion)
     if any(isnan.(data)) & use_chand_recursion
@@ -94,10 +94,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     i = 1                   # Index tracking the stage of the algorithm
     j = 2                   # Index tracking the fixed_schedule entry ϕ_prop is set as
     resampled_last_period = false # Ensures proper resetting of ESS_bar after resample
-    ϕ_n = 0.                      # Instantiate ϕ_n and ϕ_prop variables for
+    ϕ_n    = 0.                   # Instantiate ϕ_n and ϕ_prop variables for
     ϕ_prop = 0.                   # reference in respective while loop conditions
     use_fixed_schedule = get_setting(m, :adaptive_tempering_target_smc) == 0.0
-    λ = get_setting(m, :λ)
+    λ   = get_setting(m, :λ)
     n_Φ = get_setting(m, :n_Φ)
     tempering_target = get_setting(m, :adaptive_tempering_target_smc)
 
