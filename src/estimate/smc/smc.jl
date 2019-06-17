@@ -65,6 +65,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ### Setting Parameters
     ##################################################################################
 
+    sendto(workers(), m = m)
+    function model_function() return m end
+    @everywhere function model_function() return m end
+
     # General
     parallel = get_setting(m, :use_parallel_workers)
     n_parts  = get_setting(m, :n_particles)
@@ -289,7 +293,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         if parallel
             new_particles = @distributed (hcat) for k in 1:n_parts
-                mutation(m, data, particle_array[k, :], d, blocks_free, blocks_all,
+                mutation(model_function, data, particle_array[k, :], d, blocks_free, blocks_all,
                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose)
             end
