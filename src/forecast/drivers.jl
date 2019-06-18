@@ -156,7 +156,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     elseif input_type == :prior
         params = rand(m.parameters, n_forecast_draws(m, :prior))
     # Return initial parameters of model object
-    elseif input_type == :init
+    elseif input_type == :init || input_type == :init_draw_shocks
 
         if m.spec == "het_dsge"
             init_parameters!(m, testing_gamma = false)
