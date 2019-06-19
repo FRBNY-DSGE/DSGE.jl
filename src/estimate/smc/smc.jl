@@ -61,13 +61,26 @@ function smc(m::AbstractModel, data::Matrix{Float64};
              intermediate_stage_start::Int = 0,
              save_intermediate::Bool = false,
              intermediate_stage_increment::Int = 10)
+
     ########################################################################################
     ### Setting Parameters
     ##################################################################################
-
     sendto(workers(), m = m)
-    function model_function() return m end
-    @everywhere function model_function() return m end
+    sendto(workers(), data = data)
+    function mutation_closure(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0, α = 1.0,
+                              old_data = Matrix{Float64}(undef, size(data, 1), 0),
+                              use_chand_recursion = false, verbose = :low)
+        return mutation(m, data, p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
+                        old_data = old_data, use_chand_recursion = use_chand_recursion,
+                        verbose = verbose)
+    end
+    @everywhere function mutation_closure(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c=1., α=1.,
+                                          old_data = Matrix{Float64}(undef, size(data, 1), 0),
+                                          use_chand_recursion = false, verbose = :low)
+        return mutation(m, data, p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
+                        old_data = old_data, use_chand_recursion = use_chand_recursion,
+                        verbose = verbose)
+    end
 
     # General
     parallel = get_setting(m, :use_parallel_workers)
@@ -142,9 +155,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                            filestring_addl)
         cloud = Cloud(load(loadpath, "cloud"))
     else
-        # Instantiating Cloud object
+        # Instantiating Cloud object, update draws, loglh, & logpost
         cloud = Cloud(m, n_parts)
-        # Modifies the Cloud object in place to update draws, loglh, & logpost
         initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
@@ -162,11 +174,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         z_matrix = load(loadpath, "z")
         w_matrix = load(loadpath, "w")
         W_matrix = load(loadpath, "W")
-
         j = load(loadpath, "j")
         i = cloud.stage_index
         c = cloud.c
-
         ϕ_prop = proposed_fixed_schedule[j]
     else
         z_matrix = ones(1)
@@ -212,7 +222,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Calculate incremental weights (if no old data, get_old_loglh(cloud) = 0)
         incremental_weights = exp.((ϕ_n1 - ϕ_n) * get_old_loglh(cloud) +
                                    (ϕ_n - ϕ_n1) * get_loglh(cloud))
-
         # Update weights
         update_weights!(cloud, incremental_weights)
         mult_weights = get_weights(cloud)
@@ -237,12 +246,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # Resample if degeneracy/ESS metric falls below the accepted threshold
         if (cloud.ESS[i] < threshold)
-            # Resample new indices according to particle weights
+            # Resample according to particle weights, uniformly reset weights to 1/n_parts
             new_inds = resample(normalized_weights; method = resampling_method)
-            # Update parameters/logpost/loglh with resampled values
             cloud.particles = [deepcopy(cloud.particles[i,j]) for i in new_inds,
-                                   j=1:size(cloud.particles, 2)]
-            reset_weights!(cloud) # Uniformly reset all weights to 1/n_parts
+                               j=1:size(cloud.particles, 2)]
+            reset_weights!(cloud)
             cloud.resamples += 1
             resampled_last_period = true
             W_matrix[:, i] = fill(1/n_parts, (n_parts, 1))
@@ -274,24 +282,25 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         if parallel
             @time new_particles = @distributed (vcat) for k in 1:n_parts
-                mutation(model_function, data, cloud.particles[k, :], d, blocks_free, blocks_all,
-                         ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
-                         use_chand_recursion = use_chand_recursion, verbose = verbose)'
+                mutation_closure(cloud.particles[k, :], d, blocks_free, blocks_all,
+                                 ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
+                                 use_chand_recursion = use_chand_recursion,
+                                 verbose = verbose)'
             end
         else
-            new_particles = [mutation(m, data, cloud.particles[k, :], d, blocks_free,
-                                      blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
-                                      old_data = old_data,
-                                      use_chand_recursion = use_chand_recursion,
-                                      verbose = verbose) for k=1:n_parts]
+            new_particles = [mutation_closure(cloud.particles[k, :], d, blocks_free,
+                                              blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
+                                              old_data = old_data,
+                                              use_chand_recursion = use_chand_recursion,
+                                              verbose = verbose) for k=1:n_parts]
         end
         update_cloud!(cloud, new_particles)
-        update_acceptance_rate!(cloud) # Update average acceptance rate
+        update_acceptance_rate!(cloud)
 
         ##############################################################################
         ### Timekeeping and Output Generation
         ##############################################################################
-        total_time = Float64((time_ns()-start_time)*1e-9)
+        total_time = Float64((time_ns() - start_time) * 1e-9)
         cloud.total_sampling_time += total_time
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -303,11 +312,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             break
         end
         if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
-            output_cloud = new_to_old_cloud(cloud, para_symbols)
-
             jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"),
                     true, true, true, IOStream) do file
-                write(file, "cloud", output_cloud)
+                write(file, "cloud", ParticleCloud(cloud, para_symbols))
                 write(file, "w", w_matrix)
                 write(file, "W", W_matrix)
                 write(file, "z", z_matrix)
@@ -319,7 +326,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ##################################################################################
     ### Saving data
     ##################################################################################
-
     if !m.testing
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5", filestring_addl), "w")
         particle_store = d_create(simfile, "smcparams", datatype(Float64),
@@ -329,10 +335,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         end
         close(simfile)
 
-        output_cloud = new_to_old_cloud(cloud, para_symbols)
         jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl),
                 true, true, true, IOStream) do file
-            write(file, "cloud", output_cloud)
+            write(file, "cloud", ParticleCloud(cloud, para_symbols))
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
             write(file, "z", z_matrix)
@@ -340,7 +345,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 end
 
-function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
+function smc(m::AbstractModel, data::DataFrame; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
@@ -348,7 +353,7 @@ function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
                filestring_addl = filestring_addl)
 end
 
-function smc(m::AbstractModel; verbose::Symbol=:low,
+function smc(m::AbstractModel; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)

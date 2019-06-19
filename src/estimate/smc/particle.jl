@@ -72,6 +72,24 @@ end
 
 """
 ```
+function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
+```
+Returns a ParticleCloud in the place of a Cloud.
+"""
+function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
+    N = size(cloud.particles, 2)
+    return ParticleCloud([Particle(cloud.particles[k, ind_weight(N)], para_symbols,
+                                   cloud.particles[k, 1:ind_para_end(N)],
+                                   cloud.particles[k, ind_loglh(N)],
+                                   cloud.particles[k, ind_logpost(N)],
+                                   cloud.particles[k, ind_old_loglh(N)],
+                                   cloud.particles[k, ind_accept(N)]) for k in 1:length(cloud)],
+                         cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
+                         cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
+end
+
+"""
+```
 Cloud
 ```
 
@@ -112,6 +130,23 @@ Easier constructor for Cloud, which initializes the weights to be equal, and eve
 function Cloud(m::AbstractModel, n_parts::Int)
     return Cloud(Matrix{Float64}(undef, n_parts, n_parameters(m) + 5),
                  zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
+end
+
+"""
+```
+function Cloud(c::ParticleCloud)
+function Cloud(c::Cloud)
+```
+Returns a Cloud type.
+"""
+function Cloud(cloud::ParticleCloud)
+    return Cloud(hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), get_logprior(cloud),
+                      get_old_loglh(cloud), get_accept(cloud), get_weights(cloud)),
+                 cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
+                 cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
+end
+function Cloud(cloud::Cloud)
+    return cloud
 end
 
 """
@@ -570,42 +605,6 @@ Returns a particle array in the place of a ParticleCloud.
 function get_cloud_array(c::ParticleCloud)
     return hcat(Matrix{Float64}(get_vals(c)'), get_loglh(c), get_logprior(c),
                 get_old_loglh(c), get_accept(c), get_weights(c))
-end
-
-"""
-```
-function Cloud(c::ParticleCloud)
-function Cloud(c::Cloud)
-```
-Returns a Cloud type.
-"""
-function Cloud(cloud::ParticleCloud)
-    return Cloud(hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), get_logprior(cloud),
-                      get_old_loglh(cloud), get_accept(cloud), get_weights(cloud)),
-                 cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
-                 cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
-end
-function Cloud(cloud::Cloud)
-    return cloud
-end
-
-
-"""
-```
-function new_to_old_cloud(c::Cloud)
-```
-Returns a ParticleCloud in the place of a Cloud.
-"""
-function new_to_old_cloud(cloud::Cloud, para_symbols::Vector{Symbol})
-    N = size(cloud.particles, 2)
-    return ParticleCloud([Particle(cloud.particles[k, ind_weight(N)], para_symbols,
-                                   cloud.particles[k, 1:ind_para_end(N)],
-                                   cloud.particles[k, ind_loglh(N)],
-                                   cloud.particles[k, ind_logpost(N)],
-                                   cloud.particles[k, ind_old_loglh(N)],
-                                   cloud.particles[k, ind_accept(N)]) for k in 1:length(cloud)],
-                         cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
-                         cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
 end
 
 """
