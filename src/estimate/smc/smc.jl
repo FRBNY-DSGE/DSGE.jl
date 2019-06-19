@@ -279,7 +279,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                 R[free_para_inds, free_para_inds]') / 2.
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
-        #d = MvNormal(θ_bar[free_para_inds], R_fr)
         θ_bar_fr = θ_bar[free_para_inds]
 
         # Generate random parameter blocks
@@ -287,11 +286,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
         if parallel
-            @time new_particles = @distributed (vcat) for k in 1:n_parts
+            @time new_particles = @distributed (hcat) for k in 1:n_parts
                 mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr, blocks_free,
                                  blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                                  use_chand_recursion = use_chand_recursion,
-                                 verbose = verbose)'
+                                 verbose = verbose)
             end
         else
             new_particles = [mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr,
