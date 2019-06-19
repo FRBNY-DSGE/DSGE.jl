@@ -240,9 +240,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             # Resample new indices according to particle weights
             new_inds = resample(normalized_weights; method = resampling_method)
             # Update parameters/logpost/loglh with resampled values
-            cloud_new.particles = [deepcopy(cloud_new.particles[i,j]) for i in new_inds,
-                                   j=1:size(cloud_new.particles, 2)]
-            reset_weights!(cloud_new) # Uniformly reset all weights to 1/n_parts
+            cloud.particles = [deepcopy(cloud.particles[i,j]) for i in new_inds,
+                                   j=1:size(cloud.particles, 2)]
+            reset_weights!(cloud) # Uniformly reset all weights to 1/n_parts
             cloud.resamples += 1
             resampled_last_period = true
             W_matrix[:, i] = fill(1/n_parts, (n_parts, 1))
@@ -303,7 +303,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             break
         end
         if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
-            output_cloud = new_to_old_cloud(cloud_new, para_symbols)
+            output_cloud = new_to_old_cloud(cloud, para_symbols)
 
             jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"),
                     true, true, true, IOStream) do file
@@ -329,7 +329,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         end
         close(simfile)
 
-        output_cloud = new_to_old_cloud(cloud_new, para_symbols)
+        output_cloud = new_to_old_cloud(cloud, para_symbols)
         jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl),
                 true, true, true, IOStream) do file
             write(file, "cloud", output_cloud)
