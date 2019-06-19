@@ -72,24 +72,6 @@ end
 
 """
 ```
-function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
-```
-Returns a ParticleCloud in the place of a Cloud.
-"""
-function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
-    N = size(cloud.particles, 2)
-    return ParticleCloud([Particle(cloud.particles[k, ind_weight(N)], para_symbols,
-                                   cloud.particles[k, 1:ind_para_end(N)],
-                                   cloud.particles[k, ind_loglh(N)],
-                                   cloud.particles[k, ind_logpost(N)],
-                                   cloud.particles[k, ind_old_loglh(N)],
-                                   cloud.particles[k, ind_accept(N)]) for k in 1:length(cloud)],
-                         cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
-                         cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
-end
-
-"""
-```
 Cloud
 ```
 
@@ -147,6 +129,25 @@ function Cloud(cloud::ParticleCloud)
 end
 function Cloud(cloud::Cloud)
     return cloud
+end
+
+
+"""
+```
+function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
+```
+Returns a ParticleCloud in the place of a Cloud.
+"""
+function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
+    N = size(cloud.particles, 2)
+    return ParticleCloud([Particle(cloud.particles[k, ind_weight(N)], para_symbols,
+                                   cloud.particles[k, 1:ind_para_end(N)],
+                                   cloud.particles[k, ind_loglh(N)],
+                                   cloud.particles[k, ind_logpost(N)],
+                                   cloud.particles[k, ind_old_loglh(N)],
+                                   cloud.particles[k, ind_accept(N)]) for k in 1:length(cloud)],
+                         cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
+                         cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
 end
 
 """
