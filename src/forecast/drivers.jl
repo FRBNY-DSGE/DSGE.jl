@@ -113,7 +113,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
-    if input_type in [:mean, :mode]
+    if input_type in [:mean, :mode, :mode_draw_shocks]
         if get_setting(m, :sampling_method) == :MH
             params = convert(Vector{Float64}, h5read(input_file_name, "params"))
         elseif get_setting(m, :sampling_method) == :SMC
@@ -215,6 +215,9 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
             return params
         end
     elseif input_type == :init_draw_shocks
+        ndraws = length(block_inds)
+        params = repeat([map(x -> x.value, m.parameters)], ndraws)
+    elseif input_type == :mode_draw_shocks
         ndraws = length(block_inds)
         params = repeat([map(x -> x.value, m.parameters)], ndraws)
     elseif input_type == :prior
@@ -343,7 +346,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     ### Multiple-Draw Forecasts
 
-    elseif input_type in [:full, :subset, :prior, :init_draw_shocks]
+    elseif input_type in [:full, :subset, :prior, :init_draw_shocks, :init_mode_shocks]
 
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
@@ -538,7 +541,16 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
             # drawn from N(s_{T|T}, P_{T|T}) (if uncertainty)
             histstates[:, end]
         else
-            kal = filter(m, df, system; cond_type = cond_type)
+            kal = Kalman(Vector{Float64}(undef,0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0))
+            try
+                kal = filter(m, df, system; cond_type = cond_type)
+            catch err
+                if isa(err, DomainError)
+                    return Dict{Symbol, Array{Float64}}()
+                else
+                    rethrow(err)
+                end
+            end
             if uncertainty
                 # If we want to draw s_T but haven't run the smoother, draw from
                 # N(s_{T|T}, P_{T|T}) directly
