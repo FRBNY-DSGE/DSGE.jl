@@ -64,20 +64,28 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     ########################################################################################
     ### Setting Parameters
-    ##################################################################################
+    ########################################################################################
+    # Construct closure of mutation function so as to avoid issues with serialization
+    # across workers with different Julia system images
     sendto(workers(), m = m)
     sendto(workers(), data = data)
-    function mutation_closure(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1.0, α = 1.0,
-                              old_data = Matrix{Float64}(undef, size(data, 1), 0),
-                              use_chand_recursion = false, verbose = :low)
-        return mutation(m, data, p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
+    function mutation_closure(p::Vector{S}, d_μ::Vector{S}, d_Σ::Matrix{S},
+                              blocks_free::Vector{Vector{Int64}},blocks_all::Vector{Vector{Int64}},
+                              ϕ_n::S, ϕ_n1::S; c::S = 1.0, α::S = 1.0,
+                              old_data::T = Matrix{S}(undef, size(data, 1), 0),
+                              use_chand_recursion::Bool = false,
+                              verbose::Symbol = :low) where {S<:Float64, T<:AbstractMatrix}
+        return mutation(m, data, p, d_μ, d_Σ, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
                         old_data = old_data, use_chand_recursion = use_chand_recursion,
                         verbose = verbose)
     end
-    @everywhere function mutation_closure(p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c=1., α=1.,
-                                          old_data = Matrix{Float64}(undef, size(data, 1), 0),
-                                          use_chand_recursion = false, verbose = :low)
-        return mutation(m, data, p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
+    @everywhere function mutation_closure(p::Vector{S}, d_μ::Vector{S}, d_Σ::Matrix{S},
+                            blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
+                            ϕ_n::S, ϕ_n1::S; c::S = 1.0, α::S = 1.0,
+                            old_data::T = Matrix{S}(undef, size(data, 1), 0),
+                            use_chand_recursion::Bool = false,
+                            verbose::Symbol = :low) where {S<:Float64, T<:Matrix}
+        return mutation(m, data, p, d_μ, d_Σ, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
                         old_data = old_data, use_chand_recursion = use_chand_recursion,
                         verbose = verbose)
     end
@@ -200,7 +208,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     while ϕ_n < 1.
         start_time = time_ns()
         cloud.stage_index = i += 1
-
         #############################################################################
         ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
         #############################################################################
@@ -237,7 +244,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ##############################################################################
         ### Step 2: Selection
         ##############################################################################
-
         # Calculate the degeneracy/effective sample size metric
         push!(cloud.ESS, 1 / sum(normalized_weights .^ 2))
 
@@ -259,7 +265,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ##############################################################################
         ### Step 3: Mutation
         ##############################################################################
-
         # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
         c = c * (0.95 + 0.10*exp(16.0 * (cloud.accept - target)) /
                (1.0 + exp(16.0 * (cloud.accept - target))))
@@ -271,10 +276,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Ensures marix is positive semi-definite symmetric
         # (not off due to numerical error) and values haven't changed
         R_fr = (R[free_para_inds, free_para_inds] +
-                R[free_para_inds, free_para_inds]') / 2
+                R[free_para_inds, free_para_inds]') / 2.
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
-        d = MvNormal(θ_bar[free_para_inds], R_fr)
+        #d = MvNormal(θ_bar[free_para_inds], R_fr)
+        θ_bar_fr = θ_bar[free_para_inds]
 
         # Generate random parameter blocks
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
@@ -282,15 +288,15 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         if parallel
             @time new_particles = @distributed (vcat) for k in 1:n_parts
-                mutation_closure(cloud.particles[k, :], d, blocks_free, blocks_all,
-                                 ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
+                mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr, blocks_free,
+                                 blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                                  use_chand_recursion = use_chand_recursion,
                                  verbose = verbose)'
             end
         else
-            new_particles = [mutation_closure(cloud.particles[k, :], d, blocks_free,
-                                              blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
-                                              old_data = old_data,
+            new_particles = [mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr,
+                                              blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c,
+                                              α = α, old_data = old_data,
                                               use_chand_recursion = use_chand_recursion,
                                               verbose = verbose) for k=1:n_parts]
         end

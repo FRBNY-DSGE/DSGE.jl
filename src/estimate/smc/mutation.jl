@@ -25,12 +25,13 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `p::Vector{Float64}`: An updated particle containing updated parameter values, log-likelihood, prior, and acceptance indicator.
 
 """
-function mutation(m::AbstractModel, data::Matrix{Float64}, p::Vector{Float64}, d::Distribution,
+function mutation(m::AbstractModel, data::Matrix{S}, p::Vector{S},
+                  d_μ::Vector{S}, d_Σ::Matrix{S},#d::Distribution,
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
                   ϕ_n::S, ϕ_n1::S; c::S = 1., α::S = 1.,
                   old_data::T = T(undef, size(data, 1), 0),
                   use_chand_recursion::Bool = false,
-                  verbose::Symbol = :low) where {S <: Float64, T <: AbstractMatrix}
+                  verbose::Symbol = :low) where {S<:Float64, T<:AbstractMatrix}
 
     n_steps     = get_setting(m, :n_mh_steps_smc)
     n_free_para = length([!θ.fixed for θ in m.parameters])
@@ -42,6 +43,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Vector{Float64}, d
     logprior  = p[ind_logprior(N)]
     like_prev = p[ind_old_loglh(N)] # Likelihood evaluated at the old data (for time tempering)
     accept    = 0.0
+
+    d = MvNormal(d_μ, d_Σ)
 
     for step in 1:n_steps
         for (block_f, block_a) in zip(blocks_free, blocks_all)
