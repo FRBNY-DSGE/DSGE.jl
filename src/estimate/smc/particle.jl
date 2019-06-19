@@ -251,7 +251,7 @@ function get_logprior(c::Cloud)
 ```
 Returns Vector{Float64}(n_parts) of log-prior of particles in cloud.
 """
-function get_logpprior(c::ParticleCloud)
+function get_logprior(c::ParticleCloud)
     #TODO: Fix logpost/logprior confusion
     return map(p -> p.logpost, c.particles)
 end
@@ -307,7 +307,7 @@ function update_draws!(c::ParticleCloud, draws::Array{Particle,1})
 Update parameter draws in cloud.
 """
 function update_draws!(c::ParticleCloud, draws::Matrix{Float64})
-    @assert size(draws) == (length(c.particles[1]),length(c))
+    @assert size(draws) == (length(c.particles[1]), length(c))
     for (i,p) in enumerate(c.particles)
         update_val!(p, draws[:,i])
     end
@@ -318,10 +318,18 @@ function update_draws!(c::ParticleCloud, draws::Array{Particle,1})
     end
 end
 @inline function update_draws!(c::Matrix{Float64}, draws::Matrix{Float64})
-    @assert size(draws) == (size(c,1), ind_para_end(size(c,2))) "Draws are incorrectly sized"
     I, J = size(draws)
-    for i = 1:I, j=1:J
-        c[i, j] = draws[i,j]
+    if (I, J) == (size(c,1), ind_para_end(size(c,2)))
+        for i = 1:I, j=1:J
+            c[i, j] = draws[i,j]
+        end
+    # Consequence of outputs from legacy functions
+    elseif (J, I) == (size(c,1), ind_para_end(size(c,2)))
+        for i = 1:I, j=1:J
+            c[i, j] = draws[j,i]
+        end
+    else
+        throw(error("update_draws!(c::Cloud, draws::Matrix): Draws are incorrectly sized!"))
     end
 end
 @inline function update_draws!(c::Cloud, draws::Matrix{Float64})
@@ -513,19 +521,45 @@ end
 """
 ```
 function update_cloud!(cloud::ParticleCloud, new_particles::Matrix{Float64})
+function update_cloud!(cloud::Cloud, new_particles::Matrix{Float64})
 ```
 Updates cloud values with those of new particles in particle array.
 """
 function update_cloud!(cloud::ParticleCloud, new_particles::Matrix{Float64})
-    N = size(new_particles, 2)
-    for k=1:length(cloud.particles)
-        cloud.particles[k].value     = new_particles[k, 1:ind_para_end(N)]
-        cloud.particles[k].loglh     = new_particles[k, ind_loglh(N)]
-        cloud.particles[k].logpost   = new_particles[k, ind_logpost(N)]
-        cloud.particles[k].old_loglh = new_particles[k, ind_old_loglh(N)]
-        cloud.particles[k].accept    = new_particles[k, ind_accept(N)]
+    M, N = size(new_particles)
+    if M == length(cloud.particles)
+        for k=1:length(cloud.particles)
+            cloud.particles[k].value     = new_particles[k, 1:ind_para_end(N)]
+            cloud.particles[k].loglh     = new_particles[k, ind_loglh(N)]
+            cloud.particles[k].logpost   = new_particles[k, ind_logpost(N)]
+            cloud.particles[k].old_loglh = new_particles[k, ind_old_loglh(N)]
+            cloud.particles[k].accept    = new_particles[k, ind_accept(N)]
+        end
+    elseif N == length(cloud.particles)
+        for k=1:length(cloud.particles)
+            cloud.particles[k].value     = new_particles[1:ind_para_end(M), k]
+            cloud.particles[k].loglh     = new_particles[ind_loglh(M), k]
+            cloud.particles[k].logpost   = new_particles[ind_logpost(M), k]
+            cloud.particles[k].old_loglh = new_particles[ind_old_loglh(M), k]
+            cloud.particles[k].accept    = new_particles[ind_accept(M), k]
+        end
+    else
+        throw(error("update_cloud!(c::ParticleCloud, draws): draws are incorrect size!"))
     end
 end
+function update_cloud!(cloud::Cloud, new_particles::Matrix{Float64})
+    I, J = size(new_particles)
+    if I == length(cloud)
+        cloud.particles = new_particles
+    elseif J == length(cloud)
+        for k = 1:length(cloud)
+            cloud.particles[k,:] = new_particles[:, k]
+        end
+    else
+        throw(error("update_cloud!(c::Cloud, draws): draws are incorrect size!"))
+    end
+end
+
 
 """
 ```
@@ -540,15 +574,38 @@ end
 
 """
 ```
-function old_to_new_cloud(c::ParticleCloud)
+function Cloud(c::ParticleCloud)
+function Cloud(c::Cloud)
 ```
-Returns a particle array in the place of a ParticleCloud.
+Returns a Cloud type.
 """
-function old_to_new_cloud(cloud::ParticleCloud)
+function Cloud(cloud::ParticleCloud)
     return Cloud(hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), get_logprior(cloud),
                       get_old_loglh(cloud), get_accept(cloud), get_weights(cloud)),
                  cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
-                 cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling.time)
+                 cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
+end
+function Cloud(cloud::Cloud)
+    return cloud
+end
+
+
+"""
+```
+function new_to_old_cloud(c::Cloud)
+```
+Returns a ParticleCloud in the place of a Cloud.
+"""
+function new_to_old_cloud(cloud::Cloud, para_symbols::Vector{Symbol})
+    N = size(cloud.particles, 2)
+    return ParticleCloud([Particle(cloud.particles[k, ind_weight(N)], para_symbols,
+                                   cloud.particles[k, 1:ind_para_end(N)],
+                                   cloud.particles[k, ind_loglh(N)],
+                                   cloud.particles[k, ind_logpost(N)],
+                                   cloud.particles[k, ind_old_loglh(N)],
+                                   cloud.particles[k, ind_accept(N)]) for k in 1:length(cloud)],
+                         cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
+                         cloud.resamples, cloud.c, cloud.accept, cloud.total_sampling_time)
 end
 
 """

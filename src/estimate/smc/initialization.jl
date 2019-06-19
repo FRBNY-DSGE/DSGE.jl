@@ -277,6 +277,5 @@ function initialize_cloud_settings!(m::AbstractModel, cloud::Union{ParticleCloud
     cloud.c           = get_setting(m, :step_size_smc)
     cloud.accept      = get_setting(m, :target_accept)
     cloud.total_sampling_time = 0.
-
     return nothing
 end
