@@ -91,15 +91,15 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 
     # Step 1 (ϕ schedule) settings
-    i = 1                   # Index tracking the stage of the algorithm
-    j = 2                   # Index tracking the fixed_schedule entry ϕ_prop is set as
-    resampled_last_period = false # Ensures proper resetting of ESS_bar after resample
+    i = 1                         # Index tracking the stage of the algorithm
+    j = 2                         # Index tracking the fixed_schedule entry ϕ_prop
     ϕ_n    = 0.                   # Instantiate ϕ_n and ϕ_prop variables for
     ϕ_prop = 0.                   # reference in respective while loop conditions
-    use_fixed_schedule = get_setting(m, :adaptive_tempering_target_smc) == 0.0
-    λ   = get_setting(m, :λ)
-    n_Φ = get_setting(m, :n_Φ)
-    tempering_target = get_setting(m, :adaptive_tempering_target_smc)
+    resampled_last_period = false # Ensures proper resetting of ESS_bar after resample
+    λ      = get_setting(m, :λ)
+    n_Φ    = get_setting(m, :n_Φ)
+    tempering_target   = get_setting(m, :adaptive_tempering_target_smc)
+    use_fixed_schedule = tempering_target == 0.0
 
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
@@ -111,86 +111,48 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     α      = get_setting(m, :mixture_proportion)
     target = accept = get_setting(m, :target_accept)
 
+    para_symbols    = [θ.key for θ in m.parameters]
     fixed_para_inds = findall([θ.fixed for θ in m.parameters])
     free_para_inds  = findall([!θ.fixed for θ in m.parameters])
     n_free_para     = length(free_para_inds)
-    para_symbols    = [θ.key for θ in m.parameters]
 
     # Step 4 (Initialization of Particle Array Cloud)
-    particle_array = Matrix{Float64}(undef, n_parts, n_params + 5)
-    cloud_new = Cloud(m, n_parts)
+    cloud = Cloud(m, n_parts)
 
     #################################################################################
     ### Initialize Algorithm: Draws from prior
     #################################################################################
-
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        if m.testing
-            println("\n\n SMC testing starts ....  \n\n  ")
-        else
-            println("\n\n SMC starts ....  \n\n  ")
-        end
+        println("\n\n SMC " * (m.testing ? "testing " : "") * "starts ....  \n\n  ")
     end
 
     if tempered_update
         if isempty(old_cloud)
             loadpath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
-            loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
-
-            cloud = load(loadpath, "cloud")
+            loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint=" * old_vintage)
+            cloud = Cloud(load(loadpath, "cloud"))
         else
-            cloud = old_cloud
+            cloud = Cloud(old_cloud)
         end
-        ### NEW ###
-        cloud_array    = get_cloud_array(cloud)
-        cloud_settings = get_cloud_settings(cloud)
-        initialize_cloud_settings!(m, cloud_settings; tempered_update = tempered_update)
-        initialize_likelihoods!(m, data, cloud_array, parallel = parallel,
-                                verbose = verbose)
-        ### NEW ###
-
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
         initialize_likelihoods!(m, data, cloud, parallel = parallel,
                                 verbose = verbose)
     elseif continue_intermediate
         loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2",
                            filestring_addl)
-        cloud = load(loadpath, "cloud")
-
-        ### NEW ###
-        cloud_array    = get_cloud_array(cloud)
-        cloud_settings = get_cloud_settings(cloud)
+        cloud = Cloud(load(loadpath, "cloud"))
     else
-        # Instantiating ParticleCloud object
-        cloud = ParticleCloud(m, n_parts)
-
-        ### NEW ###
-        cloud_array    = get_cloud_array(cloud)
-        cloud_settings = get_cloud_settings(cloud)
-
-        # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw!(m, data, cloud_array, parallel = parallel,
-                      use_chand_recursion = use_chand_recursion, verbose = verbose)
-
-        initialize_cloud_settings!(m, cloud_settings; tempered_update = tempered_update)
-        ### NEW ###
-
-        # Modifies the cloud object in place to update draws, loglh, & logpost
+        # Instantiating Cloud object
+        cloud = Cloud(m, n_parts)
+        # Modifies the Cloud object in place to update draws, loglh, & logpost
         initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
-
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
-
-        # TODO: since draw was random, we want these to be consistent
-        cloud_array    = get_cloud_array(cloud)
-        cloud_settings = get_cloud_settings(cloud)
     end
 
     # Fixed schedule for construction of ϕ_prop
     if use_fixed_schedule
         cloud.tempering_schedule = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
-        # NEW
-        cloud_settings.tempering_schedule = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
     else
         proposed_fixed_schedule  = ((collect(1:n_Φ) .- 1) / (n_Φ-1)) .^ λ
     end
@@ -201,33 +163,20 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         w_matrix = load(loadpath, "w")
         W_matrix = load(loadpath, "W")
 
-        i = cloud.stage_index
         j = load(loadpath, "j")
+        i = cloud.stage_index
         c = cloud.c
 
-        #= NEW
-        i = cloud_settings.stage_index
-        j = cloud_settings.c
-        =#
         ϕ_prop = proposed_fixed_schedule[j]
     else
         z_matrix = ones(1)
         w_matrix = zeros(n_parts, 1)
-        if tempered_update
-            W_matrix = similar(w_matrix)
-            for k in 1:n_parts
-                W_matrix[k] = cloud.particles[k].weight
-            end
-        else
-            W_matrix = fill(1/n_parts, (n_parts,1))
-        end
+        W_matrix = Matrix{Float64}(tempered_update ? get_weights(cloud) :
+                                                     fill(1/n_parts, (n_parts, 1)))
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        init_stage_print(cloud; verbose = verbose,
-                         use_fixed_schedule = use_fixed_schedule)
-        # New
-        init_stage_print(cloud_array, cloud_settings, para_symbols; verbose = verbose,
+        init_stage_print(cloud, para_symbols; verbose = verbose,
                          use_fixed_schedule = use_fixed_schedule)
     end
 
@@ -241,17 +190,14 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     while ϕ_n < 1.
         start_time = time_ns()
         cloud.stage_index = i += 1
-        cloud_settings.stage_index = i += 1
 
         #############################################################################
         ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
         #############################################################################
         ϕ_n1 = cloud.tempering_schedule[i-1]
-        ϕ_n1 = cloud_settings.tempering_schedule[i-1]
 
         if use_fixed_schedule
             ϕ_n = cloud.tempering_schedule[i]
-            ϕ_n = cloud_settings.tempering_schedule[i]
         else
             ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud,
                                                        proposed_fixed_schedule,
@@ -284,20 +230,22 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ##############################################################################
 
         # Calculate the degeneracy/effective sample size metric
-        push!(cloud.ESS, 1/sum(normalized_weights.^2))
+        push!(cloud.ESS, 1 / sum(normalized_weights .^ 2))
 
         # If this assertion does not hold then there are likely too few particles
         @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
 
         # Resample if degeneracy/ESS metric falls below the accepted threshold
         if (cloud.ESS[i] < threshold)
+            # Resample new indices according to particle weights
             new_inds = resample(normalized_weights; method = resampling_method)
             # Update parameters/logpost/loglh with resampled values
-            cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
-            reset_weights!(cloud) # Uniformly reset all weights to 1/n_parts
+            cloud_new.particles = [deepcopy(cloud_new.particles[i,j]) for i in new_inds,
+                                   j=1:size(cloud_new.particles, 2)]
+            reset_weights!(cloud_new) # Uniformly reset all weights to 1/n_parts
             cloud.resamples += 1
             resampled_last_period = true
-            W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
+            W_matrix[:, i] = fill(1/n_parts, (n_parts, 1))
         end
 
         ##############################################################################
@@ -305,8 +253,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ##############################################################################
 
         # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
-        c = c*(0.95 + 0.10*exp(16 .*(cloud.accept - target)) / (1.
-                                     + exp(16 .*(cloud.accept - target))))
+        c = c * (0.95 + 0.10*exp(16.0 * (cloud.accept - target)) /
+               (1.0 + exp(16.0 * (cloud.accept - target))))
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
@@ -320,30 +268,24 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
         d = MvNormal(θ_bar[free_para_inds], R_fr)
 
-        # New way of generating blocks
+        # Generate random parameter blocks
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
-        particle_array = hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), map(x -> x.logpost, cloud.particles), get_old_loglh(cloud), map(x -> x.accept, cloud.particles))
-
         if parallel
-            new_particles = @distributed (hcat) for k in 1:n_parts
-                mutation(model_function, data, particle_array[k, :], d, blocks_free, blocks_all,
+            @time new_particles = @distributed (vcat) for k in 1:n_parts
+                mutation(model_function, data, cloud.particles[k, :], d, blocks_free, blocks_all,
                          ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose)'
             end
         else
-            new_particles = [mutation(m, data, particle_array[k, :], d, blocks_free,
+            new_particles = [mutation(m, data, cloud.particles[k, :], d, blocks_free,
                                       blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
                                       old_data = old_data,
                                       use_chand_recursion = use_chand_recursion,
                                       verbose = verbose) for k=1:n_parts]
         end
-
-        particle_array = new_particles
         update_cloud!(cloud, new_particles)
-
-        #cloud.particles = new_particles
         update_acceptance_rate!(cloud) # Update average acceptance rate
 
         ##############################################################################
@@ -353,7 +295,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         cloud.total_sampling_time += total_time
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            end_stage_print(cloud; verbose = verbose,
+            end_stage_print(cloud, para_symbols; verbose = verbose,
                             use_fixed_schedule = use_fixed_schedule)
         end
 
@@ -361,11 +303,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             break
         end
         if mod(cloud.stage_index, intermediate_stage_increment) == 0 && save_intermediate
-            update_cloud!(cloud, particle_array)
+            output_cloud = new_to_old_cloud(cloud_new, para_symbols)
 
             jldopen(rawpath(m, "estimate", "smc_cloud_stage=$(cloud.stage_index).jld2"),
                     true, true, true, IOStream) do file
-                write(file, "cloud", cloud)
+                write(file, "cloud", output_cloud)
                 write(file, "w", w_matrix)
                 write(file, "W", W_matrix)
                 write(file, "z", z_matrix)
@@ -382,12 +324,15 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5", filestring_addl), "w")
         particle_store = d_create(simfile, "smcparams", datatype(Float64),
                                   dataspace(n_parts, n_params))
-        for i in 1:length(cloud)
-            particle_store[i,:] = cloud.particles[i].value
+        for i in 1:n_parts
+            particle_store[i,:] = cloud.particles[i, 1:n_params]#.particles[i].value
         end
         close(simfile)
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl), true, true, true, IOStream) do file
-            write(file, "cloud", cloud)
+
+        output_cloud = new_to_old_cloud(cloud_new, para_symbols)
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl),
+                true, true, true, IOStream) do file
+            write(file, "cloud", output_cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
             write(file, "z", z_matrix)
