@@ -271,7 +271,9 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
 ```
 """
 function prior_table(m::AbstractModel; subset_string::String = "",
-             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+                     groupings::AbstractDict{String, Vector{Parameter}} =
+                     Dict{String, Vector{Parameter}}(),
+                     caption::Bool = true, outdir::String = "")
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -287,6 +289,7 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     if !isempty(outdir)
         outfile = replace(outfile, dirname(outfile), outdir)
     end
+
     fid = open(outfile, "w")
 
     # Write header
@@ -355,7 +358,7 @@ function prior_table(m::AbstractModel; subset_string::String = "",
             @printf fid " %s &" (θ.fixed ? "-" : distid(get(θ.prior)))
             @printf fid " %0.2f &" prior_mean
             if θ.fixed
-                @printf fid " \\scriptsize{fixed} &"
+                @printf fid " 0.00 &"
             else
                 @printf fid " %0.2f &" prior_std
             end
