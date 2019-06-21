@@ -1,7 +1,7 @@
 julia 0.7
 BenchmarkTools
 Calculus
-CSV
+CSV 0.4.3
 DataFrames
 OrderedCollections
 DataStructures
