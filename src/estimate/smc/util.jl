@@ -58,7 +58,7 @@ Function ensures type conformity of the return arguments.
 """
 function scalar_reshape(args...)
     n_args = length(args)
-    return_arg = Vector{Vector{Float64}}(n_args)
+    return_arg = Vector{Vector{Float64}}(undef, n_args)
     for i in 1:n_args
         arg = typeof(args[i]) <: Vector ? args[i] : [args[i]]
         return_arg[i] = arg

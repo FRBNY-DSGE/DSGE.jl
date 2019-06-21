@@ -165,9 +165,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     else
         # Instantiating Cloud object, update draws, loglh, & logpost
         cloud = Cloud(m, n_parts)
-        initial_draw!(m, data, cloud, parallel = parallel,
+        @time initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
-        initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
+        @time initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
     end
 
     # Fixed schedule for construction of ϕ_prop
@@ -285,19 +285,19 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
-        if parallel
-            @time new_particles = @distributed (hcat) for k in 1:n_parts
+        @time new_particles = if parallel
+            @distributed (hcat) for k in 1:n_parts
                 mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr, blocks_free,
                                  blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
                                  use_chand_recursion = use_chand_recursion,
                                  verbose = verbose)
             end
         else
-            new_particles = [mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr,
-                                              blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c,
-                                              α = α, old_data = old_data,
-                                              use_chand_recursion = use_chand_recursion,
-                                              verbose = verbose) for k=1:n_parts]
+            hcat([mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr,
+                                   blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c,
+                                   α = α, old_data = old_data,
+                                   use_chand_recursion = use_chand_recursion,
+                                   verbose = verbose) for k=1:n_parts]...)
         end
         update_cloud!(cloud, new_particles)
         update_acceptance_rate!(cloud)
