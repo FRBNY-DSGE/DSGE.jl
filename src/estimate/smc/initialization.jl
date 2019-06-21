@@ -1,5 +1,46 @@
 """
 ```
+one_draw(m::AbstractModel, data::Matrix{Float64}; use_chand_recursion::Bool = true,
+         verbose::Symbol = :low)
+```
+Finds and returns one valid draw from parameter distribution, along with its log likelihood and log posterior.
+"""
+function one_draw(m::AbstractModel, data::Matrix{Float64};
+                  use_chand_recursion::Bool = true, verbose::Symbol = :low)
+    success    = false
+    draw       = vec(rand(m.parameters, 1))
+    draw_loglh = draw_logpost = 0.0
+
+    while !success
+        try
+            update!(m, draw)
+            draw_loglh = likelihood(m, data, catch_errors = true,
+                                    use_chand_recursion=use_chand_recursion,
+                                    verbose = verbose)
+            draw_logpost = prior(m)
+            if (draw_loglh == -Inf) | (draw_loglh === NaN)
+                draw_loglh = draw_logpost = -Inf
+            end
+        catch err
+            if isa(err, ParamBoundsError)
+                draw_loglh = draw_logpost = -Inf
+            elseif isa(err, PosDefException) || isa(err, SingularException)
+                draw_loglh = draw_logpost = -Inf
+            else
+                throw(err)
+            end
+        end
+        if any(isinf.(draw_loglh))
+            draw = vec(rand(m.parameters, 1))
+        else
+            success = true
+        end
+    end
+    return DSGE.vector_reshape(draw, draw_loglh, draw_logpost)
+end
+
+"""
+```
 initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud)
 initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::Cloud)
 ```
@@ -8,249 +49,94 @@ Draw from a general starting distribution (set by default to be from the prior) 
 initialize the SMC algorithm. Returns a tuple (logpost, loglh) and modifies the
 particle objects in the particle cloud in place.
 """
-function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
+function initial_draw!(m::AbstractModel, data::Matrix{Float64},
+                       c::Union{DSGE.Cloud, ParticleCloud};
                        parallel::Bool = false, use_chand_recursion::Bool = true,
                        verbose::Symbol = :low)
     n_parts = length(c)
-    loglh   = zeros(n_parts)
-    logpost = zeros(n_parts)
-    if parallel
-        draws, loglh, logpost = @sync @distributed (vector_reduce) for i in 1:n_parts
-            draw         = vec(rand(m.parameters, 1))
-            draw_loglh   = 0.
-            draw_logpost = 0.
-            success      = false
-            while !success
-                try
-                    update!(m, draw)
-                    draw_loglh = likelihood(m, data, catch_errors = true,
-                                            use_chand_recursion=use_chand_recursion,
-                                            verbose = verbose)
-                    draw_logpost = prior(m)
-                    if (draw_loglh == -Inf) | (draw_loglh===NaN)
-                        draw_logpost = -Inf
-                        draw_loglh = -Inf
-                    end
-                catch err
-                    if isa(err, ParamBoundsError)
-                        draw_loglh = draw_logpost = -Inf
-                    elseif isa(err, PosDefException) || isa(err, SingularException)
-                        draw_loglh = -Inf
-                        draw_logpost = -Inf
-                    else
-                        throw(err)
-                    end
-                end
 
-                if any(isinf.(draw_loglh))
-                    draw = vec(rand(m.parameters, 1))
-                else
-                    success = true
-                end
-            end
-            vector_reshape(draw, draw_loglh, draw_logpost)
-        end
-        loglh = dropdims(loglh, dims = 1)
-        logpost = dropdims(logpost, dims = 1)
-    else
-        draws = rand(m.parameters, n_parts)
-        for i in 1:n_parts
-            success = false
-            while !success
-                try
-                    update!(m, draws[:, i])
-                    loglh[i] = likelihood(m, data, catch_errors = true,
-                                          use_chand_recursion = use_chand_recursion, verbose = verbose)
-                    logpost[i] = prior(m)
-                    if (loglh[i] == -Inf) | (loglh[i]===NaN)
-                        logpost[i] = -Inf
-                        loglh[i] = -Inf
-                    end
-                catch err
-                    if isa(err, ParamBoundsError)
-                        loglh[i] = logpost[i] = -Inf
-                    elseif isa(err, PosDefException)
-                        logpost[i] = -Inf
-                        loglh[i] = -Inf
-                    else
-                        rethrow(err)
-                    end
-                end
-                if isinf(loglh[i])
-                    draws[:, i] = rand(m.parameters, 1)
-                else
-                    success = true
-                end
-            end
-        end
-    end
-    update_draws!(c, draws)
-    update_loglh!(c, loglh)
-    update_logpost!(c, logpost)
-end
-function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::Cloud;
-                       parallel::Bool = false, use_chand_recursion::Bool = true,
-                       verbose::Symbol = :low)
-    n_parts = length(c)
-    loglh   = zeros(n_parts)
-    logpost = zeros(n_parts)
-    if parallel
-        draws, loglh, logpost = @sync @distributed (vector_reduce) for i in 1:n_parts
-            draw         = vec(rand(m.parameters, 1))
-            draw_loglh   = 0.
-            draw_logpost = 0.
-            success      = false
-            while !success
-                try
-                    update!(m, draw)
-                    draw_loglh = likelihood(m, data, catch_errors = true,
-                                            use_chand_recursion=use_chand_recursion,
-                                            verbose = verbose)
-                    draw_logpost = prior(m)
-                    if (draw_loglh == -Inf) | (draw_loglh===NaN)
-                        draw_logpost = -Inf
-                        draw_loglh = -Inf
-                    end
-                catch err
-                    if isa(err, ParamBoundsError)
-                        draw_loglh = draw_logpost = -Inf
-                    elseif isa(err, PosDefException) || isa(err, SingularException)
-                        draw_loglh = -Inf
-                        draw_logpost = -Inf
-                    else
-                        throw(err)
-                    end
-                end
+    # ================== Define closure on one_draw function ==================
+    DSGE.sendto(workers(), m = m)
+    DSGE.sendto(workers(), data = data)
+    DSGE.sendto(workers(), verbose = verbose)
+    DSGE.sendto(workers(), use_chand_recursion = use_chand_recursion)
 
-                if any(isinf.(draw_loglh))
-                    draw = vec(rand(m.parameters, 1))
-                else
-                    success = true
-                end
-            end
-            vector_reshape(draw, draw_loglh, draw_logpost)
+    one_draw_closure() = one_draw(m, data; use_chand_recursion = use_chand_recursion,
+                                  verbose = verbose)
+    @everywhere one_draw_closure() = one_draw(m, data;
+                                              use_chand_recursion = use_chand_recursion,
+                                              verbose = verbose)
+    # =========================================================================
+
+    # For each particle, finds valid parameter draw and returns likelihood & posterior
+    draws, loglh, logpost = if parallel
+        @sync @distributed (DSGE.vector_reduce) for i in 1:n_parts
+            one_draw_closure()
         end
-        loglh = dropdims(loglh, dims = 1)
-        logpost = dropdims(logpost, dims = 1)
     else
-        draws = rand(m.parameters, n_parts)
-        for i in 1:n_parts
-            success = false
-            while !success
-                try
-                    update!(m, draws[:, i])
-                    loglh[i] = likelihood(m, data, catch_errors = true,
-                                          use_chand_recursion = use_chand_recursion, verbose = verbose)
-                    logpost[i] = prior(m)
-                    if (loglh[i] == -Inf) | (loglh[i]===NaN)
-                        logpost[i] = -Inf
-                        loglh[i] = -Inf
-                    end
-                catch err
-                    if isa(err, ParamBoundsError)
-                        loglh[i] = logpost[i] = -Inf
-                    elseif isa(err, PosDefException)
-                        logpost[i] = -Inf
-                        loglh[i] = -Inf
-                    else
-                        rethrow(err)
-                    end
-                end
-                if isinf(loglh[i])
-                    draws[:, i] = rand(m.parameters, 1)
-                else
-                    success = true
-                end
-            end
-        end
+        DSGE.vector_reduce([one_draw_closure() for i in 1:n_parts]...)
     end
-    update_draws!(c, draws)
-    update_loglh!(c, loglh)
-    update_logpost!(c, logpost)
+    DSGE.update_draws!(c, draws)
+    DSGE.update_loglh!(c, vec(loglh))
+    DSGE.update_logpost!(c, vec(logpost))
 end
 
 """
 ```
-initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
+function draw_likelihood(m, data, draw_vec; verbose::Symbol = :low)
+```
+Computes likelihood of a particular parameter draw; returns loglh and logpost.
+"""
+function draw_likelihood(m::AbstractModel, data::Matrix{Float64},
+                         draw_vec::Vector{Float64}; verbose::Symbol = :low)
+    update!(m, draw_vec)
+    loglh   = likelihood(m, data, verbose = verbose)
+    logpost = prior(m)
+    return DSGE.scalar_reshape(loglh, logpost)
+end
+
+"""
+```
+initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64},
+                        c::Union{Cloud, ParticleCloud};
                         parallel::Bool = false, verbose::Symbol = :low)
 ```
 This function is made for transfering the log-likelihood values saved in the
-ParticleCloud from a previous estimation to each particle's respective old_loglh
+Cloud from a previous estimation to each particle's respective old_loglh
 field, and for evaluating/saving the likelihood and posterior at the new data, which
 here is just the argument, data.
 """
-function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
+function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64},
+                                 c::Union{DSGE.Cloud, ParticleCloud};
                                  parallel::Bool = false, verbose::Symbol = :low)
-    # Retire log-likelihood values from the old estimation to the field old_loglh
-    map(p -> p.old_loglh = p.loglh, c.particles)
-
     n_parts = length(c)
-    draws = get_vals(c)
-    loglh = zeros(n_parts)
-    logpost = zeros(n_parts)
+    draws = (typeof(c) <: DSGE.Cloud) ? DSGE.get_vals(c) : Matrix{Float64}(DSGE.get_vals(c)')
 
-    if parallel
-        loglh, logpost = @sync @distributed (scalar_reduce) for i in 1:n_parts
-            update!(m, draws[:, i])
-            draw_loglh = likelihood(m, data, verbose = verbose)
-            draw_logpost = prior(m)
-            scalar_reshape(draw_loglh, draw_logpost)
+    # Retire log-likelihood values from the old estimation to the field old_loglh
+    DSGE.update_old_loglh!(c, DSGE.get_loglh(c))
+
+    # ============== Define closure on draw_likelihood function ===============
+    DSGE.sendto(workers(), m = m)
+    DSGE.sendto(workers(), data = data)
+    DSGE.sendto(workers(), verbose = verbose)
+
+    draw_likelihood_closure(draw::Vector{Float64}) = draw_likelihood(m, data, draw;
+                                                                 verbose = verbose)
+    @everywhere draw_likelihood_closure(draw::Vector{Float64}) = draw_likelihood(m, data,
+                                                                 draw; verbose = verbose)
+    # =========================================================================
+
+    # TODO: handle when the likelihood with new data cannot be evaluated (returns -Inf),
+    # even if the likelihood was not -Inf prior to incorporating new data
+    loglh, logpost = if parallel
+        @sync @distributed (DSGE.scalar_reduce) for i in 1:n_parts
+            draw_likelihood_closure(draws[i, :])
         end
     else
-        for i in 1:n_parts
-            update!(m, draws[:, i])
-            loglh[i] = likelihood(m, data, verbose = verbose)
-            logpost[i] = prior(m)
-
-            # Will need a way to handle the case when the likelihood with the new data
-            # cannot be evaluated (returning -Inf) even if the likelihood was not -Inf
-            # prior to incorporating the new data
-        end
+        DSGE.scalar_reduce([draw_likelihood_closure(draws[i, :]) for i in 1:n_parts]...)
     end
-    update_loglh!(c, loglh)
-    update_logpost!(c, logpost)
-end
-
-"""
-```
-initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::Matrix{Float64};
-                        parallel::Bool = false, verbose::Symbol = :low)
-```
-This function is made for transfering the log-likelihood values saved in the
-ParticleCloud from a previous estimation to each particle's respective old_loglh
-field, and for evaluating/saving the likelihood and posterior at the new data, which
-here is just the argument, data.
-"""
-function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::Cloud;
-                                 parallel::Bool = false, verbose::Symbol = :low)
-    # Retire log-likelihood values from the old estimation to the field old_loglh
-    update_old_loglh!(c, get_loglh(c))
-
-    n_parts = length(c)
-    draws = get_vals(c)
-    loglh = zeros(n_parts)
-    logpost = zeros(n_parts)
-
-    if parallel
-        loglh, logpost = @sync @distributed (scalar_reduce) for i in 1:n_parts
-            update!(m, draws[i, :])
-            draw_loglh = likelihood(m, data, verbose = verbose)
-            draw_logpost = prior(m)
-            scalar_reshape(draw_loglh, draw_logpost)
-        end
-    else
-        for i in 1:n_parts
-            update!(m, draws[i, :])
-            loglh[i] = likelihood(m, data, verbose = verbose)
-            logpost[i] = prior(m)
-
-            # Will need a way to handle the case when the likelihood with the new data
-            # cannot be evaluated (returning -Inf) even if the likelihood was not -Inf
-            # prior to incorporating the new data
-        end
-    end
-    update_loglh!(c, loglh)
-    update_logpost!(c, logpost)
+    DSGE.update_loglh!(c, loglh)
+    DSGE.update_logpost!(c, logpost)
 end
 
 """
@@ -260,22 +146,19 @@ function initialize_cloud_settings!(m::AbstractModel, cloud::ParticleCloud;
 ```
 Initializes stage index, number of Φ stages, c, resamples, acceptance, and sampling time.
 """
-function initialize_cloud_settings!(m::AbstractModel, cloud::Union{ParticleCloud,Cloud};
+function initialize_cloud_settings!(m::AbstractModel,
+                                    cloud::Union{DSGE.ParticleCloud,DSGE.Cloud};
                                     tempered_update::Bool = false)
-    n_parts = get_setting(m, :n_particles)
-    cloud.tempering_schedule = zeros(1)
-
     if tempered_update
         cloud.ESS = [cloud.ESS[end]]
     else
-        cloud.ESS[1] = n_parts
+        cloud.ESS[1] = get_setting(m, :n_particles)
     end
-
     cloud.stage_index = 1
     cloud.n_Φ         = get_setting(m, :n_Φ)
     cloud.resamples   = 0
     cloud.c           = get_setting(m, :step_size_smc)
     cloud.accept      = get_setting(m, :target_accept)
     cloud.total_sampling_time = 0.
-    return nothing
+    cloud.tempering_schedule  = zeros(1)
 end
