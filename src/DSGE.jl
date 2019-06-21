@@ -1,7 +1,6 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-using ParallelDataTransfer
     using Dates, Test, BenchmarkTools
     using CSV
 using DataFrames, DataStructures, OrderedCollections
