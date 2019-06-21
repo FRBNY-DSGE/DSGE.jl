@@ -75,7 +75,7 @@ function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
     for (var, title) in zip(vars, titles)
         ylabel = series_ylabel(m, var, class, untrans = untrans, fourquarter = fourquarter)
         ylabel = ylabel * " (deviations from baseline)"
-        @show typeof(var), typeof(hist), typeof(fcast)
+
         plots[var] = histforecast(var, hist, fcast;
                                   start_date = date_forecast_start(m),
                                   title = title, legend = legend, kwargs...)
