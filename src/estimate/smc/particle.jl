@@ -354,22 +354,24 @@ function update_draws!(c::ParticleCloud, draws::Array{Particle,1})
     end
 end
 @inline function update_draws!(c::Matrix{Float64}, draws::Matrix{Float64})
-    I, J = size(draws)
-    if (I, J) == (size(c,1), ind_para_end(size(c,2)))
+
+end
+@inline function update_draws!(c::Cloud, draws::Matrix{Float64})
+    I, J     = size(draws)
+    n_params = ind_para_end(size(c.particles, 2))
+    n_parts  = length(c)
+
+    if (I, J) == (n_parts, n_params)
         for i = 1:I, j=1:J
-            c[i, j] = draws[i,j]
+            c.particles[i, j] = draws[i, j]
         end
-    # Consequence of outputs from legacy functions
-    elseif (J, I) == (size(c,1), ind_para_end(size(c,2)))
+    elseif (I, J) == (n_params, n_parts)
         for i = 1:I, j=1:J
-            c[i, j] = draws[j,i]
+            c.particles[j, i] = draws[i, j]
         end
     else
         throw(error("update_draws!(c::Cloud, draws::Matrix): Draws are incorrectly sized!"))
     end
-end
-@inline function update_draws!(c::Cloud, draws::Matrix{Float64})
-    update_draws!(c.particles, draws)
 end
 
 """
