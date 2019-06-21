@@ -223,7 +223,6 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
     elseif input_type == :prior
         ndraws = length(block_inds)
         params = Vector{Vector{Float64}}(undef, ndraws)
-        @show block_inds
         for (i, j) in zip(1:ndraws, block_inds)
             try_again = true
             param_try = vec(rand(m.parameters, ndraws)[:, i])
@@ -346,7 +345,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     ### Multiple-Draw Forecasts
 
-    elseif input_type in [:full, :subset, :prior, :init_draw_shocks, :init_mode_shocks]
+    elseif input_type in [:full, :subset, :prior, :init_draw_shocks, :mode_draw_shocks]
 
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
@@ -364,7 +363,6 @@ function forecast_one(m::AbstractModel{Float64},
 
             # Get to work!
             params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
-            @show size(params)
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                  param, df, verbose = verbose),
@@ -394,7 +392,6 @@ function forecast_one(m::AbstractModel{Float64},
         end # of loop through blocks
 
     end # of input_type
-
     combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
 
     println(verbose, :low, "\nForecast complete: $(now())")
@@ -483,7 +480,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     uncertainty = if Nullables.isnull(uncertainty_override)
         if input_type in [:init, :mode, :mean, :prior]
             false
-        elseif input_type in [:full, :subset]
+        elseif input_type in [:full, :subset, :mode_draw_shocks, :init_draw_shocks]
             true
         end
     else
