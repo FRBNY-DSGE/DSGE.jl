@@ -36,7 +36,7 @@ function one_draw(m::AbstractModel, data::Matrix{Float64};
             success = true
         end
     end
-    return DSGE.vector_reshape(draw, draw_loglh, draw_logpost)
+    return vector_reshape(draw, draw_loglh, draw_logpost)
 end
 
 """
@@ -50,16 +50,16 @@ initialize the SMC algorithm. Returns a tuple (logpost, loglh) and modifies the
 particle objects in the particle cloud in place.
 """
 function initial_draw!(m::AbstractModel, data::Matrix{Float64},
-                       c::Union{DSGE.Cloud, ParticleCloud};
+                       c::Union{Cloud, ParticleCloud};
                        parallel::Bool = false, use_chand_recursion::Bool = true,
                        verbose::Symbol = :low)
     n_parts = length(c)
 
     # ================== Define closure on one_draw function ==================
-    DSGE.sendto(workers(), m = m)
-    DSGE.sendto(workers(), data = data)
-    DSGE.sendto(workers(), verbose = verbose)
-    DSGE.sendto(workers(), use_chand_recursion = use_chand_recursion)
+    sendto(workers(), m = m)
+    sendto(workers(), data = data)
+    sendto(workers(), verbose = verbose)
+    sendto(workers(), use_chand_recursion = use_chand_recursion)
 
     one_draw_closure() = one_draw(m, data; use_chand_recursion = use_chand_recursion,
                                   verbose = verbose)
@@ -70,15 +70,15 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64},
 
     # For each particle, finds valid parameter draw and returns likelihood & posterior
     draws, loglh, logpost = if parallel
-        @sync @distributed (DSGE.vector_reduce) for i in 1:n_parts
+        @sync @distributed (vector_reduce) for i in 1:n_parts
             one_draw_closure()
         end
     else
-        DSGE.vector_reduce([one_draw_closure() for i in 1:n_parts]...)
+        vector_reduce([one_draw_closure() for i in 1:n_parts]...)
     end
-    DSGE.update_draws!(c, draws)
-    DSGE.update_loglh!(c, vec(loglh))
-    DSGE.update_logpost!(c, vec(logpost))
+    update_draws!(c, draws)
+    update_loglh!(c, vec(loglh))
+    update_logpost!(c, vec(logpost))
 end
 
 """
@@ -92,7 +92,7 @@ function draw_likelihood(m::AbstractModel, data::Matrix{Float64},
     update!(m, draw_vec)
     loglh   = likelihood(m, data, verbose = verbose)
     logpost = prior(m)
-    return DSGE.scalar_reshape(loglh, logpost)
+    return scalar_reshape(loglh, logpost)
 end
 
 """
@@ -107,18 +107,18 @@ field, and for evaluating/saving the likelihood and posterior at the new data, w
 here is just the argument, data.
 """
 function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64},
-                                 c::Union{DSGE.Cloud, ParticleCloud};
+                                 c::Union{Cloud, ParticleCloud};
                                  parallel::Bool = false, verbose::Symbol = :low)
     n_parts = length(c)
-    draws = (typeof(c) <: DSGE.Cloud) ? DSGE.get_vals(c) : Matrix{Float64}(DSGE.get_vals(c)')
+    draws = (typeof(c) <: Cloud) ? get_vals(c) : Matrix{Float64}(get_vals(c)')
 
     # Retire log-likelihood values from the old estimation to the field old_loglh
-    DSGE.update_old_loglh!(c, DSGE.get_loglh(c))
+    update_old_loglh!(c, get_loglh(c))
 
     # ============== Define closure on draw_likelihood function ===============
-    DSGE.sendto(workers(), m = m)
-    DSGE.sendto(workers(), data = data)
-    DSGE.sendto(workers(), verbose = verbose)
+    sendto(workers(), m = m)
+    sendto(workers(), data = data)
+    sendto(workers(), verbose = verbose)
 
     draw_likelihood_closure(draw::Vector{Float64}) = draw_likelihood(m, data, draw;
                                                                  verbose = verbose)
@@ -129,14 +129,14 @@ function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64},
     # TODO: handle when the likelihood with new data cannot be evaluated (returns -Inf),
     # even if the likelihood was not -Inf prior to incorporating new data
     loglh, logpost = if parallel
-        @sync @distributed (DSGE.scalar_reduce) for i in 1:n_parts
+        @sync @distributed (scalar_reduce) for i in 1:n_parts
             draw_likelihood_closure(draws[i, :])
         end
     else
-        DSGE.scalar_reduce([draw_likelihood_closure(draws[i, :]) for i in 1:n_parts]...)
+        scalar_reduce([draw_likelihood_closure(draws[i, :]) for i in 1:n_parts]...)
     end
-    DSGE.update_loglh!(c, loglh)
-    DSGE.update_logpost!(c, logpost)
+    update_loglh!(c, loglh)
+    update_logpost!(c, logpost)
 end
 
 """
@@ -147,7 +147,7 @@ function initialize_cloud_settings!(m::AbstractModel, cloud::ParticleCloud;
 Initializes stage index, number of Φ stages, c, resamples, acceptance, and sampling time.
 """
 function initialize_cloud_settings!(m::AbstractModel,
-                                    cloud::Union{DSGE.ParticleCloud,DSGE.Cloud};
+                                    cloud::Union{ParticleCloud,Cloud};
                                     tempered_update::Bool = false)
     if tempered_update
         cloud.ESS = [cloud.ESS[end]]
