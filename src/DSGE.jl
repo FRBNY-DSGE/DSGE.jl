@@ -3,7 +3,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 module DSGE
     using Dates, Test, BenchmarkTools
     using CSV
-using DataFrames, DataStructures, OrderedCollections
+    using DataFrames, DataStructures, OrderedCollections
     using BasisMatrices, ColorTypes, Distributed, Distributions, FileIO, FFTW, FredData, HDF5, JLD2
     using LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase
     using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatsPlots
@@ -11,6 +11,7 @@ using DataFrames, DataStructures, OrderedCollections
     using QuantEcon: solve_discrete_lyapunov
     using DifferentialEquations: ODEProblem, Tsit5, Euler
     using ForwardDiff
+    using ParallelDataTransfer
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
@@ -18,6 +19,7 @@ using DataFrames, DataStructures, OrderedCollections
     import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
+    import ParallelDataTransfer.sendto
     import StateSpaceRoutines: KalmanFilter
     import SparseArrays: sparse
     export
