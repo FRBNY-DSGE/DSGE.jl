@@ -67,8 +67,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
     # Construct closure of mutation function so as to avoid issues with serialization
     # across workers with different Julia system images
-    sendto(workers(), m = m)
-    sendto(workers(), data = data)
+    ParallelDataTransfer.sendto(workers(), m = m)
+    ParallelDataTransfer.sendto(workers(), data = data)
     function mutation_closure(p::Vector{S}, d_μ::Vector{S}, d_Σ::Matrix{S},
                               blocks_free::Vector{Vector{Int64}},blocks_all::Vector{Vector{Int64}},
                               ϕ_n::S, ϕ_n1::S; c::S = 1.0, α::S = 1.0,
