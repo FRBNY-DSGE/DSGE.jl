@@ -87,15 +87,9 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
 @testset "Test full-distribution blocking" begin
     for input_type in [:mode, :full]
         output_files = get_forecast_output_files(m, input_type, :none, output_vars)
-        JLD2.jldopen(output_files[:trendobs], "r") do file
-            @test ndims(DSGE.read_forecast_series(file, :obs, :trend, :obs_gdp)) == 2
-        end
-        JLD2.jldopen(output_files[:forecastobs], "r") do file
-            @test ndims(DSGE.read_forecast_series(file, :obs, :forecast, :obs_gdp)) == 2
-        end
-        JLD2.jldopen(output_files[:irfobs], "r") do file
-            @test ndims(DSGE.read_forecast_series(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
-        end
+        @test ndims(DSGE.read_forecast_series(output_files[:trendobs], :trend, m.observables[:obs_gdp])) == 2
+        @test ndims(DSGE.read_forecast_series(output_files[:forecastobs], :forecast, m.observables[:obs_gdp])) == 2
+        @test ndims(DSGE.read_forecast_series(output_files[:irfobs], m.observables[:obs_gdp], m.exogenous_shocks[:rm_sh])) == 2
     end
 end
 
