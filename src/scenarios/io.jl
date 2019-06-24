@@ -389,7 +389,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
     # Aggregate scenarios
     nscens = length(agg.scenarios)
     agg_draws = Vector{Matrix{Float64}}(undef, nscens)
-    agg_dates = Vector{Vector{Date}}(nscens)
+    agg_dates = Vector{Vector{Date}}(undef, nscens)
 
     # If not sampling, initialize vector to record number of draws in each
     # scenario in order to update `agg.proportions` and `agg.total_draws` at the

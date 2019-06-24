@@ -78,9 +78,10 @@ function filter(m::AbstractModel, data::AbstractArray, system::System{S},
     return Kalman(out...)
 end
 
-function filter_shocks{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
+function filter_shocks(m::AbstractModel, df::DataFrame, system::System{S},
                        s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0); cond_type::Symbol = :none,
-                       start_date::Date = date_presample_start(m), include_presample::Bool = false)
+                       start_date::Date = date_presample_start(m),
+                       include_presample::Bool = false) where S<:AbstractFloat
 
     data = df_to_matrix(m, df, cond_type = cond_type)
 
