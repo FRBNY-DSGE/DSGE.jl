@@ -163,7 +163,7 @@ function csminwel(fcn::Function,
             if wall1 && (length(H) > 1)
                 println(verbose, :low, "Cliff. Perturbing search direction.")
 
-                Hcliff = H + diagm(diag(H).*rand(rng, nx))
+                Hcliff = H + Matrix(Diagonal(diag(H).*rand(rng, nx)))
                 f2, x2, fc, retcode2 = csminit(fcn, x, f_x, gr, badg, Hcliff,
                                                args...; verbose=verbose, kwargs...)
                 f_calls += fc
