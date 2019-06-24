@@ -175,17 +175,8 @@ n_parameters(m::AbstractModel)              = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
 n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
 
-"""
-```
-get_key(m, class, index)
-```
-
-Returns the name of the state (`class = :states`), observable (`:obs`),
-pseudo-observable (`:pseudo`), or shock (`:shocks` or `:stdshocks`)
-corresponding to the given `index`.
-"""
-function get_key(m::AbstractModel, class::Symbol, index::Int)
-    dict = if class == :states
+function get_dict(m::AbstractModel, class::Symbol)
+    if class == :states
         m.endogenous_states
     elseif class == :obs
         m.observables
@@ -196,7 +187,19 @@ function get_key(m::AbstractModel, class::Symbol, index::Int)
     else
         throw(ArgumentError("Invalid class: $class. Must be :states, :obs, :pseudo, :shocks, or :stdshocks"))
     end
+end
 
+"""
+```
+get_key(m, class, index)
+```
+
+Returns the name of the state (`class = :states`), observable (`:obs`),
+pseudo-observable (`:pseudo`), or shock (`:shocks` or `:stdshocks`)
+corresponding to the given `index`.
+"""
+function get_key(m::AbstractModel, class::Symbol, index::Int)
+    dict = get_dict(m, class)
     out = Base.filter(key -> dict[key] == index, collect(keys(dict)))
     if length(out) == 0
         error("Key corresponding to index $index not found for class: $class")
@@ -378,10 +381,7 @@ function specify_mode!(m::AbstractModel, mode_file::String = ""; verbose=:low)
 
     DSGE.update!(m,load_parameters_from_file(m,mode_file))
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loaded previous mode from $mode_file.")
-    end
-
+    println(verbose, :low, "Loaded previous mode from $mode_file.")
 end
 
 """
@@ -405,9 +405,7 @@ function specify_hessian(m::AbstractModel, path::String=""; verbose=:low)
 
     m <= Setting(:calculate_hessian, false)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Specified hessian from $path.")
-    end
+    println(verbose, :low, "Specified hessian from $path.")
 end
 
 
@@ -513,7 +511,7 @@ end
 # Input data handled slightly differently, because it is not model-specific.
 """
 ```
-inpath(m::AbstractModel, in_type::T, file_name::T="") where {T<:String}
+inpath(m::AbstractModel, in_type::T, file_name::T="") where T<:String
 ```
 
 Returns path to specific input data file, creating containing directory as needed. If
@@ -609,7 +607,7 @@ end
 
 """
 ```
-update!(m::AbstractModel, values::Vector{T}) where {T<:AbstractFloat}
+update!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
 ```
 
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
@@ -618,7 +616,7 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function update!(m::AbstractModel, values::Vector{T}) where {T <: AbstractFloat}
+function update!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
     DSGE.update!(m.parameters, values)
     steadystate!(m)
 end

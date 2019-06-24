@@ -76,7 +76,7 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
             else
                 return "Percent Q/Q Annualized"
             end
-        elseif transform == quartertoannual
+        elseif transform in [quartertoannual, loggrowthtopct]
             if untrans
                 return "Percent Q/Q"
             else
@@ -102,8 +102,51 @@ function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :l
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Saved $output_file")
+        println(verbose, :low, "Saved $output_file")
+    end
+end
+
+function rescale_annotations_fontsize!(p::Plots.Plot{Plots.GRBackend}, fontsize::Int64)
+    for i in 1:length(p.series_list)
+        if typeof(p.series_list[i].d[:series_annotations]) == Void
+            continue
+        else
+            p.series_list[i].d[:series_annotations].font.pointsize = fontsize
+        end
+    end
+end
+
+# horiz_position can be :hcenter, :left, :right
+# vert_position can be :vcenter, :top, :bottom
+# reverse_position Bool to indicate if you want left and right to actually correspond to left and right..
+function relocate_annotations!(p::Plots.Plot{Plots.GRBackend},
+                               horiz_position::Symbol, vert_position::Symbol,
+                               reverse_position::Bool = true)
+    if reverse_position
+        horiz_position =
+        if horiz_position == :right
+            :left
+        elseif horiz_position == :left
+            :right
+        else
+            :hcenter
+        end
+        vert_position =
+        if vert_position == :top
+            :bottom
+        elseif vert_position == :bottom
+            :top
+        else
+            :vcenter
+        end
+    end
+
+    for i in 1:length(p.series_list)
+        if typeof(p.series_list[i].d[:series_annotations]) == Void
+            continue
+        else
+            p.series_list[i].d[:series_annotations].font.halign = horiz_position
+            p.series_list[i].d[:series_annotations].font.valign = vert_position
         end
     end
 end

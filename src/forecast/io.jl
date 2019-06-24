@@ -36,7 +36,13 @@ function get_forecast_input_file(m, input_type)
     elseif input_type == :init
         return ""
     elseif input_type in [:full, :subset]
-        return rawpath(m, "estimate", "mhsave.h5")
+        if get_setting(m, :sampling_method) == :MH
+            return rawpath(m, "estimate", "mhsave.h5")
+        elseif get_setting(m, :sampling_method) == :SMC
+            return rawpath(m, "estimate", "smcsave.h5")
+        else
+            throw("Invalid sampling method specification. Change in setting :sampling_method")
+        end
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
     end
@@ -197,7 +203,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
         # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
         # is executed.
         if isnull(block_number) || get(block_number) == 1
-            jldopen(filepath, "w") do file
+            JLD2.jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
             end
             h5open(replace(filepath, "jld2" => "h5"), "w") do file
@@ -221,6 +227,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                         chunk_dims[1] = block_size
 
                         # Initialize dataset
+                        #pfile = file #.plain
                         dset = HDF5.d_create(file, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
                     end
                 end
@@ -236,9 +243,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                 end
             end
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println(" * Wrote $(basename(filepath))")
-        end
+        println(verbose, :high, " * Wrote $(basename(filepath))")
     end
 end
 
@@ -337,10 +342,11 @@ Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
 function write_forecast_block(file, arr::Array,
                               block_inds::AbstractRange{Int64})
+    #pfile = file #.plain
     dataset = HDF5.d_open(file, "arr")
     dims = size(dataset)
     ndims = length(dims)
-    dataset[block_inds, fill(Colon(), ndims-1)...] = arr
+    dataset[block_inds, fill(Colon(), ndims-1)...] = arr #pfile was dataset before
     set_dims!(dataset, dims)
 end
 
@@ -358,7 +364,7 @@ function combine_raw_forecast_output_and_metadata(m::AbstractModel,
     for jld_file_path in values(forecast_output_files)
         h5_file_path = replace(jld_file_path, "jld2" => "h5")
         arr = h5read(h5_file_path, "arr")
-        jldopen(jld_file_path, "r+") do file
+        JLD2.jldopen(jld_file_path, "r+") do file
             write(file, "arr", arr)
         end
         # Remove the h5 containing the raw forecast output when the data has been transferred.
@@ -413,14 +419,24 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
     product = get_product(output_var)
     class   = get_class(output_var)
 
-    jldopen(filename, "r") do file
-        # Read forecast output
-        fcast_series = if isnull(shock_name)
-            read_forecast_series(file, class, product, var_name)
-        else
-            read_forecast_series(file, class, product, var_name, get(shock_name))
-        end
+    # Get index corresponding to var_name
+    class_long = get_class_longname(class)
+    indices = FileIO.load(filename, "$(class_long)_indices")
+    var_ind = indices[var_name]
 
+    # Read forecast output
+    fcast_series = if isnull(shock_name)
+        read_forecast_series(filename, product, var_ind)
+    else
+        # Get indices corresponding to shock_name
+        shock_name = get(shock_name)
+        shock_indices = FileIO.load(filename, "shock_indices")
+        shock_ind = shock_indices[shock_name]
+
+        read_forecast_series(filename, var_ind, shock_ind)
+    end
+
+    JLD2.jldopen(filename, "r") do file
         # The `fcast_output` for trends only is of size `ndraws` x `nvars`. We
         # need to use `repeat` below because population adjustments will be
         # different in each period. Now we have something of size `ndraws` x
@@ -441,26 +457,21 @@ end
 
 """
 ```
-read_forecast_series(file, class, product, var_name[, shock_name])
+read_forecast_series(filepath, product, var_ind)
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
 observable) and possibly a particular shock. Result should be a matrix of size
 `ndraws` x `nperiods`.
 """
-function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol)
-    # Get index corresponding to var_name
-    class_long = get_class_longname(class)
-    filepath = file.path
-    indices = load(filepath, "$(class_long)_indices")
-    var_ind = indices[var_name]
+function read_forecast_series(filepath::String, product::Symbol, var_ind::Int)
 
-    dataset = load(filepath, "arr")
+    dataset = FileIO.load(filepath, "arr")
     ndims = length(size(dataset))
 
     # Trends are ndraws x nvars
     if product == :trend
-        whole = load(filepath, "arr")
+        whole = FileIO.load(filepath, "arr")
         if ndims == 1 # one draw
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, 1))
@@ -474,11 +485,11 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
                        :decompdata, :decompnews, :decomppara, :decompdettrend, :decomptotal]
         inds_to_read = if ndims == 2 # one draw
-            whole = load(filepath, "arr")
+            whole = FileIO.load(filepath, "arr")
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, length(arr)))
         elseif ndims == 3 # many draws
-            whole = load(filepath, "arr")
+            whole = FileIO.load(filepath, "arr")
             arr = whole[Colon(), var_ind, Colon()]
         end
     else
@@ -488,25 +499,17 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
     return arr
 end
 
-function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol,
-                              shock_name::Symbol)
-    # Get indices corresponding to var_name and shock_name
-    class_long = get_class_longname(class)
-    filepath = file.path
-    indices = load(filepath, "$(class_long)_indices")
-    var_ind = indices[var_name]
-    shock_indices = load(filepath, "shock_indices")
-    shock_ind = shock_indices[shock_name]
+function read_forecast_series(filepath::String, var_ind::Int, shock_ind::Int)
 
-    dataset = load(filepath, "arr")
+    dataset = FileIO.load(filepath, "arr")
     ndims = length(size(dataset))
 
     if ndims == 3 # one draw
-        whole = load(filepath, "arr")
+        whole = FileIO.load(filepath, "arr")
         arr = whole[var_ind, :, shock_ind]
         arr = reshape(arr, 1, length(arr))
     elseif ndims == 4 # many draws
-        whole = load(filepath, "arr")
+        whole = FileIO.load(filepath, "arr")
         arr = whole[:, var_ind, :, shock_ind]
     end
 

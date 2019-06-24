@@ -12,6 +12,7 @@ Compute impulse responses for a single draw.
 - `m::AbstractModel`: model object
 - `system::System{S}`: state-space system matrices
 - `horizon::Int`: number of periods ahead to forecast
+- `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock (by default the shock magnitude is a negative 1 std. shock)
 
 where `S<:AbstractFloat`
 
@@ -24,9 +25,10 @@ where `S<:AbstractFloat`
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
   pseudo-observable impulse response functions
 """
-function impulse_responses(m::AbstractModel, system::System{S}) where {S<:AbstractFloat}
+function impulse_responses(m::AbstractModel, system::System{S};
+                           flip_shocks::Bool = false) where {S<:AbstractFloat}
     horizon = impulse_response_horizons(m)
-    impulse_responses(system, horizon)
+    impulse_responses(system, horizon, flip_shocks = flip_shocks)
 end
 
 function impulse_responses(system::System{S}, horizon::Int;
@@ -44,19 +46,18 @@ function impulse_responses(system::System{S}, horizon::Int;
     # Set constant system matrices to 0
     system = zero_system_constants(system)
 
-    z0 = zeros(S, nstates)
+    s_0 = zeros(S, nstates)
 
     for i = 1:nshocks
         # Isolate single shock
         shocks = zeros(S, nshocks, horizon)
         if flip_shocks
-            shocks[i, 1] = sqrt(system[:QQ][i, i])  # a positive 1 s.d. shock
+            shocks[i, 1] = sqrt(system[:QQ][i, i]) # a positive 1 s.d. shock
         else
             shocks[i, 1] = -sqrt(system[:QQ][i, i]) # a negative 1 s.d. shock
         end
-
         # Iterate state space forward
-        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, z0, shocks)
+        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, s_0, shocks)
     end
 
     return states, obs, pseudo

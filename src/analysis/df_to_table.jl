@@ -30,9 +30,8 @@ function construct_fcast_and_hist_dfs(m::AbstractModel, cond_type::Symbol,
                                       forecast_string::String = "",
                                       include_T_in_df_forecast::Bool = true,
                                       use_4q::Bool = false,
-                                      hist_start::Date = DSGE.quartertodate("2008-Q4"),
-                                      forecast_end::Date =
-                                      DSGE.iterate_quarters(m.settings[:date_forecast_start].value, 12))
+                                      hist_start::Date = quartertodate("2008-Q4"),
+                                      forecast_end::Date = iterate_quarters(date_forecast_start(m), 12))
 
     # Assert that if save_to_table is true, there is a caption, filename, and a savedir
     if save_to_table
@@ -69,7 +68,7 @@ function construct_fcast_and_hist_dfs(m::AbstractModel, cond_type::Symbol,
     df_forecastpseudo   = mb_forecastpseudo.means[vcat(:date, pseudo)]
     if use_4q
         # If producing 4q figures, then the forecast_end date must be a Q4 date
-        forecast_end = DSGE.quartertodate(string(Dates.year(forecast_end))*"-Q4")
+        forecast_end = quartertodate(string(Dates.year(forecast_end))*"-Q4")
     end
     forecast_end_ind = findfirst(x -> x == forecast_end, df_forecastobs[:date])
     df_forecastobs      = df_forecastobs[1:forecast_end_ind, :]
@@ -151,7 +150,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
     table_out = savedir*filename*".tex"
     fid = open(table_out, "w")
 
-    DSGE.write_table_preamble(fid)
+    write_table_preamble(fid)
     function write_single_table(fid::IOStream, df::DataFrame, units::OrderedDict{Symbol, String})
 
         # Write header
@@ -244,7 +243,7 @@ function create_table_header_mappings(m::AbstractModel, vars::Vector{Symbol})
         if var in obs_keys
             header_mappings[var] = Symbol(m.observable_mappings[var].name)
         else
-            header_mappings[var] = DSGE.detexify(Symbol(m.pseudo_observable_mappings[var].name))
+            header_mappings[var] = detexify(Symbol(m.pseudo_observable_mappings[var].name))
         end
     end
     return header_mappings

@@ -1,6 +1,6 @@
 """
 ```
-hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::AbstractArray{Union{T, Missing}};
+hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::AbstractArray;
                            verbose::Symbol = :none)
 ```
 
@@ -8,8 +8,8 @@ Compute Hessian of DSGE posterior function evaluated at x.
 """
 function hessian!(m::AbstractModel,
                   x::Vector{T},
-                  data::AbstractArray{Union{T, Missing}};
-                  verbose::Symbol = :none) where {T<:AbstractFloat}
+                  data::AbstractArray;
+                  verbose::Symbol = :none) where T<:AbstractFloat
     DSGE.update!(m, x)
 
     # Index of free parameters

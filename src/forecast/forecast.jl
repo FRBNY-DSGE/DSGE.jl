@@ -7,11 +7,16 @@ forecast(system, z0, shocks; enforce_zlb = false)
 
 ### Inputs
 
-- `m::AbstractModel`: model object. Only needed for the method in which `shocks`
-  are not provided.
 - `system::System{S}`: state-space system matrices
-- `kal::Kalman{S}` or `z0::Vector{S}`: result of running the Kalman filter or
-  state vector in the final historical period (aka initial forecast period)
+- `z0::Vector{S}`: state vector in the final historical period
+- `shocks::Matrix{S}`: `nshocks` x `nperiods` matrix of shocks to use when
+  forecasting. Note that in the first method, `nperiods` doesn't necessarily
+  have to equal `forecast_horizons(m)`; it will be truncated or padded with
+  zeros appropriately
+
+**Method 1 only:**
+
+- `m::AbstractModel`
 
 where `S<:AbstractFloat`.
 

@@ -1,11 +1,79 @@
 """
 ```
-moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
-    verbose = :none)
+function load_posterior_moments(m; load_bands = true, include_fixed = false)
 ```
 
-Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
-bands in various LaTeX tables stored `tablespath(m)`.
+Load posterior moments (mean, std) of parameters for a particular sample, and optionally
+also load 5% and 95% lower and upper bands.
+
+### Keyword Arguments
+- `load_bands::Bool`: Optionally include the 5% and 95% percentiles for the sample of parameters
+in the returned df
+- `include_fixed::Bool`: Optionally include the fixed parameters in the returned df
+- `excl_list::Vector{Symbol}`: List parameters by their key that you want to exclude from
+loading
+
+### Outputs
+- `df`: A dataframe containing the aforementioned moments/bands
+"""
+function load_posterior_moments(m::AbstractModel; load_bands::Bool = true,
+                                include_fixed::Bool = false,
+                                excl_list::Vector{Symbol} = Vector{Symbol}(0))
+
+    if include_fixed
+        parameters          = m.parameters
+        parameter_indices   = 1:n_parameters(m)
+    else
+        parameters          = Base.filter(x -> x.fixed == false, m.parameters)
+        parameter_indices   = find(x -> x.fixed == false, m.parameters)
+    end
+
+    n_params = length(parameter_indices)
+
+    # Remove excluded parameters
+    non_excl_indices = find(x -> !(x in excl_list), [parameters[i].key for i in 1:n_params])
+    parameters = parameters[non_excl_indices]
+    parameter_indices = parameter_indices[non_excl_indices]
+
+    n_particles = get_setting(m, :n_particles)
+
+    # Read in Posterior Draws
+    params = load_draws(m, :full)
+    params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
+    params_mean = vec(mean(params, 1))
+    params_std  = vec(std(params, 1))
+
+    df = DataFrame()
+    df[:param] = [DSGE.detexify(parameters[i].tex_label) for i in 1:length(parameters)]
+    df[:post_mean] = params_mean[parameter_indices]
+    df[:post_std]  = params_std[parameter_indices]
+
+    if load_bands
+        post_lb = Vector{Float64}(length(parameters))
+        post_ub = similar(post_lb)
+        for i in 1:length(parameters)
+            post_lb[i] = quantile(params[:, parameter_indices][:, i], .05)
+            post_ub[i] = quantile(params[:, parameter_indices][:, i], .95)
+        end
+    end
+
+    df[:post_lb] = post_lb
+    df[:post_ub] = post_ub
+
+    return df
+end
+
+"""
+```
+moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
+    groupings = Dict{String, Vector{Parameter}}(), use_mode = false,
+    tables = [:prior_posterior_means, :moments, :prior, :posterior],
+    caption = true, outdir = "", verbose = :none)
+```
+
+Computes prior and posterior parameter moments. Tabulates prior mean, posterior
+mean, and bands in various LaTeX tables. These tables will be saved in `outdir`
+if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 
 ### Inputs
 
@@ -19,13 +87,21 @@ bands in various LaTeX tables stored `tablespath(m)`.
 - `subset_string::String`: short string identifying the subset to be
   appended to the output filenames. If `subset_inds` is nonempty but
   `subset_string` is empty, an error is thrown
+- `groupings::Dict{String, Vector{Parameter}}`: see `?parameter_groupings`
+- `use_mode::Bool`: use the modal parameters instead of the mean in the
+  prior_posterior_means table
+- `tables::Vector{Symbol}`: which tables to produce
+- `caption::Bool`: whether to include table captions
+- `outdir::String`: where to save output tables
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 - `use_mode::Bool`: Return a table with the modal parameters as opposed to the mean
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
-                       groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                       groupings::AbstractDict{String,Vector{Parameter}}=Dict{String,Vector{Parameter}}(),
+                       tables::Vector{Symbol} = [:prior_posterior_means, :moments, :prior, :posterior],
+                       caption::Bool = true, outdir::String = "",
                        verbose::Symbol = :low, use_mode::Bool = false)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -61,17 +137,29 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
 
     ### 3. Produce TeX tables
 
-    if use_mode
-        prior_posterior_table(m, post_mode; subset_string = subset_string, groupings = groupings, use_mode = use_mode)
-    else
-        prior_posterior_table(m, post_means; subset_string = subset_string, groupings = groupings, use_mode = use_mode)
+    if :prior_posterior_means in tables
+        prior_posterior_table(m, use_mode ? post_mode : post_means;
+                              subset_string = subset_string, groupings = groupings,
+                              use_mode = use_mode, caption = caption, outdir = outdir)
     end
-    prior_posterior_moments_table(m, post_means, post_bands;
-                                  percent = percent, subset_string = subset_string, groupings = groupings)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
+    if :moments in tables
+        prior_posterior_moments_table(m, post_means, post_bands; percent = percent,
+                                      subset_string = subset_string, groupings = groupings,
+                                      caption = caption, outdir = outdir)
     end
+
+    if :prior in tables
+        prior_table(m, groupings = groupings, caption = caption, outdir = outdir)
+    end
+
+    if :posterior in tables
+        posterior_table(m, post_means, post_bands, percent = percent,
+                        subset_string = subset_string, groupings = groupings,
+                        caption = caption, outdir = outdir)
+    end
+
+    println(verbose, :low, "Tables are saved as " * tablespath(m, "estimate", "*.tex"))
 end
 
 """
@@ -79,7 +167,7 @@ end
 moments(θ::Parameter)
 ```
 
-If θ's prior is a `DSGE.RootInverseGamma`, τ and ν. Otherwise, returns the mean
+If θ's prior is a `RootInverseGamma`, τ and ν. Otherwise, returns the mean
 and standard deviation of the prior. If θ is fixed, returns `(θ.value, 0.0)`.
 """
 function moments(θ::Parameter)
@@ -97,11 +185,13 @@ end
 
 """
 ```
-prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}())
+prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}(),
+    caption = true, outdir = "")
 ```
 """
 function prior_table(m::AbstractModel; subset_string::String = "",
-             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+             caption::Bool = true, outdir::String = "")
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -113,41 +203,53 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     if !isempty(subset_string)
         basename *= "_sub=$(subset_string)"
     end
-    priors_out = tablespath(m, "estimate", "$basename.tex")
-    priors_fid = open(priors_out, "w")
+    outfile = tablespath(m, "estimate", "$basename.tex")
+    if !isempty(outdir)
+        outfile = replace(outfile, dirname(outfile), outdir)
+    end
+    fid = open(outfile, "w")
 
     # Write header
-    write_table_preamble(priors_fid)
+    write_table_preamble(fid)
 
-    @printf priors_fid "\\renewcommand*\\footnoterule{}"
-    @printf priors_fid "\\vspace*{.5cm}\n"
-    @printf priors_fid "{\\small\n"
-    @printf priors_fid "\\begin{longtable}{rlrr@{\\hspace{1in}}rlrr}\n"
-    @printf priors_fid "\\caption{Priors}\n"
-    @printf priors_fid "\\\\ \\hline\n"
+    @printf fid "\\renewcommand*\\footnoterule{}"
+    @printf fid "\\vspace*{.5cm}\n"
+    @printf fid "{\\small\n"
+    @printf fid "\\begin{longtable}{rlrr@{\\hspace{1in}}rlrr}\n"
+    if caption
+        @printf fid "\\caption{Priors}\n"
+    end
+    @printf fid "\\label{tab:param-priors}\n"
+    @printf fid "\\\\ \\hline\n"
 
-    @printf priors_fid "& Dist & Mean & Std Dev & & Dist & Mean & Std Dev \\\\ \\hline\n"
-    @printf priors_fid "\\endhead\n"
+    @printf fid "& Dist & Mean & Std Dev & & Dist & Mean & Std Dev \\\\ \\hline\n"
+    @printf fid "\\endhead\n"
 
-    @printf priors_fid "\\hline \\\\\n"
-    @printf priors_fid "\\multicolumn{8}{c}{\\footnotesize Note: For Inverse Gamma prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
-    @printf priors_fid "\\endfoot\n"
+    @printf fid "\\hline \\\\\n"
+    @printf fid "\\multicolumn{8}{c}{\\footnotesize Note: For Inverse Gamma prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
+    @printf fid "\\endfoot\n"
 
     # Map prior distributions to identifying strings
+    distid(::Distributions.Uniform) = "Uniform"
     distid(::Distributions.Beta)    = "Beta"
     distid(::Distributions.Gamma)   = "Gamma"
     distid(::Distributions.Normal)  = "Normal"
-    distid(::DSGE.RootInverseGamma) = "InvG"
+    distid(::RootInverseGamma)      = "InvG"
 
     # Write priors
     for group_desc in keys(groupings)
         params = groupings[group_desc]
+
+        # Take out anticipated shock SDs 2 to k - these priors are all the same
+        antshock_params = [m[k] for k in [Symbol("σ_r_m$i") for i = 2:n_anticipated_shocks(m)]]
+        params = setdiff(params, antshock_params)
+
         n_params = length(params)
         n_rows = convert(Int, ceil(n_params/2))
 
         # Write grouping description if not empty
         if !isempty(group_desc)
-            @printf priors_fid "\\multicolumn{8}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
+            @printf fid "\\multicolumn{8}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
         end
 
         # Write footnote about standard deviations of anticipated policy shocks
@@ -160,7 +262,7 @@ function prior_table(m::AbstractModel; subset_string::String = "",
 
                 if n_nonzero_sigmas > 1
                     text = "\$\\sigma_{ant1}\$ through \$\\sigma_{ant$(n_nonzero_sigmas)}\$ all have the same distribution."
-                    @printf priors_fid "\\let\\thefootnote\\relax\\footnote{\\centering %s}" text
+                    @printf fid "\\let\\thefootnote\\relax\\footnote{\\centering %s}" text
                 end
             end
         end
@@ -169,60 +271,170 @@ function prior_table(m::AbstractModel; subset_string::String = "",
             # Write left column
             θ = params[i]
             (prior_mean, prior_std) = moments(θ)
-            @printf priors_fid "\$%s\$ & " θ.tex_label
-            @printf priors_fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
-            @printf priors_fid "%0.2f & " prior_mean
-            @printf priors_fid "%0.2f & " prior_std
+            @printf fid "\$%s\$ &" θ.tex_label
+            @printf fid " %s &" (θ.fixed ? "-" : distid(get(θ.prior)))
+            @printf fid " %0.2f &" prior_mean
+            if θ.fixed
+                @printf fid " \\scriptsize{fixed} &"
+            else
+                @printf fid " %0.2f &" prior_std
+            end
             anticipated_shock_footnote(θ)
 
             # Write right column if it exists
             if n_rows + i <= n_params
                 θ = params[n_rows + i]
                 (prior_mean, prior_std) = moments(θ)
-                @printf priors_fid "\$%s\$ & " θ.tex_label
-                @printf priors_fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
-                @printf priors_fid "%0.2f & " prior_mean
-                @printf priors_fid "%0.2f" prior_std
+                @printf fid " \$%s\$ &" θ.tex_label
+                @printf fid " %s &" (θ.fixed ? "-" : distid(get(θ.prior)))
+                @printf fid " %0.2f &" prior_mean
+                if θ.fixed
+                    @printf fid " \\scriptsize{fixed}"
+                else
+                    @printf fid " %0.2f" prior_std
+                end
                 anticipated_shock_footnote(θ)
             else
-                @printf priors_fid "& & &"
+                @printf fid  "& & &"
             end
 
             # Add padding after last row in a grouping
             if i == n_rows
-                @printf priors_fid " \\\\[3pt]\n"
+                @printf fid " \\\\[3pt]\n"
             else
-                @printf priors_fid " \\\\\n"
+                @printf fid " \\\\\n"
             end
         end
     end
 
     # Write footer
-    write_table_postamble(priors_fid; small = true)
+    write_table_postamble(fid; small = true)
 
     # Close file
-    close(priors_fid)
+    close(fid)
+end
+
+"""
+```
+posterior_table(m, post_means, post_bands; percent = 0.9, subset_string = "",
+    groupings = Dict{String, Vector{Parameter}}(), caption = true, outdir = "")
+```
+"""
+function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matrix;
+                         percent::AbstractFloat = 0.9,
+                         subset_string::String = "",
+                         groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                         caption::Bool = true,
+                         outdir::String = "")
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
+    # Open the TeX file
+    basename = "posterior"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
+    end
+    outfile = tablespath(m, "estimate", "$basename.tex")
+    if !isempty(outdir)
+        outfile = replace(outfile, dirname(outfile), outdir)
+    end
+    fid = open(outfile, "w")
+
+    # Write header
+    write_table_preamble(fid)
+
+    @printf fid "\\renewcommand*\\footnoterule{}"
+    @printf fid "\\vspace*{.5cm}\n"
+    @printf fid "{\\small\n"
+    @printf fid "\\begin{longtable}{rrc@{\\hspace{1in}}rrc}\n"
+    if caption
+        @printf fid "\\caption{Posteriors}\n"
+    end
+    @printf fid "\\label{tab:param-posteriors}\n"
+    @printf fid "\\\\ \\hline\n"
+
+    lb = (1 - percent)/2 * 100
+    ub = 100 - lb
+    @printf fid "& Mean & (p%0.0f, p%0.0f) & & Mean & (p%0.0f, p%0.0f) \\\\ \\hline\n" lb ub lb ub
+    @printf fid "\\endhead\n"
+
+    @printf fid "\\hline \\\\\n"
+    @printf fid "\\endfoot\n"
+
+    # Write priors
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
+        n_params = length(params)
+        n_rows = convert(Int, ceil(n_params/2))
+
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf fid "\\multicolumn{6}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
+        end
+
+        for i = 1:n_rows
+            # Write left column
+            θ = params[i]
+            j = m.keys[θ.key]
+            @printf fid "\$%s\$ &" θ.tex_label
+            @printf fid " %0.2f &" post_means[j]
+            if θ.fixed
+                @printf fid " \\scriptsize{fixed} &"
+            else
+                @printf fid " (%0.2f, %0.2f) &" post_bands[j, :]...
+            end
+
+            # Write right column if it exists
+            if n_rows + i <= n_params
+                θ = params[n_rows + i]
+                j = m.keys[θ.key]
+                (prior_mean, prior_std) = moments(θ)
+                @printf fid " \$%s\$ &" θ.tex_label
+                @printf fid " %0.2f &" post_means[j]
+                if θ.fixed
+                    @printf fid " \\scriptsize{fixed}"
+                else
+                    @printf fid " (%0.2f, %0.2f)" post_bands[j, :]...
+                end
+            else
+                @printf fid " & &"
+            end
+
+            # Add padding after last row in a grouping
+            if i == n_rows
+                @printf fid " \\\\[3pt]\n"
+            else
+                @printf fid " \\\\\n"
+            end
+        end
+    end
+
+    # Write footer
+    write_table_postamble(fid; small = true)
+
+    # Close file
+    close(fid)
 end
 
 """
 ```
 prior_posterior_moments_table(m, post_means, post_bands; percent = 0.9,
-    subset_string = "")
+    subset_string = "", groupings = Dict{String, Vector{Parameter}}(),
+    caption = true, outdir = "")
 ```
 
 Produces a table of prior means, prior standard deviations, posterior means, and
-90% bands for posterior draws. Saves to:
-
-```
-tablespath(m, \"estimate\", \"moments[_sub=\$subset_string].tex\")
-```
+90% bands for posterior draws.
 """
 function prior_posterior_moments_table(m::AbstractModel,
                  post_means::Vector, post_bands::Matrix;
                  percent::AbstractFloat = 0.9,
                  subset_string::String = "",
-                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
-
+                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                 caption::Bool = true, outdir::String = "")
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
         groupings[""] = sorted_parameters
@@ -233,17 +445,22 @@ function prior_posterior_moments_table(m::AbstractModel,
     if !isempty(subset_string)
         basename *= "_sub=$(subset_string)"
     end
-    moments_out = tablespath(m, "estimate", "$basename.tex")
-    moments_fid = open(moments_out, "w")
+    outfile = tablespath(m, "estimate", "$basename.tex")
+    if !isempty(outdir)
+        outfile = replace(outfile, dirname(outfile), outdir)
+    end
+    fid = open(outfile, "w")
 
     # Write header
-    write_table_preamble(moments_fid)
+    write_table_preamble(fid)
 
-    @printf moments_fid "\\vspace*{.5cm}\n"
-    @printf moments_fid "{\\small\n"
-    @printf moments_fid "\\begin{longtable}{lcccccc}\n"
-    @printf moments_fid "\\caption{Parameter Estimates}\n"
-    @printf moments_fid "\\\\ \\hline\n"
+    @printf fid "\\vspace*{.5cm}\n"
+    @printf fid "{\\small\n"
+    @printf fid "\\begin{longtable}{lcccccc}\n"
+    if caption
+        @printf fid "\\caption{Parameter Estimates}\n"
+    end
+    @printf fid "\\\\ \\hline\n"
 
     # Two-row column names. First row is multicolumn, where entries (i,str) are `i` columns
     # with content `str`.
@@ -252,28 +469,29 @@ function prior_posterior_moments_table(m::AbstractModel,
                 "$(100*percent)\\% {\\tiny Lower Band}",
                 "$(100*percent)\\% {\\tiny Upper Band}"]
 
-    @printf moments_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
+    @printf fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
     for col in colnames0[2:end]
-        @printf moments_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
+        @printf fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
     end
-    @printf moments_fid " \\\\\n"
-    @printf moments_fid "%s" colnames[1]
+    @printf fid " \\\\\n"
+    @printf fid "%s" colnames[1]
     for col in colnames[2:end]
-        @printf moments_fid " & %s" col
+        @printf fid " & %s" col
     end
-    @printf moments_fid " \\\\\n"
-    @printf moments_fid "\\cmidrule(lr){1-1} \\cmidrule(lr){2-4} \\cmidrule(lr){5-7}\n"
-    @printf moments_fid "\\endhead\n"
+    @printf fid " \\\\\n"
+    @printf fid "\\cmidrule(lr){1-1} \\cmidrule(lr){2-4} \\cmidrule(lr){5-7}\n"
+    @printf fid "\\endhead\n"
 
-    @printf moments_fid "\\hline\n"
-    @printf moments_fid "\\\\ \\multicolumn{7}{c}{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
-    @printf moments_fid "\\endfoot\n"
+    @printf fid "\\hline\n"
+    @printf fid "\\\\ \\multicolumn{7}{c}{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
+    @printf fid "\\endfoot\n"
 
     # Map prior distributions to identifying strings
+    distid(::Distributions.Uniform) = "U"
     distid(::Distributions.Beta)    = "B"
     distid(::Distributions.Gamma)   = "G"
     distid(::Distributions.Normal)  = "N"
-    distid(::DSGE.RootInverseGamma) = "IG"
+    distid(::RootInverseGamma) = "IG"
 
     # Write parameter moments
     # sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -282,48 +500,43 @@ function prior_posterior_moments_table(m::AbstractModel,
 
         # Write grouping description if not empty
         if !isempty(group_desc)
-            @printf moments_fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
+            @printf fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
         end
 
         for param in params
             index = m.keys[param.key]
             (prior_mean, prior_std) = moments(param)
 
-            @printf moments_fid "\$ %4.99s\$ & " param.tex_label
-            @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
-            @printf moments_fid "%8.3f & " prior_mean
-            @printf moments_fid "%8.3f & " prior_std
-            @printf moments_fid "%8.3f & " post_means[index]
-            @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
+            @printf fid "\$%4.99s\$ & " param.tex_label
+            @printf fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
+            @printf fid "%8.3f & " prior_mean
+            @printf fid "%8.3f & " prior_std
+            @printf fid "%8.3f & " post_means[index]
+            @printf fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
         end
     end
 
     # Write footer
-    write_table_postamble(moments_fid; small=true)
+    write_table_postamble(fid; small=true)
 
     # Close file
-    close(moments_fid)
+    close(fid)
 end
 
 """
 ```
-prior_posterior_table(m, post_values; subset_string = "")
+prior_posterior_table(m, post_values; subset_string = "",
+    groupings = Dict{String, Vector{Parameter}}(), use_mode = false,
+    caption = true, outdir = "")
 ```
 
-Produces a table of prior means and posterior means or mode. Saves to:
-
-```
-tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
-```
-or
-```
-tablespath(m, \"estimate\", \"prior_posterior_mode[_sub=\$subset_string].tex\")
-```
+Produce a table of prior means and posterior means or mode.
 """
 function prior_posterior_table(m::AbstractModel, post_values::Vector;
                  subset_string::String = "",
                  groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                 use_mode::Bool = false)
+                 use_mode::Bool = false,
+                 caption::Bool = true, outdir::String = "")
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -336,16 +549,21 @@ function prior_posterior_table(m::AbstractModel, post_values::Vector;
         basename *= "_sub=$(subset_string)"
     end
     table_out = tablespath(m, "estimate", "$basename.tex")
+    if !isempty(outdir)
+        outfile = replace(outfile, dirname(outfile), outdir)
+    end
     fid = open(table_out, "w")
 
     # Write header
     write_table_preamble(fid)
     @printf fid "\\vspace*{.5cm}\n"
     @printf fid "\\begin{longtable}{ccc}\n"
-    if use_mode
-        @printf fid "\\caption{Parameter Estimates: Prior Mean and Posterior Mode}\n"
-    else
-        @printf fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
+    if caption
+        if use_mode
+            @printf fid "\\caption{Parameter Estimates: Prior Mean and Posterior Mode}\n"
+        else
+            @printf fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
+        end
     end
     @printf fid "\\\\ \\hline\n"
     @printf fid "Parameter & Prior & Posterior\n"
@@ -362,7 +580,7 @@ function prior_posterior_table(m::AbstractModel, post_values::Vector;
 
         # Write grouping description if not empty
         if !isempty(group_desc)
-            @printf means_fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
+            @printf fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
         end
 
         for param in params
@@ -406,7 +624,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where T<:AbstractFloat
 
     if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
@@ -468,7 +686,7 @@ end
 
 """
 ```
-find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool=true) where {T<:AbstractFloat}
+find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool=true) where T<:AbstractFloat
 ```
 
 Returns a `2` x `cols(draws)` matrix `bands` such that `percent` of the mass of `draws[:,i]`
@@ -484,7 +702,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where T<:AbstractFloat
 
     bands = DataFrame()
 

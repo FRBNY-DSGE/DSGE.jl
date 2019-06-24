@@ -28,7 +28,13 @@ function n_forecast_draws(m::AbstractModel, input_type::Symbol)
     elseif input_type in [:full, :subset]
         input_file = get_forecast_input_file(m, input_type)
         draws = h5open(input_file, "r") do file
-            dataset = HDF5.o_open(file, "mhparams")
+            if get_setting(m, :sampling_method) == :MH
+                dataset = HDF5.o_open(file, "mhparams")
+            elseif get_setting(m, :sampling_method) == :SMC
+                dataset = HDF5.o_open(file, "smcparams")
+            else
+                throw("Invalid :sampling_method setting specification.")
+            end
             size(dataset)[1]
         end
         return draws
@@ -50,8 +56,8 @@ range of indices for block `i` before thinning by `jstep` and
 function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
 
     if input_type == :full
-        ndraws = n_forecast_draws(m, :full)
-        jstep = get_jstep(m, ndraws)
+        ndraws    = n_forecast_draws(m, :full)
+        jstep     = get_jstep(m, ndraws)
         start_ind = 1
         end_ind   = ndraws
     elseif input_type == :subset
@@ -225,8 +231,8 @@ deviation will be set to zero.
 function standardize_shocks(shocks::Matrix{T}, QQ::Matrix{T}) where {T<:AbstractFloat}
     stdshocks = shocks ./ sqrt.(diag(QQ))
 
-    zeroed_shocks = find(diag(QQ) .== 0)
-    stdshocks[zeroed_shocks, :] = 0
+    zeroed_shocks = findall(diag(QQ) .== 0)
+    stdshocks[zeroed_shocks, :] .= 0
 
     return stdshocks
 end

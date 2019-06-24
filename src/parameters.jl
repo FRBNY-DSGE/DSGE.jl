@@ -224,7 +224,7 @@ function parameter(key::Symbol,
 
     if fixed
         transform_parameterization_new = (value,value)  # value is transformed already
-        transform_new = DSGE.Untransformed()            # fixed priors should stay untransformed
+        transform_new = Untransformed()                 # fixed priors should stay untransformed
         U_new = Untransformed
 
         if isa(transform, Untransformed)
@@ -309,7 +309,7 @@ function Base.show(io::IO, p::Parameter{T,U}) where {T, U}
     #@printf io "real value:        %+6f\n" transform_to_real_line(p)
     @printf io "unscaled, untransformed value:        %+6f\n" p.value
     isa(p,ScaledParameter) && @printf "scaled, untransformed value:        %+6f\n" p.scaledvalue
-    #!isa(U(),DSGE.Untransformed) && @printf io "transformed value: %+6f\n" p.value
+    #!isa(U(),Untransformed) && @printf io "transformed value: %+6f\n" p.value
 
     if hasprior(p)
         @printf io "prior distribution:\n\t%s\n" get(p.prior)
@@ -420,6 +420,7 @@ end
 
 for f in (:(Base.exp),
           :(Base.log),
+          :(Base.transpose),
           :(Base.:-),
           :(Base.:<),
           :(Base.:>),
@@ -493,26 +494,66 @@ end
 Distributions.pdf(pvec::ParameterVector{T}) where T  = exp(logpdf(pvec))
 Distributions.pdf(pvec::ParameterVector{T}, values::Vector{T}) where T = exp(logpdf(pvec, values))
 
+"""
+```
+Distributions.rand(p::Vector{AbstractParameter{Float64}})
+```
+
+Generate a draw from the prior of each parameter in `p`.
+"""
+function Distributions.rand(p::Vector{AbstractParameter{Float64}})
+    draw = zeros(length(p))
+    for (i, para) in enumerate(p)
+        draw[i] = if para.fixed
+            para.value
+        else
+            # Resample until all prior draws are within the value bounds
+            prio = rand(para.prior.value)
+            while !(para.valuebounds[1] < prio < para.valuebounds[2])
+                prio = rand(para.prior.value)
+            end
+            prio
+        end
+    end
+    return draw
+end
+
+"""
+```
+Distributions.rand(p::Vector{AbstractParameter{Float64}}, n::Int)
+```
+
+Generate `n` draws from the priors of each parameter in `p`.This returns a matrix of size
+`(length(p),n)`, where each column is a sample.
+"""
+function Distributions.rand(p::Vector{AbstractParameter{Float64}}, n::Int)
+    priorsim = zeros(length(p), n)
+    for i in 1:n
+        priorsim[:, i] = rand(p)
+    end
+    return priorsim
+end
+
 function describe_prior(param::Parameter)
     if param.fixed
         return "fixed at " * string(param.value)
 
     elseif !param.fixed && !isnull(param.prior)
-        (prior_mean, prior_std) = DSGE.moments(param)
+        (prior_mean, prior_std) = moments(param)
 
         prior_dist = string(typeof(get(param.prior)))
         prior_dist = replace(prior_dist, "Distributions." => "")
         prior_dist = replace(prior_dist, "DSGE." => "")
         prior_dist = replace(prior_dist, "{Float64}" => "")
 
-        mom1, mom2 = if isa(prior, DSGE.RootInverseGamma)
+        mom1, mom2 = if isa(prior, RootInverseGamma)
             "tau", "nu"
         else
             "mu", "sigma"
         end
 
-        return prior_dist * "(" * mom1 * "=" * string(round(prior_mean, 4)) * ", " *
-                                  mom2 * "=" * string(round(prior_std, 4)) * ")"
+        return prior_dist * "(" * mom1 * "=" * string(round(prior_mean, digits=4)) * ", " *
+                                  mom2 * "=" * string(round(prior_std, digits=4)) * ")"
 
     else
         error("Parameter must either be fixed or have non-null prior: " * string(param.key))

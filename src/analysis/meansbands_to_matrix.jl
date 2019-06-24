@@ -26,21 +26,17 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
     output_vars = add_requisite_output_vars(output_vars)
     output_dir  = workpath(m, "forecast")
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println()
-        @Base.info "Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type..."
-        println("Start time: $(now())")
-        println("Means and bands matrices will be saved in $output_dir")
-    end
+    println(verbose, :low, )
+    info_print(verbose, :low, "Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
+    println(verbose, :low, "Start time: $(now())")
+    println(verbose, :low, "Means and bands matrices will be saved in $output_dir")
 
     for output_var in output_vars
         meansbands_to_matrix(m, input_type, cond_type, output_var;
                              forecast_string = forecast_string, verbose = verbose)
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\nConversion of means and bands complete: $(now())")
-    end
+    println(verbose, :low, "\nConversion of means and bands complete: $(now())")
 end
 
 function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
@@ -65,14 +61,12 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
     means, bands = meansbands_to_matrix(mb)
 
     # Save to file
-    jldopen(outfile, "w") do file
+    JLD2.jldopen(outfile, "w") do file
         write(file, "means", means)
         write(file, "bands", bands)
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        println(" * Wrote $(basename(outfile))")
-    end
+    println(verbose, :high, " * Wrote $(basename(outfile))")
 end
 
 """
@@ -127,7 +121,7 @@ function meansbands_to_matrix(mb::MeansBands)
 
         for series in setdiff(names(mb.means), [:date])
 
-            var, shock = DSGE.parse_mb_colname(series)
+            var, shock = parse_mb_colname(series)
             ind = inds[var]
 
             shock_ind = shock_inds[shock]

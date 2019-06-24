@@ -107,9 +107,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loading draws from $input_file_name")
-    end
+    println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
     if input_type in [:mean, :mode]
@@ -119,7 +117,13 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     # Load full distribution
     elseif input_type == :full
 
-        params = map(Float64, h5read(input_file_name, "mhparams"))
+        if get_setting(m, :sampling_method) == :MH
+            params = map(Float64, h5read(input_file_name, "mhparams"))
+        elseif get_setting(m, :sampling_method) == :SMC
+            params = map(Float64, h5read(input_file_name, "smcparams"))
+        else
+            throw("Invalid :sampling method specification. Change in setting :sampling_method")
+        end
 
     # Load subset of full distribution
     elseif input_type == :subset
@@ -127,7 +131,13 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
         if isempty(subset_inds)
             error("Must supply nonempty range of subset_inds if input_type == :subset")
         else
-            params = map(Float64, h5read(input_file_name, "mhparams", (subset_inds, :)))
+            if get_setting(m, :sampling_method) == :MH
+                params = map(Float64, h5read(input_file_name, "mhparams", (subset_inds, :)))
+            elseif get_setting(m, :sampling_method) == :SMC
+                params = map(Float64, h5read(input_file_name, "smcparams", (subset_inds, :)))
+            else
+                throw("Invalid :sampling method specification. Change in setting :sampling_method")
+            end
         end
 
     # Return initial parameters of model object
@@ -146,9 +156,7 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
                     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loading draws from $input_file_name")
-    end
+    println(verbose, :low, "Loading draws from $input_file_name")
 
     if input_type in [:full, :subset]
         if isempty(block_inds)
@@ -157,7 +165,13 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
             ndraws = length(block_inds)
             params = Vector{Vector{Float64}}(undef, ndraws)
             for (i, j) in zip(1:ndraws, block_inds)
-                params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
+                if get_setting(m, :sampling_method) == :MH
+                    params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
+                elseif get_setting(m, :sampling_method) == :SMC
+                    params[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                else
+                    throw("Invalid :sampling_method setting specification.")
+                end
             end
             return params
         end
@@ -223,9 +237,13 @@ None. Output is saved to files returned by
 `get_forecast_output_files(m, input_type, cond_type, output_vars)`.
 """
 function forecast_one(m::AbstractModel{Float64},
-    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-    df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-    forecast_string::String = "", verbose::Symbol = :low)
+                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                      df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
+                      forecast_string::String = "", verbose::Symbol = :low,
+                      use_filtered_shocks_in_shockdec::Bool = false,
+                      shock_name::Symbol = :none,
+                      shock_var_name::Symbol = :none,
+                      shock_var_value::Float64 = 0.0)
 
     ### Common Setup
 
@@ -241,33 +259,35 @@ function forecast_one(m::AbstractModel{Float64},
     output_dir = rawpath(m, "forecast")
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        @Base.info "Forecasting input_type = $input_type, cond_type = $cond_type..."
-        println("Start time: $(now())")
-        println("Forecast outputs will be saved in $output_dir")
-    end
+    info_print(verbose, :low, "Forecasting input_type = $input_type, cond_type = $cond_type...")
+    println(verbose, :low, "Start time: $(now())")
+    println(verbose, :low, "Forecast outputs will be saved in $output_dir")
 
 
     ### Single-Draw Forecasts
 
     if input_type in [:mode, :mean, :init]
 
-        toq = @elapsed let
+        elapsed_time = @elapsed let
             params = load_draws(m, input_type; verbose = verbose)
             forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                params, df, verbose = verbose)
+                                                params, df, verbose = verbose,
+                                                shock_name = shock_name,
+                                                shock_var_name = shock_var_name,
+                                                shock_var_value = shock_var_value)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
                                    verbose = verbose)
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            total_forecast_time     = toq
-            total_forecast_time_min = total_forecast_time/60
+        write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                               forecast_output; df = df, block_number = Nullable{Int64}(),
+                               verbose = verbose)
 
-            println("\nTotal time to forecast: $total_forecast_time_min minutes")
-        end
+        total_forecast_time     = elapsed_time
+        total_forecast_time_min = total_forecast_time/60
+        println(verbose, :low, "\nTotal time to forecast: $total_forecast_time_min minutes")
 
 
     ### Multiple-Draw Forecasts
@@ -284,52 +304,51 @@ function forecast_one(m::AbstractModel{Float64},
         block_verbose = verbose == :none ? :none : :low
 
         for block = start_block:nblocks
-           if VERBOSITY[verbose] >= VERBOSITY[:low]
-               println()
-               @Base.info "Forecasting block $block of $nblocks..."
-           end
-           toq = @elapsed let
-               # Get to work!
-               params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+            println(verbose, :low, )
+            info_print(verbose, :low, "Forecasting block $block of $nblocks...")
+            begin_time = time_ns()
 
-               mapfcn = use_parallel_workers(m) ? pmap : map
-               forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                                    param, df, verbose = verbose),
-                                         params)
+            # Get to work!
+            params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
 
-               # Assemble outputs from this block and write to file
-               forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-               forecast_output = assemble_block_outputs(forecast_outputs)
-               write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                                      forecast_output; df = df, block_number = Nullable(block),
-                                      verbose = block_verbose, block_inds = block_inds_thin[block],
-                                      subset_inds = subset_inds)
-               GC.gc()
-           end
+            mapfcn = use_parallel_workers(m) ? pmap : map
+            forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                                 param, df, verbose = verbose,
+                                                                 use_filtered_shocks_in_shockdec =
+                                                                 use_filtered_shocks_in_shockdec,
+                                                                 shock_name = shock_name,
+                                                                 shock_var_name = shock_var_name,
+                                                                 shock_var_value = shock_var_value),
+                                      params)
+
+            # Assemble outputs from this block and write to file
+            forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+            forecast_output = assemble_block_outputs(forecast_outputs)
+            write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                                   forecast_output; df = df, block_number = Nullable(block),
+                                   verbose = block_verbose, block_inds = block_inds_thin[block],
+                                   subset_inds = subset_inds)
+            GC.gc()
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                block_time = toq
-                total_forecast_time += block_time
-                total_forecast_time_min     = total_forecast_time/60
-                blocks_elapsed              = block - start_block + 1
-                expected_time_remaining     = (total_forecast_time/blocks_elapsed)*(nblocks - block)
-                expected_time_remaining_min = expected_time_remaining/60
+            block_time = (time_ns() - begin_time)/1e9
+            total_forecast_time += block_time
+            total_forecast_time_min     = total_forecast_time/60
+            blocks_elapsed              = block - start_block + 1
+            expected_time_remaining     = (total_forecast_time/blocks_elapsed)*(nblocks - block)
+            expected_time_remaining_min = expected_time_remaining/60
 
-                println("\nCompleted $block of $nblocks blocks.")
-                println("Total time elapsed: $total_forecast_time_min minutes")
-                println("Expected time remaining: $expected_time_remaining_min minutes")
-            end
+            println(verbose, :low, "\nCompleted $block of $nblocks blocks.")
+            println(verbose, :low, "Total time elapsed: $total_forecast_time_min minutes")
+            println(verbose, :low, "Expected time remaining: $expected_time_remaining_min minutes")
         end # of loop through blocks
 
     end # of input_type
 
-	combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
+    combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\nForecast complete: $(now())")
-    end
+    println(verbose, :low, "\nForecast complete: $(now())")
 end
 
 """
@@ -389,7 +408,12 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 ```
 """
 function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_type::Symbol,
-    output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low)
+                           output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low,
+                           use_filtered_shocks_in_shockdec::Bool = false,
+                           shock_name::Symbol = :none,
+                           shock_var_name::Symbol = :none,
+                           shock_var_value::Float64 = 0.0
+                           )
 
     ### Setup
 
@@ -550,7 +574,14 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
 
     if !isempty(shockdecs_to_compute)
-        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, histshocks)
+
+        histshocks_shockdec = if use_filtered_shocks_in_shockdec
+            filter_shocks(m, df, system, cond_type = cond_type)
+        else
+            histshocks
+        end
+
+        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
@@ -591,8 +622,14 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     irfs_to_compute = intersect(output_vars, irf_vars)
 
     if !isempty(irfs_to_compute)
-        irfstates, irfobs, irfpseudo = impulse_responses(m, system)
-
+        if shock_name!=:none
+            irfstates, irfobs, irfpseudo = impulse_responses(m, system, impulse_response_horizons(m),
+                                                             shock_name,
+                                                             shock_var_name,
+                                                             shock_var_value)
+        else
+            irfstates, irfobs, irfpseudo = impulse_responses(m, system)
+        end
         forecast_output[:irfstates] = irfstates
         forecast_output[:irfobs] = irfobs
         forecast_output[:irfpseudo] = irfpseudo

@@ -28,12 +28,10 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
                               verbose::Symbol = :low,
                               kwargs...)
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println()
-        Base.@info "Computing means and bands for scenario = " * string(scen.key) * "..."
-        println("Start time: " * string(now()))
-        println("Means and bands will be saved in " * workpath(m, "scenarios"))
-    end
+    println(verbose, :low, )
+    info_print(verbose, :low, "Computing means and bands for scenario = " * string(scen.key) * "...")
+    println(verbose, :low, "Start time: " * string(now()))
+    println(verbose, :low, "Means and bands will be saved in " * workpath(m, "scenarios"))
 
     start_time = time_ns()
     # Revert model alt policy to historical rule
@@ -41,27 +39,20 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
                  "Alternative policy")
 
     for output_var in output_vars
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            print("Computing " * string(output_var) * "...")
-        end
+        print(verbose, :high, "Computing " * string(output_var) * "...")
 
         # Compute means and bands
         scenario_means_bands(m, scen, output_var; kwargs...)
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            output_file = get_scenario_mb_output_file(m, scen, output_var)
-            println("wrote " * basename(output_file))
-        end
+        output_file = get_scenario_mb_output_file(m, scen, output_var)
+        println(verbose, :high, "wrote " * basename(output_file))
     end
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = (time_ns() - start_time)/1e9
-        total_mb_time_min = total_mb_time/60
-
-        println("\nTotal time to compute scenario means and bands: " * string(total_mb_time_min) * " minutes")
-        println("Computation of means and bands complete: " * string(now()))
-    end
+    total_mb_time     = (time_ns() - start_time)/1e9
+    total_mb_time_min = total_mb_time/60
+    println(verbose, :low, "\nTotal time to compute scenario means and bands: " * string(total_mb_time_min) * " minutes")
+    println(verbose, :low, "Computation of means and bands complete: " * string(now()))
 end
 
 function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_var::Symbol; kwargs...)
@@ -89,7 +80,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
     output_file = get_scenario_mb_output_file(m, scen, output_var)
     output_dir = dirname(output_file)
     isdir(output_dir) || mkpath(output_dir)
-    jldopen(output_file, "w") do file
+    JLD2.jldopen(output_file, "w") do file
         write(file, "mb", mb)
     end
 

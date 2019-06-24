@@ -72,7 +72,7 @@ equilibrium conditions.
 
 * `observable_mappings::OrderedDict{Symbol,Observable}`: A dictionary that
   stores data sources, series mnemonics, and transformations to/from model
-  units.  DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
+  units. DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
   FRED database; all other data must be downloaded by the user. See `load_data`
   and `Observable` for further details.
 
@@ -200,7 +200,7 @@ function Model1002(subspec::String="ss10";
             OrderedDict{Symbol,PseudoObservable}())
 
     # Set settings
-    settings_m1002!(m)
+    model_settings!(m)
     default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -430,79 +430,79 @@ function init_parameters!(m::Model1002)
                    tex_label="\\mathcal{C}_{me}")
 
     # exogenous processes - standard deviation
-    m <= parameter(:σ_g, 2.5230, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_g, 2.5230, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
 
-    m <= parameter(:σ_b, 0.0292, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_b, 0.0292, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label="\\sigma_{b}")
 
-    m <= parameter(:σ_μ, 0.4559, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_μ, 0.4559, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label="\\sigma_{\\mu}")
 
-    m <= parameter(:σ_z, 0.6742, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_z, 0.6742, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
 
-    m <= parameter(:σ_λ_f, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_f, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
-    m <= parameter(:σ_λ_w, 0.3864, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_w, 0.3864, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{\\lambda_w}")
 
-    m <= parameter(:σ_r_m, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_r_m, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_r_m: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{r^m}")
 
-    m <= parameter(:σ_σ_ω, 0.0428, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., 0.05), fixed=false,
+    m <= parameter(:σ_σ_ω, 0.0428, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4, 0.05), fixed=false,
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                    tex_label="\\sigma_{\\sigma_\\omega}")
 
-    m <= parameter(:σ_μ_e, 0.0000, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., 0.05), fixed=true,
+    m <= parameter(:σ_μ_e, 0.0000, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4, 0.05), fixed=true,
                    description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",
                    tex_label="\\sigma_{\\mu_e}")
 
-    m <= parameter(:σ_γ, 0.0000, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., 0.01), fixed=true,
+    m <= parameter(:σ_γ, 0.0000, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4, 0.01), fixed=true,
                    description="σ_γ: The fraction of entrepreneurs surviving period t follows an exogenous process with standard deviation σ_γ.",
                    tex_label="\\sigma_{\\gamma}")
 
-    m <= parameter(:σ_π_star, 0.0269, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(6., 0.03), fixed=false,
+    m <= parameter(:σ_π_star, 0.0269, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(6, 0.03), fixed=false,
                    description="σ_π_star: The standard deviation of the inflation target.",
                    tex_label="\\sigma_{\\pi_*}")
 
-    m <= parameter(:σ_lr, 0.1766, (1e-8,10.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.75), fixed=false,
+    m <= parameter(:σ_lr, 0.1766, (1e-8,10.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.75), fixed=false,
                    tex_label="\\sigma_{10y}")
 
-    m <= parameter(:σ_z_p, 0.1662, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_z_p, 0.1662, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
                    tex_label="\\sigma_{z^p}")
 
-    m <= parameter(:σ_tfp, 0.9391, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_tfp, 0.9391, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{tfp}")
 
-    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdpdef}")
 
-    m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{pce}")
 
-    m <= parameter(:σ_gdp, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_gdp, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdp}")
 
-    m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=false,
+            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
-            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=true,
+            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4, .2), fixed=true,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
@@ -693,7 +693,7 @@ function steadystate!(m::Model1002)
     return m
 end
 
-function settings_m1002!(m::Model1002)
+function model_settings!(m::Model1002)
 
     default_settings!(m)
 
@@ -705,7 +705,7 @@ function settings_m1002!(m::Model1002)
 
     # Data
     m <= Setting(:data_id, 3, "Dataset identifier")
-    if get_setting(m, :cond_id) in [1,2]
+    if get_setting(m, :cond_id) in collect(1:5)
         m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
                      "Observables used in conditional forecasts")
     elseif get_setting(m, :cond_id) == 6
@@ -735,7 +735,8 @@ parameter groupings (e.g. \"Policy Parameters\") to vectors of
 `prior_table`.
 """
 function parameter_groupings(m::Model1002)
-    policy     = [:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm, :σ_r_m, :σ_r_m1]
+    policy     = [[:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm, :σ_r_m];
+                  [Symbol("σ_r_m$i") for i = 1:n_anticipated_shocks(m)]]
     sticky     = [:ζ_p, :ι_p, :ϵ_p, :ζ_w, :ι_w, :ϵ_w]
     other_endo = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Φ, :S′′, :ppsi, :π_star,
                   :Γ_gdpdef, :δ_gdpdef, :Lmean, :λ_w, :g_star]
@@ -757,7 +758,7 @@ function parameter_groupings(m::Model1002)
     # Ensure no parameters missing
     incl_params = vcat(collect(values(groupings))...)
     excl_params = [m[θ] for θ in vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
-                                      [Symbol("σ_r_m$i") for i=2:20])]
+                                      [Symbol("σ_r_m$i") for i=n_anticipated_shocks(m)+1:n_anticipated_shocks_padding(m)])]
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings

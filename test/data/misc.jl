@@ -16,7 +16,7 @@ using DataFrames: DataFrame
     DSGE.subtract_quarters(end_date, start_date)
 
     df1 = DataFrame(a = [1])
-    df2 = DataFrame()
+    global df2 = DataFrame()
     df1, df2 = DSGE.reconcile_column_names(df1, df2)
     @test names(df1) == names(df2)
     @test size(df2, 1) == 0
@@ -27,8 +27,8 @@ using DataFrames: DataFrame
     @test_throws Meta.ParseError quartertodate("2005q9")
     @test_throws Meta.ParseError quartertodate("12345")
 
-    df = DataFrame(date = ["1913-12-23", "1992-11-14", "2002-01-01", "2014-12-19"],
-                   x = [1, 2, missing, 4])
+    global df = DataFrame(date = ["1913-12-23", "1992-11-14", "2002-01-01", "2014-12-19"],
+                          x = [1, 2, missing, 4])
     DSGE.format_dates!(:date, df)
 end
 

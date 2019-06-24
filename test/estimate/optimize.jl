@@ -8,8 +8,13 @@ custom_settings = Dict{Symbol, Setting}(
 m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 file = "$path/../reference/optimize.h5"
+# For regenerating test file
+#=params_test = h5read(file, "params")
+data_test = h5read(file, "data")=#
+
+file = "$path/../reference/optimize.h5"
 x0 = h5read(file, "params")
-data = Matrix{Float64}(h5read(file, "data")')
+data = h5read(file, "data")'
 minimizer = h5read(file, "minimizer")
 minimum = h5read(file, "minimum")
 H_expected = h5read(file, "H")
@@ -33,7 +38,7 @@ end=#
 
 @testset "Check optimize minimizers are the same" begin
     @test @test_matrix_approx_eq minimizer out.minimizer
-    @test minimum ≈ out.minimum atol=1e-6
+    @test minimum ≈ out.minimum atol=5e-7
     @test @test_matrix_approx_eq H_expected H
 end
 

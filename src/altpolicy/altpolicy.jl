@@ -10,9 +10,9 @@ Type defining an alternative policy rule.
 - `key::Symbol`: alternative policy identifier
 
 - `eqcond::Function`: a version of `DSGE.eqcond` which computes the equilibrium
-  condition matrices under the alternative policy. Like `eqcond`, it should take
-  in one argument of type `AbstractModel` and return the `Γ0`, `Γ1`, `C`, `Ψ`,
-  and `Π` matrices.
+  condition matrices under the alternative policy. Like `DSGE.eqcond`, it should
+  take in one argument of type `AbstractModel` and return the `Γ0`, `Γ1`, `C`,
+  `Ψ`, and `Π` matrices.
 
 - `solve::Function`: a version of `DSGE.solve` which solves the model under the
   alternative policy. Like `DSGE.solve`, it should take in one argument of type

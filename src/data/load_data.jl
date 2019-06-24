@@ -28,18 +28,12 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
     # Check if already downloaded
     if try_disk && has_saved_data(m; cond_type=cond_type)
         filename = get_data_filename(m, cond_type)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            print("Reading dataset $(filename) from disk...")
-        end
+        print(verbose, :low, "Reading dataset $(filename) from disk...")
         df = read_data(m; cond_type = cond_type)
         if isvalid_data(m, df; cond_type = cond_type)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("dataset from disk valid")
-            end
+            println(verbose, :low, "dataset from disk valid")
         else
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("dataset from disk not valid")
-            end
+            println(verbose, :low, "dataset from disk not valid")
             recreate_data = true
         end
     else
@@ -48,9 +42,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
 
     # Download routines
     if recreate_data
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Creating dataset...")
-        end
+        println(verbose, :low, "Creating dataset...")
 
         levels = load_data_levels(m; verbose=verbose)
         if cond_type in [:semi, :full]
@@ -72,9 +64,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         if !m.testing
             save_data(m, df; cond_type=cond_type)
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("dataset creation successful")
-        end
+        println(verbose, :low, "dataset creation successful")
 
         missing_cond_vars!(m, df; cond_type = cond_type)
 
@@ -149,12 +139,10 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
         file = inpath(m, "raw", "$(lowercase(string(source)))_$vint.csv")
 
         if isfile(file)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Reading data from $file...")
-            end
+            println(verbose, :low, "Reading data from $file...")
 
             # Read in dataset and check that the file contains data for the proper dates
-            addl_data = CSV.read(file, copycols=true)
+            addl_data = CSV.read(file)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
@@ -228,12 +216,10 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
     file = inpath(m, "cond", "cond_cdid=" * cond_idno * "_cdvt=" * cond_vint * ".csv")
 
     if isfile(file)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Reading conditional data from $file...")
-        end
+        println(verbose, :low, "Reading conditional data from $file...")
 
         # Read data
-        cond_df = CSV.read(file, copycols=true)
+        cond_df = CSV.read(file)
         format_dates!(:date, cond_df)
 
         date_cond_end = cond_df[end, :date]
@@ -241,14 +227,17 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         # Use population forecast as population data
         population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
         if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
-            pop_forecast = CSV.read(population_forecast_file, copycols=true)
+            pop_forecast = CSV.read(population_forecast_file)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
+            #DSGE.na2nan!(pop_forecast)
             DSGE.format_dates!(:date, pop_forecast)
 
             cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
 
+            # Turn NAs into NaNs
+            #na2nan!(cond_df)
             sort!(cond_df, :date)
 
             return cond_df
@@ -295,7 +284,7 @@ Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
 function read_data(m::AbstractModel; cond_type::Symbol = :none)
     filename = get_data_filename(m, cond_type)
-    df       = CSV.read(filename, copycols=true)
+    df       = CSV.read(filename)
 
     # Convert date column from string to Date
     df[:date] = map(Date, df[:date])
@@ -405,7 +394,7 @@ Create a `DataFrame` out of the matrix `data`, including a `:date` column
 beginning in `start_date`.  Variable names and indices are obtained from
 `m.observables`.
 """
-function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where {T<:AbstractFloat}
+function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where T<:AbstractFloat
     # Check number of rows = number of observables
     nobs = n_observables(m)
     @assert size(data, 1) == nobs "Number of rows of data matrix ($(size(data, 1))) must equal number of observables ($nobs)"
@@ -472,11 +461,9 @@ function read_population_data(m::AbstractModel; verbose::Symbol = :low)
 end
 
 function read_population_data(filename::String; verbose::Symbol = :low)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Reading population data from $filename...")
-    end
+    println(verbose, :low, "Reading population data from $filename...")
 
-    df = CSV.read(filename, copycols=true)
+    df = CSV.read(filename)
     DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
@@ -509,11 +496,9 @@ end
 function read_population_forecast(filename::String, population_mnemonic::Symbol;
                                   verbose::Symbol = :low)
     if isfile(filename)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Loading population forecast from $filename...")
-        end
+        println(verbose, :low, "Loading population forecast from $filename...")
 
-        df = CSV.read(filename, copycols=true)
+        df = CSV.read(filename)
         rename!(df, :POPULATION => population_mnemonic)
         DSGE.format_dates!(:date, df)
         sort!(df, :date)

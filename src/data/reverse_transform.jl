@@ -133,7 +133,7 @@ end
 function reverse_transform(y::AbstractArray, rev_transform::Function;
                            fourquarter::Bool = false,
                            y0 = missing, y0s::Vector = Vector(undef, 0),
-                           pop_growth::Vector = Vector(undef, 0)) where {T<:AbstractFloat}
+                           pop_growth::Vector = Vector(undef, 0)) where T<:AbstractFloat
     if fourquarter
         if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q,
                              loggrowthtopct_4q_approx]
@@ -232,7 +232,7 @@ function reverse_transform(path::String, class::Symbol, product::Symbol,
                            fourquarter::Bool = false)
 
     # Read in the draws for this variable
-    draws = jldopen(path, "r") do jld
+    draws = JLD2.jldopen(path, "r") do jld
         read_forecast_output(jld, class, product, var)
     end
 

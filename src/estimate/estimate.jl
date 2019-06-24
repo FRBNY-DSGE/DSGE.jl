@@ -22,34 +22,45 @@ Estimate the DSGE parameter posterior distribution.
   eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
   decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
   the rest of the routine has not broken.
+- `method::Symbol`: The method to use when sampling from the posterior distribution. Can
+    be either `:MH` for standard Metropolis Hastings Markov Chain Monte Carlo, or `:SMC`
+    for Sequential Monte Carlo.
 - `mle`: Set to true if parameters should be estimated by maximum likelihood directly.
     If this is set to true, this function will return after estimating parameters.
-- `run_MH`: Set to false to disable sampling from the posterior.
+- `sampling`: Set to false to disable sampling from the posterior.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
-                  run_MH::Bool = true)
+                  sampling::Bool = true)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
-             mle = mle, run_MH = run_MH)
+             mle = mle, sampling = sampling)
 end
+
 function estimate(m::AbstractModel;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
-                  run_MH::Bool = true)
+                  sampling::Bool = true)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
-             mle = mle, run_MH = run_MH)
+             mle = mle, sampling = sampling)
 end
+
 function estimate(m::AbstractModel, data::AbstractArray;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
-                  run_MH::Bool = true)
+                  sampling::Bool = true)
+
+    if !(get_setting(m, :sampling_method) in [:SMC,:MH])
+        error("method must be :SMC or :MH")
+    else
+        method = get_setting(m, :sampling_method)
+    end
 
     ########################################################################################
     ### Step 1: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
@@ -90,11 +101,8 @@ function estimate(m::AbstractModel, data::AbstractArray;
             converged = out.converged || attempts > max_attempts
 
             end_time = (time_ns() - begin_time)/1e9
-
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                @printf "Total iterations completed: %d\n" total_iterations
-                @printf "Optimization time elapsed: %5.2f\n" optimization_time += end_time
-            end
+            println(verbose, :low, @sprintf "Total iterations completed: %d\n" total_iterations)
+            println(verbose, :low, @sprintf "Optimization time elapsed: %5.2f\n" optimization_time += end_time)
 
             # Write params to file after every `n_iterations` iterations
             params = map(θ->θ.value, m.parameters)
@@ -112,46 +120,45 @@ function estimate(m::AbstractModel, data::AbstractArray;
     params = map(θ->θ.value, m.parameters)
 
     # Sampling does not make sense if mle=true
-    if mle || !run_MH
+    if mle || !sampling
         return nothing
     end
 
-    ########################################################################################
-    ### Step 2: Compute proposal distribution
-    ###
-    ### In Metropolis-Hastings, we draw sample parameter vectors from
-    ### the proposal distribution, which is a degenerate multivariate
-    ### normal centered at the mode. Its variance is the inverse of
-    ### the hessian. We find the inverse via eigenvalue decomposition.
-    ########################################################################################
+    if get_setting(m,:sampling_method) == :MH
+        ########################################################################################
+        ### Step 2: Compute proposal distribution for Markov Chain Monte Carlo (MCMC)
+        ###
+        ### In Metropolis-Hastings, we draw sample parameter vectors from
+        ### the proposal distribution, which is a degenerate multivariate
+        ### normal centered at the mode. Its variance is the inverse of
+        ### the hessian. We find the inverse via eigenvalue decomposition.
+        ########################################################################################
 
-    # Calculate the Hessian at the posterior mode
-    hessian = if calculate_hessian(m)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Recalculating Hessian...")
-        end
+        ## Calculate the Hessian at the posterior mode
+        hessian = if calculate_hessian(m)
+            println(verbose, :low, "Recalculating Hessian...")
 
-        hessian, _ = hessian!(m, params, data; verbose=verbose)
+            hessian, _ = hessian!(m, params, data; verbose=verbose)
 
-        h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
-            file["hessian"] = hessian
-        end
+            h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
+                file["hessian"] = hessian
+            end
 
-        hessian
+            hessian
 
     # Read in a pre-calculated Hessian
     else
         fn = hessian_path(m)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Using pre-calculated Hessian from $fn")
-        end
+        println(verbose, :low, "Using pre-calculated Hessian from $fn")
 
         hessian = h5open(fn,"r") do file
             read(file, "hessian")
         end
+
+        hessian
 	end
 
-	# Compute inverse hessian and create proposal distribution, or
+        # Compute inverse hessian and create proposal distribution, or
         # just create it with the given cov matrix if we have it
         propdist = if isempty(proposal_covariance)
             # Make sure the mode and hessian have the same number of parameters
@@ -178,15 +185,27 @@ function estimate(m::AbstractModel, data::AbstractArray;
             println("problem –    shutting down dimensions")
         end
 
-    ########################################################################################
-    ### Step 3: Sample from posterior using Metropolis-Hastings algorithm
-    ########################################################################################
+        ########################################################################################
+        ### Step 3: Sample from posterior using Metropolis-Hastings algorithm
+        ########################################################################################
 
-    # Set the jump size for sampling
-    cc0 = get_setting(m, :mh_cc0)
-    cc = get_setting(m, :mh_cc)
+        # Set the jump size for sampling
+        cc0 = get_setting(m, :mh_cc0)
+        cc = get_setting(m, :mh_cc)
 
-    metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose)
+        metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
+
+    elseif get_setting(m, :sampling_method) == :SMC
+        ########################################################################################
+        ### Step 3: Run Sequential Monte Carlo (SMC)
+        ###
+        ### In Sequential Monte Carlo, a large number of Markov Chains
+        ### are simulated iteratively to create a particle approximation
+        ### of the posterior. Portions of this method are executed in
+        ### parallel.
+        ########################################################################################
+        smc(m, data; verbose = verbose)
+    end
 
     ########################################################################################
     ### Step 4: Calculate and save parameter covariance matrix
@@ -200,8 +219,8 @@ end
 
 """
 ```
-metropolis_hastings(propdist::Distribution, m::AbstractModel,
-    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
+metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractModel,
+    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
 ```
 
 Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
@@ -231,7 +250,7 @@ function metropolis_hastings(propdist::Distribution,
                              data::AbstractArray,
                              cc0::T,
                              cc::T;
-                             verbose::Symbol=:low) where {T<:AbstractFloat}
+                             verbose::Symbol=:low) where T<:AbstractFloat
 
 
     # If testing, set the random seeds at fixed numbers
@@ -260,7 +279,7 @@ function metropolis_hastings(propdist::Distribution,
 
     initialized = false
     while !initialized
-        post_old = posterior!(m, para_old, data; mh = true)
+        post_old = posterior!(m, para_old, data; sampler = true)
         if post_old > -Inf
             propdist.μ = para_old
             initialized = true
@@ -271,10 +290,8 @@ function metropolis_hastings(propdist::Distribution,
 
 
     # Report number of blocks that will be used
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Blocks: $n_blocks")
-        println("Draws per block: $n_sim")
-    end
+    println(verbose, :low, "Blocks: $n_blocks")
+    println(verbose, :low, "Draws per block: $n_sim")
 
     # For n_sim*mhthin iterations within each block, generate a new parameter draw.
     # Decide to accept or reject, and save every (mhthin)th draw that is accepted.
@@ -286,7 +303,7 @@ function metropolis_hastings(propdist::Distribution,
     # Open HDF5 file for saving parameter draws
     simfile = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
-    parasim = d_create(simfile, "mhparams", datatype(Float32),
+    parasim = d_create(simfile, "mhparams", datatype(Float64),
                        dataspace(n_saved_obs,n_params),
                        "chunk", (n_sim,n_params))
 
@@ -305,11 +322,9 @@ function metropolis_hastings(propdist::Distribution,
 
             # Solve the model (checking that parameters are within bounds and
             # gensys returns a meaningful system) and evaluate the posterior
-            post_new = posterior!(m, para_new, data; mh = true)
+            post_new = posterior!(m, para_new, data; sampler = true)
 
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println("Block $block, Iteration $j: posterior = $post_new")
-            end
+            println(verbose, :high, "Block $block, Iteration $j: posterior = $post_new")
 
             # Choose to accept or reject the new parameter by calculating the
             # ratio (r) of the new posterior value relative to the old one We
@@ -327,16 +342,12 @@ function metropolis_hastings(propdist::Distribution,
                 post_old = post_new
                 propdist.μ = para_new
 
-                if VERBOSITY[verbose] >= VERBOSITY[:high]
-                    println("Block $block, Iteration $j: accept proposed jump")
-                end
+                println(verbose, :high, "Block $block, Iteration $j: accept proposed jump")
             else
                 # Reject proposed jump
                 block_rejections += 1
 
-                if VERBOSITY[verbose] >= VERBOSITY[:high]
-                    println("Block $block, Iteration $j: reject proposed jump")
-                end
+                println(verbose, :high, "Block $block, Iteration $j: reject proposed jump")
             end
 
             # Save every (mhthin)th draw
@@ -357,32 +368,27 @@ function metropolis_hastings(propdist::Distribution,
 
         # Write parameters to file if we're past n_burn blocks
         if block > n_burn
-            parasim[block_start:block_end, :] = map(Float32, mhparams)
+            parasim[block_start:block_end, :] = map(Float64, mhparams)
         end
 
         # Calculate time to complete this block, average block time, and
         # expected time to completion
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            end_time = (time_ns() - begin_time)/1e9
-            total_sampling_time += end_time
-            total_sampling_time_minutes = total_sampling_time/60
-            expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
-            expected_time_remaining_minutes = expected_time_remaining_sec/60
+        block_time = (time_ns() - begin_time)/1e9
+        total_sampling_time += block_time
+        total_sampling_time_minutes = total_sampling_time/60
+        expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
+        expected_time_remaining_minutes = expected_time_remaining_sec/60
 
-            println("Completed $block of $n_blocks blocks.")
-            println("Total time to compute $block blocks: $total_sampling_time_minutes minutes")
-            println("Expected time remaining for Metropolis-Hastings: $expected_time_remaining_minutes minutes")
-            println("Block $block rejection rate: $block_rejection_rate \n")
-        end
-
+        println(verbose, :low, "Completed $block of $n_blocks blocks.")
+        println(verbose, :low, "Total time to compute $block blocks: $total_sampling_time_minutes minutes")
+        println(verbose, :low, "Expected time remaining for Metropolis-Hastings: $expected_time_remaining_minutes minutes")
+        println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
     end # of loop over blocks
 
     close(simfile)
 
     rejection_rate = all_rejections / (n_blocks*n_sim*mhthin)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Overall rejection rate: $rejection_rate")
-    end
+    println(verbose, :low, "Overall rejection rate: $rejection_rate")
 end
 
 """
@@ -399,21 +405,42 @@ parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 function compute_parameter_covariance(m::AbstractModel)
 
     # Read in saved parameter draws
-    param_draws_path = rawpath(m,"estimate","mhsave.h5")
-    if !isfile(param_draws_path)
-        @printf stderror "Saved parameter draws not found.\n"
-        return
-    end
-    param_draws = h5open(param_draws_path, "r") do f
-        read(f, "mhparams")
-    end
+    if get_setting(m, :sampling_method) == :MH
+        param_draws_path = rawpath(m, "estimate", "mhsave.h5")
+        if !isfile(param_draws_path)
+            @printf stderr "Saved parameter draws not found.\n"
+            return
+        end
+        param_draws = h5open(param_draws_path, "r") do f
+            read(f, "mhparams")
+        end
 
-    # Calculate covariance matrix
-    param_covariance = cov(param_draws)
+        # Calculate covariance matrix
+        param_covariance = cov(param_draws)
 
-    # Write to file
-    h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
-        f["mhcov"] = param_covariance
+        # Write to file
+        h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
+            f["mhcov"] = param_covariance
+        end
+    elseif get_setting(m, :sampling_method) == :SMC
+        param_draws_path = rawpath(m, "estimate", "smcsave.h5")
+        if !isfile(param_draws_path)
+            @printf stderr "Saved parameter draws not found.\n"
+            return
+        end
+        param_draws = h5open(param_draws_path, "r") do f
+            read(f, "smcparams")
+        end
+
+        # Calculate covariance matrix
+        param_covariance = cov(param_draws)
+
+        # Write to file
+        h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
+            f["smccov"] = param_covariance
+        end
+    else
+        throw("Invalid sampling method specified in setting :sampling_method")
     end
 
     return param_covariance

@@ -161,13 +161,9 @@ function csminwel(fcn::Function,
             # Bad gradient or back and forth on step length.  Possibly at cliff edge. Try
             # perturbing search direction if problem not 1D
             if wall1 && (length(H) > 1)
+                println(verbose, :low, "Cliff. Perturbing search direction.")
 
-                Hcliff = H + diagm(0 => diag(H).*rand(rng, nx))
-
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    println("Cliff. Perturbing search direction.")
-                end
-
+                Hcliff = H + Matrix(Diagonal(diag(H).*rand(rng, nx)))
                 f2, x2, fc, retcode2 = csminit(fcn, x, f_x, gr, badg, Hcliff,
                                                args...; verbose=verbose, kwargs...)
                 f_calls += fc
@@ -183,9 +179,7 @@ function csminwel(fcn::Function,
                     end
 
                     if wall2
-                        if VERBOSITY[verbose] >= VERBOSITY[:low]
-                            println("Cliff again. Try traversing")
-                        end
+                        println(verbose, :low, "Cliff again. Try traversing")
 
                         if norm(x2-x1) < 1e-13
                             f3 = f_x
@@ -289,14 +283,10 @@ function csminwel(fcn::Function,
             H = bfgsi(H , gh-gr , xh-x; verbose=verbose)
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @printf "Improvement on iteration %d = %18.9f\n" iteration fh-f_x
-        end
+        println(verbose, :high, @sprintf "Improvement on iteration %d = %18.9f\n" iteration fh-f_x)
 
         if stuck
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("improvement < ftol -- terminating")
-            end
+            println(verbose, :low, "improvement < ftol -- terminating")
         end
 
         # record# retcodeh of previous x
@@ -355,7 +345,7 @@ function csminwel(fcn::Function,
                   rng::AbstractRNG     = MersenneTwister(0),
                   kwargs...)
 
-    grad(x::Array{T}) where {T<:Number} = csminwell_grad(fcn, x, args...; kwargs...)
+    grad(x::Array{T}) where {T <: Number} = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
@@ -398,11 +388,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
         dxnorm = norm(dx)
 
         if dxnorm > 1e12
-
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Near singular H problem.")
-            end
-
+            println(verbose, :low, "Near singular H problem.")
             dx = dx * fchange / dxnorm
         end
 
@@ -417,15 +403,12 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
                 dx *= dxnorm/norm(dx)
                 dfhat = dot(dx, gr)
 
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    @printf "Correct for low angle %f\n" a
-                end
+                println(verbose, :low, @sprintf "Correct for low angle %f\n" a)
             end
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @printf "Predicted Improvement: %18.9f\n" (-dfhat/2)
-        end
+        println(verbose, :high, @sprintf "Predicted Improvement: %18.9f\n" -dfhat/2)
+
         # Have OK dx, now adjust length of step (lambda) until min and max improvement rate
         # criteria are met.
         done = false
@@ -446,9 +429,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
 
             f = fcn(dxtest, args...; kwargs...)
 
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                @printf "lambda = %10.5f; f = %20.7f\n" lambda f
-            end
+            println(verbose, :high, @sprintf "lambda = %10.5f; f = %20.7f\n" lambda f)
 
             if f < fhat
                 fhat = f
@@ -541,9 +522,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
         end
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        @printf "Norm of dx %10.5f\n" dxnorm
-    end
+    println(verbose, :high, @sprintf "Norm of dx %10.5f\n" dxnorm)
 
     return fhat, xhat, f_calls, retcode
 end
@@ -579,11 +558,9 @@ function bfgsi(H0, dg, dx; verbose::Symbol = :none)
     else
         @warn "bfgs update failed"
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))
-            @printf "dg'dx = %f\n" dgdx
-            @printf "|H*dg| = %f\n" (norm(Hdg))
-        end
+        println(verbose, :high, @sprintf "|dg| = %f, |dx| = %f\n" norm(dg) norm(dx))
+        println(verbose, :high, @sprintf "dg'dx = %f\n" dgdx)
+        println(verbose, :high, @sprintf "|H*dg| = %f\n" norm(Hdg))
     end
 
     return H

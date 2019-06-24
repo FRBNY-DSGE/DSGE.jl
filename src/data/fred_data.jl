@@ -45,9 +45,7 @@ function load_fred_data(m::AbstractModel;
         qend = lastdayofquarter(end_date)
 
         if !in(qstart, data[:date]) || !in(qend, data[:date])
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("FRED dataset on disk missing start or end date. Fetching data from FRED.")
-            end
+            println(verbose, :low, "FRED dataset on disk missing start or end date. Fetching data from FRED.")
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
         else
@@ -78,9 +76,7 @@ function load_fred_data(m::AbstractModel;
         f = Fred()
 
         for (i,s) in enumerate(missing_series)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Fetching FRED series $s...")
-            end
+            println(verbose, :low, "Fetching FRED series $s...")
             try
                 fredseries[i] = get_data(f, string(s); frequency="q",
                                                        observation_start=string(start_date),
@@ -95,9 +91,7 @@ function load_fred_data(m::AbstractModel;
                 @warn "FRED series $s could not be fetched at vintage $vint."
 
                 try
-                    if VERBOSITY[verbose] >= VERBOSITY[:low]
-                        println("Fetching FRED series $s without vintage...")
-                    end
+                    println(verbose, :low, "Fetching FRED series $s without vintage...")
                     fredseries[i] = get_data(f, string(s); frequency="q",
                                                            observation_start=string(start_date),
                                                            observation_end=string(end_date))
@@ -133,9 +127,7 @@ function load_fred_data(m::AbstractModel;
 
         if !m.testing
             CSV.write(datafile, data, missingstring = "")
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Updated data from FRED written to $datafile.")
-            end
+            println(verbose, :low, "Updated data from FRED written to $datafile.")
         end
     end
 

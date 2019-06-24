@@ -1,5 +1,5 @@
 using DSGE
-using Test, DataFrames, HDF5
+using Test, DataFrames, HDF5, JLD2
 
 path = dirname(@__FILE__)
 
@@ -21,14 +21,14 @@ path = dirname(@__FILE__)
 
         # Read expected results
         exp_data, exp_cond_data, exp_semicond_data =
-            jldopen("$path/../reference/load_data_out.jld2", "r") do file
+            JLD2.jldopen("$path/../reference/load_data_out.jld2", "r") do file
                 read(file, "data"), read(file, "cond_data"), read(file, "semi_cond_data")
             end
 
         # Unconditional data
         println("The following warnings are expected test behavior:")
-        df = load_data(m; try_disk=false, verbose=:none)
-        data = df_to_matrix(m, df)
+        global df = load_data(m; try_disk=false, verbose=:none)
+        global data = df_to_matrix(m, df)
         @test @test_matrix_approx_eq exp_data data
 
         # Conditional data

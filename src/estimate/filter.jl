@@ -77,3 +77,61 @@ function filter(m::AbstractModel, data::AbstractArray, system::System{S},
 
     return Kalman(out...)
 end
+
+function filter_shocks(m::AbstractModel, df::DataFrame, system::System{S},
+                       s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0); cond_type::Symbol = :none,
+                       start_date::Date = date_presample_start(m),
+                       include_presample::Bool = false) where S<:AbstractFloat
+
+    data = df_to_matrix(m, df, cond_type = cond_type)
+
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = zlb_regime_indices(m, data, start_date)
+
+    # Get system matrices for each regime
+    Ts, Rs, Cs, Qs, Zs, Ds, Es = zlb_regime_matrices(m, system, start_date)
+
+    # Initialize s_0 and P_0
+    if isempty(s_0) || isempty(P_0)
+        s_0, P_0 = init_stationary_states(Ts[1], Rs[1], Cs[1], Qs[1])
+
+        # If s_0 and P_0 provided, check that rows and columns corresponding to
+        # anticipated shocks are zero in P_0
+        ant_state_inds = setdiff(1:n_states_augmented(m), inds_states_no_ant(m))
+        # MDχ: Had to change the tolerance from exactly == 0, if below tol
+        # explicitly set to 0
+        @assert all(x -> abs(x) < 1e-14, P_0[:, ant_state_inds])
+        @assert all(x -> abs(x) < 1e-14, P_0[ant_state_inds, :])
+        P_0[:, ant_state_inds] = 0.
+        P_0[ant_state_inds, :] = 0.
+    end
+
+    # Specify number of presample periods if we don't want to include them in
+    # the final results
+    Nt0 = include_presample ? 0 : n_presample_periods(m)
+
+    # Dimensions
+    Nt = size(data,  2) # number of periods of data
+    Ns = size(Ts[1], 1) # number of states
+
+    # Augment state space with shocks
+    Ts, Rs, Cs, Zs, s_0, P_0 =
+        augment_states_with_shocks(regime_inds, Ts, Rs, Cs, Qs, Zs, s_0, P_0)
+
+    # Kalman filter stacked states and shocks stil_t
+    _, _, _, stil_filt, Ptil_filt, _, _, _, _ =
+        kalman_filter(regime_inds, data, Ts, Rs, Cs, Qs, Zs, Ds, Es, s_0, P_0,
+                      outputs = [:filt])
+
+    # Index out shocks
+    ϵ_filt = stil_filt[Ns+1:end, :] # ϵ_{t|T}
+
+    # Trim the presample if needed
+    if Nt0 > 0
+        insample = Nt0+1:Nt
+        ϵ_filt = ϵ_filt[:, insample]
+    end
+
+    return ϵ_filt
+end

@@ -144,7 +144,7 @@ If `bdd_and_unbdd`, then `output_var` must be either `:forecast` or
 """
 function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
-    jldopen(fn, "r") do f
+    JLD2.jldopen(fn, "r") do f
         read(f, "mb")
     end
 end
@@ -164,6 +164,7 @@ function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
         bdd_file = get_meansbands_output_file(m, input_type, cond_type, bdd_output_var;
                                               forecast_string = forecast_string,
                                               directory = directory)
+
         read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
     else
         read_mb(unbdd_file)
@@ -190,7 +191,12 @@ function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
 
     # Check well-formed
     for fld in [:para, :forecast_string, :cond_type, :date_inds, :class, :indices]
-        @assert bdd_mb.metadata[fld] == unbdd_mb.metadata[fld] "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
+        if typeof(bdd_mb.metadata[fld]) == OrderedDict{Date,Int64}
+            @assert bdd_mb.metadata[fld].vals == unbdd_mb.metadata[fld].vals
+            @assert bdd_mb.metadata[fld].keys == unbdd_mb.metadata[fld].keys
+        else
+            @assert bdd_mb.metadata[fld] == unbdd_mb.metadata[fld] "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
+        end
     end
     @assert (bdd_mb.metadata[:product], unbdd_mb.metadata[:product]) in [(:bddforecast, :forecast), (:bddforecast4q, :forecast4q)] "Invalid product fields: $((bdd_mb.metadata[:product], unbdd_mb.metadata[:product]))"
 
@@ -301,10 +307,12 @@ end
 """
 ```
 write_means_tables_shockdec(m, input_type, cond_type, class;
-    forecast_string = "", dirname = tablespath(m, \"forecast\"),
+    forecast_string = "",
+    read_dirname = workpath(m, \"forecast\"),
+    write_dirname = tablespath(m, \"forecast\"),
     kwargs...)
 
-write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
+write_means_tables_shockdec(write_dirname, filestring_base, mb_shockdec,
     mb_trend, mb_dettrend, mb_hist, mb_forecast; tablevars = get_variables(mb),
     columnvars = get_shocks(mb), groups = [])
 ```
@@ -320,7 +328,7 @@ write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
 
 **Method 2 only:**
 
-- `dirname::String`: directory to which tables are saved
+- `write_dirname::String`: directory to which tables are saved
 - `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
   typically `[\"vint=yymmdd\"]``
 - `mb_shockdec::MeansBands`
@@ -560,4 +568,18 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
                                write_dirname = write_dirname)
         end
     end
+end
+
+function add_requisite_output_vars_meansbands(output_vars)
+
+    all_output_vars = add_requisite_output_vars(output_vars)
+
+    if :shockdecpseudo in all_output_vars
+        push!(all_output_vars, :histforecastpseudo)
+    end
+    if :shockdecobs in all_output_vars
+        push!(all_output_vars, :histforecastobs)
+    end
+
+    return all_output_vars
 end

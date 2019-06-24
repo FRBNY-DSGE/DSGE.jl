@@ -77,6 +77,20 @@ function datetoquarter(date::Dates.Date)
 end
 
 """
+```
+function vinttodate(vint)
+```
+
+Return the string given by data_vintage(m), which is in the format YYYYMMDD, to a Date object.
+"""
+function vinttodate(vint::String)
+    year  = Meta.parse("20"*vint[1:2])
+    month = Meta.parse(vint[3:4])
+    day   = Meta.parse(vint[5:6])
+    return Date(year, month, day)
+end
+
+"""
 `subtract_quarters(t1::Date, t0::Date)`
 
 Compute the number of quarters between t1 and t0, including t0 and excluding t1.
@@ -114,6 +128,16 @@ function missing2nan(a::Array)
     return a_new
 end
 
+# Temp function to ensure proper transition into 0.7
+function nan2missing!(df::DataFrame)
+    for col in names(df)
+        if col != :date
+            df[col] = convert(Vector{Union{Missing, Float64}}, df[col])
+            df[col] = replace(x -> isnan(x) ? missing : x, df[col])
+        end
+    end
+end
+
 """
 ```
 na2nan!(df::DataFrame)
@@ -123,7 +147,11 @@ Convert all NAs in a DataFrame to NaNs.
 """
 function na2nan!(df::DataFrame)
     for col in names(df)
-        df[ismissing.(df[col]), col] = NaN
+        if typeof(df[col])==Vector{Date}
+            nothing
+        else
+            df[ismissing.(df[col]), col] = NaN
+        end
     end
 end
 
@@ -159,10 +187,8 @@ function missing_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol =
 
         # Make non-conditional variables missing
         cond_names_missing = setdiff(names(df), [cond_names; :date])
-        for var_name in cond_names_missing
-            df[var_name] = convert(Vector{Union{Missing, eltype(df[var_name])}}, df[var_name])
-            df[df[:date] .>= date_forecast_start(m), var_name] = missing
-        end
+        T = eltype(df[cond_names_missing])
+        df[df[:date] .>= date_forecast_start(m), cond_names_missing] = convert(T, missing)
 
         # Warn if any conditional variables are missing
         for var in cond_names

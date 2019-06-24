@@ -55,6 +55,8 @@ function get_product(output_var::Symbol)
         :trend
     elseif occursin("irf", s)
         :irf
+    elseif occursin("decomp", s)
+        :decomp
     else
         error("Invalid output_var: " * s)
     end
@@ -96,7 +98,7 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
         return population_forecast[1:nperiods, :]
 
     else
-        # Extend forecast by n_filler_periods
+       # Extend forecast by n_filler_periods
         n_filler_periods = nperiods - nperiods_act
 
         last_provided = population_forecast[end, :date]
@@ -200,8 +202,8 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
     # If no population forecast, use last period of population data instead
     if isempty(population_forecast)
-        population_forecast = population_data[end, :]
-        last_forecast_date = DSGE.iterate_quarters(last_historical_date, 1)
+        population_forecast = DataFrame(deepcopy(population_data[end, :]))
+        last_forecast_date = iterate_quarters(last_historical_date, 1)
         population_forecast[1, :date] = last_forecast_date
     else
         last_forecast_date = population_forecast[end, :date]
@@ -239,6 +241,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         padding, unpadded_data = reconcile_column_names(padding, unpadded_data)
         padded_data = vcat(padding, unpadded_data)
+        # na2nan!(padded_data)
         padded_data
 
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
@@ -311,8 +314,7 @@ function get_mb_metadata(m::AbstractModel, input_type::Symbol, cond_type::Symbol
 
     class   = get_class(output_var)
     product = get_product(output_var)
-
-    metadata = jldopen(forecast_output_file, "r") do jld
+    metadata = JLD2.jldopen(forecast_output_file, "r") do jld
         read_forecast_metadata(jld)
     end
 

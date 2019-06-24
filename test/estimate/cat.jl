@@ -5,7 +5,7 @@ path = dirname(@__FILE__)
 # Set up
 m = AnSchorfheide(testing = true)
 
-kal1, kal2 = jldopen("$path/../reference/kalman_cat_args.jld2", "r") do file
+kal1, kal2 = JLD2.jldopen("$path/../reference/kalman_cat_args.jld2", "r") do file
     read(file, "kal1"), read(file, "kal2")
 end
 
@@ -13,7 +13,7 @@ end
 kal12 = cat(m, kal1, kal2)
 
 # Test equality
-exp_kal12 = jldopen("$path/../reference/kalman_cat_out.jld2", "r") do file
+exp_kal12 = JLD2.jldopen("$path/../reference/kalman_cat_out.jld2", "r") do file
     read(file, "kal12")
 end
 

@@ -213,7 +213,7 @@ function init_observable_mappings!(m::Model1010)
 
     longinflation_rev_transform = loggrowthtopct_annualized
 
-    observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__SPF],
+    observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__DLX],
                                                  longinflation_fwd_transform, longinflation_rev_transform,
                                                  "Long term inflation expectations",
                                                  "10-year average yr/yr CPI inflation expectations")
@@ -231,7 +231,7 @@ function init_observable_mappings!(m::Model1010)
 
     longrate_rev_transform = quartertoannual
 
-    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__LONGRATE],
+    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__DLX],
                                             longrate_fwd_transform, longrate_rev_transform,
                                             "Long term interest rate expectations",
                                             "10T yield")
@@ -257,12 +257,12 @@ function init_observable_mappings!(m::Model1010)
         tfp_unadj      = levels[:TFPKQ]
         tfp_unadj_inrange_nonmissing = tfp_unadj_inrange[.!ismissing.(tfp_unadj_inrange)]
         tfp_unadj_mean = isempty(tfp_unadj_inrange_nonmissing) ? missing : mean(tfp_unadj_inrange_nonmissing)
-        (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
+        (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[:TFPJQ]))
     end
 
     tfp_rev_transform = quartertoannual
 
-    observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__FERNALD, :TFPJQ__FERNALD],
+    observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__DLX, :TFPJQ__DLX],
                                        tfp_fwd_transform, tfp_rev_transform,
                                        "Total Factor Productivity",
                                        "Fernald's TFP, adjusted by Fernald's estimated alpha")

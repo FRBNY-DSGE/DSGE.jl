@@ -56,9 +56,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     data_transforms = collect_data_transforms(m)
 
     for series in keys(data_transforms)
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("Transforming series $series...")
-        end
+        println(verbose, :high, "Transforming series $series...")
         f = data_transforms[series]
         transformed[series] = f(levels)
     end
@@ -103,6 +101,10 @@ levels. Optionally do the same for forecasts.
 
 - `verbose`: one of `:none`, `:low`, or `:high`
 - `use_hpfilter`: whether to HP filter population data and forecast. See `Output` below.
+- `pad_forecast_start::Bool`: Whether you want to re-size
+the population_forecast such that the first index is one quarter ahead of the last index
+of population_data. Only set to false if you have manually constructed population_forecast
+to artificially start a quarter earlier, so as to avoid having an unnecessary missing first entry.
 
 ### Output
 
@@ -124,13 +126,14 @@ empty.
 """
 function transform_population_data(population_data::DataFrame, population_forecast::DataFrame,
                                    population_mnemonic::Symbol; verbose = :low,
-                                   use_hpfilter::Bool = true)
+                                   use_hpfilter::Bool = true,
+                                   pad_forecast_start::Bool = false)
 
     # Unfiltered population data
     population_recorded = population_data[[:date, population_mnemonic]]
 
     # Make sure first period of unfiltered population forecast is the first forecast quarter
-    if !isempty(population_forecast)
+    if !isempty(population_forecast) && !pad_forecast_start
         last_recorded_date = population_recorded[end, :date]
         if population_forecast[1, :date] <= last_recorded_date
             last_recorded_ind   = findall(population_forecast[:date] .== last_recorded_date)[1]

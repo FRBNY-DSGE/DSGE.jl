@@ -192,7 +192,7 @@ histforecast
     date_ticks = Base.filter(x -> start_date <= x <= end_date,    dates)
     date_ticks = Base.filter(x -> Dates.month(x) == 3,            date_ticks)
     date_ticks = Base.filter(x -> Dates.year(x) % tick_size == 0, date_ticks)
-    xticks --> (date_ticks, map(Dates.year, date_ticks))
+    xticks --> (map(Dates.value, date_ticks), map(Dates.year, date_ticks))
 
     # Bands
     sort!(bands_pcts, rev = true) # s.t. non-transparent bands will be plotted correctly

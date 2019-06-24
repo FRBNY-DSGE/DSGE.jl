@@ -1,4 +1,4 @@
-using DSGE, HDF5, JLD2, Plots
+using DSGE, HDF5, JLD, Plots
 
 path = dirname(@__FILE__)
 
@@ -25,7 +25,6 @@ output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :
 m <= Setting(:forecast_block_size, 5)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
 compute_meansbands(m, :full, :none, output_vars; verbose = :none)
-
 println("The following warning is expected test behavior:")
 
 # Plot history and forecast

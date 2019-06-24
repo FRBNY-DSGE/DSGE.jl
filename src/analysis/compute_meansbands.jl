@@ -43,7 +43,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
         println("Start time: $(now())")
         println("Means and bands will be saved in $output_dir")
     end
-    toq = @elapsed let
+    elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
         output_vars = add_requisite_output_vars(output_vars)
 
@@ -54,7 +54,6 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
             population_data, population_forecast = load_population_growth(m, verbose = verbose)
             isempty(df) && (df = load_data(m, verbose = :none))
         end
-
         for output_var in output_vars
             prod = get_product(output_var)
             if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -76,7 +75,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
         end
     end
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = toq
+        total_mb_time     = elapsed_time
         total_mb_time_min = total_mb_time/60
 
         println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
@@ -107,8 +106,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                    :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
         # Get to work!
-        #changed from pmap because of strange MethodError that I believe has to do with parallel workers trying to access same file
-        mb_vec = map(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+        mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                       pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
                       variable_names)
 
@@ -128,12 +126,9 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
         # Get to work!
         for shock_name in keys(metadata[:shock_indices])
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println("  * " * string(shock_name))
-            end
+            println(verbose, :high, "  * " * string(shock_name))
 
-            #changed from pmap because of strange MethodError that I believe has to do with parallel workers trying to access same file
-            mb_vec = map(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+            mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullables.Nullable(shock_name),
                                           forecast_string = forecast_string, kwargs...),
                           variable_names)
@@ -159,14 +154,12 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                                           forecast_string = forecast_string)
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
-    jldopen(filepath, true, true, true, IOStream) do file
+    JLD2.jldopen(filepath, true, true, true, IOStream) do file
         write(file, "mb", mb)
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        sep = prod in [:shockdec, :irf] ? "  " : ""
-        println(sep * "wrote " * basename(filepath))
-    end
+    sep = prod in [:shockdec, :irf] ? "  " : ""
+    println(verbose, :high, sep * "wrote " * basename(filepath))
 
     return mb
 end
@@ -209,7 +202,6 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     else
         find_density_bands(transformed_series, density_bands, minimize = minimize)
     end
-
     return means, bands
 end
 
@@ -236,6 +228,7 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
         else
             Float64[]
         end
+
         reverse_transform(fcast_series, transform4q;
                           fourquarter = true, y0s = y0s,
                           pop_growth = pop_growth)

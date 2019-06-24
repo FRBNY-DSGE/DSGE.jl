@@ -144,10 +144,11 @@ shockdec
     var, shockdec, trend, dettrend, hist, forecast, groups = sd.args
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
-    df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
+    df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
                                       mb_hist = hist, mb_forecast = forecast,
                                       detexify_shocks = false,
                                       groups = groups)
+
     dates = df[:date]
     xnums = (1:length(dates)) .- 0.5
 
@@ -156,6 +157,12 @@ shockdec
                      findall(x -> Dates.month(x) == 3,            dates),
                      findall(x -> Dates.year(x) % tick_size == 0, dates))
     xticks --> (xnums[inds], map(Dates.year, dates[inds]))
+
+    # Set date axis limits
+    x0 = xnums[findfirst(dates .== start_date)]
+    x1 = xnums[findfirst(dates .== end_date)]
+
+    xlims := (x0, x1)
 
     # Shock contributions
     @series begin
@@ -171,8 +178,8 @@ shockdec
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
         inds = findall(start_date .<= dates .<= end_date)
-        x = df[inds, :date]
-        y = convert(Matrix, df[inds, cat_names])
+        x = xnums[inds]
+        y = convert(Matrix{Float64}, df[inds, cat_names])
 
         StatsPlots.GroupedBar((x, y))
     end
@@ -188,7 +195,7 @@ shockdec
 
         inds = intersect(findall(start_date .<= dates .<= end_date),
                          findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
-        xnums[inds], df[inds, :detrendedMean]
+        xnums[inds], convert(Vector{Float64}, df[inds, :detrendedMean])
     end
 
     # Detrended mean forecast
@@ -198,6 +205,6 @@ shockdec
 
         inds = intersect(findall(start_date .<= dates .<= end_date),
                          findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
-        xnums[inds], df[inds, :detrendedMean]
+        xnums[inds], convert(Vector{Float64}, df[inds, :detrendedMean])
     end
 end
