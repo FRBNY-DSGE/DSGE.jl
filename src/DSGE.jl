@@ -1,20 +1,11 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-<<<<<<< HEAD
-    using MPI
-    using Dates, Test, BenchmarkTools
-    using CSV, DataFrames, DataStructures, OrderedCollections
-    using BasisMatrices, ColorTypes, Distributed, Distributions, FileIO, FFTW, FredData, HDF5, JLD2
-    using LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase
-    using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatsPlots
-=======
     using BenchmarkTools, BasisMatrices, ColorTypes, CSV
     using DataFrames, DataStructures, Dates, Distributed, Distributions
     using FileIO, FFTW, ForwardDiff, FredData, HDF5, JLD2, LinearAlgebra
     using Missings, Nullables, Optim, OrderedCollections, Printf, Random, RecipesBase
     using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatsPlots, Test
->>>>>>> hank-0.7-dict
     using DataStructures: SortedDict, insert!, ForwardOrdering
     using QuantEcon: solve_discrete_lyapunov
     using DifferentialEquations: ODEProblem, Tsit5, Euler
