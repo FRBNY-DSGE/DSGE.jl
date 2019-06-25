@@ -24,7 +24,7 @@ function one_draw(m::AbstractModel, data::Matrix{Float64};
         catch err
             if isa(err, ParamBoundsError)
                 draw_loglh = draw_logpost = -Inf
-            elseif isa(err, PosDefException) || isa(err, SingularException)
+            elseif isa(err, PosDefException) || isa(err, SingularException) || isa(err, LinearAlgebra.LAPACKException)
                 draw_loglh = draw_logpost = -Inf
             else
                 throw(err)
