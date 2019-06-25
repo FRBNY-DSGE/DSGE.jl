@@ -353,9 +353,6 @@ function update_draws!(c::ParticleCloud, draws::Array{Particle,1})
         c.particles[i] = d
     end
 end
-@inline function update_draws!(c::Matrix{Float64}, draws::Matrix{Float64})
-
-end
 @inline function update_draws!(c::Cloud, draws::Matrix{Float64})
     I, J     = size(draws)
     n_params = ind_para_end(size(c.particles, 2))
