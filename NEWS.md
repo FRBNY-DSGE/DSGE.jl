@@ -1,5 +1,36 @@
-# DSGE.jl v0.4.1 Release Notes
+# DSGE.jl 0.6.1 Release Notes
 
+## New features and enhancements
+   + Forecast decompositions user to compare two forecasts and break down why forecasts have changed (by shock, differences in parameters, differences in data, etc.)
+   + Specify size of desired impulse responses (on impact) and flip shocks
+   + `filter_shocks` method allows user to obtain only filtered-only shocks (as opposed to filtered *and smoothed* shocks)
+   + Compatibility with SMC (full version to be released soon)
+   + New functions to deal with Date objects
+   + Compatibility with likelihood-only Kalman Filter and Chandrsekhar recursions (see StateSpaceRoutines.jl) which offer large speedups
+
+## Bug Fixes and cleanup
+   + Fixes to scenarios code, inluding rectifying date labels
+
+# DSGE.jl v0.5.1 Release Notes
++ Patch release to fix failing test
+
+# DSGE.jl v0.5.0 Release Notes
+## Breaking changes
++ Upgraded all code for use with Julia v0.7.0.
++ Changed file-saving dependency from JLD to JLD2.
++ Updated data loading and other machinery to rely on the Missing type for missing data as opposed to NaN.
+
+# DSGE.jl v0.4.2 Release Notes
+## New features and enhancements
+  + Implement benchmarking suite to benchmark code performance.
+  + Make DSGE compatible with improvements to the Kalman filter.
+
+## Bug fixes and cleanup
+  + Clean up unit tests.
+  + Clean up travis file.
+  + Fix dependency issues with NLOpt and Optim.
+
+# DSGE.jl v0.4.1 Release Notes
 ## Bug fixes and cleanup
 - Addressed deprecations and warnings for:
   + Non-vectorized functions (e.g. `log`, `!`)
