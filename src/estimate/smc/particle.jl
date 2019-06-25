@@ -355,9 +355,8 @@ function update_draws!(c::ParticleCloud, draws::Array{Particle,1})
 end
 @inline function update_draws!(c::Cloud, draws::Matrix{Float64})
     I, J     = size(draws)
-    n_params = ind_para_end(size(c.particles, 2))
     n_parts  = length(c)
-
+    n_params = ind_para_end(size(c.particles, 2))
     if (I, J) == (n_parts, n_params)
         for i = 1:I, j=1:J
             c.particles[i, j] = draws[i, j]
@@ -396,10 +395,19 @@ end
     update_weights!(c.particles, weights)
 end
 
+"""
+```
 @inline function set_weights!(c::Cloud, weights::Vector{Float64})
-    @assert size(c.particles, 1) == length(weights) "Dimensional mismatch in inc. weights"
+```
+Set weights to specific values. Contrast to update_weights, which multiplies
+existing weights by provided incremental weights.
+"""
+@inline function set_weights!(c::Cloud, weights::Vector{Float64})
+    @assert length(c) == length(weights) "Dimensional mismatch in set_weights"
     N = ind_weight(size(c.particles,2))
-    c.particles[:, N] = weights
+    for i=1:length(c)
+        c.particles[i, N] = weights[i]
+    end
 end
 
 
@@ -417,7 +425,7 @@ function update_loglh!(c::ParticleCloud, loglh::Vector{Float64})
     end
 end
 @inline function update_loglh!(c::Matrix{Float64}, loglh::Vector{Float64})
-    @assert size(c, 1) == length(loglh) "Dimensional mismatch"
+    @assert size(c,1) == length(loglh) "Dimensional mismatch"
     N = ind_loglh(size(c,2))
     for i=1:length(loglh)
         c[i, N] = loglh[i]
