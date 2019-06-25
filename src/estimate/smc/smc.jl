@@ -200,7 +200,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     #################################################################################
     ### Recursion
     #################################################################################
-    (VERBOSITY[verbose] >= VERBOSITY[:low]) & println("\n\n SMC recursion starts \n\n")
+    (VERBOSITY[verbose] >= VERBOSITY[:low]) && println("\n\n SMC recursion starts \n\n")
 
     while ϕ_n < 1.
 
