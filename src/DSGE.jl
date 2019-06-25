@@ -1,17 +1,14 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Dates, Test, BenchmarkTools
-    using CSV
-    using DataFrames, DataStructures, OrderedCollections
-    using BasisMatrices, ColorTypes, Distributed, Distributions, FileIO, FFTW, FredData, HDF5, JLD2
-    using LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase
-    using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatsPlots
+    using BenchmarkTools, BasisMatrices, ColorTypes, CSV
+    using DataFrames, DataStructures, Dates, Distributed, Distributions
+    using FileIO, FFTW, ForwardDiff, FredData, HDF5, JLD2, LinearAlgebra
+    using Missings, Nullables, Optim, OrderedCollections, Printf, Random, RecipesBase
+    using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatsPlots, Test
     using DataStructures: SortedDict, insert!, ForwardOrdering
     using QuantEcon: solve_discrete_lyapunov
     using DifferentialEquations: ODEProblem, Tsit5, Euler
-    using ForwardDiff
-    using ParallelDataTransfer
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
@@ -104,7 +101,7 @@ module DSGE
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
         compute_moments, find_density_bands, mutation, resample, smc,
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
-        initial_draw!, ParticleCloud, Particle,
+        initial_draw!, ParticleCloud, Particle, Cloud,
 
         # forecast/
         load_draws, forecast_one,
@@ -149,10 +146,12 @@ module DSGE
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
-        plot_posterior_intervals, plot_posterior_interval_comparison, plot_forecast_decomposition,
+        plot_posterior_intervals, plot_posterior_interval_comparison,
+        plot_forecast_decomposition,
 
         # models/
-        init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
+        init_parameters!, steadystate!, init_observable_mappings!,
+        init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide,
         KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
         RepDSGEGovDebt, HetDSGESimpleTaylor, HetDSGELag,
@@ -160,13 +159,14 @@ module DSGE
 
         #### Continuous time
         # models
-        solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT, SteadyStateParameterArray,
-        OneAssetHANK, calibrate_pLH_pHL,
+        solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT,
+        SteadyStateParameterArray, OneAssetHANK, calibrate_pLH_pHL,
 
         # solve/
         gensysct, gensysct!, new_divct, decomposition_svdct!, <,
-        krylov_reduction, valueref_reduction, deflated_block_arnoldi, change_basis, oneDquad_spline,
-        extend_to_nd, projection_for_subset, spline_basis, solve_static_conditions,
+        krylov_reduction, valueref_reduction, deflated_block_arnoldi, change_basis,
+        oneDquad_spline, extend_to_nd, projection_for_subset, spline_basis,
+        solve_static_conditions,
 
         # estimate
         hessizero, hess_diag_element, hess_offdiag_element, transform_transition_matrices,
