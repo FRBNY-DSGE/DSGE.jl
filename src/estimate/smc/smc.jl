@@ -167,9 +167,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     else
         # Instantiating Cloud object, update draws, loglh, & logpost
         cloud = Cloud(m, n_parts)
-        @time initial_draw!(m, data, cloud, parallel = parallel,
+        initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
-        @time initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
+        initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
     end
 
     # Fixed schedule for construction of ϕ_prop

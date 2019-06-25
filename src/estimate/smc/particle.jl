@@ -399,6 +399,13 @@ end
     update_weights!(c.particles, weights)
 end
 
+@inline function set_weights!(c::Cloud, weights::Vector{Float64})
+    @assert size(c.particles, 1) == length(weights) "Dimensional mismatch in inc. weights"
+    N = ind_weight(size(c.particles,2))
+    c.particles[:, N] = weights
+end
+
+
 """
 ```
 function update_loglh!(c::ParticleCloud, incweight::Vector{Float64})

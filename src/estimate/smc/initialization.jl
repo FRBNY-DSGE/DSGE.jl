@@ -76,9 +76,11 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64},
     else
         vector_reduce([one_draw_closure() for i in 1:n_parts]...)
     end
+
     update_draws!(c, draws)
     update_loglh!(c, vec(loglh))
     update_logpost!(c, vec(logpost))
+    set_weights!(c, ones(n_parts))
 end
 
 """
