@@ -1,4 +1,4 @@
-# DSGE.jl 0.6.1 Release Notes
+# DSGE.jl 0.6.0 Release Notes
 
 ## New features and enhancements
    + Forecast decompositions user to compare two forecasts and break down why forecasts have changed (by shock, differences in parameters, differences in data, etc.)
