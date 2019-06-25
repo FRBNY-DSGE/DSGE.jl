@@ -57,10 +57,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
              old_cloud::ParticleCloud = ParticleCloud(m, 0),
              recompute_transition_equation::Bool = true, run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
-             continue_intermediate::Bool = false,
-             intermediate_stage_start::Int = 0,
-             save_intermediate::Bool = false,
-             intermediate_stage_increment::Int = 10)
+             continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
+             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
 
     ########################################################################################
     ### Setting Parameters
@@ -83,10 +81,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     @everywhere function mutation_closure(p::Vector{S}, d_μ::Vector{S}, d_Σ::Matrix{S},
                                           blocks_free::Vector{Vector{Int64}},
                                           blocks_all::Vector{Vector{Int64}},
-                            ϕ_n::S, ϕ_n1::S; c::S = 1.0, α::S = 1.0,
-                            old_data::T = Matrix{S}(undef, size(data, 1), 0),
-                            use_chand_recursion::Bool = false,
-                            verbose::Symbol = :low) where {S<:Float64, T<:Matrix}
+                                          ϕ_n::S, ϕ_n1::S; c::S = 1.0, α::S = 1.0,
+                                          old_data::T = Matrix{S}(undef, size(data, 1), 0),
+                                          use_chand_recursion::Bool = false,
+                                          verbose::Symbol = :low) where {S<:Float64, T<:Matrix}
         return mutation(m, data, p, d_μ, d_Σ, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = c, α = α,
                         old_data = old_data, use_chand_recursion = use_chand_recursion,
                         verbose = verbose)
@@ -146,27 +144,25 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ### Initialize Algorithm: Draws from prior
     #################################################################################
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\n\n SMC " * (m.testing ? "testing " : "") * "starts ....  \n\n  ")
+        println("\n\n SMC " * (m.testing ? "testing " : "") * "starts ....\n\n")
     end
 
     if tempered_update
-        if isempty(old_cloud)
+        cloud = if isempty(old_cloud)
             loadpath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint=" * old_vintage)
-            cloud = Cloud(load(loadpath, "cloud"))
+            Cloud(load(loadpath, "cloud"))
         else
-            cloud = Cloud(old_cloud)
+            Cloud(old_cloud)
         end
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
-        initialize_likelihoods!(m, data, cloud, parallel = parallel,
-                                verbose = verbose)
+        initialize_likelihoods!(m, data, cloud, parallel = parallel, verbose = verbose)
     elseif continue_intermediate
         loadpath = rawpath(m, "estimate", "smc_cloud_stage=$(intermediate_stage_start).jld2",
                            filestring_addl)
-        cloud = Cloud(load(loadpath, "cloud"))
+        cloud    = Cloud(load(loadpath, "cloud"))
     else
         # Instantiating Cloud object, update draws, loglh, & logpost
-        cloud = Cloud(m, n_parts)
         initial_draw!(m, data, cloud, parallel = parallel,
                       use_chand_recursion = use_chand_recursion, verbose = verbose)
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
@@ -184,10 +180,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         z_matrix = load(loadpath, "z")
         w_matrix = load(loadpath, "w")
         W_matrix = load(loadpath, "W")
-        j = load(loadpath, "j")
-        i = cloud.stage_index
-        c = cloud.c
-        ϕ_prop = proposed_fixed_schedule[j]
+        j        = load(loadpath, "j")
+        i        = cloud.stage_index
+        c        = cloud.c
+        ϕ_prop   = proposed_fixed_schedule[j]
     else
         z_matrix = ones(1)
         w_matrix = zeros(n_parts, 1)
@@ -203,9 +199,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     #################################################################################
     ### Recursion
     #################################################################################
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\n\n SMC recursion starts \n\n")
-    end
+    (VERBOSITY[verbose] >= VERBOSITY[:low]) & println("\n\n SMC recursion starts \n\n")
 
     while ϕ_n < 1.
         start_time = time_ns()
@@ -268,8 +262,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ### Step 3: Mutation
         ##############################################################################
         # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
-        c = c * (0.95 + 0.10*exp(16.0 * (cloud.accept - target)) /
-               (1.0 + exp(16.0 * (cloud.accept - target))))
+        c = c * (0.95 + 0.10 * exp(16.0 * (cloud.accept - target)) /
+                 (1.0 + exp(16.0 * (cloud.accept - target))))
         cloud.c = c
 
         θ_bar = weighted_mean(cloud)
@@ -277,8 +271,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # Ensures marix is positive semi-definite symmetric
         # (not off due to numerical error) and values haven't changed
-        R_fr = (R[free_para_inds, free_para_inds] +
-                R[free_para_inds, free_para_inds]') / 2.
+        R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]') / 2.
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
         θ_bar_fr = θ_bar[free_para_inds]
@@ -287,7 +280,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         blocks_free = generate_free_blocks(n_free_para, n_blocks)
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
-        @time new_particles = if parallel
+        new_particles = if parallel
             @distributed (hcat) for k in 1:n_parts
                 mutation_closure(cloud.particles[k, :], θ_bar_fr, R_fr, blocks_free,
                                  blocks_all, ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
@@ -307,8 +300,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ##############################################################################
         ### Timekeeping and Output Generation
         ##############################################################################
-        total_time = Float64((time_ns() - start_time) * 1e-9)
-        cloud.total_sampling_time += total_time
+        cloud.total_sampling_time += Float64((time_ns() - start_time) * 1e-9)
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             end_stage_print(cloud, para_symbols; verbose = verbose,
@@ -337,9 +329,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5", filestring_addl), "w")
         particle_store = d_create(simfile, "smcparams", datatype(Float64),
                                   dataspace(n_parts, n_params))
-        for i in 1:n_parts
-            particle_store[i,:] = cloud.particles[i, 1:n_params]#.particles[i].value
-        end
+        for i in 1:n_parts; particle_store[i,:] = cloud.particles[i, 1:n_params] end
         close(simfile)
 
         jldopen(rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl),
