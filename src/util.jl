@@ -1,5 +1,29 @@
 """
 ```
+sendto(p::Int; args...)
+```
+Function to send data from master process to particular worker, p. Code from ChrisRackauckas, avavailable at: https://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jl.
+"""
+function sendto(p::Int; args...)
+    for (nm, val) in args
+        @spawnat(p, Core.eval(Main, Expr(:(=), nm, val)))
+    end
+end
+
+"""
+```
+sendto(ps::AbstractVector{Int}; args...)
+```
+Function to send data from master process to list of workers. Code from ChrisRackauckas, available at: https://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jl.
+"""
+function sendto(ps::AbstractVector{Int}; args...)
+    for p in ps
+        sendto(p; args...)
+    end
+end
+
+"""
+```
 abbrev_symbol(s::Symbol, n::Int=4)
 ```
 
@@ -32,7 +56,7 @@ quarter_range(t0::Date, t1::Date)
 ```
 
 Returns a vector of `Dates`, consisting of the last days of each quarter between
-`t0` and `t1`, inclusive.
+ https://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jlhttps://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jl`t0` and `t1`, inclusive.
 """
 function quarter_range(t0::Date, t1::Date)
     dr = t0:Day(1):t1

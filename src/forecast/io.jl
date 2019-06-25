@@ -30,11 +30,13 @@ function get_forecast_input_file(m, input_type;
         return get_forecast_input_file(m, :full)
     end
 
-    if input_type == :mode
+    if input_type == :mode || input_type == :mode_draw_shocks
         return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
     elseif input_type == :mean
         return workpath(m,"estimate","paramsmean.h5", filestring_addl)
-    elseif input_type == :init
+    elseif input_type == :init || input_type == :init_draw_shocks
+        return ""
+    elseif input_type == :prior
         return ""
     elseif input_type in [:full, :subset]
         if get_setting(m, :sampling_method) == :MH
@@ -101,7 +103,7 @@ end
 function get_forecast_filestring_addl(input_type, cond_type; forecast_string::String = "")
 
     filestring_addl = Vector{String}()
-    push!(filestring_addl, String("para=" * abbrev_symbol(input_type)))
+    push!(filestring_addl, String("para=" * String(input_type)))
     push!(filestring_addl, String("cond=" * abbrev_symbol(cond_type)))
     if isempty(forecast_string)
         if input_type == :subset

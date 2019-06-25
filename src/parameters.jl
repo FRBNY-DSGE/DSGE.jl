@@ -560,7 +560,7 @@ for op in (:(Base.:+),
     @eval ($op)(p::UnscaledOrSteadyState, x::Vector)        = ($op)(p.value, x)
     @eval ($op)(p::UnscaledOrSteadyState, x::Matrix)        = ($op)(p.value, x)
     @eval ($op)(x::Vector, p::UnscaledOrSteadyState)        = ($op)(x, p.value)
-    @eval ($op)(x::Matrix, p::UnscaledOrSteadyState)         = ($op)(x, p.value)
+    @eval ($op)(x::Matrix, p::UnscaledOrSteadyState)        = ($op)(x, p.value)
 end
 
 """

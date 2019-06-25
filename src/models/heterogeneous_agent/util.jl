@@ -4,7 +4,7 @@
 # model state variables after the transition equation has been solved for
 # but rather, augmenting the model states with lags prior to solution since the
 # solution method requires lags
-function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_states::Int64)
+function augment_model_states(endo::Dict{Symbol, UnitRange}, n_model_states::Int64)
     endo_aug = deepcopy(endo)
     for (state::Symbol, inds::UnitRange) in endo
         unprimed_state = unprime(state)
@@ -14,19 +14,19 @@ function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_stat
 
     # Ensure all ranges are consecutive
     endo_ranges = endo_aug.vals
-    for i in 1:length(endo_ranges)
+  #=  for i in 1:length(endo_ranges)
         if i == 1
             @assert endo_ranges[1].start == 1
         else
             @assert endo_ranges[i].start == endo_ranges[i-1].stop + 1
         end
-    end
+    end =#
 
     return endo_aug
 end
 
 # For the RANK equivalent of the HANK models
-function augment_model_states(endo::OrderedDict{Symbol, Int64}, n_model_states::Int64)
+function augment_model_states(endo::Dict{Symbol, Int64}, n_model_states::Int64)
     endo_aug = deepcopy(endo)
     for (state::Symbol, ind::Int) in endo
         unprimed_state           = unprime(state)
@@ -59,14 +59,15 @@ function normalize_model_state_indices!(m::AbstractModel)
     normalized_model_states = m.normalized_model_states
 
     endo                     = m.endogenous_states
-    model_state_keys         = endo.keys
-    normalized_model_state_inds = findall((in)(normalized_model_states), model_state_keys)
+    model_state_keys         = collect(keys(endo))
+    normalized_model_states = intersect(model_state_keys, normalized_model_states) #findall((in)(normalized_model_states), model_state_keys)
+
     state_inds                  = get_setting(m, :state_indices)
     jump_inds                   = get_setting(m, :jump_indices)
     state_normalization_factor  = get_setting(m, :backward_looking_states_normalization_factor)
     jump_normalization_factor   = get_setting(m, :jumps_normalization_factor)
 
-    m.endogenous_states = normalize(endo, model_state_keys, normalized_model_state_inds,
+    m.endogenous_states = normalize(m, endo, model_state_keys, normalized_model_states,
                                     state_inds, jump_inds,
                                     state_normalization_factor, jump_normalization_factor)
 end
@@ -88,9 +89,10 @@ function shift(inds::UnitRange, increment::Int64; first_range::Bool = false)
 end
 
 # normalize the distributional states located in indices specified by normalized_state_inds
-function normalize(endo::OrderedDict{Symbol, UnitRange},
+function normalize(m::AbstractModel,
+                   endo::Dict{Symbol, UnitRange},
                    model_state_keys::Vector{Symbol},
-                   normalized_model_state_inds::Vector{Int64},
+                   normalized_model_states::Vector{Symbol},
                    state_inds::AbstractArray{Int64},
                    jump_inds::AbstractArray{Int64},
                    state_normalization_factor::Int64,
@@ -98,31 +100,37 @@ function normalize(endo::OrderedDict{Symbol, UnitRange},
     n_model_state_vars = length(endo)
 
     # For each model state that needs to be normalized...
-    for i in normalized_model_state_inds
+    for state in normalized_model_states
         normalization_factor =
-        if i in state_inds
+        if state in get_setting(m, :states)
             state_normalization_factor
-        elseif i in jump_inds
+        elseif state in get_setting(m, :jumps)
             jump_normalization_factor
         end
         # Subtract 1 from both the beginning and end of the UnitRange...
-        for j in i:n_model_state_vars
+        for state in model_state_keys
+            inds = endo[state]
+            # except for first UnitRange in a given normalization
+            first_range = (state==get_setting(m, :states)[1])
+            endo[state] = shift(inds, -normalization_factor, first_range = first_range)
+        end
+        #=for j in i:n_model_state_vars
             inds = endo[model_state_keys[j]]
             # Except for the first UnitRange in a given normalization
             first_range = (j == i)
             endo[model_state_keys[j]] = shift(inds, -normalization_factor, first_range = first_range)
-        end
+        end=#
     end
 
     # Ensure all ranges are consecutive
     endo_ranges = endo.vals
-    for i in 1:n_model_state_vars
+   #= for i in 1:n_model_state_vars
         if i == 1
             @assert endo_ranges[1].start == 1
         else
             @assert endo_ranges[i].start == endo_ranges[i-1].stop + 1
         end
-    end
+    end =#
 
     return endo
 end
@@ -134,7 +142,7 @@ stack_indices(key_dict::OrderedDict, keys::Vector{Symbol})
 ```
 Stacks the indices of a OrderedDict{Symbol, AbstractRange} into a Vector of Ints defined by the Ranges in the dictionary.
 """
-function stack_indices(key_dict::OrderedDict, keys::Vector{Symbol})
+function stack_indices(key_dict::Dict, keys::Vector{Symbol})
     indices = Vector{Int64}(undef, 0)
     for i in getindex.(key_dict, keys)
         indices = [indices; i]

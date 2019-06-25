@@ -30,13 +30,13 @@ function jacobian(m::RepDSGEGovDebt)
     ψy         = m[:ψy].value
     δb         = m[:δb].value
     bg         = m[:bg].value
-    ρB         = m[:ρ_B].value
-    ρG         = m[:ρ_G].value
+    ρB         = m[:ρ_b].value
+    ρG         = m[:ρ_g].value
     ρZ         = m[:ρ_z].value
     ρμ         = m[:ρ_μ].value
-    ρlamw      = m[:ρ_lamw].value
-    ρlamf      = m[:ρ_lamf].value
-    ρmon       = m[:ρ_mon].value
+    ρlamw      = m[:ρ_λ_w].value
+    ρlamf      = m[:ρ_λ_f].value
+    ρmon       = m[:ρ_rm].value
 
     # make the Jacobian
     JJ = zeros(n_model_states(m), 2*n_model_states(m))
