@@ -3,8 +3,8 @@ function jacobian(m::HetDSGEGovDebt)
     #truncate_distribution!(m)
 
     # Load in endogenous state and eq cond indices
-    endo = augment_model_states(m.endogenous_states_unnormalized,
-                         n_model_states_unnormalized(m))
+    endo = augment_model_states(m.endogenous_states_original,#m.endogenous_states_unnormalized,
+                         n_model_states_original(m))
     eq   = m.equilibrium_conditions
 
     # Load in parameters, steady-state parameters, and grids
@@ -18,13 +18,13 @@ function jacobian(m::HetDSGEGovDebt)
     γ::Float64     = m[:γ].scaledvalue
     g::Float64     = m[:g].value
     η::Float64     = m[:η].value
-    ρ_B::Float64    = m[:ρ_B].value
-    ρ_G::Float64    = m[:ρ_G].value
+    ρ_B::Float64    = m[:ρ_b].value
+    ρ_G::Float64    = m[:ρ_g].value
     ρ_z::Float64    = m[:ρ_z].value
     ρ_μ::Float64    = m[:ρ_μ].value
-    ρ_lamw::Float64 = m[:ρ_lamw].value
-    ρ_lamf::Float64 = m[:ρ_lamf].value
-    ρ_mon::Float64  = m[:ρ_mon].value
+    ρ_lamw::Float64 = m[:ρ_λ_w].value
+    ρ_lamf::Float64 = m[:ρ_λ_f].value
+    ρ_mon::Float64  = m[:ρ_rm].value
     spp::Float64   = m[:spp].value
     ϕh::Float64    = m[:ϕh].value
     ρ_R::Float64    = m[:ρR].value
@@ -84,6 +84,7 @@ function jacobian(m::HetDSGEGovDebt)
     # Market clearing, lambda function
     c = min.(1 ./ ell,repeat(xgrid,ns).+η)
     lam = (xswts.*μ)'*(1 ./ c) # average marginal utility which the union uses to set wages
+    aggc = (xswts .* μ)'c
     ϕ = lam*ω/(H^ϕh) # now that we know lam in steady state, choose disutility to target hours H
 
     setup_indices!(m)
@@ -107,28 +108,24 @@ function jacobian(m::HetDSGEGovDebt)
     JJ[eq[:eq_kolmogorov_fwd],endo[:kf′_t]]   = -Matrix{Float64}(I, nxns, nxns)
     JJ[eq[:eq_kolmogorov_fwd],endo[:kf_t]]   = dF2_dM
     JJ[eq[:eq_kolmogorov_fwd],endo[:l_t]] = dF2_dELL
-    JJ[eq[:eq_kolmogorov_fwd],endo[:R_t]] = dF2_dM*dF2_dRZ
+    JJ[eq[:eq_kolmogorov_fwd],endo[:R_t]] = dF2_dRZ
     JJ[eq[:eq_kolmogorov_fwd],endo[:z_t]]    = -dF2_dM*dF2_dRZ
     JJ[eq[:eq_kolmogorov_fwd],endo[:w_t]]    = dF2_dM*dF2_dWH
     JJ[eq[:eq_kolmogorov_fwd],endo[:L_t]]   = dF2_dM*dF2_dWH
     JJ[eq[:eq_kolmogorov_fwd],endo[:t_t]]   = dF2_dM*dF2_dTT
 
-    # mkt clearing
-    JJ[first(eq[:eq_market_clearing]),first(endo[:y_t])]   = ystar/g
-    JJ[first(eq[:eq_market_clearing]),first(endo[:g_t])]   = -ystar/g
-    JJ[first(eq[:eq_market_clearing]),first(endo[:I_t])]   = -xstar
-    JJ[first(eq[:eq_market_clearing]), endo[:l_t]] = (μ .*unc.*xswts.*c)'
-    JJ[first(eq[:eq_market_clearing]), endo[:kf_t]] = -(xswts.*c)' # note, now we linearize
-    JJ[first(eq[:eq_market_clearing]),first(endo[:R_t])]   = -(xswts.*c)'*dF2_dRZ
-    JJ[first(eq[:eq_market_clearing]),first(endo[:z_t])]   = (xswts.*c)'*dF2_dRZ
-    JJ[first(eq[:eq_market_clearing]),first(endo[:w_t])]   = -(xswts.*c)'*dF2_dWH
-    JJ[first(eq[:eq_market_clearing]),first(endo[:L_t])]   = -(xswts.*c)'*dF2_dWH
-    JJ[first(eq[:eq_market_clearing]),first(endo[:t_t])]   = -(xswts.*c)'*dF2_dTT
+    # aggregate consumption
+    JJ[first(eq[:eq_agg_consumption]),first(endo[:C_t])]   = -aggc
+    JJ[first(eq[:eq_agg_consumption]), endo[:l_t]] = -(μ .*unc.*xswts.*c)'
+    JJ[first(eq[:eq_agg_consumption]), endo[:kf_t]] = (xswts.*c)' # note, now we linearize
+    JJ[first(eq[:eq_agg_consumption]),first(endo[:z_t])]   = -(xswts.*c)'*dF2_dRZ
+    JJ[first(eq[:eq_agg_consumption]),first(endo[:w_t])]   = (xswts.*c)'*dF2_dWH
+    JJ[first(eq[:eq_agg_consumption]),first(endo[:L_t])]   = (xswts.*c)'*dF2_dWH
+    JJ[first(eq[:eq_agg_consumption]),first(endo[:t_t])]   = (xswts.*c)'*dF2_dTT
 
     # lambda = average marginal utility
     JJ[first(eq[:eq_lambda]),first(endo[:margutil_t])] = lam
     JJ[first(eq[:eq_lambda]),endo[:kf_t]]   = -(xswts./c)' # note, now we linearize
-    JJ[first(eq[:eq_lambda]),first(endo[:R_t])]   = -(xswts./c)'*dF2_dRZ
     JJ[first(eq[:eq_lambda]),first(endo[:z_t])]   = (xswts./c)'*dF2_dRZ
     JJ[first(eq[:eq_lambda]),first(endo[:w_t])]   = -(xswts./c)'*dF2_dWH
     JJ[first(eq[:eq_lambda]),first(endo[:L_t])]   = -(xswts./c)'*dF2_dWH
@@ -240,9 +237,11 @@ function jacobian(m::HetDSGEGovDebt)
     JJ[first(eq[:eq_g_budget_constraint]),first(endo[:g_t])]   = ystar/g
     JJ[first(eq[:eq_g_budget_constraint]),first(endo[:tg_t])]  = -Tg
 
-    # update lagged variables
-    JJ[first(eq[:LR]),first(endo[:R′_t1])] = 1.
-    JJ[first(eq[:LR]),first(endo[:R_t])]   = -1.
+    # resource constraints
+    JJ[first(eq[:eq_resource_constraint]),first(endo[:y_t])] = ystar/g
+    JJ[first(eq[:eq_resource_constraint]),first(endo[:g_t])] = -ystar/g
+    JJ[first(eq[:eq_resource_constraint]),first(endo[:I_t])] = -xstar
+    JJ[first(eq[:eq_resource_constraint]),first(endo[:C_t])] = -aggc
 
     JJ[first(eq[:LI]),first(endo[:i′_t1])] = 1.
     JJ[first(eq[:LI]),first(endo[:i_t])]   = -1.
@@ -445,8 +444,8 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
         setup_indices!(m)
         init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
         normalize_model_state_indices!(m)
-        endogenous_states_augmented = [:c_t1]
-        for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
+        endogenous_states_augmented = [:C_t1]
+        for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(m.endogenous_states[get_setting(m, :jumps)[end]]) end #first(collect(values(m.endogenous_states))[end]) end
 
         m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                      length(m.endogenous_states_augmented))
@@ -468,8 +467,8 @@ function compose_normalization_matrices(m::HetDSGEGovDebt)
         setup_indices!(m)
         init_states_and_jumps!(m, get_setting(m, :states), get_setting(m, :jumps))
         normalize_model_state_indices!(m)
-        endogenous_states_augmented = [:c_t1]
-        for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
+        endogenous_states_augmented = [:C_t1]
+        for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(m.endogenous_states[get_setting(m, :jumps)[end]]) end #first(collect(values(m.endogenous_states))[end]) end
 
         m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                      length(m.endogenous_states_augmented))
@@ -563,8 +562,8 @@ function truncate_distribution!(m::HetDSGEGovDebt)
 
         normalize_model_state_indices!(m)
 
-        endogenous_states_augmented = [:c_t1]
-        for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(collect(values(m.endogenous_states))[end]) end
+        endogenous_states_augmented = [:C_t1]
+        for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i + first(m.endogenous_states[get_setting(m, :jumps)[end]]) end #first(collect(values(m.endogenous_states))[end]) end
 
         m <= Setting(:n_model_states_augmented, get_setting(m, :n_model_states) +
                      length(m.endogenous_states_augmented))

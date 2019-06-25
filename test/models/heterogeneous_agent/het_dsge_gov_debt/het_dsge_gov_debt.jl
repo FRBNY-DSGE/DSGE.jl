@@ -152,7 +152,7 @@ if check_jacobian
     F40 = read(file, "F40")
     F41 = read(file, "F41")
     close(file)
-    endo = DSGE.augment_model_states(m.endogenous_states_unnormalized, DSGE.n_model_states_unnormalized(m))
+    endo = DSGE.augment_model_states(m.endogenous_states_original, DSGE.n_model_states_original(m))
 
     eq = m.equilibrium_conditions
     @testset "Check indices" begin

@@ -1,6 +1,6 @@
 function init_observable_mappings!(m::HetDSGEGovDebt)
 
-    observables = OrderedDict{Symbol,Observable}()
+    observables = Dict{Symbol,Observable}()
     population_mnemonic = get(get_setting(m, :population_mnemonic))
 
     ############################################################################

@@ -64,8 +64,8 @@ function measurement(m::HetDSGEGovDebt{T},
     DD[obs[:obs_nominalrate]]                     = 100 * ((1+m[:r]) * m[:π_star] - 1) #m[:Rstarn]
 
     ## Consumption Growth
-    ZZ[obs[:obs_consumption], 1:get_setting(m, :n_backward_looking_states)] = -C_eqn
-    ZZ[obs[:obs_consumption], endo_new[:c_t1]]    = -1.0
+    ZZ[obs[:obs_consumption], first(endo[:C′_t])] = 1.0
+    ZZ[obs[:obs_consumption], endo_new[:C_t1]]    = -1.0
     ZZ[obs[:obs_consumption], first(endo[:z′_t])] = 1.0
     DD[obs[:obs_consumption]]                     = 100*(exp(m[:γ])-1) #100*(exp(m[:zstar])-1)
 
@@ -149,12 +149,10 @@ end
 
 function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64}, dF2_dRZ::Vector{Float64}, dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
 
-    endo_unnorm = m.endogenous_states_unnormalized
-
     dC_dELL, dC_dKF, dC_dR, dC_dZ, dC_dW, dC_dL, dC_dT = construct_consumption_partial(m, dF2_dRZ, dF2_dWH, dF2_dTT)
 
     endo_orig = m.endogenous_states_original
-    C_eqn = zeros(first(endo_orig[collect(keys(endo_orig))[end]])) #n_model_states_unnormalized(m))
+    C_eqn = zeros(last(endo_orig[get_setting(m, :jumps)[end]])) #first(endo_orig[collect(keys(endo_orig))[end]]))
 
     C_eqn[endo_orig[:l′_t]] = vec(dC_dELL)
     C_eqn[endo_orig[:kf′_t]] = vec(dC_dKF)
@@ -175,5 +173,6 @@ function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64},
 
     n_backward_looking_states_orig = length(stack_indices(m.endogenous_states_original, get_setting(m, :states)))
     C = C_eqn'*[Matrix{Float64}(I, n_backward_looking_states_orig, n_backward_looking_states_orig); gx2]*Qx'
+    #C = reorder(C)
     return vec(C)
 end

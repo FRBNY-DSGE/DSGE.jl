@@ -59,6 +59,65 @@ end
 
 """
 ```
+function solve_adaptive_ϕ(cloud::Cloud, proposed_fixed_schedule::Vector{Float64},
+                          i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
+                          tempering_target::Float64, resampled_last_period::Bool)
+```
+
+Solves for next Φ. Returns ϕ_n, resampled_last_period, j, ϕ_prop.
+"""
+function solve_adaptive_ϕ(cloud::Cloud, proposed_fixed_schedule::Vector{Float64},
+                          i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
+                          tempering_target::Float64, resampled_last_period::Bool)
+    n_Φ = length(proposed_fixed_schedule)
+
+    if resampled_last_period
+        # The ESS_bar is reset to target an evenly weighted particle population
+        ESS_bar = tempering_target * length(cloud)
+        resampled_last_period = false
+    else
+        ESS_bar = tempering_target*cloud.ESS[i-1]
+    end
+
+    # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
+    optimal_ϕ_function(ϕ) = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
+                                        old_loglh = get_old_loglh(cloud)) - ESS_bar
+
+    # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
+    # Do so by iterating through a proposed_fixed_schedule and finding the first
+    # ϕ_prop such that the ESS would fall by more than the targeted amount ESS_bar
+    while optimal_ϕ_function(ϕ_prop) >= 0 && j <= n_Φ
+        ϕ_prop = proposed_fixed_schedule[j]
+        j += 1
+    end
+
+    # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
+    # When ϕ_prop != 1.0, there are still ϕ increments strictly below 1 that
+    # give the optimal ϕ step, ϕ_n.
+    # When ϕ_prop == 1.0 but optimal_ϕ_function(ϕ_prop) < 0, there still exists
+    # an optimal ϕ step, ϕ_n, that does not equal 1.
+    # Thus the interval [optimal_ϕ_function(ϕ_n1), optimal_ϕ_function(ϕ_prop)] always
+    # contains a 0 by construction.
+
+    # Modification makes it such that ϕ_n is the minimum of ϕ_prop (the fixed schedule)
+    # at a given stage or the root-solved ϕ such that the ESS drops by the target amount.
+    # Thus the ϕ_schedule should be strictly bounded above by the fixed schedule
+    # i.e. the adaptive ϕ schedule should not outpace the fixed schedule at the end
+    # (when the fixed schedule tends to drop by less than 5% per iteration)
+
+    if ϕ_prop != 1. || optimal_ϕ_function(ϕ_prop) < 0
+        ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
+        push!(cloud.tempering_schedule, ϕ_n)
+    else
+        ϕ_n = 1.
+        push!(cloud.tempering_schedule, ϕ_n)
+    end
+
+    return ϕ_n, resampled_last_period, j, ϕ_prop
+end
+
+"""
+```
 mvnormal_mixture_draw(θ_old, σ; cc, α, θ_prop) where {T<:AbstractFloat}
 ```
 
@@ -115,13 +174,13 @@ end
 
 """
 ```
-function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
-                                       ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh)))
+function compute_ESS(loglh::Vector{T}, current_weights::Vector{T}, ϕ_n::T, ϕ_n1::T;
+                     old_loglh::Vector{T} = zeros(length(loglh))) where {T<:AbstractFloat}
 ```
 Compute ESS given log likelihood, current weights, ϕ_n, ϕ_{n-1}, and old log likelihood.
 """
-function compute_ESS(loglh::Vector{T}, current_weights::Vector{T},
-                     ϕ_n::T, ϕ_n1::T; old_loglh::Vector{T} = zeros(length(loglh))) where T<:AbstractFloat
+function compute_ESS(loglh::Vector{T}, current_weights::Vector{T}, ϕ_n::T, ϕ_n1::T;
+                     old_loglh::Vector{T} = zeros(length(loglh))) where T<:AbstractFloat
     inc_weights  = exp.((ϕ_n1 - ϕ_n) * old_loglh + (ϕ_n - ϕ_n1) * loglh)
     new_weights  = current_weights .* inc_weights
     norm_weights = new_weights / sum(new_weights)

@@ -232,6 +232,7 @@ n_model_states(m::AbstractModel) = get_setting(m, :n_model_states)
 n_jumps_unnormalized(m::AbstractModel) = n_jumps(m) + get_setting(m, :jumps_normalization_factor)
 n_backward_looking_states_unnormalized(m::AbstractModel) = n_backward_looking_states(m) + get_setting(m, :backward_looking_states_normalization_factor)
 n_model_states_unnormalized(m::AbstractModel) = n_jumps_unnormalized(m) + n_backward_looking_states_unnormalized(m)
+n_model_states_original(m::AbstractModel) = get_setting(m, :n_model_states_original)
 
 """
 ```
