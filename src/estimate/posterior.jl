@@ -42,7 +42,6 @@ function posterior(m::AbstractModel{T},
     like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
     post = ϕ_smc*like + prior(m)
     return post
-    end
 end
 
 """

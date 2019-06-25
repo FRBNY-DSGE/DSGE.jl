@@ -75,7 +75,7 @@ end
 function MeansBands()
     metadata   = Dict(:class => :none, :product => :none,
                       :cond_type => :none, :para => :none,
-                      :date_inds => OrderedDict{Date, Int}(Date() => 1),
+                      :date_inds => OrderedDict{Date, Int}(Date(1) => 1),
                       :indices => Dict{Symbol, Int}(:none => 1))
 
     means = DataFrame(date = [Dates.Date(0)], none = [0.0])
