@@ -1,0 +1,114 @@
+MATLAB - times in seconds, then milliseconds
+
+solve KrusellSmith: 0.23393900, 234 ms
+solve OneAssetHANK: 0.7912,     791.2 ms
+
+steadystate KS: 0.13,           130 ms
+steadystate OAH: 0.5378,        537.8 ms
+
+eqcond KS: 0.0549               47.7 ms
+- breakdown of KS time
+  a. Computing residuals        45.2 ms
+  b. Applying auto diff          2.5 ms
+eqcond OAH: 0.2407              240.07 ms
+
+reduce KS: 0.03352500           33.525 ms
+reduce OAH: 0.05500200          55.002 ms
+- krylov reduce -> 37 ms
+- valuef reduce -> 12 ms
+
+gensys KS: 0.00909000           9.09 ms
+gensys OAH: 0.01185200          11.852 ms
+
+Julia
+
+Timing KrusellSmith, entire solution, no bypassing checks
+
+  226.571 ms (237720 allocations: 251.94 MiB) -> faster by 8 ms
+
+Timing OneAssetHANK, entire solution, no bypassing checks
+
+  1.723 s (6023745 allocations: 1.01 GiB) -> slower by 1 second
+
+Timing KrusellSmith, entire solution but bypassing checks
+
+  226.829 ms (237712 allocations: 248.28 MiB) -> faster by 8 ms
+
+Timing OneAssetHANK, entire solution but bypassing checks
+
+  1.733 s (6023737 allocations: 1.01 GiB) -> slower by 1 second
+
+Timing KrusellSmith, entire solution but without sparse matrices
+
+  230.618 ms (233701 allocations: 247.87 MiB) -> faster by 4 ms
+
+Timing OneAssetHANK, entire solution but without sparse matrices
+
+  1.785 s (6019424 allocations: 1.00 GiB) -> slower by 1 second
+
+Timing KrusellSmith, steady state only
+
+  33.658 ms (26616 allocations: 45.85 MiB) -> faster by 55 ms
+
+Timing OneAssetHANK, steady state only
+
+  1.296 s (5277840 allocations: 427.40 MiB) -> slower by 800 ms
+
+Timing KrusellSmith, eqcond only
+
+  170.484 ms (175635 allocations: 185.92 MiB) -> slower by 120 ms
+
+Timing KrusellSmith, get_residuals (computing once iteration)
+
+  612.661 μs (2176 allocations: 422.95 KiB)
+
+Timing KrusellSmith, jacobian
+
+  164.558 ms (244663 allocations: 209.63 MiB)
+
+Timing OneAssetHANK, eqcond only
+
+  410.802 ms (727757 allocations: 328.65 MiB) -> slower by 160 ms
+
+Timing OneAssetHANK, get_residuals
+
+  865.838 μs (6603 allocations: 651.44 KiB)
+
+Timing OneAssetHANK, jacobian
+
+  378.241 ms (811477 allocations: 327.26 MiB)
+
+Timing KrusellSmith, reduction only
+
+  6.457 ms (5282 allocations: 18.01 MiB) -> faster by 27 ms
+
+Timing OneAssetHANK, reduction only
+
+  98.378 ms (13454 allocations: 271.64 MiB) -> slower by 40 ms
+
+Timing KrusellSmith, reduction only without sparse matrices
+
+  9.890 ms (1344 allocations: 17.75 MiB) -> faster by 23 ms
+
+Timing OneAssetHANK, reduction only without sparse matrices
+
+  107.373 ms (9215 allocations: 270.87 MiB) -> slower by 50 ms
+
+Timing OneAssetHANK, krylov reduction
+
+  125.406 ms (10685 allocations: 270.22 MiB) -> slower by 90 ms
+ - If given 13454 allocations, likely around 97 ms -> slower by 60 ms
+
+Timing OneAssetHANK, valuef reduction
+
+  1.454 ms (2763 allocations: 1.43 MiB) -> faster by 10 ms
+
+Timing KrusellSmith, gensysct only, not in place first, then in place
+
+  747.872 μs (332 allocations: 246.53 KiB) -> faster by 8 ms
+  0.000916 seconds (341 allocations: 239.188 KiB) -> faster by 8 ms
+
+Timing OneAssetHANK, gensysct only, not in place first, then in place
+
+  2.376 ms (343 allocations: 611.95 KiB) -> faster by 8 ms
+  0.002463 seconds (351 allocations: 579.156 KiB) -> faster by 8 ms

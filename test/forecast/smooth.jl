@@ -1,5 +1,3 @@
-using DSGE, DataFrames, JLD2, FileIO
-
 path = dirname(@__FILE__())
 
 # Set up arguments
@@ -9,20 +7,12 @@ m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 forecast_args = load("$path/../reference/forecast_args.jld2")
 df = forecast_args["df"]
 system = forecast_args["system"]
-#df, system = jldopen("$path/../reference/forecast_args.jld2","r") do file
-#    read(file, "df"), read(file, "system")
-#end
 
 # Read expected output
 smooth_out = load("$path/../reference/smooth_out.jld2")
 exp_states = smooth_out["exp_states"]
 exp_shocks = smooth_out["exp_shocks"]
 exp_pseudo = smooth_out["exp_pseudo"]
-#exp_states, exp_shocks, exp_pseudo = jldopen("$path/../reference/smooth_out.jld2", "r") do file
-#    read(file, "exp_states"),
-#    read(file, "exp_shocks"),
-#    read(file, "exp_pseudo")
-#end
 
 # Smooth without drawing states
 states = Dict{Symbol, Matrix{Float64}}()

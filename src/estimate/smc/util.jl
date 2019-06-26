@@ -58,7 +58,7 @@ Function ensures type conformity of the return arguments.
 """
 function scalar_reshape(args...)
     n_args = length(args)
-    return_arg = Vector{Vector{Float64}}(n_args)
+    return_arg = Vector{Vector{Float64}}(undef, n_args)
     for i in 1:n_args
         arg = typeof(args[i]) <: Vector ? args[i] : [args[i]]
         return_arg[i] = arg
@@ -164,6 +164,30 @@ function init_stage_print(cloud::ParticleCloud;
     end
 end
 
+function init_stage_print(cloud::Cloud, para_symbols::Vector{Symbol};
+                          verbose::Symbol=:low, use_fixed_schedule::Bool = true)
+    if use_fixed_schedule
+        println("--------------------------")
+            println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
+    else
+        println("--------------------------")
+            println("Iteration = $(cloud.stage_index)")
+    end
+	println("--------------------------")
+        println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
+	println("--------------------------")
+        println("c = $(cloud.c)")
+        println("ESS = $(cloud.ESS[cloud.stage_index])   ($(cloud.resamples) total resamples.)")
+	println("--------------------------")
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
+        μ = weighted_mean(cloud)
+        σ = weighted_std(cloud)
+        for n=1:length(para_symbols)
+            println("$(para_symbols[n]) = $(round(μ[n], digits = 5)), $(round(σ[n], digits = 5))")
+	    end
+    end
+end
+
 function end_stage_print(cloud::ParticleCloud;
                          verbose::Symbol=:low, use_fixed_schedule::Bool = true)
     total_sampling_time_minutes = cloud.total_sampling_time/60
@@ -193,6 +217,38 @@ function end_stage_print(cloud::ParticleCloud;
         σ = weighted_std(cloud)
         for n=1:length(cloud.particles[1])
             println("$(cloud.particles[1].keys[n]) = $(round(μ[n], digits = 5)), $(round(σ[n], digits = 5))")
+        end
+    end
+end
+function end_stage_print(cloud::Cloud, para_symbols::Vector{Symbol};
+                         verbose::Symbol=:low, use_fixed_schedule::Bool = true)
+    total_sampling_time_minutes = cloud.total_sampling_time/60
+    if use_fixed_schedule
+        expected_time_remaining_sec = (cloud.total_sampling_time/cloud.stage_index)*(cloud.n_Φ - cloud.stage_index)
+        expected_time_remaining_minutes = expected_time_remaining_sec/60
+    end
+
+    println("--------------------------")
+    if use_fixed_schedule
+        println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
+        println("time elapsed: $(round(total_sampling_time_minutes, digits = 4)) minutes")
+        println("estimated time remaining: $(round(expected_time_remaining_minutes, digits = 4)) minutes")
+    else
+        println("Iteration = $(cloud.stage_index)")
+        println("time elapsed: $(round(total_sampling_time_minutes, digits = 4)) minutes")
+    end
+    println("--------------------------")
+        println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
+    println("--------------------------")
+        println("c = $(cloud.c)")
+        println("accept = $(cloud.accept)")
+        println("ESS = $(cloud.ESS[cloud.stage_index])   ($(cloud.resamples) total resamples.)")
+    println("--------------------------")
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
+        μ = weighted_mean(cloud)
+        σ = weighted_std(cloud)
+        for n=1:length(para_symbols)
+            println("$(para_symbols[n]) = $(round(μ[n], digits = 5)), $(round(σ[n], digits = 5))")
         end
     end
 end

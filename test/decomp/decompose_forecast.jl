@@ -6,7 +6,7 @@ path = dirname(@__FILE__)
 # Initialize models
 function make_test_model(year::Int)
     m = Model990()
-    vint = Dates.format(Date(year, 4, 10), "yymmdd")
+    vint = Dates.format(Dates.Date(year, 4, 10), "yymmdd")
     m <= Setting(:data_vintage, vint)
     m <= Setting(:cond_vintage, vint)
     m <= Setting(:date_forecast_start, DSGE.quartertodate("$year-Q1"))
@@ -19,10 +19,10 @@ m_new = make_test_model(2016)
 m_old = make_test_model(2014)
 
 # Read in data and parameters
-JLD2.@load "$path/../reference/decompose_forecast_args.jld2" df_new df_old params_new params_old
+@load "$path/../reference/decompose_forecast_args.jld2" df_new df_old params_new params_old
 
 # Read in expected outputs
-JLD2.@load "$path/../reference/decompose_forecast_out.jld2" exp_decomps
+@load "$path/../reference/decompose_forecast_out.jld2" exp_decomps
 
 cond_types = [(:none, :none), (:none, :full), (:full, :none), (:full, :full)]
 for (cond_new, cond_old) in cond_types

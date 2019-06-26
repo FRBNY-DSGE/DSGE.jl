@@ -1,8 +1,8 @@
 """
 ```
 filter(m, data, system, s_0 = [], P_0 = []; cond_type = :none,
-    include_presample = true, in_sample = true,
-    outputs = [:loglh, :pred, :filt])
+       include_presample = true, in_sample = true,
+       outputs = [:loglh, :pred, :filt])
 ```
 
 Computes and returns the filtered values of states for the state-space
@@ -50,7 +50,7 @@ function filter(m::AbstractModel, df::DataFrame, system::System{S},
            include_presample = include_presample, outputs = outputs, tol = tol)
 end
 
-function filter(m::AbstractModel, data::Matrix{S}, system::System,
+function filter(m::AbstractModel, data::AbstractArray, system::System{S},
                 s_0::Vector{S} = Vector{S}(undef, 0),
                 P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                 start_date::Date = date_presample_start(m),

@@ -20,7 +20,7 @@ minimum = h5read(file, "minimum")
 H_expected = h5read(file, "H")
 
 # See src/estimate/estimate.jl
-update!(m, x0)
+DSGE.update!(m, x0)
 n_iterations = 3
 
 x0 = Float64[p.value for p in m.parameters]

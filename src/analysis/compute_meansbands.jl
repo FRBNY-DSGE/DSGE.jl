@@ -46,7 +46,9 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
         output_vars = add_requisite_output_vars(output_vars)
-
+        if input_type == :prior
+            output_vars = setdiff(output_vars, [:bddforecastobs])
+        end
         # Load population data and main dataset (required for some transformations)
         if all(var -> get_product(var) == :irf, output_vars)
             population_data, population_forecast = DataFrame(), DataFrame()
@@ -191,7 +193,8 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[var_name], NaN))) : fill(NaN, size(df, 1))
+    data = class == :obs && product != :irf ? missing2nan(df[var_name]) : fill(NaN, size(df, 1))
+
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)

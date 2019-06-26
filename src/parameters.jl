@@ -167,6 +167,99 @@ mutable struct SteadyStateParameter{T} <: AbstractParameter{T}
     tex_label::String
 end
 
+"""
+```
+SteadyStateValueGrid{T} <: AbstractParameter{T}
+```
+
+Steady-state model parameter grid (for heterogeneous agent models) whose value is calculated by an
+iterative procedure.
+`SteadyStateParameterGrid`s must be constructed and added to an instance of a
+model object `m` after all other model `Parameter`s have been defined. Once added to `m`,
+`SteadyStateParameterGrid`s are stored in `m.steady_state`. Their values are calculated and set
+by `steadystate!(m)`, rather than being estimated directly. `SteadyStateParameter`s do not
+require transformations from the model space to the real line or scalings for use in
+equilibrium conditions.
+
+#### Fields
+
+- `key::Symbol`: Parameter name. Should conform to the guidelines
+  established in the DSGE Style Guide.
+- `value::Array{T}`: The parameter's steady-state value grid.
+- `description::String`: Short description of the parameter's economic significance.
+- `tex_label::String`: String for printing parameter name to LaTeX.
+"""
+mutable struct SteadyStateParameterGrid{T} <: AbstractParameter{T}
+    key::Symbol
+    value::Array{T}
+    description::String
+    tex_label::String
+end
+
+function SteadyStateParameterGrid(key::Symbol,
+                                  value::Array{T};
+                                  description::String = "No description available",
+                                  tex_label::String = "") where {T<:Number}
+
+    return SteadyStateParameterGrid{T}(key, value, description, tex_label)
+end
+
+"""
+```
+SteadyStateParameterArray{T} <: AbstractParameter{T}
+```
+Steady-state model parameter whose value is an Array and
+ depends upon the value of other (non-steady-state)
+`Parameter`s. `SteadyStateParameterArray`s must be constructed and added to an instance of a
+model object `m` after all other model `Parameter`s have been defined. Once added to `m`,
+`SteadyStateParameterArray`s are stored in `m.steady_state`. Their values are calculated and set
+by `steadystate!(m)`, rather than being estimated directly. `SteadyStateParameterArray`s do not
+require transformations from the model space to the real line or scalings for use in
+equilibrium conditions.
+
+#### Fields
+
+- `key::Symbol`: Parameter name. Should conform to the guidelines
+  established in the DSGE Style Guide.
+- `value::Array{T}`: The parameter's steady-state values.
+- `description::String`: Short description of the parameter's economic significance.
+- `tex_label::String`: String for printing parameter name to LaTeX.
+"""
+mutable struct SteadyStateParameterArray{T} <: AbstractParameter{T}
+    key::Symbol
+    value::Array{T}
+    description::String
+    tex_label::String
+end
+
+"""
+```
+SteadyStateParameterArray{T<:Number}(key::Symbol, value::Array{T};
+                                description::String = "",
+                                tex_label::String = "")
+```
+
+SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
+"""
+function SteadyStateParameterArray(key::Symbol,
+                                   value::Array{T};
+                                   description::String = "No description available",
+                                   tex_label::String = "") where {T<:Number}
+
+    return SteadyStateParameterArray(key, value, description, tex_label)
+end
+
+# TypeError: non-boolean (BitArray{1}) used in boolean context
+# gets thrown when we print the value.
+
+function Base.show(io::IO, p::SteadyStateParameterArray{T}) where {T}
+    @printf io "%s\n" typeof(p)
+    @printf io "(:%s)\n%s\n"      p.key p.description
+    @printf io "LaTeX label: %s\n"     p.tex_label
+    @printf io "-----------------------------\n"
+    @printf io "value:        [%+6f,...,%+6f]\n" p.value[1] p.value[end]
+end
+
 hasprior(p::Parameter) = !isnull(p.prior)
 
 NullableOrPrior = Union{NullablePrior, ContinuousUnivariateDistribution}
@@ -265,7 +358,7 @@ end
 
 """
 ```
-parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
+parameter(p::UnscaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
 ```
 
 Returns an UnscaledParameter with value field equal to `newvalue`. If `p` is a fixed
@@ -284,7 +377,7 @@ end
 
 """
 ```
-parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
+parameter(p::ScaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
 ```
 
 Returns a ScaledParameter with value field equal to `newvalue` and scaledvalue field equal
@@ -329,6 +422,14 @@ function Base.show(io::IO, p::SteadyStateParameter{T}) where {T}
     @printf io "value:        %+6f\n" p.value
 end
 
+function Base.show(io::IO, p::SteadyStateParameterGrid{T}) where {T}
+    @printf io "%s\n" typeof(p)
+    @printf io "(:%s)\n%s\n"      p.key p.description
+    @printf io "LaTeX label: %s\n"     p.tex_label
+    @printf io "-----------------------------\n"
+    @printf io "value:        [%f,...,%f]" p.value[1] p.value[end]
+end
+
 """
 ```
 transform_to_model_space{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T)
@@ -356,7 +457,7 @@ transform_to_model_space(pvec::ParameterVector{T}, values::Vector{T}) where T = 
 
 """
 ```
-transform_to_real_line{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T = p.value)
+transform_to_real_line(p::Parameter{T,U}, x::T = p.value) where {T<:Number, U<:Transform}
 ```
 
 Transforms `p.value` from model space (between `p.valuebounds`) to the real line, without updating
@@ -392,12 +493,13 @@ transform_to_real_line(pvec::ParameterVector{T}) where T = map(transform_to_real
 
 # define operators to work on parameters
 
-Base.convert(::Type{T}, p::UnscaledParameter) where T <: Number     = convert(T,p.value)
-Base.convert(::Type{T}, p::ScaledParameter) where T <: Number       = convert(T,p.scaledvalue)
-Base.convert(::Type{T}, p::SteadyStateParameter) where T <: Number  = convert(T,p.value)
+Base.convert(::Type{T}, p::UnscaledParameter) where {T <: Number}     = convert(T,p.value)
+Base.convert(::Type{T}, p::ScaledParameter) where {T <: Number}       = convert(T,p.scaledvalue)
+Base.convert(::Type{T}, p::SteadyStateParameter) where {T <: Number}  = convert(T,p.value)
 
 Base.promote_rule(::Type{AbstractParameter{T}}, ::Type{U}) where {T<:Number, U<:Number} = promote_rule(T,U)
 
+# Define scalar operators on parameters
 for op in (:(Base.:+),
            :(Base.:-),
            :(Base.:*),
@@ -418,6 +520,7 @@ for op in (:(Base.:+),
     @eval ($op)(p::UnscaledOrSteadyState, q::ScaledParameter) = ($op)(p.value, q.scaledvalue)
 end
 
+# Define scalar functional mappings and comparisons
 for f in (:(Base.exp),
           :(Base.log),
           :(Base.transpose),
@@ -436,6 +539,30 @@ for f in (:(Base.exp),
     end
 end
 
+# Define scalar operators on grids
+for op in (:(Base.:+),
+           :(Base.:-),
+           :(Base.:*),
+           :(Base.:/))
+
+    @eval ($op)(g::SteadyStateParameterGrid, x::Integer)        = ($op)(g.value, x)
+    @eval ($op)(g::SteadyStateParameterGrid, x::Number)         = ($op)(g.value, x)
+    @eval ($op)(x::Integer, g::SteadyStateParameterGrid)        = ($op)(x, g.value)
+    @eval ($op)(x::Number, g::SteadyStateParameterGrid)         = ($op)(x, g.value)
+end
+
+# Define vectorized arithmetic for Unscaled or Steady-State Parameters
+for op in (:(Base.:+),
+           :(Base.:-),
+           :(Base.:*),
+           :(Base.:/))
+
+    @eval ($op)(p::UnscaledOrSteadyState, x::Vector)        = ($op)(p.value, x)
+    @eval ($op)(p::UnscaledOrSteadyState, x::Matrix)        = ($op)(p.value, x)
+    @eval ($op)(x::Vector, p::UnscaledOrSteadyState)        = ($op)(x, p.value)
+    @eval ($op)(x::Matrix, p::UnscaledOrSteadyState)        = ($op)(x, p.value)
+end
+
 """
 ```
 update!(pvec::ParameterVector{T}, values::Vector{T}) where T
@@ -443,6 +570,7 @@ update!(pvec::ParameterVector{T}, values::Vector{T}) where T
 
 Update all parameters in `pvec` that are not fixed with
 `values`. Length of `values` must equal length of `pvec`.
+Function optimized for speed.
 """
 function update!(pvec::ParameterVector{T}, values::Vector{T}) where T
     # this function is optimised for speed

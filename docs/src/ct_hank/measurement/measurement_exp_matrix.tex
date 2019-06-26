@@ -1,0 +1,189 @@
+\documentclass[12 pt, oneside]{article}
+\textheight 9 in
+\textwidth 6.5 in
+\topmargin 0 in
+\oddsidemargin .3 in
+\evensidemargin .3 in
+\usepackage{amssymb}
+\usepackage{amsmath,amsthm}
+\usepackage{amsbsy,paralist}
+\usepackage{appendix}
+\usepackage{natbib}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{epsfig}
+\usepackage{color}
+\usepackage{mathrsfs}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+%\usepackage[nodisplayskipstretch]{setspace}
+\usepackage{fullpage}
+\usepackage{cancel}
+\usepackage{lipsum}
+\usepackage{subfig}
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+\setlength{\parindent}{1cm}
+\newtheorem*{thm}{Theorem}
+\newtheorem*{lem}{Lemma}
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{lemfull}{Lemma}[section]
+\newtheorem*{cor}{Corollary}
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{thmfull}{Theorem}[section]
+\newtheorem*{prop}{Proposition}
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{propfull}{Proposition}[section]
+\theoremstyle{definition}
+\newtheorem*{remark}{Remarks}
+\theoremstyle{definition}
+\newtheorem*{eg}{Example}
+\theoremstyle{definition}
+\newtheorem*{defn}{Definition}
+\newtheorem{definition}{Definition}[section]
+\newcommand{\bigsum}[2]{\sum\limits_{#1}^{#2}}
+\newcommand{\bigprod}[2]{\prod\limits_{#1}^{#2}}
+\newcommand{\nlim}{\lim_{n\ra\infty}}
+\newcommand{\vecx}{\vec{x}}
+\newcommand{\vecy}{\vec{y}}
+\DeclareMathOperator{\Char}{Char}
+\DeclareMathOperator{\orb}{orb}
+\DeclareMathOperator{\stab}{stab}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\Inn}{Inn}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\card}{card}
+\DeclareMathOperator{\Cl}{Cl}
+\DeclareMathOperator{\Int}{Int}
+\DeclareMathOperator{\var}{Var}
+\DeclareMathOperator{\io}{i.o.}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\tr}{trace}
+\newcommand{\bfc}{\mathbf{c}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfd}{\mathbf{d}}
+\newcommand{\bff}{\mathbf{f}}
+\newcommand{\bfh}{\mathbf{h}}
+\newcommand{\bfg}{\mathbf{g}}
+\newcommand{\bfi}{\mathbf{i}}
+\newcommand{\bfj}{\mathbf{j}}
+\newcommand{\bfk}{\mathbf{k}}
+\newcommand{\bfl}{\mathbf{l}}
+\newcommand{\bfm}{\mathbf{m}}
+\newcommand{\bfn}{\mathbf{n}}
+\newcommand{\bfo}{\mathbf{o}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfq}{\mathbf{q}}
+\newcommand{\bfr}{\mathbf{r}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bft}{\mathbf{t}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfy}{\mathbf{y}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\bfu}{\mathbf{u}}
+\newcommand{\bfv}{\mathbf{v}}
+\newcommand{\bfw}{\mathbf{w}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfY}{\mathbf{Y}}
+\newcommand{\bfA}{\mathbf{A}}
+\newcommand{\bfB}{\mathbf{B}}
+\newcommand{\bfC}{\mathbf{C}}
+\newcommand{\bfD}{\mathbf{D}}
+\newcommand{\bfE}{\mathbf{E}}
+\newcommand{\bfF}{\mathbf{F}}
+\newcommand{\bfG}{\mathbf{G}}
+\newcommand{\bfH}{\mathbf{H}}
+\newcommand{\bfI}{\mathbf{I}}
+\newcommand{\bfJ}{\mathbf{J}}
+\newcommand{\bfK}{\mathbf{K}}
+\newcommand{\bfL}{\mathbf{L}}
+\newcommand{\bfU}{\mathbf{U}}
+\newcommand{\bfV}{\mathbf{V}}
+\newcommand{\bfW}{\mathbf{W}}
+\newcommand{\bfZ}{\mathbf{Z}}
+\newcommand{\bfM}{\mathbf{M}}
+\newcommand{\bfN}{\mathbf{N}}
+\newcommand{\bfQ}{\mathbf{Q}}
+\newcommand{\bfO}{\mathbf{O}}
+\newcommand{\bfR}{\mathbf{R}}
+\newcommand{\bfS}{\mathbf{S}}
+\newcommand{\bfT}{\mathbf{T}}
+\newcommand{\bfP}{\mathbf{P}}
+\newcommand{\bfzero}{\mathbf{0}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\curA}{\mathscr{A}}
+\newcommand{\curC}{\mathscr{C}}
+\newcommand{\curD}{\mathscr{D}}
+\newcommand{\curE}{\mathscr{E}}
+\newcommand{\curH}{\mathscr{H}}
+\newcommand{\curI}{\mathscr{I}}
+\newcommand{\curJ}{\mathscr{J}}
+\newcommand{\curK}{\mathscr{K}}
+\newcommand{\curN}{\mathscr{N}}
+\newcommand{\curO}{\mathscr{O}}
+\newcommand{\curQ}{\mathscr{Q}}
+\newcommand{\curS}{\mathscr{S}}
+\newcommand{\curT}{\mathscr{T}}
+\newcommand{\curU}{\mathscr{U}}
+\newcommand{\curV}{\mathscr{V}}
+\newcommand{\curW}{\mathscr{W}}
+\newcommand{\curZ}{\mathscr{Z}}
+\newcommand{\curB}{\mathscr{B}}
+\newcommand{\curF}{\mathscr{F}}
+\newcommand{\curG}{\mathscr{G}}
+\newcommand{\curM}{\mathscr{M}}
+\newcommand{\curL}{\mathscr{L}}
+\newcommand{\curP}{\mathscr{P}}
+\newcommand{\curR}{\mathscr{R}}
+\newcommand{\curX}{\mathscr{X}}
+\newcommand{\curY}{\mathscr{Y}}
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\RA}{\Rightarrow}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\fd}{\vspace{2.5mm}}
+\newcommand{\as}{\vspace{1mm}}
+\begin{document}
+Suppose we have the continuous-time transition equation
+\[dX_t = TX_t\,dt + R\, dW_t,  \]
+where $X_t\in \R^n$, $T\in \R^{n\times n}$, $R\in \R^{n\times m}$, and $dW_t$ is a $m$-dimensional standard Brownian motion. In expectation, we have that this system behaves according to
+\[ dX_t = TX_t\,dt, \]
+which corresponds to the linear ODE system\footnote{Formally, any stochastic differential equation (SDE) is an \textit{integral} equation. In our case, our SDE is actually short hand for
+\[X_t - X_0 = \int_0^t TX_s\, ds + \int_0^t R\, dW_s.  \]
+The second integral is an Ito integral, which is a martingale. With standard Brownian motion, it has mean zero, so in expectation, our equation becomes
+\[\E[X_t - X_0] = \int_0^t TX_s\,ds,  \]
+which is the \textit{integral} equivalent of a linear ODE (i.e. every ODE can be represented with integrals).
+}
+\[ \dfrac{dX_t}{dt} = TX_t, \]
+yielding the standard solution
+\[ X_t = \exp((t-\tau)T)X_\tau, \]
+where $X_\tau$ is some initial condition (though $\tau$ need not be zero).
+
+Our problem is to find a matrix $Z$ which convert flows into stocks. Our states, $X_t$, represents the instantaneous state variable, so, for example, if output is a state, then $X_t$ tracks the \textit{rate} of output. Therefore, to acquire the total output procued, a \textit{stock} variable, we must integrate the path of $X_t$. In the case that $T$ is invertible, we have the analytical solution\footnote{To develop intuition for this, it may be useful to study the scalar case, where the invertibility of $T$ does not matter, as it will just be some real.}
+\[\left| \int_\tau^S X_t\, dt\right| = \left|T^{-1}\exp((t-\tau)T)X_\tau - T^{-1}\right|. \]
+Note that we use absolute values here to allow for $\tau > S$ in the case that we want to determine output by integrating backwards in time (i.e. I observe my current state and guess the stock of output by extrapolating backward rather than observing my past state and guessing its evolution forward from there).
+
+However, $T$ is not always invertible, and in test trials with HANK models, $T$ won't be invertible. Therefore, we approximate it using the definition of exponential matrices. Given any matrix $T$, we have that
+\[ \exp((t-\tau) T) = \sum_{n = 0}^\infty \dfrac{((t-\tau)T)^n}{n!}, \]
+where $((t-\tau)T)^0 = I$. We can integrate term by term by the dominated convergence theorem\footnote{Since we know the exponential matrix converges, we can bound the tail above by some constant and integrate the resulting \textit{finite} sum of powers of $T$, plus some constant. Since this function is integrable and dominates $\exp((t-\tau)T)$, we can apply the Lebesgue dominated convergence theorem and integrate term by term.}, yielding
+\begin{align*}
+& \int_{\tau}^S \exp((t-\tau)T)\, dt = \sum_{ n = 0}^\infty \int_\tau^S \dfrac{((t-\tau)T)^n}{n!}\\
+& = (S-\tau) +\dfrac{(S-\tau)^2 T}{2!} + \dfrac{(S-\tau)^3T^2}{3!} + \dfrac{(S-\tau)^4T^3}{4!} + \cdots\\
+& = (S-\tau)\sum_{n = 0}^\infty \dfrac{((S-\tau)T)^n}{n!}.
+\end{align*}
+We can therefore write
+\begin{align*}
+\int_\tau^S \exp((t-\tau)T) X_\tau\, ds & = \left(\int_\tau^S \exp((t-\tau)T)\, ds\right) X_\tau= \left((S-\tau)\sum_{n = 0}^\infty \dfrac{((S-\tau)T)^n}{n!}\right)X_\tau.
+\end{align*}
+
+
+
+
+
+\end{document}

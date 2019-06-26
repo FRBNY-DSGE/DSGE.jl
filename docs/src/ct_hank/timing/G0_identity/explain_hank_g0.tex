@@ -1,0 +1,200 @@
+\documentclass[12 pt, oneside]{article}
+\textheight 9 in
+\textwidth 6.5 in
+\topmargin 0 in
+\oddsidemargin .3 in
+\evensidemargin .3 in
+\usepackage{amssymb}
+\usepackage{amsmath,amsthm}
+\usepackage{amsbsy,paralist}
+\usepackage{appendix}
+\usepackage{natbib}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{epsfig}
+\usepackage{color}
+\usepackage{mathrsfs}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+%\usepackage[nodisplayskipstretch]{setspace}
+\usepackage{fullpage}
+\usepackage{cancel}
+\usepackage{lipsum}
+\usepackage{subfig}
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+\setlength{\parindent}{1cm}
+\newtheorem*{thm}{Theorem}
+\newtheorem*{lem}{Lemma}
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{lemfull}{Lemma}[section]
+\newtheorem*{cor}{Corollary}
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{thmfull}{Theorem}[section]
+\newtheorem*{prop}{Proposition}
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{propfull}{Proposition}[section]
+\theoremstyle{definition}
+\newtheorem*{remark}{Remarks}
+\theoremstyle{definition}
+\newtheorem*{eg}{Example}
+\theoremstyle{definition}
+\newtheorem*{defn}{Definition}
+\newtheorem{definition}{Definition}[section]
+\newcommand{\bigsum}[2]{\sum\limits_{#1}^{#2}}
+\newcommand{\bigprod}[2]{\prod\limits_{#1}^{#2}}
+\newcommand{\nlim}{\lim_{n\ra\infty}}
+\newcommand{\vecx}{\vec{x}}
+\newcommand{\vecy}{\vec{y}}
+\DeclareMathOperator{\Char}{Char}
+\DeclareMathOperator{\orb}{orb}
+\DeclareMathOperator{\stab}{stab}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\Inn}{Inn}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\card}{card}
+\DeclareMathOperator{\Cl}{Cl}
+\DeclareMathOperator{\Int}{Int}
+\DeclareMathOperator{\var}{Var}
+\DeclareMathOperator{\io}{i.o.}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\tr}{trace}
+\newcommand{\bfc}{\mathbf{c}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfd}{\mathbf{d}}
+\newcommand{\bff}{\mathbf{f}}
+\newcommand{\bfh}{\mathbf{h}}
+\newcommand{\bfg}{\mathbf{g}}
+\newcommand{\bfi}{\mathbf{i}}
+\newcommand{\bfj}{\mathbf{j}}
+\newcommand{\bfk}{\mathbf{k}}
+\newcommand{\bfl}{\mathbf{l}}
+\newcommand{\bfm}{\mathbf{m}}
+\newcommand{\bfn}{\mathbf{n}}
+\newcommand{\bfo}{\mathbf{o}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfq}{\mathbf{q}}
+\newcommand{\bfr}{\mathbf{r}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bft}{\mathbf{t}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfy}{\mathbf{y}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\bfu}{\mathbf{u}}
+\newcommand{\bfv}{\mathbf{v}}
+\newcommand{\bfw}{\mathbf{w}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfY}{\mathbf{Y}}
+\newcommand{\bfA}{\mathbf{A}}
+\newcommand{\bfB}{\mathbf{B}}
+\newcommand{\bfC}{\mathbf{C}}
+\newcommand{\bfD}{\mathbf{D}}
+\newcommand{\bfE}{\mathbf{E}}
+\newcommand{\bfF}{\mathbf{F}}
+\newcommand{\bfG}{\mathbf{G}}
+\newcommand{\bfH}{\mathbf{H}}
+\newcommand{\bfI}{\mathbf{I}}
+\newcommand{\bfJ}{\mathbf{J}}
+\newcommand{\bfK}{\mathbf{K}}
+\newcommand{\bfL}{\mathbf{L}}
+\newcommand{\bfU}{\mathbf{U}}
+\newcommand{\bfV}{\mathbf{V}}
+\newcommand{\bfW}{\mathbf{W}}
+\newcommand{\bfZ}{\mathbf{Z}}
+\newcommand{\bfM}{\mathbf{M}}
+\newcommand{\bfN}{\mathbf{N}}
+\newcommand{\bfQ}{\mathbf{Q}}
+\newcommand{\bfO}{\mathbf{O}}
+\newcommand{\bfR}{\mathbf{R}}
+\newcommand{\bfS}{\mathbf{S}}
+\newcommand{\bfT}{\mathbf{T}}
+\newcommand{\bfP}{\mathbf{P}}
+\newcommand{\bfzero}{\mathbf{0}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\curA}{\mathscr{A}}
+\newcommand{\curC}{\mathscr{C}}
+\newcommand{\curD}{\mathscr{D}}
+\newcommand{\curE}{\mathscr{E}}
+\newcommand{\curH}{\mathscr{H}}
+\newcommand{\curI}{\mathscr{I}}
+\newcommand{\curJ}{\mathscr{J}}
+\newcommand{\curK}{\mathscr{K}}
+\newcommand{\curN}{\mathscr{N}}
+\newcommand{\curO}{\mathscr{O}}
+\newcommand{\curQ}{\mathscr{Q}}
+\newcommand{\curS}{\mathscr{S}}
+\newcommand{\curT}{\mathscr{T}}
+\newcommand{\curU}{\mathscr{U}}
+\newcommand{\curV}{\mathscr{V}}
+\newcommand{\curW}{\mathscr{W}}
+\newcommand{\curZ}{\mathscr{Z}}
+\newcommand{\curB}{\mathscr{B}}
+\newcommand{\curF}{\mathscr{F}}
+\newcommand{\curG}{\mathscr{G}}
+\newcommand{\curM}{\mathscr{M}}
+\newcommand{\curL}{\mathscr{L}}
+\newcommand{\curP}{\mathscr{P}}
+\newcommand{\curR}{\mathscr{R}}
+\newcommand{\curX}{\mathscr{X}}
+\newcommand{\curY}{\mathscr{Y}}
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\RA}{\Rightarrow}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\fd}{\vspace{2.5mm}}
+\newcommand{\as}{\vspace{1mm}}
+\begin{document}
+Without any aggregate shocks and after applying Ito's lemma, the steady state in a HANK model can be represented as the system
+\begin{align*}
+\rho v_t & = \max_c u(c) +\dfrac{1}{dt} \E_t[\calA v_t],\\
+\dfrac{dg_t}{dt} & = -\calA^*g_t,\\
+p_t & = F(g_t),
+\end{align*}
+where $\calA$ is the generator of an Ito diffusion (or jump diffusion or semi-martingale), $\calA^*$ is the adjoint, etc.
+
+In the steady state, where we set aggregate shocks to zero, we can represent the discretized system as
+\begin{align*}
+\rho \bfv_t & = \bfu(\bfv_t) + \bfA(\bfv_t;\bfp_t) \bfv_t\\
+\bfzero & = \bfA(\bfv_t;\bfp_t)^T\bfg_t\\
+\bfp_t & = \bfF(\bfg_t).
+\end{align*}
+In this system, $\bfv, \bfg, \bfp$ are all now vectors at points in a discrete grid, with $\bfA$ performing a variety of finite difference operations. To arrive at the system with aggregate shocks $Z_t$, we have
+\begin{align*}
+\rho \bfv_t & = \bfu(\bfv_t) + \bfA(\bfv_t;\bfp_t) \bfv_t + \dfrac{1}{dt} \E_t[d\bfv_t]\\
+\dfrac{d\bfg_t}{dt} & = \bfA(\bfv_t;\bfp_t)^T\bfg_t\\
+dZ_t & = (\mu_1 Z_t+\mu_2)\,dt + \sigma\, dW_t\\
+\bfp_t & = \bfF(\bfg_t; Z_t).
+\end{align*}
+The first equation is just the HJB, where the RHS reflects the fact that technically, with Ito calculus, $d\bfv$ represents a stochastic integral, so ``technically'', you can't take the time derivative. The second line is the Fokker-Planck/KFE. Since we are not looking for a stationary density, the zeros become the time derivative of $\bfg$. The third equation is just some generic linear SDE, where $\mu_1,\mu_2$ are assumed to not depend on $\bfv,\bfg,Z$. Finally, the last equation is market-clearing.
+
+We now re-arrange time derivatives onto the same side. Note $\bfp$ is statically solved, so technically we don't need to track it as a state. After plugging $\bfp$ directly into our equations, we have
+\begin{align*}
+ \E_t[d\bfv_t] & = \left[\rho \bfv_t - \bfu(\bfv_t) - \bfA(\bfv_t;\bfp_t) \bfv_t\right] \,dt\\
+d\bfg_t & = \bfA(\bfv_t;\bfp_t)^T\bfg_t\,dt\\
+dZ_t & = (\mu_1 Z_t+\mu_2)\,dt + \sigma\, dW_t
+\end{align*}
+We may re-write this nonlinear system as
+\[d\bfs_t = \bff(\bfv_t, \bfg_t, p_t, Z_t), \]
+with $d\bfs_t = 0$ at the steady-state. We now linearize the model by taking the first-order Taylor expansions w.r.t. $\bfv, \bfg, Z, \bfp$. Since all the arguments of $\bff$ are just dependent on these \textit{levels} of state variables, differentiation should not pop out any time derivatives/stochastic differentials. Let $d\hat{\bfg}_t$ represent the linear approximation of the time differential of the distribution (i.e. an approximation of $d\bfg_t$. Similar notation is used for the other state variables. Noting that $d\bfs_t = 0$ at the steady state, we can write, in gensys form,
+\begin{align*}
+\begin{bmatrix}
+\E[d\hat{\bfv_t}]\\
+d\hat{\bfg_t}\\
+dZ_t
+\end{bmatrix} & = \bfB\begin{bmatrix}\hat{\bfv_t}\\ \hat{\bfg_t}\\ Z_t + \sigma dW_t.
+\end{bmatrix}
+\end{align*}
+In Sims's notation, we have
+\[ \dot{s} = \Gamma_1 s + \Psi dW + \Pi \eta  \]
+since we can completely summarize the time derivatives/differentials with their current levels at time $t$.
+
+
+
+
+\end{document}

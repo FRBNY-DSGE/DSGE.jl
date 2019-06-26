@@ -7,7 +7,7 @@ Create an instance of the `AltPolicy` proposed in John Taylor's \"A Historical
 Analysis of Monetary Policy Rules\" (1999).
 """
 function taylor99()
-    AltPolicy(:taylor99, taylor99_eqcond, taylor99_solve, color = colorant"blue")
+    AltPolicy(:taylor99, taylor99_eqcond, taylor99_solve, color = RGB(0., 0., 1.))
 end
 
 function taylor99_eqcond(m::AbstractModel)

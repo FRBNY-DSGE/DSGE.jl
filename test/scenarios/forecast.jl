@@ -50,8 +50,9 @@ end
     end
 
     # Test scenario with shock scaling
-    scale = Scenario(:scaledscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
-                     shock_scaling = 2.0)
+    global scale = Scenario(:scaledscen, "Test Shock Scaling Scenario",
+                            [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
+                            shock_scaling = 2.0)
     scale.targets = scen.targets
 
     global forecastshocks = filter_shocks!(m, scale, sys)
