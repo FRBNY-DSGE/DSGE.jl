@@ -16,7 +16,6 @@ module DSGE
     import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
-    import ParallelDataTransfer.sendto
     import StateSpaceRoutines: KalmanFilter
     import SparseArrays: sparse
     export
@@ -187,7 +186,6 @@ module DSGE
 
     include("solve/gensys.jl")
     include("solve/solve.jl")
-    include("solve/klein.jl")
 
     include("estimate/util.jl")
     include("estimate/kalman.jl")

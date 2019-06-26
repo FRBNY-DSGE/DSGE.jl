@@ -402,11 +402,17 @@ end
 
 """
 ```
+function set_weights!(c::ParticleCloud, weights::Vector{Float64})
 @inline function set_weights!(c::Cloud, weights::Vector{Float64})
 ```
 Set weights to specific values. Contrast to update_weights, which multiplies
 existing weights by provided incremental weights.
 """
+function update_weights!(c::ParticleCloud, weights::Vector{Float64})
+    for (p,w) in zip(c.particles, weights)
+        update_weight!(p, w)
+    end
+end
 @inline function set_weights!(c::Cloud, weights::Vector{Float64})
     @assert length(c) == length(weights) "Dimensional mismatch in set_weights"
     N = ind_weight(size(c.particles,2))

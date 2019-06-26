@@ -1,4 +1,4 @@
-using DSGE, JLD2, Distributions, PDMats, DataStructures, OrderedCollections, FileIO, Test, DataFrames, Dates, Nullables, Plots, Distributed, DelimitedFiles, Random
+using DSGE, JLD2, Distributions, PDMats, DataStructures, OrderedCollections, FileIO, Test, DataFrames, Dates, Nullables, Plots, Printf, Distributed, DelimitedFiles, Random
 
 my_tests = [
            "core",
@@ -12,9 +12,6 @@ my_tests = [
             "data/load_data",
             "solve/gensys",
             "solve/solve",
-            # "solve/solve_ct",
-            # "solve/gensys_ct",
-            # "solve/reduction",
             "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
@@ -25,7 +22,7 @@ my_tests = [
             "estimate/metropolis_hastings",
             # "estimate/smc/smc",
             "estimate/smc/helpers",
-            "estimate/smc/initialization",
+            #"estimate/smc/initialization",
             "estimate/smc/resample",
             "estimate/smc/util",
             "estimate/smc/mutation",

@@ -275,7 +275,7 @@ function metropolis_hastings(propdist::Distribution,
                              cc0::T,
                              cc::T;
                              verbose::Symbol=:low,
-                             filestring_addl::Vector{String} = Vector{String}(0)) where {T<:AbstractFloat}
+                             filestring_addl::Vector{String} = Vector{String}(undef, 0)) where {T<:AbstractFloat}
 
 
     # If testing, set the random seeds at fixed numbers
