@@ -1,7 +1,0 @@
-\beamer@endinputifotherversion {3.06pt}
-\beamer@sectionintoc {1}{Steady State Theory}{3}{0}{1}
-\beamer@sectionintoc {2}{Krylov Subspace Methods and Aggregate State Variable Reduction}{14}{0}{2}
-\beamer@sectionintoc {3}{Spline Basis Projection and Value Function Reduction}{19}{0}{3}
-\beamer@sectionintoc {4}{Description of KrusellSmith and OneAssetHANK}{22}{0}{4}
-\beamer@sectionintoc {5}{Estimation}{30}{0}{5}
-\beamer@sectionintoc {6}{Future Work}{44}{0}{6}

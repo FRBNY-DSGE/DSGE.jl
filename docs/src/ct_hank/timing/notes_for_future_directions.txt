@@ -1,5 +1,0 @@
-It appears that our automatic differentiation works fundamentally differently from SeHyoun's based on the timings. Most of SeHyoun's matlab code takes time to compute the actual residuals but very little time to actually retrieve derivatives from those residuals. In contrast, in Julia, it takes less than 1 ms to compute the residuals, but the actual Jacobian step takes a long time.
-
- We may need to check ways to speed up the automatic differentiation tool provided by Julia, as there seems to be some speed improvements by doing "chunking" or something like that. See the advanced usage part of the documentation.
-
-Another hypothesis is that SeHyoun's AutoDiff assumes you do the residual computation first and then exploits that all the residuals should have been computed. I think that the Julia AutoDiff package re-evaluates the function every time for each dimension. For example, if I have a 10-dimension vector-valued function, then the Julia AutoDiff evaluates the function once for every dimension against which you take a derivative, so you'd be evaluating the function 10 times.
