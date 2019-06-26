@@ -1,29 +1,13 @@
 using DSGE, JLD2, Distributions, PDMats, DataStructures, OrderedCollections, FileIO, Test, DataFrames, Dates, Nullables, Plots, Distributed, DelimitedFiles, Random
 
-HETDSGEGOVDEBT = "/home/rceexm14/.julia/dev/DSGE/src/models/heterogeneous_agent/het_dsge_gov_debt/reference"
-
 my_tests = [
-            "models/heterogeneous_agent/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
-            "models/heterogeneous_agent/het_dsge_gov_debt/het_dsge_gov_debt",
-            "models/representative_agent/rep_dsge_gov_debt/rep_dsge_gov_debt",
-            # "models/heterogeneous_agent/het_dsge_simple_taylor/het_dsge_simple_taylor",
-            # "models/heterogeneous_agent/het_dsge/het_dsge",
-            # "models/heterogeneous_agent/het_dsge_lag/het_dsge_lag",
            "core",
            "parameters",
-            # "models/heterogeneous_agent/het_dsge/het_dsge",
             # "models/representative_agent/an_schorfheide/an_schorfheide",
             # "models/representative_agent/smets_wouters/smets_wouters",
             # "models/representative_agent/m990/m990",
             # "models/representative_agent/m1002/m1002",
             # "models/representative_agent/m1010/m1010",
-            # "models/heterogeneous_agent/krusell_smith/krusell_smith",
-            # "models/heterogeneous_agent/bond_labor/bond_labor",
-            "models/heterogeneous_agent/real_bond/real_bond",
-            "models/heterogeneous_agent/real_bond_mkup/real_bond_mkup",
-            # "models/heterogeneous_agent/krusell_smith_ct/krusell_smith_ct",
-            # "models/heterogeneous_agent/one_asset_hank/one_asset_hank",
-            # "models/heterogeneous_agent/one_asset_hank/interns",
             "data/misc",
             "data/load_data",
             "solve/gensys",
