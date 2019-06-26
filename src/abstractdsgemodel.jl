@@ -236,28 +236,6 @@ n_model_states_original(m::AbstractModel) = get_setting(m, :n_model_states_origi
 
 """
 ```
-AbstractCTModel{T} <: AbstractModel{T}
-```
-
-The AbstractCTModel is defined as a subtype of AbstractModel to accomodate the
-numerical methods and procedures specific to continuous time models.
-"""
-abstract type AbstractCTModel{T} <: AbstractModel{T} end
-
-n_states(m::AbstractCTModel) = sum(map(i -> length(collect(m.endogenous_states)[i][2]), 1:length(keys(m.endogenous_states))))
-n_shocks_expectational(m::AbstractCTModel) = sum(map(i -> length(collect(m.expected_shocks)[i][2]), 1:length(keys(m.expected_shocks))))
-
-"""
-```
-AbstractHetModel{T} <: AbstractModel{T}
-```
-
-The AbstractHetModel is defined as a subtype of AbstractModel to accomodate a bunch of stuff, but for now just different impulse response functions.
-"""
-abstract type AbstractHetModel{T} <: AbstractModel{T} end
-
-"""
-```
 AbstractRepModel{T} <: AbstractModel{T}
 ```
 
