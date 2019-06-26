@@ -61,8 +61,10 @@ function default_settings!(m::AbstractModel)
         "Use available parallel workers in computations")
 
     # Solution
-    settings[:solution_method] = Setting(:solution_method, :gensys, "What method the model uses to solve for the
-                                         state space model form. The options are :gensys and :klein")
+    settings[:solution_method] = Setting(:solution_method, :gensys,
+                                         "What method the model uses to solve for the
+                                         state space model form. The options are :gensys and
+                                         (TBD) :klein")
 
     # Optimization
     settings[:reoptimize] = Setting(:reoptimize, true,
