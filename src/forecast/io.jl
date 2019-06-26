@@ -16,7 +16,7 @@ overrides[:mode] = \"path/to/input/file.h5\"
 ```
 """
 function get_forecast_input_file(m, input_type;
-                                 filestring_addl::Vector{String} = Vector{String}(0))
+                                 filestring_addl::Vector{String} = Vector{String}(undef, 0))
     overrides = forecast_input_file_overrides(m)
     if haskey(overrides, input_type)
         override_file = overrides[input_type]

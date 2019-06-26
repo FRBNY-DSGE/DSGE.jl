@@ -107,7 +107,8 @@ Load and return parameter draws from Metropolis-Hastings.
   parameter draws for this block.
 """
 function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
-                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(0))
+                    verbose::Symbol = :low,
+                    filestring_addl::Vector{String} = Vector{String}(undef, 0))
 
     input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
     println(verbose, :low, "Loading draws from $input_file_name")

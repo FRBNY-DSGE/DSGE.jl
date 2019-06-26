@@ -408,7 +408,7 @@ function set_weights!(c::ParticleCloud, weights::Vector{Float64})
 Set weights to specific values. Contrast to update_weights, which multiplies
 existing weights by provided incremental weights.
 """
-function update_weights!(c::ParticleCloud, weights::Vector{Float64})
+function set_weights!(c::ParticleCloud, weights::Vector{Float64})
     for (p,w) in zip(c.particles, weights)
         update_weight!(p, w)
     end
