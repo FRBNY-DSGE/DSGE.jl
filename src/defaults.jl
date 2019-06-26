@@ -60,6 +60,10 @@ function default_settings!(m::AbstractModel)
     settings[:use_parallel_workers] = Setting(:use_parallel_workers, true,
         "Use available parallel workers in computations")
 
+    # Solution
+    settings[:solution_method] = Setting(:solution_method, :gensys, "What method the model uses to solve for the
+                                         state space model form. The options are :gensys and :klein")
+
     # Optimization
     settings[:reoptimize] = Setting(:reoptimize, true,
         "Optimize the posterior mode. If false, reads in mode from a file.")
@@ -83,10 +87,9 @@ function default_settings!(m::AbstractModel)
         "Total number of cycles to use in the combined optimization routine")
     settings[:optimization_attempts] = Setting(:optimization_attempts, 4,
         "Number of times to attempt optimization in estimate()")
-    settings[:sampling_method] = Setting(:sampling_method, :MH, "The sampling method used, either :MH or :SMC")
 
     # Estimation
-    settings[:sampling_method] = Setting(:sampling_method, :MH, "The method used to generate samples from the posterior distribution of the parameters.")
+    settings[:sampling_method] = Setting(:sampling_method, :MH, "The sampling method used, either :MH or :SMC")
     settings[:calculate_hessian] = Setting(:calculate_hessian, true,
         "Calculate the hessian at the mode")
     settings[:n_hessian_test_params] = Setting(:n_hessian_test_params, typemax(Int),
@@ -146,6 +149,7 @@ function default_settings!(m::AbstractModel)
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
     settings[:resampler_smc] = Setting(:resampler_smc, :multinomial, "Which resampling method to use in SMC")
     settings[:mixture_proportion] = Setting(:mixture_proportion, 1., "The mixture proportion for the mutation step's proposal distribution")
+    settings[:use_penalty] = Setting(:use_penalty, false, "Whether or not to additionally include a penalty function in the likelihood evaluation")
 
     # Endogenous ϕ Schedule
     settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")

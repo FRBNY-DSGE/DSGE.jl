@@ -1,0 +1,27 @@
+This file holds the reduction times while using no reduction, just krylov, and krylov + value function reduction.
+
+Krylov + value function reduction (with real Schur decomp)
+performing Krylov reduction on state space...
+  151.015 ms (8630 allocations: 274.03 MiB)
+
+performing value function reduction via quadratic spline projection...
+  4.254 ms (917 allocations: 1.94 MiB)
+
+solving the model...
+  2.560 ms (1783 allocations: 1.18 MiB)
+
+total: 157.829 ms
+
+Krylov reduction (with complex Schur decomp)
+performing Krylov reduction on state space...
+  157.739 ms (8630 allocations: 274.03 MiB)
+
+solving the model...
+  2.674 s (5942 allocations: 162.17 MiB)
+
+total: 2.831739s
+
+No reduction
+solving the model...
+  6.197 s (9422 allocations: 214.33 MiB)
+

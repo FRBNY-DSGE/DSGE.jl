@@ -147,7 +147,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
 
-            # Warn on sources with incomplete data; missing data will be replaced with NaN
+            # Warn on sources with incomplete data; missing data will be replaced with missing
             # during merge.
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
                 !in(lastdayofquarter(end_date), addl_data[:date])
@@ -170,7 +170,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             addl_data = addl_data[rows, cols]
             df = join(df, addl_data, on=:date, kind=:outer)
         else
-            # If series not found, use all Missings
+            # If series not found, use all missings
             addl_data = DataFrame(fill(missing, (size(df,1), length(mnemonics))))
             names!(addl_data, mnemonics)
             df = hcat(df, addl_data)
@@ -395,7 +395,7 @@ Create a `DataFrame` out of the matrix `data`, including a `:date` column
 beginning in `start_date`.  Variable names and indices are obtained from
 `m.observables`.
 """
-function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where {T<:AbstractFloat}
+function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where T<:AbstractFloat
     # Check number of rows = number of observables
     nobs = n_observables(m)
     @assert size(data, 1) == nobs "Number of rows of data matrix ($(size(data, 1))) must equal number of observables ($nobs)"
@@ -501,7 +501,6 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
 
         df = CSV.read(filename)
         rename!(df, :POPULATION => population_mnemonic)
-        #DSGE.na2nan!(df)
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
 

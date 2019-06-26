@@ -31,30 +31,49 @@ Estimate the DSGE parameter posterior distribution.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol = :low,
-                  proposal_covariance::Matrix = Matrix(undef, 0,0),
+                  proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
-                  sampling::Bool = true)
+                  sampling::Bool = true,
+                  filestring_addl::Vector{String} = Vector{String}(),
+                  continue_intermediate::Bool = false,
+                  intermediate_stage_start::Int = 0,
+                  intermediate_stage_increment::Int = 10,
+                  save_intermediate::Bool = false)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
-             mle = mle, sampling = sampling)
+             mle = mle, sampling = sampling,
+             intermediate_stage_increment = intermediate_stage_increment,
+             save_intermediate = save_intermediate)
 end
 
 function estimate(m::AbstractModel;
                   verbose::Symbol = :low,
-                  proposal_covariance::Matrix = Matrix(undef, 0,0),
+                  proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
-                  sampling::Bool = true)
+                  sampling::Bool = true,
+                  filestring_addl::Vector{String} = Vector{String}(),
+                  continue_intermediate::Bool = false,
+                  intermediate_stage_start::Int = 0,
+                  intermediate_stage_increment::Int = 10,
+		          save_intermediate::Bool = false)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
-             mle = mle, sampling = sampling)
+             mle = mle, sampling = sampling,
+             intermediate_stage_increment = intermediate_stage_increment,
+	         save_intermediate = save_intermediate)
 end
 
 function estimate(m::AbstractModel, data::AbstractArray;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
-                  sampling::Bool = true)
+                  sampling::Bool = true,
+                  filestring_addl::Vector{String} = Vector{String}(),
+                  continue_intermediate::Bool = false,
+                  intermediate_stage_start::Int = 0,
+                  intermediate_stage_increment::Int = 10,
+		          save_intermediate::Bool = false)
 
     if !(get_setting(m, :sampling_method) in [:SMC,:MH])
         error("method must be :SMC or :MH")
@@ -69,7 +88,7 @@ function estimate(m::AbstractModel, data::AbstractArray;
     # Specify starting mode
 
     vint = get_setting(m, :data_vintage)
-    if reoptimize(m)
+    if reoptimize(m) && method == :MH
         println("Reoptimizing...")
 
         # Inputs to optimization algorithm
@@ -101,7 +120,6 @@ function estimate(m::AbstractModel, data::AbstractArray;
             converged = out.converged || attempts > max_attempts
 
             end_time = (time_ns() - begin_time)/1e9
-
             println(verbose, :low, @sprintf "Total iterations completed: %d\n" total_iterations)
             println(verbose, :low, @sprintf "Optimization time elapsed: %5.2f\n" optimization_time += end_time)
 
@@ -137,9 +155,7 @@ function estimate(m::AbstractModel, data::AbstractArray;
 
         ## Calculate the Hessian at the posterior mode
         hessian = if calculate_hessian(m)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Recalculating Hessian...")
-            end
+            println(verbose, :low, "Recalculating Hessian...")
 
             hessian, _ = hessian!(m, params, data; verbose=verbose)
 
@@ -149,19 +165,17 @@ function estimate(m::AbstractModel, data::AbstractArray;
 
             hessian
 
-            ## Read in a pre-calculated Hessian
-        else
-            fn = hessian_path(m)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Using pre-calculated Hessian from $fn")
-            end
+    # Read in a pre-calculated Hessian
+    else
+        fn = hessian_path(m)
+        println(verbose, :low, "Using pre-calculated Hessian from $fn")
 
-            hessian = h5open(fn,"r") do file
-                read(file, "hessian")
-            end
-
-            hessian
+        hessian = h5open(fn,"r") do file
+            read(file, "hessian")
         end
+
+        hessian
+	end
 
         # Compute inverse hessian and create proposal distribution, or
         # just create it with the given cov matrix if we have it
@@ -198,7 +212,8 @@ function estimate(m::AbstractModel, data::AbstractArray;
         cc0 = get_setting(m, :mh_cc0)
         cc = get_setting(m, :mh_cc)
 
-        metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
+        metropolis_hastings(propdist, m, data, cc0, cc; verbose = verbose,
+                            filestring_addl = filestring_addl);
 
     elseif get_setting(m, :sampling_method) == :SMC
         ########################################################################################
@@ -209,14 +224,18 @@ function estimate(m::AbstractModel, data::AbstractArray;
         ### of the posterior. Portions of this method are executed in
         ### parallel.
         ########################################################################################
-        smc(m, data; verbose = verbose)
+        smc(m, data; verbose = verbose, filestring_addl = filestring_addl,
+            continue_intermediate = continue_intermediate,
+            intermediate_stage_start = intermediate_stage_start,
+            save_intermediate = save_intermediate,
+            intermediate_stage_increment = intermediate_stage_increment)
     end
 
     ########################################################################################
     ### Step 4: Calculate and save parameter covariance matrix
     ########################################################################################
 
-    compute_parameter_covariance(m)
+    compute_parameter_covariance(m, filestring_addl = filestring_addl)
 
     return nothing
 end
@@ -224,8 +243,8 @@ end
 
 """
 ```
-metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractModel,
-    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
+metropolis_hastings(propdist::Distribution, m::AbstractModel,
+    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
 ```
 
 Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
@@ -251,11 +270,12 @@ distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-                                               m::AbstractModel,
-                                               data::AbstractArray,
-                                               cc0::T,
-                                               cc::T;
-                                               verbose::Symbol=:low) where T<: AbstractFloat
+                             m::AbstractModel,
+                             data::Matrix{T},
+                             cc0::T,
+                             cc::T;
+                             verbose::Symbol=:low,
+                             filestring_addl::Vector{String} = Vector{String}(0)) where {T<:AbstractFloat}
 
 
     # If testing, set the random seeds at fixed numbers
@@ -293,7 +313,6 @@ function metropolis_hastings(propdist::Distribution,
         end
     end
 
-
     # Report number of blocks that will be used
     println(verbose, :low, "Blocks: $n_blocks")
     println(verbose, :low, "Draws per block: $n_sim")
@@ -306,7 +325,7 @@ function metropolis_hastings(propdist::Distribution,
     mhparams = zeros(n_sim, n_parameters(m))
 
     # Open HDF5 file for saving parameter draws
-    simfile = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
+    simfile = h5open(rawpath(m,"estimate","mhsave.h5",filestring_addl),"w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
     parasim = d_create(simfile, "mhparams", datatype(Float64),
                        dataspace(n_saved_obs,n_params),
@@ -378,8 +397,8 @@ function metropolis_hastings(propdist::Distribution,
 
         # Calculate time to complete this block, average block time, and
         # expected time to completion
-        end_time = (time_ns() - begin_time)/1e9
-        total_sampling_time += end_time
+        block_time = (time_ns() - begin_time)/1e9
+        total_sampling_time += block_time
         total_sampling_time_minutes = total_sampling_time/60
         expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
         expected_time_remaining_minutes = expected_time_remaining_sec/60
@@ -407,11 +426,12 @@ parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 ### Arguments
 * `m::AbstractModel`: the model object
 """
-function compute_parameter_covariance(m::AbstractModel)
+function compute_parameter_covariance(m::AbstractModel;
+                                      filestring_addl::Vector{String} = Vector{String}(undef, 0))
 
     # Read in saved parameter draws
     if get_setting(m, :sampling_method) == :MH
-        param_draws_path = rawpath(m, "estimate", "mhsave.h5")
+        param_draws_path = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
         if !isfile(param_draws_path)
             @printf stderr "Saved parameter draws not found.\n"
             return
@@ -424,11 +444,11 @@ function compute_parameter_covariance(m::AbstractModel)
         param_covariance = cov(param_draws)
 
         # Write to file
-        h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
+        h5open(workpath(m, "estimate","parameter_covariance.h5", filestring_addl),"w") do f
             f["mhcov"] = param_covariance
         end
     elseif get_setting(m, :sampling_method) == :SMC
-        param_draws_path = rawpath(m, "estimate", "smcsave.h5")
+        param_draws_path = rawpath(m, "estimate", "smcsave.h5", filestring_addl)
         if !isfile(param_draws_path)
             @printf stderr "Saved parameter draws not found.\n"
             return
@@ -441,7 +461,7 @@ function compute_parameter_covariance(m::AbstractModel)
         param_covariance = cov(param_draws)
 
         # Write to file
-        h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
+        h5open(workpath(m, "estimate","parameter_covariance.h5", filestring_addl),"w") do f
             f["smccov"] = param_covariance
         end
     else

@@ -25,8 +25,7 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
     end
 
     if calculation_method == :incremental_weights
-        #file = load(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(get_setting(m,:tempering_target))]))
-        file = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"))
+        file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
@@ -36,8 +35,7 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
         free_para_inds = find(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
-            #cloud = load(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(get_setting(m, :tempering_target))]), "cloud")
-            cloud = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
+            cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 
@@ -103,14 +101,14 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     n_free_para = length(free_para_inds)
 
     θ_all = params
-    θ_bar = mean(θ_all, 2)
+    θ_bar = mean(θ_all, dims = 2)
 
     p = 0.1:0.1:0.8
     pcrit = map(x -> chisqinvcdf(n_free_para, x), p)
     densfac = mean(logpost)
 
     θ_free = θ_all[free_para_inds, :]
-    θ_bar_free = vec(mean(θ_free, 2))
+    θ_bar_free = vec(mean(θ_free, dims = 2))
 
     # # Computing the covariance matrix with the built-in function
     # Σ_bar = cov(θ_free, 2)
@@ -173,7 +171,7 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
         !any(isinf, invlike) && (all_invlike = hcat(all_invlike, invlike))
     end
 
-    mean_invlike = mean(all_invlike, 2)
+    mean_invlike = mean(all_invlike, dims = 2)
     mean_invlike = Base.filter(x -> isfinite(x), mean_invlike)
 
     return mean(densfac - log.(mean_invlike))
@@ -260,7 +258,7 @@ function marginal_data_density_weighted(params::Matrix{Float64},
         !any(isinf, invlike) && (all_invlike = hcat(all_invlike, invlike))
     end
 
-    mean_invlike = mean(all_invlike, 2)
+    mean_invlike = mean(all_invlike, dims = 2)
     mean_invlike = Base.filter(x -> isfinite(x), mean_invlike)
 
     return mean(densfac - log.(mean_invlike))
@@ -276,7 +274,7 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
 
     if calculation_method == :incremental_weights
         #file = load(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(get_setting(m, :tempering_target))]))
-        file = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"))
+        file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
@@ -286,7 +284,7 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
         free_para_inds = find(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
-            cloud = JLD2.load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
+            cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 

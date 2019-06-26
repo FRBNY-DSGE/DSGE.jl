@@ -1,0 +1,60 @@
+This text file records attempts to approximate the following integral:
+
+\[\int_0^dt \exp(\tau T)\, d\tau = dt( I + ( dt * T) /2 + (dt * T) ^2/ 3! + ...),\]
+
+which emerges from the fact that, given an initial state $s_0$ which evolves according to
+
+\[\dfrac{ds_t}{s_t} = Ts_t,\]
+
+then the solution is $s_t = s_0 \exp (t T)$.
+
+However, in continuous time models, $s_t$ represents flow variables (e.g. output/second), so we need to integrate to obtain the stock amount. The results below report some numerical experiments with seeing how many powers we need to use a power series approximation of the integral. In the matrix case, in particular, the matrix $T$ is not generally invertible, so we must use a power series approximation in order to maintain the measurement equation form
+
+\[y_t = Zs_t + D + u_t.\]
+
+Scalar case:
+
+If dt = 1/3 (so one month), we can be reasonably close to the truth (tol = 1e-5) with just a growth rate Q of 0.05 for k = 1, and up to .73 for k = 3. If we shrink dt further, we can get even better performance that scales nonlinearly with the powers of k. But even with just dt = 1/3, a linear approximation is fine.
+
+dt = 1/3
+k  Q
+1 .05
+2 .27
+3 .73
+
+dt = 1/12
+k  Q
+1 .33
+2 1.7
+3 4.1
+
+
+Matrix case:
+
+Here, we just KrusellSmith's transition matrix as a hopefully stereotypical transition matrix. With a range of dts varying from 1/90 to 1/2 (10 increments), with a tol of 1e-5 on the maximum entry wise error of the next additional term, we are fine w/powers of 2, 3, 4, 5, 5, 6, 6, 6, 7, when we do linspace(1/90, 1/2, 10). W/a smaller tolerance of 1e-8, the vector becomes [3, 5, 6, 7, 7, 8, 8, 9 ,9, 10]. It seems that a smart thing to do is just a-priori compute the best power since this seems fairly cheap, or allow the user to just fix the powers of the approximation at roughly 7, since that seems to be very good robustly.
+
+tol = 1e-8
+dt    power
+.01    2
+.065   4
+.119   5
+.174   6
+.228   6
+.283   7
+.337   7
+.391   8
+.446   8
+.5     9
+
+tol = 1e-5
+dt    power
+.01    1
+.065   2
+.119   3
+.174   3
+.228   4
+.283   4
+.337   5
+.391   5
+.446   5
+.5     6

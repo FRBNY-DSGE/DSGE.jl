@@ -1,5 +1,3 @@
-using DSGE, JLD2
-
 path = dirname(@__FILE__)
 
 # Set up arguments
@@ -7,13 +5,13 @@ m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:forecast_horizons, 1)
 
-system, histshocks = JLD2.jldopen("$path/../reference/forecast_args.jld2","r") do file
+system, histshocks = jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system"), read(file, "histshocks")
 end
 
 # Read expected output
 exp_states, exp_obs, exp_pseudo =
-    JLD2.jldopen("$path/../reference/shock_decompositions_out.jld2", "r") do file
+    jldopen("$path/../reference/shock_decompositions_out.jld2", "r") do file
         read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo")
     end
 

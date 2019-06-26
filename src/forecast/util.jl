@@ -55,7 +55,7 @@ range of indices for block `i` before thinning by `jstep` and
 """
 function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
 
-    if input_type == :full
+    if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
         ndraws    = n_forecast_draws(m, :full)
         jstep     = get_jstep(m, ndraws)
         start_ind = 1
@@ -272,7 +272,7 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
 
     ndraws = if input_type in [:mode, :mean, :init]
         1
-    elseif input_type in [:full, :subset]
+    elseif input_type in [:full, :subset, :prior, :init_draw_shocks, :mode_draw_shocks]
         _, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         sum(map(length, block_inds_thin))
     end
