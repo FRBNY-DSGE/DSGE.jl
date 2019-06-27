@@ -80,6 +80,8 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64},
     update_draws!(c, draws)
     update_loglh!(c, vec(loglh))
     update_logpost!(c, vec(logpost))
+    update_old_loglh!(c, zeros(n_parts))
+    # Need to call `set_weights` as opposed to `update_weights` since update_weights will multiply and 0*anything = 0
     set_weights!(c, ones(n_parts))
 end
 
