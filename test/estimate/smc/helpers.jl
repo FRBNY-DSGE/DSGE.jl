@@ -7,8 +7,8 @@ writing_output = false
 
 file   = jldopen("reference/helpers_input.jld2", "r")
 cloud  = read(file, "cloud")
-i      = read(file, "i")
-j      = read(file, "j")
+i_smc      = read(file, "i")
+j_smc      = read(file, "j")
 ϕ_prop = read(file, "phi_prop")
 ϕ_n1   = read(file, "phi_n1")
 proposed_fixed_schedule = read(file, "proposed_fixed_schedule")
@@ -18,7 +18,7 @@ close(file)
 
 @everywhere Random.seed!(42)
 test_ϕ_n, test_resampled_last_period, test_j, test_ϕ_prop = DSGE.solve_adaptive_ϕ(cloud, proposed_fixed_schedule,
-                                                                             i, j, ϕ_prop, ϕ_n1, tempering_target,
+                                                                             i_smc, j_smc, ϕ_prop, ϕ_n1, tempering_target,
                                                                              resampled_last_period)
 if writing_output
     jldopen("reference/helpers_output.jld2", "w") do file
