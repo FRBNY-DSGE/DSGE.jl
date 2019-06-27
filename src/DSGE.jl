@@ -1,7 +1,7 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using BenchmarkTools, BasisMatrices, ColorTypes, CSV
+    using BenchmarkTools, ColorTypes, CSV
     using DataFrames, DataStructures, Dates, Distributed, Distributions
     using FileIO, FFTW, ForwardDiff, FredData, HDF5, JLD2, LinearAlgebra
     using Missings, Nullables, Optim, OrderedCollections, Printf, Random, RecipesBase
