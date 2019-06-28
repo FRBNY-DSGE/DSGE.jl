@@ -188,8 +188,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     else
         z_matrix = ones(1)
         w_matrix = zeros(n_parts, 1)
-        W_matrix = Matrix{Float64}(tempered_update ? get_weights(cloud) :
-                                                     fill(1/n_parts, (n_parts, 1)))
+        W_matrix = tempered_update ? get_weights(cloud) : fill(1/n_parts, (n_parts, 1))
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
