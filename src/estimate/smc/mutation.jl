@@ -111,7 +111,7 @@ function mutation(m::AbstractModel, data::Matrix{S}, p::Vector{S},
                 q0 = 0.0
             end
 
-            η = exp(ϕ_n * (like_new - like_init) + (prior_new - prior_init) + (q0 - q1))
+            η = exp(ϕ_n * (like_new - like_init) + (1 - ϕ_n) * (like_old_data - like_prev) + (prior_new - prior_init) + (q0 - q1))
 
             if step_prob < η
                 para      = para_new
