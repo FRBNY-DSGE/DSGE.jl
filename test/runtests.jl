@@ -32,7 +32,7 @@ my_tests = [
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
-            #"analysis/compute_meansbands",
+            "analysis/compute_meansbands",
             "altpolicy/altpolicy",
             "scenarios/scenario",
             "scenarios/forecast",
