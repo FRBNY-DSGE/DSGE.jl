@@ -1,7 +1,9 @@
 # To be removed after running this test individually in the REPL successfully
-#using DSGE
-#using HDF5, JLD, JLD2, Random, Distributions, PDMats
-#import Test: @test, @testset
+using DSGE
+using HDF5, JLD, JLD2, Random, Distributions, PDMats
+import Test: @test, @testset
+
+write_test_output = false
 
 path = dirname(@__FILE__)
 
@@ -10,7 +12,7 @@ m = AnSchorfheide()
 save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, saveroot)
 
-data = h5read("reference/smc.h5", "data")
+data = h5read("../../reference/smc.h5", "data")
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -29,7 +31,7 @@ m <= Setting(:use_fixed_schedule, true)
 
 n_parts = get_setting(m, :n_particles)
 
-file = JLD2.jldopen("reference/mutation_inputs.jld2", "r")
+file = JLD2.jldopen("../../reference/mutation_inputs.jld2", "r")
 old_particles = read(file, "particles")
 d = read(file, "d")
 blocks_free = read(file, "blocks_free")
@@ -41,40 +43,25 @@ c = read(file, "c")
 old_data = read(file, "old_data")
 close(file)
 
-function stack_values(particles::Vector{Particle}, field::Symbol)
-    n_parts = length(particles)
-    init_field_value = getfield(particles[1], field)
-    stacked_values = Vector{typeof(init_field_value)}(undef, n_parts)
+old_part_cloud = DSGE.vector_particles_to_cloud(m, old_particles)
+Random.seed!(42)
+new_particles = [mutation(m, data, old_part_cloud.particles[j, :], d.μ, Matrix(d.Σ),
+                          blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                          c = c, α = α, old_data = old_data) for j = 1:n_parts]
 
-    for (i, particle) in enumerate(particles)
-        stacked_values[i] = getfield(particle, field)
+if write_test_output
+    #=JLD.jldopen("reference/mutation_outputs.jld", "w") do file
+    write(file, "particles", new_particles)
+    end =#
+    JLD2.jldopen("../../reference/mutation_outputs.jld2", "w") do file
+        write(file, "particles", new_particles)
     end
-
-    return stacked_values
 end
 
-@everywhere Random.seed!(42)
+saved_particles = load("../../reference/mutation_outputs.jld2", "particles")
 
-new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                 c = c, α = α, old_data = old_data) for j = 1:n_parts]
-
-#=JLD.jldopen("reference/mutation_outputs.jld", "w") do file
-    write(file, "particles", new_particles)
-end =#
-#=JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
-    write(file, "particles", new_particles)
-end=#
-
-saved_particles = load("reference/mutation_outputs.jld2", "particles")
-
-particle_fields = fieldnames(typeof(new_particles[1]))
-@testset "Individual Particle Fields Post-Mutation" begin
-    @test stack_values(new_particles, :weight) == stack_values(saved_particles, :weight)
-    @test stack_values(new_particles, :keys) == stack_values(saved_particles, :keys)
-    for field in setdiff(particle_fields, [:keys])
-        new_particles_field = stack_values(new_particles, field)
-        saved_particles_field = stack_values(saved_particles, field)
-
-        @test isapprox(new_particles_field, saved_particles_field, atol = 1e-5)
+@testset "Test mutation outputs, particle by particle" begin
+    for i = 1:length(saved_particles)
+        @test isapprox(saved_particles[i], new_particles[i], nans = true)
     end
 end
