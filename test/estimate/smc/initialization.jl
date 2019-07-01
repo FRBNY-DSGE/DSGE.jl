@@ -1,7 +1,10 @@
+
 # To be removed after running this test individually in the REPL successfully
-#@everywhere using DSGE, DSGEModels
-#@everywhere using HDF5, JLD, JLD2, Random, DelimitedFiles
-#@everywhere import Test: @test, @testset
+@everywhere using DSGE, DSGEModels
+@everywhere using HDF5, JLD, JLD2, Random, DelimitedFiles
+@everywhere import Test: @test, @testset
+
+write_test_output = false
 
 path = dirname(@__FILE__)
 
@@ -10,7 +13,7 @@ m = AnSchorfheide()
 save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, save)
 
-data = h5read("reference/smc.h5", "data")
+data = h5read("../../reference/smc.h5", "data")
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -32,14 +35,16 @@ test_init_cloud = ParticleCloud(m, get_setting(m, :n_particles))
 @everywhere Random.seed!(42)
 DSGE.initial_draw!(m, data, test_init_cloud)
 
-#=JLD.jldopen("reference/initial_draw.jld", "w") do file
+if write_test_output
+    #=JLD.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
-end =#
-#=JLD2.jldopen("reference/initial_draw.jld2", "w") do file
-    write(file, "cloud", test_init_cloud)
-end=#
+    end =#
+    JLD2.jldopen("../../reference/initial_draw.jld2", "w") do file
+        write(file, "cloud", test_init_cloud)
+    end
+end
 
-saved_init_cloud = load("reference/initial_draw.jld2", "cloud")
+saved_init_cloud = load("../../reference/initial_draw.jld2", "cloud")
 
 @testset "Initial draw" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_init_cloud) DSGE.get_vals(saved_init_cloud)
@@ -55,7 +60,7 @@ m = SmetsWoutersOrig()
 save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, save)
 
-data = readdlm("reference/YY.txt")
+data = readdlm("../../reference/YY.txt")
 data = Matrix{Float64}(data')
 
 m <= Setting(:n_particles, 12000)
@@ -80,14 +85,16 @@ test_init_cloud = ParticleCloud(m, get_setting(m, :n_particles))
 DSGE.initial_draw!(m, data, test_init_cloud)
 
 
-#=JLD.jldopen("reference/initial_draw.jld", "w") do file
+if write_test_output
+    #=JLD.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
-end=#
-#=JLD2.jldopen("reference/initial_draw_sw.jld2", true, true, true, IOStream) do file
-    write(file, "cloud", test_init_cloud)
-end=#
+    end=#
+    JLD2.jldopen("../../reference/initial_draw_sw.jld2", true, true, true, IOStream) do file
+        write(file, "cloud", test_init_cloud)
+    end
+end
 
-saved_init_cloud = load("reference/initial_draw_sw.jld2", "cloud")
+saved_init_cloud = load("../../reference/initial_draw_sw.jld2", "cloud")
 
 @testset "Initial draw" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_init_cloud) DSGE.get_vals(saved_init_cloud)
