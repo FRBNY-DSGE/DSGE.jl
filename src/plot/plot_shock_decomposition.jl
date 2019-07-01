@@ -178,7 +178,7 @@ shockdec
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
         inds = findall(start_date .<= dates .<= end_date)
-        x = xnums[inds]
+        x = df[inds, :date]
         y = convert(Matrix{Float64}, df[inds, cat_names])
 
         StatsPlots.GroupedBar((x, y))

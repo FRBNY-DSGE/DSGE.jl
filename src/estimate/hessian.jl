@@ -1,7 +1,7 @@
 """
 ```
-hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::AbstractArray;
-                           verbose::Symbol = :none)
+hessian!(m::AbstractModel, x::Vector{T}, data::AbstractArray;
+         verbose::Symbol = :none) where {T<:AbstractFloat}
 ```
 
 Compute Hessian of DSGE posterior function evaluated at x.
@@ -30,6 +30,7 @@ function hessian!(m::AbstractModel,
     # x_model is the vector of all params
     x_model = copy(x)
     x_hessian = x_model[para_free_inds]
+
     function f_hessian(x_hessian)
         x_model[para_free_inds] = x_hessian
         return -posterior!(m, x_model, data)

@@ -7,7 +7,7 @@ Create an instance of the `AltPolicy` proposed in John Taylor's \"Discretion
 versus policy rules in practice\" (1993).
 """
 function taylor93()
-    AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve, color = colorant"red")
+    AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve, color = RGB(1., 0., 0.))
 end
 
 function taylor93_eqcond(m::AbstractModel)
@@ -38,7 +38,8 @@ function taylor93_solve(m::AbstractModel)
     Γ0, Γ1, C, Ψ, Π = taylor93_eqcond(m)
 
     # Solve model
-    TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    #TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     if !((eu[1] == 1) & (eu[2] == 1))
         throw(GensysError("Gensys does not give existence"))
     end

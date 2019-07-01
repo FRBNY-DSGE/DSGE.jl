@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 using DSGE, HDF5, Plots
 
+=======
+>>>>>>> smc-0.7
 path = dirname(@__FILE__)
 
 # Initialize the plotting backend

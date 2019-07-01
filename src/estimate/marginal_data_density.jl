@@ -16,16 +16,16 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 """
-function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(0, 0);
-                               estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
+function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
+                               estimation_method::Symbol = :smc,
+                               calculation_method::Symbol = :incremental_weights,
                                parallel::Bool = false)
     if estimation_method == :mh && calculation_method == :incremental_weights
-        throw("Can only calculation the MDD with incremental weights if the estimation method is :smc")
+        throw("Can only calculation MDD with incremental weights if the estimation method is :smc")
     end
 
     if calculation_method == :incremental_weights
-        #file = load(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(get_setting(m,:tempering_target))]))
-        file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+        file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
@@ -35,8 +35,7 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
         free_para_inds = find(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
-            #cloud = load(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(get_setting(m, :tempering_target))]), "cloud")
-            cloud = load(rawpath(m, "estimate", "smc_cloud.jld"), "cloud")
+            cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 
@@ -59,7 +58,7 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
                     posterior!(m, params[:, i], data)
                 end
             else
-                logpost = Vector{Float64}(n_draws)
+                logpost = Vector{Float64}(undef, n_draws)
                 for i in 1:n_draws
                     logpost[i] = posterior!(m, params[:, i], data)
                 end
@@ -76,20 +75,30 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
 
 end
 
+function tt2string(time_temper::Symbol)
+    if time_temper==:new
+        return "new"
+    elseif time_temper==:old
+        return "old"
+    elseif time_temper==:whole
+        return "whole"
+    end
+end
+
 function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}, free_para_inds::Vector{Int64})
     # From margdensim.m
     n_draws = size(params, 2)
     n_free_para = length(free_para_inds)
 
     θ_all = params
-    θ_bar = mean(θ_all, 2)
+    θ_bar = mean(θ_all, dims = 2)
 
     p = 0.1:0.1:0.8
     pcrit = map(x -> chisqinvcdf(n_free_para, x), p)
     densfac = mean(logpost)
 
     θ_free = θ_all[free_para_inds, :]
-    θ_bar_free = vec(mean(θ_free, 2))
+    θ_bar_free = vec(mean(θ_free, dims = 2))
 
     # # Computing the covariance matrix with the built-in function
     # Σ_bar = cov(θ_free, 2)
@@ -118,12 +127,12 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     end
     Σ_bar_inv = U * S * U'
 
-    all_invlike = Matrix{Float64}(length(p), 0)
+    all_invlike = Matrix{Float64}(undef, length(p), 0)
 
     ####################################
     # TEMPORARY
     ####################################
-    all_exp_terms = Matrix{Float64}(length(p), n_draws)
+    all_exp_terms = Matrix{Float64}(undef, length(p), n_draws)
     all_indpara = similar(all_exp_terms)
     all_lnfpara = similar(all_exp_terms)
     ####################################
@@ -152,13 +161,15 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
         !any(isinf, invlike) && (all_invlike = hcat(all_invlike, invlike))
     end
 
-    mean_invlike = mean(all_invlike, 2)
+    mean_invlike = mean(all_invlike, dims = 2)
     mean_invlike = Base.filter(x -> isfinite(x), mean_invlike)
 
     return mean(densfac - log.(mean_invlike))
 end
 
-function marginal_data_density_weighted(params::Matrix{Float64}, logpost::Vector{Float64}, free_para_inds::Vector{Int64}, cloud)
+function marginal_data_density_weighted(params::Matrix{Float64},
+                                        logpost::Vector{Float64},
+                                        free_para_inds::Vector{Int64}, cloud)
     # From margdensim.m
     n_draws = size(params, 2)
     n_free_para = length(free_para_inds)
@@ -203,12 +214,12 @@ function marginal_data_density_weighted(params::Matrix{Float64}, logpost::Vector
     end
     Σ_bar_inv = U * S * U'
 
-    all_invlike = Matrix{Float64}(length(p), 0)
+    all_invlike = Matrix{Float64}(undef, length(p), 0)
 
     ####################################
     # TEMPORARY
     ####################################
-    all_exp_terms = Matrix{Float64}(length(p), n_draws)
+    all_exp_terms = Matrix{Float64}(undef, length(p), n_draws)
     all_indpara = similar(all_exp_terms)
     all_lnfpara = similar(all_exp_terms)
     ####################################
@@ -237,14 +248,14 @@ function marginal_data_density_weighted(params::Matrix{Float64}, logpost::Vector
         !any(isinf, invlike) && (all_invlike = hcat(all_invlike, invlike))
     end
 
-    mean_invlike = mean(all_invlike, 2)
+    mean_invlike = mean(all_invlike, dims = 2)
     mean_invlike = Base.filter(x -> isfinite(x), mean_invlike)
 
     return mean(densfac - log.(mean_invlike))
 end
 
 
-function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(0, 0);
+function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
                                parallel::Bool = false)
     if estimation_method == :mh && calculation_method == :incremental_weights
@@ -252,8 +263,8 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
     end
 
     if calculation_method == :incremental_weights
-        #file = load(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(get_setting(m, :tempering_target))]))
-        file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+        #file = load(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(get_setting(m, :tempering_target))]))
+        file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
@@ -263,7 +274,7 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
         free_para_inds = find(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
-            cloud = load(rawpath(m, "estimate", "smc_cloud.jld"), "cloud")
+            cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 
@@ -286,7 +297,7 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
                     posterior!(m, params[:, i], data)
                 end
             else
-                logpost = Vector{Float64}(n_draws)
+                logpost = Vector{Float64}(undef, n_draws)
                 for i in 1:n_draws
                     logpost[i] = posterior!(m, params[:, i], data)
                 end
@@ -302,4 +313,3 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
     end
 
 end
-

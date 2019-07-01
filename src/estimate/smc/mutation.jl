@@ -8,10 +8,10 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 ### Arguments:
 - `m::AbstractModel`: Model of type AbstractModel being estimated.
 - `data::Matrix{Float64}`: Matrix of data
-- `p::Particle`: Initial particle value
+- `p::Vector{Float64}`: Initial particle value
 - `d::Distribution`: A distribution with μ = the weighted mean, and Σ = the weighted variance/covariance matrix
 - `blocks_free::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of free parameters only (e.g. all the indices will be ∈ 1:n_free_parameters)
-- `blocks_all::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of all parameters (e.g. all the indices will be in ∈ set of all model parameter indices)
+- `blocks_all::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of all parameters (e.g. all the indices will be in ∈ 1:n_para, free and fixed)
 - `ϕ_n::Float64`: The current tempering factor
 - `ϕ_n1::Float64`: The previous tempering factor
 
@@ -22,87 +22,107 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 
 ### Outputs:
 
-- `p::Particle`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
+- `p::Vector{Float64}`: An updated particle containing updated parameter values, log-likelihood, prior, and acceptance indicator.
 
 """
-function mutation(m::AbstractModel, data::T, p::Particle, d::Distribution,
+function mutation(m::AbstractModel, data::Matrix{S}, p::Vector{S},
+                  d_μ::Vector{S}, d_Σ::Matrix{S},#d::Distribution,
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
-                  ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
-                  old_data::T = T(size(data, 1), 0),
+                  ϕ_n::S, ϕ_n1::S; c::S = 1., α::S = 1.,
+                  old_data::T = T(undef, size(data, 1), 0),
                   use_chand_recursion::Bool = false,
-                  verbose::Symbol = :low) where T <: AbstractMatrix
+                  verbose::Symbol = :low) where {S<:Float64, T<:AbstractMatrix}
 
-    n_steps = get_setting(m, :n_mh_steps_smc)
+    n_steps     = get_setting(m, :n_mh_steps_smc)
+    n_free_para = length([!θ.fixed for θ in m.parameters])
+    step_prob   = rand() # Draw initial step probability
 
-    # draw initial step probability
-    # conditions for testing purposes
-    step_prob = rand()
+    N         = length(p)
+    para      = p[1:ind_para_end(N)]
+    like      = p[ind_loglh(N)]
+    logprior  = p[ind_logprior(N)]
+    like_prev = p[ind_old_loglh(N)] # Likelihood evaluated at the old data (for time tempering)
+    accept    = 0.0
 
-    para = p.value
-    like = p.loglh
-    post_init = p.logpost
-    like_prev = p.old_loglh # The likelihood evaluated at the old data (for time tempering)
-
-    # Previous posterior needs to be updated (due to tempering)
-    post = post_init + (ϕ_n - ϕ_n1) * like
-    accept = false
+    d = MvNormal(d_μ, d_Σ)
 
     for step in 1:n_steps
         for (block_f, block_a) in zip(blocks_free, blocks_all)
-
-            # Index out the parameters corresponding to a given random block
-            # And also create a distribution centered at the weighted mean
-            # and with Σ corresponding to the same random block
+            # Index out parameters corresponding to given random block, create distribution
+            # centered at weighted mean, with Σ corresponding to the same random block
             para_subset = para[block_a]
-            d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
+            d_subset    = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
-            para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset, d_subset;
-                                                                                  cc = c, α = α)
-
-            para_new = copy(para)
+            para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
+                                                                       d_subset; c = c, α = α)
+            para_new = deepcopy(para)
             para_new[block_a] = para_draw
 
-            like_new = -Inf
-            post_new = -Inf
-            like_old_data = -Inf
+            like_init  = like
+            prior_init = logprior
+
+            q0 = α * exp(logpdf(MvNormal(para_draw,   c^2 * d_subset.Σ.mat), para_subset))
+            q1 = α * exp(logpdf(MvNormal(para_subset, c^2 * d_subset.Σ.mat), para_draw))
+
+            ind_pdf = 1.0
+
+            for i=1:length(block_a)
+                Σ_ii    = sqrt(d_subset.Σ.mat[i,i])
+                zstat   = (para_subset[i] - para_draw[i]) / Σ_ii
+                ind_pdf = ind_pdf / (Σ_ii * sqrt(2.0 * π)) * exp(-0.5 * zstat^2)
+            end
+
+            q0 += (1.0 - α) / 2.0 * ind_pdf
+            q1 += (1.0 - α) / 2.0 * ind_pdf
+
+            q0 += (1.0 - α) / 2.0 * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
+                                               para_subset))
+            q1 += (1.0 - α) / 2.0 * exp(logpdf(MvNormal(d_subset.μ, c^2 * d_subset.Σ.mat),
+                                               para_draw))
+            q0 = log(q0)
+            q1 = log(q1)
+
+            prior_new = like_new = like_old_data = -Inf
 
             try
                 update!(m, para_new)
-                like_new = likelihood(m, data; sampler = true, use_chand_recursion = use_chand_recursion,
-                                      verbose = verbose)
+                para_new  = [θ.value for θ in m.parameters]
+                prior_new = prior(m)
+                like_new  = likelihood(m, data; sampler = true,
+                                       use_chand_recursion = use_chand_recursion,
+                                       verbose = verbose)
                 if like_new == -Inf
-                    post_new = like_old_data = -Inf
+                    prior_new = like_old_data = -Inf
                 end
-                post_new = ϕ_n*like_new + prior(m) - para_new_density
                 like_old_data = isempty(old_data) ? 0. : likelihood(m, old_data; sampler = true,
-                                                                    use_chand_recursion = use_chand_recursion,
-                                                                    verbose = verbose)
+                                                      use_chand_recursion = use_chand_recursion,
+                                                      verbose = verbose)
             catch err
-                if isa(err, ParamBoundsError)
-                    post_new = like_new = like_old_data = -Inf
-                #elseif isa(err, SPDError)
-                #    post_new = like_new = like_old_data = -Inf
+                if isa(err, ParamBoundsError) || isa(err, LinearAlgebra.LAPACKException)
+                    prior_new = like_new = like_old_data = -Inf
+                elseif isa(err, PosDefException) || isa(err, SingularException)
+                    prior_new = like_new = like_old_data = -Inf
                 else
                     throw(err)
                 end
             end
 
-            # Accept/Reject
-            post_old = post - para_old_density
-            η = exp(post_new - post_old)
-
-            if step_prob < η # accept
-                para   = para_new
-                like   = like_new
-                post   = post_new + para_new_density # Have to add it back so as to not accumulate
-                like_prev = like_old_data            # para_new_density throughout the iterations
-                accept = true
+            if (q0 == Inf && q1 == Inf)
+                q0 = 0.0
             end
 
-            # draw again for the next step
-            step_prob = rand()
+            η = exp(ϕ_n * (like_new - like_init) + (1 - ϕ_n) * (like_old_data - like_prev) + (prior_new - prior_init) + (q0 - q1))
+
+            if step_prob < η
+                para      = para_new
+                like      = like_new
+                logprior  = prior_new
+                like_prev = like_old_data
+                accept   += length(block_a)
+            end
+            step_prob = rand() # Draw again for next step
         end
     end
-    update_mutation!(p, para, like, post, like_prev, accept)
+    update_mutation!(p, para, like, logprior, like_prev, accept / n_free_para)
     return p
 end

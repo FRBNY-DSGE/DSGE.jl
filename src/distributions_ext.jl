@@ -237,6 +237,7 @@ function mean(dist::RootInverseGamma)
 end
 
 function std(dist::RootInverseGamma)
+    μ = mean(dist)
     α = dist.ν/2
     β = dist.τ^2 * dist.ν/2
 

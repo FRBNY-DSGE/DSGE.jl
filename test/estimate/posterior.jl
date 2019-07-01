@@ -1,6 +1,4 @@
-using DSGE
-using HDF5, Test
-
+using FileIO
 path = dirname(@__FILE__)
 
 custom_settings = Dict{Symbol, Setting}(
@@ -8,7 +6,7 @@ custom_settings = Dict{Symbol, Setting}(
 m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 file = "$path/../reference/posterior.jld2"
-data = load(file, "data")'
+data = Matrix{Float64}(load(file, "data")')
 lh_expected = load(file, "lh_expected")
 post_expected = load(file, "post_expected")
 

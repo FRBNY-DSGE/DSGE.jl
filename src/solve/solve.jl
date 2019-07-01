@@ -22,37 +22,36 @@ Driver to compute the model solution and augment transition matrices.
     S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
     ```
 """
-function solve(m::AbstractModel; apply_altpolicy = false) #, verbose::Symbol = :high)
+function solve(m::AbstractModel; apply_altpolicy = false, verbose::Symbol = :high)
 
     altpolicy_solve = alternative_policy(m).solve
 
+    if get_setting(m, :solution_method) == :gensys
+        if altpolicy_solve == solve || !apply_altpolicy
+            # Get equilibrium condition matrices
+            Γ0, Γ1, C, Ψ, Π  = eqcond(m)
 
-    if altpolicy_solve == solve || !apply_altpolicy
+            # Solve model
+            TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6,
+                                                            verbose = verbose)
 
-        # Get equilibrium condition matrices
-        Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+            # Check for LAPACK exception, existence and uniqueness
+            if eu[1] != 1 || eu[2] != 1
+                throw(GensysError())
+            end
 
-        # Solve model
-        TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose =
-            gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6) #, verbose = verbose)
+            TTT_gensys = real(TTT_gensys)
+            RRR_gensys = real(RRR_gensys)
+            CCC_gensys = real(CCC_gensys)
 
-        # Check for LAPACK exception, existence and uniqueness
-        if eu[1] != 1 || eu[2] != 1
-            throw(GensysError())
+            # Augment states
+            TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+
+        else
+            # Change the policy rule
+            TTT, RRR, CCC = altpolicy_solve(m)
         end
-
-        TTT_gensys = real(TTT_gensys)
-        RRR_gensys = real(RRR_gensys)
-        CCC_gensys = real(CCC_gensys)
-
-        # Augment states
-        TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-
-    else
-        # Change the policy rule
-        TTT, RRR, CCC = altpolicy_solve(m)
     end
-
     return TTT, RRR, CCC
 end
 

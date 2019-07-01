@@ -41,6 +41,23 @@ end
     end
 end
 
+Base.setindex!(m::AbstractModel, value::Array, k::Symbol) = Base.setindex!(m, value, m.keys[k])
+
+@inline function Base.setindex!(m::AbstractModel, value::Array, i::Integer)
+    if i <= (j = length(m.parameters))
+        param = m.parameters[i]
+        param.value = value
+        if isa(param, ScaledParameter)
+            param.scaledvalue = param.scaling(value)
+        end
+        return param
+    else
+        steady_state_param = m.steady_state[i-j]
+        steady_state_param.value = value
+        return steady_state_param
+    end
+end
+
 """
 ```
 setindex!(m::AbstractModel, param::AbstractParameter, i::Integer)
@@ -63,14 +80,14 @@ Base.setindex!(m::AbstractModel, value, k::Symbol) = Base.setindex!(m, value, m.
 
 """
 ```
-(m::AbstractModel{T} <= p::AbstractParameter{T}) where T
+(<=)(m::AbstractModel{T}, p::AbstractParameter{T}) where T
 ```
 
 Syntax for adding a parameter to a model: m <= parameter.
 NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the
 index of `p` in `m.parameters`.
 """
-function (m::AbstractModel{T} <= p::AbstractParameter{T}) where T
+function (<=)(m::AbstractModel{T}, p::AbstractParameter{T}) where T
 
     if !in(p.key, keys(m.keys))
 
@@ -90,13 +107,38 @@ end
 
 """
 ```
-(m::AbstractModel{T} <= ssp::SteadyStateParameter) where T
+(<=)(m::AbstractModel{T}, ssp::Union{SteadyStateParameter,SteadyStateParameterArray}) where {T}
 ```
 
 Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and
 adding `ssp.key` to `m.keys`.
 """
-function (m::AbstractModel{T} <= ssp::SteadyStateParameter) where T
+function (<=)(m::AbstractModel{T}, ssp::Union{SteadyStateParameter, SteadyStateParameterArray}) where {T}
+
+    if !in(ssp.key, keys(m.keys))
+        new_param_index = length(m.keys) + 1
+
+        # append ssp to steady_state vector
+        push!(m.steady_state, ssp)
+
+        # add parameter location to dict
+        setindex!(m.keys, new_param_index, ssp.key)
+    else
+        # overwrite the previous parameter with the new one
+        setindex!(m, ssp, ssp.key)
+    end
+end
+
+"""
+```
+(<=)(m::AbstractModel{T}, ssp::SteadyStateParameterGrid) where {T}
+
+```
+
+Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and
+adding `ssp.key` to `m.keys`.
+"""
+function (<=)(m::AbstractModel{T}, ssp::SteadyStateParameterGrid) where {T}
 
     if !in(ssp.key, keys(m.keys))
         new_param_index = length(m.keys) + 1
@@ -163,7 +205,7 @@ inds_prezlb_periods(m::AbstractModel)     = collect(index_mainsample_start(m):(i
 inds_zlb_periods(m::AbstractModel)        = collect(index_zlb_start(m):(index_forecast_start(m)-1))
 inds_mainsample_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_forecast_start(m)-1))
 
-# Number of a few things that are useful
+# Convenience functions
 n_states(m::AbstractModel)                  = length(m.endogenous_states)
 n_states_augmented(m::AbstractModel)        = n_states(m) + length(m.endogenous_states_augmented)
 n_shocks_exogenous(m::AbstractModel)        = length(m.exogenous_shocks)
@@ -175,6 +217,38 @@ n_parameters(m::AbstractModel)              = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
 n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
 
+# Convenience functions for working with heterogeneous agent models
+# that differentiate between backward looking "state" variables and "jump" variables
+n_backward_looking_states(m::AbstractModel) = get_setting(m, :n_backward_looking_states)
+n_jumps(m::AbstractModel) = get_setting(m, :n_jumps)
+n_model_states(m::AbstractModel) = get_setting(m, :n_model_states)
+
+# The numbers for n_states, and n_jumps assumes normalization
+# There is a procedure in klein_solve that normalizes the state variable grids
+# by removing an entry from them. Hence the number of states and jumps being
+# tracked should be 1 less if normalized
+# However, the number of jumps and states unnormalized are required for
+# the construction of the Jacobian, hence the reason for these helpers
+n_jumps_unnormalized(m::AbstractModel) = n_jumps(m) + get_setting(m, :jumps_normalization_factor)
+n_backward_looking_states_unnormalized(m::AbstractModel) = n_backward_looking_states(m) + get_setting(m, :backward_looking_states_normalization_factor)
+n_model_states_unnormalized(m::AbstractModel) = n_jumps_unnormalized(m) + n_backward_looking_states_unnormalized(m)
+n_model_states_original(m::AbstractModel) = get_setting(m, :n_model_states_original)
+
+"""
+```
+AbstractRepModel{T} <: AbstractModel{T}
+```
+
+The AbstractRepresentativeModel is defined as a subtype of AbstractModel to accomodate a bunch of stuff, but for now just different impulse response functions.
+"""
+abstract type AbstractRepModel{T} <: AbstractModel{T} end
+
+
+"""
+```
+get_dict(m, class, index)
+```
+"""
 function get_dict(m::AbstractModel, class::Symbol)
     if class == :states
         m.endogenous_states
@@ -349,6 +423,10 @@ function load_parameters_from_file(m::AbstractModel, path::String)
         end
     else
         error("$path is not a valid HDF5 file.")
+    end
+
+    if m.spec=="smets_wouters" && length(x)==42
+        x = vcat(x, zeros(7))
     end
 
     @assert length(x) == length(m.parameters)
@@ -568,7 +646,7 @@ function filestring_base(m::AbstractModel)
     end
 end
 
-filestring(m::AbstractModel) = filestring(m, Vector{String}())
+filestring(m::AbstractModel) = filestring(m, Vector{String}(undef, 0))
 filestring(m::AbstractModel, d::String) = filestring(m, [String(d)])
 function filestring(m::AbstractModel, d::Vector{String})
     base = filestring_base(m)
@@ -599,7 +677,7 @@ paramter values.
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function transform_to_model_space!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
+function transform_to_model_space!(m::AbstractModel, values::Vector{T}) where {T<:AbstractFloat}
     new_values = transform_to_model_space(m.parameters, values)
     DSGE.update!(m, new_values)
     steadystate!(m)
