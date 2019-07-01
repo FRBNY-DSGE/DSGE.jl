@@ -10,7 +10,8 @@ function nelder_mead(fcn::Function,
                      kwargs...)
 
     Optim.optimize(fcn, x0,
-                   method = Optim.NelderMead(parameters = parameters, initial_simplex = initial_simplex),
+                   method = Optim.NelderMead(parameters = parameters,
+                                             initial_simplex = initial_simplex),
                    iterations = iterations, store_trace = store_trace, show_trace = show_trace,
                    extended_trace = extended_trace)
 end

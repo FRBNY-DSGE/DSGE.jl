@@ -1,6 +1,3 @@
-using DSGE
-using HDF5, Test
-
 path = dirname(@__FILE__)
 
 # # Test hessian! in context of model
@@ -10,7 +7,7 @@ m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Setup paths
 
-data = load("$path/../reference/hessian.jld2","data")'
+data = Matrix{Float64}(load("$path/../reference/hessian.jld2","data")')
 mode = load("$path/../reference/hessian.jld2","paramsmode")
 hessian_expected = load("$path/../reference/hessian.jld2","hessian")
 

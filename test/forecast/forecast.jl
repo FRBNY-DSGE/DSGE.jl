@@ -1,6 +1,3 @@
-using DSGE, JLD2
-using Test
-
 path = dirname(@__FILE__)
 
 # Set up arguments

@@ -1,5 +1,29 @@
 """
 ```
+sendto(p::Int; args...)
+```
+Function to send data from master process to particular worker, p. Code from ChrisRackauckas, avavailable at: https://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jl.
+"""
+function sendto(p::Int; args...)
+    for (nm, val) in args
+        @spawnat(p, Core.eval(Main, Expr(:(=), nm, val)))
+    end
+end
+
+"""
+```
+sendto(ps::AbstractVector{Int}; args...)
+```
+Function to send data from master process to list of workers. Code from ChrisRackauckas, available at: https://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jl.
+"""
+function sendto(ps::AbstractVector{Int}; args...)
+    for p in ps
+        sendto(p; args...)
+    end
+end
+
+"""
+```
 abbrev_symbol(s::Symbol, n::Int=4)
 ```
 
@@ -32,7 +56,7 @@ quarter_range(t0::Date, t1::Date)
 ```
 
 Returns a vector of `Dates`, consisting of the last days of each quarter between
-`t0` and `t1`, inclusive.
+ https://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jlhttps://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jl`t0` and `t1`, inclusive.
 """
 function quarter_range(t0::Date, t1::Date)
     dr = t0:Day(1):t1
@@ -193,4 +217,70 @@ margin of absolute tolerance given by `ϵ_abs` and a margin of relative toleranc
 """
 macro test_matrix_approx_eq_eps(a,b,c,d)
     :(test_matrix_eq2($(esc(a)),$(esc(b)),$(string(a)),$(string(b)),$(esc(c)),$(esc(d))))
+end
+
+"""
+Sparse identity matrix - since deprecated in 0.7
+"""
+function speye(n::Integer)
+    return SparseMatrixCSC{Float64}(I, n, n)
+end
+
+"""
+Sparse identity matrix - since deprecated in 0.7
+"""
+function speye(T::Type, n::Integer)
+    return SparseMatrixCSC{T}(I, n, n)
+end
+
+
+"""
+    <(a::Complex, b::Complex)
+
+Compare real values of complex numbers.
+"""
+function <(a::Complex, b::Complex)
+    return a.re < b.re
+end
+
+"""
+    <(a::Real, b::Complex)
+
+Compare real values of complex numbers.
+"""
+function <(a::Real, b::Complex)
+    return a < b.re
+end
+
+"""
+    <(a::Complex, b::Real)
+
+Compare real values of complex numbers.
+"""
+function <(a::Complex, b::Real)
+    return a.re < b
+end
+
+function min(a::Complex, b::Real)
+    return min(a.re, b)
+end
+
+function min(a::Complex, b::Complex)
+    return min(a.re, b.re)
+end
+
+function min(a::Real, b::Complex)
+    return min(a, b.re)
+end
+
+function max(a::Complex, b::Real)
+    return max(a.re, b)
+end
+
+function max(a::Complex, b::Complex)
+    return max(a.re, b.re)
+end
+
+function max(a::Real, b::Complex)
+    return max(a, b.re)
 end

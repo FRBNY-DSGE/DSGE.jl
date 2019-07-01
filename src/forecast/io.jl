@@ -15,7 +15,8 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = \"path/to/input/file.h5\"
 ```
 """
-function get_forecast_input_file(m, input_type)
+function get_forecast_input_file(m, input_type;
+                                 filestring_addl::Vector{String} = Vector{String}(undef, 0))
     overrides = forecast_input_file_overrides(m)
     if haskey(overrides, input_type)
         override_file = overrides[input_type]
@@ -29,17 +30,19 @@ function get_forecast_input_file(m, input_type)
         return get_forecast_input_file(m, :full)
     end
 
-    if input_type == :mode
-        return rawpath(m,"estimate","paramsmode.h5")
+    if input_type == :mode || input_type == :mode_draw_shocks
+        return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
     elseif input_type == :mean
-        return workpath(m,"estimate","paramsmean.h5")
-    elseif input_type == :init
+        return workpath(m,"estimate","paramsmean.h5", filestring_addl)
+    elseif input_type == :init || input_type == :init_draw_shocks
+        return ""
+    elseif input_type == :prior
         return ""
     elseif input_type in [:full, :subset]
         if get_setting(m, :sampling_method) == :MH
-            return rawpath(m, "estimate", "mhsave.h5")
+            return rawpath(m, "estimate", "mhsave.h5", filestring_addl)
         elseif get_setting(m, :sampling_method) == :SMC
-            return rawpath(m, "estimate", "smcsave.h5")
+            return rawpath(m, "estimate", "smcsave.h5", filestring_addl)
         else
             throw("Invalid sampling method specification. Change in setting :sampling_method")
         end
@@ -100,7 +103,7 @@ end
 function get_forecast_filestring_addl(input_type, cond_type; forecast_string::String = "")
 
     filestring_addl = Vector{String}()
-    push!(filestring_addl, String("para=" * abbrev_symbol(input_type)))
+    push!(filestring_addl, String("para=" * String(input_type)))
     push!(filestring_addl, String("cond=" * abbrev_symbol(cond_type)))
     if isempty(forecast_string)
         if input_type == :subset
@@ -249,7 +252,7 @@ end
 
 """
 ```
-write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symbol)
+write_forecast_metadata(m::AbstractModel, file::JLDFile, var::Symbol)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -334,7 +337,7 @@ end
 
 """
 ```
-write_forecast_block(file::JLD2.JLDFile, arr::Array, block_number::Int,
+write_forecast_block(file::JLDFile, arr::Array, block_number::Int,
     block_inds::AbstractRange{Int64})
 ```
 
@@ -379,7 +382,7 @@ end
 
 """
 ```
-read_forecast_metadata(file::JLD2.JLDFile)
+read_forecast_metadata(file::JLDFile)
 ```
 
 Read metadata from forecast output files. This includes dictionaries mapping

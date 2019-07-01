@@ -2,15 +2,20 @@
 # then it is meant to indicate the ordering of blocks for visual comparison.
 # I.e. if param_range 1:10 corresponds to the first block, and 11:20 corresponds to the
 # second block then the files will be aptly named ...block=1.pdf, ...block=2.pdf
-function plot_posterior_intervals(m::AbstractModel; plotroot::String = figurespath(m, "estimate"),
+function plot_posterior_intervals(m::AbstractModel; cloud::ParticleCloud = ParticleCloud(m, 0),
+                                  df::DataFrame = DataFrame(),
+                                  plotroot::String = figurespath(m, "estimate"),
                                   verbose::Symbol = :low, label::String = "", title::String
                                   = isempty(label) ? "" : "$label Posterior Intervals",
-                                  param_range::UnitRange = UnitRange(1, n_parameters_free(m)),
-                                  block::Int64 = 0,
-                                  excl_list::Vector{Symbol} = Vector{Symbol}(0))
+                                  block::Int64 = 0, include_fixed::Bool = false,
+                                  param_range::UnitRange = include_fixed ? UnitRange(1, n_parameters(m)) : UnitRange(1, n_parameters_free(m)),
+                                  excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0))
 
-    df = load_posterior_moments(m; load_bands = true, include_fixed = false, excl_list =
-                                excl_list)
+    # If the moments to be plotted are not pre-provided
+    if isempty(df)
+        df = load_posterior_moments(m; cloud = cloud, load_bands = true, include_fixed =
+                                    include_fixed, excl_list = excl_list)
+    end
 
     # Indexing out a block of the parameters
     df = df[param_range, :]
@@ -37,7 +42,27 @@ function plot_posterior_intervals(m::AbstractModel; plotroot::String = figurespa
         end
         output_file = output_file * ".pdf"
         save_plot(p, output_file, verbose = verbose)
+    else
+        return p
     end
+end
+
+# Calculate the posterior intervals averaged over the estimations in the
+# clouds vector
+function plot_posterior_intervals(m::AbstractModel, clouds::Vector{ParticleCloud};
+                                  plotroot::String = figurespath(m, "estimate"),
+                                  verbose::Symbol = :low, label::String = "",
+                                  title::String = isempty(label) ? "" : "$label Posterior Intervals",
+                                  block::Int64 = 0, include_fixed::Bool = false,
+                                  param_range::UnitRange = include_fixed ? UnitRange(1, n_parameters(m)) : UnitRange(1, n_parameters_free(m)),
+                                  excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0))
+
+    df = load_posterior_moments(m, clouds, load_bands = true,
+                                include_fixed = include_fixed, excl_list = excl_list)
+
+    plot_posterior_intervals(m; df = df, plotroot = plotroot, verbose = verbose,
+                             label = label, title = title, param_range = param_range,
+                             block = block, include_fixed = include_fixed, excl_list = excl_list)
 end
 
 # block is for if there are multiple blocks of parameters being produce in succession
@@ -46,28 +71,44 @@ end
 # second block then the files will be aptly named ...b1.pdf, ...b2.pdf
 function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                                             m_comparison::AbstractModel;
-                                            plotroot::String = figurespath(m, "estimate"),
+                                            cloud_baseline::ParticleCloud = ParticleCloud(m_baseline, 0),
+                                            cloud_comparisons::Vector{ParticleCloud} = [ParticleCloud(m_comparison, 0)],
+                                            df_baseline::DataFrame = DataFrame(),
+                                            df_comparisons::Vector{DataFrame} = [DataFrame()],
+                                            plotroot::String = figurespath(m_baseline, "estimate"),
                                             verbose::Symbol = :low,
                                             in_deviations::Bool = false,
                                             scale_by_std::Bool = false,
                                             base_label::String = "",
-                                            comp_label::String = "",
+                                            comp_labels::Vector{String} = [""],
                                             title::String = in_deviations ? "$comp_label deviations from $base_label Interval Comparisons" : "$base_label and $comp_label Interval Comparisons",
-                                            param_range::UnitRange =
-                                            UnitRange(1, n_parameters_free(m_baseline)),
-                                            block::Int64 = 0,
-                                            excl_list::Vector{Symbol} = Vector{Symbol}(0))
+                                            block::Int64 = 0, include_fixed::Bool = false,
+                                            param_range::UnitRange = include_fixed ? UnitRange(1, n_parameters(m_baseline)) : UnitRange(1, n_parameters_free(m_baseline)),
+                                            excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                                            filename_tag::String = "")
 
-    df_baseline = load_posterior_moments(m_baseline; load_bands = true,
-                                         include_fixed = false, excl_list = excl_list)
-    df_comparison = load_posterior_moments(m_comparison; load_bands = true,
-                                           include_fixed = false, excl_list = excl_list)
+    if isempty(df_baseline)
+        df_baseline = load_posterior_moments(m_baseline; cloud = cloud_baseline, load_bands = true,
+                                             include_fixed = include_fixed, excl_list = excl_list)
+    end
+
+    if isempty(df_comparisons[1])
+        for i=1:length(cloud_comparisons)
+            df_comparisons[i] = load_posterior_moments(m_comparison; cloud = cloud_comparisons[i],
+                                                      load_bands = true, include_fixed = include_fixed,
+                                                      excl_list = excl_list)
+        end
+    end
+    for i=1:length(df_comparisons)
+        df_comparisons[i] = df_comparisons[i][param_range, :]
+        df_comparisons[i][:param_inds] = param_range
+    end
 
     # Indexing out a block of the parameters
     df_baseline = df_baseline[param_range, :]
-    df_comparison = df_comparison[param_range, :]
+  #  df_comparison = df_comparison[param_range, :]
     df_baseline[:param_inds] = param_range
-    df_comparison[:param_inds] = param_range
+  #  df_comparison[:param_inds] = param_range
 
     parameter_labels = df_baseline[:param]
 
@@ -95,32 +136,34 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
         end
 
         p = @df df_deviations plot(:param_inds, :comp_ub, label = "", linealpha = 0, marker =
-                                :hline, markerstrokecolor = :blue, title = title,
-                                series_annotations = parameter_labels)
+                                :hline, markerstrokecolor = :blue, title = "",
+                                series_annotations = parameter_labels, legend=:bottomright)
         @df df_deviations plot!(p, :param_inds, :comp_lb, label = "", linealpha = 0, marker =
-                                :hline, markerstrokecolor = :blue)
+                                :hline, markerstrokecolor = :blue, legend=:bottomright)
         @df df_deviations plot!(p, :param_inds, :base_mean, label = "", marker = :hline,
-                                markerstrokecolor = :black, linecolor = :black)
+                                markerstrokecolor = :black, linecolor = :black, legend=:bottomright)
         @df df_deviations plot!(p, :param_inds, :comp_mean, label = "", linealpha = 0, marker =
-                                :hline, markerstrokecolor = :red)
+                                :hline, markerstrokecolor = :red, legend=:bottomright)
 
         rescale_annotations_fontsize!(p, 6)
         relocate_annotations!(p, :right, :top)
     else
         p = @df df_baseline plot(:param_inds, :post_ub, label = base_label, linealpha = 0, marker =
-                              :hline, markerstrokecolor = :black, title = title, series_annotations =
-                              parameter_labels)
+                              :hline, markerstrokecolor = :black, title = "", series_annotations =
+                              parameter_labels, legend=:bottomright)
         @df df_baseline plot!(p, :param_inds, :post_lb, label = "", linealpha = 0, marker =
-                              :hline, markerstrokecolor = :black)
-        @df df_comparison plot!(p, :param_inds, :post_ub, label = comp_label, linealpha = 0, marker =
-                                :hline, markerstrokecolor = :red)
-        @df df_comparison plot!(p, :param_inds, :post_lb, label = "", linealpha = 0, marker =
-                                :hline, markerstrokecolor = :red)
-        @df df_baseline plot(:param_inds, :post_mean, label = "", linealpha = 0, marker = :hline,
-                                 markerstrokecolor = :black)
-        @df df_comparison plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
-                                :hline, markerstrokecolor = :red)
-
+                              :hline, markerstrokecolor = :black, legend=:bottomright)
+        @df df_baseline plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
+                              :hline, markerstrokecolor = :black, legend=:bottomright)
+        colors = [:red, :blue, :green, :orange, :yellow]
+        for i = 1:length(df_comparisons)
+            @df (df_comparisons[i]) plot!(p, :param_inds, :post_ub, label = comp_labels[i], linealpha = 0, marker =
+                                    :hline, markerstrokecolor = colors[i], legend=:bottomright)
+            @df (df_comparisons[i]) plot!(p, :param_inds, :post_lb, label = "", linealpha = 0, marker =
+                                    :hline, markerstrokecolor = colors[i], legend=:bottomright)
+            @df (df_comparisons[i]) plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
+                                    :hline, markerstrokecolor = colors[i], legend=:bottomright)
+        end
         rescale_annotations_fontsize!(p, 6)
         relocate_annotations!(p, :right, :top)
     end
@@ -128,11 +171,45 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
     if !isempty(plotroot)
         vint = data_vintage(m_baseline)
         output_file = joinpath(plotroot, "posterior_comparison_intervals_" *
-                               "deviat=$(in_deviations)_" * "vint=$vint")
+                               "deviat=$(in_deviations)_" * "vint=$vint" * "_" *filename_tag)
         if !iszero(block)
             output_file = output_file * "_block=$block"
         end
         output_file = output_file * ".pdf"
         save_plot(p, output_file, verbose = verbose)
+    else
+        return p
     end
+end
+
+# Calculate the posterior intervals averaged over the estimations in the
+# clouds vectors
+function plot_posterior_interval_comparison(m_baseline::AbstractModel,
+                                            m_comparison::AbstractModel,
+                                            clouds_baseline::Vector{ParticleCloud},
+                                            clouds_comparisons::Vector{Vector{ParticleCloud}};
+                                            plotroot::String = figurespath(m_baseline, "estimate"),
+                                            verbose::Symbol = :low,
+                                            in_deviations::Bool = false,
+                                            scale_by_std::Bool = false,
+                                            base_label::String = "",
+                                            comp_labels::Vector{String} = [""],
+                                            title::String = in_deviations ? "$(comp_labels[1]) deviations from $base_label Interval Comparisons" : "$base_label and $(comp_labels[1]) Interval Comparisons",
+                                            block::Int64 = 0, include_fixed::Bool = false,
+                                            param_range::UnitRange = include_fixed ? UnitRange(1, n_parameters(m_baseline)) : UnitRange(1, n_parameters_free(m_baseline)),
+                                            excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                                            filename_tag::String = "")
+
+    df_baseline = load_posterior_moments(m_baseline, clouds_baseline, load_bands = true,
+                                         include_fixed = include_fixed, excl_list = excl_list)
+    df_comparisons = Vector{DataFrame}(undef, length(clouds_comparisons))
+    for i=1:length(clouds_comparisons)
+        df_comparisons[i] = load_posterior_moments(m_comparison, clouds_comparisons[i], load_bands = true,
+                                         include_fixed = include_fixed, excl_list = excl_list)
+    end
+
+    plot_posterior_interval_comparison(m_baseline, m_comparison, df_baseline = df_baseline, df_comparisons = df_comparisons,
+                                       plotroot = plotroot, verbose = verbose, in_deviations = in_deviations, scale_by_std = scale_by_std,
+                                       base_label = base_label, comp_labels = comp_labels, title = "", param_range = param_range, block =
+                                       block, excl_list = excl_list, filename_tag = filename_tag)
 end

@@ -7,7 +7,7 @@ function thin_mh_draws(m::AbstractModel, params::Matrix{Float64}; jstep::Int64 =
     # If it does not evenly divide, then start from the remainder+1-th index
     # and then take a thinned subset from there
     n_new_draws, offset = divrem(n_total_draws, jstep)
-    params_thinned = Matrix{Float64}(n_new_draws, n_params)
+    params_thinned = Matrix{Float64}(undef, n_new_draws, n_params)
     params_offset = params[offset+1:end, :]
 
     for (i, j) in enumerate(1:jstep:n_total_draws)

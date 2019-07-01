@@ -1,6 +1,6 @@
 """
 ```
-type MeansBands
+mutable struct MeansBands
 ```
 
 Stores the means and bands of results for a particular set of outputs from the forecast step.

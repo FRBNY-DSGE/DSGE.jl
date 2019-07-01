@@ -7,7 +7,7 @@ Create an instance of the `AltPolicy` proposed in John Taylor's \"A Historical
 Analysis of Monetary Policy Rules\" (1999).
 """
 function taylor99()
-    AltPolicy(:taylor99, taylor99_eqcond, taylor99_solve, color = colorant"blue")
+    AltPolicy(:taylor99, taylor99_eqcond, taylor99_solve, color = RGB(0., 0., 1.))
 end
 
 function taylor99_eqcond(m::AbstractModel)
@@ -38,7 +38,8 @@ function taylor99_solve(m::AbstractModel)
     Γ0, Γ1, C, Ψ, Π  = taylor99_eqcond(m)
 
     # Solve model
-    TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    #TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    TTT_gensys, CCC_gensys, RRR_gensys, eu  = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     if !((eu[1] == 1) & (eu[2] == 1))
         throw(GensysError("Gensys does not give existence"))
     end
