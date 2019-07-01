@@ -107,7 +107,7 @@ function filter_likelihood(m::AbstractModel, df::DataFrame, system::System{S},
                       include_presample = include_presample, tol = tol)
 end
 
-function filter_likelihood(m::AbstractModel, data::Matrix{S}, system::System{S},
+function filter_likelihood(m::AbstractModel, data::AbstractArray, system::System{S},
                            s_0::Vector{S} = Vector{S}(undef, 0),
                            P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                            start_date::Date = date_presample_start(m),
