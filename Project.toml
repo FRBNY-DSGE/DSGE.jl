@@ -46,9 +46,6 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[compat]
-julia = "0.7, 1.0"
-
 [extras]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
