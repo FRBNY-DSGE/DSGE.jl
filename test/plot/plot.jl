@@ -1,3 +1,4 @@
+using Plots
 path = dirname(@__FILE__)
 
 # Initialize the plotting backend

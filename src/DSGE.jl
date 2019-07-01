@@ -12,9 +12,10 @@ module DSGE
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
     import Calculus
+    import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
-    import StateSpaceRoutines: augment_states_with_shocks
+    import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
 
     export
         # distributions_ext.jl

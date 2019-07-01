@@ -153,18 +153,13 @@ Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
 function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
-                        verbose::Symbol = :high,
-                        solution_method::Symbol = get_setting(m, :solution_method)) where T<:AbstractFloat
+                        verbose::Symbol = :high) where T<:AbstractFloat
     # Solve model
-    if solution_method == :gensys
-        TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
-        transition_equation = Transition(TTT, RRR, CCC)
+    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+    transition_equation = Transition(TTT, RRR, CCC)
 
-        # Solve measurement equation
-        measurement_equation = measurement(m, TTT, RRR, CCC)
-    else
-        throw("solution_method provided does not exist.")
-    end
+    # Solve measurement equation
+    measurement_equation = measurement(m, TTT, RRR, CCC)
 
     type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
     if hasmethod(pseudo_measurement, type_tuple)
