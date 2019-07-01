@@ -67,11 +67,7 @@ end
 # Method for specifying the subset of shocks, and the size of each shock
 function impulse_responses(m::AbstractModel, system::System{S},
                            horizon::Int, shock_names::Vector{Symbol},
-<<<<<<< HEAD
-                           shock_values::Vector{Float64}) where {S<:AbstractFloat}
-=======
                            shock_values::Vector{Float64}) where S<:AbstractFloat
->>>>>>> smc-0.7
 
     # Must provide a name and value for each shock
     @assert length(shock_names) == length(shock_values)
@@ -109,13 +105,7 @@ end
 # now, for simplicity)
 function impulse_responses(m::AbstractModel, system::System{S},
                            horizon::Int, shock_name::Symbol,
-<<<<<<< HEAD
-                           var_name::Symbol, var_value::Float64) where {S<:AbstractFloat}
-=======
                            var_name::Symbol, var_value::Float64) where S<:AbstractFloat
->>>>>>> smc-0.7
-
-
     # Setup
     var_names, var_class =
     if var_name in keys(m.endogenous_states)
