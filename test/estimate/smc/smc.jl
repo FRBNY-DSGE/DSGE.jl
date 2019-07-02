@@ -1,13 +1,14 @@
-# To be removed after running this test individually in the REPL successfully
-using DSGE
-using JLD2
-using Test
+using HDF5, DSGEModels, FileIO, JLD2, Test, Random, DSGE, DelimitedFiles
+path = dirname(@__FILE__)
+
+writing_output = false
 
 m = AnSchorfheide()
 
-m <= Setting(:saveroot, tempdir())
+save = normpath(joinpath(dirname(@__FILE__),"save"))
+m <= Setting(:saveroot, save)
 
-@load "reference/smc.jld2" data
+data = h5read("../../reference/smc.h5", "data")
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -25,25 +26,33 @@ m <= Setting(:resampling_threshold, .5)
 m <= Setting(:smc_iteration, 0)
 m <= Setting(:use_chand_recursion, true)
 
-Random.seed!(42)
-
+@everywhere Random.seed!(42)
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
 
-file = JLD2.jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), "r")
-test_cloud = read(file, "cloud")
-test_w     = read(file, "w")
-test_W     = read(file, "W")
-close(file)
+test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
+test_cloud  = test_file["cloud"]
+test_w      = test_file["w"]
+test_W      = test_file["W"]
+test_z = test_file["z"]
 
-file = JLD2.jldopen("reference/smc_test_cloud.jld2", "r")
-saved_cloud = read(file, "cloud")
-saved_w     = read(file, "w")
-saved_W     = read(file, "W")
-close(file)
+if writing_output
+    jldopen("../../reference/smc_cloud_fix=true.jld2", true, true, true, IOStream) do file
+        write(file, "cloud", test_cloud)
+        write(file, "w", test_w)
+        write(file, "W", test_W)
+        write(file, "z", test_z)
+    end
+end
+
+saved_file = load("../../reference/smc_cloud_fix=true.jld2")
+saved_cloud  = saved_file["cloud"]
+saved_w      = saved_file["w"]
+saved_W      = saved_file["W"]
+
 
 ####################################################################
 cloud_fields = fieldnames(typeof(test_cloud))
-@testset "ParticleCloud Fields" begin
+@testset "ParticleCloud Fields: AnSchorf" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_cloud) DSGE.get_vals(saved_cloud)
     @test @test_matrix_approx_eq DSGE.get_loglh(test_cloud) DSGE.get_loglh(saved_cloud)
     @test length(test_cloud.particles) == length(saved_cloud.particles)
@@ -59,7 +68,7 @@ end
 test_particle = test_cloud.particles[1]
 saved_particle = saved_cloud.particles[1]
 particle_fields = fieldnames(typeof(test_particle))
-@testset "Individual Particle Fields Post-SMC" begin
+@testset "Individual Particle Fields Post-SMC: AnSchorf" begin
     @test test_particle.weight == saved_particle.weight
     @test test_particle.keys == saved_particle.keys
     @test test_particle.value == saved_particle.value
@@ -69,7 +78,7 @@ particle_fields = fieldnames(typeof(test_particle))
     @test test_particle.accept == saved_particle.accept
 end
 
-@testset "Weight Matrices" begin
+@testset "Weight Matrices: AnSchorf" begin
     @test @test_matrix_approx_eq test_w saved_w
     @test @test_matrix_approx_eq test_W saved_W
 end

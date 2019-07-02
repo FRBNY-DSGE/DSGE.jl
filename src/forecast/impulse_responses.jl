@@ -25,10 +25,11 @@ where `S<:AbstractFloat`
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
   pseudo-observable impulse response functions
 """
-function impulse_responses(m::AbstractModel, system::System{S};
+function impulse_responses(m::AbstractRepModel, system::System{S};
                            flip_shocks::Bool = false) where {S<:AbstractFloat}
     horizon = impulse_response_horizons(m)
-    impulse_responses(system, horizon, flip_shocks = flip_shocks)
+    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+    return states, obs, pseudo
 end
 
 function impulse_responses(system::System{S}, horizon::Int;
@@ -66,7 +67,7 @@ end
 # Method for specifying the subset of shocks, and the size of each shock
 function impulse_responses(m::AbstractModel, system::System{S},
                            horizon::Int, shock_names::Vector{Symbol},
-                           shock_values::Vector{Float64}) where {S<:AbstractFloat}
+                           shock_values::Vector{Float64}) where S<:AbstractFloat
 
     # Must provide a name and value for each shock
     @assert length(shock_names) == length(shock_values)
@@ -104,9 +105,7 @@ end
 # now, for simplicity)
 function impulse_responses(m::AbstractModel, system::System{S},
                            horizon::Int, shock_name::Symbol,
-                           var_name::Symbol, var_value::Float64) where {S<:AbstractFloat}
-
-
+                           var_name::Symbol, var_value::Float64) where S<:AbstractFloat
     # Setup
     var_names, var_class =
     if var_name in keys(m.endogenous_states)

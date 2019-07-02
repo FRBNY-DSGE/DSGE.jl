@@ -285,6 +285,7 @@ function get_mb_population_series(product::Symbol, population_data::DataFrame,
 
         pop_growth = get_population_series(:population_growth, population_data, population_forecast,
                                            start_date, end_date)
+        pop_growth[ismissing.(pop_growth)] .= NaN
         return convert(Vector{Float64}, pop_growth)
     end
 end

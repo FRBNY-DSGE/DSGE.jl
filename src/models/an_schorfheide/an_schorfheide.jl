@@ -1,6 +1,6 @@
 """
 ```
-AnSchorfheide{T} <: AbstractModel{T}
+AnSchorfheide{T} <: AbstractRepModel{T}
 ```
 
 The `AnSchorfheide` type defines the structure of the simple New Keynesian DSGE
@@ -81,7 +81,7 @@ equilibrium conditions.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-mutable struct AnSchorfheide{T} <: AbstractModel{T}
+mutable struct AnSchorfheide{T} <: AbstractRepModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
@@ -236,7 +236,7 @@ function init_parameters!(m::AnSchorfheide)
 
     m <= parameter(:π_star, 8.1508, (1e-20, 1e5), (1e-20, 1e5), Exponential(), GammaAlt(7., 2.), fixed=false,
                    description="π_star: Target inflation rate.",
-                   tex_label="\\pi^*")
+                   tex_label="\\pi*")
 
     m <= parameter(:γ_Q, 1.5, (1e-20, 1e5), (1e-20, 1e5), Exponential(), Normal(0.40, 0.20), fixed=false,
 

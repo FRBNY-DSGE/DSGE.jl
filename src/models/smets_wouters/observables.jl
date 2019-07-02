@@ -32,7 +32,7 @@ function init_observable_mappings!(m::SmetsWouters)
 
         levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
         weeklyhours = percapita(m, :temp, levels)
-        100*log(3 * weeklyhours / 100)
+        100*log.(3 * weeklyhours / 100)
     end
 
     hrs_rev_transform = logleveltopct_annualized_percapita

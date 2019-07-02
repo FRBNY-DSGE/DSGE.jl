@@ -1,17 +1,18 @@
 using DSGE
 using Test
 using DataFrames: DataFrame
+using Dates
 
 @testset "Miscellaneous data handling functions" begin
     # Previous and next quarter arithmetic
-    q = Date(1913,12,13)
+    q = Dates.Date(1913,12,13)
     DSGE.prev_quarter()
     DSGE.next_quarter()
-    @test DSGE.prev_quarter(q) == Date(1913,09,30)
-    @test DSGE.next_quarter(q) == Date(1914,03,31)
+    @test DSGE.prev_quarter(q) == Dates.Date(1913,09,30)
+    @test DSGE.next_quarter(q) == Dates.Date(1914,03,31)
 
-    start_date = Date(2000,01,01)
-    end_date   = Date(2010,01,01)
+    start_date = Dates.Date(2000,01,01)
+    end_date   = Dates.Date(2010,01,01)
     DSGE.get_quarter_ends(start_date,end_date)
     DSGE.subtract_quarters(end_date, start_date)
 

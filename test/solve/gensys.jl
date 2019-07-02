@@ -7,7 +7,8 @@ path = dirname(@__FILE__)
 m = AnSchorfheide()
 Γ0, Γ1, C, Ψ, Π = eqcond(m)
 stake = 1 + 1e-6
-G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, stake)
+#G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, stake)
+G1, C, impact, eu = gensys(Γ0, Γ1, C, Ψ, Π, stake)
 
 file = "$path/../reference/gensys.h5"
 G1_exp = h5read(file, "G1_gensys")

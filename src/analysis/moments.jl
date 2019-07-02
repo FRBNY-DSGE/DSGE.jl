@@ -7,8 +7,8 @@ Load posterior moments (mean, std) of parameters for a particular sample, and op
 also load 5% and 95% lower and upper bands.
 
 ### Keyword Arguments
-- `load_bands::Bool`: Optionally include the 5% and 95% percentiles for the sample of parameters
-in the returned df
+- `cloud::ParticleCloud`: Optionally pass in a cloud that you want to load the sample from. If the cloud is non-empty then the model object will only be used to find fixed indices and parameter tex labels
+- `load_bands::Bool`: Optionally include the 5% and 95% percentiles for the sample of parameters in the returned df
 - `include_fixed::Bool`: Optionally include the fixed parameters in the returned df
 - `excl_list::Vector{Symbol}`: List parameters by their key that you want to exclude from
 loading
@@ -16,44 +16,113 @@ loading
 ### Outputs
 - `df`: A dataframe containing the aforementioned moments/bands
 """
-function load_posterior_moments(m::AbstractModel; load_bands::Bool = true,
+function load_posterior_moments(m::AbstractModel;
+                                cloud::ParticleCloud = ParticleCloud(m, 0),
+                                load_bands::Bool = true,
                                 include_fixed::Bool = false,
-                                excl_list::Vector{Symbol} = Vector{Symbol}(0))
+                                excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                                weighted::Bool = true)
+    parameters = m.parameters
 
-    if include_fixed
-        parameters          = m.parameters
-        parameter_indices   = 1:n_parameters(m)
+    # Read in Posterior Draws
+    if isempty(cloud)
+        params = load_draws(m, :full)
+        params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
+        params = params'
     else
-        parameters          = Base.filter(x -> x.fixed == false, m.parameters)
-        parameter_indices   = find(x -> x.fixed == false, m.parameters)
+        params = get_vals(cloud)
+        weights = get_weights(cloud)
+    end
+
+    # Index out the fixed parameters
+    if include_fixed
+        free_indices   = 1:n_parameters(m)
+    else
+        free_indices   = findall(x -> x.fixed == false, parameters)
+        parameters = parameters[free_indices]
+        params = params[free_indices, :]
     end
 
     n_params = length(parameter_indices)
 
     # Remove excluded parameters
-    non_excl_indices = find(x -> !(x in excl_list), [parameters[i].key for i in 1:n_params])
-    parameters = parameters[non_excl_indices]
-    parameter_indices = parameter_indices[non_excl_indices]
+    included_indices = setdiff(1:length(free_indices), calculate_excluded_indices(m, excl_list, include_fixed = include_fixed))
+    parameters = parameters[included_indices]
+    params = params[included_indices, :]
+    tex_labels = [DSGE.detexify(parameters[i].tex_label) for i in 1:length(parameters)]
 
-    n_particles = get_setting(m, :n_particles)
+    load_posterior_moments(params, weights, tex_labels, weighted = weighted, load_bands = load_bands)
+end
 
-    # Read in Posterior Draws
-    params = load_draws(m, :full)
-    params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
-    params_mean = vec(mean(params, 1))
-    params_std  = vec(std(params, 1))
+# Aggregating many ParticleClouds to calculate moments across
+# multiple SMC estimations
+function load_posterior_moments(m::AbstractModel,
+                                clouds::Vector{ParticleCloud};
+                                load_bands::Bool = true,
+                                include_fixed::Bool = false,
+                                excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                                weighted::Bool = true)
+    n_params = n_parameters(m)
+    n_particles = length(clouds[1])
+    n_clouds = length(clouds)
+    n_free_params = length(Base.filter(x -> x.fixed == false, m.parameters))
+
+    p_mean = Array{Float64}(undef, n_free_params, n_clouds)
+    p_lb = Array{Float64}(undef, n_free_params, n_clouds)
+    p_ub = Array{Float64}(undef, n_free_params, n_clouds)
+
+    for (i, c) in enumerate(clouds)
+        df_i = load_posterior_moments(m; weighted = weighted, cloud = c, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
+        p_mean[:, i] = df_i[:post_mean]
+        p_lb[:, i] = df_i[:post_lb]
+        p_ub[:, i] = df_i[:post_ub]
+    end
+    param = load_posterior_moments(m; cloud = clouds[1], load_bands = true, include_fixed = false)[:param]
+    df = DataFrame(param = param, post_mean = dropdims(mean(p_mean, dims = 2), dims = 2), post_std = dropdims(std(p_mean, dims = 2),dims = 2), post_lb = dropdims(mean(p_lb, dims = 2), dims = 2), post_ub = dropdims(mean(p_ub, dims = 2), dims = 2))
+
+    return df
+
+    #=all_draws = Matrix{Float64}(n_params, n_particles*n_clouds)
+    all_weights = Vector{Float64}(n_particles*n_clouds)
+
+    for (i, c) in enumerate(clouds)
+        all_draws[:, ((i-1)*n_particles+1):(i*n_particles)] = get_vals(c)
+        all_weights[((i-1)*n_particles+1):(i*n_particles)] = get_weights(c)
+    end
+
+    cloud = ParticleCloud(m, n_particles*n_clouds)
+    update_draws!(cloud, all_draws)
+    update_weights!(cloud, all_weights)
+
+    load_posterior_moments(m; weighted = weighted, cloud = cloud, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)=#
+end
+
+# Base method
+# Assumes n_parameters x n_draws
+function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64}, tex_labels::Vector{String}; weighted::Bool = true, load_bands::Bool = true)
+    if size(params, 1) > size(params, 2)
+        @warn "`params` argument to load_posterior_moments seems to be oriented incorrectly.
+        The argument should be n_params x n_draws. Currently, size(params) = ($(size(params, 1)), $(size(params, 2)))"
+    end
+    if weighted
+        params_mean = vec(mean(params, Weights(weights), dims = 2))
+        params_std = vec(std(params, Weights(weights), 2, corrected = false))
+    else
+        params_mean = vec(mean(params, dims = 2))
+        params_std  = vec(std(params, 2))
+    end
 
     df = DataFrame()
-    df[:param] = [DSGE.detexify(parameters[i].tex_label) for i in 1:length(parameters)]
-    df[:post_mean] = params_mean[parameter_indices]
-    df[:post_std]  = params_std[parameter_indices]
+    df[:param] = tex_labels
+    df[:post_mean] = params_mean
+    df[:post_std]  = params_std
 
     if load_bands
-        post_lb = Vector{Float64}(length(parameters))
+        post_lb = Vector{Float64}(undef, length(params_mean))
         post_ub = similar(post_lb)
-        for i in 1:length(parameters)
-            post_lb[i] = quantile(params[:, parameter_indices][:, i], .05)
-            post_ub[i] = quantile(params[:, parameter_indices][:, i], .95)
+        for i in 1:length(params_mean)
+            post_lb[i] = quantile(params[i, :], Weights(weights), .05)
+            post_ub[i] = quantile(params[i, :], Weights(weights), .95)
         end
     end
 
@@ -61,6 +130,21 @@ function load_posterior_moments(m::AbstractModel; load_bands::Bool = true,
     df[:post_ub] = post_ub
 
     return df
+end
+
+# For calculating the indices to exclude when making posterior interval plots
+function calculate_excluded_indices(m::AbstractModel, excl_list::Vector{Symbol}; include_fixed::Bool = false)
+    parameters = deepcopy(m.parameters)
+
+    # If fixed parameters are excluded, the indices need to be calculated
+    # with respect to only the free parameters
+    if include_fixed
+        return findall(x -> x in excl_list, [parameters[i].key for i in 1:length(parameters)])
+    else
+        # Remove the fixed parameters
+        Base.filter!(x -> x.fixed == false, parameters)
+        return findall(x -> x in excl_list, [parameters[i].key for i in 1:length(parameters)])
+    end
 end
 
 """
@@ -99,9 +183,9 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
-                       groupings::AbstractDict{String,Vector{Parameter}}=Dict{String,Vector{Parameter}}(),
-                       tables::Vector{Symbol} = [:prior_posterior_means, :moments, :prior, :posterior],
-                       caption::Bool = true, outdir::String = "",
+                       groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                       tables = [:prior_posterior_means, :moments, :prior, :posterior],
+                       caption = true, outdir = "",
                        verbose::Symbol = :low, use_mode::Bool = false)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -158,7 +242,13 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                         subset_string = subset_string, groupings = groupings,
                         caption = caption, outdir = outdir)
     end
-
+    #=
+    if :mean_mode_moments in tables
+        mean_mode_moments_table(m, post_means, post_bands; percent = percent,
+                                subset_string = subset_string, groupings = groupings,
+                                caption = caption, outdir = outdir)
+    end
+    =#
     println(verbose, :low, "Tables are saved as " * tablespath(m, "estimate", "*.tex"))
 end
 
@@ -190,8 +280,8 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
 ```
 """
 function prior_table(m::AbstractModel; subset_string::String = "",
-             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-             caption::Bool = true, outdir::String = "")
+                     caption = true, outdir = "",
+             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -430,11 +520,12 @@ Produces a table of prior means, prior standard deviations, posterior means, and
 90% bands for posterior draws.
 """
 function prior_posterior_moments_table(m::AbstractModel,
-                 post_means::Vector, post_bands::Matrix;
-                 percent::AbstractFloat = 0.9,
-                 subset_string::String = "",
-                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                 caption::Bool = true, outdir::String = "")
+                                       post_means::Vector, post_bands::Matrix;
+                                       percent::AbstractFloat = 0.9,
+                                       subset_string::String = "",
+                                       caption = true, outdir = "",
+                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
         groupings[""] = sorted_parameters
@@ -533,10 +624,10 @@ prior_posterior_table(m, post_values; subset_string = "",
 Produce a table of prior means and posterior means or mode.
 """
 function prior_posterior_table(m::AbstractModel, post_values::Vector;
-                 subset_string::String = "",
-                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                 use_mode::Bool = false,
-                 caption::Bool = true, outdir::String = "")
+                               subset_string::String = "",
+                               groupings::AbstractDict{String,Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                               caption = true, outdir = "",
+                               use_mode::Bool = false)
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -624,8 +715,8 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where T<:AbstractFloat
-
+function find_density_bands(draws::AbstractArray, percent::T;
+                            minimize::Bool = true) where {T<:AbstractFloat}
     if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
     end
@@ -702,8 +793,8 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where T<:AbstractFloat
-
+function find_density_bands(draws::AbstractArray, percents::Vector{T};
+                            minimize::Bool = true) where {T<:AbstractFloat}
     bands = DataFrame()
 
     for p in percents
@@ -720,17 +811,29 @@ function write_table_preamble(fid::IOStream)
     @printf fid "\\usepackage[justification=centering]{caption}\n"
     @printf fid "\\usepackage[margin=1in]{geometry}\n"
     @printf fid "\\usepackage{longtable}\n"
+    @printf fid "\\usepackage{graphicx}\n"
+    @printf fid "\\usepackage{cellspace}\n"
+    @printf fid "\\setlength\\cellspacetoplimit{7pt}\n"
+    @printf fid "\\setlength\\cellspacebottomlimit{7pt}\n"
     @printf fid "\\begin{document}\n"
     @printf fid "\\pagestyle{empty}\n"
 end
 
 # `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
 # the table is enclosed by "\small{}")
-function write_table_postamble(fid::IOStream; small::Bool=false)
+function write_table_postamble(fid::IOStream; small::Bool=false, tabular::Bool=false)
     if small
-        @printf fid "\\end{longtable}}\n"
+        if tabular
+            @printf fid "\\end{tabular}}\n"
+        else
+            @printf fid "\\end{longtable}}\n"
+        end
     else
-        @printf fid "\\end{longtable}\n"
+        if tabular
+            @printf fid "\\end{tabular}\n"
+        else
+            @printf fid "\\end{longtable}\n"
+        end
     end
 
     @printf fid "\\end{document}"

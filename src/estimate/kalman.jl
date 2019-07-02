@@ -64,7 +64,7 @@ function Base.getindex(kal::Kalman, inds::Union{Int, UnitRange{Int}})
 end
 
 function Base.cat(m::AbstractModel, k1::Kalman{S},
-    k2::Kalman{S}; allout::Bool = true) where S<:AbstractFloat
+                  k2::Kalman{S}; allout::Bool = true) where S<:AbstractFloat
 
     loglh  = cat(k1[:loglh], k2[:loglh], dims = 1)
     s_pred = cat(k1[:s_pred], k2[:s_pred], dims = 2)
