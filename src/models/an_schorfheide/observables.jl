@@ -46,7 +46,7 @@ function init_observable_mappings!(m::AnSchorfheide)
     nominalrate_fwd_transform = function (levels)
         # FROM: Nominal effective federal funds rate (aggregate daily data at a
         #       quarterly frequency at an annual rate)
-        # TO:   Nominal effective fed funds rate, at a quarterly rate
+        # TO:   Nominal effective fed funds rate, at a quarterly rate annualized
 
         levels[:DFF]
     end
