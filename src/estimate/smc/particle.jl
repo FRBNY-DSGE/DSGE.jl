@@ -202,11 +202,13 @@ function get_vals(c::Cloud)
 Returns Matrix{Float64}(n_parts, n_params) of parameter values in particle cloud.
 NOTE: Output is transpose of get_vals(c::ParticleCloud).
 """
-@inline function get_vals(c::Matrix{Float64})
-    return c[:, 1:ind_para_end(size(c,2))]
+@inline function get_vals(c::Matrix{Float64}; transpose::Bool = true)
+    return transpose ? Matrix{Float64}(c[:, 1:ind_para_end(size(c, 2))]') :
+                                       c[:, 1:ind_para_end(size(c, 2))]
 end
-@inline function get_vals(c::Cloud)
-    return c.particles[:, 1:ind_para_end(size(c.particles,2))]
+@inline function get_vals(c::Cloud; transpose::Bool = true)
+    return transpose ? Matrix{Float64}(c.particles[:, 1:ind_para_end(size(c.particles,2))]') :
+                                       c.particles[:, 1:ind_para_end(size(c.particles,2))]
 end
 
 """
@@ -698,9 +700,9 @@ function weighted_mean(c::ParticleCloud)
     return get_vals(c) * get_weights(c)
 end
 @inline function weighted_mean(c::Matrix{Float64})
-    return get_vals(c)' * get_weights(c)
+    return get_vals(c) * get_weights(c)
 end
-function weighted_mean(c::Cloud)
+@inline function weighted_mean(c::Cloud)
     return weighted_mean(c.particles)
 end
 
@@ -757,7 +759,7 @@ function weighted_cov(c::ParticleCloud)
     return cov(Matrix(get_vals(c)'), Weights(get_weights(c)), corrected = false)
 end
 @inline function weighted_cov(c::Matrix{Float64})
-    return cov(get_vals(c), Weights(get_weights(c)), corrected = false)
+    return cov(get_vals(c; transpose = false), Weights(get_weights(c)), corrected = false)
 end
 @inline function weighted_cov(c::Cloud)
     return weighted_cov(c.particles)
