@@ -64,11 +64,7 @@ function klein(m::AbstractModel)
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of U22*U22'"
-            if m.spec == "het_dsge"
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
-            else
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
-            end
+            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
         else
             rethrow(ex)
         end
@@ -83,11 +79,7 @@ function klein(m::AbstractModel)
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of eye(NK) + gx_coef'*gx_+coef"
-            if m.spec == "het_dsge"
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
-            else
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
-            end
+         return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
         else
             rethrow(ex)
         end
@@ -107,12 +99,7 @@ function klein(m::AbstractModel)
 	# next, want to represent policy functions in terms of meaningful things
 	# gx_fval = Qy'*gx_coef*Qx
 	# hx_fval = Qx'*hx_coef*Qx
-
-    if m.spec == "het_dsge"
-	    return gx_coef, hx_coef, 0
-    else
-        return gx_coef, hx_coef, 0
-    end
+    return gx_coef, hx_coef, 0
 end
 
 # Need an additional transition_equation function to properly stack the
