@@ -21,7 +21,7 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::HetDSGEGovDebt{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}, C_eqn::Vector{T}) where {T<:AbstractFloat}
+                     CCC::Vector{T}) where {T<:AbstractFloat}
     endo      = m.endogenous_states
     endo_new  = m.endogenous_states_augmented
     exo       = m.exogenous_shocks
@@ -114,7 +114,8 @@ function measurement(m::HetDSGEGovDebt{T},
     return Measurement(ZZ, DD, QQ, EE)
 end
 
-function construct_consumption_partial(m::HetDSGEGovDebt, dF2_dRZ::Vector{Float64},
+
+#=function construct_consumption_partial(m::HetDSGEGovDebt, dF2_dRZ::Vector{Float64},
                                        dF2_dWH::Vector{Float64}, dF2_dTT::Vector{Float64})
 
     c = m[:cstar].value
@@ -175,4 +176,4 @@ function construct_consumption_eqn(m::HetDSGEGovDebt, TTT_jump::Matrix{Float64},
     C = C_eqn'*[Matrix{Float64}(I, n_backward_looking_states_orig, n_backward_looking_states_orig); gx2]*Qx'
     #C = reorder(C)
     return vec(C)
-end
+end=#

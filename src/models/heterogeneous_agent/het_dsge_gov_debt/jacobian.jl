@@ -295,7 +295,7 @@ function jacobian(m::HetDSGEGovDebt)
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ  = normalize(m, JJ)
     end
-    return JJ, dF2_dRZ, dF2_dWH, dF2_dTT
+    return JJ
 end
 
 function euler_equation_hetdsgegovdebt(nx::Int, ns::Int,

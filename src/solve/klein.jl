@@ -3,11 +3,7 @@ function klein(m::AbstractModel)
     #################
     # Linearization:
     #################
-    if m.spec=="het_dsge"
-        Jac1, dF2_dRZ, dF2_dWH, dF2_dTT = jacobian(m)
-    else
-        Jac1 = jacobian(m)
-    end
+    Jac1 = jacobian(m)
     Jac1 = Matrix{Float64}(Jac1)
     ##################################################################################
     # Klein Solution Method---apply generalized Schur decomposition a la Klein (2000)
@@ -69,7 +65,7 @@ function klein(m::AbstractModel)
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of U22*U22'"
             if m.spec == "het_dsge"
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1, dF2_dRZ, dF2_dWH, dF2_dTT
+                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
             else
                 return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
             end
@@ -88,7 +84,7 @@ function klein(m::AbstractModel)
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of eye(NK) + gx_coef'*gx_+coef"
             if m.spec == "het_dsge"
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1, dF2_dRZ, dF2_dWH, dF2_dTT
+                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
             else
                 return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
             end
@@ -113,7 +109,7 @@ function klein(m::AbstractModel)
 	# hx_fval = Qx'*hx_coef*Qx
 
     if m.spec == "het_dsge"
-	    return gx_coef, hx_coef, 0, dF2_dRZ, dF2_dWH, dF2_dTT
+	    return gx_coef, hx_coef, 0
     else
         return gx_coef, hx_coef, 0
     end
