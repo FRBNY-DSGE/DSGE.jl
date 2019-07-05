@@ -17,7 +17,6 @@ module DSGE
     import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
-    import ParallelDataTransfer.sendto
     import StateSpaceRoutines: KalmanFilter
     import SparseArrays: sparse, spdiagm, spzeros
     export
