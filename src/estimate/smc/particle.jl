@@ -187,21 +187,14 @@ end
 """
 ```
 function get_vals(c::ParticleCloud)
+function get_vals(c::Matrix{Float64})
+function get_vals(c::Cloud)
 ```
 Returns Matrix{Float64}(n_params, n_parts) of parameter values in particle cloud.
-NOTE: Output is transpose of get_vals(c::Matrix{Float64}).
 """
 function get_vals(c::ParticleCloud)
     return hcat(map(p -> p.value, c.particles)...)
 end
-"""
-```
-function get_vals(c::Matrix{Float64})
-function get_vals(c::Cloud)
-```
-Returns Matrix{Float64}(n_parts, n_params) of parameter values in particle cloud.
-NOTE: Output is transpose of get_vals(c::ParticleCloud).
-"""
 @inline function get_vals(c::Matrix{Float64}; transpose::Bool = true)
     return transpose ? Matrix{Float64}(c[:, 1:ind_para_end(size(c, 2))]') :
                                        c[:, 1:ind_para_end(size(c, 2))]
