@@ -3,8 +3,7 @@ function klein(m::AbstractModel)
     #################
     # Linearization:
     #################
-    Jac1 = jacobian(m)
-    Jac1 = Matrix{Float64}(Jac1)
+    Jac1 = Matrix{Float64}(jacobian(m))
     ##################################################################################
     # Klein Solution Method---apply generalized Schur decomposition a la Klein (2000)
     ##################################################################################
@@ -75,11 +74,11 @@ function klein(m::AbstractModel)
 	S11invT11 = S11\T11;
 	Ustuff = (U11 + U12*gx_coef);
 	invterm = try
-        pinv(eye(NK)+gx_coef'*gx_coef)
+        pinv(eye(NK) + gx_coef' * gx_coef)
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of eye(NK) + gx_coef'*gx_+coef"
-         return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
+            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
         else
             rethrow(ex)
         end
