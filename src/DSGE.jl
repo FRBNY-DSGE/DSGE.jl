@@ -12,13 +12,14 @@ module DSGE
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
+    using Statistics: std
     import Calculus, Missings, Nullables
     import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import ParallelDataTransfer.sendto
     import StateSpaceRoutines: KalmanFilter
-    import SparseArrays: sparse
+    import SparseArrays: sparse, spdiagm, spzeros
     export
         # distributions_ext.jl
         BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist,
@@ -161,6 +162,9 @@ module DSGE
         # models
         solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT,
         SteadyStateParameterArray, OneAssetHANK, calibrate_pLH_pHL,
+	
+	# TwoAssetHANK
+        TwoAssetHANK,
 
         # solve/
         gensysct, gensysct!, new_divct, decomposition_svdct!, <,
@@ -232,9 +236,6 @@ module DSGE
     include("estimate/smc/mutation.jl")
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
-
-    include("estimate/smc/smc_mpi.jl")
-    include("estimate/smc/mutation_mpi.jl")
 
     # CT HANK code
     include("estimate/filter_hank.jl")
@@ -423,4 +424,12 @@ module DSGE
     include("models/heterogeneous_agent/one_asset_hank/measurement.jl")
     include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
     include("models/heterogeneous_agent/one_asset_hank/helpers.jl")
+
+    include("models/heterogeneous_agent/two_asset_hank/income_transition.jl")
+    include("models/heterogeneous_agent/two_asset_hank/two_asset_hank.jl")
+    #include("models/heterogeneous_agent/two_asset_hank/measurement.jl")
+    include("models/heterogeneous_agent/two_asset_hank/eqcond.jl")
+    include("models/heterogeneous_agent/two_asset_hank/util.jl")
+    include("models/heterogeneous_agent/two_asset_hank/helpers.jl")
+    include("models/heterogeneous_agent/two_asset_hank/interp.jl")
 end
