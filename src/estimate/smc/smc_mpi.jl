@@ -314,7 +314,7 @@ function smc_mpi(m::AbstractModel, data::Matrix{Float64};
 
             t0 = time_ns()
 
-            particle_array = hcat(Matrix{Float64}(get_vals(cloud)'), get_loglh(cloud), get_logpost(cloud), get_old_loglh(cloud), map(x -> x.accept, cloud.particles))
+            particle_array = hcat(get_vals(cloud), get_loglh(cloud), get_logpost(cloud), get_old_loglh(cloud), map(x -> x.accept, cloud.particles))
         end
 is_root_process && @show "4"
         MPI.Barrier(comm)
@@ -328,7 +328,8 @@ is_root_process && @show "5"
         MPI.bcast(c,           root, comm)
 is_root_process && @show "6"
         # Gives jth chunk of data to each worker
-        MPI.Scatter!(vec(get_vals(cloud)), node_p_values, count * (n_params + 5), root, comm)
+        MPI.Scatter!(vec(get_vals(cloud, transpose = false)),
+                     node_p_values, count * (n_params + 5), root, comm)
         MPI.Scatter!(get_loglh(cloud),     node_p_loglh,     count, root, comm)
         MPI.Scatter!(get_logprior(cloud),  node_p_logpost,   count, root, comm)
         MPI.Scatter!(get_old_loglh(cloud), node_p_old_loglh, count, root, comm)
