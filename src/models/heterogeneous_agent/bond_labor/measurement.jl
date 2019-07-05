@@ -1,3 +1,5 @@
+import DSGE: Measurement, get_setting, n_observables, n_shocks_exogenous
+
 """
 ```
 measurement{T<:AbstractFloat}(m::BondLabor{T}, TTT::Matrix{T}, RRR::Matrix{T},
