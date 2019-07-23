@@ -5,8 +5,8 @@ version = "v0.7.1"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 ClusterManagers = "34f1f09b-3a8b-5176-ab39-66d58a4d544e"
 ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
@@ -46,13 +46,13 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[compat]
+julia = "0.7, 1.0"
+
 [extras]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["CSV", "Test", "InteractiveUtils"]
-
-[compat]
-julia = "0.7, 1.0"
