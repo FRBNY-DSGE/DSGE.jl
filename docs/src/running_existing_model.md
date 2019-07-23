@@ -25,10 +25,10 @@ custom_settings = Dict{Symbol, Setting}(
     :data_vintage        => Setting(:data_vintage, "151127"),
     :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 
-m <= Setting(:sampling_method, :SMC) #if you'd like to use SMC
-
 # construct a model object
 m = Model990(custom_settings = custom_settings)
+
+m <= Setting(:sampling_method, :SMC) #if you'd like to use SMC
 
 # reoptimize parameter vector, compute Hessian at mode, and full posterior
 # parameter sampling
