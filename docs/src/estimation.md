@@ -7,9 +7,9 @@ CurrentModule = DSGE
 ## Procedure
 
 The goal of the estimation step is to sample from the posterior
-distribution of the model parameters. DSGE.jl uses a Metropolis-Hastings
-sampler to do this, which requires as a proposal covariance matrix the
-Hessian matrix corresponding to the posterior mode. The function `estimate` implements the entire procedure.
+distribution of the model parameters. DSGE.jl uses either a Metropolis-Hastings or Sequential Monte Carlo
+sampler to do this. The Metropolis-Hastings sampler requires as a  proposal covariance matrix the
+Hessian matrix corresponding to the posterior mode. Depending on the value of the model setting `sampling_method` (which can be checked via `get_setting(m, :sampling_method)` and set via `m <= Setting(:sampling_method, :SMC)`, the function `estimate` will either find the mode, compute the Hessian, and run Metropolis-Hastings (if `get_setting(m, :sampling_method)==:MH)`) or run Sequential Monte Carlo (if `get-setting(m, :sampling_method)==:SMC`).
 
 **Main Steps**:
 
