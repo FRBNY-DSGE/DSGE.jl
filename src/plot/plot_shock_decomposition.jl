@@ -144,7 +144,7 @@ shockdec
     var, shockdec, trend, dettrend, hist, forecast, groups = sd.args
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
-    df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
+    df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
                                       mb_hist = hist, mb_forecast = forecast,
                                       detexify_shocks = false,
                                       groups = groups)
@@ -161,7 +161,6 @@ shockdec
     # Set date axis limits
     x0 = xnums[findfirst(dates .== start_date)]
     x1 = xnums[findfirst(dates .== end_date)]
-
     xlims := (x0, x1)
 
     # Shock contributions
@@ -178,7 +177,7 @@ shockdec
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
         inds = findall(start_date .<= dates .<= end_date)
-        x = df[inds, :date]
+        x = xnums[inds]
         y = convert(Matrix{Float64}, df[inds, cat_names])
 
         StatsPlots.GroupedBar((x, y))
