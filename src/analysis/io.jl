@@ -153,7 +153,6 @@ function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
                  bdd_and_unbdd::Bool = false,
                  directory::String = workpath(m, "forecast"))
-
     unbdd_file = get_meansbands_output_file(m, input_type, cond_type, output_var;
                                             forecast_string = forecast_string,
                                             directory = directory)
@@ -166,6 +165,31 @@ function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                                               directory = directory)
 
         read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
+    else
+        read_mb(unbdd_file)
+    end
+end
+
+
+function read_mb_4q(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+                 output_var::Symbol; forecast_string::String = "",
+                 bdd_and_unbdd::Bool = false,
+                 directory::String = workpath(m, "forecast"))
+
+    unbdd_file = get_meansbands_output_file(m, input_type, cond_type, output_var;
+                                            forecast_string = forecast_string,
+                                            directory = directory)
+    unbdd_file = replace(unbdd_file, "mb"*string(output_var) => "ma4Qavg"*"mb"*string(output_var))
+
+    if bdd_and_unbdd
+        @assert get_product(output_var) in [:forecast, :forecast4q]
+        bdd_output_var = Symbol(:bdd, output_var)
+        bdd_file = get_meansbands_output_file(m, input_type, cond_type, bdd_output_var;
+                                              forecast_string = forecast_string,
+                                              directory = directory)
+
+        replace(bdd_file, "mb"*string(output_var) => "ma4Qavg"*"mb"*string(output_var))
+        bdd_file = read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
     else
         read_mb(unbdd_file)
     end

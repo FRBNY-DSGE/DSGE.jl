@@ -37,11 +37,10 @@ into `plot_history_and_forecast`.
 """
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
-                                  title = "",
+                                  title = "", file_ext = "", four_quarter_avg = false,
                                   kwargs...)
-
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
-                                     titles = isempty(title) ? String[] : [title],
+                                     titles = isempty(title) ? String[] : [title], file_ext = file_ext, four_quarter_avg = four_quarter_avg,
                                      kwargs...)
     return plots[var]
 end
@@ -52,12 +51,20 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
                                   groups::Vector{ShockGroup} = shock_groupings(m),
                                   plotroot::String = figurespath(m, "forecast"),
                                   titles::Vector{String} = String[],
+                                  file_ext::String = "",
                                   verbose::Symbol = :low,
+                                  four_quarter_avg = false,
                                   kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
-    mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
-              output_vars)
+
+    if four_quarter_avg
+        mbs = map(output_var -> read_mb_4q(m, input_type, cond_type, output_var, forecast_string = forecast_string),
+                  output_vars)
+    else
+        mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
+                  output_vars)
+    end
 
     # Get titles if not provided
     if isempty(titles)
@@ -75,7 +82,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
 
         # Save plot
         if !isempty(plotroot)
-            output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
+            output_file = get_forecast_filename(plotroot, vcat(filestring_base(m), [file_ext]), input_type, cond_type,
                                                 Symbol("shockdec_", detexify(var)),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
@@ -131,7 +138,9 @@ shockdec
                    forecast_label = "Detrended Forecast",
                    hist_color = :black,
                    forecast_color = :red,
-                   tick_size = 5)
+                   tick_size = 5,
+                   vert_line = quartertodate("0000-Q1"),
+                   vert_line2 = quartertodate("0000-Q1"))
     # Error checking
     if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
         typeof(sd.args[2]) != MeansBands || typeof(sd.args[3]) != MeansBands ||
@@ -179,9 +188,34 @@ shockdec
         inds = findall(start_date .<= dates .<= end_date)
         x = xnums[inds]
         y = convert(Matrix{Float64}, df[inds, cat_names])
-
         StatsPlots.GroupedBar((x, y))
     end
+
+    if vert_line != quartertodate("0000-Q1")
+        seriestype := :vline
+        linewidth  := 2
+        ylim       := :auto
+
+        @series begin
+            label      := "Peak"
+            ind = findall(vert_line .== dates)
+            xnums[ind]
+        end
+    end
+
+    if vert_line2 != quartertodate("0000-Q1")
+        seriestype := :vline
+        linewidth  := 2
+        ylim       := :auto
+
+        @series begin
+            label      := "Peak"
+            ind = findall(vert_line2 .== dates)
+            xnums[ind]
+        end
+    end
+
+
 
     seriestype := :line
     linewidth  := 2
