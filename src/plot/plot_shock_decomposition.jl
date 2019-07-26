@@ -138,7 +138,9 @@ shockdec
                    forecast_label = "Detrended Forecast",
                    hist_color = :black,
                    forecast_color = :red,
-                   tick_size = 5)
+                   tick_size = 5,
+                   vert_line = quartertodate("0000-Q1"),
+                   vert_line2 = quartertodate("0000-Q1"))
     # Error checking
     if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
         typeof(sd.args[2]) != MeansBands || typeof(sd.args[3]) != MeansBands ||
@@ -188,6 +190,32 @@ shockdec
         y = convert(Matrix{Float64}, df[inds, cat_names])
         StatsPlots.GroupedBar((x, y))
     end
+
+    if vert_line != quartertodate("0000-Q1")
+        seriestype := :vline
+        linewidth  := 2
+        ylim       := :auto
+
+        @series begin
+            label      := "Peak"
+            ind = findall(vert_line .== dates)
+            xnums[ind]
+        end
+    end
+
+    if vert_line2 != quartertodate("0000-Q1")
+        seriestype := :vline
+        linewidth  := 2
+        ylim       := :auto
+
+        @series begin
+            label      := "Peak"
+            ind = findall(vert_line2 .== dates)
+            xnums[ind]
+        end
+    end
+
+
 
     seriestype := :line
     linewidth  := 2
