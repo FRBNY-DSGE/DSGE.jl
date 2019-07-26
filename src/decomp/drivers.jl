@@ -49,7 +49,6 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
                             classes::Vector{Symbol};
                             verbose::Symbol = :low, forecast_string_new = "", forecast_string_old = "", kwargs...) where M<:AbstractModel
     # Get output file names
-#    @show forecast_string_new
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, forecast_string_old = forecast_string_old, forecast_string_new = forecast_string_new)
 
     info_print(verbose, :low, "Decomposing forecast...")
