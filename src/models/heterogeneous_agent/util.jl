@@ -4,7 +4,7 @@
 # model state variables after the transition equation has been solved for
 # but rather, augmenting the model states with lags prior to solution since the
 # solution method requires lags
-function augment_model_states(endo::Dict{Symbol, UnitRange}, n_model_states::Int64)
+function augment_model_states(endo::AbstractDict{Symbol, UnitRange}, n_model_states::Int64)
     endo_aug = deepcopy(endo)
     for (state::Symbol, inds::UnitRange) in endo
         unprimed_state = unprime(state)
@@ -26,7 +26,7 @@ function augment_model_states(endo::Dict{Symbol, UnitRange}, n_model_states::Int
 end
 
 # For the RANK equivalent of the HANK models
-function augment_model_states(endo::Dict{Symbol, Int64}, n_model_states::Int64)
+function augment_model_states(endo::AbstractDict{Symbol, Int64}, n_model_states::Int64)
     endo_aug = deepcopy(endo)
     for (state::Symbol, ind::Int) in endo
         unprimed_state           = unprime(state)
@@ -90,7 +90,7 @@ end
 
 # normalize the distributional states located in indices specified by normalized_state_inds
 function normalize(m::AbstractModel,
-                   endo::Dict{Symbol, UnitRange},
+                   endo::AbstractDict{Symbol, UnitRange},
                    model_state_keys::Vector{Symbol},
                    normalized_model_states::Vector{Symbol},
                    state_inds::AbstractArray{Int64},
@@ -142,7 +142,7 @@ stack_indices(key_dict::OrderedDict, keys::Vector{Symbol})
 ```
 Stacks the indices of a OrderedDict{Symbol, AbstractRange} into a Vector of Ints defined by the Ranges in the dictionary.
 """
-function stack_indices(key_dict::Dict, keys::Vector{Symbol})
+function stack_indices(key_dict::AbstractDict, keys::Vector{Symbol})
     indices = Vector{Int64}(undef, 0)
     for i in getindex.(key_dict, keys)
         indices = [indices; i]
