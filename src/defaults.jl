@@ -27,9 +27,11 @@ function default_settings!(m::AbstractModel)
         "Conditional data vintage")
     settings[:cond_id] = Setting(:cond_id, 2,
         "Conditional dataset identifier")
-    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
+    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread,
+                                                            :obs_nominalrate, :obs_longrate],
         "Observables used in conditional forecasts")
-    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
+    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate,
+                                                            :obs_longrate],
         "Observables used in semiconditional forecasts")
     settings[:use_population_forecast] = Setting(:use_population_forecast, false,
         "Whether to use population forecasts as data")
@@ -45,9 +47,11 @@ function default_settings!(m::AbstractModel)
         "Start date of main sample")
     settings[:date_zlb_start] = Setting(:date_zlb_start, quartertodate("2008-Q4"),
         "Start date of zero lower bound regime")
-    settings[:date_forecast_start] = Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()),
+    settings[:date_forecast_start] = Setting(:date_forecast_start,
+                                             Dates.lastdayofquarter(Dates.today()),
         "Start date of forecast period")
-    settings[:date_conditional_end] = Setting(:date_conditional_end, Dates.lastdayofquarter(Dates.today()),
+    settings[:date_conditional_end] = Setting(:date_conditional_end,
+                                              Dates.lastdayofquarter(Dates.today()),
         "End date of conditional data period")
 
     # Anticipated shocks
@@ -69,9 +73,11 @@ function default_settings!(m::AbstractModel)
         "Number of iterations the optimizer should run for")
     settings[:optimization_step_size] = Setting(:optimization_step_size, 0.01,
         "Step size scaling factor for optimization")
-	settings[:simulated_annealing_temperature] = Setting(:simulated_annealing_temperature, Optim.log_temperature,
+	settings[:simulated_annealing_temperature] = Setting(:simulated_annealing_temperature,
+                                                         Optim.log_temperature,
         "Temperature function for simulated annealing")
-   settings[:simulated_annealing_block_proportion] = Setting(:simulated_annealing_block_proportion, 0.3,
+   settings[:simulated_annealing_block_proportion] = Setting(:simulated_annealing_block_proportion,
+                                                             0.3,
         "Fraction of parameters to vary for each proposed move in simulated annealing")
    settings[:optimization_ftol] = Setting(:optimization_ftol, 1e-10,
         "Relative function difference threshold for optimization")
@@ -85,12 +91,14 @@ function default_settings!(m::AbstractModel)
         "Number of times to attempt optimization in estimate()")
 
     # Estimation
-    settings[:sampling_method] = Setting(:sampling_method, :MH, "The sampling method used, either :MH or :SMC")
+    settings[:sampling_method] = Setting(:sampling_method, :MH,
+        "The sampling method used, either :MH or :SMC")
     settings[:calculate_hessian] = Setting(:calculate_hessian, true,
         "Calculate the hessian at the mode")
     settings[:n_hessian_test_params] = Setting(:n_hessian_test_params, typemax(Int),
         "Max number of free params for which to calculate Hessian")
-    settings[:use_chand_recursion] = Setting(:use_chand_recursion, false, "Use Chandrasekhar Recursions instead of standard Kalman filter")
+    settings[:use_chand_recursion] = Setting(:use_chand_recursion, false,
+        "Use Chandrasekhar Recursions instead of standard Kalman filter")
 
     # Metropolis-Hastings
     settings[:n_mh_simulations] = Setting(:n_mh_simulations, 5000,
@@ -115,10 +123,12 @@ function default_settings!(m::AbstractModel)
         Dict{Symbol, String}())
     settings[:forecast_jstep] = Setting(:forecast_jstep, 5,
         "Forecast thinning step (in addition to MH thinning step")
-    settings[:forecast_uncertainty_override] = Setting(:forecast_uncertainty_override, Nullable{Bool}(),
+    settings[:forecast_uncertainty_override] = Setting(:forecast_uncertainty_override,
+                                                       Nullable{Bool}(),
         "If non-null, overrides default drawing states/shocks behavior in smoother and forecast")
     settings[:forecast_smoother] = Setting(:forecast_smoother, :durbin_koopman,
-        "Choice of smoother to use during forecasting. Can be :hamilton, :koopman, :carter_kohn, or :durbin_koopman")
+        "Choice of smoother to use during forecasting. Can be :hamilton, :koopman, " *
+        ":carter_kohn, or :durbin_koopman")
     settings[:forecast_horizons] = Setting(:forecast_horizons, 60,
         "Number of periods to forecast ahead")
     settings[:forecast_tdist_shocks] = Setting(:forecast_tdist_shocks, false,
@@ -128,32 +138,53 @@ function default_settings!(m::AbstractModel)
     settings[:forecast_zlb_value] = Setting(:forecast_zlb_value, 0.13/4,
         "Value of the zero lower bound in forecast periods, if we choose to enforce it")
     settings[:shockdec_startdate] = Setting(:shockdec_startdate, Nullable{Date}(),
-        "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
+        "Date of start of shock decomposition output period. If null, then shockdec starts " *
+        "at date_mainsample_start")
     settings[:shockdec_enddate] = Setting(:shockdec_enddate, Nullable{Date}(),
-        "Date of end of shock decomposition output period. If null, then shockdec ends at date_forecast_end")
+        "Date of end of shock decomposition output period. If null, then shockdec ends at " *
+        "date_forecast_end")
     settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40,
         "Number of periods for which to calculate an impulse response")
-    settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false, "Whether or not to compute bands for shock decomposition. Setting to false saves signficant storage space.")
+    settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false,
+        "Whether or not to compute bands for shock decomposition. Setting to false saves " *
+        "signficant storage space.")
 
 	# Sequential Monte Carlo
-    settings[:n_particles] = Setting(:n_particles, 2000, "Number of particles for use in SMC")
-    settings[:n_Φ] = Setting(:n_Φ, 300, "Number of stages in the tempering schedule")
-  	settings[:λ] = Setting(:λ, 2.1, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
-    settings[:n_smc_blocks] = Setting(:n_smc_blocks, 1, "The number of parameter blocks in SMC")
-    settings[:step_size_smc] = Setting(:step_size_smc, .5, "The scaling factor for the covariance of the particles. Controls size of steps in mutation step")
-    settings[:n_mh_steps_smc] = Setting(:n_mh_steps_smc, 1, "Number of Metropolis Hastings steps to attempt during the mutation step.")
-    settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
-    settings[:resampler_smc] = Setting(:resampler_smc, :multinomial, "Which resampling method to use in SMC")
-    settings[:mixture_proportion] = Setting(:mixture_proportion, 1., "The mixture proportion for the mutation step's proposal distribution")
+    settings[:n_particles] = Setting(:n_particles, 2000,
+        "Number of particles for use in SMC")
+    settings[:n_Φ] = Setting(:n_Φ, 300,
+        "Number of stages in the tempering schedule")
+  	settings[:λ] = Setting(:λ, 2.1,
+        "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
+    settings[:n_smc_blocks] = Setting(:n_smc_blocks, 1,
+        "The number of parameter blocks in SMC")
+    settings[:step_size_smc] = Setting(:step_size_smc, .5,
+        "Scaling factor for covariance of the particles. Controls size of steps in mutation step")
+    settings[:n_mh_steps_smc] = Setting(:n_mh_steps_smc, 1,
+        "Number of Metropolis Hastings steps to attempt during the mutation step.")
+    settings[:target_accept] = Setting(:target_accept, .25,
+        "The initial target acceptance rate for new particles during mutation")
+    settings[:resampler_smc] = Setting(:resampler_smc, :multinomial,
+        "Which resampling method to use in SMC")
+    settings[:mixture_proportion] = Setting(:mixture_proportion, 1.,
+        "The mixture proportion for the mutation step's proposal distribution")
 
     # Endogenous ϕ Schedule
-    settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
-    settings[:tempering_target] = Setting(:tempering_target, 0.95, "The coefficient of the sample size metric to be targeted when solving for an endogenous ϕ")
-    settings[:resampling_threshold] = Setting(:resampling_threshold, 0.5, "The threshold such that the particles will be resampled when the population drops below threshold * N")
-    # temporary setting to save different output files
-    settings[:adaptive_tempering_target_smc] = Setting(:adaptive_tempering_target_smc, 0.97, false, "adpt", "Either the adaptive tempering target or 0.0 if using fixed schedule")
-    settings[:smc_iteration] = Setting(:smc_iteration, 1, false, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
-    settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint, "The old data vintage to start SMC from when time tempering.")
+    settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true,
+        "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
+    settings[:tempering_target] = Setting(:tempering_target, 0.95,
+        "Coefficient of the sample size metric to be targeted when solving for an endogenous ϕ")
+    settings[:resampling_threshold] = Setting(:resampling_threshold, 0.5,
+        "Threshold s.t. particles will be resampled when the population drops below threshold * N")
+
+    # Temporary setting to save different output files
+    settings[:adaptive_tempering_target_smc] = Setting(:adaptive_tempering_target_smc, 0.97, false,
+         "adpt", "Either the adaptive tempering target or 0.0 if using fixed schedule")
+    settings[:smc_iteration] = Setting(:smc_iteration, 1, false, "iter",
+        "The iteration index for the number of times smc has been run on the same data vintage. " *
+        "Primarily for numerical accuracy/testing purposes.")
+    settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint,
+        "The old data vintage to start SMC from when time tempering.")
 
     # Alternative policy
     baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
