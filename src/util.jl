@@ -56,7 +56,7 @@ quarter_range(t0::Date, t1::Date)
 ```
 
 Returns a vector of `Dates`, consisting of the last days of each quarter between
- https://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jlhttps://github.com/ChrisRackauckas/ParallelDataTransfer.jl/blob/master/src/ParallelDataTransfer.jl`t0` and `t1`, inclusive.
+`t0` and `t1`, inclusive.
 """
 function quarter_range(t0::Date, t1::Date)
     dr = t0:Day(1):t1
