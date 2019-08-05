@@ -98,7 +98,7 @@ function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray,
 
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
 
-            n_nozlb_periods = subtract_quarters(date_zlb_start(m))
+            n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
             regime_inds::Vector{UnitRange{Int64}} = [1:n_nozlb_periods, (n_nozlb_periods+1):T]
 
         else
