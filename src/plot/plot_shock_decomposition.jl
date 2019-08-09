@@ -82,7 +82,12 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
 
         # Save plot
         if !isempty(plotroot)
-            output_file = get_forecast_filename(plotroot, vcat(filestring_base(m), [file_ext]), input_type, cond_type,
+            if isempty(file_ext)
+                filestr_base = filestring_base(m)
+            else
+                filestr_base = vcat(filestring_base(m), [file_ext])
+            end
+            output_file = get_forecast_filename(plotroot, filestr_base, input_type, cond_type,
                                                 Symbol("shockdec_", detexify(var)),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
