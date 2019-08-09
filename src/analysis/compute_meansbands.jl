@@ -1,4 +1,4 @@
-rintln"""
+"""
 ```
 compute_meansbands(m, input_type, cond_type, output_vars; forecast_string = "",
     verbose = :low, kwargs...)
