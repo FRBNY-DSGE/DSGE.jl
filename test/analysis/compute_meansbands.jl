@@ -1,3 +1,4 @@
+using Nullables
 path = dirname(@__FILE__)
 
 # Initialize model object
@@ -5,7 +6,7 @@ m = AnSchorfheide(testing = true)
 m <= Setting(:saveroot, tempdir())
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
-m <= Setting(:forecast_uncertainty_override, Nullable(false))
+m <= Setting(:forecast_uncertainty_override, Nullables.Nullable(false))
 m <= Setting(:use_population_forecast, true)
 m <= Setting(:compute_shockdec_bands, true)
 
