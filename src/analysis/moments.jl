@@ -26,9 +26,17 @@ function load_posterior_moments(m::AbstractModel;
 
     # Read in Posterior Draws
     if isempty(cloud)
-        params = load_draws(m, :full)
-        params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
-        params = params'
+        if get_setting(m, :sampling_method) == :MH
+            params = load_draws(m, :full)
+            params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
+            params = params'
+        elseif get_setting(m, :sampling_method) == :SMC
+            cloud = get_cloud(m)
+            params = get_vals(cloud)
+            weights = get_weights(cloud)
+        else
+            @error "Invalid sampling method"
+        end
     else
         params = get_vals(cloud)
         weights = get_weights(cloud)
@@ -42,8 +50,6 @@ function load_posterior_moments(m::AbstractModel;
         parameters = parameters[free_indices]
         params = params[free_indices, :]
     end
-
-    n_params = length(parameter_indices)
 
     # Remove excluded parameters
     included_indices = setdiff(1:length(free_indices), calculate_excluded_indices(m, excl_list, include_fixed = include_fixed))
