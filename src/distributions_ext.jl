@@ -1,4 +1,4 @@
-#=
+#=#=
 This file defines additional functions to return objects of type Distribution. This is
 necessary because we specify prior distributions wrt mean and SD
 (for beta and gamma-distributed parameters) and ν and σ (for inverse gamma-distributed
@@ -345,3 +345,4 @@ function Distributions.logpdf(d::MatrixNormal, x::Matrix)
     V_inv = d.V_inv
     return -.5*trace(V_inv * (x-μ)' * U_inv * (x-μ)) - log((2π)^(n*p/2) * det(U)^(p/2) * det(V)^(n/2))
 end
+=#

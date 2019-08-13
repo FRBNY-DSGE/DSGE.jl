@@ -1,4 +1,4 @@
-"""
+#="""
 ```
 Setting{T}
 ```
@@ -121,3 +121,4 @@ function get_setting(m::AbstractModel, s::Symbol)
         return m.settings[s].value
     end
 end
+=#

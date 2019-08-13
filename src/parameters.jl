@@ -1,4 +1,4 @@
-import Base: <=
+#=import Base: <=
 
 Interval{T} = Tuple{T,T}
 """
@@ -687,3 +687,4 @@ function describe_prior(param::Parameter)
         error("Parameter must either be fixed or have non-null prior: " * string(param.key))
     end
 end
+=#

@@ -1,6 +1,7 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
+    using ModelConstructors
     using Dates, Test, BenchmarkTools
     using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra
     using Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions
@@ -16,6 +17,7 @@ module DSGE
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
+    import ModelConstructors: <=
 
     export
         # distributions_ext.jl
@@ -59,10 +61,10 @@ module DSGE
         ShockGroup, alternative_policy,
 
         # parameters.jl
-        parameter, Transform, NullablePrior, AbstractParameter,
+       #= parameter, Transform, NullablePrior, AbstractParameter,
         Parameter, ParameterVector, ScaledParameter,
         UnscaledParameter, SteadyStateParameter, transform_to_real_line, transform_to_model_space,
-        update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
+        update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,=#
 
         # observables.jl
         Observable, PseudoObservable, check_mnemonics,
