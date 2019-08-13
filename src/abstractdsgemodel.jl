@@ -23,7 +23,6 @@ n_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_anticipat
 date_presample_start(m::AbstractDSGEModel) = get_setting(m, :date_presample_start)
 date_mainsample_start(m::AbstractDSGEModel) = get_setting(m, :date_mainsample_start)
 date_zlb_start(m::AbstractDSGEModel) = get_setting(m, :date_zlb_start)
-date_zlb_end(m::AbstractDSGEModel) = get_setting(m, :date_zlb_end)
 
 date_presample_end(m::AbstractDSGEModel) = Dates.lastdayofquarter(get_setting(m, :date_mainsample_start) - Dates.Month(3))
 date_prezlb_end(m::AbstractDSGEModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
@@ -318,22 +317,6 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 """
 function update!(m::AbstractDSGEModel, values::Vector{T}) where T<:AbstractFloat
     ModelConstructors.update!(m.parameters, values)
-    steadystate!(m)
-end
-
-"""
-```
-update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
-```
-
-Update `m.parameters` with `values`, recomputing the steady-state parameter values.
-
-### Arguments:
-- `m`: the model object
-- `values`: the new values to assign to non-steady-state parameters.
-"""
-function update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
-    ModelConstructors.update!(m.parameters, [θ.value for θ in values])
     steadystate!(m)
 end
 
