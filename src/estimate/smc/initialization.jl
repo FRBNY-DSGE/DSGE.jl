@@ -15,7 +15,7 @@ function one_draw(m::AbstractModel, data::Matrix{Float64};
         try
             update!(m, draw)
             draw_loglh = likelihood(m, data, catch_errors = true,
-                                    use_chand_recursion=use_chand_recursion,
+                                    use_chand_recursion = use_chand_recursion,
                                     verbose = verbose)
             draw_logpost = prior(m)
             if (draw_loglh == -Inf) | (draw_loglh === NaN)
@@ -24,7 +24,8 @@ function one_draw(m::AbstractModel, data::Matrix{Float64};
         catch err
             if isa(err, ParamBoundsError)
                 draw_loglh = draw_logpost = -Inf
-            elseif isa(err, PosDefException) || isa(err, SingularException) || isa(err, LinearAlgebra.LAPACKException)
+            elseif isa(err, PosDefException) || isa(err, SingularException) ||
+                   isa(err, LinearAlgebra.LAPACKException)
                 draw_loglh = draw_logpost = -Inf
             else
                 throw(err)
@@ -81,7 +82,8 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64},
     update_loglh!(c, vec(loglh))
     update_logpost!(c, vec(logpost))
     update_old_loglh!(c, zeros(n_parts))
-    # Need to call `set_weights` as opposed to `update_weights` since update_weights will multiply and 0*anything = 0
+    # Need to call `set_weights` as opposed to `update_weights`
+    # since update_weights will multiply and 0*anything = 0
     set_weights!(c, ones(n_parts))
 end
 

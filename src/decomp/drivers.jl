@@ -241,7 +241,7 @@ function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{
                                 T::Int, k::Int, H::Int;
                                 outputs::Vector{Symbol} = [:forecast, :shockdec], check::Bool = false)
     # Compute state space
-    update!(m, params)
+    DSGE.update!(m, params)
     system = compute_system(m)
 
     # Initialize output dictionary
