@@ -17,7 +17,7 @@ module DSGE
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
-    import ModelConstructors
+    import ModelConstructors: <=
     import ModelConstructors: posterior!, posterior,
                               @test_matrix_approx_eq, @test_matrix_approx_eq_eps, <=
 
