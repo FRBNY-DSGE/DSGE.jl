@@ -71,7 +71,7 @@ function posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractAr
     catch_errors = catch_errors | sampler
     if sampler
         try
-            update!(m, parameters)
+            DSGE.update!(m, parameters)
         catch err
             if isa(err, ParamBoundsError)
                 return -Inf
@@ -80,7 +80,7 @@ function posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractAr
             end
         end
     else
-        update!(m, parameters)
+        DSGE.update!(m, parameters)
     end
     return posterior(m, data; sampler=sampler, ϕ_smc=ϕ_smc, catch_errors=catch_errors)
 
