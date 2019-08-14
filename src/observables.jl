@@ -1,4 +1,4 @@
-"""
+#="""
 ```
 mutable struct Observable
 ```
@@ -65,3 +65,4 @@ function check_mnemonics(levels::DataFrame, mnemonics::Symbol)
         @assert in(mnemonic, names(levels)) "Dataframe is missing $(mnemonic)"
     end
 end
+=#
