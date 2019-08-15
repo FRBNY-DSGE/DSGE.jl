@@ -79,19 +79,3 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                              verbose = :high)
     end
 end
-
-function usual_decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
-                            input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
-                            classes::Vector{Symbol}; est_override::String = "",
-                            verbose::Symbol = :low, forecast_string_old = "", forecast_string_new = "", kwargs...) where M<:AbstractModel
-
-    if !isempty(est_override)
-        overrides = forecast_input_file_overrides(m)
-        overrides[input_type] = est_override
-        overrides = forecast_input_file_overrides(m_old)
-        overrides[input_type] = est_override
-    end
-
-    decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old, classes; verbose = verbose, forecast_string_old = forecast_string_old, forecast_string_new = forecast_string_new)
-
-end
