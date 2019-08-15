@@ -165,6 +165,7 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 date_presample_start(m::AbstractModel) = get_setting(m, :date_presample_start)
 date_mainsample_start(m::AbstractModel) = get_setting(m, :date_mainsample_start)
 date_zlb_start(m::AbstractModel) = get_setting(m, :date_zlb_start)
+date_zlb_end(m::AbstractModel) = get_setting(m, :date_zlb_end)
 
 date_presample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_mainsample_start) - Dates.Month(3))
 date_prezlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
