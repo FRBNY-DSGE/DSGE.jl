@@ -130,6 +130,10 @@ module DSGE
         read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file, read_scenario_mb,
         count_scenario_draws,
 
+        # packet/
+        usual_settings!, usual_forecast, usual_decompose_forecast,
+        write_forecast_centric_packet, write_standard_packet, plot_standard_packet,
+
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
@@ -224,6 +228,11 @@ module DSGE
     include("scenarios/forecast.jl")
     include("scenarios/switching.jl")
     include("scenarios/transform.jl")
+
+    include("packet/util.jl")
+    include("packet/drivers.jl")
+    include("packet/standard_packet.jl")
+    include("packet/forecast_centric_packet.jl")
 
     include("plot/util.jl")
     include("plot/plot_posterior_intervals.jl")
