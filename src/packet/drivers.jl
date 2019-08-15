@@ -34,32 +34,6 @@ end
 
 """
 ```
-usual_estimation(m; reoptimize = true, paramsstart_file = "")
-```
-
-Load data, estimate, and write parameter moment tables. If `reoptimize`,
-optimization can optionally start from a provided `paramsstart_file`. If
-`!reoptimize`, the mode and hessian will be read in from `rawpath(m,
-\"estimate\")`.
-"""
-function usual_estimation(m::AbstractModel;
-                          reoptimize::Bool = true,
-                          paramsstart_file::String = "")
-    if reoptimize && !isempty(paramsstart_file)
-        params = h5read(paramsstart_file, "params")
-        DSGE.update!(m, params)
-    else
-        specify_mode!(m, get_forecast_input_file(m, :mode))
-        specify_hessian(m, rawpath(m, "estimate", "hessian.h5"))
-    end
-
-    df = load_data(m)
-    estimate(m, df)
-    moment_tables(m)
-end
-
-"""
-```
 usual_forecast(m, input_type, cond_type,
     output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo];
     est_override = "", forecast_string = "",
@@ -104,33 +78,6 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
         meansbands_to_matrix(m, input_type, cond_type, output_vars; forecast_string = forecast_string,
                              verbose = :high)
     end
-end
-
-function altpolicy_settings!(m::AbstractModel, altpolicy::AltPolicy)
-    # I/O and data settings
-    fn = dirname(@__FILE__)
-    dataroot = "$(fn)/save/input_data/"
-    saveroot = "$(fn)/save/"
-    m <= Setting(:dataroot, dataroot, "Input data directory path")
-    m <= Setting(:saveroot, saveroot, "Output data directory path")
-    m <= Setting(:use_population_forecast, true)
-    m <= Setting(:alternative_policy, altpolicy, true, "apol", "Alternative policy")
-end
-
-function make_altpolicy(key::Symbol)
-    # Eval-ing a Symbol gets you a function
-    eval(key)()
-end
-
-function use_estimation_vintage!(m::AbstractModel, input_type::Symbol)
-    # Determine estimation vintage
-    est_file = get_forecast_input_file(m, input_type)
-    est_vint = match(r"\d{6}", basename(est_file)).match
-
-    # Cache current vintage and update to estimation vintage
-    fcast_vint = data_vintage(m)
-    m <= Setting(:data_vintage, est_vint)
-    return fcast_vint
 end
 
 function usual_decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
