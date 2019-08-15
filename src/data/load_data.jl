@@ -112,7 +112,11 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Set ois series to load
     if n_anticipated_shocks(m) > 0
-        data_series[:OIS] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+        if get_setting(m, :rate_expectations_source) == :ois
+            data_series[:OIS] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+        elseif get_setting(m, :rate_expectations_source) == :bluechip
+            data_series[:bluechip] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+        end
     end
 
     # For each additional source, search for the file with the proper name. Open
@@ -510,4 +514,69 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
         end
         return DataFrame()
     end
+end
+
+# Takes  individual forecast
+function construct_bluechip_data(m::AbstractModel, raw_forecasts::String, num_anticipated_shocks::Int, save_bluechip_rate_expectations_here::String)
+    df = DataFrame(date = DSGE.quarter_range(date_zlb_start(m), date_zlb_end(m)))
+    for h = 1:num_anticipated_shocks
+        df[Symbol("ant$h")] = NaN
+    end
+    for date in DSGE.quarter_range(date_zlb_start(m), date_zlb_end(m))
+        y, q = Dates.year(date), Dates.quarterofyear(date)
+        bluechip = load_reference_forecast(m, y, q, raw_forecasts, num_anticipated_shocks)
+        df_date_ind = findfirst(df[:date], date)
+        for h=1:num_anticipated_shocks
+            df[df_date_ind, Symbol("ant$h")] =
+                # We use quarterly interest rates but bluechip forecasts annualized
+                bluechip[h]/4
+        end
+    end
+    CSV.write(save_bluechip_rate_expectations_here, df)
+    print("Saved $(save_bluechip_rate_expectations_here)")
+    return df
+end
+
+function load_reference_forecast(m::AbstractModel, year::Int, quarter::Int, file::String, num_anticipated_shocks::Int)
+    # Dates
+    start_date = DSGE.quartertodate(string(year)*"q"*string(quarter))
+    end_date   = DSGE.iterate_quarters(start_date, num_anticipated_shocks)
+    dates      = DSGE.quarter_range(start_date, end_date)
+
+    df = DataFrame(date = dates)
+
+    series = CSV.read(file)
+
+    datestr = reference_forecast_vintage(year, quarter, :bluechip)
+    date_index = something(findfirst(isequal(datestr), series[:date]), 0)
+
+    horizon = num_anticipated_shocks
+    # Assign t-quarters-ahead forecast of var to df[t, var]
+    forecast = NaN*zeros(horizon)
+
+    horizon = minimum([horizon, subtract_quarters(get_setting(m, :date_zlb_end), DSGE.quartertodate(string(year)*"q"*string(quarter))) + 1])
+    for t = 1:horizon
+        forecast[t] = series[date_index, Symbol("bluechip_nominalrate_", t)]
+    end
+
+    # Assign forecast of var to column of df
+    #df[:obs_nominalrate] = forecast
+
+    return forecast
+end
+
+
+function reference_forecast_vintage(year::Int, quarter::Int, reference_forecast::Symbol)
+    # We compare to Jaunary, Aprilp, July, and October Blue Chip forecasts (bluechip_forecast_month = 1 in Realtime code
+        bluechip_forecast_month = 1
+        release_quarter = quarter % 4 + 1
+        release_year = if release_quarter == 1
+            year + 1
+        else
+            year
+        end
+        release_month = 3*(release_quarter - 1) + bluechip_forecast_month
+        release_day   = 10
+
+    return Date(release_year, release_month, release_day)
 end
