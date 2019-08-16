@@ -6,7 +6,7 @@ estimate(m, data; verbose=:low, proposal_covariance=Matrix(), method=:SMC)
 Estimate the DSGE parameter posterior distribution.
 
 ### Arguments:
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 
 ### Optional Arguments:
 - `data`: well-formed data as `Matrix` or `DataFrame`. If this is not provided, the `load_data` routine will be executed.
@@ -29,7 +29,7 @@ Estimate the DSGE parameter posterior distribution.
     If this is set to true, this function will return after estimating parameters.
 - `sampling`: Set to false to disable sampling from the posterior.
 """
-function estimate(m::AbstractModel, df::DataFrame;
+function estimate(m::AbstractDSGEModel, df::DataFrame;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
@@ -46,7 +46,7 @@ function estimate(m::AbstractModel, df::DataFrame;
              save_intermediate = save_intermediate)
 end
 
-function estimate(m::AbstractModel;
+function estimate(m::AbstractDSGEModel;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
@@ -64,7 +64,7 @@ function estimate(m::AbstractModel;
 	         save_intermediate = save_intermediate)
 end
 
-function estimate(m::AbstractModel, data::AbstractArray;
+function estimate(m::AbstractDSGEModel, data::AbstractArray;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
@@ -243,7 +243,7 @@ end
 
 """
 ```
-metropolis_hastings(propdist::Distribution, m::AbstractModel,
+metropolis_hastings(propdist::Distribution, m::AbstractDSGEModel,
     data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
 ```
 
@@ -270,7 +270,7 @@ distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-                             m::AbstractModel,
+                             m::AbstractDSGEModel,
                              data::Matrix{T},
                              cc0::T,
                              cc::T;
@@ -417,16 +417,16 @@ end
 
 """
 ```
-compute_parameter_covariance(m::AbstractModel)
+compute_parameter_covariance(m::AbstractDSGEModel)
 ```
 
 Calculates the parameter covariance matrix from saved parameter draws, and writes it to the
 parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 
 ### Arguments
-* `m::AbstractModel`: the model object
+* `m::AbstractDSGEModel`: the model object
 """
-function compute_parameter_covariance(m::AbstractModel;
+function compute_parameter_covariance(m::AbstractDSGEModel;
                                       filestring_addl::Vector{String} = Vector{String}(undef, 0))
 
     # Read in saved parameter draws
@@ -478,7 +478,7 @@ get_estimation_output_files(m)
 
 Returns a `Dict{Symbol, String}` with all files created by `estimate(m)`.
 """
-function get_estimation_output_files(m::AbstractModel)
+function get_estimation_output_files(m::AbstractDSGEModel)
     output_files = Dict{Symbol, String}()
 
     for file in [:paramsmode, :hessian, :mhsave]

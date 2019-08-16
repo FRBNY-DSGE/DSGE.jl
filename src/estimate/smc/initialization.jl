@@ -1,11 +1,11 @@
 """
 ```
-one_draw(m::AbstractModel, data::Matrix{Float64}; use_chand_recursion::Bool = true,
+one_draw(m::AbstractDSGEModel, data::Matrix{Float64}; use_chand_recursion::Bool = true,
          verbose::Symbol = :low)
 ```
 Finds and returns one valid draw from parameter distribution, along with its log likelihood and log posterior.
 """
-function one_draw(m::AbstractModel, data::Matrix{Float64};
+function one_draw(m::AbstractDSGEModel, data::Matrix{Float64};
                   use_chand_recursion::Bool = true, verbose::Symbol = :low)
     success    = false
     draw       = vec(rand(m.parameters, 1))
@@ -42,15 +42,15 @@ end
 
 """
 ```
-initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud)
-initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::Cloud)
+initial_draw!(m::AbstractDSGEModel, data::Matrix{Float64}, c::ParticleCloud)
+initial_draw!(m::AbstractDSGEModel, data::Matrix{Float64}, c::Cloud)
 ```
 
 Draw from a general starting distribution (set by default to be from the prior) to
 initialize the SMC algorithm. Returns a tuple (logpost, loglh) and modifies the
 particle objects in the particle cloud in place.
 """
-function initial_draw!(m::AbstractModel, data::Matrix{Float64},
+function initial_draw!(m::AbstractDSGEModel, data::Matrix{Float64},
                        c::Union{Cloud, ParticleCloud};
                        parallel::Bool = false, use_chand_recursion::Bool = true,
                        verbose::Symbol = :low)
@@ -93,7 +93,7 @@ function draw_likelihood(m, data, draw_vec; verbose::Symbol = :low)
 ```
 Computes likelihood of a particular parameter draw; returns loglh and logpost.
 """
-function draw_likelihood(m::AbstractModel, data::Matrix{Float64},
+function draw_likelihood(m::AbstractDSGEModel, data::Matrix{Float64},
                          draw_vec::Vector{Float64}; verbose::Symbol = :low)
     update!(m, draw_vec)
     loglh   = likelihood(m, data, verbose = verbose)
@@ -103,7 +103,7 @@ end
 
 """
 ```
-initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64},
+initialize_likelihoods!(m::AbstractDSGEModel, data::Matrix{Float64},
                         c::Union{Cloud, ParticleCloud};
                         parallel::Bool = false, verbose::Symbol = :low)
 ```
@@ -112,7 +112,7 @@ Cloud from a previous estimation to each particle's respective old_loglh
 field, and for evaluating/saving the likelihood and posterior at the new data, which
 here is just the argument, data.
 """
-function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64},
+function initialize_likelihoods!(m::AbstractDSGEModel, data::Matrix{Float64},
                                  c::Union{Cloud, ParticleCloud};
                                  parallel::Bool = false, verbose::Symbol = :low)
     n_parts = length(c)
@@ -147,12 +147,12 @@ end
 
 """
 ```
-function initialize_cloud_settings!(m::AbstractModel, cloud::ParticleCloud;
+function initialize_cloud_settings!(m::AbstractDSGEModel, cloud::ParticleCloud;
                                     tempered_update::Bool = false)
 ```
 Initializes stage index, number of Φ stages, c, resamples, acceptance, and sampling time.
 """
-function initialize_cloud_settings!(m::AbstractModel,
+function initialize_cloud_settings!(m::AbstractDSGEModel,
                                     cloud::Union{ParticleCloud,Cloud};
                                     tempered_update::Bool = false)
     if tempered_update

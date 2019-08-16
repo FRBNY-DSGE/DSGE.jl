@@ -1,8 +1,8 @@
 """
 ```
-smc_mpi(m::AbstractModel, data::Matrix; verbose::Symbol, old_data::Matrix)
-smc_mpi(m::AbstractModel, data::DataFrame)
-smc_mpi(m::AbstractModel)
+smc_mpi(m::AbstractDSGEModel, data::Matrix; verbose::Symbol, old_data::Matrix)
+smc_mpi(m::AbstractDSGEModel, data::DataFrame)
+smc_mpi(m::AbstractDSGEModel)
 ```
 
 ### Arguments:
@@ -51,7 +51,7 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis
     Hastings algorithm.
 """
-function smc_mpi(m::AbstractModel, data::Matrix{Float64};
+function smc_mpi(m::AbstractDSGEModel, data::Matrix{Float64};
                  verbose::Symbol = :low,
                  old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                  old_cloud::ParticleCloud  = ParticleCloud(m, 0),
@@ -419,7 +419,7 @@ is_root_process && @show "8"
     MPI.Finalize()
 end
 
-function smc_mpi(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
+function smc_mpi(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol=:low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
@@ -427,7 +427,7 @@ function smc_mpi(m::AbstractModel, data::DataFrame; verbose::Symbol=:low,
                filestring_addl = filestring_addl)
 end
 
-function smc_mpi(m::AbstractModel; verbose::Symbol=:low,
+function smc_mpi(m::AbstractDSGEModel; verbose::Symbol=:low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)

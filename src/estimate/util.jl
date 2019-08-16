@@ -1,6 +1,6 @@
 # Allows for a custom thinning factor (jstep) to be specified
 # If not, it pulls the jstep from the model
-function thin_mh_draws(m::AbstractModel, params::Matrix{Float64}; jstep::Int64 = 1)
+function thin_mh_draws(m::AbstractDSGEModel, params::Matrix{Float64}; jstep::Int64 = 1)
     jstep = jstep == 1 ? m.settings[:forecast_jstep].value : jstep
     n_total_draws, n_params = size(params)
     # Thin as usual if n_total_draws % jstep == 0
