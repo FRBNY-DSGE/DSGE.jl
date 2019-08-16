@@ -1,11 +1,11 @@
 """
 ```
-default_settings!(m::AbstractModel)
+default_settings!(m::AbstractDSGEModel)
 ```
 
 Default Settings are constructed, initialized and added to `m.settings`.
 """
-function default_settings!(m::AbstractModel)
+function default_settings!(m::AbstractDSGEModel)
 
     settings = m.settings
 
@@ -195,7 +195,7 @@ end
 
 """
 ```
-default_test_settings!(m::AbstractModel)
+default_test_settings!(m::AbstractDSGEModel)
 ```
 
 The following Settings are constructed, initialized and added to
@@ -213,7 +213,7 @@ The following Settings are constructed, initialized and added to
 - `n_mh_burn::Setting{Int}`: 0
 - `mh_thin::Setting{Int}`: 1
 """
-function default_test_settings!(m::AbstractModel)
+function default_test_settings!(m::AbstractDSGEModel)
 
     test = m.test_settings
 

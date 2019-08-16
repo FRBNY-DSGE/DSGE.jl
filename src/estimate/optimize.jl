@@ -18,7 +18,7 @@ end
 
 """
 ```
-optimize!(m::AbstractModel, data::Matrix;
+optimize!(m::AbstractDSGEModel, data::Matrix;
           method::Symbol       = :csminwel,
           xtol::Real           = 1e-32,  # default from Optim.jl
           ftol::Float64        = 1e-14,  # Default from csminwel
@@ -32,7 +32,7 @@ optimize!(m::AbstractModel, data::Matrix;
 
 Wrapper function to send a model to csminwel (or another optimization routine).
 """
-function optimize!(m::AbstractModel,
+function optimize!(m::AbstractDSGEModel,
                    data::AbstractArray;
                    method::Symbol       = :csminwel,
                    xtol::Real           = 1e-32,  # default from Optim.jl
