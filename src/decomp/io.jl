@@ -3,7 +3,7 @@ function get_decomp_filename(m_new::M, m_old::M, input_type::Symbol,
                              product::Symbol, class::Symbol;
                              pathfcn::Function = rawpath,
                              fileformat::Symbol = :jld2,
-                             forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
+                             forecast_string_new = "", forecast_string_old = "") where M<:AbstractDSGEModel
     output_var = Symbol(product, class)
 
     fn_new = get_forecast_filename(m_new, input_type, cond_new, output_var,
@@ -21,7 +21,7 @@ end
 
 function get_decomp_output_files(m_new::M, m_old::M, input_type::Symbol,
                                  cond_new::Symbol, cond_old::Symbol,
-                                 classes::Vector{Symbol}; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
+                                 classes::Vector{Symbol}; forecast_string_new = "", forecast_string_old = "") where M<:AbstractDSGEModel
     output_files = Dict{Symbol, String}()
     for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         for class in classes
@@ -38,7 +38,7 @@ end
 
 function get_decomp_mean_file(m_new::M, m_old::M, input_type::Symbol,
                               cond_new::Symbol, cond_old::Symbol,
-                              class::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
+                              class::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractDSGEModel
     get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, :decomp, class,
                         pathfcn = workpath, fileformat = :jld2,
                         forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
@@ -51,7 +51,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                                       block_number::Nullable{Int} = Nullable{Int}(),
                                       block_inds::AbstractRange{Int} = 1:0,
                                       verbose::Symbol = :low,
-                                      forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
+                                      forecast_string_new = "", forecast_string_old = "") where M<:AbstractDSGEModel
     for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         for class in classes
             prod = Symbol(:decomp, comp)

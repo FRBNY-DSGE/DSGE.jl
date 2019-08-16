@@ -1,6 +1,6 @@
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol}; forecast_string_new = "", forecast_string_old = "",
-                             verbose::Symbol = :low) where M<:AbstractModel
+                             verbose::Symbol = :low) where M<:AbstractDSGEModel
     # Print
     println(verbose, :low, )
     info_print(verbose, :low, "Computing means of forecast decomposition...")
@@ -48,7 +48,7 @@ end
 
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
-                             class::Symbol, var::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractModel
+                             class::Symbol, var::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractDSGEModel
     # Read in dates
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class], forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
     input_file = input_files[Symbol(:decomptotal, class)]
