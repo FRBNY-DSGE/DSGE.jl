@@ -136,7 +136,7 @@ function generate_all_blocks(blocks_free::Vector{Vector{Int64}}, free_para_inds:
     return blocks_all
 end
 
-function get_cloud(m::AbstractModel; filepath::String = rawpath(m, "estimate", "smc_cloud.jld"))
+function get_cloud(m::AbstractModel; filepath::String = rawpath(m, "estimate", "smc_cloud.jld2"))
     return load(filepath, "cloud")
 end
 

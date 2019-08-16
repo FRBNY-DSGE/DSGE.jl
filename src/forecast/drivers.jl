@@ -141,7 +141,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
             weights = W[:, end]
             inds = resample(weights)
 
-            params = params_unweighted[inds, :]
+            params = Matrix{Float64}(params_unweighted[:, inds]')
         else
             throw("Invalid :sampling method specification. Change in setting :sampling_method")
         end

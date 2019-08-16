@@ -90,26 +90,23 @@ regimes. The optional argument `start_date` indicates the first quarter of
 `data`.
 """
 function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray,
-                            start_date::Dates.Date = date_presample_start(m)) where S<:AbstractFloat
+                            start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
     T = size(data, 2)
-
     if n_anticipated_shocks(m) > 0 && !isempty(data)
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
-        elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
-            n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            regime_inds = Vector{UnitRange{Int64}}(undef, 2)
-            regime_inds[1] = 1:n_nozlb_periods
-            regime_inds[2] = (n_nozlb_periods+1):T
+        elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
 
-        else # date_zlb_start(m) < start_date
+            n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
+            regime_inds::Vector{UnitRange{Int64}} = [1:n_nozlb_periods, (n_nozlb_periods+1):T]
+
+        else
             regime_inds = UnitRange{Int64}[1:T]
         end
     else
         regime_inds = UnitRange{Int64}[1:T]
     end
-
     return regime_inds
 end
 
@@ -123,11 +120,13 @@ and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
 function zlb_regime_matrices(m::AbstractModel{S}, system::System{S},
-                             start_date::Dates.Date = date_presample_start(m)) where S<:AbstractFloat
+                             start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
     if n_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
+        # TODO: This technically doesn't handle the case where the end_date of the sample
+        # is before the start of the ZLB
         elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
             n_regimes = 2
 

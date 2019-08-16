@@ -108,9 +108,16 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                    :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
         # Get to work!
-        mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
-                                      pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
-                      variable_names)
+        # pmap produces an error for trendobs sometimes, so just doing this iteratively
+        mb_vec = Vector{Any}(undef,length(variable_names))
+        for i in 1:length(mb_vec)
+            mb_vec[i] = compute_meansbands(m, input_type, cond_type, output_var,
+                                           variable_names[i], df; pop_growth = pop_growth,
+                                           forecast_string = forecast_string, kwargs...)
+        end
+        # mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+        #                               pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
+        #               variable_names)
 
         # Re-assemble pmap outputs
         means = DataFrame(date = date_list)

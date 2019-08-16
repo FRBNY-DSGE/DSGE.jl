@@ -149,6 +149,76 @@ function impulse_responses(m::AbstractModel, system::System{S},
     return states, obs, pseudo
 end
 
+function impulse_responses_peg(m::AbstractRepModel, system::System{S}, horizon::Int;
+                           flip_shocks::Bool = false, H::Int = 0, peg::Symbol = :all_periods, real_rate = false) where {S<:AbstractFloat}
+    ## H is peg horizon
+
+    # Setup
+    nshocks      = size(system[:RRR], 2)
+    nstates      = size(system[:TTT], 1)
+    nobs         = size(system[:ZZ], 1)
+    npseudo      = size(system[:ZZ_pseudo], 1)
+
+    shocks = m.exogenous_shocks
+
+    states = zeros(S, nstates, horizon) #, nshocks)
+    obs    = zeros(S, nobs,    horizon) #, nshocks)
+    pseudo = zeros(S, npseudo, horizon) #, nshocks)
+
+    # Set constant system matrices to 0
+    system = zero_system_constants(system)
+
+    s_0 = zeros(S, nstates)
+
+    ### IRFs to FFR peg for H periods
+    # Set anticipated shocks to peg FFR from t+1 to t+H
+    FFRpeg = -0.25/4 #/400
+
+    PsiR1 = 0 #constant
+    # ZZ matrix
+    PsiR2 = zeros(nstates)
+    PsiR2[m.endogenous_states[:R_t]] = 1
+    if real_rate
+        PsiR2[m.endogenous_states[:Eπ_t]] = -1
+    end
+    if H == 0
+        Rht = system[:RRR][:,shocks[:rm_sh]]
+    else
+        Rht = system[:RRR][:,vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")])] #% Columns of Rh referring to anticipated monetary shocks
+    end
+    bb = zeros(H+1,1)
+    MH = zeros(H+1,H+1)
+    for hh = 1:H+1
+        if peg == :all_periods
+           # @show size(FFRpeg), size(PsiR1), size(PsiR2), size(system[:TTT]), hh, size(s_0)
+            #@show size(FFRpeg - PsiR1 - PsiR2'*(system[:TTT])^hh*s_0)
+            bb[hh,1] = (FFRpeg - PsiR1 - PsiR2'*(system[:TTT])^hh*s_0)
+            #@show bb[hh, 1]
+            MH[hh,:] = PsiR2'*(system[:TTT])^(hh-1)*Rht
+        elseif peg == :some_periods
+            if hh < H+1
+                FFRpeg_ = 0
+            else
+                FFRpeg_ = FFRpeg
+            end
+            bb[hh,1] = (FFRpeg_ - PsiR1 - PsiR2'*(system[:TTT])^hh*s_0)[1]
+            MH[hh,:] = PsiR2'*(system[:TTT])^(hh-1)*Rht
+        end
+
+    end
+    monshocks = MH\bb
+    #@show size(MH), bb, monshocks
+    #% Simulate the model
+    etpeg = zeros(nshocks,horizon)
+    if H == 0
+        etpeg[shocks[:rm_sh],1] = monshocks[1]
+    else
+        etpeg[vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")]),1] = monshocks
+    end
+    states[:, :], obs[:, :], pseudo[:, :] = forecast(system, s_0, etpeg)
+    return states, obs, pseudo
+end
+
 # Given a desired value, x, for some state s^i_1, back out the necessary value of
 # ϵ^j_1 needed s.t. s^i_1 = x.
 # E.g. if I want the impulse response of output (s^i_1) to be 50 basis points

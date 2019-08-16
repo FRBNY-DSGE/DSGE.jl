@@ -114,7 +114,7 @@ function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64},
                                  c::Union{Cloud, ParticleCloud};
                                  parallel::Bool = false, verbose::Symbol = :low)
     n_parts = length(c)
-    draws = (typeof(c) <: Cloud) ? get_vals(c) : Matrix{Float64}(get_vals(c)')
+    draws = (typeof(c) <: Cloud) ? get_vals(c; transpose = false) : Matrix{Float64}(get_vals(c)')
 
     # Retire log-likelihood values from the old estimation to the field old_loglh
     update_old_loglh!(c, get_loglh(c))

@@ -349,9 +349,9 @@ SteadyStateParameter(key::Symbol, value::T; description::String = "",
 
 SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
 """
-function SteadyStateParameter(key::Symbol, value::T; description::String = "No description available",
+function SteadyStateParameter(key::Symbol, value::T;
+                              description::String = "No description available",
                               tex_label::String = "") where {T <: Number}
-
     return SteadyStateParameter(key, value, description, tex_label)
 end
 
@@ -492,7 +492,6 @@ transform_to_real_line(pvec::ParameterVector{T}) where T = map(transform_to_real
 
 
 # define operators to work on parameters
-
 Base.convert(::Type{T}, p::UnscaledParameter) where {T <: Number}     = convert(T,p.value)
 Base.convert(::Type{T}, p::ScaledParameter) where {T <: Number}       = convert(T,p.scaledvalue)
 Base.convert(::Type{T}, p::SteadyStateParameter) where {T <: Number}  = convert(T,p.value)
@@ -682,7 +681,6 @@ function describe_prior(param::Parameter)
 
         return prior_dist * "(" * mom1 * "=" * string(round(prior_mean, digits=4)) * ", " *
                                   mom2 * "=" * string(round(prior_std, digits=4)) * ")"
-
     else
         error("Parameter must either be fixed or have non-null prior: " * string(param.key))
     end
