@@ -10,7 +10,7 @@ function taylor99()
     AltPolicy(:taylor99, taylor99_eqcond, taylor99_solve, color = RGB(0., 0., 1.))
 end
 
-function taylor99_eqcond(m::AbstractModel)
+function taylor99_eqcond(m::AbstractDSGEModel)
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = eqcond(m)
 
@@ -33,7 +33,7 @@ function taylor99_eqcond(m::AbstractModel)
     return Γ0, Γ1, C, Ψ, Π
 end
 
-function taylor99_solve(m::AbstractModel)
+function taylor99_solve(m::AbstractDSGEModel)
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = taylor99_eqcond(m)
 
