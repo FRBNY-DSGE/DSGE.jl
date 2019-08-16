@@ -16,7 +16,7 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 
 ### Inputs
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `var::Symbol` or `vars::Vector{Symbol}`: variable(s) to be plotted,
   e.g. `:obs_gdp` or `[:obs_gdp, :obs_nominalrate]`
 - `class::Symbol`
@@ -42,7 +42,7 @@ into `plot_history_and_forecast`.
 
 - `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
-function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
+function plot_history_and_forecast(m::AbstractDSGEModel, var::Symbol, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
                                    title::String = "", plot_handle::Plots.Plot = plot(),
                                    kwargs...)
@@ -54,7 +54,7 @@ function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
     return plots[var]
 end
 
-function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
+function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
                                    forecast_string::String = "",
                                    bdd_and_unbdd::Bool = false,

@@ -22,8 +22,8 @@ Plot forecasts from `m_old` and `m_new` of `var` or `vars`.
 
 ### Inputs
 
-- `m_old::AbstractModel`
-- `m_new::AbstractModel`
+- `m_old::AbstractDSGEModel`
+- `m_new::AbstractDSGEModel`
 - `var::Symbol` or `vars::Vector{Symbol}`: e.g. `:obs_gdp` or `[:obs_gdp,
   :obs_nominalrate]`
 - `class::Symbol`
@@ -58,7 +58,7 @@ Plot forecasts from `m_old` and `m_new` of `var` or `vars`.
 
 - `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
-function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
+function plot_forecast_comparison(m_old::AbstractDSGEModel, m_new::AbstractDSGEModel,
                                   var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   title::String = "",
@@ -70,7 +70,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     return plots[var]
 end
 
-function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
+function plot_forecast_comparison(m_old::AbstractDSGEModel, m_new::AbstractDSGEModel,
                                   vars::Vector{Symbol}, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   input_type_old::Symbol = input_type,

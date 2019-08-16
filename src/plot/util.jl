@@ -25,7 +25,7 @@ function plot_extension()
     end
 end
 
-function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
+function describe_series(m::AbstractDSGEModel, var::Symbol, class::Symbol;
                          detexify::Bool = false)
     res = if class in [:obs, :pseudo]
         dict = if class == :obs
@@ -45,7 +45,7 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
     detexify ? DSGE.detexify(res) : res
 end
 
-function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
+function series_ylabel(m::AbstractDSGEModel, var::Symbol, class::Symbol;
                        untrans::Bool = false,
                        fourquarter::Bool = false)
     if untrans && fourquarter

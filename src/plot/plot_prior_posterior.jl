@@ -11,7 +11,7 @@ Plot prior distribution and histogram of posterior draws for specified
 
 ### Inputs
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `param_key::Symbol` or `param_keys::Vector{Symbol}`: e.g. `:α` or `[:α, :ζ_p]`
 
 ### Keyword Arguments
@@ -25,13 +25,13 @@ into `plot_prior_posterior`.
 
 - `include_fixed::Bool`: whether to plot fixed parameters
 """
-function plot_prior_posterior(m::AbstractModel, param_key::Symbol; kwargs...)
+function plot_prior_posterior(m::AbstractDSGEModel, param_key::Symbol; kwargs...)
 
     plots = plot_prior_posterior(m, [param_key]; include_fixed = true, kwargs...)
     return plots[param_key]
 end
 
-function plot_prior_posterior(m::AbstractModel,
+function plot_prior_posterior(m::AbstractDSGEModel,
                               param_keys::Vector{Symbol} = map(x -> x.key, m.parameters);
                               include_fixed::Bool = false,
                               verbose::Symbol = :low,
