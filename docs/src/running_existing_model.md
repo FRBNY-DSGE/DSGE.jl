@@ -28,6 +28,8 @@ custom_settings = Dict{Symbol, Setting}(
 # construct a model object
 m = Model990(custom_settings = custom_settings)
 
+m <= Setting(:sampling_method, :SMC) #if you'd like to use SMC
+
 # reoptimize parameter vector, compute Hessian at mode, and full posterior
 # parameter sampling
 estimate(m)

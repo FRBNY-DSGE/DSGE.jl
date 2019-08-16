@@ -5,16 +5,15 @@ CurrentModule = DSGE
 ```
 
 The *DSGE.jl* package implements the New York Fed DSGE model and provides
-general code to estimate many user-specified DSGE models. The package is
+general code to estimate and forecast many user-specified DSGE models. The package is
 introduced in the Liberty Street Economics blog post
 [The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
 
-This Julia-language implementation mirrors the MATLAB code included in the
+This Julia-language implementation partially mirrors the MATLAB code included in the
 Liberty Street Economics blog post
-[The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
+[The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html). However, we have stopped updating the Matlab code so the Julia package contains several new features not included in the Matlab code.
 
-The New York Fed DSGE team is currently working on extending the code to include
-forecasts and other features. Extensions of the DSGE model code may be released
+Extensions of the DSGE model code may be released
 in the future at the discretion of the New York Fed.
 
 ## Table of Contents
@@ -47,6 +46,8 @@ Pages = [
 Developers of this package at the
 [New York Fed](https://www.newyorkfed.org/research) include
 
+* [Reca Sarfati](https://github.com/rsarfati)
+* [Ethan Matlin](https://github.com/ethanmatlin)
 * [Michael Cai](https://github.com/caimichael)
 * [Abhi Gupta](https://github.com/abhig94)
 * [Pearl Li](https://github.com/pearlzli)

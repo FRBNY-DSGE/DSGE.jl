@@ -7,9 +7,11 @@ CurrentModule = DSGE
 ## Procedure
 
 The goal of the estimation step is to sample from the posterior
-distribution of the model parameters. DSGE.jl uses a Metropolis-Hastings
-sampler to do this, which requires as a proposal covariance matrix the
-Hessian matrix corresponding to the posterior mode. The function `estimate` implements the entire procedure.
+distribution of the model parameters. DSGE.jl uses either a Metropolis-Hastings or Sequential Monte Carlo
+sampler to do this. The Metropolis-Hastings sampler requires as a  proposal covariance matrix the
+Hessian matrix corresponding to the posterior mode. Depending on the value of the model setting `sampling_method` (which can be checked via `get_setting(m, :sampling_method)` and set via `m <= Setting(:sampling_method, :SMC)`, the function `estimate` will either find the mode, compute the Hessian, and run Metropolis-Hastings (if `get_setting(m, :sampling_method)==:MH)`) or run Sequential Monte Carlo (if `get-setting(m, :sampling_method)==:SMC`).
+
+### Metropolis Hastings
 
 **Main Steps**:
 
@@ -41,20 +43,7 @@ To run the entire procedure, the user simply calls the `estimate` routine:
 DSGE.estimate
 ```
 
-## Computing the Posterior
-
-In DSGE.jl, the function `posterior` computes the value of the posterior
-distribution at a given parameter vector. It calls the `likelihood` function,
-which in turn calls the `filter` routine. See [Estimation routines](@ref) for
-more details on these functions.
-
-We implement the Kalman Filter via the `filter` function to compute the
-log-likelihood, and add this to the log prior to obtain the log posterior. See
-[StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl) for
-a model-independent implementation of the Kalman filter.
-
-
-## [Optimizing or Reoptimizing](@id estimation-reoptimizing)
+#### [Optimizing or Reoptimizing](@id estimation-reoptimizing)
 
 Generally, the user will want to reoptimize the parameter vector (and consequently,
 calculate the Hessian at this new mode) every time they conduct posterior sampling; that is,
@@ -67,7 +56,7 @@ when:
 
 This behavior can be controlled more finely.
 
-### Reoptimize from a Specified Starting Vector
+##### Reoptimize from a Specified Starting Vector
 
 Reoptimize the model starting from the parameter values supplied in a specified file.
 Ensure that you supply an HDF5 file with a variable named `params` that is the correct
@@ -80,7 +69,7 @@ update!(m, params)
 estimate(m)
 ```
 
-### Skip Reoptimization Entirely
+##### Skip Reoptimization Entirely
 
 You can provide a modal parameter vector and optionally a Hessian matrix calculated at that
 mode to skip the reoptimization entirely. These values are usually computed by the user
@@ -99,7 +88,7 @@ reoptimization by setting the `reoptimize` model setting. Ensure that you supply
 file with a variable named `params` that is the correct dimension and data type. (See also
 the utility function `load_parameters_from_file`.)
 
-## Calculating the Hessian
+#### Calculating the Hessian
 
 By default, `estimate` will recompute the Hessian matrix. You can skip
 calculation of the Hessian matrix entirely if you provide a file with
@@ -118,6 +107,50 @@ than calculating it directly.  Ensure that you supply an HDF5 file with a variab
 *not* the parameter mode results in undefined behavior.
 
 See [Hessian Approximation] for more details on the Hessian computation.
+
+
+#### Computing the Posterior
+
+In DSGE.jl, the function `posterior` computes the value of the posterior
+distribution at a given parameter vector. It calls the `likelihood` function,
+which in turn calls the `filter` routine. See [Estimation routines](@ref) for
+more details on these functions.
+
+We implement the Kalman Filter via the `filter` function to compute the
+log-likelihood, and add this to the log prior to obtain the log posterior. See
+[StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl) for
+a model-independent implementation of the Kalman filter.
+
+### Sequential Monte Carlo
+
+#### Procedure
+
+**Main Steps**:
+
+- *Initialization*: Read in and transform raw data from `save/input_data/`. See [Input Data](@ref) for more details.
+
+- *Sample from Posterior*: Posterior sampling is performed using the Sequential Monte Carlo algorithm. A cloud of particles and their weights is initialized from the prior. These particles are mutated and their weights adjusted based on each value's likelihood. Settings for the number of particles, tempering schedule, and various other settings can be altered as described in [Editing or Extending a Model](@ref editing-extending-model).
+
+To run the entire procedure, the user simply calls the `estimate` routine:
+
+```@docs
+DSGE.estimate
+```
+
+The user can also call `smc(m, df)` explicitly (where `m` is a model object and `df` is a `DataFrame`
+
+#### Computing the Posterior
+
+In DSGE.jl, the function `posterior` computes the value of the posterior
+distribution at a given parameter vector. It calls the `likelihood` function,
+which in turn calls the `filter` routine. See [Estimation routines](@ref) for
+more details on these functions.
+
+We implement the Kalman Filter via the `filter` function to compute the
+log-likelihood, and add this to the log prior to obtain the log posterior. See
+[StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl) for
+a model-independent implementation of the Kalman filter.
+
 
 ## Estimation routines
 
