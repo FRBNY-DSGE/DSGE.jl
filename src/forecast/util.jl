@@ -22,7 +22,7 @@ n_forecast_draws(m, input_type)
 Returns the number of forecast draws in the file
 `get_forecast_input_file(m, input_type)`.
 """
-function n_forecast_draws(m::AbstractModel, input_type::Symbol)
+function n_forecast_draws(m::AbstractDSGEModel, input_type::Symbol)
     if input_type in [:mean, :mode, :init]
         return 1
     elseif input_type in [:full, :subset]
@@ -53,7 +53,7 @@ each of length equal to the number of forecast blocks. `block_inds[i]` is the
 range of indices for block `i` before thinning by `jstep` and
 `block_inds_thin[i]` is the range after thinning.
 """
-function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
+function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
 
     if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
         ndraws    = n_forecast_draws(m, :full)
@@ -265,7 +265,7 @@ get_forecast_output_dims(m, input_type, output_var)
 Returns the dimension of the forecast output specified by `input_type` and
 `output_var`.
 """
-function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_var::Symbol;
+function get_forecast_output_dims(m::AbstractDSGEModel, input_type::Symbol, output_var::Symbol;
                                   subset_inds::AbstractRange{Int64} = 1:0)
     prod  = get_product(output_var)
     class = get_class(output_var)

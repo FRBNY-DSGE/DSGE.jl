@@ -71,7 +71,7 @@ an error.
   not required.) `filestring_base` should be equivalent to the result of
   `filestring_base(m)`.
 """
-function get_forecast_filename(m::AbstractModel, input_type::Symbol,
+function get_forecast_filename(m::AbstractDSGEModel, input_type::Symbol,
                                cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
                                forecast_string::String = "",
@@ -143,7 +143,7 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 See `get_forecast_filename` for more information.
 """
-function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
+function get_forecast_output_files(m::AbstractDSGEModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
                                    forecast_string::String = "",
                                    fileformat::Symbol = :jld2)
@@ -183,7 +183,7 @@ Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 
 If `output_vars` contains `:histobs`, data must be passed in as `df`.
 """
-function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
+function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
                                 output_vars::Vector{Symbol},
                                 forecast_output_files::Dict{Symbol, String},
                                 forecast_output::Dict{Symbol, Array{Float64}};
@@ -252,7 +252,7 @@ end
 
 """
 ```
-write_forecast_metadata(m::AbstractModel, file::JLDFile, var::Symbol)
+write_forecast_metadata(m::AbstractDSGEModel, file::JLDFile, var::Symbol)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -272,7 +272,7 @@ forecast output array. The saved dictionaries include:
 Note that we don't save dates or transformations for impulse response
 functions.
 """
-function write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symbol)
+function write_forecast_metadata(m::AbstractDSGEModel, file::JLD2.JLDFile, var::Symbol)
 
     prod  = get_product(var)
     class = get_class(var)
@@ -361,7 +361,7 @@ Writes the raw forecast output data (`arr`) saved in the temporary h5 file to th
 jld2 file containing the rest of the forecast metadata. The intermediary h5 step exists because
 jld2 does not support chunked memory assignment in the same way that jld and h5 permitted previously.
 """
-function combine_raw_forecast_output_and_metadata(m::AbstractModel,
+function combine_raw_forecast_output_and_metadata(m::AbstractDSGEModel,
                                                   forecast_output_files::Dict{Symbol, String};
                                                   verbose::Symbol = :low)
     for jld_file_path in values(forecast_output_files)
@@ -410,7 +410,7 @@ function read_forecast_metadata(file::JLD2.JLDFile)
     return metadata
 end
 
-function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                               output_var::Symbol, var_name::Symbol,
                               shock_name::Nullable{Symbol} = Nullable{Symbol}();
                               forecast_string::String = "")

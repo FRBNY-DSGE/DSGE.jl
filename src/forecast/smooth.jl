@@ -9,7 +9,7 @@ Computes and returns the smoothed values of states and shocks for the system
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 - `df::DataFrame`: data for observables. This should include the conditional
   period if `cond_type in [:semi, :full]`
 - `system::System`: `System` object representing the state-space system
@@ -54,7 +54,7 @@ m <= Setting(:forecast_smoother, :koopman_smoother))
 
 before calling `smooth`.
 """
-function smooth(m::AbstractModel, df::DataFrame, system::System{S},
+function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
     s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
     cond_type::Symbol = :none, draw_states::Bool = false,
     include_presample::Bool = false, in_sample::Bool = true) where {S<:AbstractFloat}

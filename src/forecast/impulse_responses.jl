@@ -9,7 +9,7 @@ Compute impulse responses for a single draw.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 - `system::System{S}`: state-space system matrices
 - `horizon::Int`: number of periods ahead to forecast
 - `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock (by default the shock magnitude is a negative 1 std. shock)
@@ -65,7 +65,7 @@ function impulse_responses(system::System{S}, horizon::Int;
 end
 
 # Method for specifying the subset of shocks, and the size of each shock
-function impulse_responses(m::AbstractModel, system::System{S},
+function impulse_responses(m::AbstractDSGEModel, system::System{S},
                            horizon::Int, shock_names::Vector{Symbol},
                            shock_values::Vector{Float64}) where S<:AbstractFloat
 
@@ -103,7 +103,7 @@ end
 # Method for picking a specific shock and the size of the desired shift in the state or
 # observed variable using that shock. (Omitting the feature to do pseudo-observables
 # now, for simplicity)
-function impulse_responses(m::AbstractModel, system::System{S},
+function impulse_responses(m::AbstractDSGEModel, system::System{S},
                            horizon::Int, shock_name::Symbol,
                            var_name::Symbol, var_value::Float64) where S<:AbstractFloat
     # Setup
