@@ -62,7 +62,7 @@ function Base.getindex(M::Measurement, d::Symbol)
     end
 end
 
-function measurement(m::AbstractModel, trans::Transition; shocks::Bool=true)
+function measurement(m::AbstractDSGEModel, trans::Transition; shocks::Bool=true)
     TTT = trans[:TTT]
     RRR = trans[:RRR]
     CCC = trans[:CCC]
@@ -152,7 +152,7 @@ compute_system(m; apply_altpolicy = false)
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
+function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                         verbose::Symbol = :high) where T<:AbstractFloat
     # Solve model
     TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
