@@ -1,4 +1,4 @@
-using HDF5, DSGEModels, FileIO, JLD2, Test, Random, DSGE, DelimitedFiles
+using HDF5, FileIO, JLD2, Test, Random, DSGE, DelimitedFiles
 path = dirname(@__FILE__)
 writing_output = false
 
