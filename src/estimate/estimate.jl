@@ -75,7 +75,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false)
 
-    if !(get_setting(m, :sampling_method) in [:SMC,:MH])
+    if !(get_setting(m, :sampling_method) in [:SMC, :MH])
         error("method must be :SMC or :MH")
     else
         method = get_setting(m, :sampling_method)
@@ -210,7 +210,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
 
         # Set the jump size for sampling
         cc0 = get_setting(m, :mh_cc0)
-        cc = get_setting(m, :mh_cc)
+        cc  = get_setting(m, :mh_cc)
 
         metropolis_hastings(propdist, m, data, cc0, cc; verbose = verbose,
                             filestring_addl = filestring_addl);

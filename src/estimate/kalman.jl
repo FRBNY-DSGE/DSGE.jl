@@ -18,16 +18,16 @@ Kalman{S<:AbstractFloat}
 - `total_loglh`: log p(y_{1:t})
 """
 struct Kalman{S<:AbstractFloat}
-    loglh::Vector{S}     # log p(y_t | y_{1:t-1}), t = 1:T
+    loglh::Vector{S}            # log p(y_t | y_{1:t-1}), t = 1:T
     s_pred::AbstractArray{S}    # s_{t|t-1}, t = 1:T
-    P_pred::Array{S, 3}  # P_{t|t-1}, t = 1:T
+    P_pred::Array{S, 3}         # P_{t|t-1}, t = 1:T
     s_filt::AbstractArray{S}    # s_{t|t}, t = 1:T
-    P_filt::Array{S, 3}  # P_{t|t}, t = 1:T
-    s_0::Vector{S}       # s_0
+    P_filt::Array{S, 3}         # P_{t|t}, t = 1:T
+    s_0::Vector{S}              # s_0
     P_0::AbstractArray{S}       # P_0
-    s_T::Vector{S}       # s_{T|T}
+    s_T::Vector{S}              # s_{T|T}
     P_T::AbstractArray{S}       # P_{T|T}
-    total_loglh::S       # log p(y_{1:t})
+    total_loglh::S              # log p(y_{1:t})
 end
 
 function Kalman(loglh::Vector{S},
