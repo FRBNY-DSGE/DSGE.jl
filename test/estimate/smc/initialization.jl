@@ -1,7 +1,7 @@
 
 # To be removed after running this test individually in the REPL successfully
-@everywhere using DSGE, DSGEModels
-@everywhere using HDF5, JLD, JLD2, Random, DelimitedFiles
+#@everywhere using DSGE, DSGEModels
+@everywhere using HDF5, JLD2, Random, DelimitedFiles
 @everywhere import Test: @test, @testset
 
 write_test_output = false
@@ -13,7 +13,7 @@ m = AnSchorfheide()
 save = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, save)
 
-data = h5read("../../reference/smc.h5", "data")
+data = h5read("$path/../../reference/smc.h5", "data")
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -39,12 +39,12 @@ if write_test_output
     #=JLD.jldopen("reference/initial_draw.jld", "w") do file
     write(file, "cloud", test_init_cloud)
     end =#
-    JLD2.jldopen("../../reference/initial_draw.jld2", "w") do file
+    JLD2.jldopen("$path/../../reference/initial_draw.jld2", "w") do file
         write(file, "cloud", test_init_cloud)
     end
 end
 
-saved_init_cloud = load("../../reference/initial_draw.jld2", "cloud")
+saved_init_cloud = load("$path/../../reference/initial_draw.jld2", "cloud")
 
 @testset "Initial draw" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_init_cloud) DSGE.get_vals(saved_init_cloud)
@@ -54,7 +54,7 @@ end
 ###################################################################
 # Smets Wouters
 ###################################################################
-using DSGEModels
+#=using DSGEModels
 m = SmetsWoutersOrig()
 
 save = normpath(joinpath(dirname(@__FILE__),"save"))
@@ -100,3 +100,4 @@ saved_init_cloud = load("../../reference/initial_draw_sw.jld2", "cloud")
     @test @test_matrix_approx_eq DSGE.get_vals(test_init_cloud) DSGE.get_vals(saved_init_cloud)
     @test @test_matrix_approx_eq DSGE.get_loglh(test_init_cloud) DSGE.get_loglh(saved_init_cloud)
 end
+=#
