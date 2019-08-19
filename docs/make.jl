@@ -35,8 +35,8 @@ makedocs(modules = [DSGE],
 deploydocs(
      repo = "github.com/FRBNY-DSGE/DSGE.jl.git",
      target = "build",
-     # deps = nothing,
-     # julia = "0.7",
-     # osname = "osx",
-     # make = nothing
+     deps = nothing,
+     julia = "0.7",
+     osname = "osx",
+     make = nothing
 )
