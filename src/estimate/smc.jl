@@ -93,7 +93,7 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
                            "smc_cloud_stage=$(intermediate_stage_start).jld2",
                            filestring_addl)
     end
-    savepath = rawpath(m, "estimate", "")
+    savepath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
     particle_store_path = rawpath(m, "estimate", "smcsave.h5", filestring_addl)
 
     # Calls SMC package's generic SMC
