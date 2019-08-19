@@ -46,9 +46,12 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
 
     data_vintage = data_vintage(m)
     parallel = get_setting(m, :use_parallel_workers)
+    n_parts  = get_setting(m, :n_particles)
     n_blocks = get_setting(m, :n_smc_blocks)
-    n_steps  = get_setting(m, :n_mh_steps_smc)
-    previous_data_vintage = get_setting(m, :previous_data_vintage) ##
+    n_mh_steps  = get_setting(m, :n_mh_steps_smc)
+    old_vintage = get_setting(m, :previous_data_vintage) ##
+
+    smc_iteration = get_setting(m, :smc_iteration)
 
     λ      = get_setting(m, :λ)
     n_Φ    = get_setting(m, :n_Φ)
@@ -63,19 +66,47 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
     # Step 3 (Mutation) settings
     c      = get_setting(m, :step_size_smc)
     α      = get_setting(m, :mixture_proportion)
-    target = accept = get_setting(m, :target_accept)
+    target = get_setting(m, :target_accept)
 
     recompute_transition_equation # TODO
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
     # Calls SMC package's generic SMC
-    SMC.smc(my_likelihood, m.parameters, data; verbose = verbose, old_data = old_data,
-            old_cloud = old_cloud, run_test = run_test, filestring_addl = filestring_addl,
+    SMC.smc(my_likelihood, m.parameters, data;
+            verbose = verbose,
+            testing = testing, # "testing + run_test redundant"
+            data_vintage = data_vintage,
+
+            parallel = parallel,
+            n_parts  = n_parts,
+            n_blocks = n_blocks,
+            n_mh_steps = n_mh_steps,
+
+            λ = λ, n_Φ = n_Φ,
+
+            resampling_method = resampling_method,
+            threshold_ratio = threshold_ratio,
+
+            c = c, α = α, target = target
+
+            use_fixed_schedule = use_fixed_schedule,
+            tempering_target = tempering_target,
+
+            old_data = old_data,
+            old_cloud = old_cloud,
+            old_vintage = old_vintage,
+            smc_iteration = smc_iteration,
+
+            run_test = run_test, # REDUNDANT
+            filestring_addl = filestring_addl,
+            loadpath = loadpath, # Factor out?
+            savepath = savepath,
+            particle_store_path = particle_store_path,
+
             continue_intermediate = continue_intermediate,
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
-            intermediate_stage_increment = intermediate_stage_increment,
-            data_vintage = data_vintage, parallel = parallel)
+            intermediate_stage_increment = intermediate_stage_increment)
 end
 
 function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
