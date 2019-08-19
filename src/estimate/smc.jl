@@ -35,26 +35,26 @@ smc(m::AbstractDSGEModel)
 These are wrapper functions to ensure simplicity of estimation of DSGE models while
 navigating the DSGE package.
 """
-function smc(m::AbstractDSGEModel, data::Matrix{Float64};
+function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-             old_cloud::ParticleCloud  = ParticleCloud(m, 0),
+             old_cloud::ParticleCloud  = DSGE.ParticleCloud(m, 0),
              run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
 
-    data_vintage = data_vintage(m)
-    parallel = get_setting(m, :use_parallel_workers)
-    n_parts  = get_setting(m, :n_particles)
-    n_blocks = get_setting(m, :n_smc_blocks)
+    parallel    = get_setting(m, :use_parallel_workers)
+    n_parts     = get_setting(m, :n_particles)
+    n_blocks    = get_setting(m, :n_smc_blocks)
     n_mh_steps  = get_setting(m, :n_mh_steps_smc)
     old_vintage = get_setting(m, :previous_data_vintage) ##
 
     smc_iteration = get_setting(m, :smc_iteration)
 
-    λ      = get_setting(m, :λ)
-    n_Φ    = get_setting(m, :n_Φ)
+    λ    = get_setting(m, :λ)
+    n_Φ  = get_setting(m, :n_Φ)
+
     tempering_target   = get_setting(m, :adaptive_tempering_target_smc)
     use_fixed_schedule = tempering_target == 0.0
 
@@ -68,14 +68,39 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
     α      = get_setting(m, :mixture_proportion)
     target = get_setting(m, :target_accept)
 
-    recompute_transition_equation # TODO
     use_chand_recursion = get_setting(m, :use_chand_recursion)
+
+    function my_likelihood(parameters::ParameterVector, data::Matrix{Float64})::Float64
+        update!(m, parameters)
+        likelihood(m, data; sampler = false, catch_errors = true,
+                   use_chand_recursion = use_chand_recursion, verbose = verbose)
+    end
+
+    tempered_update = !isempty(old_data)
+
+    # This step is purely for backwards compatibility purposes
+    old_cloud_conv = isempty(old_cloud) ? SMC.Cloud(0,0) : SMC.Cloud(old_cloud)
+
+    # Initialize Paths
+    loadpath = ""
+    if tempered_update
+        if isempty(old_cloud)
+            loadpath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
+            loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint=" * old_vintage)
+        end
+    elseif continue_intermediate
+        loadpath = rawpath(m, "estimate",
+                           "smc_cloud_stage=$(intermediate_stage_start).jld2",
+                           filestring_addl)
+    end
+    savepath = rawpath(m, "estimate", "")
+    particle_store_path = rawpath(m, "estimate", "smcsave.h5", filestring_addl)
 
     # Calls SMC package's generic SMC
     SMC.smc(my_likelihood, m.parameters, data;
             verbose = verbose,
-            testing = testing, # "testing + run_test redundant"
-            data_vintage = data_vintage,
+            testing = m.testing,
+            data_vintage = data_vintage(m),
 
             parallel = parallel,
             n_parts  = n_parts,
@@ -87,19 +112,19 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
             resampling_method = resampling_method,
             threshold_ratio = threshold_ratio,
 
-            c = c, α = α, target = target
+            c = c, α = α, target = target,
 
             use_fixed_schedule = use_fixed_schedule,
             tempering_target = tempering_target,
 
             old_data = old_data,
-            old_cloud = old_cloud,
+            old_cloud = old_cloud_conv,
             old_vintage = old_vintage,
             smc_iteration = smc_iteration,
 
-            run_test = run_test, # REDUNDANT
+            run_test = run_test,
             filestring_addl = filestring_addl,
-            loadpath = loadpath, # Factor out?
+            loadpath = loadpath,
             savepath = savepath,
             particle_store_path = particle_store_path,
 
