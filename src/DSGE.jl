@@ -1,7 +1,7 @@
 isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
-    using ModelConstructors
+    using ModelConstructors, SMC
     using Dates, Test, BenchmarkTools
     using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra
     using Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions
@@ -18,6 +18,7 @@ module DSGE
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
     import ModelConstructors
+    import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
     export
         # distributions_ext.jl
@@ -92,6 +93,8 @@ module DSGE
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
         initial_draw!, ParticleCloud, Particle,
 
+        smc2, # TO REMOVE
+
         # forecast/
         load_draws, forecast_one,
         smooth, forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
@@ -142,10 +145,7 @@ module DSGE
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement,
         pseudo_measurement,
-        shock_groupings,
-
-        # util
-        @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+        shock_groupings
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -188,8 +188,6 @@ module DSGE
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
 
-    include("estimate/smc.jl")
-
     include("estimate/smc/particle.jl")
     include("estimate/smc/initialization.jl")
     include("estimate/smc/helpers.jl")
@@ -197,6 +195,8 @@ module DSGE
     include("estimate/smc/mutation.jl")
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
+
+    include("estimate/smc.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
