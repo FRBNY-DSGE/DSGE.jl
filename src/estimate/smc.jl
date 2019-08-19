@@ -39,7 +39,7 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud  = ParticleCloud(m, 0),
-             recompute_transition_equation::Bool = true, run_test::Bool = false,
+             run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
