@@ -1,6 +1,6 @@
 using Pkg
 Pkg.add("Documenter")
-using Documenter, DSGE, Distributions, DataFrames
+using Documenter, DSGE
 
 makedocs(modules = [DSGE],
          clean = false,
