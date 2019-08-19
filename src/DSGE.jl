@@ -1,4 +1,4 @@
-isdefined(Base, :__precompile__) && __precompile__()
+isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
     using ModelConstructors
@@ -61,17 +61,6 @@ module DSGE
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
         ShockGroup, alternative_policy,
-
-        # parameters.jl
-     #= parameter, Transform, NullablePrior, AbstractParameter,
-        Parameter, ParameterVector, ScaledParameter,
-        UnscaledParameter, SteadyStateParameter, transform_to_real_line, transform_to_model_space,
-        update, update!, transform_to_model_space, transform_to_real_line, Interval,
-        ParamBoundsError,=#
-
-        # observables.jl
-        #Observable,
-        #PseudoObservable, check_mnemonics,
 
         # statespace.jl
         Transition, Measurement, PseudoMeasurement, System, compute_system,
@@ -136,7 +125,8 @@ module DSGE
         n_targets, n_instruments, n_target_horizons, targets_to_data,
         compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching,
         scenario_means_bands,
-        get_scenario_input_file, n_scenario_draws, get_scenario_filename, get_scenario_output_files,
+        get_scenario_input_file, n_scenario_draws, get_scenario_filename,
+        get_scenario_output_files,
         read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file,
         read_scenario_mb,
         count_scenario_draws,
@@ -148,7 +138,8 @@ module DSGE
         plot_forecast_sequence,
 
         # models/
-        init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
+        init_parameters!, steadystate!, init_observable_mappings!,
+        init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement,
         pseudo_measurement,
         shock_groupings,
@@ -161,12 +152,9 @@ module DSGE
     const DSGE_DATASERIES_DELIM = "__"
     const DSGE_SHOCKDEC_DELIM = "__"
 
-    include("parameters.jl")
-    include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
     include("defaults.jl")
-    include("observables.jl")
     include("statespace.jl")
     include("util.jl")
 
@@ -199,6 +187,9 @@ module DSGE
     include("estimate/marginal_data_density.jl")
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
+
+    include("estimate/smc.jl")
+
     include("estimate/smc/particle.jl")
     include("estimate/smc/initialization.jl")
     include("estimate/smc/helpers.jl")
