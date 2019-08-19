@@ -99,7 +99,7 @@ end
 end
 
 # prior
-priordensity = exp(prior(m))
+priordensity = exp(DSGE.prior(m))
 @testset "Ensure prior density is a density" begin
     @test 0 <= priordensity <= 1
 end
