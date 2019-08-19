@@ -48,9 +48,12 @@ Developers of this package at the
 [New York Fed](https://www.newyorkfed.org/research) include
 
 * [Michael Cai](https://github.com/caimichael)
+* [William Chen](https://github.com/chenwilliam77)
 * [Abhi Gupta](https://github.com/abhig94)
 * [Pearl Li](https://github.com/pearlzli)
+* [Ethan Matlin](https://github.com/ethanmatlin)
 * [Erica Moszkowski](https://github.com/emoszkowski)
+* [Reca Sarfati](https://github.com/rsarfati)
 * [Micah Smith](https://github.com/micahjsmith)
 
 Contributors to this package at [QuantEcon](http://quantecon.org) include
