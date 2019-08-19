@@ -55,7 +55,7 @@ for two series `:series1` and `:series2`:
 date,series1,series2
 1959-06-30,1.0,NaN
 1959-09-30,1.1,0.5
-etc.
+# etc.
 ```
 
 Note that quarters are represented by the date of the *last* day of the quarter and missing
@@ -72,7 +72,7 @@ via Haver Analytics:
 julia> m.data_series
 Dict{Symbol,Array{Symbol,1}} with 2 entries:
  :spf   => [:ASACX10]
- :fred  => [:GDP, :PCE, ...] #etc
+ :fred  => [:GDP, :PCE, ...] # etc
 ```
 
 If the data vintage specified for the model is `151127` (Nov. 27, 2015), then the following
@@ -89,7 +89,7 @@ generated, but the `spf_151127.csv` file must be manually compiled as shown abov
 ```
 date,ASACX10
 1991-12-31,4.0
-etc.
+# etc.
 ```
 
 Now, suppose that we set the data vintage to `151222`, to incorporate the BEA's third
@@ -133,7 +133,7 @@ The file should look like this:
 date,POPULATION
 2015-12-31,250000
 2016-03-31,251000
-etc.
+# etc.
 ```
 
 ## Dataset creation implementation details
