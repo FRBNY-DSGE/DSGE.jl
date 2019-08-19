@@ -1,3 +1,5 @@
+using Pkg
+Pkg.add("Documenter")
 using Documenter, DSGE, Distributions, DataFrames
 
 makedocs(modules = [DSGE],
