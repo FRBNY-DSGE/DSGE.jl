@@ -23,7 +23,8 @@ module DSGE
 
     export
         # distributions_ext.jl
-        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
+        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist,
+        MatrixNormal,
 
         # settings.jl
         Setting, get_setting,
@@ -46,7 +47,8 @@ module DSGE
         n_parameters_free, n_pseudo_observables, get_dict, get_key,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
-        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
+        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names,
+        use_population_forecast,
         use_parallel_workers,
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
@@ -74,7 +76,8 @@ module DSGE
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
         oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         loggrowthtopct_percapita, loggrowthtopct, logleveltopct_annualized,
-        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
+        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized,
+        logleveltopct_annualized_percapita,
         logleveltopct_annualized_approx, loggrowthtopct_4q_approx, logleveltopct_4q_approx,
         parse_data_series, collect_data_transforms, reverse_transform,
         subtract_quarters, iterate_quarters,
@@ -106,8 +109,10 @@ module DSGE
         meansbands_to_matrix, read_mb, read_bdd_and_unbdd_mb,
         get_meansbands_input_file, get_meansbands_output_file, get_product, get_class,
         which_density_bands,
-        prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
-        write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
+        prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec,
+        prepare_meansbands_table_irf,
+        write_meansbands_tables_timeseries, write_means_tables_shockdec,
+        prepare_meansbands_table_irf,
         write_meansbands_tables_all, construct_fcast_and_hist_dfs,
         df_to_table, load_posterior_moments,
 
@@ -143,7 +148,10 @@ module DSGE
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide, eqcond, measurement,
         pseudo_measurement,
-        shock_groupings
+        shock_groupings,
+
+        # util
+        @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
