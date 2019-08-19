@@ -1,4 +1,4 @@
-# Input Data
+# [Input Data](@id input-data-step)
 
 ```@meta
 CurrentModule = DSGE
