@@ -16,6 +16,7 @@ DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -48,6 +49,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 julia = "0.7, 1.0"
+Documenter = "~0.22"
 
 [extras]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
