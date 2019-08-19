@@ -11,7 +11,9 @@ end
 
 """
 ```
-posterior(m::AbstractDSGEModel{T}, data::Matrix{T}; sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1) where {T<:AbstractFloat}
+posterior(m::AbstractDSGEModel{T}, data::Matrix{T};
+          sampler::Bool = false, catch_errors::Bool = false,
+          φ_smc = 1) where {T<:AbstractFloat}
 ```
 
 Calculates and returns the log of the posterior distribution for `m.parameters`:
@@ -45,7 +47,9 @@ end
 
 """
 ```
-posterior!(m::AbstractDSGEModel{T}, parameters::Vector{T}, data::Matrix{T}; sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1) where {T<:AbstractFloat}
+posterior!(m::AbstractDSGEModel{T}, parameters::Vector{T}, data::Matrix{T};
+           sampler::Bool = false, catch_errors::Bool = false,
+           φ_smc = 1) where {T<:AbstractFloat}
 ```
 
 Evaluates the log posterior density at `parameters`.
