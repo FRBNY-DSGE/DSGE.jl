@@ -1,6 +1,6 @@
 # Herbst-Schorfheide Sequential Monte Carlo Implementation and Replication
 [![Build Status](https://travis-ci.org/FRBNY-DSGE/DSGE.jl.svg)](https://travis-ci.org/FRBNY-DSGE/DSGE.jl)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://FRBNY-DSGE.github.io/DSGE.jl/latest)
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://frbny-dsge.github.io/DSGE.jl/latest)
 
 
 This branch of the FRBNY *DSGE.jl* package implements Sequential Monte
