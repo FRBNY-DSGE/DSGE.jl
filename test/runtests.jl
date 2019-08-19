@@ -18,7 +18,6 @@ my_tests = [
             "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
-
             "estimate/hessizero",
             "estimate/hessian",
             "estimate/csminwel",

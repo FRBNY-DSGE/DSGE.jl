@@ -128,9 +128,12 @@ module DSGE
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
         n_targets, n_instruments, n_target_horizons, targets_to_data,
-        compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching, scenario_means_bands,
-        get_scenario_input_file, n_scenario_draws, get_scenario_filename, get_scenario_output_files,
-        read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file, read_scenario_mb,
+        compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching,
+        scenario_means_bands,
+        get_scenario_input_file, n_scenario_draws, get_scenario_filename,
+        get_scenario_output_files,
+        read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file,
+        read_scenario_mb,
         count_scenario_draws,
 
         # packet/
