@@ -1,6 +1,6 @@
 name = "DSGE"
 uuid = "6cf23378-2c47-544c-b0c3-6efefe57ca11"
-authors = ["Michael Cai <michael.cai@ny.frb.org>", "Ethan Matlin <ethan.matlin@ny.frb.org>", "Rebecca Sarfati <rebecca.sarfati@ny.frb.org>"]
+authors = ["Michael Cai <michael.cai@ny.frb.org>", "Ethan Matlin <ethan.matlin@ny.frb.org>", "Reca Sarfati <rebecca.sarfati@ny.frb.org>"]
 version = "v0.7.0"
 
 [deps]
@@ -38,6 +38,7 @@ QuantEcon = "fcd29c91-0bd7-5a09-975d-7ac3f643a60c"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+SMC = "c6043b28-c053-11e9-348c-19d3cb73bbb3"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StateSpaceRoutines = "261fd431-d7e4-51f7-86ab-ce9e57fc1fff"
