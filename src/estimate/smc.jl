@@ -32,24 +32,8 @@ smc(m::AbstractDSGEModel)
 
 ### Overview
 
-Sequential Monte Carlo can be used in lieu of Random Walk Metropolis Hastings to
-    generate parameter samples from high-dimensional parameter spaces using
-    sequentially constructed proposal densities to be used in iterative importance
-    sampling.
-
-The implementation here is based on Edward Herbst and Frank Schorfheide's 2014 paper
-    'Sequential Monte Carlo Sampling for DSGE Models' and the code accompanying their
-    book 'Bayesian Estimation of DSGE Models'.
-
-SMC is broken up into three main steps:
-
-- `Correction`: Reweight the particles from stage n-1 by defining incremental weights,
-    which gradually "temper in" the likelihood function p(Y|θ)^(ϕ_n - ϕ_n-1) into the
-    normalized particle weights.
-- `Selection`: Resample the particles if the distribution of particles begins to
-    degenerate, according to a tolerance level for the ESS.
-- `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis
-    Hastings algorithm.
+These are wrapper functions to ensure simplicity of estimation of DSGE models while
+navigating the DSGE package.
 """
 function smc(m::AbstractDSGEModel, data::Matrix{Float64};
              verbose::Symbol = :low,
@@ -81,10 +65,10 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
     α      = get_setting(m, :mixture_proportion)
     target = accept = get_setting(m, :target_accept)
 
-
     recompute_transition_equation # TODO
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
+    # Calls SMC package's generic SMC
     SMC.smc(my_likelihood, m.parameters, data; verbose = verbose, old_data = old_data,
             old_cloud = old_cloud, run_test = run_test, filestring_addl = filestring_addl,
             continue_intermediate = continue_intermediate,
