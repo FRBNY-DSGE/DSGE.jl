@@ -13,7 +13,7 @@ Hessian matrix corresponding to the posterior mode. The function `estimate` impl
 
 **Main Steps**:
 
-- *Initialization*: Read in and transform raw data from `save/input_data/`. See [Input Data](@ref) for more details.
+- *Initialization*: Read in and transform raw data from `save/input_data/`. See [Input Data](@ref input-data-step) for more details.
 
 - *Reoptimize parameter vector*: The main program will call the `csminwel`
   optimization routine (located in `csminwel.jl`) to find modal parameter

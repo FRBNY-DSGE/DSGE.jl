@@ -52,7 +52,7 @@ vector, computes the Hessian at the mode, and conducts full posterior parameter 
 (The initial parameter vector used is specified in the model's constructor.)
 Further options for estimation are described in [Estimation](@ref estimation-step):
 
-- To use updated data or alternative user-specified datasets, see [Input Data](@ref).
+- To use updated data or alternative user-specified datasets, see [Input Data](@ref input-data-step).
 - The user may want to avoid reoptimizing the parameter vector and calculating
   the Hessian matrix at this new vector. Please see [Reoptimizing](@ref
   estimation-reoptimizing).
