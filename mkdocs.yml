@@ -19,6 +19,6 @@ nav:
     - Plotting: plotting.md
     - Algorithms: algorithms.md
     - Contributing: contributing.md
-    - MATLAB to Julia Transition, Estimation: MatlabtoJuliTransition.md
+    - MATLAB to Julia Transition, Estimation: MatlabtoJuliaTransition.md
     - MATLAB to Julia Transition, Forecast: julia_forecasting.md
     - License: license.md
