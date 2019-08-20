@@ -29,7 +29,7 @@ where `S<:AbstractFloat`.
 
 where `nperiods = `end_index - start_index + 1`.
 """
-function shock_decompositions(m::AbstractModel,
+function shock_decompositions(m::AbstractDSGEModel,
     system::System{S}, histshocks::Matrix{S}) where {S<:AbstractFloat}
 
     horizon   = forecast_horizons(m)
@@ -98,7 +98,7 @@ presample period.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 - `system::System{S}`: state-space system matrices
 - `z0`::Vector{S}: initial state vector
 
@@ -116,7 +116,7 @@ where `S<:AbstractFloat`.
 where `nperiods` is the number of quarters between
 `date_shockdec_start(m)` and `date_shockdec_end(m)`, inclusive.
 """
-function deterministic_trends(m::AbstractModel{S},
+function deterministic_trends(m::AbstractDSGEModel{S},
     system::System{S}, z0::Vector{S}) where {S<:AbstractFloat}
 
     # Dates: We compute the deterministic trend starting from the

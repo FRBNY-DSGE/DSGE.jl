@@ -1,6 +1,6 @@
 """
 ```
-load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol = :low)
+load_data(m::AbstractDSGEModel; try_disk::Bool = true, verbose::Symbol = :low)
 ```
 
 Create a DataFrame with all data series for this model, fully transformed.
@@ -22,7 +22,7 @@ Then, the series in levels are transformed as specified in `m.observable_mapping
 If `m.testing` is false, then the resulting DataFrame is saved to disk as `data_<yymmdd>.csv`.
 The data are then returned to the caller.
 """
-function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool = true, verbose::Symbol=:low)
+function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bool = true, verbose::Symbol=:low)
     recreate_data = false
 
     # Check if already downloaded
@@ -77,7 +77,7 @@ end
 
 """
 ```
-load_data_levels(m::AbstractModel; verbose::Symbol=:low)
+load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 ```
 
 Load data in levels by appealing to the data sources specified for the model. Data from FRED
@@ -97,7 +97,7 @@ using `load_fred_data`. See `?load_fred_data` for more details.
 
 Data from non-FRED data sources are read from disk, verified, and merged.
 """
-function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
+function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
     start_date = date_presample_start(m) - Dates.Month(6)
@@ -198,7 +198,7 @@ end
 
 """
 ```
-load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
+load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 ```
 
 Check on disk in `inpath(m, \"cond\")` for a conditional dataset (in levels) of the correct
@@ -212,7 +212,7 @@ appended or merged into the conditional data:
 - The first period of forecasted population
   (`population_forecast_<yymmdd>.csv`), used for per-capita calculations
 """
-function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
+function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
     # Prepare file name
     cond_vint = cond_vintage(m)
@@ -256,37 +256,37 @@ end
 
 """
 ```
-save_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+save_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none)
 ```
 
 Save `df` to disk as CSV. File is located in `inpath(m, \"data\")`.
 """
-function save_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function save_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none)
     filename = get_data_filename(m, cond_type)
     CSV.write(filename, df)
 end
 
 """
 ```
-has_saved_data(m::AbstractModel; cond_type::Symbol = :none)
+has_saved_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
 ```
 
 Determine if there is a saved dataset on disk for the required vintage and
 conditional type.
 """
-function has_saved_data(m::AbstractModel; cond_type::Symbol = :none)
+function has_saved_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
     filename = get_data_filename(m, cond_type)
     return isfile(filename)
 end
 
 """
 ```
-read_data(m::AbstractModel; cond_type::Symbol = :none)
+read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
 ```
 
 Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
-function read_data(m::AbstractModel; cond_type::Symbol = :none)
+function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
     filename = get_data_filename(m, cond_type)
     df       = CSV.read(filename, copycols=true)
 
@@ -300,14 +300,14 @@ end
 
 """
 ```
-isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none)
 ```
 
 Return if dataset is valid for this model, ensuring that all observables are contained and
 that all quarters between the beginning of the presample and the end of the mainsample are
 contained. Also checks to make sure that expected interest rate data is available if `n_anticipated_shocks(m) > 0`.
 """
-function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none)
     valid = true
 
     # Ensure that every series in m_series is present in df_series
@@ -363,7 +363,7 @@ function is suitable for direct use in `estimate`, `posterior`, etc.
 - `in_sample::Bool`: indicates whether or not to discard rows that are out of sample. Set this flag to false in
 the case that you are calling filter_shocks! in the scenarios codebase.
 """
-function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
+function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
     # Sort rows by date
     df1 = sort(df, :date)
 
@@ -398,7 +398,7 @@ Create a `DataFrame` out of the matrix `data`, including a `:date` column
 beginning in `start_date`.  Variable names and indices are obtained from
 `m.observables`.
 """
-function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where T<:AbstractFloat
+function data_to_df(m::AbstractDSGEModel, data::Matrix{T}, start_date::Date) where T<:AbstractFloat
     # Check number of rows = number of observables
     nobs = n_observables(m)
     @assert size(data, 1) == nobs "Number of rows of data matrix ($(size(data, 1))) must equal number of observables ($nobs)"
@@ -420,14 +420,14 @@ end
 
 """
 ```
-parse_data_series(m::AbstractModel)
+parse_data_series(m::AbstractDSGEModel)
 ```
 
 Parse `m.observable_mappings` for the data sources and mnemonics to read in.
 
 Returns a `Dict{Symbol, Vector{Symbol}}` mapping sources => mnemonics found in that data file.
 """
-function parse_data_series(m::AbstractModel)
+function parse_data_series(m::AbstractDSGEModel)
 
     data_series = Dict{Symbol, Vector{Symbol}}()
 
@@ -458,7 +458,7 @@ read_population_data(filename; verbose = :low)
 Read in population data stored in levels, either from
 `inpath(m, \"raw\", \"population_data_levels_[vint].csv\"`) or `filename`.
 """
-function read_population_data(m::AbstractModel; verbose::Symbol = :low)
+function read_population_data(m::AbstractDSGEModel; verbose::Symbol = :low)
     vint = data_vintage(m)
     filename = inpath(m, "raw", "population_data_levels_" * vint * ".csv")
     read_population_data(filename; verbose = verbose)
@@ -486,7 +486,7 @@ Read in population forecast in levels, either from
 If that file does not exist, return an empty `DataFrame`.
 
 """
-function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
+function read_population_forecast(m::AbstractDSGEModel; verbose::Symbol = :low)
     population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
     population_mnemonic = parse_population_mnemonic(m)[1]
 

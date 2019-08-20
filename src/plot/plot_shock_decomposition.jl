@@ -13,7 +13,7 @@ Plot shock decomposition(s) for `var` or `vars`.
 
 ### Inputs
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `var::Symbol` or `vars::Vector{Symbol}`: variable(s) whose shock decomposition
   is to be plotted, e.g. `:obs_gdp` or `[:obs_gdp, :obs_nominalrate]`
 - `class::Symbol`
@@ -35,7 +35,7 @@ into `plot_history_and_forecast`.
 
 - `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
-function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
+function plot_shock_decomposition(m::AbstractDSGEModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   title = "", file_ext = "", four_quarter_avg = false,
                                   kwargs...)
@@ -45,7 +45,7 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
     return plots[var]
 end
 
-function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
+function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   groups::Vector{ShockGroup} = shock_groupings(m),

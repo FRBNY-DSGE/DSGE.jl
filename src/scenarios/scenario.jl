@@ -75,7 +75,7 @@ n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 n_scenario_draws(scen::Scenario) = scen.n_draws
 
-function targets_to_data(m::AbstractModel, scen::Scenario)
+function targets_to_data(m::AbstractDSGEModel, scen::Scenario)
     df = DataFrame()
 
     # Assign dates

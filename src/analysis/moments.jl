@@ -16,7 +16,7 @@ loading
 ### Outputs
 - `df`: A dataframe containing the aforementioned moments/bands
 """
-function load_posterior_moments(m::AbstractModel;
+function load_posterior_moments(m::AbstractDSGEModel;
                                 cloud::ParticleCloud = ParticleCloud(m, 0),
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
@@ -62,7 +62,7 @@ end
 
 # Aggregating many ParticleClouds to calculate moments across
 # multiple SMC estimations
-function load_posterior_moments(m::AbstractModel,
+function load_posterior_moments(m::AbstractDSGEModel,
                                 clouds::Vector{ParticleCloud};
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
@@ -139,7 +139,7 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
 end
 
 # For calculating the indices to exclude when making posterior interval plots
-function calculate_excluded_indices(m::AbstractModel, excl_list::Vector{Symbol}; include_fixed::Bool = false)
+function calculate_excluded_indices(m::AbstractDSGEModel, excl_list::Vector{Symbol}; include_fixed::Bool = false)
     parameters = deepcopy(m.parameters)
 
     # If fixed parameters are excluded, the indices need to be calculated
@@ -167,7 +167,7 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 
 ### Keyword Arguments
 
@@ -186,7 +186,7 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
-function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
+function moment_tables(m::AbstractDSGEModel; percent::AbstractFloat = 0.90,
                        subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
                        groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                        tables = [:prior_posterior_means, :moments, :prior, :posterior],
@@ -284,7 +284,7 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
     caption = true, outdir = "")
 ```
 """
-function prior_table(m::AbstractModel; subset_string::String = "",
+function prior_table(m::AbstractDSGEModel; subset_string::String = "",
                      caption = true, outdir = "",
              groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
@@ -415,7 +415,7 @@ posterior_table(m, post_means, post_bands; percent = 0.9, subset_string = "",
     groupings = Dict{String, Vector{Parameter}}(), caption = true, outdir = "")
 ```
 """
-function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matrix;
+function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::Matrix;
                          percent::AbstractFloat = 0.9,
                          subset_string::String = "",
                          groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
@@ -524,7 +524,7 @@ prior_posterior_moments_table(m, post_means, post_bands; percent = 0.9,
 Produces a table of prior means, prior standard deviations, posterior means, and
 90% bands for posterior draws.
 """
-function prior_posterior_moments_table(m::AbstractModel,
+function prior_posterior_moments_table(m::AbstractDSGEModel,
                                        post_means::Vector, post_bands::Matrix;
                                        percent::AbstractFloat = 0.9,
                                        subset_string::String = "",
@@ -628,7 +628,7 @@ prior_posterior_table(m, post_values; subset_string = "",
 
 Produce a table of prior means and posterior means or mode.
 """
-function prior_posterior_table(m::AbstractModel, post_values::Vector;
+function prior_posterior_table(m::AbstractDSGEModel, post_values::Vector;
                                subset_string::String = "",
                                groupings::AbstractDict{String,Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                                caption = true, outdir = "",

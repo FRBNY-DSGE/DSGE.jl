@@ -18,16 +18,16 @@ Kalman{S<:AbstractFloat}
 - `total_loglh`: log p(y_{1:t})
 """
 struct Kalman{S<:AbstractFloat}
-    loglh::Vector{S}     # log p(y_t | y_{1:t-1}), t = 1:T
+    loglh::Vector{S}            # log p(y_t | y_{1:t-1}), t = 1:T
     s_pred::AbstractArray{S}    # s_{t|t-1}, t = 1:T
-    P_pred::Array{S, 3}  # P_{t|t-1}, t = 1:T
+    P_pred::Array{S, 3}         # P_{t|t-1}, t = 1:T
     s_filt::AbstractArray{S}    # s_{t|t}, t = 1:T
-    P_filt::Array{S, 3}  # P_{t|t}, t = 1:T
-    s_0::Vector{S}       # s_0
+    P_filt::Array{S, 3}         # P_{t|t}, t = 1:T
+    s_0::Vector{S}              # s_0
     P_0::AbstractArray{S}       # P_0
-    s_T::Vector{S}       # s_{T|T}
+    s_T::Vector{S}              # s_{T|T}
     P_T::AbstractArray{S}       # P_{T|T}
-    total_loglh::S       # log p(y_{1:t})
+    total_loglh::S              # log p(y_{1:t})
 end
 
 function Kalman(loglh::Vector{S},
@@ -63,7 +63,7 @@ function Base.getindex(kal::Kalman, inds::Union{Int, UnitRange{Int}})
                        sum(kal[:loglh][inds]))   # total_loglh
 end
 
-function Base.cat(m::AbstractModel, k1::Kalman{S},
+function Base.cat(m::AbstractDSGEModel, k1::Kalman{S},
                   k2::Kalman{S}; allout::Bool = true) where S<:AbstractFloat
 
     loglh  = cat(k1[:loglh], k2[:loglh], dims = 1)
@@ -89,7 +89,7 @@ Returns a Vector{UnitRange{Int64}} of index ranges for the pre- and post-ZLB
 regimes. The optional argument `start_date` indicates the first quarter of
 `data`.
 """
-function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray,
+function zlb_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
                             start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
     T = size(data, 2)
     if n_anticipated_shocks(m) > 0 && !isempty(data)
@@ -119,7 +119,7 @@ Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
 and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
-function zlb_regime_matrices(m::AbstractModel{S}, system::System{S},
+function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::System{S},
                              start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
     if n_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)

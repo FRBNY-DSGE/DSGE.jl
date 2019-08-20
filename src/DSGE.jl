@@ -1,6 +1,7 @@
-isdefined(Base, :__precompile__) && __precompile__()
+isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
+    using ModelConstructors, SMC
     using Dates, Test, BenchmarkTools
     using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra
     using Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions
@@ -16,10 +17,13 @@ module DSGE
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
+    import ModelConstructors
+    import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
     export
         # distributions_ext.jl
-        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
+        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist,
+        MatrixNormal,
 
         # settings.jl
         Setting, get_setting,
@@ -42,7 +46,8 @@ module DSGE
         n_parameters_free, n_pseudo_observables, get_dict, get_key,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
-        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
+        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names,
+        use_population_forecast,
         use_parallel_workers,
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
@@ -58,15 +63,6 @@ module DSGE
         transform_to_model_space!, transform_to_real_line!,
         ShockGroup, alternative_policy,
 
-        # parameters.jl
-        parameter, Transform, NullablePrior, AbstractParameter,
-        Parameter, ParameterVector, ScaledParameter,
-        UnscaledParameter, SteadyStateParameter, transform_to_real_line, transform_to_model_space,
-        update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
-
-        # observables.jl
-        Observable, PseudoObservable, check_mnemonics,
-
         # statespace.jl
         Transition, Measurement, PseudoMeasurement, System, compute_system,
 
@@ -79,7 +75,8 @@ module DSGE
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
         oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         loggrowthtopct_percapita, loggrowthtopct, logleveltopct_annualized,
-        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
+        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized,
+        logleveltopct_annualized_percapita,
         logleveltopct_annualized_approx, loggrowthtopct_4q_approx, logleveltopct_4q_approx,
         parse_data_series, collect_data_transforms, reverse_transform,
         subtract_quarters, iterate_quarters,
@@ -96,6 +93,9 @@ module DSGE
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
         initial_draw!, ParticleCloud, Particle,
 
+        # backwards_compatibility.jl
+        smc2, old_to_new_cloud,# TO REMOVE
+
         # forecast/
         load_draws, forecast_one,
         smooth, forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
@@ -108,8 +108,10 @@ module DSGE
         meansbands_to_matrix, read_mb, read_bdd_and_unbdd_mb,
         get_meansbands_input_file, get_meansbands_output_file, get_product, get_class,
         which_density_bands,
-        prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
-        write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
+        prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec,
+        prepare_meansbands_table_irf,
+        write_meansbands_tables_timeseries, write_means_tables_shockdec,
+        prepare_meansbands_table_irf,
         write_meansbands_tables_all, construct_fcast_and_hist_dfs,
         df_to_table, load_posterior_moments,
 
@@ -125,9 +127,12 @@ module DSGE
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
         n_targets, n_instruments, n_target_horizons, targets_to_data,
-        compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching, scenario_means_bands,
-        get_scenario_input_file, n_scenario_draws, get_scenario_filename, get_scenario_output_files,
-        read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file, read_scenario_mb,
+        compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching,
+        scenario_means_bands,
+        get_scenario_input_file, n_scenario_draws, get_scenario_filename,
+        get_scenario_output_files,
+        read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file,
+        read_scenario_mb,
         count_scenario_draws,
 
         # packet/
@@ -141,24 +146,20 @@ module DSGE
         plot_forecast_sequence,
 
         # models/
-        init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
-        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
-        shock_groupings,
-
-        # util
-        @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+        init_parameters!, steadystate!, init_observable_mappings!,
+        init_pseudo_observable_mappings!,
+        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement,
+        pseudo_measurement,
+        shock_groupings
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
     const DSGE_DATASERIES_DELIM = "__"
     const DSGE_SHOCKDEC_DELIM = "__"
 
-    include("parameters.jl")
-    include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
     include("defaults.jl")
-    include("observables.jl")
     include("statespace.jl")
     include("util.jl")
 
@@ -191,6 +192,7 @@ module DSGE
     include("estimate/marginal_data_density.jl")
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
+
     include("estimate/smc/particle.jl")
     include("estimate/smc/initialization.jl")
     include("estimate/smc/helpers.jl")
@@ -198,6 +200,9 @@ module DSGE
     include("estimate/smc/mutation.jl")
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
+
+    include("estimate/smc.jl")
+    include("estimate/backwards_compatibility.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")

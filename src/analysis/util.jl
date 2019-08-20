@@ -131,7 +131,7 @@ load_population_growth(m; verbose = :low)
 Returns `DataFrame`s of growth rates for HP-filtered (unless
 `hpfilter_population(m) == false`) population data and forecast.
 """
-function load_population_growth(m::AbstractModel; verbose::Symbol = :low)
+function load_population_growth(m::AbstractDSGEModel; verbose::Symbol = :low)
 
     data_verbose = verbose == :none ? :none : :low
 
@@ -304,7 +304,7 @@ get_mb_metadata(m, input_type, cond_type, output_var, forecast_output_file = "";
 Returns the `metadata` dictionary from `read_forecast_metadata`, as well as
 `mb_metadata`, the dictionary that we will save to the means and bands file.
 """
-function get_mb_metadata(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function get_mb_metadata(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                          output_var::Symbol, forecast_output_file::String = "";
                          forecast_string::String = "")
 
@@ -347,7 +347,7 @@ end
 
 """
 ```
-get_y0_index(m::AbstractModel, product::Symbol)
+get_y0_index(m::AbstractDSGEModel, product::Symbol)
 ```
 
 Returns the index of the period *before* the start of saved results
@@ -358,7 +358,7 @@ period. For shockdecs, this is one period before
 `index_shockdec_start(m)`, and for histories, it is the last period of
 the presample.
 """
-function get_y0_index(m::AbstractModel, product::Symbol)
+function get_y0_index(m::AbstractDSGEModel, product::Symbol)
     if product in [:forecastut, :forecast, :bddforecastut, :bddforecast]
         return index_forecast_start(m) - 1
     elseif product in [:forecast4q, :bddforecast4q]

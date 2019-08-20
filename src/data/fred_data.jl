@@ -1,6 +1,6 @@
 """
 ```
-load_fred_data(m::AbstractModel; start_date="1959-03-31", end_date=prev_quarter())
+load_fred_data(m::AbstractDSGEModel; start_date="1959-03-31", end_date=prev_quarter())
 ```
 
 Checks in `inpath(m, raw)` for a FRED dataset corresponding to `data_vintage(m)`.
@@ -9,7 +9,7 @@ imported. All missing series will be downloaded directly from FRED using the *Fr
 package. The full dataset is written to the appropriate data vintage file and returned.
 
 # Arguments
-- `m::AbstractModel`: the model object
+- `m::AbstractDSGEModel`: the model object
 - `start_date`: starting date.
 - `end_date`: ending date.
 
@@ -18,7 +18,7 @@ package. The full dataset is written to the appropriate data vintage file and re
 The FRED API reports observations according to the quarter-start date. `load_fred_data`
 returns data indexed by quarter-end date for compatibility with other datasets.
 """
-function load_fred_data(m::AbstractModel;
+function load_fred_data(m::AbstractDSGEModel;
                         start_date::Dates.Date = Dates.Date("1959-01-01", "y-m-d"),
                         end_date::Dates.Date   = prev_quarter(),
                         verbose::Symbol  = :low)

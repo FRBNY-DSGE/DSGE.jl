@@ -30,7 +30,7 @@ the results to a file. Other methods are for one `output_var` and one `var_name`
 - `verbose`: level of error messages to be printed to screen. One of `:none`,
   `:low`, `:high`
 """
-function compute_meansbands(m::AbstractModel, input_type::Symbol,
+function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                             cond_type::Symbol, output_vars::Vector{Symbol};
                             forecast_string::String = "",
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
@@ -85,7 +85,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     end
 end
 
-function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                             output_var::Symbol, df::DataFrame;
                             forecast_string::String = "",
                             population_data::DataFrame = DataFrame(),
@@ -173,7 +173,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     return mb
 end
 
-function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                             output_var::Symbol, var_name::Symbol, df::DataFrame;
                             forecast_string::String = "",
                             pop_growth::AbstractVector{Float64} = Float64[],

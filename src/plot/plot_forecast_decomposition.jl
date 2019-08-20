@@ -10,7 +10,7 @@ forecast) necessary to call the plotting function `shockdec` in
 """
 function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
                          cond_new::Symbol, cond_old::Symbol,
-                         class::Symbol; individual_shocks::Bool = false, forecast_string_old = "", forecast_string_new = "") where M<:AbstractModel
+                         class::Symbol; individual_shocks::Bool = false, forecast_string_old = "", forecast_string_new = "") where M<:AbstractDSGEModel
     # Read in means
     input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
     decomps = JLD2.jldopen(input_file, "r") do file
@@ -134,7 +134,7 @@ The `groups` keyword argument is only used if `individual_shocks = true`.
 """
 function plot_forecast_decomposition(m_new::M, m_old::M, var::Symbol, class::Symbol,
                                      input_type::Symbol, cond_new::Symbol, cond_old::Symbol;
-                                     title::String = "", kwargs...) where M<:AbstractModel
+                                     title::String = "", kwargs...) where M<:AbstractDSGEModel
 
     plot_forecast_decomposition(m_new, m_old, [var], class, input_type, cond_new, cond_old;
                                 titles = isempty(title) ? String[] : [title], kwargs...)
@@ -147,7 +147,7 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
                                      groups::Vector{ShockGroup} = shock_groupings(m_new),
                                      plotroot::String = figurespath(m_new, "forecast"),
                                      verbose::Symbol = :low, forecast_string_new = "", forecast_string_old = "",
-                                     kwargs...) where M<:AbstractModel
+                                     kwargs...) where M<:AbstractDSGEModel
     # Create MeansBands
     mbs = make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class,
                           individual_shocks = individual_shocks, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)

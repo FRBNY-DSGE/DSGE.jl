@@ -94,7 +94,7 @@ end
 ####################
 # Grid-based utils
 ####################
-function get_grid(m::AbstractModel, grid_name::Symbol)
+function get_grid(m::AbstractDSGEModel, grid_name::Symbol)
     return m.grids[grid_name]
 end
 

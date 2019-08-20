@@ -1,6 +1,6 @@
 """
 ```
-solve(m::AbstractModel; apply_altpolicy = false)
+solve(m::AbstractDSGEModel; apply_altpolicy = false)
 ```
 
 Driver to compute the model solution and augment transition matrices.
@@ -22,7 +22,7 @@ Driver to compute the model solution and augment transition matrices.
     S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
     ```
 """
-function solve(m::AbstractModel; apply_altpolicy = false, verbose::Symbol = :high)
+function solve(m::AbstractDSGEModel; apply_altpolicy = false, verbose::Symbol = :high)
 
     altpolicy_solve = alternative_policy(m).solve
 

@@ -1,6 +1,6 @@
 name = "DSGE"
 uuid = "6cf23378-2c47-544c-b0c3-6efefe57ca11"
-authors = ["Michael Cai <michael.cai@ny.frb.org>", "Ethan Matlin <ethan.matlin@ny.frb.org>", "Rebecca Sarfati <rebecca.sarfati@ny.frb.org>"]
+authors = ["Michael Cai <michael.cai@ny.frb.org>", "Ethan Matlin <ethan.matlin@ny.frb.org>", "Reca Sarfati <rebecca.sarfati@ny.frb.org>"]
 version = "v0.7.0"
 
 [deps]
@@ -27,6 +27,7 @@ JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
 Missings = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
+ModelConstructors = "e47e5152-bd14-11e9-1b46-c951f0a7041d"
 Nullables = "4d1e1d77-625e-5b40-9113-a560ec7a8ecd"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
@@ -37,6 +38,7 @@ QuantEcon = "fcd29c91-0bd7-5a09-975d-7ac3f643a60c"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+SMC = "c6043b28-c053-11e9-348c-19d3cb73bbb3"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StateSpaceRoutines = "261fd431-d7e4-51f7-86ab-ce9e57fc1fff"
@@ -53,6 +55,8 @@ julia = "0.7, 1.0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+SMC = "c6043b28-c053-11e9-348c-19d3cb73bbb3"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["CSV", "Test", "InteractiveUtils"]
+test = ["CSV", "SMC", "Test", "InteractiveUtils"]

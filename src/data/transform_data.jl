@@ -1,6 +1,6 @@
 """
 ```
-transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol = :none,
+transform_data(m::AbstractDSGEModel, levels::DataFrame; cond_type::Symbol = :none,
     verbose::Symbol = :low)
 ```
 
@@ -25,7 +25,8 @@ of the population forecast because we treat the first forecast period
 `date_forecast_start(m)` as if it were data. We also only apply transformations
 for the observables given in `cond_full_names(m)` or `cond_semi_names(m)`.
 """
-function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol = :none, verbose::Symbol = :low)
+function transform_data(m::AbstractDSGEModel, levels::DataFrame;
+                        cond_type::Symbol = :none, verbose::Symbol = :low)
 
     n_obs, _ = size(levels)
 

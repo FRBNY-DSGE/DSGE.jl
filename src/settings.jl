@@ -1,4 +1,4 @@
-"""
+#="""
 ```
 Setting{T}
 ```
@@ -48,11 +48,11 @@ end
 
 """
 ```
-(<=)(m::AbstractModel, s::Setting)
+(<=)(m::AbstractDSGEModel, s::Setting)
 ```
 Syntax for adding a setting to a model/overwriting a setting via `m <= Setting(...)`
 """
-function (<=)(m::AbstractModel, s::Setting)
+function (<=)(m::AbstractDSGEModel, s::Setting)
     if !m.testing
         setting_field_name = :settings
     else
@@ -109,15 +109,16 @@ end
 
 """
 ```
-get_setting(m::AbstractModel, setting::Symbol)
+get_setting(m::AbstractDSGEModel, setting::Symbol)
 ```
 
 Returns the value of the setting
 """
-function get_setting(m::AbstractModel, s::Symbol)
+function get_setting(m::AbstractDSGEModel, s::Symbol)
     if m.testing && in(s, keys(m.test_settings))
         return m.test_settings[s].value
     else
         return m.settings[s].value
     end
 end
+=#

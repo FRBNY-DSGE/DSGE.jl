@@ -21,7 +21,7 @@ one `output_var` and one `var_name` respectively.
 - `density_bands::Vector{Float64}`: a vector of percent values (between 0 and 1) for
   which to compute density bands
 """
-function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
+function scenario_means_bands(m::AbstractDSGEModel, scen::AbstractScenario,
                               output_vars::Vector{Symbol} = [:forecastutobs, :forecastutpseudo,
                                                              :forecastobs, :forecastpseudo,
                                                              :forecast4qobs, :forecast4qpseudo];
@@ -55,7 +55,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
     println(verbose, :low, "Computation of means and bands complete: " * string(now()))
 end
 
-function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_var::Symbol; kwargs...)
+function scenario_means_bands(m::AbstractDSGEModel, scen::AbstractScenario, output_var::Symbol; kwargs...)
     # Read metadata
     metadata = get_scenario_mb_metadata(m, scen, output_var)
     date_list = collect(keys(metadata[:date_inds]))
@@ -87,7 +87,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
     return mb
 end
 
-function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_var::Symbol,
+function scenario_means_bands(m::AbstractDSGEModel, scen::AbstractScenario, output_var::Symbol,
                               var_name::Symbol; minimize::Bool = false,
                               density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9])
     # Determine class and product

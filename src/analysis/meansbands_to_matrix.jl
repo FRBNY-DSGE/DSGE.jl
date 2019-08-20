@@ -6,7 +6,7 @@ Reformat `MeansBands` object into matrices, and save to individual files.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 - `input_type::Symbol`: same as input into `forecast_one`
 - `cond_type::Symbol`: same as input into `forecast_one`
 - `output_vars::Symbol`: same as input into `forecast_one`
@@ -18,7 +18,7 @@ Reformat `MeansBands` object into matrices, and save to individual files.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
-function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
+function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
                               cond_type::Symbol, output_vars::Vector{Symbol};
                               forecast_string::String = "", verbose::Symbol = :low)
 
@@ -39,7 +39,7 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
     println(verbose, :low, "\nConversion of means and bands complete: $(now())")
 end
 
-function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
+function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
                               cond_type::Symbol, output_var::Symbol;
                               forecast_string::String = "", verbose::Symbol = :low)
 
@@ -137,4 +137,3 @@ function meansbands_to_matrix(mb::MeansBands)
     # return matrix
     return means, bands
 end
-

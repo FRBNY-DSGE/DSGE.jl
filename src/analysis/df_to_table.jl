@@ -9,7 +9,7 @@ specified to be true with `table_caption`, `filename`, and `savedir` also specif
 `construct_fcast_and_hist_dfs` will save the DataFrames as LaTeX tables in the specified directory.
 
 ### Arguments
-- `m::AbstractModel`: The model object that was used for the forecast.
+- `m::AbstractDSGEModel`: The model object that was used for the forecast.
 - `cond_type::Symbol`: The conditioning of the forecast.
 - `vars::Vector{Symbol}`: The vector of forecasted variables (can be any combination of observables or pseudo-observables) from which to construct the table.
 
@@ -21,7 +21,7 @@ specified to be true with `table_caption`, `filename`, and `savedir` also specif
 - `hist_start::Date`: The date from which to start the historical table.
 - `forecast_end::Date`: The date from which to end the forecast table.
 """
-function construct_fcast_and_hist_dfs(m::AbstractModel, cond_type::Symbol,
+function construct_fcast_and_hist_dfs(m::AbstractDSGEModel, cond_type::Symbol,
                                       vars::Vector{Symbol};
                                       save_to_table::Bool = false,
                                       table_caption::String = "",
@@ -236,7 +236,7 @@ end
 
 # Rename keys in the obs dictionaries
 # So that the DataFrame has LaTeX conformant names
-function create_table_header_mappings(m::AbstractModel, vars::Vector{Symbol})
+function create_table_header_mappings(m::AbstractDSGEModel, vars::Vector{Symbol})
     obs_keys = m.observables.keys
     header_mappings = OrderedDict{Symbol, Symbol}()
     for var in vars
@@ -250,7 +250,7 @@ function create_table_header_mappings(m::AbstractModel, vars::Vector{Symbol})
 end
 
 # Defining the units for the variables included
-function unit_mappings(m::AbstractModel, df::DataFrame,
+function unit_mappings(m::AbstractDSGEModel, df::DataFrame,
                        header_mappings::OrderedDict{Symbol, Symbol}; use_4q::Bool = false)
     units = OrderedDict{Symbol, String}()
     quarter = use_4q ? "Q4" : "Q"

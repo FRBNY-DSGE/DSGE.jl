@@ -1,10 +1,28 @@
-using DSGE
+using DSGE, ModelConstructors
 using Distributions, Test, LinearAlgebra
 
+m = AnSchorfheide()
+# not moved below here
+# prior
+priordensity = exp(DSGE.prior(m))
+@testset "Ensure prior density is a density" begin
+    @test 0 <= priordensity <= 1
+end
+
+
+# Pseudo-measurement equation matrices in Systems
+system = compute_system(m)
+system[:ZZ_pseudo]
+system[:DD_pseudo]
+
+nothing
+
+
+# Below have all been moved to ModelConstructors.jl
 # Test Parameter type
 
 # UnscaledParameter, fixed=false
-α =  parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), Normal(0.30, 0.05), fixed=false)
+#=α =  parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), Normal(0.30, 0.05), fixed=false)
 @testset "Test non-fixed UnscaledParameter" begin
     @test isa(α, UnscaledParameter)
     @test α.key == :α
@@ -12,20 +30,20 @@ using Distributions, Test, LinearAlgebra
     @test α.prior.value.μ == 0.3
     @test α.description == "No description available."
     @test α.tex_label == ""
-    @test isa(α.transform, DSGE.SquareRoot)
+    @test isa(α.transform, ModelConstructors.SquareRoot)
 end
 
 # UnscaledParameter, fixed = true
-α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), DSGE.Untransformed(), Normal(0.30, 0.05), fixed=true)
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.Untransformed(), Normal(0.30, 0.05), fixed=true)
 @testset "Test fixed UnscaledParameter" begin
     @test α_fixed.transform_parameterization == (0.1596,0.1596)
-    @test isa(α_fixed.transform, DSGE.Untransformed)
+    @test isa(α_fixed.transform, ModelConstructors.Untransformed)
 end
 
 # UnscaledParameter, fixed = true, transform should be overwritten given fixed
-α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), Normal(0.30, 0.05), fixed=true)
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), Normal(0.30, 0.05), fixed=true)
 @testset "Test fixed UnscaledParameter, ensuring transform is overwritten" begin
-    @test isa(α_fixed.transform, DSGE.Untransformed)
+    @test isa(α_fixed.transform, ModelConstructors.Untransformed)
 end
 
 # Fixed UnscaledParameter, minimal constructor
@@ -37,11 +55,11 @@ end
 end
 
 # Scaled parameter
-β = parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.25, 0.1), fixed=false,  scaling = x -> (1 + x/100)\1, description="β: Discount rate.", tex_label="\\beta ")
+β = parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(), GammaAlt(0.25, 0.1), fixed=false,  scaling = x -> (1 + x/100)\1, description="β: Discount rate.", tex_label="\\beta ")
 @testset "Test ScaledParameter constructor" begin
     @test isa(β, ScaledParameter)
     @test isa(β.prior.value, Gamma)
-    @test isa(β.transform, DSGE.Exponential)
+    @test isa(β.transform, ModelConstructors.Exponential)
 end
 
 # Invalid transform
@@ -98,11 +116,6 @@ end
     end
 end
 
-# prior
-priordensity = exp(prior(m))
-@testset "Ensure prior density is a density" begin
-    @test 0 <= priordensity <= 1
-end
 
 # settings
 # settings - boolean, string, and number. adding to model. overwriting. filestrings. testing/not testing.
@@ -120,14 +133,14 @@ vint = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constr
     @test get_setting(m, :n_mh_blocks) == m.settings[:n_mh_blocks].value
     m.testing = true
     @test get_setting(m, :n_mh_blocks) == m.test_settings[:n_mh_blocks].value
-    @test DSGE.filestring(m) == "_test"
+    @test ModelConstructors.filestring(m) == "_test"
 
     m.testing = false
     m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
     @test m.settings[:n_mh_blocks].value == 5
-    @test occursin(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
-    DSGE.filestring(m, "key=val")
-    DSGE.filestring(m, ["key=val", "foo=bar"])
+    @test occursin(r"^\s*_mhbk=5_vint=(\d{6})", ModelConstructors.filestring(m))
+    ModelConstructors.filestring(m, "key=val")
+    ModelConstructors.filestring(m, ["key=val", "foo=bar"])
     m.testing = true
 
     # Overwriting settings
@@ -156,11 +169,4 @@ addl_strings = ["foo=bar", "hat=head", "city=newyork"]
         @eval $(fn)(m, "test", "temp")
         @eval $(fn)(m, "test", "temp", addl_strings)
     end
-end
-
-# Pseudo-measurement equation matrices in Systems
-system = compute_system(m)
-system[:ZZ_pseudo]
-system[:DD_pseudo]
-
-nothing
+end=#

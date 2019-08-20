@@ -7,7 +7,7 @@ For calculating the log marginal data density for a given posterior sample.
 
 ### Inputs
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `data::Matrix{Float64}`
 
 ### Keyword Arguments
@@ -16,7 +16,7 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 """
-function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
+function marginal_data_density(m::AbstractDSGEModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
                                parallel::Bool = false)
@@ -255,7 +255,7 @@ function marginal_data_density_weighted(params::Matrix{Float64},
 end
 
 
-function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
+function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
                                parallel::Bool = false)
     if estimation_method == :mh && calculation_method == :incremental_weights

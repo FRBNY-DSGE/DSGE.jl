@@ -5,7 +5,7 @@ get_scenario_input_file(m, scen::Scenario)
 
 Get file name of raw scenario targets from `inpath(m, \"scenarios\")`.
 """
-function get_scenario_input_file(m::AbstractModel, scen::Scenario)
+function get_scenario_input_file(m::AbstractDSGEModel, scen::Scenario)
     basename = string(scen.key) * "_" * scen.vintage * ".jld2"
     return inpath(m, "scenarios", basename)
 end
@@ -19,7 +19,7 @@ Return the number of draws for `scen`, determined using
 `get_scenario_input_file(m, scen)`, and update the
 `n_draws` field of `scen` with this count.
 """
-function count_scenario_draws!(m::AbstractModel, scen::Scenario)
+function count_scenario_draws!(m::AbstractDSGEModel, scen::Scenario)
     input_file = get_scenario_input_file(m, scen)
     draws = JLD2.jldopen(input_file, "r") do file
         dataset = read(file, "arr")
@@ -37,7 +37,7 @@ load_scenario_targets!(m, scen::Scenario, draw_index)
 Add the targets from the `draw_index`th draw of the raw scenario targets to
 `scen.targets`.
 """
-function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::Int)
+function load_scenario_targets!(m::AbstractDSGEModel, scen::Scenario, draw_index::Int)
     if isempty(scen.target_names)
         n_periods = forecast_horizons(m)
         for target in keys(m.observables)
@@ -78,7 +78,7 @@ Get scenario file name of the form
 `directory` is provided (nonempty), then the same file name in that directory
 will be returned instead.
 """
-function get_scenario_filename(m::AbstractModel, scen::AbstractScenario, output_var::Symbol;
+function get_scenario_filename(m::AbstractDSGEModel, scen::AbstractScenario, output_var::Symbol;
                                pathfcn::Function = rawpath,
                                fileformat::Symbol = :jld2,
                                directory::String = "")
@@ -106,7 +106,7 @@ get_scenario_output_files(m, scen::SingleScenario, output_vars)
 Return a `Dict{Symbol, String}` mapping `output_vars` to the raw simulated
 scenario outputs for `scen`.
 """
-function get_scenario_output_files(m::AbstractModel, scen::SingleScenario,
+function get_scenario_output_files(m::AbstractDSGEModel, scen::SingleScenario,
                                    output_vars::Vector{Symbol})
     output_files = Dict{Symbol, String}()
     for var in output_vars
@@ -123,7 +123,7 @@ get_scenario_mb_input_file(m, scen::AbstractScenario, output_var)
 Call `get_scenario_filename` while replacing `forecastut` and `forecast4q` in
 `output_var` with `forecast`.
 """
-function get_scenario_mb_input_file(m::AbstractModel, scen::AbstractScenario, output_var::Symbol)
+function get_scenario_mb_input_file(m::AbstractDSGEModel, scen::AbstractScenario, output_var::Symbol)
     input_file = get_scenario_filename(m, scen, output_var)
     input_file = replace(input_file, "forecastut" => "forecast")
     input_file = replace(input_file, "forecast4q" => "forecast")
@@ -139,7 +139,7 @@ get_scenario_mb_output_file(m, scen::AbstractScenario, output_var;
 Call `get_scenario_filename` while tacking on `\"mb\"` to the front of the base
 file name.
 """
-function get_scenario_mb_output_file(m::AbstractModel, scen::AbstractScenario, output_var::Symbol;
+function get_scenario_mb_output_file(m::AbstractDSGEModel, scen::AbstractScenario, output_var::Symbol;
                                      directory::String = "")
     fullfile = get_scenario_filename(m, scen, output_var, pathfcn = workpath, directory = directory)
     joinpath(dirname(fullfile), "mb" * basename(fullfile))
@@ -154,7 +154,7 @@ get_scenario_mb_metadata(m, agg::ScenarioAggregate, output_var)
 
 Return the `MeansBands` metadata dictionary for `scen`.
 """
-function get_scenario_mb_metadata(m::AbstractModel, scen::SingleScenario, output_var::Symbol)
+function get_scenario_mb_metadata(m::AbstractDSGEModel, scen::SingleScenario, output_var::Symbol)
     forecast_output_file = get_scenario_mb_input_file(m, scen, output_var)
     metadata = get_mb_metadata(m, :mode, :none, output_var, forecast_output_file)
     metadata[:scenario_key] = scen.key
@@ -163,7 +163,7 @@ function get_scenario_mb_metadata(m::AbstractModel, scen::SingleScenario, output
     return metadata
 end
 
-function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, output_var::Symbol)
+function get_scenario_mb_metadata(m::AbstractDSGEModel, agg::ScenarioAggregate, output_var::Symbol)
     forecast_output_file = get_scenario_mb_input_file(m, agg.scenarios[1], output_var)
     metadata = get_mb_metadata(m, :mode, :none, output_var, forecast_output_file)
 
@@ -206,7 +206,7 @@ appropriate reverse transform for `var_name`.
 
 The third function that takes in two models is used for when we have scenarios from two different models.
 """
-function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Symbol, product::Symbol,
+function read_scenario_output(m::AbstractDSGEModel, scen::SingleScenario, class::Symbol, product::Symbol,
                               var_name::Symbol)
     # Get filename
     filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
@@ -232,7 +232,7 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
     end
 end
 
-function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::ScenarioAggregate, class::Symbol,
+function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
@@ -308,7 +308,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
 end
 
 
-function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::ScenarioAggregate, class::Symbol,
+function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
@@ -384,7 +384,7 @@ function read_scenario_output(m::AbstractModel, m904::AbstractModel, agg::Scenar
     return fcast_series, transform
 end
 
-function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::Symbol,
+function read_scenario_output(m::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
@@ -458,7 +458,7 @@ read_scenario_mb(m, scen::AbstractScenario, output_var; directory = "")
 
 Read in an alternative scenario `MeansBands` object.
 """
-function read_scenario_mb(m::AbstractModel, scen::AbstractScenario, output_var::Symbol;
+function read_scenario_mb(m::AbstractDSGEModel, scen::AbstractScenario, output_var::Symbol;
                           directory::String = "")
     filepath = get_scenario_mb_output_file(m, scen, output_var, directory = directory)
     read_mb(filepath)

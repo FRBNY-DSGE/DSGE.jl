@@ -1,6 +1,6 @@
 """
 ```
-transform_transition_matrices(m::AbstractModel, T::Matrix{T},
+transform_transition_matrices(m::AbstractDSGEModel, T::Matrix{T},
                               R::Matrix{T}, C::Matrix{T}) where {T<:AbstractFloat}
 ```
 
@@ -16,7 +16,7 @@ transform_transition_matrices(m::AbstractModel, T::Matrix{T},
 
 ### Description
 """
-function transform_transition_matrices(m::AbstractModel, TT::Matrix{T},
+function transform_transition_matrices(m::AbstractDSGEModel, TT::Matrix{T},
                                        R::Matrix{T}, C::Vector{T};
                                        track_lag::Bool = true) where {T<:AbstractFloat}
 

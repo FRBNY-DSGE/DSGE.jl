@@ -18,7 +18,7 @@ This is useful for seeing the evolution of forecasts with respect to the true re
 - `models::AbstractVector`: A vector of model objects with the correct vintage/saveroot settings from which to load the sequence of forecast MeansBands.
 - `input_types::Vector{Symbol}`: A vector of the input types of each of the forecasts that were run.
 - `cond_types::Vector{Symbol}`: A vector of the cond types of each of the forecasts that were run.
-- `model_realized::AbstractModel`: The model object from which to load the historical realization/smoothed history of the series to compare to the forecasts.
+- `model_realized::AbstractDSGEModel`: The model object from which to load the historical realization/smoothed history of the series to compare to the forecasts.
 - `input_type_realized::Symbol`: The input type from which the historical realization/smoothed history was generated.
 - `cond_type_realized::Symbol`: The cond type from which the historical realization/smoothed history was generated.
 - `class::Symbol`: The class, either :obs or :pseudo, that `forecast_var` belongs to.
@@ -36,7 +36,7 @@ This is useful for seeing the evolution of forecasts with respect to the true re
 function plot_forecast_sequence(models::AbstractVector,
                                 input_types::Vector{Symbol},
                                 cond_types::Vector{Symbol},
-                                model_realized::AbstractModel,
+                                model_realized::AbstractDSGEModel,
                                 input_type_realized::Symbol,
                                 cond_type_realized::Symbol,
                                 class::Symbol,

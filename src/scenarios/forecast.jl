@@ -9,7 +9,7 @@ to model `m` and alternative scenario `scen`. This function differs from
 zero (since we forecast in deviations from baseline) and shocks that are not in
 `scen.instrument_names` are zeroed out in the `QQ` matrix.
 """
-function compute_scenario_system(m::AbstractModel, scen::Scenario;
+function compute_scenario_system(m::AbstractDSGEModel, scen::Scenario;
                                  apply_altpolicy::Bool = false)
 
     system = compute_system(m, apply_altpolicy = apply_altpolicy)
@@ -48,7 +48,7 @@ shocks.
 This function checks `forecast_uncertainty_override(m)` for whether to smooth
 shocks using the simulation smoother.
 """
-function filter_shocks!(m::AbstractModel, scen::Scenario, system::System, in_sample::Bool = false)
+function filter_shocks!(m::AbstractDSGEModel, scen::Scenario, system::System, in_sample::Bool = false)
     # Check applicability of this methodology
     @assert n_instruments(scen) >= n_targets(scen) "Number of instruments must be at least number of targets"
 
@@ -83,7 +83,7 @@ forecast_scenario_draw(m, scen::Scenario, system, draw_index)
 
 Filter shocks and use them to forecast the `draw_index`th draw of `scen`.
 """
-function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System,
+function forecast_scenario_draw(m::AbstractDSGEModel, scen::Scenario, system::System,
                                 draw_index::Int)
     # Re-initialize model indices in case extra states or equations were added
     # for an alternative policy
@@ -136,7 +136,7 @@ write_scenario_forecasts(m, scenario_output_files, forecast_output;
 
 Write scenario outputs in `forecast_output` to `values(scenario_output_files)`.
 """
-function write_scenario_forecasts(m::AbstractModel,
+function write_scenario_forecasts(m::AbstractDSGEModel,
                                   scenario_output_files::Dict{Symbol, String},
                                   forecast_output::Dict{Symbol, Array{Float64}};
                                   verbose::Symbol = :low)
@@ -162,7 +162,7 @@ forecast_scenario(m, scen::Scenario; verbose = :low)
 Simulate all draws of `scen` using the modal parameters of the model `m`. This
 function returns a `Dict{Symbol, Array{Float64}`.
 """
-function forecast_scenario(m::AbstractModel, scen::Scenario;
+function forecast_scenario(m::AbstractDSGEModel, scen::Scenario;
                            verbose::Symbol = :low)
     # Print
     info_print(verbose, :low, "Forecasting scenario = " * string(scen.key) * "...")

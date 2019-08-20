@@ -10,7 +10,7 @@ function taylor93()
     AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve, color = RGB(1., 0., 0.))
 end
 
-function taylor93_eqcond(m::AbstractModel)
+function taylor93_eqcond(m::AbstractDSGEModel)
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = eqcond(m)
 
@@ -33,7 +33,7 @@ function taylor93_eqcond(m::AbstractModel)
     return Γ0, Γ1, C, Ψ, Π
 end
 
-function taylor93_solve(m::AbstractModel)
+function taylor93_solve(m::AbstractDSGEModel)
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π = taylor93_eqcond(m)
 

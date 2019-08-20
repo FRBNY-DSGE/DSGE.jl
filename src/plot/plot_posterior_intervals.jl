@@ -2,7 +2,7 @@
 # then it is meant to indicate the ordering of blocks for visual comparison.
 # I.e. if param_range 1:10 corresponds to the first block, and 11:20 corresponds to the
 # second block then the files will be aptly named ...block=1.pdf, ...block=2.pdf
-function plot_posterior_intervals(m::AbstractModel; cloud::ParticleCloud = ParticleCloud(m, 0),
+function plot_posterior_intervals(m::AbstractDSGEModel; cloud::ParticleCloud = ParticleCloud(m, 0),
                                   df::DataFrame = DataFrame(),
                                   plotroot::String = figurespath(m, "estimate"),
                                   verbose::Symbol = :low, label::String = "", title::String
@@ -49,7 +49,7 @@ end
 
 # Calculate the posterior intervals averaged over the estimations in the
 # clouds vector
-function plot_posterior_intervals(m::AbstractModel, clouds::Vector{ParticleCloud};
+function plot_posterior_intervals(m::AbstractDSGEModel, clouds::Vector{ParticleCloud};
                                   plotroot::String = figurespath(m, "estimate"),
                                   verbose::Symbol = :low, label::String = "",
                                   title::String = isempty(label) ? "" : "$label Posterior Intervals",
@@ -69,8 +69,8 @@ end
 # then it is meant to indicate the ordering of blocks for visual comparison.
 # I.e. if param_range 1:35 corresponds to the first block, and 36:68 corresponds to the
 # second block then the files will be aptly named ...b1.pdf, ...b2.pdf
-function plot_posterior_interval_comparison(m_baseline::AbstractModel,
-                                            m_comparison::AbstractModel;
+function plot_posterior_interval_comparison(m_baseline::AbstractDSGEModel,
+                                            m_comparison::AbstractDSGEModel;
                                             cloud_baseline::ParticleCloud = ParticleCloud(m_baseline, 0),
                                             cloud_comparisons::Vector{ParticleCloud} = [ParticleCloud(m_comparison, 0)],
                                             df_baseline::DataFrame = DataFrame(),
@@ -184,8 +184,8 @@ end
 
 # Calculate the posterior intervals averaged over the estimations in the
 # clouds vectors
-function plot_posterior_interval_comparison(m_baseline::AbstractModel,
-                                            m_comparison::AbstractModel,
+function plot_posterior_interval_comparison(m_baseline::AbstractDSGEModel,
+                                            m_comparison::AbstractDSGEModel,
                                             clouds_baseline::Vector{ParticleCloud},
                                             clouds_comparisons::Vector{Vector{ParticleCloud}};
                                             plotroot::String = figurespath(m_baseline, "estimate"),

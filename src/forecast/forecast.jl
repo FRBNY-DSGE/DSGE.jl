@@ -16,7 +16,7 @@ forecast(system, z0, shocks; enforce_zlb = false)
 
 **Method 1 only:**
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 
 where `S<:AbstractFloat`.
 
@@ -52,7 +52,7 @@ where `S<:AbstractFloat`.
   pseudo-observables
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
-function forecast(m::AbstractModel, system::System{S},
+function forecast(m::AbstractDSGEModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
 

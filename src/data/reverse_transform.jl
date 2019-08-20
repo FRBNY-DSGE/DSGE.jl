@@ -10,7 +10,7 @@ reverse_transform(path, class, product, var, rev_transform;
 
 Methods that take a single draw of a forecast output that is already in memory:
 ```
-reverse_transform(m::AbstractModel, untransformed::Matrix, start_date,
+reverse_transform(m::AbstractDSGEModel, untransformed::Matrix, start_date,
                            row_labels, class; fourquarter = false,
                            verbose = :low)
 
@@ -48,7 +48,7 @@ series. This method is called by the higher-level functions as well as
 `compute_means_bands`.
 
 ## Inputs
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `input_type::Symbol`: see `?forecast_one`
 - `cond_type::Symbol`: see `?forecast_one`
 - `class::Symbol`: Indicates whether the reverse transform should be
@@ -73,7 +73,7 @@ series. This method is called by the higher-level functions as well as
   data. This is required when the reverse transform associated with
   `untransformed` or `y` adjusts for population.
 """
-function reverse_transform(m::AbstractModel, untransformed::AbstractArray, start_date::Dates.Date,
+function reverse_transform(m::AbstractDSGEModel, untransformed::AbstractArray, start_date::Dates.Date,
                            vars::Vector{Symbol}, class::Symbol;
                            fourquarter::Bool = false,
                            verbose::Symbol = :low)
@@ -90,7 +90,7 @@ function reverse_transform(m::AbstractModel, untransformed::AbstractArray, start
     reverse_transform(m, df, class; fourquarter = fourquarter, verbose = verbose)
 end
 
-function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Symbol;
+function reverse_transform(m::AbstractDSGEModel, untransformed::DataFrame, class::Symbol;
                            fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
     @assert (:date in names(untransformed)) "untransformed must have a date column"
@@ -173,7 +173,7 @@ function reverse_transform(y::AbstractArray, rev_transform::Function;
     end
 end
 
-function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function reverse_transform(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                            class::Symbol, product::Symbol, vars::Vector{Symbol};
                            forecast_string = "", fourquarter::Bool = false, verbose::Symbol = :low)
     # Figure out dates
