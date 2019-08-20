@@ -51,6 +51,7 @@ julia = "0.7, 1.0"
 
 [extras]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
