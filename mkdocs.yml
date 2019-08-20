@@ -1,4 +1,6 @@
 site_name: DSGE
+site_url: https://frbny-dsge.github.io/DSGE.jl/latest
+site_author: FRBNY-DSGE
 
 repo_url: https://github.com/FRBNY-DSGE/DSGE.jl.git
 
