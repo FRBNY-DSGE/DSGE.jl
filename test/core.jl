@@ -1,10 +1,28 @@
 using DSGE, ModelConstructors
 using Distributions, Test, LinearAlgebra
 
+m = AnSchorfheide()
+# not moved below here
+# prior
+priordensity = exp(DSGE.prior(m))
+@testset "Ensure prior density is a density" begin
+    @test 0 <= priordensity <= 1
+end
+
+
+# Pseudo-measurement equation matrices in Systems
+system = compute_system(m)
+system[:ZZ_pseudo]
+system[:DD_pseudo]
+
+nothing
+
+
+# Below have all been moved to ModelConstructors.jl
 # Test Parameter type
 
 # UnscaledParameter, fixed=false
-α =  parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), Normal(0.30, 0.05), fixed=false)
+#=α =  parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), Normal(0.30, 0.05), fixed=false)
 @testset "Test non-fixed UnscaledParameter" begin
     @test isa(α, UnscaledParameter)
     @test α.key == :α
@@ -98,11 +116,6 @@ end
     end
 end
 
-# prior
-priordensity = exp(DSGE.prior(m))
-@testset "Ensure prior density is a density" begin
-    @test 0 <= priordensity <= 1
-end
 
 # settings
 # settings - boolean, string, and number. adding to model. overwriting. filestrings. testing/not testing.
@@ -156,11 +169,4 @@ addl_strings = ["foo=bar", "hat=head", "city=newyork"]
         @eval $(fn)(m, "test", "temp")
         @eval $(fn)(m, "test", "temp", addl_strings)
     end
-end
-
-# Pseudo-measurement equation matrices in Systems
-system = compute_system(m)
-system[:ZZ_pseudo]
-system[:DD_pseudo]
-
-nothing
+end=#
