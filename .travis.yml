@@ -5,7 +5,7 @@ os:
     # by downloading all of xcode which Travis CI then kills because it takes too long.
     # Refer to Matt Bauman's comment on JuliaIO/HDF5.jl issue 483, and
     # Andreas Noack's issue 27751 on Homebrew/homebrew-core.
-    # - osx
+    - osx
     - linux
 julia:
     - 0.7.0
@@ -24,8 +24,8 @@ branches:
     - master
     - gh-pages
 after_success:
+- julia -e 'Pkg.add("Documenter")'
 - julia -e 'cd(Pkg.dir("DSGE")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
-# - julia -e 'Pkg.add("Documenter")'
 - julia -e 'cd(Pkg.dir("DSGE")); include(joinpath("docs", "make.jl"))'
 
 jobs:
