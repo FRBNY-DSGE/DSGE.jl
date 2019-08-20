@@ -11,11 +11,11 @@ julia:
     - 0.7.0
 notifications:
     email: false
-addons:
-  apt:
-    packages:
-    - hdf5-tools
-    - libnlopt0
+# addons:
+#   apt:
+#     packages:
+#     - hdf5-tools
+#     - libnlopt0
 # script:
 #     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #     - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'

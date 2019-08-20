@@ -38,12 +38,12 @@ makedocs(modules = [DSGE],
 # end
 deploydocs(
     repo = "github.com/FRBNY-DSGE/DSGE.jl.git",
-    target = "build",
-    deps = nothing,
-    devbranch = "master",
-    branch = "gh-pages",
+    # target = "build",
+    # deps = nothing,
+    # devbranch = "master",
+    # branch = "gh-pages",
     # versions = "v#",
     # julia = "0.7",
     # osname = "osx",
-    make = nothing
+    # make = nothing
 )
