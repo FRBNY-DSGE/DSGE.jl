@@ -50,7 +50,7 @@ new_particles = [DSGE.mutation(m, data, old_part_cloud.particles[j, :], d.μ, Ma
                           c = c, α = α, old_data = old_data) for j = 1:n_parts]
 
 if write_test_output
-    #=JLD.jldopen("reference/mutation_outputs.jld", "w") do file
+    #=JLD.jldopen("$path/../../reference/mutation_outputs.jld", "w") do file
     write(file, "particles", new_particles)
     end =#
     JLD2.jldopen("$path/../../reference/mutation_outputs.jld2", "w") do file

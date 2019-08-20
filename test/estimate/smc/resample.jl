@@ -1,13 +1,13 @@
 @everywhere Random.seed!(42)
 weights = rand(400)
 weights = weights/sum(weights)
-test_sys_resample = DSGE.resample(weights, method = :systematic)
-test_multi_resample = DSGE.resample(weights, method = :multinomial)
-test_poly_resample = DSGE.resample(weights, method = :polyalgo)
+test_sys_resample = SMC.resample(weights, method = :systematic)
+test_multi_resample = SMC.resample(weights, method = :multinomial)
+test_poly_resample = SMC.resample(weights, method = :polyalgo)
 
-saved_sys_resample = load("reference/resample.jld2", "sys")
-saved_multi_resample = load("reference/resample.jld2", "multi")
-saved_poly_resample = load("reference/resample.jld2", "poly")
+saved_sys_resample = load("$path/../../reference/resample.jld2", "sys")
+saved_multi_resample = load("$path/../../reference/resample.jld2", "multi")
+saved_poly_resample = load("$path/../../reference/resample.jld2", "poly")
 
 ####################################################################
 @testset "Resampling methods" begin
