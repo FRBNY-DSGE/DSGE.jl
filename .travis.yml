@@ -16,9 +16,9 @@ addons:
     packages:
     - hdf5-tools
     - libnlopt0
-script:
-    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'
+# script:
+#     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+#     - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'
 branches:
   only:
     - master
@@ -34,7 +34,7 @@ jobs:
       julia: 0.7
       os: linux
       script:
-        - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd()));
+        - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.build("DSGE");
                                                Pkg.instantiate()'
         - julia --project=docs/ docs/make.jl
       after_success: skip
