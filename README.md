@@ -18,7 +18,7 @@ above. Documentation for the most recent *model version* is available
 
 The New York Fed DSGE team is currently extending the code to solve and estimate
 heterogeneous agent models.
-Ongoing work on implementing Sequential Monte Carlo (SMC) sampling can be found on the `smc` branch.
+An implementation of Sequential Monte Carlo (SMC) sampling can be found in the registered package [SMC](https://github.com/FRBNY-DSGE/SMC.jl).
 Further extensions of the DSGE model code may be released in the future at the discretion
 of the New York Fed.
 
@@ -27,9 +27,12 @@ of the New York Fed.
 `DSGE.jl` is a registered Julia package. To install it, open your Julia REPL and run
 
 ```julia
-julia> Pkg.add("DSGE")
+julia> ] add DSGE
+pkg> add DSGE
 ```
 # Versioning
+
+`DSGE.jl` is currently compatible with 0.7. Official compatibility with 1.0 is imminent.
 
 To use `DSGE.jl` with Julia version 0.6, please check out tag
 0.4.1. To do this, click on the drop-down menu that reads `branch:
