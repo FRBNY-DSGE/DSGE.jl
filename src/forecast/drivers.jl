@@ -9,7 +9,7 @@ necessary.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 - `input_type::Symbol`: See `?forecast_one`.
 - `cond_type::Symbol`: See `?forecast_one`.
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See
@@ -29,7 +29,7 @@ necessary.
 - `output_vars`
 - `df`
 """
-function prepare_forecast_inputs!(m::AbstractModel{S},
+function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
     verbose::Symbol = :none) where {S<:AbstractFloat}
@@ -86,7 +86,7 @@ Load and return parameter draws from Metropolis-Hastings or SMC.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 - `input_type::Symbol`: one of the options for `input_type` described in the
   documentation for `forecast_one`
 - `block_inds::AbstractRange{Int64}`: indices of the current block (already indexed by
@@ -106,7 +106,7 @@ Load and return parameter draws from Metropolis-Hastings or SMC.
   `Vector{Float64}`. Second method returns a `Vector{Vector{Float64}}` of
   parameter draws for this block.
 """
-function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
+function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
                     verbose::Symbol = :low,
                     filestring_addl::Vector{String} = Vector{String}(undef, 0))
 
@@ -178,7 +178,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     return params
 end
 
-function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRange{Int64};
+function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::AbstractRange{Int64};
                     verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0))
 
     input_file_name = get_forecast_input_file(m, input_type)
@@ -257,7 +257,7 @@ conditional data case given by `cond_type`.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 
 - `input_type::Symbol`: one of:
 
@@ -302,7 +302,7 @@ conditional data case given by `cond_type`.
 None. Output is saved to files returned by
 `get_forecast_output_files(m, input_type, cond_type, output_vars)`.
 """
-function forecast_one(m::AbstractModel{Float64},
+function forecast_one(m::AbstractDSGEModel{Float64},
                       input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                       df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
                       forecast_string::String = "", verbose::Symbol = :low,
@@ -426,7 +426,7 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 
 ### Inputs
 
-- `m::AbstractModel{Float64}`: model object
+- `m::AbstractDSGEModel{Float64}`: model object
 - `input_type::Symbol`: See `?forecast_one`.
 - `cond_type::Symbol`: See `?forecast_one`.
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
@@ -471,7 +471,7 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
   - `:irfpseudo`: `Array{Float64, 3}` of pseudo-observable impulse responses
 ```
 """
-function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_type::Symbol,
+function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, cond_type::Symbol,
                            output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low,
                            use_filtered_shocks_in_shockdec::Bool = false,
                            shock_name::Symbol = :none,

@@ -1,6 +1,6 @@
 """
 ```
-augment_states(m::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where {T<:AbstractFloat}
+augment_states(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where {T<:AbstractFloat}
 ```
 
 ### Arguments

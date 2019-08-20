@@ -14,7 +14,7 @@ Plot `var` or `vars` forecasts under the alternative policies in `models`.
 
 ### Inputs
 
-- `models::Vector{AbstractModel}`: vector of models, where each model has a
+- `models::Vector{AbstractDSGEModel}`: vector of models, where each model has a
   different alternative policy
 - `var::Symbol` or `vars::Vector{Symbol}`: variable(s) to be plotted,
   e.g. `:obs_gdp` or `[:obs_gdp, :obs_nominalrate]`
@@ -38,7 +38,7 @@ into `plot_altpolicies`.
 """
 function plot_altpolicies(models::Vector{T}, var::Symbol, class::Symbol,
                           cond_type::Symbol; title::String = "",
-                          kwargs...) where {T<:AbstractModel}
+                          kwargs...) where {T<:AbstractDSGEModel}
     plots = plot_altpolicies(models, [var], class, cond_type;
                              title = isempty(title) ? String[] : [title],
                              kwargs...)
@@ -56,7 +56,7 @@ function plot_altpolicies(models::Vector{T}, vars::Vector{Symbol}, class::Symbol
                           plotroot::String = figurespath(m, "forecast"),
                           titles::Vector{String} = String[],
                           verbose::Symbol = :low,
-                          kwargs...) where {T<:AbstractModel}
+                          kwargs...) where {T<:AbstractDSGEModel}
     # Determine output_vars
     if untrans && fourquarter
         error("Only one of untrans or fourquarter can be true")

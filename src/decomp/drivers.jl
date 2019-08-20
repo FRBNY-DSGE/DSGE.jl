@@ -9,7 +9,7 @@ decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
 
 ### Inputs
 
-- `m_new::M` and `m_old::M` where `M<:AbstractModel`
+- `m_new::M` and `m_old::M` where `M<:AbstractDSGEModel`
 - `df_new::DataFrame` and `df_old::DataFrame`
 - `cond_new::Symbol` and `cond_old::Symbol`
 - `classes::Vector{Symbol}`: some subset of `[:states, :obs, :pseudo]`
@@ -47,7 +47,7 @@ The first method returns nothing. The second method returns
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
                             classes::Vector{Symbol};
-                            verbose::Symbol = :low, forecast_string_new = "", forecast_string_old = "", kwargs...) where M<:AbstractModel
+                            verbose::Symbol = :low, forecast_string_new = "", forecast_string_old = "", kwargs...) where M<:AbstractDSGEModel
     # Get output file names
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, forecast_string_old = forecast_string_old, forecast_string_new = forecast_string_new)
 
@@ -121,12 +121,12 @@ end
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
-                            check::Bool = false, forecast_string_old = "", forecast_string_new = "") where M<:AbstractModel
+                            check::Bool = false, forecast_string_old = "", forecast_string_new = "") where M<:AbstractDSGEModel
     # Check numbers of periods
     T, k, H = decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 
     # Forecast
-    f(m::AbstractModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol; kwargs...) =
+    f(m::AbstractDSGEModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol; kwargs...) =
         decomposition_forecast(m, df, params, cond_type, T, k, H;
                                kwargs..., check = check)
 
@@ -190,7 +190,7 @@ Returns `T`, `k`, and `H`, where:
 - Old and new models both forecast up to `T+H`
 """
 function decomposition_periods(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
-                               cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
+                               cond_new::Symbol, cond_old::Symbol) where M<:AbstractDSGEModel
     # Number of presample periods T0 must be the same
     T0 = n_presample_periods(m_new)
     @assert n_presample_periods(m_old) == T0
@@ -237,11 +237,11 @@ Returns `out::Dict{Symbol, Array{Float64}}`, which has keys determined as follow
   - `:data<class>`: like a shockdec, but only applying smoothed shocks up to `shockdec_splitdate`
   - `:news<class>`: like a shockdec, but only applying smoothed shocks after `shockdec_splitdate`
 """
-function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol,
+function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol,
                                 T::Int, k::Int, H::Int;
                                 outputs::Vector{Symbol} = [:forecast, :shockdec], check::Bool = false)
     # Compute state space
-    update!(m, params)
+    DSGE.update!(m, params)
     system = compute_system(m)
 
     # Initialize output dictionary

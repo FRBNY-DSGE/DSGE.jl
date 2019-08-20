@@ -33,7 +33,7 @@ into `plot_scenario`.
 
 - `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
-function plot_scenario(m::AbstractModel, var::Symbol, class::Symbol, scen::AbstractScenario;
+function plot_scenario(m::AbstractDSGEModel, var::Symbol, class::Symbol, scen::AbstractScenario;
                        title::String = "", kwargs...)
 
     plots = plot_scenario(m, [var], class, scen;
@@ -42,7 +42,7 @@ function plot_scenario(m::AbstractModel, var::Symbol, class::Symbol, scen::Abstr
     return plots[var]
 end
 
-function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
+function plot_scenario(m::AbstractDSGEModel, vars::Vector{Symbol}, class::Symbol,
                        scen::AbstractScenario; untrans::Bool = false, fourquarter::Bool = false,
                        plotroot::String = figurespath(m, "scenarios"),
                        titles::Vector{String} = String[],

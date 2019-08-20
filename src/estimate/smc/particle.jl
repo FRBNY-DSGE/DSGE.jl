@@ -65,11 +65,11 @@ end
 
 """
 ```
-function ParticleCloud(m::AbstractModel, n_parts::Int)
+function ParticleCloud(m::AbstractDSGEModel, n_parts::Int)
 ```
 Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
 """
-function ParticleCloud(m::AbstractModel, n_parts::Int)
+function ParticleCloud(m::AbstractDSGEModel, n_parts::Int)
     return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
                          zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
                          zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
@@ -110,11 +110,11 @@ end
 
 """
 ```
-function Cloud(m::AbstractModel, n_parts::Int)
+function Cloud(m::AbstractDSGEModel, n_parts::Int)
 ```
 Easier constructor for Cloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
 """
-function Cloud(m::AbstractModel, n_parts::Int)
+function Cloud(m::AbstractDSGEModel, n_parts::Int)
     return Cloud(Matrix{Float64}(undef, n_parts, n_parameters(m) + 5),
                  zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
 end

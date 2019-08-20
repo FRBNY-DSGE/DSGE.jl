@@ -191,11 +191,11 @@ end
 
 """
 ```
-function vector_particles_to_cloud(m::AbstractModel, particles::Vector{Particles})
+function vector_particles_to_cloud(m::AbstractDSGEModel, particles::Vector{Particles})
 ```
 Converts a ParticleCloud (old) to Cloud (new).
 """
-function vector_particles_to_cloud(m::AbstractModel, particles::Vector{Particle})
+function vector_particles_to_cloud(m::AbstractDSGEModel, particles::Vector{Particle})
     cloud = Cloud(m, length(particles))
     N = size(cloud.particles, 2)
     for i in 1:size(cloud.particles,1)

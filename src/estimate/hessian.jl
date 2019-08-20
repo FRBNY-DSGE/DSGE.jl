@@ -1,12 +1,12 @@
 """
 ```
-hessian!(m::AbstractModel, x::Vector{T}, data::AbstractArray;
+hessian!(m::AbstractDSGEModel, x::Vector{T}, data::AbstractArray;
          verbose::Symbol = :none) where {T<:AbstractFloat}
 ```
 
 Compute Hessian of DSGE posterior function evaluated at x.
 """
-function hessian!(m::AbstractModel,
+function hessian!(m::AbstractDSGEModel,
                   x::Vector{T},
                   data::AbstractArray;
                   verbose::Symbol = :none) where T<:AbstractFloat

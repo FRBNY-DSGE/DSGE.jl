@@ -10,7 +10,7 @@ system corresponding to the current parameter values of model `m`.
 
 ### Inputs
 
-- `m::AbstractModel`: model object
+- `m::AbstractDSGEModel`: model object
 - `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
   observables. This should include the conditional period if `cond_type in
   [:semi, :full]`
@@ -36,7 +36,7 @@ where `S<:AbstractFloat`.
 
 - `kal::Kalman`: see `?Kalman`
 """
-function filter(m::AbstractModel, df::DataFrame, system::System{S},
+function filter(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                 s_0::Vector{S} = Vector{S}(undef, 0),
                 P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                 cond_type::Symbol = :none, include_presample::Bool = true,
@@ -50,7 +50,7 @@ function filter(m::AbstractModel, df::DataFrame, system::System{S},
            include_presample = include_presample, outputs = outputs, tol = tol)
 end
 
-function filter(m::AbstractModel, data::AbstractArray, system::System{S},
+function filter(m::AbstractDSGEModel, data::AbstractArray, system::System{S},
                 s_0::Vector{S} = Vector{S}(undef, 0),
                 P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                 start_date::Date = date_presample_start(m),
@@ -93,7 +93,7 @@ function filter(m::AbstractModel, data::AbstractArray, system::System{S},
     return Kalman(out...)
 end
 
-function filter_likelihood(m::AbstractModel, df::DataFrame, system::System{S},
+function filter_likelihood(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                            s_0::Vector{S} = Vector{S}(undef, 0),
                            P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                            cond_type::Symbol = :none, include_presample::Bool = true,
@@ -107,7 +107,7 @@ function filter_likelihood(m::AbstractModel, df::DataFrame, system::System{S},
                       include_presample = include_presample, tol = tol)
 end
 
-function filter_likelihood(m::AbstractModel, data::AbstractArray, system::System{S},
+function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray, system::System{S},
                            s_0::Vector{S} = Vector{S}(undef, 0),
                            P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                            start_date::Date = date_presample_start(m),
@@ -138,7 +138,7 @@ function filter_likelihood(m::AbstractModel, data::AbstractArray, system::System
                       ZZs, DDs, EEs, s_0, P_0; Nt0 = Nt0, tol = tol)
 end
 
-function filter_shocks(m::AbstractModel, df::DataFrame, system::System{S},
+function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                        s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0); cond_type::Symbol = :none,
                        start_date::Date = date_presample_start(m),
                        include_presample::Bool = false) where S<:AbstractFloat

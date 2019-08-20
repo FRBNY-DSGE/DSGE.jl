@@ -12,7 +12,7 @@ Plot the responses of `var` to `shock`. By default, only 90% bands are plotted.
 
 ### Inputs
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `shock::Symbol`: e.g. `:g_sh`
 - `var::Symbol` or `vars::Vector{Symbol}`: response variable(s), e.g. `:obs_gdp`
 - `class::Symbol`
@@ -33,7 +33,7 @@ into `plot_history_and_forecast`.
 
 - `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
-function plot_impulse_response(m::AbstractModel, shock::Symbol, var::Symbol, class::Symbol,
+function plot_impulse_response(m::AbstractDSGEModel, shock::Symbol, var::Symbol, class::Symbol,
                                input_type::Symbol, cond_type::Symbol;
                                title::String = "",
                                kwargs...)
@@ -44,7 +44,7 @@ function plot_impulse_response(m::AbstractModel, shock::Symbol, var::Symbol, cla
     return plots[var]
 end
 
-function plot_impulse_response(m::AbstractModel, shock::Symbol, vars::Vector{Symbol}, class::Symbol,
+function plot_impulse_response(m::AbstractDSGEModel, shock::Symbol, vars::Vector{Symbol}, class::Symbol,
                                input_type::Symbol, cond_type::Symbol;
                                forecast_string::String = "",
                                plotroot::String = figurespath(m, "forecast"),

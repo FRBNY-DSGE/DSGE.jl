@@ -1,5 +1,6 @@
-using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random
-@everywhere using DSGE, JLD2, Printf, LinearAlgebra
+using ModelConstructors, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random
+import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+@everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 
 my_tests = [
             "core",
@@ -16,17 +17,20 @@ my_tests = [
             "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
+
             "estimate/hessizero",
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
             "estimate/metropolis_hastings",
-            # "estimate/smc/smc",
-            "estimate/smc/helpers",
-            #"estimate/smc/initialization",
-            "estimate/smc/resample",
-            "estimate/smc/util",
-            #"estimate/smc/mutation",
+
+    "estimate/smc/smc",
+    "estimate/smc/helpers",
+    "estimate/smc/initialization",
+    "estimate/smc/util",
+    "estimate/smc/mutation",
+    "estimate/smc/resample",
+
             "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",

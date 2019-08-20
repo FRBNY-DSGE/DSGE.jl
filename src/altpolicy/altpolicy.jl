@@ -11,12 +11,12 @@ Type defining an alternative policy rule.
 
 - `eqcond::Function`: a version of `DSGE.eqcond` which computes the equilibrium
   condition matrices under the alternative policy. Like `DSGE.eqcond`, it should
-  take in one argument of mutable struct `AbstractModel` and return the `Γ0`, `Γ1`, `C`,
-  `Ψ`, and `Π` matrices.
+  take in one argument of mutable struct `AbstractDSGEModel` and return the `Γ0`,
+  `Γ1`, `C`, `Ψ`, and `Π` matrices.
 
 - `solve::Function`: a version of `DSGE.solve` which solves the model under the
   alternative policy. Like `DSGE.solve`, it should take in one argument of mutable
-  struct `AbstractModel` and return the `TTT`, `RRR`, and `CCC` matrices.
+  struct `AbstractDSGEModel` and return the `TTT`, `RRR`, and `CCC` matrices.
 
 - `forecast_init::Function`: a function that initializes forecasts under the
   alternative policy rule. Specifically, it accepts a model, an `nshocks` x

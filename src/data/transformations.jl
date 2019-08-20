@@ -63,7 +63,7 @@ the filtered population series. Otherwise it divides by the result of
 - `df`: `DataFrame` containining series for proper population measure and `col`
 - `population_mnemonic`: a mnemonic found in `df` for some population measure
 """
-function percapita(m::AbstractModel, col::Symbol, df::DataFrame)
+function percapita(m::AbstractDSGEModel, col::Symbol, df::DataFrame)
     if hpfilter_population(m)
         population_mnemonic = Nullable(:filtered_population)
     else

@@ -176,7 +176,7 @@ missing_cond_vars!(m, df; cond_type = :none)
 Make conditional period variables not in `cond_semi_names(m)` or
 `cond_full_names(m)` missing if necessary.
 """
-function missing_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none)
     if cond_type in [:semi, :full]
         # Get appropriate
         cond_names = if cond_type == :semi
@@ -209,7 +209,7 @@ get_data_filename(m, cond_type)
 Returns the data file for `m`, which depends on `data_vintage(m)`, and if
 `cond_type in [:semi, :full]`, also on `cond_vintage(m)` and `cond_id(m)`.
 """
-function get_data_filename(m::AbstractModel, cond_type::Symbol)
+function get_data_filename(m::AbstractDSGEModel, cond_type::Symbol)
     filestrings = ["data"]
 
     # If writing conditional data, append conditional vintage and ID to filename

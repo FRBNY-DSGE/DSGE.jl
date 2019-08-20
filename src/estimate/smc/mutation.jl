@@ -6,7 +6,7 @@ mutation(m, data, p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1., α = 1., o
 Execute one proposed move of the Metropolis-Hastings algorithm for a given parameter
 
 ### Arguments:
-- `m::AbstractModel`: Model of type AbstractModel being estimated.
+- `m::AbstractDSGEModel`: Model of type AbstractDSGEModel being estimated.
 - `data::Matrix{Float64}`: Matrix of data
 - `p::Vector{Float64}`: Initial particle value
 - `d::Distribution`: A distribution with μ = the weighted mean, and Σ = the weighted variance/covariance matrix
@@ -25,7 +25,7 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `p::Vector{Float64}`: An updated particle containing updated parameter values, log-likelihood, prior, and acceptance indicator.
 
 """
-function mutation(m::AbstractModel, data::Matrix{S}, p::Vector{S},
+function mutation(m::AbstractDSGEModel, data::Matrix{S}, p::Vector{S},
                   d_μ::Vector{S}, d_Σ::Matrix{S},#d::Distribution,
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
                   ϕ_n::S, ϕ_n1::S; c::S = 1., α::S = 1.,

@@ -1,8 +1,8 @@
 """
 ```
-smc(m::AbstractModel, data::Matrix; verbose::Symbol, old_data::Matrix)
-smc(m::AbstractModel, data::DataFrame)
-smc(m::AbstractModel)
+smc(m::AbstractDSGEModel, data::Matrix; verbose::Symbol, old_data::Matrix)
+smc(m::AbstractDSGEModel, data::DataFrame)
+smc(m::AbstractDSGEModel)
 ```
 
 ### Arguments:
@@ -51,11 +51,11 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis
     Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix{Float64};
+function smc(m::AbstractDSGEModel, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::ParticleCloud  = ParticleCloud(m, 0),
-             recompute_transition_equation::Bool = true, run_test::Bool = false,
+             run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
@@ -348,7 +348,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 end
 
-function smc(m::AbstractModel, data::DataFrame; verbose::Symbol = :low,
+function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
@@ -356,7 +356,7 @@ function smc(m::AbstractModel, data::DataFrame; verbose::Symbol = :low,
                filestring_addl = filestring_addl)
 end
 
-function smc(m::AbstractModel; verbose::Symbol = :low,
+function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)

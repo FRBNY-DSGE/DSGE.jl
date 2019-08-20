@@ -20,7 +20,7 @@ and bands.
 
 **Method 1:**
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 
 **Method 2:**
 
@@ -38,7 +38,7 @@ and bands.
 - `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
-function get_meansbands_input_file(m::AbstractModel, input_type::Symbol,
+function get_meansbands_input_file(m::AbstractDSGEModel, input_type::Symbol,
                                    cond_type::Symbol, output_var::Symbol;
                                    forecast_string::String = "", fileformat = :jld2)
 
@@ -86,7 +86,7 @@ computed means and bands.
 
 **Method 1:**
 
-- `m::AbstractModel`: Model object
+- `m::AbstractDSGEModel`: Model object
 
 **Method 2:**
 
@@ -104,7 +104,7 @@ computed means and bands.
 - `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
-function get_meansbands_output_file(m::AbstractModel, input_type::Symbol,
+function get_meansbands_output_file(m::AbstractDSGEModel, input_type::Symbol,
                                     cond_type::Symbol, output_var::Symbol;
                                     forecast_string::String = "",
                                     fileformat::Symbol = :jld2,
@@ -149,7 +149,7 @@ function read_mb(fn::String)
     end
 end
 
-function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function read_mb(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
                  bdd_and_unbdd::Bool = false,
                  directory::String = workpath(m, "forecast"))
@@ -171,7 +171,7 @@ function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
 end
 
 
-function read_mb_4q(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function read_mb_4q(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
                  bdd_and_unbdd::Bool = false,
                  directory::String = workpath(m, "forecast"))
@@ -248,7 +248,7 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
 
 **Method 1 only:**
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `input_type::Symbol`
 - `cond_type::Symbol`
 - `output_var::Symbol`: `class(output_var)` must be one of `[:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q, :bddforecast, :bddforecastut, :bddforecast4q, :trend, :dettrend, :histforecast, :histforecastut, :histforecast4q]`
@@ -272,7 +272,7 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
 - `dirname::String`: directory to which tables are saved
 """
-function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol,
+function write_meansbands_tables_timeseries(m::AbstractDSGEModel, input_type::Symbol,
                                             cond_type::Symbol, output_var::Symbol;
                                             forecast_string::String = "",
                                             bdd_and_unbdd::Bool = false,
@@ -345,7 +345,7 @@ write_means_tables_shockdec(write_dirname, filestring_base, mb_shockdec,
 
 **Method 1 only:**
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `input_type::Symbol`
 - `cond_type::Symbol`
 - `class::Symbol`
@@ -375,7 +375,7 @@ write_means_tables_shockdec(write_dirname, filestring_base, mb_shockdec,
 - `read_dirname::String`: directory from which `MeansBands` are read in
 - `write_dirname::String`: directory to which tables are saved
 """
-function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
+function write_means_tables_shockdec(m::AbstractDSGEModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
                                      forecast_string::String = "",
                                      read_dirname::String = workpath(m, "forecast"),
@@ -444,7 +444,7 @@ write_meansbands_tables_irf(dirname, filestring_base, mb;
 
 **Method 1 only:**
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `input_type::Symbol`
 - `cond_type::Symbol`
 - `class::Symbol`
@@ -469,7 +469,7 @@ write_meansbands_tables_irf(dirname, filestring_base, mb;
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
 - `dirname::String`: directory to which tables are saved
 """
-function write_meansbands_tables_irf(m::AbstractModel, input_type::Symbol,
+function write_meansbands_tables_irf(m::AbstractDSGEModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
                                      forecast_string::String = "",
                                      write_dirname::String = tablespath(m, "forecast"),
@@ -540,7 +540,7 @@ Write all `output_vars` corresponding to model `m` to tables in `dirname`.
 
 ### Inputs
 
-- `m::AbstractModel`
+- `m::AbstractDSGEModel`
 - `input_type::Symbol`: See `?forecast_one`
 - `cond_type::Symbol`: See `?forecast_one`
 - `output_vars::Symbol`: See `?forecast_one`
@@ -557,7 +557,7 @@ Write all `output_vars` corresponding to model `m` to tables in `dirname`.
 - `shock_groups::Vector{ShockGroup}`: if provided, shocks will be grouped
   accordingly in shockdec tables
 """
-function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function write_meansbands_tables_all(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                      output_vars::Vector{Symbol};
                                      forecast_string = "",
                                      write_dirname::String = tablespath(m, "forecast"),

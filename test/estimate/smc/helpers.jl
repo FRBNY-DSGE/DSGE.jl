@@ -5,10 +5,10 @@ writing_output = false
 # Testing Adaptive Φ Solution
 ####################################################################
 
-file   = jldopen("reference/helpers_input.jld2", "r")
-cloud  = read(file, "cloud")
-i_smc      = read(file, "i")
-j_smc      = read(file, "j")
+file   = JLD2.jldopen("$path/../../reference/helpers_input.jld2", "r")
+cloud  = old_to_new_cloud(DSGE.Cloud(read(file, "cloud")))
+i_smc  = read(file, "i")
+j_smc  = read(file, "j")
 ϕ_prop = read(file, "phi_prop")
 ϕ_n1   = read(file, "phi_n1")
 proposed_fixed_schedule = read(file, "proposed_fixed_schedule")
@@ -17,17 +17,19 @@ resampled_last_period   = read(file, "resampled_last_period")
 close(file)
 
 @everywhere Random.seed!(42)
-test_ϕ_n, test_resampled_last_period, test_j, test_ϕ_prop = DSGE.solve_adaptive_ϕ(cloud, proposed_fixed_schedule,
-                                                                             i_smc, j_smc, ϕ_prop, ϕ_n1, tempering_target,
-                                                                             resampled_last_period)
+test_ϕ_n, test_resampled_last_period, test_j, test_ϕ_prop = SMC.solve_adaptive_ϕ(cloud,
+                                                                proposed_fixed_schedule,
+                                                                i_smc, j_smc, ϕ_prop, ϕ_n1,
+                                                                tempering_target,
+                                                                resampled_last_period)
 if writing_output
-    jldopen("reference/helpers_output.jld2", "w") do file
+    jldopen("$path/../../reference/helpers_output.jld2", "w") do file
         write(file, "phi_n", test_ϕ_n)
         write(file, "resampled_last_period", test_resampled_last_period)
         write(file, "j", test_j)
         write(file, "phi_prop", test_ϕ_prop)
     end
-    jldopen("reference/helpers_output.jld2", "w") do file
+    jldopen("$path/../../reference/helpers_output.jld2", "w") do file
         write(file, "phi_n", test_ϕ_n)
         write(file, "resampled_last_period", test_resampled_last_period)
         write(file, "j", test_j)
@@ -35,7 +37,7 @@ if writing_output
     end
 end
 
-file = jldopen("reference/helpers_output.jld2", "r")
+file = JLD2.jldopen("$path/../../reference/helpers_output.jld2", "r")
 saved_ϕ_n = read(file, "phi_n")
 saved_resampled_last_period = read(file, "resampled_last_period")
 saved_j = read(file, "j")
@@ -54,7 +56,7 @@ end
 # Testing MvNormal Mixture Draw Function
 ####################################################################
 #=
-file = jldopen("reference/mutation_inputs.jld2")
+file = JLD2.jldopen("reference/mutation_inputs.jld2")
 saved_particles = read(file, "particles")
 blocks_free     = read(file, "blocks_free")
 blocks_all      = read(file, "blocks_all")
@@ -68,13 +70,13 @@ for (block_f, block_a) in zip(blocks_free, blocks_all)
     d_subset    = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
     test_θ_new, test_new_mix_density, test_old_mix_density = DSGE.mvnormal_mixture_draw(para_subset,
                                                                                    d_subset; c=c, α=α)
-    jldopen("reference/mvnormal_inputs.jld2", true, true, true, IOStream) do file
+    JLD2.jldopen("reference/mvnormal_inputs.jld2", true, true, true, IOStream) do file
         write(file, "para_subset", para_subset)
         write(file, "d_subset", d_subset)
         write(file, "α", α)
         write(file, "c", c)
     end
-    jldopen("reference/mvnormal_output.jld2", true, true, true, IOStream) do file
+    JLD2.jldopen("reference/mvnormal_output.jld2", true, true, true, IOStream) do file
         write(file, "θ_new", test_θ_new)
         write(file, "new_mix_density", test_new_mix_density)
         write(file, "old_mix_density", test_old_mix_density)
@@ -82,14 +84,14 @@ for (block_f, block_a) in zip(blocks_free, blocks_all)
 end
 =#
 
-file = jldopen("reference/mvnormal_inputs.jld2")
+file = JLD2.jldopen("reference/mvnormal_inputs.jld2")
 para_subset = read(file, "para_subset")
 d_subset    = read(file, "d_subset")
 α           = read(file, "α")
 c           = read(file, "c")
 close(file)
 
-test_θ_new, test_new_mix_density, test_old_mix_density = DSGE.mvnormal_mixture_draw(para_subset,
+test_θ_new, test_new_mix_density, test_old_mix_density = SMC.mvnormal_mixture_draw(para_subset,
                                                                                    d_subset; c=c, α=α)
 
 #=JLD2.jldopen("reference/mvnormal_output.jld2", true, true, true, IOStream) do file
@@ -140,18 +142,18 @@ jldopen("reference/ess_output.jld2", true, true, true, IOStream) do file
     write(file, "ess", ess)
 end
 =#
-file = jldopen("reference/ess_inputs.jld2")
+file = JLD2.jldopen("reference/ess_inputs.jld2")
 loglh = read(file, "loglh")
 current_weights = read(file, "current_weights")
 ϕ_n = read(file, "ϕ_n")
 ϕ_n1 = read(file, "ϕ_n1")
 close(file)
 
-file = jldopen("reference/ess_output.jld2")
+file = JLD2.jldopen("reference/ess_output.jld2")
 saved_ESS = read(file, "ess")
 close(file)
 
-test_ESS = DSGE.compute_ESS(loglh, current_weights, ϕ_n, ϕ_n1)
+test_ESS = SMC.compute_ESS(loglh, current_weights, ϕ_n, ϕ_n1)
 ####################################################################
 @testset "Compute ESS" begin
     @test test_ESS ≈ saved_ESS
