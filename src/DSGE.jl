@@ -93,7 +93,8 @@ module DSGE
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
         initial_draw!, ParticleCloud, Particle,
 
-        smc2, # TO REMOVE
+        # backwards_compatibility.jl
+        smc2, old_to_new_cloud,# TO REMOVE
 
         # forecast/
         load_draws, forecast_one,
@@ -197,6 +198,7 @@ module DSGE
     include("estimate/smc/smc.jl")
 
     include("estimate/smc.jl")
+    include("estimate/backwards_compatibility.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
