@@ -27,6 +27,7 @@ of the New York Fed.
 `DSGE.jl` is a registered Julia package. To install it, open your Julia REPL, type `]` (enter package manager), and run
 
 ```julia
+julia> ] add DSGE
 pkg> add DSGE
 ```
 ## Versioning
