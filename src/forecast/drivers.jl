@@ -82,7 +82,7 @@ load_draws(m, input_type; subset_inds = 1:0, verbose = :low)
 load_draws(m, input_type, block_inds; verbose = :low)
 ```
 
-Load and return parameter draws from Metropolis-Hastings.
+Load and return parameter draws from Metropolis-Hastings or SMC.
 
 ### Inputs
 
