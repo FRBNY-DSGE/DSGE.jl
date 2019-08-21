@@ -7,6 +7,7 @@ my_tests = [
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
+            "models/smets_wouters_orig/smets_wouters_orig",
             "models/m990/m990",
             "models/m1002/m1002",
             "models/m1010/m1010",
