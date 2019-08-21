@@ -37,11 +37,11 @@ makedocs(modules = [DSGE],
 #    include("../../fake_travis.jl")
 # end
 deploydocs(
-    repo = "github.com/FRBNY-DSGE/DSGE.jl.git"
+    repo = "github.com/FRBNY-DSGE/DSGE.jl.git",
     # target = "build",
     # deps = nothing,
-    # devbranch = "master",
-    # branch = "gh-pages",
+    devbranch = "gh-pages",
+    branch = "gh-pages"
     # versions = "v#",
     # julia = "0.7",
     # osname = "osx",
