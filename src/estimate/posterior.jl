@@ -87,7 +87,6 @@ function posterior!(m::AbstractDSGEModel{T}, parameters::Vector{T}, data::Abstra
         DSGE.update!(m, parameters)
     end
     return posterior(m, data; sampler=sampler, ϕ_smc=ϕ_smc, catch_errors=catch_errors)
-
 end
 
 """
