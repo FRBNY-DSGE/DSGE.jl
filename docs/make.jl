@@ -34,7 +34,7 @@ makedocs(modules = [DSGE],
 )
 
 # if "deploy" in ARGS
-   include("../../fake_travis.jl")
+#    include("../../fake_travis.jl")
 # end
 deploydocs(
     repo = "github.com/FRBNY-DSGE/DSGE.jl.git",

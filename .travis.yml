@@ -17,8 +17,8 @@ addons:
     - hdf5-tools
     - libnlopt0
 script:
-    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'
+#     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    - julia --color=yes -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
 branches:
   only:
     - master
