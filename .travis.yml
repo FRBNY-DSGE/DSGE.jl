@@ -16,9 +16,9 @@ notifications:
 #     packages:
 #     - hdf5-tools
 #     - libnlopt0
-# script:
+script:
 #     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#     - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'
+    - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'
 branches:
   only:
     - master
