@@ -148,7 +148,7 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
         init_pseudo_observable_mappings!,
-        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement,
+        Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide, eqcond, measurement,
         pseudo_measurement,
         shock_groupings
 
@@ -287,6 +287,13 @@ module DSGE
     include("models/smets_wouters/observables.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
+
+    include("models/smets_wouters_orig/smets_wouters_orig.jl")
+    include("models/smets_wouters_orig/subspecs.jl")
+    include("models/smets_wouters_orig/eqcond.jl")
+    include("models/smets_wouters_orig/observables.jl")
+    include("models/smets_wouters_orig/measurement.jl")
+    include("models/smets_wouters_orig/augment_states.jl")
 
     include("models/an_schorfheide/an_schorfheide.jl")
     include("models/an_schorfheide/subspecs.jl")
