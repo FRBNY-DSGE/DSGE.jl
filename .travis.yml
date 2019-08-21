@@ -17,7 +17,7 @@ notifications:
 #     - hdf5-tools
 #     - libnlopt0
 script:
-#     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
     - julia --color=yes -e 'using Pkg; Pkg.build()'
     - julia --check-bounds=yes --color=yes -e 'using Pkg; Pkg.test(coverage=true)'
 branches:
