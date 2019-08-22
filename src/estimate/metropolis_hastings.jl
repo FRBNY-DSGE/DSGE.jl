@@ -145,7 +145,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
         return nothing
     end
 
-    if get_setting(m,:sampling_method) == :MH
+    if get_setting(m, :sampling_method) == :MH
         ########################################################################################
         ### Step 2: Compute proposal distribution for Markov Chain Monte Carlo (MCMC)
         ###
@@ -243,6 +243,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
 end
 
 
+
 """
 ```
 metropolis_hastings(propdist::Distribution, loglikelihood::Function,
@@ -263,7 +264,7 @@ distribution of the parameters.
 
 ### Optional Arguments
 
-- `n_blocks::Int = 1`: Number of parameter blocks
+- `n_blocks::Int = 1`: Number of blocks
 - `n_sim::Int    = 100`: Number of simulations
 - `n_burn::Int   = 0`: Length of burn-in period
 - `mhthin::Int   = 1`: Thinning parameter (for mhthin = d, keep only every dth draw)
