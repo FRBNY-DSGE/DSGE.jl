@@ -39,7 +39,7 @@ compute_moments(m)
 my_procs = addprocs(10)
 @everywhere using DSGE
 
-forecast_one(m, :full, :none, [:forecaststates, forecastobs])
+forecast_one(m, :full, :none, [:forecaststates, :forecastobs])
 compute_meansbands(m, :full, :none, [:forecaststates, :forecastobs])
 rmprocs(my_procs)
 ```
@@ -48,7 +48,8 @@ For more details on changing the model's default settings, parameters, equilibri
 conditions, etc., see [Advanced Usage](@ref).
 
 By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
-vector, computes the Hessian at the mode, and conducts full posterior parameter sampling.
+vector, computes the Hessian at the mode, and conducts full posterior parameter sampling
+using Metropolis-Hastings.
 (The initial parameter vector used is specified in the model's constructor.)
 Further options for estimation are described in [Estimation](@ref estimation-step):
 

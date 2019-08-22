@@ -16,7 +16,23 @@ Depth = 5
 ## Working with Settings
 
 There are many computational settings that affect how the code runs without affecting the
-mathematical definition of the model.
+mathematical definition of the model. While the default settings loaded are
+intended to be comprehensive rather than the minimal number of settings, users
+will generally want to check that these three settings are properly chosen:
+
+- `saveroot::String`: The root directory for model output.
+- `dataroot::String`: The root directory for model input data.
+- `data_vintage::String`: Data vintage, formatted `yymmdd`. By default,
+  `data_vintage` is set to today's date. It is (currently) the only setting
+  printed to output filenames by default.
+
+Many functions in DSGE.jl will either require input data or create output data,
+so it is important to check that the saveroot and dataroot are set as the user intends.
+Setting the data vintage is also useful for reproducibility. Economic data like GDP
+are frequently revised, which can pose issues for reproducing results. Setting
+the data vintage allows users to guarantee the correct vintage of data is used
+when generating results. By default, the data vintage is set to the current date,
+so a user will need to manually set the data vintage to the desired date.
 
 Below, we describe several important settings for package usage.
 
@@ -54,14 +70,17 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 - `date_presample_start::Date`: Start date of pre-sample.
 - `date_mainsample_start::Date`: Start date of main sample.
 - `date_zlb_start::Date`: Start date of zero lower bound regime.
+- `date_zlb_end::Date`: End date of zero lower bound regime.
 - `date_forecast_start::Date`: Start date of forecast period (or the period
   after the last period for which we have GDP data).
+- `date_forecast_end::Date`: End date of forecast, i.e. how far into the future to forecast.
 - `date_conditional_end::Date`: Last date for which we have conditional
   data. This is typically the same as `date_forecast_start` when we condition on
   nowcasts and current quarter financial data.
 
 #### Estimation
 
+##### Metropolis-Hastings Settings
 - `reoptimize::Bool`: Whether to reoptimize the posterior mode. If `true` (the
     default), `estimate` begins reoptimizing from the model object's parameter
     vector.  See [Optimizing or Reoptimizing](@ref estimation-reoptimizing) for
@@ -73,6 +92,43 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 - `n_mh_blocks::Int`: Number of blocks to run Metropolis-Hastings.
 - `n_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings.
 - `mh_thin::Int`: Metropolis-Hastings thinning step.
+- `parallel::Bool`: Flag for running algorithm in parallel.
+- `n_parts::Int`: Number of particles.
+- `n_blocks::Int`: Number of parameter blocks in mutation step.
+- `n_mh_steps::Int`: Number of Metropolis Hastings steps to attempt during the mutation step.
+
+##### Sequential Monte Carlo Settings
+- `λ::S`: The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ
+- `n_Φ::Int`: Number of stages in the tempering schedule.
+- `resampling_method::Symbol`: Which resampling method to use.
+    - `:systematic`: Will use sytematic resampling.
+    - `:multinomial`: Will use multinomial resampling.
+    - `:polyalgo`: Samples using a polyalgorithm.
+- `threshold_ratio::S`: Threshold s.t. particles will be resampled when the population
+    drops below threshold * N
+- `c::S`: Scaling factor for covariance of the particles. Controls size of steps in mutation step.
+- `α::S`: The mixture proportion for the mutation step's proposal distribution.
+- `target::S`: The initial target acceptance rate for new particles during mutation.
+
+- `use_chand_recursion::Bool`: Flag for using Chandrasekhar Recursions in Kalman filter.
+- `use_fixed_schedule::Bool`: Flag for whether or not to use a fixed tempering (ϕ) schedule.
+- `tempering_target::S`: Coefficient of the sample size metric to be targeted when solving
+    for an endogenous ϕ.
+- `old_data::Matrix{S}`:
+- `old_cloud::ParticleCloud`:
+- `old_vintage::String`: String for vintage date of old data
+- `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
+     same data vintage. Primarily for numerical accuracy/testing purposes.
+
+- `run_test::Bool`: Flag for when testing accuracy of program
+- `filestring_addl::Vector{String}`: Additional file string extension for loading old cloud.
+- `continue_intermediate::Bool`: Flag to indicate whether one is continuing SMC from an
+    intermediate stage/
+- `intermediate_stage_start::Int`: Intermediate stage at which one wishes to begin the estimation.
+- `save_intermediate::Bool`: Flag for whether one wants to save intermediate Cloud objects
+- `intermediate_stage_increment::Int`: Save Clouds at every increment
+    (1 = each stage, 10 = every 10th stage, etc.)
+
 
 #### Forecasting
 
