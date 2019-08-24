@@ -11,8 +11,8 @@ m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 
 # Read in the data, mode, and hessian
-mode = load("$path/../reference/hessian.jld2","paramsmode")
-data = Matrix{Float64}(load("$path/../reference/hessian.jld2","data")')
+mode = load("$path/../reference/hessian.jld2", "paramsmode")
+data = Matrix{Float64}(load("$path/../reference/hessian.jld2", "data")')
 
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
 hessian_inv, ref_draws, ref_cov =
@@ -26,7 +26,7 @@ hessian_inv, ref_draws, ref_cov =
 DSGE.update!(m, mode)
 prop_cov = DegenerateMvNormal(mode, hessian_inv)
 
-metropolis_hastings(prop_cov, m, data, .01, .09, verbose=:none)
+metropolis_hastings(prop_cov, m, data, .01, .09; verbose=:none)
 compute_parameter_covariance(m)
 
 # Read in the parameter draws and covariance just generated from estimate.
