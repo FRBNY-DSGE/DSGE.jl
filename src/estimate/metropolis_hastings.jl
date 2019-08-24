@@ -235,7 +235,7 @@ function metropolis_hastings(propdist::Distribution,
     use_chand_recursion = !any(isnan.(data))
 
     function loglikelihood(p::ParameterVector, data::Matrix{Float64})::Float64
-        update!(m, parameters)
+        update!(m, p)
         likelihood(m, data; sampler = true, catch_errors = false,
                    use_chand_recursion = use_chand_recursion)
     end
