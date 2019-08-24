@@ -243,6 +243,59 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
 end
 
 
+"""
+```
+metropolis_hastings(propdist::Distribution, m::AbstractDSGEModel,
+    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
+```
+
+Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
+distribution of the parameters.
+
+### Arguments
+
+- `propdist`: The proposal distribution that Metropolis-Hastings begins sampling from.
+- `m`: The model object
+- `data`: Data matrix for observables
+- `cc0`: Jump size for initializing Metropolis-Hastings.
+- `cc`: Jump size for the rest of Metropolis-Hastings.
+
+### Optional Arguments
+
+- `verbose`: The desired frequency of function progress messages printed to
+  standard out. One of:
+
+```
+   - `:none`: No status updates will be reported.
+   - `:low`: Status updates provided at each block.
+   - `:high`: Status updates provided at each draw.
+```
+"""
+function metropolis_hastings(propdist::Distribution,
+       m::AbstractDSGEModel,
+       data::Matrix{T},
+       cc0::T,
+       cc::T;
+       verbose::Symbol=:low,
+       filestring_addl::Vector{String} = Vector{String}(undef, 0)) where {T<:AbstractFloat}
+
+    n_blocks = n_mh_blocks(m)
+    n_sim    = n_mh_simulations(m)
+    n_burn   = n_mh_burn(m)
+    mhthin   = mh_thin(m)
+    rng      = m.rng
+    testing  = m.testing
+    savepath = rawpath(m,"estimate","mhsave.h5",filestring_addl)
+
+    function loglikelihood(p::ParameterVector, data::Matrix{Float64})::Float64
+        update!(m, parameters)
+        likelihood(m, data; sampler = true, catch_errors = false)
+    end
+    return metropolis_hastings(propdist, loglikelihood, m.parameters, data, cc0, cc;
+                               n_blocks = n_blocks, n_sim = n_sim, n_burn = n_burn,
+                               mh_thin = mh_thin, verbose = verbose, savepath = savepath,
+                               rng = rng, testing = testing)
+end
 
 """
 ```
