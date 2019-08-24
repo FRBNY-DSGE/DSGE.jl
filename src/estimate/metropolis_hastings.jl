@@ -249,8 +249,8 @@ metropolis_hastings(propdist::Distribution, m::AbstractDSGEModel,
     data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
 ```
 
-Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
-distribution of the parameters.
+Wrapper function for DSGE models which calls Metropolis-Hastings MCMC algorithm for
+sampling from the posterior distribution of the parameters.
 
 ### Arguments
 
@@ -285,11 +285,15 @@ function metropolis_hastings(propdist::Distribution,
     mhthin   = mh_thin(m)
     rng      = m.rng
     testing  = m.testing
-    savepath = rawpath(m,"estimate","mhsave.h5",filestring_addl)
+    savepath = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
+
+    # To check: Defaulting to using Chandrasekhar recursions if no missing data
+    use_chand_recursion = !any(isnan.(data))
 
     function loglikelihood(p::ParameterVector, data::Matrix{Float64})::Float64
         update!(m, parameters)
-        likelihood(m, data; sampler = true, catch_errors = false)
+        likelihood(m, data; sampler = true, catch_errors = false,
+                   use_chand_recursion = use_chand_recursion)
     end
     return metropolis_hastings(propdist, loglikelihood, m.parameters, data, cc0, cc;
                                n_blocks = n_blocks, n_sim = n_sim, n_burn = n_burn,
@@ -473,6 +477,42 @@ function metropolis_hastings(propdist::Distribution,
 
     rejection_rate = all_rejections / (n_blocks * n_sim * mhthin)
     println(verbose, :low, "Overall rejection rate: $rejection_rate")
+end
+
+"""
+```
+compute_parameter_covariance(m::AbstractDSGEModel)
+```
+
+Calculates the parameter covariance matrix from saved parameter draws, and writes it to the
+parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
+
+### Arguments
+* `m::AbstractDSGEModel`: the model object
+"""
+function compute_parameter_covariance(param_draws_path::String, sampling_method::Symbol;
+                                      savepath = "parameter_covariance.h5")
+    if sampling_method ∉ [:MH, :SMC]
+        throw("Invalid sampling method specified in setting :sampling_method")
+    end
+    variable_name = samping_method == :MH ? "mhcov" : "smccov"
+
+    if !isfile(param_draws_path)
+        @printf stderr "Saved parameter draws not found.\n"
+        return
+    end
+
+    param_draws = h5open(param_draws_path, "r") do f
+        read(f, "smcparams")
+    end
+
+    # Calculate covariance matrix
+    param_covariance = cov(param_draws)
+
+    # Write to file
+    h5open(savepath,"w") do f
+        f[variable_name] = param_covariance
+    end
 end
 
 """
