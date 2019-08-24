@@ -18,7 +18,8 @@ module DSGE
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
     import ModelConstructors
-    import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+    import ModelConstructors: posterior!, posterior,
+                              @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
     export
         # distributions_ext.jl
@@ -192,6 +193,8 @@ module DSGE
     include("estimate/marginal_data_density.jl")
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
+
+    include("estimate/metropolis_hastings.jl")
 
     include("estimate/smc/particle.jl")
     include("estimate/smc/initialization.jl")
