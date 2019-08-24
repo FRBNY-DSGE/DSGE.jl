@@ -61,8 +61,6 @@ function metropolis_hastings(propdist::Distribution,
                              rng::MersenneTwister  = MersenneTwister(0),
                              testing::Bool = false) where {S<:Number, T<:AbstractFloat}
 
-    n_params = length(parameters)
-
     # If testing, set the random seeds at fixed numbers
     if testing
         Random.seed!(rng, 654)
@@ -87,6 +85,8 @@ function metropolis_hastings(propdist::Distribution,
     # New feature: Parameter Blocking
     free_para_inds = findall([!θ.fixed for θ in parameters])
     n_free_para    = length(free_para_inds)
+    n_params       = length(parameters)
+    #param_vals     = [θ.value for θ in parameters]
 
     blocks_free = SMC.generate_free_blocks(n_free_para, n_param_blocks)
     blocks_all  = SMC.generate_all_blocks(blocks_free, free_para_inds)
@@ -104,11 +104,11 @@ function metropolis_hastings(propdist::Distribution,
     mhparams = zeros(n_sim, n_params)
 
     # Open HDF5 file for saving parameter draws
-    simfile = h5open(savepath, "w")
+    simfile     = h5open(savepath, "w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
-    parasim = d_create(simfile, "mhparams", datatype(Float64),
-                       dataspace(n_saved_obs, n_params),
-                       "chunk", (n_sim, n_params))
+    parasim     = d_create(simfile, "mhparams", datatype(Float64),
+                           dataspace(n_saved_obs, n_params),
+                           "chunk", (n_sim, n_params))
 
     # Keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0.
@@ -120,18 +120,29 @@ function metropolis_hastings(propdist::Distribution,
 
         for j = 1:(n_sim * mhthin)
 
-            for (block_f, block_a) in zip(blocks_free, blocks_all)
-
+            for (k, (block_f, block_a)) in enumerate(zip(blocks_free, blocks_all))
 
                 # Draw para_new from the proposal distribution
-                para_new = rand(propdist, rng; cc = cc)
+
+                # Previously:
+                # para_new = rand(propdist, rng; cc = cc)
+
+                # Now:
+                para_subset = para_old[block_a]
+                d_subset = DegenerateMvNormal(propdist.μ[block_a], propdist.σ[block_a, block_a])
+
+                para_draw = rand(d_subset, rng; cc = cc)
+
+                para_new          = deepcopy(para_old)
+                para_new[block_a] = para_draw
 
                 # Solve the model (checking that parameters are within bounds and
                 # gensys returns a meaningful system) and evaluate the posterior
                 post_new = posterior!(loglikelihood, parameters, para_new, data;
                                       sampler = true)
 
-                println(verbose, :high, "Block $block, Iteration $j: posterior = $post_new")
+                println(verbose, :high,
+                        "Block $block, Iteration $j, Parameter Block $k/$(n_param_blocks): posterior = $post_new")
 
                 # Choose to accept or reject the new parameter by calculating the
                 # ratio (r) of the new posterior value relative to the old one We
