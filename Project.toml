@@ -55,8 +55,9 @@ julia = "0.7, 1.0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+ModelConstructors = "e47e5152-bd14-11e9-1b46-c951f0a7041d"
 SMC = "c6043b28-c053-11e9-348c-19d3cb73bbb3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["CSV", "SMC", "Test", "InteractiveUtils"]
+test = ["CSV", "InteractiveUtils", "ModelConstructors", "SMC", "Test"]
