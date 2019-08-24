@@ -490,12 +490,47 @@ parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 ### Arguments
 * `m::AbstractDSGEModel`: the model object
 """
-function compute_parameter_covariance(param_draws_path::String, sampling_method::Symbol;
-                                      savepath = "parameter_covariance.h5")
+function compute_parameter_covariance(m::AbstractDSGEModel;
+                                      filestring_addl::Vector{String} = Vector{String}(undef, 0))
+
+    sampling_method = get_setting(m, :sampling_method)
     if sampling_method ∉ [:MH, :SMC]
         throw("Invalid sampling method specified in setting :sampling_method")
     end
-    variable_name = samping_method == :MH ? "mhcov" : "smccov"
+
+    prefix           = sampling_method == :MH ? "mh" : "smc"
+    param_draws_path = rawpath(m, "estimate", prefix * "save.h5", filestring_addl)
+    savepath         = workpath(m, "estimate", "parameter_covariance.h5", filestring_addl)
+
+    return compute_parameter_covariance(param_draws_path, sampling_method; savepath = savepath)
+end
+
+"""
+```
+compute_parameter_covariance(param_draws_path::String, sampling_method::Symbol;
+                             savepath = "parameter_covariance.h5")
+```
+
+Generic function calculates the parameter covariance matrix from saved parameter draws,
+writes it to the specified savepath.
+
+### Arguments
+* `param_draws_path::String`: Path to file where parameter draws are stored.
+* `sampling_method::Symbol`: Sampling method used for estimation.
+```
+   - `:MH`: Metropolis-Hastings
+   - `:SMC`: Sequential Monte Carlo
+```
+### Optional Arguments
+* `savepath::String`: Where parameter covariance matrix is to be saved. Will default
+    to "parameter_covariance.h5" if unspecified.
+"""
+function compute_parameter_covariance(param_draws_path::String, sampling_method::Symbol;
+                                      savepath::String = "parameter_covariance.h5")
+    if sampling_method ∉ [:MH, :SMC]
+        throw("Invalid sampling method specified in setting :sampling_method")
+    end
+    prefix = samping_method == :MH ? "mh" : "smc"
 
     if !isfile(param_draws_path)
         @printf stderr "Saved parameter draws not found.\n"
@@ -503,72 +538,16 @@ function compute_parameter_covariance(param_draws_path::String, sampling_method:
     end
 
     param_draws = h5open(param_draws_path, "r") do f
-        read(f, "smcparams")
+        read(f, prefix * "params")
     end
 
     # Calculate covariance matrix
     param_covariance = cov(param_draws)
 
     # Write to file
-    h5open(savepath,"w") do f
-        f[variable_name] = param_covariance
+    h5open(savepath, "w") do f
+        f[prefix * "cov"] = param_covariance
     end
-end
-
-"""
-```
-compute_parameter_covariance(m::AbstractDSGEModel)
-```
-
-Calculates the parameter covariance matrix from saved parameter draws, and writes it to the
-parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
-
-### Arguments
-* `m::AbstractDSGEModel`: the model object
-"""
-function compute_parameter_covariance(m::AbstractDSGEModel;
-                                      filestring_addl::Vector{String} = Vector{String}(undef, 0))
-
-    # Read in saved parameter draws
-    if get_setting(m, :sampling_method) == :MH
-        param_draws_path = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
-        if !isfile(param_draws_path)
-            @printf stderr "Saved parameter draws not found.\n"
-            return
-        end
-        param_draws = h5open(param_draws_path, "r") do f
-            read(f, "mhparams")
-        end
-
-        # Calculate covariance matrix
-        param_covariance = cov(param_draws)
-
-        # Write to file
-        h5open(workpath(m, "estimate","parameter_covariance.h5", filestring_addl),"w") do f
-            f["mhcov"] = param_covariance
-        end
-    elseif get_setting(m, :sampling_method) == :SMC
-        param_draws_path = rawpath(m, "estimate", "smcsave.h5", filestring_addl)
-        if !isfile(param_draws_path)
-            @printf stderr "Saved parameter draws not found.\n"
-            return
-        end
-        param_draws = h5open(param_draws_path, "r") do f
-            read(f, "smcparams")
-        end
-
-        # Calculate covariance matrix
-        param_covariance = cov(param_draws)
-
-        # Write to file
-        h5open(workpath(m, "estimate","parameter_covariance.h5", filestring_addl),"w") do f
-            f["smccov"] = param_covariance
-        end
-    else
-        throw("Invalid sampling method specified in setting :sampling_method")
-    end
-
-    return param_covariance
 end
 
 """
