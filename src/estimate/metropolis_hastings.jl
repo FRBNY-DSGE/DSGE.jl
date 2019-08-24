@@ -29,7 +29,8 @@ distribution of the parameters.
 
 ### Optional Arguments
 
-- `n_blocks::Int = 1`: Number of blocks
+- `n_blocks::Int = 1`: Number of blocks (for memory-management purposes)
+- `n_param_blocks::Int = 1`: Number of parameter blocks
 - `n_sim::Int    = 100`: Number of simulations
 - `n_burn::Int   = 0`: Length of burn-in period
 - `mhthin::Int   = 1`: Thinning parameter (for mhthin = d, keep only every dth draw)
@@ -50,13 +51,14 @@ function metropolis_hastings(propdist::Distribution,
                              data::Matrix{T},
                              cc0::T,
                              cc::T;
-                             n_blocks::Int64 = 1,
-                             n_sim::Int64    = 100,
-                             n_burn::Int64   = 0,
-                             mhthin::Int64   = 1,
-                             verbose::Symbol=:low,
-                             savepath::String = "mhsave.h5",
-                             rng::MersenneTwister = MersenneTwister(0),
+                             n_blocks::Int64       = 1,
+                             n_param_blocks::Int64 = 1,
+                             n_sim::Int64          = 100,
+                             n_burn::Int64         = 0,
+                             mhthin::Int64         = 1,
+                             verbose::Symbol       = :low,
+                             savepath::String      = "mhsave.h5",
+                             rng::MersenneTwister  = MersenneTwister(0),
                              testing::Bool = false) where {S<:Number, T<:AbstractFloat}
 
     n_params = length(parameters)
@@ -82,9 +84,17 @@ function metropolis_hastings(propdist::Distribution,
         end
     end
 
+    # New feature: Parameter Blocking
+    free_para_inds = findall([!θ.fixed for θ in parameters])
+    n_free_para    = length(free_para_inds)
+
+    blocks_free = SMC.generate_free_blocks(n_free_para, n_param_blocks)
+    blocks_all  = SMC.generate_all_blocks(blocks_free, free_para_inds)
+
     # Report number of blocks that will be used
     println(verbose, :low, "Blocks: $n_blocks")
     println(verbose, :low, "Draws per block: $n_sim")
+    println(verbose, :low, "Parameter blocks: $n_param_blocks")
 
     # For n_sim*mhthin iterations within each block, generate a new parameter draw.
     # Decide to accept or reject, and save every (mhthin)th draw that is accepted.
@@ -110,77 +120,81 @@ function metropolis_hastings(propdist::Distribution,
 
         for j = 1:(n_sim * mhthin)
 
-            # Draw para_new from the proposal distribution
-            para_new = rand(propdist, rng; cc = cc)
+            for (block_f, block_a) in zip(blocks_free, blocks_all)
 
-            # Solve the model (checking that parameters are within bounds and
-            # gensys returns a meaningful system) and evaluate the posterior
-            post_new = posterior!(loglikelihood, parameters, para_new, data;
-                                  sampler = true)
 
-            println(verbose, :high, "Block $block, Iteration $j: posterior = $post_new")
+                # Draw para_new from the proposal distribution
+                para_new = rand(propdist, rng; cc = cc)
 
-            # Choose to accept or reject the new parameter by calculating the
-            # ratio (r) of the new posterior value relative to the old one We
-            # compare min(1, r) to a number drawn randomly from a uniform (0, 1)
-            # distribution. This allows us to always accept the new draw if its
-            # posterior value is greater than the previous draw's, but it gives
-            # some probability to accepting a draw with a smaller posterior
-            # value, so that we may explore tails and other local modes.
-            r = exp(post_new - post_old)
-            x = rand(rng)
+                # Solve the model (checking that parameters are within bounds and
+                # gensys returns a meaningful system) and evaluate the posterior
+                post_new = posterior!(loglikelihood, parameters, para_new, data;
+                                      sampler = true)
 
-            if x < min(1.0, r)
-                # Accept proposed jump
-                para_old = para_new
-                post_old = post_new
-                propdist.μ = para_new
+                println(verbose, :high, "Block $block, Iteration $j: posterior = $post_new")
 
-                println(verbose, :high, "Block $block, Iteration $j: accept proposed jump")
-            else
-                # Reject proposed jump
-                block_rejections += 1
+                # Choose to accept or reject the new parameter by calculating the
+                # ratio (r) of the new posterior value relative to the old one We
+                # compare min(1, r) to a number drawn randomly from a uniform (0, 1)
+                # distribution. This allows us to always accept the new draw if its
+                # posterior value is greater than the previous draw's, but it gives
+                # some probability to accepting a draw with a smaller posterior
+                # value, so that we may explore tails and other local modes.
+                r = exp(post_new - post_old)
+                x = rand(rng)
 
-                println(verbose, :high, "Block $block, Iteration $j: reject proposed jump")
+                if x < min(1.0, r)
+                    # Accept proposed jump
+                    para_old = para_new
+                    post_old = post_new
+                    propdist.μ = para_new
+
+                    println(verbose, :high, "Block $block, Iteration $j: accept proposed jump")
+                else
+                    # Reject proposed jump
+                    block_rejections += 1
+
+                    println(verbose, :high, "Block $block, Iteration $j: reject proposed jump")
+                end
+
+                # Save every (mhthin)th draw
+                if j % mhthin == 0
+                    draw_index = convert(Int, j / mhthin)
+                    mhparams[draw_index, :]  = para_old'
+                end
+            end # of block
+
+            all_rejections += block_rejections
+            block_rejection_rate = block_rejections / (n_sim * mhthin)
+
+            ## Once every iblock times, write parameters to a file
+
+            # Calculate starting, ending indices for this block (corresponds to new chunk in memory)
+            block_start = n_sim*(block-n_burn-1)+1
+            block_end   = block_start+n_sim-1
+
+            # Write parameters to file if we're past n_burn blocks
+            if block > n_burn
+                parasim[block_start:block_end, :] = map(Float64, mhparams)
             end
 
-            # Save every (mhthin)th draw
-            if j % mhthin == 0
-                draw_index = convert(Int, j / mhthin)
-                mhparams[draw_index, :]  = para_old'
-            end
-        end # of block
+            # Calculate time to complete this block, average block time, and
+            # expected time to completion
+            block_time                      = (time_ns() - begin_time) / 1e9
+            total_sampling_time            += block_time
+            total_sampling_time_minutes     = total_sampling_time / 60
+            expected_time_remaining_sec     = (total_sampling_time / block) * (n_blocks - block)
+            expected_time_remaining_minutes = expected_time_remaining_sec / 60
 
-        all_rejections += block_rejections
-        block_rejection_rate = block_rejections / (n_sim * mhthin)
+            println(verbose, :low, "Completed $block of $n_blocks blocks.")
+            println(verbose, :low, "Total time to compute $block blocks: " *
+                    "$total_sampling_time_minutes minutes")
+            println(verbose, :low, "Expected time remaining for Metropolis-Hastings: " *
+                    "$expected_time_remaining_minutes minutes")
+            println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
 
-        ## Once every iblock times, write parameters to a file
-
-        # Calculate starting, ending indices for this block (corresponds to new chunk in memory)
-        block_start = n_sim*(block-n_burn-1)+1
-        block_end   = block_start+n_sim-1
-
-        # Write parameters to file if we're past n_burn blocks
-        if block > n_burn
-            parasim[block_start:block_end, :] = map(Float64, mhparams)
-        end
-
-        # Calculate time to complete this block, average block time, and
-        # expected time to completion
-        block_time                      = (time_ns() - begin_time) / 1e9
-        total_sampling_time            += block_time
-        total_sampling_time_minutes     = total_sampling_time / 60
-        expected_time_remaining_sec     = (total_sampling_time / block) * (n_blocks - block)
-        expected_time_remaining_minutes = expected_time_remaining_sec / 60
-
-        println(verbose, :low, "Completed $block of $n_blocks blocks.")
-        println(verbose, :low, "Total time to compute $block blocks: " *
-                               "$total_sampling_time_minutes minutes")
-        println(verbose, :low, "Expected time remaining for Metropolis-Hastings: " *
-                               "$expected_time_remaining_minutes minutes")
-        println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
+        end # of loop over parameter blocks
     end # of loop over blocks
-
     close(simfile)
 
     rejection_rate = all_rejections / (n_blocks * n_sim * mhthin)
