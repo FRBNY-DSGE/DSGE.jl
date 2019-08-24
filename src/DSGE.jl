@@ -151,10 +151,7 @@ module DSGE
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide, eqcond, measurement,
         pseudo_measurement,
-        shock_groupings,
-
-        # util
-        @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+        shock_groupings
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
