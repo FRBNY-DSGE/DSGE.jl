@@ -22,18 +22,11 @@ module DSGE
                               @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
     export
-        # distributions_ext.jl
-        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist,
-        MatrixNormal,
-
-        # settings.jl
-        Setting, get_setting,
-
         # defaults.jl
         default_settings!, default_test_settings!,
 
         # abstractdsgemodel.jl
-        AbstractModel, AbstractRepModel, description,
+        AbstractDSGEModel, AbstractRepModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
         date_presample_start, date_mainsample_start, date_zlb_start,
         date_presample_end, date_prezlb_end, date_mainsample_end, date_conditional_end,
@@ -159,7 +152,6 @@ module DSGE
     const DSGE_SHOCKDEC_DELIM = "__"
 
     include("abstractdsgemodel.jl")
-    include("settings.jl")
     include("defaults.jl")
     include("statespace.jl")
     include("util.jl")
