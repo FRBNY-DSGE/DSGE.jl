@@ -23,7 +23,7 @@ my_tests = [
             "estimate/csminwel",
             "estimate/optimize",
 
-            "estimate/metropolis_hastings"
+            "estimate/metropolis_hastings",
 
             "estimate/smc/smc",
             "estimate/smc/helpers",
