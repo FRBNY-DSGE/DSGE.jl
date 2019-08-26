@@ -1,3 +1,23 @@
+# DSGE.jl 0.8.0
+ ## New features and enhancements
+    + Breaks out SMC and Model Constructor objects into SMC.jl and ModelConstructors.jl
+    + MH can just take vector of Parameters, likelihood function, and data (like SMC but still exists only in DSGE.jl package)
+    + DSGE.jl depends on SMC.jl and ModelConstructors.jl but for users who only need SMC or Model Constructor utilities, don't need to load DSGE.jl package anymore
+
+# DSGE.jl 0.7.2
+
+## New features and enhancements
+   + Adds the ability to easily create packets of results from estimating and forecasting a DSGE model. An example script is provided in docs/examples/make_packet.jl.
+
+# DSGE.jl 0.7.1
+Bug fixes and cleanup
+
+# DSGE.jl 0.7.0 Release Notes
+
+## New features and enhancements
+    + Adds Sequential Monte Carlo (SMC) as an alternative to Metropolis Hastings for estimating models. Latest release with all bug fixes and speed improvements
+
+
 # DSGE.jl 0.6.0 Release Notes
 
 ## New features and enhancements
@@ -198,4 +218,3 @@
 
 - Input data matrices are CSV instead of HDF5
 - Estimation output matrices are *not* flattened when saved
-
