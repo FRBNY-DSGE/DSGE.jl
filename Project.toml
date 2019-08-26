@@ -59,7 +59,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ModelConstructors = "e47e5152-bd14-11e9-1b46-c951f0a7041d"
 SMC = "c6043b28-c053-11e9-348c-19d3cb73bbb3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-SMC = "c6043b28-c053-11e9-348c-19d3cb73bbb3"
 
 [targets]
 test = ["CSV", "InteractiveUtils", "LinearAlgebra", "ModelConstructors", "SMC", "Test"]
