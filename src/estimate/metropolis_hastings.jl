@@ -31,9 +31,13 @@ distribution of the parameters.
 
 - `n_blocks::Int = 1`: Number of blocks (for memory-management purposes)
 - `n_param_blocks::Int = 1`: Number of parameter blocks
-- `n_sim::Int    = 100`: Number of simulations
+- `n_sim::Int    = 100`: Number of simulations. Note: # saved observations will be
+    n_sim * n_param_blocks * (n_blocks - b_burn).
 - `n_burn::Int   = 0`: Length of burn-in period
 - `mhthin::Int   = 1`: Thinning parameter (for mhthin = d, keep only every dth draw)
+- `adaptive_accpt::Bool = false`: Whether or not to adaptively adjust acceptance prob.
+- `α::T = 1.0`: Tuning parameter for proposal density computation in adaptive case
+- `c::T = 1.0`:  Tuning parameter for proposal density computation in adaptive case
 - `verbose::Bool`: The desired frequency of function progress messages printed to
   standard out. One of:
 ```
@@ -56,6 +60,8 @@ function metropolis_hastings(propdist::Distribution,
                              n_sim::Int64          = 100,
                              n_burn::Int64         = 0,
                              mhthin::Int64         = 1,
+                             adaptive_accpt::Bool  = false,
+                             α::T = 1.0,      c::T = 1.0,
                              verbose::Symbol       = :low,
                              savepath::String      = "mhsave.h5",
                              rng::MersenneTwister  = MersenneTwister(0),
@@ -86,11 +92,7 @@ function metropolis_hastings(propdist::Distribution,
     free_para_inds = findall([!θ.fixed for θ in parameters])
     n_free_para    = length(free_para_inds)
     n_params       = length(parameters)
-
-    blocks_free = SMC.generate_free_blocks(n_free_para, n_param_blocks)
-    blocks_all  = SMC.generate_all_blocks(blocks_free, free_para_inds)
-
-    param_blocks = SMC.generate_param_blocks(n_params, n_param_blocks)
+    param_blocks   = SMC.generate_param_blocks(n_params, n_param_blocks)
 
     # Report number of blocks that will be used
     println(verbose, :low, "Blocks: $n_blocks")
@@ -102,14 +104,14 @@ function metropolis_hastings(propdist::Distribution,
     all_rejections = 0
 
     # Initialize matrices for parameter draws and transition matrices
-    mhparams = zeros(n_sim, n_params)
+    mhparams = zeros(n_sim * n_param_blocks, n_params)
 
     # Open HDF5 file for saving parameter draws
     simfile     = h5open(savepath, "w")
-    n_saved_obs = n_sim * (n_blocks - n_burn)
+    n_saved_obs = n_sim * n_param_blocks * (n_blocks - n_burn)
     parasim     = d_create(simfile, "mhparams", datatype(Float64),
                            dataspace(n_saved_obs, n_params),
-                           "chunk", (n_sim, n_params))
+                           "chunk", (n_sim * n_param_blocks, n_params))
 
     # Keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0.
@@ -124,20 +126,20 @@ function metropolis_hastings(propdist::Distribution,
             for (k, p_block) in enumerate(param_blocks)
 
                 # Draw para_new from the proposal distribution
-
-                # Previously:
-                # para_new = rand(propdist, rng; cc = cc)
-
-                # Now:
-                p_block     = sort(p_block)
                 para_subset = para_old[p_block]
-                d_subset    = DegenerateMvNormal(propdist.μ[p_block], propdist.σ[p_block, p_block])
-
+                d_subset    = DegenerateMvNormal(propdist.μ[p_block],
+                                                 propdist.σ[p_block, p_block])
                 para_draw = rand(d_subset, rng; cc = cc)
 
                 para_new          = deepcopy(para_old)
                 para_new[p_block] = para_draw
 
+                q0, q1 = if adaptive_accpt
+                    SMC.compute_proposal_densities(para_draw, para_subset, d_subset;
+                                                   α = α, c = c)
+                else
+                    0.0, 0.0
+                end
 
                 # Solve the model (checking that parameters are within bounds and
                 # gensys returns a meaningful system) and evaluate the posterior
@@ -154,7 +156,7 @@ function metropolis_hastings(propdist::Distribution,
                 # posterior value is greater than the previous draw's, but it gives
                 # some probability to accepting a draw with a smaller posterior
                 # value, so that we may explore tails and other local modes.
-                r = exp(post_new - post_old)
+                r = exp((post_new - post_old) + (q0 - q1))
                 x = rand(rng)
 
                 if x < min(1.0, r)
@@ -163,12 +165,14 @@ function metropolis_hastings(propdist::Distribution,
                     post_old = post_new
                     propdist.μ = para_new
 
-                    println(verbose, :high, "Block $block, Iteration $j: accept proposed jump")
+                    println(verbose, :high, "Block $block, Iteration $j, Parameter Block " *
+                        "$k/$(n_param_blocks): accept proposed jump")
                 else
                     # Reject proposed jump
                     block_rejections += 1
 
-                    println(verbose, :high, "Block $block, Iteration $j: reject proposed jump")
+                    println(verbose, :high, "Block $block, Iteration $j, Parameter Block " *
+                        "$k/$(n_param_blocks): reject proposed jump")
                 end
 
                 # Save every (mhthin)th draw
@@ -179,13 +183,13 @@ function metropolis_hastings(propdist::Distribution,
             end # of block
 
             all_rejections += block_rejections
-            block_rejection_rate = block_rejections / (n_sim * mhthin)
+            block_rejection_rate = block_rejections / (n_sim * mhthin * n_param_blocks)
 
             ## Once every iblock times, write parameters to a file
 
             # Calculate starting, ending indices for this block (corresponds to new chunk in memory)
-            block_start = n_sim*(block-n_burn-1)+1
-            block_end   = block_start+n_sim-1
+            block_start = n_sim * n_param_blocks * (block - n_burn - 1)+1
+            block_end   = block_start + (n_sim * n_param_blocks) - 1
 
             # Write parameters to file if we're past n_burn blocks
             if block > n_burn
@@ -211,7 +215,7 @@ function metropolis_hastings(propdist::Distribution,
     end # of loop over blocks
     close(simfile)
 
-    rejection_rate = all_rejections / (n_blocks * n_sim * mhthin)
+    rejection_rate = all_rejections / (n_blocks * n_sim * mhthin * n_param_blocks)
     println(verbose, :low, "Overall rejection rate: $rejection_rate")
 end
 
