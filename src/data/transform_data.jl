@@ -160,7 +160,7 @@ function transform_population_data(population_data::DataFrame, population_foreca
     # Output dictionary for population data
     population_data_out = DataFrame()
     population_data_out[!, :date] = convert(Array{Date}, population_recorded[:, :date])
-    population_data_out[!, :dlpopulation_recorded] = difflog(population_recorded[population_mnemonic])
+    population_data_out[!, :dlpopulation_recorded] = difflog(population_recorded[!, population_mnemonic])
 
     n_population_forecast_obs = size(population_forecast,1)
 
