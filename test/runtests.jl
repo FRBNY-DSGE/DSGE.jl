@@ -22,7 +22,8 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
-            "estimate/metropolis_hastings",
+
+            "estimate/metropolis_hastings"
 
             "estimate/smc/smc",
             "estimate/smc/helpers",
