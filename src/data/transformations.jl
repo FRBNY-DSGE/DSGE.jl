@@ -41,7 +41,7 @@ Converts nominal to real values using the specified deflator.
   value is the FRED GDP Deflator mnemonic.
 """
 function nominal_to_real(col::Symbol, df::DataFrame; deflator_mnemonic::Symbol = :GDPDEF)
-    return df[col] ./ df[deflator_mnemonic]
+    return df[!, col] ./ df[!, deflator_mnemonic]
 end
 
 
@@ -76,7 +76,7 @@ function percapita(m::AbstractDSGEModel, col::Symbol, df::DataFrame)
 end
 
 function percapita(col::Symbol, df::DataFrame, population_mnemonic::Symbol)
-    df[col] ./ df[population_mnemonic]
+    df[!, col] ./ df[!, population_mnemonic]
 end
 
 """

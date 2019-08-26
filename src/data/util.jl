@@ -109,8 +109,8 @@ Change column `col` of dates in `df` from String to Date, and map any dates give
 interior of a quarter to the last day of the quarter.
 """
 function format_dates!(col::Symbol, df::DataFrame)
-    df[col] = Dates.Date.(df[col])
-    map!(lastdayofquarter, df[col], df[col])
+    df[!, col] = Dates.Date.(df[!, col])
+    map!(lastdayofquarter, df[!, col], df[!, col])
 end
 
 """
@@ -277,10 +277,10 @@ function reconcile_column_names(a::DataFrame, b::DataFrame)
     new_a_cols = setdiff(names(b), names(a))
     new_b_cols = setdiff(names(a), names(b))
     for col in new_a_cols
-        a[col] = fill(missing, size(a, 1))
+        a[!, col] = fill(missing, size(a, 1))
     end
     for col in new_b_cols
-        b[col] = fill(missing, size(b, 1))
+        b[!, col] = fill(missing, size(b, 1))
     end
     return a, b
 end
