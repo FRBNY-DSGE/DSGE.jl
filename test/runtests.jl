@@ -3,7 +3,7 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 
 my_tests = [
-            "core",
+           #= "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
@@ -21,7 +21,7 @@ my_tests = [
             "estimate/hessizero",
             "estimate/hessian",
             "estimate/csminwel",
-            "estimate/optimize",
+            "estimate/optimize",=#
             "estimate/metropolis_hastings",
 
             "estimate/smc/smc",

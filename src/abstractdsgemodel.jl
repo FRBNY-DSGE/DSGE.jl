@@ -320,6 +320,19 @@ function update!(m::AbstractDSGEModel, values::Vector{T}) where T<:AbstractFloat
     steadystate!(m)
 end
 
+"""
+```
+update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
+```
+Update `m.parameters` with `values`, recomputing the steady-state parameter values.
+### Arguments:
+- `m`: the model object
+- `values`: the new values to assign to non-steady-state parameters.
+"""
+function update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
+    ModelConstructors.update!(m.parameters, [θ.value for θ in values])
+    steadystate!(m)
+end
 
 """
 ```
