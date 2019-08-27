@@ -5,7 +5,7 @@ os:
     # by downloading all of xcode which Travis CI then kills because it takes too long.
     # Refer to Matt Bauman's comment on JuliaIO/HDF5.jl issue 483, and
     # Andreas Noack's issue 27751 on Homebrew/homebrew-core.
-    - osx
+    #- osx
     - linux
 julia:
     - 0.7.0
