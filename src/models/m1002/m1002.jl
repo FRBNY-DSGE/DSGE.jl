@@ -130,7 +130,7 @@ function init_model_indices!(m::Model1002)
     # Exogenous shocks
     exogenous_shocks = [[
         :g_sh, :b_sh, :μ_sh, :z_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
-        :γ_sh, :π_star_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh];
+        :γ_sh, :π_star_sh, :zp_sh, :lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh];
         [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
