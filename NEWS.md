@@ -1,3 +1,6 @@
+# DSGE.jl 0.8.1
+Bug fixes and cleanup
+
 # DSGE.jl 0.8.0
  ## New features and enhancements
     + Breaks out SMC and Model Constructor objects into SMC.jl and ModelConstructors.jl
