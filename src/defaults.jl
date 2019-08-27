@@ -39,6 +39,8 @@ function default_settings!(m::AbstractDSGEModel)
         "Mnemonic of FRED data series for computing per-capita values (a Nullable{Symbol})")
     settings[:hpfilter_population] = Setting(:hpfilter_population, true,
         "Whether to HP filter combined population and forecast")
+    settings[:rate_expectations_source] = Setting(:rate_expectations_source, :ois,
+        "Data source of expectations for anticipated shocks")
 
     # Dates
     settings[:date_presample_start] = Setting(:date_presample_start, quartertodate("1959-Q3"),
