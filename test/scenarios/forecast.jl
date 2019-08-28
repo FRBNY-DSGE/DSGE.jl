@@ -36,19 +36,19 @@ end
 
     # Test filter_shocks!
     for var in scen.target_names
-        scen.targets[var] = rand(forecast_horizons(m))
+        scen.targets[!, var] = rand(forecast_horizons(m))
     end
     global forecastshocks = filter_shocks!(m, scen, sys)
     for var in scen.instrument_names
         ind = m.exogenous_shocks[var]
-        @test scen.instruments[var] == forecastshocks[ind, :]
+        @test scen.instruments[!, var] == forecastshocks[ind, :]
     end
 
     s_T = zeros(n_states_augmented(m))
     global _, forecastobs,_ ,_  = forecast(m, sys, s_T, shocks = forecastshocks)
     for var in scen.target_names
         ind = m.observables[var]
-        @test scen.targets[var] ≈ forecastobs[ind, :]
+        @test scen.targets[!, var] ≈ forecastobs[ind, :]
     end
 
     # Test scenario with shock scaling
@@ -60,11 +60,11 @@ end
     global forecastshocks = filter_shocks!(m, scale, sys)
     for var in scale.target_names
         ind = m.observables[var]
-        @test scale.targets[var] == scen.targets[var]
+        @test scale.targets[!, var] == scen.targets[!, var]
     end
     for var in scale.instrument_names
         ind = m.exogenous_shocks[var]
-        @test scale.instruments[var] == forecastshocks[ind, :]
+        @test scale.instruments[!, var] == forecastshocks[ind, :]
     end
 end
 

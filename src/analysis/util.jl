@@ -228,17 +228,15 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
         else
             DataFrame()
         end
-
         unpadded_data = if population_data[1, :date] < end_date < population_data[end, :date]
             # Dates entirely in past
-            population_data[start_date .<= population_data[:date] .<= end_date, :]
+            population_data[start_date .<= population_data[!, :date] .<= end_date, :]
         else
             # Dates span past and forecast
-            data  = population_data[start_date .<= population_data[:date], :]
-            fcast = population_forecast[population_forecast[:date] .<= end_date, :]
+            data  = population_data[start_date .<= population_data[!, :date], :]
+            fcast = population_forecast[population_forecast[!, :date] .<= end_date, :]
             vcat(data, fcast)
         end
-
         padding, unpadded_data = reconcile_column_names(padding, unpadded_data)
         padded_data = vcat(padding, unpadded_data)
         # na2nan!(padded_data)
@@ -246,13 +244,13 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
         # Dates entirely in forecast
-        population_forecast[start_date .<= population_forecast[:date] .<= end_date, :]
+        population_forecast[start_date .<= population_forecast[!, :date] .<= end_date, :]
     else
         # start_date comes after population_forecast[end, :date]
         error("Start date $start_date comes after population forecast ends")
     end
 
-    return population_insample[mnemonic]
+    return population_insample[!, mnemonic]
 end
 
 """

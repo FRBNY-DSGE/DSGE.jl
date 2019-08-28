@@ -54,7 +54,6 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
     # Download routines
     if recreate_data
         println(verbose, :low, "Creating dataset...")
-
         levels = load_data_levels(m; verbose=verbose)
         if cond_type in [:semi, :full]
             cond_levels = load_cond_data_levels(m; verbose=verbose)
@@ -62,7 +61,6 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             levels = vcat(levels, cond_levels)
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
-
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
         end_date   = if cond_type in [:semi, :full]
@@ -70,7 +68,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
         else
             date_mainsample_end(m)
         end
-        df = df[start_date .<= df[:date] .<= end_date, :]
+        df = df[start_date .<= df[!, :date] .<= end_date, :]
 
         if !m.testing
             save_data(m, df; cond_type=cond_type)
@@ -139,7 +137,6 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
     df = load_fred_data(m; start_date=firstdayofquarter(start_date),
                         end_date=end_date, verbose=verbose)
 
-
     # Set ois series to load
     if n_anticipated_shocks(m) > 0
         if get_setting(m, :rate_expectations_source) == :ois
@@ -183,8 +180,8 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
             # Warn on sources with incomplete data; missing data will be replaced with missing
             # during merge.
-            if !in(lastdayofquarter(start_date), addl_data[:date]) ||
-                !in(lastdayofquarter(end_date), addl_data[:date])
+            if !in(lastdayofquarter(start_date), addl_data[!, :date]) ||
+                !in(lastdayofquarter(end_date), addl_data[!, :date])
 
                 @warn "$file does not contain the entire date range specified; missings used."
             end
@@ -199,7 +196,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             # Extract just the columns and rows of the dataset we want, and merge them with
             # data
             cols = [:date; mnemonics]
-            rows = start_date .<= addl_data[:date] .<= end_date
+            rows = start_date .<= addl_data[!, :date] .<= end_date
 
             addl_data = addl_data[rows, cols]
             df = join(df, addl_data, on=:date, kind=:outer)
@@ -219,7 +216,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         filename = inpath(m, "raw", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
         if !isnull(mnemonic)
-            CSV.write(filename, df[[:date, get(mnemonic)]])
+            CSV.write(filename, df[!, [:date, get(mnemonic)]])
         end
     end
 
@@ -460,7 +457,7 @@ function data_to_df(m::AbstractDSGEModel, data::Matrix{T}, start_date::Date) whe
     # Add observables
     for var in keys(m.observables)
         ind = m.observables[var]
-        df[var] = vec(data[ind, :])
+        df[!, var] = vec(data[ind, :])
     end
 
     return df
@@ -568,12 +565,12 @@ end
 function construct_bluechip_data(m::AbstractModel, raw_forecasts::String, num_anticipated_shocks::Int, save_bluechip_rate_expectations_here::String)
     df = DataFrame(date = DSGE.quarter_range(date_zlb_start(m), date_zlb_end(m)))
     for h = 1:num_anticipated_shocks
-        df[Symbol("ant$h")] = NaN
+        df[!, Symbol("ant$h")] = NaN
     end
     for date in DSGE.quarter_range(date_zlb_start(m), date_zlb_end(m))
         y, q = Dates.year(date), Dates.quarterofyear(date)
         bluechip = load_reference_forecast(m, y, q, raw_forecasts, num_anticipated_shocks)
-        df_date_ind = findfirst(df[:date], date)
+        df_date_ind = findfirst(df[!, :date], date)
         for h=1:num_anticipated_shocks
             df[df_date_ind, Symbol("ant$h")] =
                 # We use quarterly interest rates but bluechip forecasts annualized

@@ -80,11 +80,11 @@ function reverse_transform(m::AbstractDSGEModel, untransformed::AbstractArray, s
     df = DataFrame()
     nperiods = size(untransformed, 2)
     end_date = iterate_quarters(start_date, nperiods - 1)
-    df[:date] = quarter_range(start_date, end_date)
+    df[!, :date] = quarter_range(start_date, end_date)
 
     for (ind, var) in enumerate(vars)
         series = untransformed[ind, :]
-        df[var] = series
+        df[!, var] = series
     end
 
     reverse_transform(m, df, class; fourquarter = fourquarter, verbose = verbose)

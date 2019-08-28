@@ -82,12 +82,12 @@ function load_fred_data(m::AbstractDSGEModel;
 
         for (i,s) in enumerate(missing_series)
             println(verbose, :low, "Fetching FRED series $s...")
-            try
+            #try
                 fredseries[i] = get_data(f, string(s); frequency="q",
                                                        observation_start=string(start_date),
                                                        observation_end=string(end_date),
                                                        vintage_dates=string(vint_date))
-            catch err
+            #=catch err
                 if :msg in fieldnames(typeof(err))
                     @warn err.msg
                 else
@@ -109,7 +109,7 @@ function load_fred_data(m::AbstractDSGEModel;
                     @warn "FRED series $s could not be fetched."
                     continue
                 end
-            end
+            end=#
         end
 
         # Extract dataframe from each series and merge on date
@@ -118,8 +118,8 @@ function load_fred_data(m::AbstractDSGEModel;
                 series = fredseries[i]
                 series_id = Symbol(series.id)
                 rename!(series.df, :value => series_id)
-                map!(x->lastdayofquarter(x), series.df[:date], series.df[:date])
-                data = join(data, series.df[[:date, series_id]], on=:date, kind=:outer)
+                map!(x->lastdayofquarter(x), series.df[!, :date], series.df[!, :date])
+                data = join(data, series.df[!, [:date, series_id]], on=:date, kind=:outer)
             end
         end
 
@@ -139,7 +139,7 @@ function load_fred_data(m::AbstractDSGEModel;
     # Make sure to only return the series and dates that are specified for this
     # model (there may be additional series in the file)
 
-    rows = start_date .<= data[:date] .<= end_date
+    rows = start_date .<= data[!, :date] .<= end_date
     cols = [:date; mnemonics]
     return data[rows, cols]
 end

@@ -724,7 +724,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     v0 = zeros(nperiods)
     for group in groups
         # Sum shock values for each group
-        shock_vectors = [df[shock] for shock in group.shocks]
+        shock_vectors = [df[!, shock] for shock in group.shocks]
         shock_sum = reduce(+, shock_vectors; init = v0)
         df[!, Symbol(group.name)] = shock_sum
 

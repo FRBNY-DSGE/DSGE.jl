@@ -266,7 +266,7 @@ function init_observable_mappings!(m::Model990)
         # TO:   Same
 
         ant_fwd_transform = function (levels)
-            levels[Symbol("ant$i")]
+            levels[!, Symbol("ant$i")]
         end
 
         ant_rev_transform = quartertoannual
