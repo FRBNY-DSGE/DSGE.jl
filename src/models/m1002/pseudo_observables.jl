@@ -1,8 +1,8 @@
 function init_pseudo_observable_mappings!(m::Model1002)
 
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
-                    :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours,
-                    :Expected10YearRateGap, :NominalFFR, :Expected10YearRate, :z_t,
+                    :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t,
+                    :Expected10YearRateGap, :NominalFFR, :Expected10YearRate,
                     :Expected10YearNaturalRate,
                     :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth]
     add_exo_process = true
