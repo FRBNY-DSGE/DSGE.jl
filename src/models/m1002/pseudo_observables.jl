@@ -1,10 +1,15 @@
 function init_pseudo_observable_mappings!(m::Model1002)
 
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
-                    :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t,
-                    :Expected10YearRateGap, :NominalFFR, :Expected10YearRate, :Expected10YearNaturalRate,
+                    :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours,
+                    :Expected10YearRateGap, :NominalFFR, :Expected10YearRate, :z_t,
+                    :Expected10YearNaturalRate,
                     :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth]
-
+    add_exo_process = true
+    if add_exo_process
+        to_add = [:g_t, :b_t, :μ_t, :α_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
+                  :γ_t, :π_star_t, :lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t]
+    end
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names
@@ -82,6 +87,14 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:LaborProductivityGrowth].name     = "Labor Productivity Growth"
     pseudo[:LaborProductivityGrowth].longname = "Labor Productivity Growth Rate"
     pseudo[:LaborProductivityGrowth].rev_transform = quartertoannual
+
+    # Other exogenous processes
+    if add_exo_process
+        for i in to_add
+            pseudo[i].name = DSGE.detexify(i)
+            pseudo[i].longname = DSGE.detexify(i)
+        end
+    end
 
     # Add to model object
     m.pseudo_observable_mappings = pseudo
