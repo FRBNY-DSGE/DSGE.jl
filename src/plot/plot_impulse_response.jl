@@ -150,7 +150,7 @@ irf
         label     := label_mean_bands ? "Mean"*string(input_type) : ""
         linewidth := 2
         linecolor := mean_color
-        sign * mb.means[varshock]
+        sign * mb.means[!, varshock]
     end
 
     if input_type2 != Symbol()

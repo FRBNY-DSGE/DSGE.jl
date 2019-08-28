@@ -321,7 +321,7 @@ function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
     df       = CSV.read(filename, copycols=true)
 
     # Convert date column from string to Date
-    df[:date] = map(Date, df[:date])
+    df[!, :date] = map(Date, df[!, :date])
 
     missing_cond_vars!(m, df; cond_type = cond_type)
 
@@ -426,7 +426,7 @@ function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
         else
             date_mainsample_end(m)
         end
-        df1 = df1[start_date .<= df[:date] .<= end_date, :]
+        df1 = df1[start_date .<= df[!, :date] .<= end_date, :]
     end
 
     # Discard columns not used

@@ -67,7 +67,7 @@ function filter_shocks!(m::AbstractDSGEModel, scen::Scenario, system::System, in
     for shock in keys(m.exogenous_shocks)
         shock_index = m.exogenous_shocks[shock]
         if shock in scen.instrument_names
-            scen.instruments[shock] = forecastshocks[shock_index, :]
+            scen.instruments[!, shock] = forecastshocks[shock_index, :]
         else
             @assert all(x -> x == 0, forecastshocks[shock_index, :])
         end

@@ -110,7 +110,7 @@ hair
     end
 
     # Assign date ticks
-    date_ticks = Base.filter(x -> Dates.month(x) == 3,            realized[:date])
+    date_ticks = Base.filter(x -> Dates.month(x) == 3,            realized[!, :date])
     date_ticks = Base.filter(x -> Dates.year(x) % tick_size == 0, date_ticks)
     xticks --> (date_ticks, map(Dates.year, date_ticks))
 
@@ -121,7 +121,7 @@ hair
         linecolor := hist_color
         label     := hist_label
 
-        realized[:date], realized[var]
+        realized[!, :date], realized[!, var]
     end
 
     # Forecasts
@@ -137,8 +137,8 @@ hair
             end
 
             initial_date = iterate_quarters(forecast.means[1, :date], -1)
-            x = vcat(initial_date,  forecast.means[:date])
-            y = vcat(initial_value, forecast.means[var])
+            x = vcat(initial_date,  forecast.means[!, :date])
+            y = vcat(initial_value, forecast.means[!, var])
             x, y
         end
     end

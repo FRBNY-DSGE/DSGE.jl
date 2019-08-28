@@ -169,11 +169,11 @@ function load_population_growth(m::AbstractDSGEModel; verbose::Symbol = :low)
         end
 
         # Prepare output variables
-        data = data[[:date, data_mnemonic]]
+        data = data[!, [:date, data_mnemonic]]
         rename!(data, data_mnemonic => :population_growth)
 
         if use_population_forecast(m)
-            forecast = forecast[[:date, forecast_mnemonic]]
+            forecast = forecast[!, [:date, forecast_mnemonic]]
             rename!(forecast, forecast_mnemonic => :population_growth)
         else
             forecast = DataFrame()

@@ -163,7 +163,7 @@ shockdec
                                       detexify_shocks = false,
                                       groups = groups)
 
-    dates = df[:date]
+    dates = df[!, :date]
     xnums = (1:length(dates)) .- 0.5
 
     # Assign date ticks

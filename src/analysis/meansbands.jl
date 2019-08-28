@@ -231,7 +231,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     end
 
     # date indices
-    date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[:date]))
+    date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[!, :date]))
 
     # variable indices
     indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(names(means)))
@@ -396,7 +396,7 @@ startdate_means(mb::MeansBands)
 Get first period in`mb.means`. Assumes `mb.means[product]` is already sorted by
 date.
 """
-startdate_means(mb::MeansBands) = mb.means[:date][1]
+startdate_means(mb::MeansBands) = mb.means[!, :date][1]
 
 """
 ```
@@ -406,7 +406,7 @@ enddate_means(mb::MeansBands)
 Get last period for which `mb` stores means. Assumes `mb.means[product]` is
 already sorted by date.
 """
-enddate_means(mb::MeansBands) = mb.means[:date][end]
+enddate_means(mb::MeansBands) = mb.means[!, :date][end]
 
 
 """
@@ -685,9 +685,9 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     # Get the variable-shock combinations we want to print
     varshocks = [Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock") for shock in shocks]
     # Fetch the columns corresponding to varshocks
-    df_shockdec = mb_shockdec.means[union([:date], varshocks)]
-    df_trend    = mb_trend.means[[:date, var]]
-    df_dettrend = mb_dettrend.means[[:date, var]]
+    df_shockdec = mb_shockdec.means[!, union([:date], varshocks)]
+    df_trend    = mb_trend.means[!, [:date, var]]
+    df_dettrend = mb_dettrend.means[!, [:date, var]]
 
     # Line up dates between trend, dettrend and shockdec
     df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
@@ -696,11 +696,11 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     rename!(df_shockdec, var => :dettrend)
 
     # Add each shock's contribution and deterministic trend to output DataFrame
-    df = DataFrame(date = df_shockdec[:date])
+    df = DataFrame(date = df_shockdec[!, :date])
     for col in setdiff(names(df_shockdec), [:date, :trend])
-        df[col] = df_shockdec[col]
+        df[!, col] = df_shockdec[!, col]
     end
-    df_shockdec[:dettrend] = df_shockdec[:dettrend]
+    df_shockdec[!, :dettrend] = df_shockdec[!, :dettrend]
 
     # Rename columns to just the shock names
     map(x -> rename!(df, x => parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
@@ -713,10 +713,10 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         # Truncate to just the dates we want
         startdate = df[1, :date]
         enddate   = df[end, :date]
-        df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[:date] .<= enddate, [:date, var]]
+        df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[!, :date] .<= enddate, [:date, var]]
 
         df_shockdec = join(df_shockdec, df_mean, on = :date, kind = :inner)
-        df[:detrendedMean] = df_shockdec[var] - df_shockdec[:trend]
+        df[!, :detrendedMean] = df_shockdec[!, var] - df_shockdec[!, :trend]
     end
 
     # Group shocks if desired
@@ -726,10 +726,10 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         # Sum shock values for each group
         shock_vectors = [df[shock] for shock in group.shocks]
         shock_sum = reduce(+, shock_vectors; init = v0)
-        df[Symbol(group.name)] = shock_sum
+        df[!, Symbol(group.name)] = shock_sum
 
         # Delete original (ungrouped) shocks from df
-        deletecols!(df, setdiff(group.shocks, [Symbol(group.name)]))
+        select!(df, Not(setdiff(group.shocks, [Symbol(group.name)])))
     end
 
     # Remove Unicode characters from shock names

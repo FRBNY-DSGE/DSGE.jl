@@ -214,7 +214,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
                     # :histobs just refers to data, so we only write one draw
                     # (as all draws would be the same)
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
-                    df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
+                    df1 = df[date_mainsample_start(m) .<= df[!, :date] .<= date_mainsample_end(m), :]
                     data = df_to_matrix(m, df1)
 
                     # Must call missing2nan since you cannot write Missing types to HDF5 files
