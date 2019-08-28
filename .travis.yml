@@ -23,7 +23,7 @@ script:
     #Pkg.test(coverage=true)'
 branches:
   only:
-    - master
+    - master 
     - gh-pages
 after_success:
 - julia -e 'Pkg.add("Documenter")'
