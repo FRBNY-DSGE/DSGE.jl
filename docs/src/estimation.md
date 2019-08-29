@@ -13,6 +13,7 @@ sampler to do this, which requires as a proposal covariance matrix and the
 Hessian matrix corresponding to the posterior mode.
 The second routine is a Sequential Monte Carlo sampler, which is called
 from the [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl) package.
+Both routines implement adaptive proposal densities and parameter blocking.[^1]
 
 The function `estimate` implements the entire procedure for either routine.
 Below, we explain the MH algorithm.
@@ -195,3 +196,6 @@ m = Model990()
 m <= Setting(:sampling_method, :SMC)
 m <= Setting(:n_particles, 10000)
 ```
+
+[^1]: We document the details of implementing adaptive proposal densities and
+      parameter blocking in [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl).
