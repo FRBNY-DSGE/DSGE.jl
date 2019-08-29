@@ -48,6 +48,8 @@ function init_subspec!(m::Model1010)
         return ss20!(m)
     elseif subspec(m) == "ss21"
         return ss21!(m)
+    elseif subspec(m) == "ss22"
+        return ss22!(m)
     else
         error("This subspec is not defined.")
     end
