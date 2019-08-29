@@ -111,10 +111,10 @@ function default_settings!(m::AbstractDSGEModel)
         "Number of parameter blocks for Metropolis-Hastings")
     settings[:mh_adaptive_accpt] = Setting(:mh_adaptive_accpt, false,
         "Whether to adaptively solve for acceptance rate in Metropolis-Hastings")
-    settings[:mh_c] = Setting(:mh_c, 1.0,
-        "Tuning parameter for adaptive acceptance rate in Metropolis-Hastings")
+    settings[:mh_c] = Setting(:mh_c, 0.5,
+        "Step size used for adaptive acceptance rate in Metropolis-Hastings")
     settings[:mh_α] = Setting(:mh_α, 1.0,
-        "Tuning parameter for adaptive acceptance rate in Metropolis-Hastings")
+        "Mixture proportion for adaptive acceptance rate in Metropolis-Hastings")
     settings[:n_mh_burn] = Setting(:n_mh_burn, 2,
         "Number of blocks to use as burn-in in Metropolis-Hastings")
     settings[:mh_thin] = Setting(:mh_thin, 5,
