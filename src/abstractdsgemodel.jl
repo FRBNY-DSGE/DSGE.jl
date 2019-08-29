@@ -151,10 +151,11 @@ hessian_path(m::AbstractDSGEModel)      = get_setting(m, :hessian_path)
 n_hessian_test_params(m::AbstractDSGEModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
-n_mh_blocks(m::AbstractDSGEModel)      =  get_setting(m, :n_mh_blocks)
-n_mh_simulations(m::AbstractDSGEModel) =  get_setting(m, :n_mh_simulations)
-n_mh_burn(m::AbstractDSGEModel)        =  get_setting(m, :n_mh_burn)
-mh_thin(m::AbstractDSGEModel)          =  get_setting(m, :mh_thin)
+n_mh_blocks(m::AbstractDSGEModel)       =  get_setting(m, :n_mh_blocks)
+n_mh_param_blocks(m::AbstractDSGEModel) =  get_setting(m, :n_mh_param_blocks)
+n_mh_simulations(m::AbstractDSGEModel)  =  get_setting(m, :n_mh_simulations)
+n_mh_burn(m::AbstractDSGEModel)         =  get_setting(m, :n_mh_burn)
+mh_thin(m::AbstractDSGEModel)           =  get_setting(m, :mh_thin)
 
 # Interface for forecast settings
 date_forecast_start(m::AbstractDSGEModel)   = get_setting(m, :date_forecast_start)
