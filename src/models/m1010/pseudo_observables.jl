@@ -31,6 +31,16 @@ function init_pseudo_observable_mappings!(m::Model1010)
          :Forward30YearRealRate, :Forward30YearRealNaturalRate]
     end
 
+    if subspec(m) in ["ss22"]
+        to_add = [:g_t, :b_liq_t, :b_safe_t, :μ_t, :z_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
+                  :γ_t, :π_star_t, :lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t,
+                  :e_BBB_t, :e_AAA_t]
+        if subspec(m) in ["ss22"]
+            to_add = setdiff(to_add, [:z_t])
+        end
+        push!(pseudo_names, to_add...)
+    end
+
     if subspec(m) in ["ss13", "ss18"]
         push!(pseudo_names, :LiquidityConvenienceYield, :SafetyConvenienceYield,
               :Forward20YearLiquidityConvenienceYield, :Forward20YearSafetyConvenienceYield,
@@ -238,6 +248,14 @@ function init_pseudo_observable_mappings!(m::Model1010)
         pseudo[:Forward20YearSDF].name = "20-year forward stochastic discount factor"
         pseudo[:Forward20YearSDF].longname = "20-year forward stochastic discount factor"
         pseudo[:Forward20YearSDF].rev_transform = quartertoannual
+    end
+
+    # Exogenous processes
+    if subspec(m) in ["ss22"]
+        for i in to_add
+            pseudo[i].name = DSGE.detexify(i)
+            pseudo[i].longname = DSGE.detexify(i)
+        end
     end
 
     # Add to model object

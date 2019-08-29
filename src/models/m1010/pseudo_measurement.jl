@@ -235,6 +235,19 @@ function pseudo_measurement(m::Model1010{T},
         DD_pseudo[pseudo[:Forward20YearSDF]]    = m[:Rstarn] - 100*(m[:π_star]-1) + 100*log(m[:lnb_liq]) + 100*log(m[:lnb_safe])
     end
 
+    ## Exogenous processes
+    if subspec(m) in ["ss22"]
+        to_add = [:g_t, :b_liq_t, :b_safe_t, :μ_t, :z_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
+                  :γ_t, :π_star_t]
+        to_add_addl = [:lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_BBB_t, :e_AAA_t]
+        for i in to_add
+            ZZ_pseudo[pseudo[i], endo[i]] = 1.
+        end
+        for i in to_add_addl
+            ZZ_pseudo[pseudo[i], endo_addl[i]] = 1.
+        end
+    end
+
     # Collect indices and transforms
     return PseudoMeasurement(ZZ_pseudo, DD_pseudo)
 end
