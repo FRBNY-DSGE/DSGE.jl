@@ -7,9 +7,12 @@ function metropolis_hastings(propdist::Distribution,
                              cc0::T,
                              cc::T;
                              n_blocks::Int = 1,
-                             n_sim::Int    = 100,
-                             n_burn::Int   = 0,
-                             mhthin::Int   = 1,
+                             n_param_blocks::Int64 = 1,
+                             n_sim::Int64          = 100,
+                             n_burn::Int64         = 0,
+                             mhthin::Int64         = 1,
+                             adaptive_accpt::Bool  = false,
+                             α::T = 1.0,      c::T = 1.0,
                              verbose::Symbol=:low,
                              savepath::String = "mhsave.h5",
                              rng::MersenneTwister = MersenneTwister(0),
@@ -187,7 +190,7 @@ function metropolis_hastings(propdist::Distribution,
 
             ## Once every iblock times, write parameters to a file
 
-            # Calculate starting, ending indices for this block (corresponds to new chunk in memory)
+            # Calculate start/end indices for this block (corresponds to new chunk in memory)
             block_start = n_sim * n_param_blocks * (block - n_burn - 1)+1
             block_end   = block_start + (n_sim * n_param_blocks) - 1
 
@@ -259,6 +262,10 @@ function metropolis_hastings(propdist::Distribution,
     n_sim    = n_mh_simulations(m)
     n_burn   = n_mh_burn(m)
     mhthin   = mh_thin(m)
+
+    n_param_blocks = n_mh_param_blocks(m)
+    adaptive_accpt = get_setting(m, :mh_adaptive_accpt)
+
     rng      = m.rng
     testing  = m.testing
     savepath = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
@@ -272,7 +279,8 @@ function metropolis_hastings(propdist::Distribution,
                    use_chand_recursion = use_chand_recursion)
     end
     return metropolis_hastings(propdist, loglikelihood, m.parameters, data, cc0, cc;
-                               n_blocks = n_blocks, n_sim = n_sim, n_burn = n_burn,
-                               mhthin = mhthin, verbose = verbose, savepath = savepath,
-                               rng = rng, testing = testing)
+                               n_blocks = n_blocks, n_param_blocks = n_param_blocks,
+                               adaptive_accpt = adaptive_accpt, n_sim = n_sim,
+                               n_burn = n_burn, mhthin = mhthin, verbose = verbose,
+                               savepath = savepath, rng = rng, testing = testing)
 end
