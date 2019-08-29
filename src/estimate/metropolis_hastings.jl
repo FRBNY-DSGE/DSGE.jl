@@ -184,38 +184,37 @@ function metropolis_hastings(propdist::Distribution,
                     draw_index = convert(Int, j / mhthin)
                     mhparams[draw_index, :]  = para_old'
                 end
-            end # of block
+            end # of loop over parameter blocks
+        end # of block
+        
+        all_rejections += block_rejections
+        block_rejection_rate = block_rejections / (n_sim * mhthin * n_param_blocks)
 
-            all_rejections += block_rejections
-            block_rejection_rate = block_rejections / (n_sim * mhthin * n_param_blocks)
+        ## Once every iblock times, write parameters to a file
 
-            ## Once every iblock times, write parameters to a file
+        # Calculate start/end indices for this block (corresponds to new chunk in memory)
+        block_start = n_sim * n_param_blocks * (block - n_burn - 1)+1
+        block_end   = block_start + (n_sim * n_param_blocks) - 1
 
-            # Calculate start/end indices for this block (corresponds to new chunk in memory)
-            block_start = n_sim * n_param_blocks * (block - n_burn - 1)+1
-            block_end   = block_start + (n_sim * n_param_blocks) - 1
+        # Write parameters to file if we're past n_burn blocks
+        if block > n_burn
+            parasim[block_start:block_end, :] = map(Float64, mhparams)
+        end
 
-            # Write parameters to file if we're past n_burn blocks
-            if block > n_burn
-                parasim[block_start:block_end, :] = map(Float64, mhparams)
-            end
+        # Calculate time to complete this block, average block time, and
+        # expected time to completion
+        block_time                      = (time_ns() - begin_time) / 1e9
+        total_sampling_time            += block_time
+        total_sampling_time_minutes     = total_sampling_time / 60
+        expected_time_remaining_sec     = (total_sampling_time / block) * (n_blocks - block)
+        expected_time_remaining_minutes = expected_time_remaining_sec / 60
 
-            # Calculate time to complete this block, average block time, and
-            # expected time to completion
-            block_time                      = (time_ns() - begin_time) / 1e9
-            total_sampling_time            += block_time
-            total_sampling_time_minutes     = total_sampling_time / 60
-            expected_time_remaining_sec     = (total_sampling_time / block) * (n_blocks - block)
-            expected_time_remaining_minutes = expected_time_remaining_sec / 60
-
-            println(verbose, :low, "Completed $block of $n_blocks blocks.")
-            println(verbose, :low, "Total time to compute $block blocks: " *
-                    "$total_sampling_time_minutes minutes")
-            println(verbose, :low, "Expected time remaining for Metropolis-Hastings: " *
-                    "$expected_time_remaining_minutes minutes")
-            println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
-
-        end # of loop over parameter blocks
+        println(verbose, :low, "Completed $block of $n_blocks blocks.")
+        println(verbose, :low, "Total time to compute $block blocks: " *
+                "$total_sampling_time_minutes minutes")
+        println(verbose, :low, "Expected time remaining for Metropolis-Hastings: " *
+                "$expected_time_remaining_minutes minutes")
+        println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")    
     end # of loop over blocks
     close(simfile)
 
