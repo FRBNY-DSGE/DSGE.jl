@@ -265,6 +265,8 @@ function metropolis_hastings(propdist::Distribution,
 
     n_param_blocks = n_mh_param_blocks(m)
     adaptive_accpt = get_setting(m, :mh_adaptive_accpt)
+    c              = get_setting(m, :mh_c)
+    α              = get_setting(m, :mh_α)
 
     rng      = m.rng
     testing  = m.testing
@@ -280,7 +282,7 @@ function metropolis_hastings(propdist::Distribution,
     end
     return metropolis_hastings(propdist, loglikelihood, m.parameters, data, cc0, cc;
                                n_blocks = n_blocks, n_param_blocks = n_param_blocks,
-                               adaptive_accpt = adaptive_accpt, n_sim = n_sim,
+                               adaptive_accpt = adaptive_accpt, c = c, α = α, n_sim = n_sim,
                                n_burn = n_burn, mhthin = mhthin, verbose = verbose,
                                savepath = savepath, rng = rng, testing = testing)
 end
