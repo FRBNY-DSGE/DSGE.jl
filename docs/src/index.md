@@ -30,6 +30,7 @@ Pages = [
   "solving.md",
   "estimation.md",
   "forecast.md",
+  "irf.md",
   "means_bands.md",
   "altpolicy.md",
   "scenarios.md",
