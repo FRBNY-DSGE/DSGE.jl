@@ -82,12 +82,12 @@ function load_fred_data(m::AbstractDSGEModel;
 
         for (i,s) in enumerate(missing_series)
             println(verbose, :low, "Fetching FRED series $s...")
-            #try
+            try
                 fredseries[i] = get_data(f, string(s); frequency="q",
                                                        observation_start=string(start_date),
                                                        observation_end=string(end_date),
                                                        vintage_dates=string(vint_date))
-            #=catch err
+            catch err
                 if :msg in fieldnames(typeof(err))
                     @warn err.msg
                 else
@@ -109,7 +109,7 @@ function load_fred_data(m::AbstractDSGEModel;
                     @warn "FRED series $s could not be fetched."
                     continue
                 end
-            end=#
+            end
         end
 
         # Extract dataframe from each series and merge on date
