@@ -365,3 +365,9 @@ function ShockGroup(name::String, shocks::Vector{Symbol}, color_name::Symbol)
     color = parse(Colorant, color_name)
     return ShockGroup(name, shocks, color)
 end
+
+mutable struct SteadyStateConvergenceError <: Exception
+    msg::String
+end
+SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't converge")
+Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)

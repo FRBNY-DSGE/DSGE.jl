@@ -100,7 +100,7 @@ function mutation(m::AbstractDSGEModel, data::Matrix{S}, p::Vector{S},
             catch err
                 if isa(err, ParamBoundsError) || isa(err, LinearAlgebra.LAPACKException)
                     prior_new = like_new = like_old_data = -Inf
-                elseif isa(err, PosDefException) || isa(err, SingularException)
+                elseif isa(err, PosDefException) || isa(err, SingularException) || isa(err, DSGE.SteadyStateConvergenceError)
                     prior_new = like_new = like_old_data = -Inf
                 else
                     throw(err)

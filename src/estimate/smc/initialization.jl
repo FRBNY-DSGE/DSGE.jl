@@ -25,7 +25,7 @@ function one_draw(m::AbstractDSGEModel, data::Matrix{Float64};
             if isa(err, ParamBoundsError)
                 draw_loglh = draw_logpost = -Inf
             elseif isa(err, PosDefException) || isa(err, SingularException) ||
-                   isa(err, LinearAlgebra.LAPACKException)
+                   isa(err, LinearAlgebra.LAPACKException) || isa(err, DSGE.SteadyStateConvergenceError)
                 draw_loglh = draw_logpost = -Inf
             else
                 throw(err)
