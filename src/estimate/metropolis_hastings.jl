@@ -39,8 +39,9 @@ distribution of the parameters.
 - `n_burn::Int   = 0`: Length of burn-in period
 - `mhthin::Int   = 1`: Thinning parameter (for mhthin = d, keep only every dth draw)
 - `adaptive_accpt::Bool = false`: Whether or not to adaptively adjust acceptance prob.
-- `α::T = 1.0`: Tuning parameter for proposal density computation in adaptive case
-- `c::T = 1.0`:  Tuning parameter for proposal density computation in adaptive case
+- `α::T = 1.0`: Tuning parameter (step size) for proposal density computation in adaptive case
+- `c::T = 0.5`: Tuning parameter (mixture proportion) for proposal density computation in
+    adaptive case
 - `verbose::Bool`: The desired frequency of function progress messages printed to
   standard out. One of:
 ```
@@ -64,7 +65,7 @@ function metropolis_hastings(propdist::Distribution,
                              n_burn::Int64         = 0,
                              mhthin::Int64         = 1,
                              adaptive_accpt::Bool  = false,
-                             α::T = 1.0,      c::T = 1.0,
+                             α::T = 1.0,      c::T = 0.5,
                              verbose::Symbol       = :low,
                              savepath::String      = "mhsave.h5",
                              rng::MersenneTwister  = MersenneTwister(0),
