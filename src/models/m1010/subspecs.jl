@@ -550,3 +550,8 @@ function ss21!(m::Model1010)
     end
 
 end
+
+function ss22!(m::Model1010)
+    # ss20 but with inflation, long run inflation, etc. as pseudo-observables
+    ss20!(m)
+end

@@ -1,6 +1,6 @@
 function init_pseudo_observable_mappings!(m::Model1010)
 
-    pseudo_names = if subspec(m) in ["ss2", "ss4"]
+    pseudo_names = if subspec(m) in ["ss2", "ss4", "ss22"]
 	    [:y_t, :y_f_t, :OutputGap,
 	     :π_t, :LongRunInflation,
 	     :Wages, :FlexibleWages, :z_t, :Hours, :FlexibleHours,
@@ -53,7 +53,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	pseudo[:OutputGap].name = "Output Gap"
 	pseudo[:OutputGap].longname = "Output Gap"
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
 	    pseudo[:π_t].name = "Inflation"
 	    pseudo[:π_t].longname = "Inflation"
 	    pseudo[:π_t].rev_transform = quartertoannual
@@ -75,7 +75,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	pseudo[:Hours].name = "Hours"
 	pseudo[:Hours].longname = "Hours"
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
 	    pseudo[:FlexibleHours].name     = "Flexible Hours"
 	    pseudo[:FlexibleHours].longname = "Flexible Hours"
     end
@@ -92,7 +92,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	pseudo[:NominalFFR].longname = "Nominal FFR at an annual rate"
 	pseudo[:NominalFFR].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvgNominalNaturalRate].name     = "Expected Average Nominal Natural Rate"
         pseudo[:ExpectedAvgNominalNaturalRate].longname = "Natural Rate + Expected Inflation"
         pseudo[:ExpectedAvgNominalNaturalRate].rev_transform = quartertoannual
@@ -110,7 +110,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:ExpectedAvg10YearRealNaturalRate].longname = "Expected Average 10-Year Real Natural Rate of Interest"
     pseudo[:ExpectedAvg10YearRealNaturalRate].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvg10YearNominalRate].name     = "Expected Average 10-Year Nominal Rate"
         pseudo[:ExpectedAvg10YearNominalRate].longname = "Expected Average 10-Year Nominal Interest Rate"
         pseudo[:ExpectedAvg10YearNominalRate].rev_transform = quartertoannual
@@ -132,7 +132,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:ExpectedAvg5YearRealNaturalRate].longname = "Expected Average 5-Year Real Natural Rate of Interest"
     pseudo[:ExpectedAvg5YearRealNaturalRate].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvg5YearNominalRate].name     = "Expected Average 5-Year Rate"
         pseudo[:ExpectedAvg5YearNominalRate].longname = "Expected Average 5-Year Interest Rate"
         pseudo[:ExpectedAvg5YearNominalRate].rev_transform = quartertoannual
@@ -154,7 +154,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:ExpectedAvg20YearRealNaturalRate].longname = "Expected Average 20-Year Real Natural Rate of Interest"
     pseudo[:ExpectedAvg20YearRealNaturalRate].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvg20YearNominalRate].name     = "Expected Average 20-Year Nominal Rate"
         pseudo[:ExpectedAvg20YearNominalRate].longname = "Expected Average 20-Year Nominal Interest Rate"
         pseudo[:ExpectedAvg20YearNominalRate].rev_transform = quartertoannual
@@ -192,7 +192,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:Forward30YearRealNaturalRate].longname = "Forward 30-Year Real Natural Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
     pseudo[:Forward30YearRealNaturalRate].rev_transform = quartertoannual
 
-    if !(subspec(m) in ["ss2", "ss4"])
+    if !(subspec(m) in ["ss2", "ss4", "ss22"])
         pseudo[:NominalNaturalRate].name     = "Nominal Natural Rate"
         pseudo[:NominalNaturalRate].longname = "Natural Rate + Expected Inflation"
         pseudo[:NominalNaturalRate].rev_transform = quartertoannual
