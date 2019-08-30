@@ -133,9 +133,10 @@ function metropolis_hastings(propdist::Distribution,
 
                 # Draw para_new from the proposal distribution
                 para_subset = para_old[block_a]
-                d_subset    = DegenerateMvNormal(propdist.μ[block_f],
-                                                 propdist.σ[block_f, block_f])
-                para_draw = rand(d_subset, rng; cc = cc)
+                d_subset    = MvNormal(propdist.μ[block_f],
+                                       (propdist.σ[block_f, block_f] +
+                                       propdist.σ[block_f, block_f]') / 2.)
+                para_draw   = rand(d_subset, rng; cc = cc)
 
                 para_new          = deepcopy(para_old)
                 para_new[block_a] = para_draw
