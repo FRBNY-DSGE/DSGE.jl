@@ -6,7 +6,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
                     :Expected10YearNaturalRate,
                     :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth]
 
-    add_exo_process = true
+    add_exo_process = false
     if add_exo_process
         to_add = [:g_t, :b_t, :μ_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
                   :γ_t, :π_star_t, :lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t]
