@@ -6,8 +6,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
                     :Expected10YearNaturalRate,
                     :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth]
 
-    add_exo_process = false
-    if add_exo_process
+    if subspec(m) == "ss12"
         to_add = [:g_t, :b_t, :μ_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
                   :γ_t, :π_star_t, :lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t]
         pseudo_names = vcat(pseudo_names, to_add)
@@ -92,7 +91,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:LaborProductivityGrowth].rev_transform = quartertoannual
 
     # Other exogenous processes
-    if add_exo_process
+    if subspec(m) == "ss12"
         for i in to_add
             pseudo[i].name = DSGE.detexify(i)
             pseudo[i].longname = DSGE.detexify(i)

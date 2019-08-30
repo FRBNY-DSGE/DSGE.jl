@@ -19,6 +19,8 @@ function init_subspec!(m::Model1002)
         # variance of the contemporaneous shock
         # See measurement equation
         return ss10!(m)
+    elseif subspec(m) == "ss12"
+        return ss12!(m)
     else
         error("This subspec is not defined.")
     end
@@ -182,4 +184,16 @@ except `betabar` is defined with `m[:σ_c]` instead of `σ_ω_star`.
 """
 function ss10!(m::Model1002)
     ss9!(m)
+end
+
+"""
+```
+ss11!(m::Model1002)
+```
+
+Initializes subspec 11 of `Model1002`. This subspecification is the same as ss19,
+but exogenous processes are added as pseudo-observables.
+"""
+function ss11!(m::Model1002)
+    ss10!(m)
 end
