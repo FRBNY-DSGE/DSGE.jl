@@ -91,7 +91,7 @@ d_subset    = read(file, "d_subset")
 c           = read(file, "c")
 close(file)
 
-test_θ_new, test_new_mix_density, test_old_mix_density = SMC.mvnormal_mixture_draw(para_subset,
+test_θ_new, test_new_mix_density, test_old_mix_density = DSGE.mvnormal_mixture_draw(para_subset,
                                                                                    d_subset; c=c, α=α)
 
 #=JLD2.jldopen("reference/mvnormal_output.jld2", true, true, true, IOStream) do file
