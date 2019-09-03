@@ -2,7 +2,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 
     pseudo_names = if subspec(m) in ["ss2", "ss4", "ss22"]
 	    [:y_t, :y_f_t, :OutputGap,
-	     :π_t, :LongRunInflation,
+	     :π_t, :LongRunInflation, :Marginal_Cost,
 	     :Wages, :FlexibleWages, :z_t, :Hours, :FlexibleHours,
 	     :RealNaturalRate, :ExAnteRealRate,
 	     :NominalFFR, :ExpectedAvgNominalNaturalRate, :NominalRateGap,
@@ -71,6 +71,10 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	    pseudo[:LongRunInflation].name = "Long Run Inflation"
 	    pseudo[:LongRunInflation].longname = "Long Run Inflation"
 	    pseudo[:LongRunInflation].rev_transform = quartertoannual
+
+        pseudo[:MarginalCost].name = "Marginal Cost"
+        pseudo[:MarginalCost].longname = "Marginal Cost"
+
 
 	    pseudo[:Wages].name = "Wages"
 	    pseudo[:Wages].longname = "Wages"

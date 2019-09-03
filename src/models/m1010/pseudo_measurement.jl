@@ -53,6 +53,9 @@ function pseudo_measurement(m::Model1010{T},
 	    ZZ_pseudo[pseudo[:LongRunInflation],endo[:π_star_t]] = 1.
 	    DD_pseudo[pseudo[:LongRunInflation]]                 = 100.0*(m[:π_star]-1.)
 
+        ## Marginal Cost
+        ZZ_pseudo[pseudo[:MarginalCost],endo[:mc_t]] = 1.
+
 	    ## Wages
 	    ZZ_pseudo[pseudo[:Wages],endo[:w_t]] = 1.
 
