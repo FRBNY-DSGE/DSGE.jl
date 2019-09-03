@@ -2,7 +2,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 
     pseudo_names = if subspec(m) in ["ss2", "ss4", "ss22"]
 	    [:y_t, :y_f_t, :OutputGap,
-	     :π_t, :LongRunInflation, :Marginal_Cost,
+	     :π_t, :LongRunInflation, :MarginalCost,
 	     :Wages, :FlexibleWages, :z_t, :Hours, :FlexibleHours,
 	     :RealNaturalRate, :ExAnteRealRate,
 	     :NominalFFR, :ExpectedAvgNominalNaturalRate, :NominalRateGap,
