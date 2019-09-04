@@ -20,6 +20,7 @@ module DSGE
     import ModelConstructors
     import ModelConstructors: posterior!, posterior,
                               @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+    import SMC: get_vals
 
     export
         # defaults.jl
