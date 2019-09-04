@@ -89,6 +89,7 @@ function metropolis_hastings(propdist::Distribution,
             initialized = true
         else
             para_old = rand(propdist, rng; cc=cc0)
+            @show para_old
         end
     end
 
@@ -131,11 +132,16 @@ function metropolis_hastings(propdist::Distribution,
 
             for (k, (block_f, block_a)) in enumerate(zip(blocks_free, blocks_all))
 
+                @show block_a
+                @show block_f
+                @show length(para_old), length(propdist.μ)
+                @show (propdist.σ[block_a, block_a] +
+                                       propdist.σ[block_a, block_a]') / 2.
                 # Draw para_new from the proposal distribution
                 para_subset = para_old[block_a]
-                d_subset    = MvNormal(propdist.μ[block_f],
-                                       (propdist.σ[block_f, block_f] +
-                                       propdist.σ[block_f, block_f]') / 2.)
+                d_subset    = MvNormal(propdist.μ[block_a],
+                                       (propdist.σ[block_a, block_a] +
+                                       propdist.σ[block_a, block_a]') / 2.)
                 para_draw   = rand(d_subset, rng; cc = cc)
 
                 para_new          = deepcopy(para_old)
@@ -254,12 +260,12 @@ sampling from the posterior distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-       m::AbstractDSGEModel,
-       data::Matrix{T},
-       cc0::T,
-       cc::T;
-       verbose::Symbol=:low,
-       filestring_addl::Vector{String} = Vector{String}(undef, 0)) where {T<:AbstractFloat}
+                             m::AbstractDSGEModel,
+                             data::Matrix{T},
+                             cc0::T,
+                             cc::T;
+                             filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                             verbose::Symbol = :low) where {T<:AbstractFloat}
 
     n_blocks = n_mh_blocks(m)
     n_sim    = n_mh_simulations(m)
@@ -277,6 +283,10 @@ function metropolis_hastings(propdist::Distribution,
 
     # To check: Defaulting to using Chandrasekhar recursions if no missing data
     use_chand_recursion = !any(isnan.(data))
+
+    JLD2.jldopen("/data/dsge_data_dir/dsgejl/reca/mh_adaptive_propdist.jld2", "w") do file
+        file["propdist"] = propdist
+    end
 
     function loglikelihood(p::ParameterVector, data::Matrix{Float64})::Float64
         update!(m, p)
