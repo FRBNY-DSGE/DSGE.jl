@@ -51,7 +51,7 @@ end
 plot_standard_packet(m, input_type, cond_type,
     output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
     sections = [:estimation, :forecast]
-    forecast_string = "")
+    forecast_string = "", hist_start-date = 0001-01-01)
 ```
 
 Plot parameter prior/posterior histograms to `figurespath(m, \"estimate\")` and
@@ -61,7 +61,8 @@ function plot_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::S
                               output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                               :shockdecobs, :shockdecpseudo];
                               sections::Vector{Symbol} = [:estimation, :forecast],
-                              forecast_string::String = "")
+                              forecast_string::String = "",
+                              hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"))
     @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast, :irf]."
     if :estimation in sections
         plot_prior_posterior(m)
@@ -69,7 +70,8 @@ function plot_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::S
     if :forecast in sections
         for output_var in setdiff(output_vars, [:irfstates, :irfobs, :irfpseudo])
             make_forecast_plots(m, input_type, cond_type, output_var,
-                                forecast_string = forecast_string)
+                                forecast_string = forecast_string,
+                                hist_start_date = hist_start_date)
         end
     end
     if :irf in sections
@@ -261,7 +263,7 @@ end
 """
 ```
 make_forecast_plots(m, input_type, cond_type, output_var;
-    forecast_string = "", plotroot = "")
+    forecast_string = "", plotroot = "", hist_start_date = 0001-01-01)
 ```
 
 Generate all `output_var` plots for the forecast of `m` specified by the
@@ -270,7 +272,8 @@ specified, plots are saved to `figurespath(m, \"forecast\")`.
 """
 function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
-                             plotroot::String = "")
+                             plotroot::String = "",
+                             hist_start_date = hist_start_date)
 
     # Output directory
     if isempty(plotroot)
@@ -295,7 +298,11 @@ function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Sy
     end
 
     # Added min() so forecasts that are starting from a year before 2007 will plot properly
-    start_date = min(DSGE.quartertodate("2007-Q1"), date_mainsample_end(m) - Dates.Year(5))
+    if hist_start_date != Date("0001-01-01", "yyyy-mm-dd")
+        start_date = hist_start_date
+    else
+        start_date = min(DSGE.quartertodate("2007-Q1"), date_mainsample_end(m) - Dates.Year(5))
+    end
     if haskey(m.settings, :date_forecast_end)
         end_date = get_setting(m, :date_forecast_end)
 
