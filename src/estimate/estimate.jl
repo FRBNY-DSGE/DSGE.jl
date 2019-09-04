@@ -185,16 +185,20 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
             @assert (n, n) == size(hessian)
 
             # Compute the inverse of the Hessian via eigenvalue decomposition
-            S_diag, U = eigen(hessian)
-            big_eig_vals = findall(x -> x > 1e-6, S_diag)
+            #S_diag, U = eigen(hessian)
+            F = svd(hessian)
+
+            big_eig_vals = findall(x -> x > 1e-6, F.S)
             hessian_rank = length(big_eig_vals)
 
             S_inv = zeros(n, n)
-            for i = (n-hessian_rank+1):n
-                S_inv[i, i] = 1/S_diag[i]
+            #for i = (n-hessian_rank+1):n
+            for i = 1:hessian_rank
+                S_inv[i, i] = 1/F.S[i]
             end
 
-            hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
+            #hessian_inv = U*sqrt.(S_inv) # this is the inverse of the hessian
+            hessian_inv = F.V * sqrt.(S_inv) * F.U'
             DegenerateMvNormal(params, hessian_inv)
         else
             DegenerateMvNormal(params, proposal_covariance)
