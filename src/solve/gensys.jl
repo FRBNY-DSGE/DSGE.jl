@@ -110,7 +110,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Arr
 
         G1     = Array{Float64, 2}(undef,0, 0)
         C      = Array{Float64, 1}(undef,0)
-        impact = Array{Float64, 2}(undef,0)
+        impact = Array{Float64, 2}(undef,0,0)
         #fmat   = Array{Complex{Float64}, 2}(undef,0,0)
         #fwt    = Array{Complex{Float64}, 2}(undef,0,0)
         #ywt    = Vector{Complex{Float64}}(undef,0)
