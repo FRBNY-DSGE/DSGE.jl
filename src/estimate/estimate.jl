@@ -198,7 +198,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
             end
 
             #hessian_inv = U*sqrt.(S_inv) # this is the inverse of the hessian
-            hessian_inv = F.V * sqrt.(S_inv) * F.U'
+            hessian_inv = F.V * S_inv * F.U'#sqrt.(S_inv) * F.U'
             DegenerateMvNormal(params, hessian_inv)
         else
             DegenerateMvNormal(params, proposal_covariance)
