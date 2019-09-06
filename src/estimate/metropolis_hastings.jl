@@ -132,14 +132,9 @@ function metropolis_hastings(propdist::Distribution,
 
             for (k, (block_f, block_a)) in enumerate(zip(blocks_free, blocks_all))
 
-                @show block_a
-                @show block_f
-                @show length(para_old), length(propdist.μ)
-                @show (propdist.σ[block_a, block_a] +
-                                       propdist.σ[block_a, block_a]') / 2.
                 # Draw para_new from the proposal distribution
                 para_subset = para_old[block_a]
-                d_subset    = MvNormal(propdist.μ[block_a],
+                d_subset    = DegenerateMvNormal(propdist.μ[block_a],
                                        (propdist.σ[block_a, block_a] +
                                        propdist.σ[block_a, block_a]') / 2.)
                 para_draw   = rand(d_subset, rng; cc = cc)
