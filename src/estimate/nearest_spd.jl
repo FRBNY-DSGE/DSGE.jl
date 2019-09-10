@@ -18,11 +18,11 @@ http://www.sciencedirect.com/science/article/pii/0024379588902236
 
 - `Ahat::Matrix`: The symmetric, square positive semidefinite matrix closest to A
 """
+function nearest_spd(A::Matrix)
 #=function nearest_spd(A::Matrix)
     @show "WHAT ARE YOU DOING? WHY ARE YOU CALLING THIS?"
     return "WHAT ARE YOU DOING? WHY ARE YOU CALLING THIS?"
 end=#
-function nearest_spd(A::Matrix)
 
     if size(A,1) != size(A,2)
         error("A must be a square matrix")
