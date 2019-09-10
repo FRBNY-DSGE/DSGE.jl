@@ -843,3 +843,205 @@ function write_table_postamble(fid::IOStream; small::Bool=false, tabular::Bool=f
 
     @printf fid "\\end{document}"
 end
+
+"""
+```
+sample_λ(m, pred_dens, θs, T = -1; parallel = true) where S<:AbstractFloat
+sample_λ(m, pred_dens, T = -1; parallel = true) where S<:AbstractFloat
+```
+
+Computes and samples from the conditional density p(λ_t|θ, I_t, P) for
+particle in `θs`, which represents the posterior distribution. The sampled
+λ particles represent the posterior distribution p(λ_{t|t} | I_t, P).
+
+If no posterior distribution is passed in, then the function computes
+the distribution of λ_{t|t} for a static pool.
+
+### Inputs
+
+- `m::PoolModel{S}`: `PoolModel` object
+- `pred_dens::Matrix{S}`: matrix of predictive densities
+- `θs::Matrix{S}`: matrix of particles representing posterior distribution of θ
+- `T::Int64`: final period for tempered particle filter
+
+where `S<:AbstractFloat`.
+
+### Keyword Argument
+
+- `parallel::Bool`: use parallel computing to compute and sample draws of λ
+
+### Outputs
+
+- `λ_sample::Vector{Float64}`: sample of draws of λs; together with (θ,λ) represents a joint density
+
+```
+"""
+function sample_λ(m::PoolModel{S}, pred_dens::Matrix{S}, θs::Matrix{S}, T::Int64 = -1;
+                  parallel::Bool = false,
+                  tuning0::Dict{Symbol,Any} = Dict{Symbol,Any}()) where S<:AbstractFloat
+    # Check size and orientation of θs is correct: assume particle_num x parameter_num
+    if length(m.parameters) != size(θs,2)
+        error("number of parameters in PoolModel do not match number of parameters in matrix of posterior draws of θ")
+    end
+
+    # Initialize necessary objects
+    if T <= 0
+         error("T must be positive") # No period provided or is invalid
+    end
+    tuning = isempty(tuning0) ? deepcopy(get_setting(m, :tuning)) : deepcopy(tuning0)
+    tuning[:get_t_particle_dist] = true
+    tuning[:parallel] = false
+    tuning[:allout] = false
+
+    # Sample from p(λ|θ, I_t^P, P) for each θ in posterior
+    data = (T == 1) ? reshape(pred_dens[:,1], 2, 1) : pred_dens[:,1:T]
+    if parallel
+        # Send variables to workers to avoid issues with serialization
+        # across workers with different Julia system images
+        sendto(workers(), m = m)
+        sendto(workers(), data = data)
+        sendto(workers(), θs = θs)
+        sendto(workers(), tuning = tuning)
+
+        # Sample from λ distribution given θ
+        λ_sample = @sync @distributed (vcat) for i in 1:size(θs,1)
+            sample_λ(m, data, vec(θs[i,:]), tuning)
+        end
+        if sum(λ_sample) == 0
+            error("Sums to zero")
+        end
+        λ_sample = Array(λ_sample)
+    else
+        # Same as above but everything is serialized
+        λ_sample = Vector{Float64}(undef, size(θs,1))
+        for i in 1:size(θs,1)
+            λ_sample[i] = sample_λ(m, data, vec(θs[i,:]), tuning)
+        end
+    end
+
+    return λ_sample
+end
+
+# This function actually does the sampling for a given θ,
+# but we provide a wrapper for an easier user experience
+function sample_λ(m::PoolModel{S}, data::Matrix{S}, θ::Vector{S},
+                  tuning::Dict{Symbol,Any}) where S<:AbstractFloat
+    update!(m, θ)
+    loglik, λ_particles, λ_weights = DSGE.filter(m, data; tuning = tuning)
+    return λ_particles[size(data,2)][1,DSGE.sample(DSGE.Weights(λ_weights[:,end]))]
+end
+
+function sample_λ(m::PoolModel{S}, pred_dens::Matrix{S}, T::Int64 = -1;
+                  parallel::Bool = false,
+                  filestring_addl::Vector{String} = Vector{String}(undef,0),
+                  tuning0::Dict{Symbol,Any} = Dict{Symbol,Any}()) where S<:AbstractFloat
+
+    # Check m is static
+    if get_setting(m, :weight_type) != :static
+        error("PoolModel is not static. Set the keyword argument weight_type = :static to create a static PoolModel object.")
+    end
+
+    # Initialize necessary objects
+    if T <= 0
+         error("T must be positive") # No period provided or is invalid
+    end
+    tuning = isempty(tuning0) ? deepcopy(get_setting(m, :tuning)) : deepcopy(tuning0)
+    tuning[:get_t_particle_dist] = true
+    tuning[:parallel] = parallel
+    tuning[:allout] = false
+    orig_samp_method = get_setting(m, :sampling_method)
+    m <= Setting(:sampling_method, :MH)
+
+    # Compute posterior from a static pool
+    data = (T == 1) ? reshape(pred_dens[:,1], 2, 1) : pred_dens[:,1:T] # make sure it is matrix
+    estimate(m, data; filestring_addl = filestring_addl, proposal_covariance = ones(1,1))
+    m <= Setting(:sampling_method, orig_samp_method)
+
+    return h5read(rawpath(m, "estimate", "mhsave.h5", filestring_addl), "mhparams")
+end
+
+"""
+```
+compute_Eλ(m, h, λvec, weights = []; current_period = true, parallel = true) where T<:AbstractFloat
+```
+
+Computes and samples from the conditional density p(λ_t|θ, I_t, P) for
+particle in `θs`, which represents the posterior distribution.
+
+### Inputs
+
+- `m::PoolModel{T}`: `PoolModel` object
+- `h::Int64`: forecast horizon
+- `λvec::Vector{T}`: vector of particles of λ samples from (θ,λ) joint distribution
+- `weights::Vector{T}`: weights of λ particles, defaults to equal weights
+
+### Keyword Argument
+
+- `current_period::Bool`: compute Eλ for current period t
+- `parallel::Bool`: use parallel computing to compute and sample λ
+- `get_dpp_pred_dens::Bool`: compute predictive densities according to dynamic prediction pools
+
+### Outputs
+
+- `λhat_tplush::Float64`: E[λ_{t+h|t} | I_t^P, P]
+- `λhat_t::Float64`: E[λ_{t|t} | I_t^P, P]
+```
+"""
+function compute_Eλ(m::PoolModel{T}, h::Int64, λvec ::Vector{T},
+                    weights::Vector{T} = Vector{Float64}(undef,0);
+                    current_period::Bool = true, parallel::Bool = false) where T<:AbstractFloat
+
+    # Set up
+    if isempty(weights)
+        weights = ones(length(λvec)) # assume equal weights
+    end
+    λhat_t = if current_period mean(λvec .* weights) end # compute expected lambda in current period t
+
+    # Push forward states and compute mean
+    Φ, F_ϵ, ~ = solve(m)
+    if parallel
+        # Send data to all workers
+        sendto(workers(), h = h)
+        sendto(workers(), Φ = Φ)
+        sendto(workers(), F_ϵ = F_ϵ)
+
+        # Propagate forward!
+        λ_vec = @sync @distributed (vcat) for i in 1:length(λvec)
+            propagate_λ(λvec[i], h, Φ, F_ϵ)
+        end
+    else
+        λ_vec = map(x -> propagate_λ(x, h, Φ, F_ϵ), λvec)
+    end
+    λhat_tplush = mean(λ_vec .* weights)
+
+    if current_period
+        return λhat_tplush, λhat_t
+    else
+        return λhat_tplush
+    end
+end
+
+"""
+```
+propgate_λ(λvec, h, Φ, F_ϵ; parallel = true) where T<:AbstractFloat
+```
+
+Propagates a λ particle h periods forward.
+
+### Inputs
+
+- `λ::T`: λ sample from (θ,λ) joint distribution
+- `h::Int64`: forecast horizon
+- `Φ::Function`: state transition function of the form Φ(s_t, ϵ_t) for a PoolModel object
+- `F_ϵ::Distribution`: distribution of structural shock
+
+```
+"""
+function propagate_λ(λ::T, h::Int64, Φ::Function,
+                   F_ϵ::Distribution) where T<:AbstractFloat
+    ϵ = rand(F_ϵ, h)
+    for j in 1:h
+        λ = Φ([λ; 1 - λ], [ϵ[j]])[1]
+    end
+    return λ
+end

@@ -171,7 +171,10 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
 
     # Return total log-likelihood, excluding the presample
     try
-        if use_chand_recursion==false
+        if typeof(m) == PoolModel{Float64}
+            return ψ_l * sum(filter_likelihood(m, data; tol = tol,
+                                               tuning = get_setting(m, :tuning))) + ψ_p * penalty
+        elseif use_chand_recursion==false
             return ψ_l * sum(filter_likelihood(m, data, system;
                                                include_presample = false, tol = tol)) +
                                                    ψ_p * penalty
