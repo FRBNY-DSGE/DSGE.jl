@@ -188,12 +188,12 @@ end
 
 """
 ```
-ss11!(m::Model1002)
+ss12!(m::Model1002)
 ```
 
-Initializes subspec 11 of `Model1002`. This subspecification is the same as ss19,
+Initializes subspec 12 of `Model1002`. This subspecification is the same as ss19,
 but exogenous processes are added as pseudo-observables.
 """
-function ss11!(m::Model1002)
+function ss12!(m::Model1002)
     ss10!(m)
 end
