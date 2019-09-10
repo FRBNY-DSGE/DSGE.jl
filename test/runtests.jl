@@ -1,8 +1,9 @@
-using ModelConstructors, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random
+using ModelConstructors, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 
 my_tests = [
+
             "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
@@ -21,8 +22,10 @@ my_tests = [
             "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
+            "estimate/filter_poolmodel",
+            "estimate/posterior_poolmodel",
+            "estimate/estimate_bma",
 
-            "estimate/hessizero",
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
@@ -35,9 +38,6 @@ my_tests = [
             "estimate/smc/util",
             "estimate/smc/mutation",
             "estimate/smc/resample",
-            "estimate/filter_poolmodel",
-            "estimate/posterior_poolmodel",
-            "estimate/estimate_bma",
 
             "forecast/smooth",
             "forecast/forecast",

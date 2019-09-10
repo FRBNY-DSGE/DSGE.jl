@@ -251,15 +251,15 @@ end
 
 """
 ```
-update!(m::AbstractDSGEModel, values::Vector{T}) where T<:AbstractFloat
+steadystate!(m::PoolModel)
 ```
 
-Update `m.parameters` with `values`, recomputing the steady-state parameter values.
+Computes the steady state for a `PoolModel`. Since
+the current implementation does not have a useful
+reason to compute the steady state, this function does nothing.
 
 ### Arguments:
 - `m`: the model object
-- `values`: the new values to assign to non-steady-state parameters.
 """
-function update!(m::PoolModel, values::Vector{T}) where T<:AbstractFloat
-    DSGE.update!(m.parameters, values)
+function steadystate!(m::PoolModel)
 end
