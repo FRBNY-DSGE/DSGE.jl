@@ -199,9 +199,10 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
 
             #hessian_inv = U*sqrt.(S_inv) # this is the inverse of the hessian
             hessian_inv = F.V * S_inv * F.U'#sqrt.(S_inv) * F.U'
-            DegenerateMvNormal(params, hessian_inv)
+            DegenerateMvNormal(params, hessian_inv, hessian, diag(S_inv))
         else
-            DegenerateMvNormal(params, proposal_covariance)
+            DegenerateMvNormal(params, proposal_covariance, pinv(proposal_covariance),
+                               eigen(proposal_covariance).values)
         end
 
         if rank(propdist) != n_parameters_free(m)
