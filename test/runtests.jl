@@ -11,10 +11,13 @@ my_tests = [
             "models/m990/m990",
             "models/m1002/m1002",
             "models/m1010/m1010",
+            "models/poolmodel/poolmodel",
             "data/misc",
             "data/load_data",
+            "data/load_data_poolmodel",
             "solve/gensys",
             "solve/solve",
+            "analysis/moments",
             "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
@@ -32,6 +35,9 @@ my_tests = [
             "estimate/smc/util",
             "estimate/smc/mutation",
             "estimate/smc/resample",
+            "estimate/filter_poolmodel",
+            "estimate/posterior_poolmodel",
+            "estimate/estimate_bma",
 
             "forecast/smooth",
             "forecast/forecast",
@@ -46,7 +52,8 @@ my_tests = [
             "scenarios/switching",
             "scenarios/drivers",
             "decomp/decompose_forecast",
-            "plot/plot"
+            "plot/plot",
+  	    "plot/util"
             ]
 
 for test in my_tests
