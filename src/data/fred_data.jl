@@ -24,7 +24,12 @@ function load_fred_data(m::AbstractDSGEModel;
                         verbose::Symbol  = :low)
 
     data_series = parse_data_series(m)
-    mnemonics = data_series[:FRED]
+    if haskey(data_series, :FRED)
+        mnemonics = data_series[:FRED]
+    else
+        # Then no FRED data used, return DataFrame with dates
+        return DataFrame(date = get_quarter_ends(start_date,end_date))
+    end
     vint = data_vintage(m)
     dateformat = "yymmdd"
 
