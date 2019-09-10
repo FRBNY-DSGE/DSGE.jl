@@ -7,6 +7,7 @@ The DSGE.jl package provides several example models:
 - The New York Fed DSGE model (version 990.2), which was introduced in [this blog post](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html)
 - The New York Fed DSGE model (version 1002.9), which is documented [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf)
 - The New York Fed DSGE model (version 1010.18)
+- Several methods for model averaging over two models from [Del Negro et al. (2016)](https://www.sciencedirect.com/science/article/pii/S0304407616300094#f000005) through the concrete type `PoolModel`.
 
 You can run these models using the description provided here. If you
 were to implement another model using DSGE.jl, these procedures can also be used to
@@ -108,4 +109,28 @@ DSGE.logpath
 DSGE.workpath
 DSGE.tablespath
 DSGE.figurespath
+```
+
+## The `PoolModel` Type
+Unlike the other models contained in DSGE, the `PoolModel` type is not a proper DSGE model.
+It is a wrapper object for different methods to average two different models,
+which do not have to be
+DSGE models. For example, a user could average two different vector auto-regressions.
+Generally, a user only needs to provide the predictive density scores
+of the two models that the user wants to average. The reason is that we
+treat the predictive density scores as non-FRED observables. This approach
+makes interfacing with the rest of the machinery provided by DSGE.jl very simple.
+
+```@docs
+PoolModel
+```
+
+See [Del Negro et al. (2016)](https://www.sciencedirect.com/science/article/pii/S0304407616300094#f000005) for theoretical details on the model averaging methods listed in the documentation.
+
+To facilitate analysis with the `PoolModel` type, we also provide the following functions.
+```@docs
+estimate_bma
+sample_λ
+propagate_λ
+compute_Eλ
 ```
