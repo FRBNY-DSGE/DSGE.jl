@@ -113,7 +113,8 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     # Outright invert it
     # Σ_bar_inv = inv(Σ_bar)
     # Or
-    U, S, V = svd(Σ_bar)
+    F = svd(Σ_bar)
+    U, S, V = F.U, F.S, F.V
     bigev = findall(x -> x > 1e-6, S)
     parasigdim = length(bigev)
     parasiglndet = 0
@@ -200,7 +201,8 @@ function marginal_data_density_weighted(params::Matrix{Float64},
     # Outright invert it
     # Σ_bar_inv = inv(Σ_bar)
     # Or
-    U, S, V = svd(Σ_bar)
+    F = svd(Σ_bar)
+    U, S, V = F.U, F.S, F.V
     bigev = findall(x -> x > 1e-6, S)
     parasigdim = length(bigev)
     parasiglndet = 0
