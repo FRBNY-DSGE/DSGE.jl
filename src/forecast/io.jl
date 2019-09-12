@@ -206,7 +206,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
         # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
         # is executed.
         if isnull(block_number) || get(block_number) == 1
-            JLD2.jldopen(filepath, "w") do file
+            JLD2.jldopen(filepath, true, true, true, IOStream) do file
                 write_forecast_metadata(m, file, var)
             end
             h5open(replace(filepath, "jld2" => "h5"), "w") do file

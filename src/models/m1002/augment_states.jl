@@ -78,8 +78,8 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     # The 8th column of the addition to TTT corresponds to "v_lr" which is set equal to
     # e_lr – measurement errors for the two real wage observables built in
     # as exogenous structural shocks.
-    TTT_aug[endo_new[:lr_t], endo_new[:lr_t]]               = m[:ρ_lr]
-    TTT_aug[endo_new[:tfp_t], endo_new[:tfp_t]]             = m[:ρ_tfp]
+    TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_t]]               = m[:ρ_lr]
+    TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_t]]             = m[:ρ_tfp]
     TTT_aug[endo_new[:e_gdpdef_t], endo_new[:e_gdpdef_t]]   = m[:ρ_gdpdef]
     TTT_aug[endo_new[:e_corepce_t], endo_new[:e_corepce_t]] = m[:ρ_corepce]
     TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_t]]         = m[:ρ_gdp]
@@ -91,10 +91,10 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     RRR_aug[endo_new[:Et_π_t], :] = (TTT*RRR)[endo[:π_t], :]
 
     # Measurement Error on long rate
-    RRR_aug[endo_new[:lr_t], exo[:lr_sh]] = 1.0
+    RRR_aug[endo_new[:e_lr_t], exo[:lr_sh]] = 1.0
 
     # Measurement Error on TFP
-    RRR_aug[endo_new[:tfp_t], exo[:tfp_sh]] = 1.0
+    RRR_aug[endo_new[:e_tfp_t], exo[:tfp_sh]] = 1.0
 
     # Measurement Error on GDP Deflator
     RRR_aug[endo_new[:e_gdpdef_t], exo[:gdpdef_sh]] = 1.0
