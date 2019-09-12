@@ -110,9 +110,9 @@ function ss9!(m::Model1002)
                    description = "ρ_μ: AR(1) coefficient in capital adjustment cost process.",
                    tex_label = "\\rho_{\\mu}")
 
-    m <= parameter(:ρ_z, 0.9446, (0.0, 1.0), (0.0, 1.0), SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_z: AR(1) coefficient in the technology process.",
-                   tex_label = "\\rho_z")
+    m <= parameter(:ρ_ztil, 0.9446, (0.0, 1.0), (0.0, 1.0), SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
+                   description = "ρ_ztil: AR(1) coefficient in the technology process.",
+                   tex_label = "\\rho_ztil")
 
     m <= parameter(:ρ_λ_f, 0.8827, (0.0, 1.0), (0.0, 1.0), SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",

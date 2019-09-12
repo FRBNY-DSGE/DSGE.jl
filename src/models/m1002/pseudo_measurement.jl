@@ -113,11 +113,14 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:LaborProductivityGrowth], endo_addl[:L_t1]]     = 1.
     DD_pseudo[pseudo[:LaborProductivityGrowth]]                       = 100*(exp(m[:z_star]) - 1)
 
+    ## u_t
+    ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
+
     ## Exogenous processes
     if subspec(m) == "ss12"
         to_add = [:g_t, :b_t, :μ_t, :z_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
                   :γ_t, :π_star_t]
-        to_add_addl = [:lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t]
+        to_add_addl = [:e_lr_t, :e_tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t]
         for i in to_add
             ZZ_pseudo[pseudo[i], endo[i]] = 1.
         end

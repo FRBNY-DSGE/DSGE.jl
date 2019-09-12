@@ -261,7 +261,7 @@ function init_observable_mappings!(m::Model1002)
 
     observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__DLX, :TFPJQ__DLX],
                                        tfp_fwd_transform, tfp_rev_transform,
-                                       "Total Factor Productivity",
+                                       "Total Factor Productivity Growth (Fernald)",
                                        "Fernald's TFP, adjusted by Fernald's estimated alpha")
 
     ############################################################################
