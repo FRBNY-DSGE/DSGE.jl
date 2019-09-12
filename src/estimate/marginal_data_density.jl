@@ -16,7 +16,8 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 """
-function marginal_data_density(m::AbstractDSGEModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
+function marginal_data_density(m::AbstractDSGEModel,
+                               data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
                                parallel::Bool = false)
@@ -32,7 +33,7 @@ function marginal_data_density(m::AbstractDSGEModel, data::Matrix{Float64} = Mat
         return sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
 
     elseif calculation_method == :harmonic_mean
-        free_para_inds = find(x -> x.fixed == false, m.parameters)
+        free_para_inds = findall(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
             cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
@@ -113,7 +114,7 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     # Σ_bar_inv = inv(Σ_bar)
     # Or
     U, S, V = svd(Σ_bar)
-    bigev = find(x -> x > 1e-6, S)
+    bigev = findall(x -> x > 1e-6, S)
     parasigdim = length(bigev)
     parasiglndet = 0
     S = diagm(S)
@@ -200,7 +201,7 @@ function marginal_data_density_weighted(params::Matrix{Float64},
     # Σ_bar_inv = inv(Σ_bar)
     # Or
     U, S, V = svd(Σ_bar)
-    bigev = find(x -> x > 1e-6, S)
+    bigev = findall(x -> x > 1e-6, S)
     parasigdim = length(bigev)
     parasiglndet = 0
     S = diagm(S)
@@ -271,7 +272,7 @@ function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float
         return sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
 
     elseif calculation_method == :harmonic_mean
-        free_para_inds = find(x -> x.fixed == false, m.parameters)
+        free_para_inds = findall(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
             cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
