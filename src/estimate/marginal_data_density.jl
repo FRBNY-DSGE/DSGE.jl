@@ -49,7 +49,7 @@ function marginal_data_density(m::AbstractDSGEModel,
             end
             all_params = h5read(rawpath(m, "estimate", "mhsave.h5"), "mhparams")
             all_params = map(Float64, all_params)
-            params = thin_mh_draws(m, all_params; jstep = 5)'
+            params = Matrix(thin_mh_draws(m, all_params; jstep = 5)')
 
             n_para = n_parameters(m)
             n_draws = size(params, 2)
@@ -86,7 +86,8 @@ function tt2string(time_temper::Symbol)
     end
 end
 
-function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}, free_para_inds::Vector{Int64})
+function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64},
+                               free_para_inds::Vector{Int64})
     # From margdensim.m
     n_draws = size(params, 2)
     n_free_para = length(free_para_inds)
