@@ -28,7 +28,7 @@ function load_posterior_moments(m::AbstractDSGEModel;
     if isempty(cloud)
         if get_setting(m, :sampling_method) == :MH
             params = load_draws(m, :full)
-            params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
+            params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params # TODO
             params = params'
         elseif get_setting(m, :sampling_method) == :SMC
             cloud = get_cloud(m)
