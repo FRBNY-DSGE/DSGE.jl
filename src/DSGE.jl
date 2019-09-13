@@ -1,4 +1,4 @@
-isdefined(Base, :__precompile__) && __precompile__()
+isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
     using ModelConstructors, SMC
