@@ -30,7 +30,7 @@ function marginal_data_density(m::AbstractDSGEModel,
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
-        return sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
+        return sum(log.(sum(w_W, dims = 1))) # sum across particles, take log, sum across params
 
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, m.parameters)
@@ -259,11 +259,14 @@ function marginal_data_density_weighted(params::Matrix{Float64},
 end
 
 
-function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
-                               estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
-                               parallel::Bool = false)
+function marginal_data_density_frontier(m::AbstractDSGEModel,
+                                        data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
+                                        estimation_method::Symbol = :smc,
+                                        calculation_method = :incremental_weights,
+                                        parallel::Bool = false)
+
     if estimation_method == :mh && calculation_method == :incremental_weights
-        throw("Can only calculation the MDD with incremental weights if the estimation method is :smc")
+        throw("Can only calculation the MDD with incremental weights if estimation method is :smc")
     end
 
     if calculation_method == :incremental_weights
@@ -272,7 +275,7 @@ function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
-        return sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
+        return sum(log.(sum(w_W, dims = 1))) # sum across particles, take log, sum across params
 
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, m.parameters)
@@ -313,7 +316,7 @@ function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float
             throw("Invalid estimation method. Must use either :smc or :mh")
         end
     else
-        throw("Invalid MDD calculation method. Must use either :incremental_weights or :harmonic_mean")
+        throw("Invalid MDD calculation method. Must use either " *
+              ":incremental_weights or :harmonic_mean")
     end
-
 end
