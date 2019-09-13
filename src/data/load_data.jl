@@ -82,11 +82,6 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
         end
         println(verbose, :low, "dataset creation successful")
 
-        missing_cond_vars!(m, df; cond_type = cond_type)
-
-        # check that dataset is valid
-        isvalid_data(m, df; check_empty_columns = check_empty_columns)
-
         # print summary statistics
         if summary_statistics == :low || summary_statistics == :high
             str_nondate_names = [string(name) for name in names(df[:,2:end])]
