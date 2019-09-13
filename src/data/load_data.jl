@@ -54,6 +54,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
     # Download routines
     if recreate_data
         println(verbose, :low, "Creating dataset...")
+
         levels = load_data_levels(m; verbose=verbose)
         if cond_type in [:semi, :full]
             cond_levels = load_cond_data_levels(m; verbose=verbose)
@@ -61,6 +62,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             levels = vcat(levels, cond_levels)
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
+
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
         end_date   = if cond_type in [:semi, :full]
@@ -136,6 +138,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
     # Load FRED data
     df = load_fred_data(m; start_date=firstdayofquarter(start_date),
                         end_date=end_date, verbose=verbose)
+
 
     # Set ois series to load
     if n_anticipated_shocks(m) > 0
@@ -371,9 +374,9 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     if check_empty_columns
         empty_cols = Vector{String}(undef,0)
         for name in names(df)[names(df) .!= :date]
-            is_missing_in_col = ismissing.(df[name])
-            is_nan_in_col = isnan.(df[name][.!is_missing_in_col])
-            if sum(vcat(is_missing_in_col, is_nan_in_col)) == length(df[name])
+            is_missing_in_col = ismissing.(df[!,name])
+            is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
+            if sum(vcat(is_missing_in_col, is_nan_in_col)) == length(df[!,name])
                 push!(empty_cols, string(name) * ", ")
             end
         end

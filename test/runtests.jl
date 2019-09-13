@@ -3,7 +3,6 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 
 my_tests = [
-
             "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
