@@ -130,7 +130,7 @@ function metropolis_hastings(propdist::Distribution,
 
         for j = 1:(n_sim * mhthin)
 
-            for (k, (block_f, block_a)) in enumerate(zip(blocks_free, blocks_all))
+            for (k, block_a) in enumerate(blocks_all)
 
                 # Draw para_new from the proposal distribution
                 para_subset = para_old[block_a]
@@ -188,7 +188,7 @@ function metropolis_hastings(propdist::Distribution,
 
                 # Save every (mhthin)th draw
                 if j % mhthin == 0
-                    draw_index = convert(Int, j / mhthin)
+                    draw_index = convert(Int, ((j / mhthin) - 1) * n_param_blocks + k)
                     mhparams[draw_index, :]  = para_old'
                 end
             end # of loop over parameter blocks
