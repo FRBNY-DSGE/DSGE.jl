@@ -308,7 +308,7 @@ function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg
 end
 
 
-function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
+#=function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
@@ -382,7 +382,7 @@ function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg
     end
 
     return fcast_series, transform
-end
+end=#
 
 function read_scenario_output(m::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
