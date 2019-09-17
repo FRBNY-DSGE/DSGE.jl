@@ -955,7 +955,8 @@ end
 
 """
 ```
-compute_Eλ(m, h, λvec, weights = []; current_period = true, parallel = true) where T<:AbstractFloat
+compute_Eλ(m, h, λvec, θmat = [], weights = [];
+    current_period = true, parallel = true) where T<:AbstractFloat
 ```
 
 Computes and samples from the conditional density p(λ_t|θ, I_t, P) for
@@ -966,6 +967,7 @@ particle in `θs`, which represents the posterior distribution.
 - `m::PoolModel{T}`: `PoolModel` object
 - `h::Int64`: forecast horizon
 - `λvec::Vector{T}`: vector of particles of λ samples from (θ,λ) joint distribution
+- `θmat::Matrix{T}': matrix of posterior parameter samples
 - `weights::Vector{T}`: weights of λ particles, defaults to equal weights
 
 ### Keyword Argument
