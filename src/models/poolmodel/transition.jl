@@ -16,8 +16,8 @@ and F_λ is the distribution of λ(x_0).
 function transition(m::PoolModel{T}) where {T<:AbstractFloat}
     @inline Φ(x::Vector{Float64}, ϵ::Vector{Float64}) = abs.([0;1] .-
                                                              (cdf.(Normal(), (1 - m[:ρ]) *
-                                                                   m[:μ] + m[:ρ] *
-                                                                   quantile(Normal(),x[1]) +
+                                                                   m[:μ] .+ m[:ρ] *
+                                                                   quantile(Normal(),x[1]) .+
                                                                    sqrt(1 - m[:ρ]^2) *
                                                                    m[:σ] * ϵ)))
     F_ϵ = Normal(0.,1.)
