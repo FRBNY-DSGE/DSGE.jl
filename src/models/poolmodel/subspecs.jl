@@ -69,7 +69,7 @@ function ss3!(m::PoolModel)
                    fixed = false,
                    description="μ: drift of AR processing underlying λ.",
                    tex_label="\\mu")
-    m <= parameter(:σ, 1., (1e-5, 10.), (1e-5, 10.), Exponential(), RootInverseGamma(4, 1/sqrt(2)),
+    m <= parameter(:σ, 1., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(), RootInverseGamma(4, 1/sqrt(2)),
                    fixed = false,
                    description="σ: volatility of AR processing underlying λ.",
                    tex_label="\\sigma")
@@ -113,7 +113,7 @@ function ss5!(m::PoolModel)
                    fixed = false,
                    description="ρ: persistence of AR processing underlying λ.",
                    tex_label="\\rho")
-    m <= parameter(:σ, 1., (1e-5, 10.), (1e-5, 10.), Exponential(), RootInverseGamma(4, 1/sqrt(2)),
+    m <= parameter(:σ, 1., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(), RootInverseGamma(4, 1/sqrt(2)),
                    fixed = false,
                    description="σ: volatility of AR processing underlying λ.",
                    tex_label="\\sigma")
