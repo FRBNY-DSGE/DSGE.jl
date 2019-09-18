@@ -128,6 +128,15 @@ function missing2nan(a::Array)
     return a_new
 end
 
+function missing2nan!(df::DataFrame)
+    for col in names(df)
+        if col != :date
+            df[:, col] = map(x -> ismissing(x) ? NaN : x, df[:, col])
+            df[:, col] = convert(Vector{Float64}, df[:, col])
+        end
+    end
+end
+
 # Temp function to ensure proper transition into 0.7
 function nan2missing!(df::DataFrame)
     for col in names(df)
