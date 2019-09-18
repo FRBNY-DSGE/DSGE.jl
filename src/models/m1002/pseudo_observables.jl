@@ -13,6 +13,10 @@ function init_pseudo_observable_mappings!(m::Model1002)
         pseudo_names = vcat(pseudo_names, to_add)
     end
 
+    if subspec(m) in ["ss13", "ss14", "ss15"]
+        push!(pseudo_names, :Sinf_t)
+    end
+
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names
@@ -93,6 +97,11 @@ function init_pseudo_observable_mappings!(m::Model1002)
 
     pseudo[:u_t].name     = "u_t"
     pseudo[:u_t].longname = "u_t"
+
+    if subspec(m) in ["ss13", "ss14", "ss15"]
+        pseudo[:Sinf_t].name     = "Sinf_t"
+        pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
+    end
 
     # Other exogenous processes
     if subspec(m) == "ss12"

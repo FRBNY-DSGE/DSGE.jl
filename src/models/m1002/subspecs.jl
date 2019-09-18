@@ -21,6 +21,12 @@ function init_subspec!(m::Model1002)
         return ss10!(m)
     elseif subspec(m) == "ss12"
         return ss12!(m)
+    elseif subspec(m) == "ss13"
+        return ss13!(m)
+    elseif subspec(m) == "ss14"
+        return ss14!(m)
+    elseif subspec(m) == "ss15"
+        return ss15!(m)
     else
         error("This subspec is not defined.")
     end
@@ -191,9 +197,46 @@ end
 ss12!(m::Model1002)
 ```
 
-Initializes subspec 12 of `Model1002`. This subspecification is the same as ss19,
+Initializes subspec 12 of `Model1002`. This subspecification is the same as ss10,
 but exogenous processes are added as pseudo-observables.
 """
 function ss12!(m::Model1002)
     ss10!(m)
+end
+
+"""
+```
+ss13!(m::Model1002)
+```
+
+Initializes subspec 13 of `Model1002`. This subspecification is the same as ss10,
+but tracks Sinf_t, the contribution of expected future marginal cost, as a pseudo-obs.
+"""
+function ss13!(m::Model1002)
+    ss10!(m)
+end
+
+"""
+```
+ss14!(m::Model1002)
+```
+
+Initializes subspec 14 of `Model1002`. This subspecification is the same as ss13,
+with stationarity in the levels (rather than growth) of the measurement
+error in the TFP process.
+"""
+function ss14!(m::Model1002)
+    ss13!(m)
+end
+
+"""
+```
+ss15!(m::Model1002)
+```
+
+Initializes subspec 15 of `Model1002`. This subspecification is the same as ss14,
+with the TFP observables series now being Fernald's TFP adjusted to utilization.
+"""
+function ss15!(m::Model1002)
+    ss14!(m)
 end

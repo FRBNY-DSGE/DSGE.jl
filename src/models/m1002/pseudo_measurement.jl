@@ -116,6 +116,13 @@ function pseudo_measurement(m::Model1002{T},
     ## u_t
     ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
+    ## Sinf_t
+    if subspec(m) in ["ss13", "ss14", "ss15"]
+        betabar = 1/(exp( (m[:σ_c] -1) * m[:z_star]) / m[:β])
+        sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT) # infinite horizon expectation of state vector
+        ZZ_pseudo[pseudo[:Sinf_t], :] = sₜ∞[endo[:mc_t],:]
+    end
+
     ## Exogenous processes
     if subspec(m) == "ss12"
         to_add = [:g_t, :b_t, :μ_t, :z_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,

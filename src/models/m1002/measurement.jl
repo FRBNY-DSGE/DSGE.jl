@@ -107,9 +107,16 @@ function measurement(m::Model1002{T},
 
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
-    ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]] = 1.0
-    ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
-    ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
+    if subspec(m) in ["ss14", "ss15"]
+        ZZ[obs[:obs_gdp], endo_new[:e_tfp_t]]  = 1.0
+        ZZ[obs[:obs_gdp], endo_new[:e_tfp_t1]] = -m[:me_level]
+    else
+        ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]] = 1.0
+    end
+    if subspec(m) !== "ss15"
+        ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
+        ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
+    end
 
     QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2

@@ -71,6 +71,9 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:u_t1],     endo[:u_t]] = 1.0
     TTT_aug[endo_new[:e_gdp_t1], endo_new[:e_gdp_t]] = 1.0
     TTT_aug[endo_new[:e_gdi_t1], endo_new[:e_gdi_t]] = 1.0
+    if subspec(m) in ["ss14", "ss15"]
+        TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
+    end
 
     # Expected inflation
     TTT_aug[endo_new[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
