@@ -4,7 +4,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	    [:y_t, :y_f_t, :OutputGap,
 	     :π_t, :LongRunInflation, :MarginalCost,
 	     :Wages, :FlexibleWages, :z_t, :Hours, :FlexibleHours,
-	     :RealNaturalRate, :ExAnteRealRate,
+	     :RealNaturalRate, :ExAnteRealRate, :NominalNaturalRate,
 	     :NominalFFR, :ExpectedAvgNominalNaturalRate, :NominalRateGap,
 	     :ExpectedAvg10YearRealRate,    :ExpectedAvg10YearRealNaturalRate,
 	     :ExpectedAvg10YearNominalRate, :ExpectedAvg10YearNominalNaturalRate,:ExpectedAvg10YearRateGap,
