@@ -31,7 +31,9 @@ on the loaded data. When set to :low, we print only the number of
 missing/NaNs for each data series. When set to :high, we also print
 means, standard deviations,
 """
-function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bool = true, verbose::Symbol=:low, check_empty_columns::Bool = true, summary_statistics::Symbol = :low)
+function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bool = true,
+                   verbose::Symbol=:low, check_empty_columns::Bool = true,
+                   summary_statistics::Symbol = :low)
     recreate_data = false
 
     # Check if already downloaded
@@ -134,7 +136,8 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
     data_series = parse_data_series(m)
 
     # Load FRED data
-    df = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date, verbose=verbose)
+    df = load_fred_data(m; start_date=firstdayofquarter(start_date),
+                        end_date=end_date, verbose=verbose)
 
 
     # Set ois series to load
