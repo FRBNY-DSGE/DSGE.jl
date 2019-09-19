@@ -117,10 +117,16 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
     ## Sinf_t
-    if subspec(m) in ["ss13", "ss14", "ss15"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
         betabar = 1/(exp( (m[:σ_c] -1) * m[:z_star]) / m[:β])
         sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT) # infinite horizon expectation of state vector
         ZZ_pseudo[pseudo[:Sinf_t], :] = sₜ∞[endo[:mc_t],:]
+        # κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+        # (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+        # (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+        # Sinf_w_coef = sₜ∞[endo[:mc_t],:] .* (κ * (1 + m[:ι_p] * m[:β] * exp((1 - m[:σ_c]) *
+        #                                                                     m[:z_star])))
+        # ZZ_pseudo[pseudo[:πtil_t], :] = Sinf_w_coef + m[:ι_p] * Sinf_w_coef
     end
 
     ## Exogenous processes

@@ -29,6 +29,8 @@ function init_observable_mappings!(m::Model1002)
         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
         # TO:   log (3 * per-capita weekly hours / 100)
         # Note: Not sure why the 3 is there.
+        # As of 9/19/2019: the 3 is there because we have monthly data
+        # on weekly hours worked. Multiply by 3 to get quarterly average.
 
         levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
         weeklyhours = percapita(m, :temp, levels)
@@ -45,21 +47,41 @@ function init_observable_mappings!(m::Model1002)
     ############################################################################
     ## 3. Wages
     ############################################################################
+    if subspec(m) == "ss16"
+        laborshare_fwd_transform = function (levels)
+            # FROM: Level of nominal GDP (FRED :GDP series), nominal compensation per hour,
+            #       and average weekly hours (AWHNONAG) & civilian employment (CE16OV)
+            # TO: log labor share of output, log(w * L / y)
 
-    wages_fwd_transform = function (levels)
-        # FROM: Nominal compensation per hour (:COMPNFB from FRED)
-        # TO: quarter to quarter percent change of real compensation (using GDP deflator)
+            levels[:gdptemp] = percapita(m, :GDP, levels)
+            gdp = 1000 * nominal_to_real(:gdptemp, levels)
+            levels[:hourstemp] = levels[:AWHNONAG] .* levels[:CE16OV]
+            weeklyhours = percapita(m, :hourstemp, levels)
+            100 * log.(nominal_to_real(:COMPNFB, levels)) +
+                100 * log.(3 * weeklyhours / 100) - 100 * log.(gdp)
+        end
 
-        oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
+        laborshare_rev_transform = logleveltopct_annualized_percapita
+
+        observables[:obs_laborshare] = Observable(:obs_laborshre, [:COMPNFB__FRED, :GDPDEF__FRED],
+                                             laborshare_fwd_transofmr, laborshare_rev_transform,
+                                             "Log Labor Share",
+                                             "Quarterly Log Labor Share of Real GDP")
+    else
+        wages_fwd_transform = function (levels)
+            # FROM: Nominal compensation per hour (:COMPNFB from FRED)
+            # TO: quarter to quarter percent change of real compensation (using GDP deflator)
+
+            oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
+        end
+
+        wages_rev_transform = loggrowthtopct_annualized
+
+        observables[:obs_wages] = Observable(:obs_wages, [:COMPNFB__FRED, :GDPDEF__FRED],
+                                             wages_fwd_transform, wages_rev_transform,
+                                             "Percent Change in Wages",
+                                             "Q-to-Q Percent Change of Real Compensation (using GDP deflator)")
     end
-
-    wages_rev_transform = loggrowthtopct_annualized
-
-    observables[:obs_wages] = Observable(:obs_wages, [:COMPNFB__FRED, :GDPDEF__FRED],
-                                         wages_fwd_transform, wages_rev_transform,
-                                         "Percent Change in Wages",
-                                         "Q-to-Q Percent Change of Real Compensation (using GDP deflator)")
-
     ############################################################################
     ## 4. GDP Deflator
     ############################################################################
@@ -236,35 +258,55 @@ function init_observable_mappings!(m::Model1002)
     ############################################################################
     # 12. Fernald TFP
     ############################################################################
-    tfp_fwd_transform =  function (levels)
-        # FROM: Fernald's unadjusted/adjusted TFP series (depending on subspec)
-        # TO:   De-meaned unadjusted/adjusted TFP series (depending on subspec),
-        # adjusted by Fernald's estimated alpha
-        # Note: We only want to calculate the mean of unadjusted/adjusted TFP over the
-        #       periods between date_presample_start(m) - 1 and
-        #       date_mainsample_end(m), though we may end up transforming
-        #       additional periods of data.
-
-        start_date = Dates.lastdayofquarter(date_presample_start(m) - Dates.Month(3))
-        end_date   = date_mainsample_end(m)
-        date_range = start_date .<= levels[1:end, :date] .<= end_date
-        tfp_unadj_inrange = levels[date_range, :TFPKQ] # tho called unadj, it also applies to adj
-
-        tfp_unadj      = levels[:TFPKQ]
-        tfp_unadj_inrange_nonmissing = tfp_unadj_inrange[.!ismissing.(tfp_unadj_inrange)]
-        tfp_unadj_inrange_nonmissing = tfp_unadj_inrange_nonmissing[.!isnan.(tfp_unadj_inrange_nonmissing)]
-        tfp_unadj_mean = isempty(tfp_unadj_inrange_nonmissing) ? missing : mean(tfp_unadj_inrange_nonmissing)
-        (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[:TFPJQ]))
-    end
 
     tfp_rev_transform = quartertoannual
 
-    if subspec(m) == "ss15"
-        observables[:obs_tfp] = Observable(:obs_tfp, [:value__tfputil],
+    if subspec(m) in ["ss15", "ss16"]
+        tfp_fwd_transform =  function (levels)
+            # FROM: Fernald's adjusted TFP series
+            # TO:   De-meaned adjusted TFP series, adjusted by Fernald's estimated alpha
+            # Note: We only want to calculate the mean of unadjusted/adjusted TFP over the
+            #       periods between date_presample_start(m) - 1 and
+            #       date_mainsample_end(m), though we may end up transforming
+            #       additional periods of data.
+
+            start_date = Dates.lastdayofquarter(date_presample_start(m) - Dates.Month(3))
+            end_date   = date_mainsample_end(m)
+            date_range = start_date .<= levels[1:end, :date] .<= end_date
+            tfp_unadj_inrange = levels[date_range, :TFPMQ]
+
+            tfp_unadj      = levels[:TFPMQ]
+            tfp_unadj_inrange_nonmissing = tfp_unadj_inrange[.!ismissing.(tfp_unadj_inrange)]
+            tfp_unadj_inrange_nonmissing = tfp_unadj_inrange_nonmissing[.!isnan.(tfp_unadj_inrange_nonmissing)]
+            tfp_unadj_mean = isempty(tfp_unadj_inrange_nonmissing) ? missing : mean(tfp_unadj_inrange_nonmissing)
+            (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[:TFPJQ]))
+        end
+
+        observables[:obs_tfp] = Observable(:obs_tfp, [:TFPMQ__tfputiladj, :TFPJQ__tfputiladj],
                                            tfp_fwd_transform, tfp_rev_transform,
                                            "Total Factor Productivity Growth (Fernald)",
                                            "Fernald's TFP, adjusted by Fernald's estimated alpha and utilization capacity")
     else
+        tfp_fwd_transform =  function (levels)
+            # FROM: Fernald's unadjusted TFP series
+            # TO:   De-meaned unadjusted TFP series, adjusted by Fernald's estimated alpha
+            # Note: We only want to calculate the mean of unadjusted/adjusted TFP over the
+            #       periods between date_presample_start(m) - 1 and
+            #       date_mainsample_end(m), though we may end up transforming
+            #       additional periods of data.
+
+            start_date = Dates.lastdayofquarter(date_presample_start(m) - Dates.Month(3))
+            end_date   = date_mainsample_end(m)
+            date_range = start_date .<= levels[1:end, :date] .<= end_date
+            tfp_unadj_inrange = levels[date_range, :TFPKQ]
+
+            tfp_unadj      = levels[:TFPKQ]
+            tfp_unadj_inrange_nonmissing = tfp_unadj_inrange[.!ismissing.(tfp_unadj_inrange)]
+            tfp_unadj_inrange_nonmissing = tfp_unadj_inrange_nonmissing[.!isnan.(tfp_unadj_inrange_nonmissing)]
+            tfp_unadj_mean = isempty(tfp_unadj_inrange_nonmissing) ? missing : mean(tfp_unadj_inrange_nonmissing)
+            (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[:TFPJQ]))
+        end
+
         observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__DLX, :TFPJQ__DLX],
                                            tfp_fwd_transform, tfp_rev_transform,
                                            "Total Factor Productivity Growth (Fernald)",

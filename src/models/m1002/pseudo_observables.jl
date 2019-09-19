@@ -13,7 +13,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
         pseudo_names = vcat(pseudo_names, to_add)
     end
 
-    if subspec(m) in ["ss13", "ss14", "ss15"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
         push!(pseudo_names, :Sinf_t)
     end
 
@@ -98,9 +98,11 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:u_t].name     = "u_t"
     pseudo[:u_t].longname = "u_t"
 
-    if subspec(m) in ["ss13", "ss14", "ss15"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
         pseudo[:Sinf_t].name     = "Sinf_t"
         pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
+        # pseudo[:πtil_t].name     = "pitil_t"
+        # pseudo[:πtil_t].longname = "Fundamental Inflation"
     end
 
     # Other exogenous processes

@@ -57,11 +57,18 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_hours]]             = m[:Lmean]
 
     ## Labor Share/real wage growth
-    ZZ[obs[:obs_wages], endo[:w_t]]      = 1.0
-    ZZ[obs[:obs_wages], endo_new[:w_t1]] = -1.0
-    ZZ[obs[:obs_wages], endo[:z_t]]      = 1.0
-    DD[obs[:obs_wages]]                  = 100*(exp(m[:z_star])-1)
-
+    if subspec(m) == "ss16"
+        # log(labor_share) = log(wage) + log(hours) - log(GDP)
+        ZZ[obs[:obs_laborshare], endo[:w_t]] = 1.
+        ZZ[obs[:obs_laborshare], endo[:L_t]] = 1.
+        DD[obs[:obs_laborshare]] = 100. * log(m[:wstar] * w[:Lstar] / w[:ystar])
+        ZZ[obs[:obs_laborshare], endo[:y_t]] = -1.
+    else
+        ZZ[obs[:obs_wages], endo[:w_t]]      = 1.0
+        ZZ[obs[:obs_wages], endo_new[:w_t1]] = -1.0
+        ZZ[obs[:obs_wages], endo[:z_t]]      = 1.0
+        DD[obs[:obs_wages]]                  = 100*(exp(m[:z_star])-1)
+    end
     ## Inflation (GDP Deflator)
     ZZ[obs[:obs_gdpdeflator], endo[:π_t]]            = m[:Γ_gdpdef]
     ZZ[obs[:obs_gdpdeflator], endo_new[:e_gdpdef_t]] = 1.0
@@ -107,13 +114,13 @@ function measurement(m::Model1002{T},
 
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
-    if subspec(m) in ["ss14", "ss15"]
+    if subspec(m) in ["ss14", "ss15", "ss16"]
         ZZ[obs[:obs_gdp], endo_new[:e_tfp_t]]  = 1.0
         ZZ[obs[:obs_gdp], endo_new[:e_tfp_t1]] = -m[:me_level]
     else
         ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]] = 1.0
     end
-    if subspec(m) !== "ss15"
+    if !(subspec(m) in ["ss15", "ss16"])
         ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end

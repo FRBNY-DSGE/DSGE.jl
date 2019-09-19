@@ -71,7 +71,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:u_t1],     endo[:u_t]] = 1.0
     TTT_aug[endo_new[:e_gdp_t1], endo_new[:e_gdp_t]] = 1.0
     TTT_aug[endo_new[:e_gdi_t1], endo_new[:e_gdi_t]] = 1.0
-    if subspec(m) in ["ss14", "ss15"]
+    if subspec(m) in ["ss14", "ss15", "ss16"]
         TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
     end
 
