@@ -53,18 +53,35 @@ function init_observable_mappings!(m::Model1002)
             #       and average weekly hours (AWHNONAG) & civilian employment (CE16OV)
             # TO: log labor share of output, log(w * L / y)
 
+            # Compute series 1: 100 * log(real wage) + log(hours) - log(real gdp)
             levels[:gdptemp] = percapita(m, :GDP, levels)
             gdp = 1000 * nominal_to_real(:gdptemp, levels)
             levels[:hourstemp] = levels[:AWHNONAG] .* levels[:CE16OV]
             weeklyhours = percapita(m, :hourstemp, levels)
-            100 * log.(nominal_to_real(:COMPNFB, levels)) +
+            series1 = 100 * log.(nominal_to_real(:COMPNFB, levels)) +
                 100 * log.(3 * weeklyhours / 100) - 100 * log.(gdp)
+
+            # Compute base value and deviation of indices from initial value
+            # log(BEA/NIPA nominal employee compensation / gdp) - log(series 1 in T0)
+            laborshare_start_date = DSGE.firstdayofquarter(date_presample_start(m) -
+                                                           Dates.Month(6))
+            laborshare_end_date = date_mainsample_end(m)
+            base_per = findfirst(get_setting(m, :laborshare_base_period) .==
+                                 DSGE.get_quarter_ends(laborshare_start_date,
+                                                       laborshare_end_date))
+            series1_base = series1[base_per] # deviation of index from this base value
+            series2_base = 100 * log(levels[:COE][base_per] /
+                                     levels[:GDP][base_per]) # base labor share
+            println(series2_base)
+
+            series1 .- series1_base .+ series2_base
         end
 
         laborshare_rev_transform = logleveltopct_annualized_percapita
 
-        observables[:obs_laborshare] = Observable(:obs_laborshre, [:COMPNFB__FRED, :GDPDEF__FRED],
-                                             laborshare_fwd_transofmr, laborshare_rev_transform,
+        observables[:obs_laborshare] = Observable(:obs_laborshre, [:COMPNFB__FRED, :GDPDEF__FRED,
+                                                                   :COE__FRED],
+                                             laborshare_fwd_transform, laborshare_rev_transform,
                                              "Log Labor Share",
                                              "Quarterly Log Labor Share of Real GDP")
     else

@@ -14,7 +14,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     end
 
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
-        push!(pseudo_names, :Sinf_t)
+        push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p)
     end
 
     # Create PseudoObservable objects
@@ -101,6 +101,10 @@ function init_pseudo_observable_mappings!(m::Model1002)
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
         pseudo[:Sinf_t].name     = "Sinf_t"
         pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
+        pseudo[:Sinf_w_coef_t].name     = "Sinf_w_coef_t"
+        pseudo[:Sinf_w_coef_t].longname = "Sinf_w_coef_t, PDV of Emc_t multiplied by coefficient"
+        pseudo[:ι_p].name = "iota_p"
+        pseudo[:ι_p].longname = "iota_p"
         # pseudo[:πtil_t].name     = "pitil_t"
         # pseudo[:πtil_t].longname = "Fundamental Inflation"
     end
