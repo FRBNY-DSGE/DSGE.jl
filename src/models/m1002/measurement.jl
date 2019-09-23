@@ -61,7 +61,7 @@ function measurement(m::Model1002{T},
         # log(labor_share) = log(wage) + log(hours) - log(GDP)
         ZZ[obs[:obs_laborshare], endo[:w_t]] = 1.
         ZZ[obs[:obs_laborshare], endo[:L_t]] = 1.
-        DD[obs[:obs_laborshare]] = 100. * log(m[:wstar] * w[:Lstar] / w[:ystar])
+        DD[obs[:obs_laborshare]] = 100. * log(m[:wstar] * m[:Lstar] / m[:ystar])
         ZZ[obs[:obs_laborshare], endo[:y_t]] = -1.
     else
         ZZ[obs[:obs_wages], endo[:w_t]]      = 1.0
