@@ -359,7 +359,14 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     ### Multiple-Draw Forecasts
 
     elseif input_type in [:full, :subset, :prior, :init_draw_shocks, :mode_draw_shocks]
-
+        if get_setting(m, :sampling_method) == :SMC
+            subset_cond = input_type == :subset && get_jstep(m, length(subset_inds)) > 1
+            other_cond = input_type in [:full, :prior, :init_draw_shocks, :mode_draw_shocks] &&
+                get_jstep(m, n_forecast_draws(m, :full)) > 1
+            if subset_cond || other_cond
+                @warn "The forecast draws are being thinned by $(get_jstep(m, n_forecast_draws(m,:full))). This is not recommended for forecasts using an SMC estimation."
+            end
+        end
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
