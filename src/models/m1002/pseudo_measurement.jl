@@ -118,7 +118,7 @@ function pseudo_measurement(m::Model1002{T},
 
     ## Sinf_t
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
-        betabar = 1/(exp( (m[:σ_c] -1) * m[:z_star]) / m[:β])
+        betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
         sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT) # infinite horizon expectation of state vector
         ZZ_pseudo[pseudo[:Sinf_t], :] = sₜ∞[endo[:mc_t],:]
         κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
@@ -126,7 +126,7 @@ function pseudo_measurement(m::Model1002{T},
         (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         ZZ_pseudo[pseudo[:Sinf_w_coef_t], :] = (κ * (1 + m[:ι_p] * m[:β] *
                                                      exp((1 - m[:σ_c]) * m[:z_star]))) .*
-                                                     sₜ∞[endo[:mc_t]]
+                                                     sₜ∞[endo[:mc_t],:]
         DD_pseudo[pseudo[:ι_p]] = m[:ι_p]
         # Sinf_w_coef = sₜ∞[endo[:mc_t],:] .* (κ * (1 + m[:ι_p] * m[:β] * exp((1 - m[:σ_c]) *
         #                                                                     m[:z_star])))
