@@ -154,6 +154,9 @@ function init_model_indices!(m::Model1002)
     endogenous_states_augmented = [
         :y_t1, :c_t1, :i_t1, :w_t1, :π_t1_dup, :L_t1, :u_t1, :Et_π_t, :e_lr_t, :e_tfp_t, :e_gdpdef_t,
         :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_gdp_t1, :e_gdi_t1]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
+        push!(endogenous_states_augmented, :Sinf_t, :πtil_t, :πtil_t1)
+    end
     if subspec(m) in ["ss14", "ss15", "ss16"]
         push!(endogenous_states_augmented, :e_tfp_t1)
     end

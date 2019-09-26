@@ -118,19 +118,17 @@ function pseudo_measurement(m::Model1002{T},
 
     ## Fundamental inflation related pseudo-obs
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
-        # Compute coefficients
+        # Compute coefficient on Sinf
         betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
         κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-        (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+             (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
         (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         κcoef = κ * (1 + m[:ι_p] * betabar)
-        sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT) # infinite horizon expectation of state vector
 
-        ZZ_pseudo[pseudo[:Sinf_t], :] = sₜ∞[endo[:mc_t],:]
-        ZZ_pseudo[pseudo[:Sinf_w_coef_t], pseudo[:Sinf_t]] = κcoef
+        ZZ_pseudo[pseudo[:Sinf_t], endo_addl[:Sinf_t]] = 1.
+        ZZ_pseudo[pseudo[:Sinf_w_coef_t], endo_addl[:Sinf_t]] = κcoef
         DD_pseudo[pseudo[:ι_p]] = m[:ι_p]
-        ZZ_pseudo[pseudo[:πtil_t], pseudo[:Sinf_w_coef_t]] = 1.
-        ZZ_pseudo[pseudo[:πtil_t], pseudo[:πtil_t1]] = m[:ι_p]
+        ZZ_pseudo[pseudo[:πtil_t], endo_addl[:πtil_t]] = 1.
         DD_pseudo[pseudo[:πtil_t]] = 100 * (m[:π_star] - 1)
     end
 

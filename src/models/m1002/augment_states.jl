@@ -88,6 +88,21 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_t]]         = m[:ρ_gdp]
     TTT_aug[endo_new[:e_gdi_t], endo_new[:e_gdi_t]]         = m[:ρ_gdi]
 
+    # Fundamental inflation
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
+        betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
+        κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+             (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+        (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+        κcoef = κ * (1 + m[:ι_p] * betabar)
+        sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT) # infinite horizon expectation of state vector
+
+        TTT_aug[endo_new[:Sinf_t], 1:n_endo] = sₜ∞[endo[:mc_t],:]
+        TTT_aug[endo_new[:πtil_t], endo_new[:Sinf_t]] = κcoef
+        TTT_aug[endo_new[:πtil_t], endo_new[:πtil_t1]] = m[:ι_p]
+        TTT_aug[endo_new[:πtil_t1], endo_new[:πtil_t]] = 1.
+    end
+
     ### RRR modfications
 
     # Expected inflation
