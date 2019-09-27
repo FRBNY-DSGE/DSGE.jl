@@ -317,7 +317,7 @@ function init_parameters!(m::SmetsWouters)
                    description="γ: The log of the steady-state growth rate of technology.",
                    tex_label="\\gamma")
 
-    m <= parameter(:Lmean, 875., (-1000., 1000.), (-1e3, 1e3), ModelConstructors.Untransformed(), Normal(-45, 5), fixed=false,
+    m <= parameter(:Lmean, -45., (-1000., 1000.), (-1e3, 1e3), ModelConstructors.Untransformed(), Normal(-45, 5), fixed=false,
                    description="Lmean: Mean level of hours.",
                    tex_label="\\bar{L}")
 

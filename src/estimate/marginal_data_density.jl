@@ -256,8 +256,8 @@ end
 
 
 function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
-                               estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
-                               parallel::Bool = false)
+                                        estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
+                                        parallel::Bool = false)
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation the MDD with incremental weights if the estimation method is :smc")
     end
