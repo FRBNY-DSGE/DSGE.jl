@@ -373,7 +373,20 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             other_cond = input_type in [:full, :prior, :init_draw_shocks, :mode_draw_shocks] &&
                 get_jstep(m, n_forecast_draws(m, :full)) > 1
             if subset_cond || other_cond
-                @warn "The forecast draws are being thinned by $(get_jstep(m, n_forecast_draws(m,:full))). This is not recommended for forecasts using an SMC estimation."
+                invalid_answer = true
+                while invalid_answer
+                    println("WARNING: The forecast draws are being thinned by $(get_jstep(m, n_forecast_draws(m,:full))). This is not recommended for forecasts using an SMC estimation. Do you want to continue? (y/n)")
+                    answer = readline(stdin)
+                    if (answer == "y" || answer == "n")
+                        invalid_answer = false
+                    else
+                        println("Invalid answer! Must be `y` or `n`")
+                    end
+                end
+
+                if answer == "n"
+                    throw(error("Forecast halted by user."))
+                end
             end
         end
         # Block info
