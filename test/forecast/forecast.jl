@@ -63,4 +63,9 @@ shocks[ind_r_sh, :] .= -10.
     @test all(x -> x != -10.,                 shocks[ind_r_sh, :])
 end
 
+@testset "Test that forecasting and populating shocks under alternative policy works" begin
+    m <= Setting(:alternative_policy, AltPolicy(:taylor93, eqcond, solve))
+    @test typeof(forecast(m, system, z0; draw_shocks = true)) == NTuple{4, Array{Float64, 2}}
+end
+
 nothing
