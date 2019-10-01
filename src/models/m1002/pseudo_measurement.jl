@@ -130,6 +130,8 @@ function pseudo_measurement(m::Model1002{T},
         DD_pseudo[pseudo[:ι_p]] = m[:ι_p]
         ZZ_pseudo[pseudo[:πtil_t], endo_addl[:πtil_t]] = 1.
         DD_pseudo[pseudo[:πtil_t]] = 100 * (m[:π_star] - 1)
+        ZZ_pseudo[pseudo[:e_tfp_t], endo_addl[:e_tfp_t]] = 1.
+        ZZ_pseudo[pseudo[:e_tfp_t1], endo_addl[:e_tfp_t1]] = 1.
     end
 
     ## Exogenous processes

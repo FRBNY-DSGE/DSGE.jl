@@ -115,8 +115,8 @@ function measurement(m::Model1002{T},
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
     if subspec(m) in ["ss14", "ss15", "ss16"]
-        ZZ[obs[:obs_gdp], endo_new[:e_tfp_t]]  = 1.0
-        ZZ[obs[:obs_gdp], endo_new[:e_tfp_t1]] = -m[:me_level]
+        ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]]  = 1.0
+        ZZ[obs[:obs_tfp], endo_new[:e_tfp_t1]] = -m[:me_level]
     else
         ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]] = 1.0
     end

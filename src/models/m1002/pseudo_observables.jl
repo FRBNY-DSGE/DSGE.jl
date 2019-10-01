@@ -14,7 +14,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     end
 
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
-        push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1)
+        push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t, :e_tfp_t1)
     end
 
     # Create PseudoObservable objects
@@ -109,6 +109,10 @@ function init_pseudo_observable_mappings!(m::Model1002)
         pseudo[:πtil_t].longname = "Fundamental Inflation"
         pseudo[:πtil_t1].name     = "pitil_t1"
         pseudo[:πtil_t1].longname = "Fundamental Inflation Lag 1"
+        pseudo[:e_tfp_t].name = "e_tfp_t"
+        pseudo[:e_tfp_t].longname = "e_tfp_t"
+        pseudo[:e_tfp_t1].name = "e_tfp_t1"
+        pseudo[:e_tfp_t1].longname = "e_tfp_t1"
     end
 
     # Other exogenous processes
