@@ -186,4 +186,17 @@ exp_states_shockobs, exp_obs_shockobs, exp_pseudo_shockobs =
     @test pseudo ≈ exp_pseudo_shockobs
 end
 
+@testset "Check impulse responses to pegged interest rate" begin
+    m = SmetsWouters(
+        custom_settings = Dict{Symbol, Setting}(:n_anticipated_shocks => Setting(:n_anticipated_shocks, 8)))
+    system = compute_system(m)
+    for H=1:8
+        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :all_periods, real_rate = false)
+        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :all_periods, real_rate = true)
+        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :some_periods, real_rate = false)
+        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :some_periods, real_rate = true)
+    end
+end
+
+
 nothing
