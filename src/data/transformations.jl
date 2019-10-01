@@ -111,10 +111,10 @@ function hpfilter(y::AbstractVector, λ::Real)
     # Indices of consecutive missing elements at beginning
     i = 1
     j = length(y)
-    while ismissing(y[i])
+    while ismissing(y[i]) || isnan(y[i])
         i = i+1
     end
-    while ismissing(y[j])
+    while ismissing(y[j]) || isnan(y[j])
         j = j-1
     end
 
