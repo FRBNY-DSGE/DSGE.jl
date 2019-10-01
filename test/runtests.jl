@@ -39,6 +39,7 @@ my_tests = [
             "estimate/smc/mutation",
             "estimate/smc/resample",
 
+            "forecast/drivers",
             "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",
