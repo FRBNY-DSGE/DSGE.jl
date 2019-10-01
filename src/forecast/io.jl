@@ -44,7 +44,7 @@ function get_forecast_input_file(m, input_type;
         elseif get_setting(m, :sampling_method) == :SMC
             return rawpath(m, "estimate", "smcsave.h5", filestring_addl)
         else
-            error(Error("Invalid sampling method specification. Change in setting :sampling_method"))
+            error("Invalid sampling method specification. Change in setting :sampling_method")
         end
     else
         error(ArgumentError("Invalid input_type: $(input_type)"))

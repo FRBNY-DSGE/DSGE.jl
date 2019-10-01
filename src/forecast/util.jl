@@ -38,6 +38,8 @@ function n_forecast_draws(m::AbstractDSGEModel, input_type::Symbol)
             size(dataset)[1]
         end
         return draws
+    elseif input_type == :prior
+        return 5000
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
     end

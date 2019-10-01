@@ -118,15 +118,20 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
         if get_setting(m, :sampling_method) == :MH
             params = convert(Vector{Float64}, h5read(input_file_name, "params"))
         elseif get_setting(m, :sampling_method) == :SMC
-            if :mode in collect(keys(forecast_input_file_overrides(m)))
-                params = convert(Vector{Float64}, h5read(input_file_name, "params"))
+            if input_type in [:mode, :mode_draw_shocks]
+                # If mode is in forecast overrides, want to use the file specified
+                if :mode in collect(keys(forecast_input_file_overrides(m)))
+                    params = convert(Vector{Float64}, h5read(input_file_name, "params"))
+                    # If not, load it from the cloud
+                else
+                    cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
+                    params = cloud.particles[argmax(get_logpost(cloud))].value
+                end
             else
-                cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
-                params = cloud.particles[argmax(get_logpost(cloud))].value
+                error("SMC mean not implemented yet")
             end
-            #params = map(Float64, h5read(input_file_name, "smcparams"))
         else
-            throw("Invalid :sampling method specification. Change in setting :sampling_method")
+            error("Invalid :sampling method specification. Change in setting :sampling_method")
         end
     # Load full distribution
     elseif input_type == :full
@@ -143,7 +148,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
 
             params = Matrix{Float64}(params_unweighted[:, inds]')
         else
-            throw("Invalid :sampling method specification. Change in setting :sampling_method")
+            error("Invalid :sampling method specification. Change in setting :sampling_method")
         end
 
     # Load subset of full distribution
