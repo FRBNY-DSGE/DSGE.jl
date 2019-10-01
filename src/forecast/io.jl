@@ -345,11 +345,10 @@ Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
 function write_forecast_block(file, arr::Array,
                               block_inds::AbstractRange{Int64})
-    #pfile = file #.plain
     dataset = HDF5.d_open(file, "arr")
     dims = size(dataset)
     ndims = length(dims)
-    dataset[block_inds, fill(Colon(), ndims-1)...] = arr #pfile was dataset before
+    dataset[block_inds, fill(Colon(), ndims-1)...] = arr
     set_dims!(dataset, dims)
 end
 
