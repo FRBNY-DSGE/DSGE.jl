@@ -233,6 +233,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
         for (i, j) in zip(1:ndraws, block_inds)
             try_again = true
             param_try = vec(rand(m.parameters, ndraws)[:, i])
+            # Need to do this to ensure that draws from prior don't return -Inf likelihood
             while try_again
                 param_try = vec(rand(m.parameters, ndraws)[:, i])
                 try

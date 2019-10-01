@@ -28,48 +28,48 @@ end
     overrides[:mode_draw_shocks] = "$path/../reference/paramsmode_.h5"
 
     # Init
-    @test typeof(load_draws(m, :init)) == Vector{Float64}
-    @test typeof(load_draws(m, :init_draw_shocks)) == Vector{Float64}
-    @test typeof(load_draws(m, :prior)) == Matrix{Float64}
-    @test typeof(load_draws(m, :init_draw_shocks, 1:1))==Vector{Vector{Float64}}
-    @test typeof(load_draws(m, :prior, 1:1))==Vector{Vector{Float64}}
+    @test typeof(load_draws(m, :init, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :init_draw_shocks, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :prior, verbose = :none)) == Matrix{Float64}
+    @test typeof(load_draws(m, :init_draw_shocks, 1:1, verbose = :none))==Vector{Vector{Float64}}
+    @test typeof(load_draws(m, :prior, 1:1, verbose = :none))==Vector{Vector{Float64}}
 
 
     # MH
     m <= Setting(:sampling_method, :MH)
     overrides[:full] = "$path/../reference/mhsave_.h5"
     # load_draws without blocks
-    @test typeof(load_draws(m, :mode)) == Vector{Float64}
-    @test typeof(load_draws(m, :mode_draw_shocks)) == Vector{Float64}
-    @test typeof(load_draws(m, :full)) == Matrix{Float64}
-    @test typeof(load_draws(m, :subset, subset_inds = 1:10)) == Matrix{Float64}
+    @test typeof(load_draws(m, :mode, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :mode_draw_shocks, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :full, verbose = :none)) == Matrix{Float64}
+    @test typeof(load_draws(m, :subset, subset_inds = 1:10, verbose = :none)) == Matrix{Float64}
 
     # load_draws with blocks
-    @test typeof(load_draws(m, :full, 1:1))==Vector{Vector{Float64}}
-    @test typeof(load_draws(m, :mode_draw_shocks, 1:1))==Vector{Vector{Float64}}
+    @test typeof(load_draws(m, :full, 1:1, verbose = :none))==Vector{Vector{Float64}}
+    @test typeof(load_draws(m, :mode_draw_shocks, 1:1, verbose = :none))==Vector{Vector{Float64}}
        # can't block with empty/invalid block indices
-    @test_throws ErrorException typeof(load_draws(m, :full, 1:0))==Vector{Vector{Float64}}
+    @test_throws ErrorException typeof(load_draws(m, :full, 1:0, verbose = :none))==Vector{Vector{Float64}}
        # can't block with only single draw
-    @test_throws ErrorException load_draws(m, :mode, 1:1)
-    @test_throws ErrorException load_draws(m, :init, 1:1)
+    @test_throws ErrorException load_draws(m, :mode, 1:1, verbose = :none)
+    @test_throws ErrorException load_draws(m, :init, 1:1, verbose = :none)
 
     # SMC
     m <= Setting(:sampling_method, :SMC)
     overrides[:full] = "$path/../reference/smcsave_.h5"
     # load draws without blocks
-    @test typeof(load_draws(m, :mode)) == Vector{Float64}
-    @test typeof(load_draws(m, :mode_draw_shocks)) == Vector{Float64}
-    @test typeof(load_draws(m, :full)) == Matrix{Float64}
-    @test typeof(load_draws(m, :subset, subset_inds = 1:10)) == Matrix{Float64}
+    @test typeof(load_draws(m, :mode, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :mode_draw_shocks, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :full, verbose = :none)) == Matrix{Float64}
+    @test typeof(load_draws(m, :subset, subset_inds = 1:10, verbose = :none)) == Matrix{Float64}
 
     # load draws with blocks
-    @test typeof(load_draws(m, :full, 1:1))==Vector{Vector{Float64}}
-    @test_throws ErrorException typeof(load_draws(m, :full, 1:0))==Vector{Vector{Float64}}
-    @test typeof(load_draws(m, :mode_draw_shocks, 1:1))==Vector{Vector{Float64}}
+    @test typeof(load_draws(m, :full, 1:1, verbose = :none))==Vector{Vector{Float64}}
+    @test_throws ErrorException typeof(load_draws(m, :full, 1:0, verbose = :none))==Vector{Vector{Float64}}
+    @test typeof(load_draws(m, :mode_draw_shocks, 1:1, verbose = :none))==Vector{Vector{Float64}}
 
     # If give nonsense sampler, should throw error
     m <= Setting(:sampling_method, :marco)
-    @test_throws ErrorException load_draws(m, :mode)
+    @test_throws ErrorException load_draws(m, :mode, verbose = :none)
 
     m <= Setting(:forecast_block_size, 100)
 end
