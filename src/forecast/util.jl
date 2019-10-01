@@ -6,7 +6,7 @@ get_jstep(m, n_sim)
 Retrieve `forecast_jstep` setting (thinning step size for forecast
 step) from `m.settings`. If `n_sim ==  1`, returns 1.
 """
-function get_jstep(m, n_sim)
+function get_jstep(m::AbstractDSGEModel, n_sim::Int)
     if n_sim == 1
         jstep = 1
     else
