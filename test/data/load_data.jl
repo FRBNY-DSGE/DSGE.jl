@@ -26,21 +26,33 @@ path = dirname(@__FILE__)
                 read(file, "data"), read(file, "cond_data"), read(file, "semi_cond_data")
             end
 
+        # Check high summary statistics runs without an error
+        load_data(m; try_disk = false, summary_statistics = :high, verbose=:none)
+        load_data(m; try_disk = false, summary_statistics = :low, verbose=:none)
+
         # Unconditional data
         println("The following warnings are expected test behavior:")
-        global df = load_data(m; try_disk=false, verbose=:none)
+        global df = load_data(m; try_disk=false, verbose=:none, summary_statistics=:none)
         global data = df_to_matrix(m, df)
         @test @test_matrix_approx_eq exp_data data
 
         # Conditional data
-        cond_df = load_data(m; cond_type=:full, try_disk=false, verbose=:none)
+        cond_df = load_data(m; cond_type=:full, try_disk=false, verbose=:none, summary_statistics=:none)
         cond_data = df_to_matrix(m, cond_df; cond_type=:full)
         @test @test_matrix_approx_eq exp_cond_data cond_data
 
         # Semiconditional data
-        semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none)
+        semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none, summary_statistics=:none)
         semicond_data = df_to_matrix(m, semicond_df; cond_type=:semi)
         @test @test_matrix_approx_eq exp_semicond_data semicond_data
+
+        # Test errors
+        m <= Setting(:data_vintage, "160813")
+        m <= Setting(:cond_vintage, "160812")
+        @test_throws ErrorException load_cond_data_levels(m)
+        m <= Setting(:cond_vintage, "160813")
+        @test_throws ErrorException load_cond_data_levels(m)
+        @test_throws ErrorException load_data(m; try_disk = false, verbose=:none)
     else
         @warn "Skipping load_data test because FRED_API_KEY not present"
     end

@@ -220,8 +220,8 @@ function model_settings!(m::PoolModel; weight_type::Symbol = :dynamic_weight)
     m <= Setting(:tuning, tuning, "tuning parameters for TPF")
 
     # MH estimation
-    m <= Setting(:mh_cc, 0.15^2)
-    m <= Setting(:mh_cc0, 0.15^2)
+    m <= Setting(:mh_cc, 0.15)
+    m <= Setting(:mh_cc0, 0.15)
     m <= Setting(:calculate_hessian, false)
     m <= Setting(:reoptimize, false)
     m <= Setting(:n_mh_simulations, 1000)

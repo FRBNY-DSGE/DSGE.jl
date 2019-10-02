@@ -980,7 +980,8 @@ particle in `θs`, which represents the posterior distribution.
 - `λhat_t::Float64`: E[λ_{t|t} | I_t^P, P]
 ```
 """
-function compute_Eλ(m::PoolModel{T}, h::Int64, λvec ::Vector{T},
+function compute_Eλ(m::PoolModel{T}, h::Int64, λvec::Vector{T},
+                    θmat::Matrix{T} = Matrix{Float64}(undef,0,0),
                     weights::Vector{T} = Vector{Float64}(undef,0);
                     current_period::Bool = true, parallel::Bool = false) where T<:AbstractFloat
 
@@ -988,24 +989,42 @@ function compute_Eλ(m::PoolModel{T}, h::Int64, λvec ::Vector{T},
     if isempty(weights)
         weights = ones(length(λvec)) # assume equal weights
     end
+    update_param = !isempty(θmat)
+    if update_param # save so we can reset the parameters of the PoolModel
+        old_param = map(x -> x.value, m.parameters)
+    end
     λhat_t = if current_period mean(λvec .* weights) end # compute expected lambda in current period t
 
     # Push forward states and compute mean
-    Φ, F_ϵ, ~ = solve(m)
     if parallel
         # Send data to all workers
+        sendto(workers(), m = m)
         sendto(workers(), h = h)
-        sendto(workers(), Φ = Φ)
-        sendto(workers(), F_ϵ = F_ϵ)
+        if update_param
+            sendto(workers(), θmat = θmat)
 
-        # Propagate forward!
-        λ_vec = @sync @distributed (vcat) for i in 1:length(λvec)
-            propagate_λ(λvec[i], h, Φ, F_ϵ)
+            # Propagate forward!
+            λ_vec = @sync @distributed (vcat) for i in 1:length(λvec)
+                propagate_λ(λvec[i], h, m, vec(θmat[i,:]))
+            end
+        else
+            λ_vec = @sync @distributed (vcat) for i in 1:length(λvec)
+                propagate_λ(λvec[i], h, m)
+            end
         end
     else
-        λ_vec = map(x -> propagate_λ(x, h, Φ, F_ϵ), λvec)
+        if update_param
+            λ_vec = map(i -> propagate_λ(λvec[i], h, m, vec(θmat[i,:])), collect(1:length(λvec)))
+        else
+            λ_vec = map(x -> propagate_λ(x, h, m), λvec)
+        end
     end
     λhat_tplush = mean(λ_vec .* weights)
+
+    if update_param
+        # Update m to take original parameters
+        DSGE.update!(m, old_param)
+    end
 
     if current_period
         return λhat_tplush, λhat_t
@@ -1016,7 +1035,7 @@ end
 
 """
 ```
-propgate_λ(λvec, h, Φ, F_ϵ; parallel = true) where T<:AbstractFloat
+propgate_λ(λvec, h, m, θvec) where T<:AbstractFloat
 ```
 
 Propagates a λ particle h periods forward.
@@ -1025,16 +1044,19 @@ Propagates a λ particle h periods forward.
 
 - `λ::T`: λ sample from (θ,λ) joint distribution
 - `h::Int64`: forecast horizon
-- `Φ::Function`: state transition function of the form Φ(s_t, ϵ_t) for a PoolModel object
-- `F_ϵ::Distribution`: distribution of structural shock
+- `m::PoolModel`: PoolModel object
+- `θvec::Vector{T}`: optional vector of parameters to update PoolModel
 
 ```
 """
-function propagate_λ(λ::T, h::Int64, Φ::Function,
-                   F_ϵ::Distribution) where T<:AbstractFloat
-    ϵ = rand(F_ϵ, h)
+function propagate_λ(λ::T, h::Int64, m::PoolModel,
+                     θvec = Vector{Float64}(undef,0)) where T<:AbstractFloat
+    if !isempty(θvec)
+        update!(m, θvec)
+    end
+    Φ, ~, ~ = solve(m)
     for j in 1:h
-        λ = Φ([λ; 1 - λ], [ϵ[j]])[1]
+        λ = Φ([λ; 1 - λ], [0.])[1]
     end
     return λ
 end

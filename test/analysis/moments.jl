@@ -23,14 +23,12 @@ pred_dens = load("$(fp)/../reference/moments_poolmodel_inputs.jld2", "pred_dens"
 end
 
 λvec = 0.5 * ones(2)
-λhat_plush, λhat_t = compute_Eλ(m, 4, λvec)
-λhat_plush_parallel, λhat_t_parallel = compute_Eλ(m, 4, λvec; parallel = true)
-save_λhatplush_noparallel = load("$(fp)/../reference/moments_poolmodel_outputs.jld2", "lamhat_plush_noparallel")
-save_λhatplush_parallel = load("$(fp)/../reference/moments_poolmodel_outputs.jld2", "lamhat_plush_parallel")
-
+θchange = [.8 0. 1.] .* ones(2)
+λhat_plush, λhat_t = compute_Eλ(m, 4, λvec, θchange)
+λhat_plush_parallel, λhat_t_parallel = compute_Eλ(m, 4, λvec, θchange; parallel = true)
 @testset "Check compute_Eλ works correctly" begin
-    @test λhat_plush == save_λhatplush_noparallel
-    @test λhat_plush_parallel == save_λhatplush_parallel
+    @test λhat_plush == 0.5
+    @test λhat_plush_parallel == 0.5
     @test λhat_t == 0.5
     @test λhat_t_parallel == 0.5
 end
@@ -39,9 +37,9 @@ Random.seed!(1793)
 sm = PoolModel("ss1"; weight_type = :static)
 sm <= Setting(:saveroot, "$(fp)/../reference/")
 sm <= Setting(:hessian_path, "$(fp)/../reference/mh_hessian_poolmodel.h5")
-sm <= Setting(:n_mh_simulations, 1000)
-save_sλmat_noparallel = load("$(fp)/../reference/moments_poolmodel_outputs.jld2", "slammat_noparallel")
-save_sλmat_parallel = load("$(fp)/../reference/moments_poolmodel_outputs.jld2", "slammat_parallel")
+sm <= Setting(:n_mh_simulations, 1)
+save_sλmat_noparallel = load("$(fp)/../reference/moments_poolmodel_outputs.jld2", "slammat_noparallel_one")
+save_sλmat_parallel = load("$(fp)/../reference/moments_poolmodel_outputs.jld2", "slammat_parallel_one")
 sλmat_noparallel = sample_λ(sm, pred_dens, 1)
 sλmat_parallel   = sample_λ(sm, pred_dens, 1; parallel = true)
 rm(joinpath(saveroot(sm), "output_data/poolmodel"); recursive = true)
