@@ -128,7 +128,7 @@ function measurement(m::Model1002{T},
     QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
     QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
-    QQ[exo[:ztil_sh], exo[:ztil_sh]]            = m[:σ_ztil]^2
+    QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil]^2
     QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
     QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
     QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2
