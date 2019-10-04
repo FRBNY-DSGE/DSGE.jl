@@ -70,7 +70,12 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
         else
             date_mainsample_end(m)
         end
-        df = df[start_date .<= df[!, :date] .<= end_date, :]
+        df = df[start_date .<= df[!,:date] .<= end_date, :]
+
+        missing_cond_vars!(m, df; cond_type = cond_type)
+
+        # check that dataset is valid
+        isvalid_data(m, df; check_empty_columns = check_empty_columns)
 
         if !m.testing
             save_data(m, df; cond_type=cond_type)
@@ -199,7 +204,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             # Extract just the columns and rows of the dataset we want, and merge them with
             # data
             cols = [:date; mnemonics]
-            rows = start_date .<= addl_data[!, :date] .<= end_date
+            rows = start_date .<= addl_data[!,:date] .<= end_date
 
             addl_data = addl_data[rows, cols]
             df = join(df, addl_data, on=:date, kind=:outer)
@@ -219,7 +224,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         filename = inpath(m, "raw", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
         if !isnull(mnemonic)
-            CSV.write(filename, df[!, [:date, get(mnemonic)]])
+            CSV.write(filename, df[!,[:date, get(mnemonic)]])
         end
     end
 
@@ -321,7 +326,7 @@ function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
     df       = CSV.read(filename, copycols=true)
 
     # Convert date column from string to Date
-    df[!, :date] = map(Date, df[!, :date])
+    df[!,:date] = map(Date, df[!,:date])
 
     missing_cond_vars!(m, df; cond_type = cond_type)
 
@@ -386,7 +391,7 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
         end
     else
         for col in setdiff(names(df), [:date])
-            if all(ismissing.(df[col])) || all(isnan.(df[col]))
+            if all(ismissing.(df[!,col])) || all(isnan.(df[!,col]))
                 @warn "df[$col] is all missing."
             end
         end
@@ -426,7 +431,7 @@ function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
         else
             date_mainsample_end(m)
         end
-        df1 = df1[start_date .<= df[!, :date] .<= end_date, :]
+        df1 = df1[start_date .<= df[!,:date] .<= end_date, :]
     end
 
     # Discard columns not used
@@ -615,7 +620,7 @@ end
 
 
 function reference_forecast_vintage(year::Int, quarter::Int, reference_forecast::Symbol)
-    # We compare to Jaunary, Aprilp, July, and October Blue Chip forecasts (bluechip_forecast_month = 1 in Realtime code
+    # We compare to Jaunary, April, July, and October Blue Chip forecasts (bluechip_forecast_month = 1 in Realtime code
         bluechip_forecast_month = 1
         release_quarter = quarter % 4 + 1
         release_year = if release_quarter == 1

@@ -49,7 +49,7 @@ function load_fred_data(m::AbstractDSGEModel;
         qstart = lastdayofquarter(start_date)
         qend = lastdayofquarter(end_date)
 
-        if !in(qstart, data[:date]) || !in(qend, data[:date])
+        if !in(qstart, data[!,:date]) || !in(qend, data[!,:date])
             println(verbose, :low, "FRED dataset on disk missing start or end date. Fetching data from FRED.")
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
