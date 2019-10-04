@@ -87,13 +87,13 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             str_nondate_names = [string(name) for name in names(df[:,2:end])]
             freq_nan_empty = zeros(size(df,2) - 1)
             for (colnum, name) in enumerate(names(df[:,2:end]))
-                is_missing_in_col = ismissing.(df[name])
-                is_nan_in_col = isnan.(df[name][.!is_missing_in_col])
+                is_missing_in_col = ismissing.(df[!,name])
+                is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
                 freq_nan_empty[colnum] = mean(vcat(is_missing_in_col, is_nan_in_col))
                 println("$(name), Frequency of missing/NaNs: $(freq_nan_empty[colnum])")
                 if summary_statistics == :high
-                    colmean = mean(df[name][.!is_missing_in_col][.!is_nan_in_col])
-                    colstd  = std(df[name][.!is_missing_in_col][.!is_nan_in_col])
+                    colmean = mean(df[!,name][.!is_missing_in_col][.!is_nan_in_col])
+                    colstd  = std(df[!,name][.!is_missing_in_col][.!is_nan_in_col])
                     println("$(name), Column Mean: $(colmean)")
                     println("$(name), Standard deviation: $(colstd)")
                 end
@@ -183,8 +183,8 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
             # Warn on sources with incomplete data; missing data will be replaced with missing
             # during merge.
-            if !in(lastdayofquarter(start_date), addl_data[!, :date]) ||
-                !in(lastdayofquarter(end_date), addl_data[!, :date])
+            if !in(lastdayofquarter(start_date), addl_data[!,:date]) ||
+                !in(lastdayofquarter(end_date), addl_data[!,:date])
 
                 @warn "$file does not contain the entire date range specified; missings used."
             end
@@ -353,7 +353,7 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     end
 
     # Ensure the dates between date_presample_start and date_mainsample_end are contained.
-    actual_dates = df[:date]
+    actual_dates = df[!,:date]
 
     start_date = date_presample_start(m)
     end_date   = if cond_type in [:semi, :full]
@@ -432,7 +432,7 @@ function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     # Discard columns not used
     cols = collect(keys(m.observables))
     sort!(cols, by = x -> m.observables[x])
-    df1 = df1[cols]
+    df1 = df1[!,cols]
 
     return permutedims(Float64.(collect(Missings.replace(convert(Matrix{Union{Missing, Float64}}, df1), NaN))))
 end
@@ -555,7 +555,7 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
 
-        return df[[:date, population_mnemonic]]
+        return df[!,[:date, population_mnemonic]]
     else
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             @warn "No population forecast found"

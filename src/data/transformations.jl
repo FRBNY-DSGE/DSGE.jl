@@ -612,7 +612,7 @@ function logleveltopct_4q_percapita(y::AbstractArray, pop_growth::AbstractVector
         y_t4 = prepend_data(y[:, 1:nperiods-4], data)
     end
 
-    @assert length(pop_growth_4q) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+    @assert length(pop_growth_4q) == nperiods "Length of pop_growth ($(length(pop_growth_4q))) must equal number of periods of y ($nperiods)"
 
     y_4q = y - y_t4
 
