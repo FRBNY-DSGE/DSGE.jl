@@ -18,6 +18,8 @@ my_tests = [
             "data/load_data_poolmodel",
             "solve/gensys",
             "solve/solve",
+            "analysis/compute_meansbands",
+            "analysis/df_to_table.jl"
             "analysis/moments",
             "estimate/filter",
             "estimate/cat",
@@ -30,7 +32,7 @@ my_tests = [
             "estimate/csminwel",
             "estimate/optimize",
 
-            #"estimate/metropolis_hastings"
+    #"estimate/metropolis_hastings"
 
             "estimate/smc/smc",
             "estimate/smc/helpers",
@@ -46,6 +48,7 @@ my_tests = [
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
+            "forecast/util",
             "analysis/compute_meansbands",
             "altpolicy/altpolicy",
             "scenarios/scenario",
