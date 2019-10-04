@@ -1,6 +1,3 @@
-# using DSGE
-using HDF5, Test# , Distributions
-
 path = dirname(@__FILE__)
 
 ### Model
