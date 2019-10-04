@@ -99,8 +99,8 @@ function optimize!(m::AbstractDSGEModel,
     # variables used across several optimizers
     rng = m.rng
     temperature = get_setting(m, :simulated_annealing_temperature)
-    max_cycles = get_setting(m, :combined_optimizer_max_cycles)
-    block_frac = get_setting(m, :simulated_annealing_block_proportion)
+    max_cycles  = get_setting(m, :combined_optimizer_max_cycles)
+    block_frac  = get_setting(m, :simulated_annealing_block_proportion)
     H_ = nothing
 
     function neighbor_dsge!(x, x_proposal)

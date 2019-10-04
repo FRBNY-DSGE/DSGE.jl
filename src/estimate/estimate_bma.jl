@@ -15,7 +15,6 @@ Estimate a Bayesian Model Average.
 ### Keyword Arguments:
 - `return_output::Bool`: option to return output. If false, `nothing` is returned.
 - `filestring_addl::Vector{String}`: Additional strings to append to output files.
-
 """
 function estimate_bma(m::PoolModel, df::DataFrame, prior::Float64 = 0.5;
                       return_output::Bool = false, save_output::Bool = true,
