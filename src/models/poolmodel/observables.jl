@@ -2,10 +2,10 @@ function init_observable_mappings!(m::PoolModel)
     observables = OrderedDict{Symbol,Observable}()
 
     identity_transform_805 = function(levels)
-        return levels[:p805]
+        return levels[!,:p805]
     end
     identity_transform_904 = function(levels)
-        return levels[:p904]
+        return levels[!,:p904]
     end
 
     if subspec(m) in ["ss1", "ss3", "ss5", "ss7"]
