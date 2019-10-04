@@ -1,6 +1,7 @@
 using DSGE
 using HDF5
 path = dirname(@__FILE__)
+writing_output = true
 
 # Test in model optimization
 custom_settings = Dict{Symbol, Setting}(
@@ -28,6 +29,24 @@ x0 = Float64[p.value for p in m.parameters]
 out, H = optimize!(m, data; iterations=n_iterations)
 
 # Re-generate test file
+#=if writing_output
+    h5open("$path/../reference/optimize.h5", "w") do file
+        file["params"] = params_test
+        file["data"] = data_test
+        file["minimizer"] = out.minimizer
+        file["minimum"] = out.minimum
+        file["H"] = H
+    end
+end=#
+
+
+@testset "Check optimize minimizers are the same [csminwel]" begin
+    @test @test_matrix_approx_eq minimizer out.minimizer
+    @test minimum ≈ out.minimum atol=1e-6
+    @test @test_matrix_approx_eq H_expected H
+end
+
+# Re-generate test file
 #=h5open("$path/../reference/optimize.h5", "w") do file
     file["params"] = params_test
     file["data"] = data_test
@@ -36,10 +55,23 @@ out, H = optimize!(m, data; iterations=n_iterations)
     file["H"] = H
 end=#
 
-@testset "Check optimize minimizers are the same" begin
+@testset "Check optimize minimizers are the same [simulated_annealing]" begin
     @test @test_matrix_approx_eq minimizer out.minimizer
     @test minimum ≈ out.minimum atol=1e-6
     @test @test_matrix_approx_eq H_expected H
 end
+
+@testset "Check optimize minimizers are the same [nelder_mead]" begin
+    @test @test_matrix_approx_eq minimizer out.minimizer
+    @test minimum ≈ out.minimum atol=1e-6
+    @test @test_matrix_approx_eq H_expected H
+end
+
+@testset "Check optimize minimizers are the same [lbfgs]" begin
+    @test @test_matrix_approx_eq minimizer out.minimizer
+    @test minimum ≈ out.minimum atol=1e-6
+    @test @test_matrix_approx_eq H_expected H
+end
+
 
 nothing
