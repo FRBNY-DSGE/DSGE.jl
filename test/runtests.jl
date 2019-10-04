@@ -19,7 +19,7 @@ my_tests = [
             "solve/gensys",
             "solve/solve",
             "analysis/compute_meansbands",
-            "analysis/df_to_table.jl"
+            "analysis/df_to_table.jl",
             "analysis/moments",
             "estimate/filter",
             "estimate/cat",
