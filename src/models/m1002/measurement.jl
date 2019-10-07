@@ -57,7 +57,7 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_hours]]             = m[:Lmean]
 
     ## Labor Share/real wage growth
-    if subspec(m) == "ss16"
+    if subspec(m) in ["ss16", "ss17"]
         # log(labor_share) = log(wage) + log(hours) - log(GDP)
         ZZ[obs[:obs_laborshare], endo[:w_t]] = 1.
         ZZ[obs[:obs_laborshare], endo[:L_t]] = 1.

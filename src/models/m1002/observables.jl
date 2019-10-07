@@ -47,7 +47,7 @@ function init_observable_mappings!(m::Model1002)
     ############################################################################
     ## 3. Wages
     ############################################################################
-    if subspec(m) == "ss16"
+    if subspec(m) in ["ss16", "ss17"]
         laborshare_fwd_transform = function (levels)
             # FROM: Level of nominal GDP (FRED :GDP series), nominal compensation per hour,
             #       and average weekly hours (AWHNONAG) & civilian employment (CE16OV)

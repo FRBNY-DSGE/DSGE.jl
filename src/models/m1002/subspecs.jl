@@ -29,6 +29,8 @@ function init_subspec!(m::Model1002)
         return ss15!(m)
     elseif subspec(m) == "ss16"
         return ss16!(m)
+    elseif subspec(m) == "ss17"
+        return ss17!(m)
     else
         error("This subspec is not defined.")
     end
@@ -253,4 +255,8 @@ but with the measurement equation using log labor share instead of wage growth.
 """
 function ss16!(m::Model1002)
     ss15!(m)
+end
+
+function ss17!(m::Model1002)
+    ss13!(m)
 end
