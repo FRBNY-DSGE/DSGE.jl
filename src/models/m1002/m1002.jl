@@ -720,7 +720,7 @@ function model_settings!(m::Model1002)
     end
     m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
-    if subspec(m) == "ss16"
+    if subspec(m) in ["ss16", "ss17"]
         m <= Setting(:laborshare_base_period, DSGE.quartertodate("1964-Q1"), "Base year for labor share series to provide an initial condition")
     end
 

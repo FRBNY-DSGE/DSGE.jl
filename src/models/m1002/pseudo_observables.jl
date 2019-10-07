@@ -14,7 +14,10 @@ function init_pseudo_observable_mappings!(m::Model1002)
     end
 
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17"]
-        push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t, :e_tfp_t1)
+        push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t)
+        if subspec(m) in ["ss14", "ss15", "ss16"]
+            push!(pseudo_names, :e_tfp_t1)
+        end
     end
 
     # Create PseudoObservable objects
