@@ -472,8 +472,13 @@ startdate_bands(mb::MeansBands)
 ```
 
 Get first period for which `mb` stores bands. Assumes `mb.bands` is already sorted by date.
+Also assumes the startdate is same for all observables in MeansBands
 """
-startdate_bands(mb::MeansBands) = mb.bands[collect(keys(mb.bands))][:date][1]
+startdate_bands(mb::MeansBands) = if isempty(mb)
+    Date(0000, 1, 1)
+else
+    first(mb.bands)[2][:date][1]
+end
 
 """
 ```
@@ -481,8 +486,13 @@ enddate_bands(mb::MeansBands)
 ```
 
 Get last period in `mb.bands`. Assumes `mb.bands` is already sorted by date.
+Also assumes the startdate is same for all observables in MeansBands
 """
-enddate_bands(mb::MeansBands) = mb.bands[:date][end]
+enddate_bands(mb::MeansBands) = if isempty(mb)
+    Date(0000, 1, 1)
+else
+    first(mb.bands)[2][:date][end]
+end
 
 """
 ```
@@ -630,7 +640,7 @@ function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
     return df
 end
 
-"""
+#="""
 ```
 prepare_meansbands_table_irf(mb, var, shock)
 ```
@@ -664,6 +674,7 @@ function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, var::Symbol
 
     return df
 end
+
 function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, vars::Vector{Symbol})
 
     # Print all vars by default
@@ -673,14 +684,20 @@ function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, vars::Vecto
 
     # Make dictionary to return
     irfs = Dict{Symbol, DataFrame}()
+    df = DataFrame()
 
     # Make tables for each irf
     for var in vars
-        irfs[var] = prepare_meansbands_table_irf(mb, shock, var)
+        @show df
+        if isempty(df)
+            df = prepare_meansbands_table_irf(mb, shock, var)
+        else
+            join(df, prepare_meansbands_table_irf(mb, shock, var), on = :date)
+        end
     end
 
-    return irfs
-end
+    return df
+end=#
 
 """
 ```
