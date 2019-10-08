@@ -523,11 +523,13 @@ function write_meansbands_tables_all(m::AbstractDSGEModel, input_type::Symbol, c
                                         write_dirname = write_dirname,
                                         groups = shock_groups)
 
-        elseif prod == :irf
+        #=elseif prod == :irf
             write_means_tables(m, input_type, cond_type, class,
                                tablevars = shocks, columnvars = vars,
                                forecast_string = forecast_string,
-                               write_dirname = write_dirname)
+                               write_dirname = write_dirname)=#
+        else
+            error("Invalid Product")
         end
     end
 end
