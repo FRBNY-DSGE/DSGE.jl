@@ -534,7 +534,7 @@ function write_meansbands_tables_all(m::AbstractDSGEModel, input_type::Symbol, c
     end
 end
 
-function add_requisite_output_vars_meansbands(output_vars)
+function add_requisite_output_vars_meansbands(output_vars::Vector{Symbol})
 
     all_output_vars = add_requisite_output_vars(output_vars)
 
