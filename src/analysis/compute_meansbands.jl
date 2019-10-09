@@ -199,8 +199,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[:, var_name]), NaN))) : fill(NaN, size(df, 1))
-    #data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
+    # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[var_name]), NaN))) : fill(NaN, size(df, 1))
+    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
