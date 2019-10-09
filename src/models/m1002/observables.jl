@@ -72,14 +72,13 @@ function init_observable_mappings!(m::Model1002)
             series1_base = series1[base_per] # deviation of index from this base value
             series2_base = 100 * log(levels[!,:COE][base_per] /
                                      levels[!,:GDP][base_per]) # base labor share
-            println(series2_base)
 
             series1 .- series1_base .+ series2_base
         end
 
         laborshare_rev_transform = logleveltopct_annualized_percapita
 
-        observables[:obs_laborshare] = Observable(:obs_laborshre, [:COMPNFB__FRED, :GDPDEF__FRED,
+        observables[:obs_laborshare] = Observable(:obs_laborshare, [:COMPNFB__FRED, :GDPDEF__FRED,
                                                                    :COE__FRED],
                                              laborshare_fwd_transform, laborshare_rev_transform,
                                              "Log Labor Share",

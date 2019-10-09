@@ -101,7 +101,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:u_t].name     = "u_t"
     pseudo[:u_t].longname = "u_t"
 
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17"]
         pseudo[:Sinf_t].name     = "Sinf_t"
         pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
         pseudo[:Sinf_w_coef_t].name     = "Sinf_w_coef_t"

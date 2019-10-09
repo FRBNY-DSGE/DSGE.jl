@@ -264,13 +264,13 @@ end
 
 """
 ```
-specify_hessian(m::AbstractDSGEModel, path::String=""; verbose=:low)
+specify_hessian!(m::AbstractDSGEModel, path::String=""; verbose=:low)
 ```
 
 Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
 no path is provided, will attempt to detect location.
 """
-function specify_hessian(m::AbstractDSGEModel, path::String=""; verbose=:low)
+function specify_hessian!(m::AbstractDSGEModel, path::String=""; verbose=:low)
     if isempty(path)
         path = inpath(m, "user", "hessian.h5")
     end

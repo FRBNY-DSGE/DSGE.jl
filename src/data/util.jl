@@ -109,8 +109,8 @@ Change column `col` of dates in `df` from String to Date, and map any dates give
 interior of a quarter to the last day of the quarter.
 """
 function format_dates!(col::Symbol, df::DataFrame)
-    df[!, col] = Dates.Date.(df[!, col])
-    map!(lastdayofquarter, df[!, col], df[!, col])
+    df[!,col] = Dates.Date.(df[!,col])
+    map!(lastdayofquarter, df[!,col], df[!,col])
 end
 
 """

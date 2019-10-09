@@ -56,7 +56,7 @@ my_tests = [
             "scenarios/forecast",
             "scenarios/switching",
             "scenarios/drivers",
-            "decomp/decompose_forecast",
+            "decomp/drivers",
             "plot/plot",
   	        "plot/util",
             "packet/packet"

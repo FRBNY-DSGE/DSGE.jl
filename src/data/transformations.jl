@@ -525,7 +525,7 @@ function loggrowthtopct_4q_percapita(y::AbstractArray, pop_growth::AbstractVecto
         pop_growth_4q = pop_growth_4q'
     end
 
-    @assert length(pop_growth_4q) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+    @assert length(pop_growth_4q) == nperiods "Length of pop_growth ($(length(pop_growth_4q))) must equal number of periods of y ($nperiods)"
 
     100. .* (exp.(y_4q ./ 100. .+ pop_growth_4q) .- 1.)
 end

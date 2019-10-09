@@ -120,7 +120,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     # Measurement Error on Core PCE
     RRR_aug[endo_new[:e_corepce_t], exo[:corepce_sh]] = 1.0
 
-    # Measurement Error on GDP Deflator
+    # Measurement Error on GDP and GDI
     RRR_aug[endo_new[:e_gdp_t], exo[:gdp_sh]] = 1.0
     RRR_aug[endo_new[:e_gdp_t], exo[:gdi_sh]] = m[:ρ_gdpvar] * m[:σ_gdp] ^ 2
 

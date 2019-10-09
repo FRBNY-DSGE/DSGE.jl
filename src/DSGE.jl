@@ -53,7 +53,7 @@ module DSGE
         forecast_zlb_value, forecast_tdist_shocks, forecast_tdist_df_val,
         shockdec_startdate, date_shockdec_end,
         n_shockdec_periods, impulse_response_horizons,
-        load_parameters_from_file, specify_mode!, specify_hessian,
+        load_parameters_from_file, specify_mode!, specify_hessian!,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
         ShockGroup, alternative_policy,
