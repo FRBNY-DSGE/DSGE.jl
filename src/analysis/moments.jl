@@ -30,6 +30,8 @@ function load_posterior_moments(m::AbstractDSGEModel;
             params = load_draws(m, :full)
             params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params # TODO
             params = params'
+            weights = Vector{Float64}(0)
+            weighted = false
         elseif get_setting(m, :sampling_method) == :SMC
             cloud = get_cloud(m)
             params = get_vals(cloud)
@@ -40,7 +42,7 @@ function load_posterior_moments(m::AbstractDSGEModel;
     else
         params = get_vals(cloud)
         weights = get_weights(cloud)
-    end
+   end
 
     # Index out the fixed parameters
     if include_fixed
@@ -127,8 +129,13 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
         post_lb = Vector{Float64}(undef, length(params_mean))
         post_ub = similar(post_lb)
         for i in 1:length(params_mean)
-            post_lb[i] = quantile(params[i, :], Weights(weights), .05)
-            post_ub[i] = quantile(params[i, :], Weights(weights), .95)
+            if weighted
+                post_lb[i] = quantile(params[i, :], Weights(weights), .05)
+                post_ub[i] = quantile(params[i, :], Weights(weights), .95)
+            else
+                post_lb[i] = quantile(params[i, :], .05)
+                post_ub[i] = quantile(params[i, :], .95)
+            end
         end
     end
 
