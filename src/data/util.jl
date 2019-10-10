@@ -277,11 +277,7 @@ function reconcile_column_names(a::DataFrame, b::DataFrame)
     new_a_cols = setdiff(names(b), names(a))
     new_b_cols = setdiff(names(a), names(b))
     for col in new_a_cols
-<<<<<<< HEAD
         a[!, col] = fill(missing, size(a, 1))
-=======
-        a[!,col] = fill(missing, size(a, 1))
->>>>>>> Add tests for src folder code (except chebyshev.jl and grids.jl) and upgrade it to 1.0. Fix additional deprecation warnings.
     end
     for col in new_b_cols
         b[!, col] = fill(missing, size(b, 1))
