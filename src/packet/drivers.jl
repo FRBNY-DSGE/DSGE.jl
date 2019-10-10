@@ -54,7 +54,8 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                         mb_matrix::Bool = false,
                         shock_name::Symbol = :none,
                         shock_var_name::Symbol = :none,
-                        shock_var_value::Float64 = 0.0)
+                        shock_var_value::Float64 = 0.0,
+                        check_empty_columns = true)
 
     # Override estimation file if necessary
     if !isempty(est_override)
@@ -67,7 +68,8 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  verbose = :high,
                  shock_name = shock_name,
                  shock_var_name = shock_var_name,
-                 shock_var_value = shock_var_value)
+                 shock_var_value = shock_var_value,
+                 check_empty_columns = check_empty_columns)
 
     # Compute means and bands
     compute_meansbands(m, input_type, cond_type, output_vars; forecast_string = forecast_string,

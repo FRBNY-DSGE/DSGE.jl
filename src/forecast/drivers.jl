@@ -32,6 +32,7 @@ necessary.
 function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
+    check_empty_columns::Bool = true,
     verbose::Symbol = :none) where {S<:AbstractFloat}
 
     # Compute everything that will be needed to plot original output_vars
@@ -65,7 +66,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     if !irfs_only
         if isempty(df)
             data_verbose = verbose == :none ? :none : :low
-            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = data_verbose)
+            df = load_data(m; cond_type = cond_type, try_disk = true, check_empty_columns = check_empty_columns, verbose = data_verbose)
         else
             @assert df[1, :date] == date_presample_start(m)
             @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))

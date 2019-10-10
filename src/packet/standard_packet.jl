@@ -421,9 +421,9 @@ function write_forecast_table(fid::IOStream, m::AbstractModel, cond_type::Symbol
     fcast_years = [first_fcast_year, first_fcast_year + 1, first_fcast_year + 2, first_fcast_year + 3]
     fcast_dates = map(year -> Date(year, 12, 31), fcast_years)
 
-    curr_BB_month = month_label(m)
+    curr_month = month_label(m)
 
-    if curr_BB_month != "Jan" && curr_BB_month != "Feb"
+    if curr_month != "Jan" && curr_month != "Feb"
         curr_year = "20"*data_vintage(m)[1:2]
     else
         # Because the first forecast of the year still forecasts the previous year.
