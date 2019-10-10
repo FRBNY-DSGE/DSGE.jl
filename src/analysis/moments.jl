@@ -89,20 +89,6 @@ function load_posterior_moments(m::AbstractDSGEModel,
     df = DataFrame(param = param, post_mean = dropdims(mean(p_mean, dims = 2), dims = 2), post_std = dropdims(std(p_mean, dims = 2),dims = 2), post_lb = dropdims(mean(p_lb, dims = 2), dims = 2), post_ub = dropdims(mean(p_ub, dims = 2), dims = 2))
 
     return df
-
-    #=all_draws = Matrix{Float64}(n_params, n_particles*n_clouds)
-    all_weights = Vector{Float64}(n_particles*n_clouds)
-
-    for (i, c) in enumerate(clouds)
-        all_draws[:, ((i-1)*n_particles+1):(i*n_particles)] = get_vals(c)
-        all_weights[((i-1)*n_particles+1):(i*n_particles)] = get_weights(c)
-    end
-
-    cloud = ParticleCloud(m, n_particles*n_clouds)
-    update_draws!(cloud, all_draws)
-    update_weights!(cloud, all_weights)
-
-    load_posterior_moments(m; weighted = weighted, cloud = cloud, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)=#
 end
 
 # Base method
