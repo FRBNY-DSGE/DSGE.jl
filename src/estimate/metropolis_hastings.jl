@@ -89,7 +89,6 @@ function metropolis_hastings(propdist::Distribution,
             initialized = true
         else
             para_old = rand(propdist, rng; cc=cc0)
-            @show para_old
         end
     end
 
