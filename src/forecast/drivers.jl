@@ -170,11 +170,11 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
     # Return initial parameters of model object
     elseif input_type == :init || input_type == :init_draw_shocks
 
-        if m.spec == "het_dsge"
+#=        if m.spec == "het_dsge"
             init_parameters!(m, testing_gamma = false)
         else
             init_parameters!(m)
-        end
+        end =#
         tmp = map(α -> α.value, m.parameters)
         params = convert(Vector{Float64}, tmp)
 
