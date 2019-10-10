@@ -75,8 +75,8 @@ function construct_fcast_and_hist_dfs(m::AbstractDSGEModel, cond_type::Symbol,
     df_forecastpseudo   = df_forecastpseudo[1:forecast_end_ind, :]
 
     if include_T_in_df_forecast
-        df_forecastobs = append!(df_histobs[end, :], df_forecastobs)
-        df_forecastpseudo = append!(df_histpseudo[end, :], df_forecastpseudo)
+        df_forecastobs = append!(DataFrame(df_histobs[end, :]), df_forecastobs)
+        df_forecastpseudo = append!(DataFrame(df_histpseudo[end, :]), df_forecastpseudo)
     end
 
     df_forecast = join(df_forecastobs, df_forecastpseudo, on = :date)
@@ -142,7 +142,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
         if answer == "y"
             mkpath(savedir)
         else
-            throw("Create the proper savedir and call df_to_table again.")
+            error("Create the proper savedir and call df_to_table again.")
         end
     else
         mkpath(savedir)
@@ -154,7 +154,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
     function write_single_table(fid::IOStream, df::DataFrame, units::OrderedDict{Symbol, String})
 
         # Write header
-        n_columns = length(df.columns)
+        n_columns = length(names(df))
         col_str   = repeat("c", n_columns)
 
         @printf fid "%s%s%s" "\\begin{longtable}{" col_str "}\n"
@@ -162,7 +162,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
         @printf fid "\\\\ \\hline\n"
 
         # Write column names
-        date_range = df[:date].data
+        date_range = Vector(df[:, :date])
 
         column_keys = names(df)
 
