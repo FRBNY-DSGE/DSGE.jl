@@ -62,7 +62,8 @@ my_tests = [
             "scenarios/drivers",
             "decomp/decompose_forecast",
             "plot/plot",
-  	    "plot/util"
+  	        "plot/util",
+            "packet/packet"
             ]
 
 for test in my_tests
