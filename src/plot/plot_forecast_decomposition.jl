@@ -19,7 +19,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
 
     # Common metadata
     comps = [:data, :news, :para]
-    dates = decomps[collect(keys(decomps))[1]][:date]
+    dates = decomps[collect(keys(decomps))[1]][!,:date]
     vars  = collect(keys(get_dict(m_new, class)))
 
     metadata = Dict{Symbol, Any}()
@@ -41,7 +41,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
             end
             for shock in shocks
                 varshock = Symbol(var, "__", shock)
-                shockdec_mb.means[varshock] = decomps[var][shock]
+                shockdec_mb.means[varshock] = decomps[var][!,shock]
                 shockdec_mb.bands[varshock] = DataFrame(date = dates)
             end
         end
@@ -50,7 +50,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
         for var in vars
             for comp in comps
                 varcomp = Symbol(var, "__", comp)
-                shockdec_mb.means[varcomp] = decomps[var][comp]
+                shockdec_mb.means[!,varcomp] = decomps[var][!,comp]
                 shockdec_mb.bands[varcomp] = DataFrame(date = dates)
             end
         end
@@ -60,7 +60,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     trend_mb = MeansBands(Dict(metadata), DataFrame(date = dates), Dict{Symbol, DataFrame}())
     trend_mb.metadata[:product] = :trend
     for var in vars
-        trend_mb.means[var] = 0.0
+        trend_mb.means[!,var] = zeros(length(dates))
         trend_mb.bands[var] = DataFrame(date = dates)
     end
 
@@ -68,7 +68,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     dettrend_mb = MeansBands(Dict(metadata), DataFrame(date = dates), Dict{Symbol, DataFrame}())
     dettrend_mb.metadata[:product] = :dettrend
     for var in vars
-        dettrend_mb.means[var] = individual_shocks ? decomps[var][:dettrend] : 0
+        dettrend_mb.means[!,var] = individual_shocks ? decomps[var][:dettrend] : zeros(length(dates))
         dettrend_mb.bands[var] = DataFrame(date = dates)
     end
 
@@ -82,7 +82,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
         hist_mb.metadata[:product]   = :hist
         hist_mb.metadata[:date_inds] = OrderedDict(date => i for (i, date) in enumerate(hist_dates))
         for var in vars
-            hist_mb.means[var] = if individual_shocks
+            hist_mb.means[!,var] = if individual_shocks
                 decomps[var][hist_inds, :data] + decomps[var][hist_inds, :news]
             else
                 decomps[var][hist_inds, :total]
@@ -101,7 +101,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
         fcast_mb.metadata[:product]   = :forecast
         fcast_mb.metadata[:date_inds] = OrderedDict(date => i for (i, date) in enumerate(fcast_dates))
         for var in vars
-            fcast_mb.means[var] = if individual_shocks
+            fcast_mb.means[!,var] = if individual_shocks
                 decomps[var][fcast_inds, :data] + decomps[var][fcast_inds, :news]
             else
                 decomps[var][fcast_inds, :total]

@@ -140,8 +140,8 @@ irf
             linealpha := 0
             label     := label_mean_bands ? "$pct Bands" : ""
 
-            fillrange := sign * mb.bands[varshock][Symbol(pct, " UB")]
-            sign * mb.bands[varshock][Symbol(pct, " LB")]
+            fillrange := sign * mb.bands[varshock][!,Symbol(pct, " UB")]
+            sign * mb.bands[varshock][!,Symbol(pct, " LB")]
         end
     end
 

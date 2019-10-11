@@ -81,11 +81,11 @@ function load_posterior_moments(m::AbstractDSGEModel,
 
     for (i, c) in enumerate(clouds)
         df_i = load_posterior_moments(m; weighted = weighted, cloud = c, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
-        p_mean[:, i] = df_i[:post_mean]
-        p_lb[:, i] = df_i[:post_lb]
-        p_ub[:, i] = df_i[:post_ub]
+        p_mean[:, i] = df_i[!,:post_mean]
+        p_lb[:, i] = df_i[!,:post_lb]
+        p_ub[:, i] = df_i[!,:post_ub]
     end
-    param = load_posterior_moments(m; cloud = clouds[1], load_bands = true, include_fixed = false)[:param]
+    param = load_posterior_moments(m; cloud = clouds[1], load_bands = true, include_fixed = false)[!,:param]
     df = DataFrame(param = param, post_mean = dropdims(mean(p_mean, dims = 2), dims = 2), post_std = dropdims(std(p_mean, dims = 2),dims = 2), post_lb = dropdims(mean(p_lb, dims = 2), dims = 2), post_ub = dropdims(mean(p_ub, dims = 2), dims = 2))
 
     return df
@@ -107,9 +107,9 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
     end
 
     df = DataFrame()
-    df[:param] = tex_labels
-    df[:post_mean] = params_mean
-    df[:post_std]  = params_std
+    df[!,:param] = tex_labels
+    df[!,:post_mean] = params_mean
+    df[!,:post_std]  = params_std
 
     if load_bands
         post_lb = Vector{Float64}(undef, length(params_mean))
@@ -125,8 +125,8 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
         end
     end
 
-    df[:post_lb] = post_lb
-    df[:post_ub] = post_ub
+    df[!,:post_lb] = post_lb
+    df[!,:post_ub] = post_ub
 
     return df
 end

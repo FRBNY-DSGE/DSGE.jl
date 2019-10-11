@@ -373,6 +373,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             other_cond = input_type in [:full, :prior, :init_draw_shocks, :mode_draw_shocks] &&
                 get_jstep(m, n_forecast_draws(m, :full)) > 1
             if subset_cond || other_cond
+                answer = ""
                 invalid_answer = true
                 while invalid_answer
                     println("WARNING: The forecast draws are being thinned by $(get_jstep(m, n_forecast_draws(m,:full))). This is not recommended for forecasts using an SMC estimation. Do you want to continue? (y/n)")

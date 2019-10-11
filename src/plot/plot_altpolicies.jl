@@ -40,7 +40,7 @@ function plot_altpolicies(models::Vector{T}, var::Symbol, class::Symbol,
                           cond_type::Symbol; title::String = "",
                           kwargs...) where {T<:AbstractDSGEModel}
     plots = plot_altpolicies(models, [var], class, cond_type;
-                             title = isempty(title) ? String[] : [title],
+                             titles = isempty(title) ? String[] : [title],
                              kwargs...)
     return plots[var]
 end
@@ -53,7 +53,7 @@ function plot_altpolicies(models::Vector{T}, vars::Vector{Symbol}, class::Symbol
                           end_date::Date = iterate_quarters(date_forecast_start(models[1]), 20),
                           untrans::Bool = false,
                           fourquarter::Bool = false,
-                          plotroot::String = figurespath(m, "forecast"),
+                          plotroot::String = figurespath(models[1], "forecast"),
                           titles::Vector{String} = String[],
                           verbose::Symbol = :low,
                           kwargs...) where {T<:AbstractDSGEModel}
@@ -74,7 +74,7 @@ function plot_altpolicies(models::Vector{T}, vars::Vector{Symbol}, class::Symbol
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> describe_series(models[1], var, class, detexify = detexify_title))
+        titles = map(var -> describe_series(models[1], var, class, detexify = detexify_title), vars)
     end
 
     # Temporarily set models[1] altpolicy key to altpol_string for get_forecast_filename
@@ -105,8 +105,9 @@ function plot_altpolicies(models::Vector{T}, vars::Vector{Symbol}, class::Symbol
             # Call recipe
             plots[var] = histforecast!(var, hist, forecast;
                                        start_date = start_date, end_date = end_date,
-                                       hist_label = "", forecast_label = string(altpolicy),
-                                       forecast_color = altpolicy.color, linestyle = altpolicy.linestyle,
+                                       names = Dict(:forecast =>string(altpolicy)),
+                                       colors = Dict(:forecast => altpolicy.color),
+                                       styles = Dict(:forecast => altpolicy.linestyle),
                                        ylabel = series_ylabel(m, var, class, untrans = untrans,
                                                               fourquarter = fourquarter),
                                        title = title, kwargs...)

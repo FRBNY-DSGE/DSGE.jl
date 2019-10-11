@@ -76,7 +76,7 @@ function series_ylabel(m::AbstractDSGEModel, var::Symbol, class::Symbol;
             else
                 return "Percent Q/Q Annualized"
             end
-        elseif transform in [quartertoannual, loggrowthtopct]
+        elseif transform in [quartertoannual]
             if untrans
                 return "Percent Q/Q"
             else
