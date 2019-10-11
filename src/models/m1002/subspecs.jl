@@ -31,6 +31,10 @@ function init_subspec!(m::Model1002)
         return ss16!(m)
     elseif subspec(m) == "ss17"
         return ss17!(m)
+    elseif subspec(m) == "ss18"
+        return ss18!(m)
+    elseif subspec(m) == "ss19"
+        return ss19!(m)
     else
         error("This subspec is not defined.")
     end
@@ -257,6 +261,48 @@ function ss16!(m::Model1002)
     ss15!(m)
 end
 
+"""
+```
+ss17!(m::Model1002)
+```
+
+Initializes subspec 17 of `Model1002`. This subspecification is the same as ss13,
+but with the measurement equation using log labor share instead of wage growth.
+"""
 function ss17!(m::Model1002)
     ss13!(m)
+end
+
+"""
+```
+ss18!(m::Model1002)
+```
+
+Initializes subspec 18 of `Model1002`. This subspecification is the same as ss14,
+but with ρ_tfp = 0 (fixed) and a near-zero prior on σ_tfp
+"""
+function ss18!(m::Model1002)
+    ss14!(m)
+    m <= parameter(:ρ_tfp, 0., (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(),
+                   BetaAlt(0.5, 0.2), fixed = true, tex_label = "\\rho_{tfp}")
+    m <= parameter(:σ_tfp, 0.01, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                   RootInverseGamma(2, sqrt(0.0001)), fixed=false,
+                   tex_label="\\sigma_{tfp}")
+end
+
+"""
+```
+ss19!(m::Model1002)
+```
+
+Initializes subspec 19 of `Model1002`. This subspecification is the same as ss14,
+but with a near zero prior on ρ_tfp and σ_tfp
+"""
+function ss19!(m::Model1002)
+    ss14!(m)
+    m <= parameter(:ρ_tfp, 0.01, (1e-5, 0.999999), (1e-5, 0.999999), ModelConstructors.SquareRoot(),
+                   BetaAlt(0.01, 0.02), fixed = false, tex_label = "\\rho_{tfp}")
+    m <= parameter(:σ_tfp, 0.01, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                   RootInverseGamma(2, sqrt(0.0001)), fixed=false,
+                   tex_label="\\sigma_{tfp}")
 end

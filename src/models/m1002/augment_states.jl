@@ -71,7 +71,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:u_t1],     endo[:u_t]] = 1.0
     TTT_aug[endo_new[:e_gdp_t1], endo_new[:e_gdp_t]] = 1.0
     TTT_aug[endo_new[:e_gdi_t1], endo_new[:e_gdi_t]] = 1.0
-    if subspec(m) in ["ss14", "ss15", "ss16"]
+    if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
         TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
     end
 
@@ -89,7 +89,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:e_gdi_t], endo_new[:e_gdi_t]]         = m[:ρ_gdi]
 
     # Fundamental inflation
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
         κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
              (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/

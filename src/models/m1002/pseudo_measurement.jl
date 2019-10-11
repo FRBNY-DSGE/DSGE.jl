@@ -117,7 +117,7 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
     ## Fundamental inflation related pseudo-obs
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         # Compute coefficient on Sinf
         betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
         κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
@@ -131,7 +131,7 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudo[pseudo[:πtil_t], endo_addl[:πtil_t]] = 1.
         DD_pseudo[pseudo[:πtil_t]] = 100 * (m[:π_star] - 1)
         ZZ_pseudo[pseudo[:e_tfp_t], endo_addl[:e_tfp_t]] = 1.
-        if subspec(m) in ["ss14", "ss15", "ss16"]
+        if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
             ZZ_pseudo[pseudo[:e_tfp_t1], endo_addl[:e_tfp_t1]] = 1.
         end
     end

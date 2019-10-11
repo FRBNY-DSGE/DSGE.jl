@@ -13,9 +13,9 @@ function init_pseudo_observable_mappings!(m::Model1002)
         pseudo_names = vcat(pseudo_names, to_add)
     end
 
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t)
-        if subspec(m) in ["ss14", "ss15", "ss16"]
+        if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
             push!(pseudo_names, :e_tfp_t1)
         end
     end
@@ -101,7 +101,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:u_t].name     = "u_t"
     pseudo[:u_t].longname = "u_t"
 
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         pseudo[:Sinf_t].name     = "Sinf_t"
         pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
         pseudo[:Sinf_w_coef_t].name     = "Sinf_w_coef_t"
@@ -114,7 +114,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
         pseudo[:πtil_t1].longname = "Fundamental Inflation Lag 1"
         pseudo[:e_tfp_t].name = "e_tfp_t"
         pseudo[:e_tfp_t].longname = "e_tfp_t"
-        if subspec(m) in ["ss14", "ss15", "ss16"]
+        if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
             pseudo[:e_tfp_t1].name = "e_tfp_t1"
             pseudo[:e_tfp_t1].longname = "e_tfp_t1"
         end
