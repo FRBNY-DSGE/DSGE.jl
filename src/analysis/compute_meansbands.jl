@@ -34,6 +34,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                             cond_type::Symbol, output_vars::Vector{Symbol};
                             forecast_string::String = "",
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
+                            check_empty_columns::Bool = true,
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -54,7 +55,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
             population_data, population_forecast = DataFrame(), DataFrame()
         else
             population_data, population_forecast = load_population_growth(m, verbose = verbose)
-            isempty(df) && (df = load_data(m, verbose = :none))
+            isempty(df) && (df = load_data(m, check_empty_columns = check_empty_columns, verbose = :none))
         end
         for output_var in output_vars
             prod = get_product(output_var)
@@ -198,8 +199,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-
-    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[var_name], NaN))) : fill(NaN, size(df, 1))
+    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[var_name]), NaN))) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)

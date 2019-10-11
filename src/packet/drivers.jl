@@ -73,7 +73,8 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
 
     # Compute means and bands
     compute_meansbands(m, input_type, cond_type, output_vars; forecast_string = forecast_string,
-                       density_bands = density_bands, verbose = :high)
+                       density_bands = density_bands, check_empty_columns = check_empty_columns,
+                       verbose = :high)
 
     # Convert MeansBands to matrices if desired
     if mb_matrix

@@ -273,7 +273,7 @@ specified, plots are saved to `figurespath(m, \"forecast\")`.
 function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
                              plotroot::String = "",
-                             hist_start_date = hist_start_date)
+                             hist_start_date = Date("0001-01-01", "yyyy-mm-dd"))
 
     # Output directory
     if isempty(plotroot)
@@ -314,8 +314,8 @@ function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Sy
             end_date = get_setting(m, :date_forecast_end)
         end
     elseif haskey(m.settings, :forecast_horizons)
-        end_date = get_setting(m, :forecast_start_date) # this will become the end date
-        end_date += Dates.Month(get_setting(m, :forecast_horizons) * 3)
+        end_date = get_setting(m, :date_forecast_start) # this will become the end date
+        end_date += Dates.Month((get_setting(m, :forecast_horizons)-1) * 3)
     else
         end_date = DSGE.quartertodate("2020-Q1")
     end

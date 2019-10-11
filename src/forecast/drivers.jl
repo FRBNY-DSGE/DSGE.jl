@@ -316,14 +316,16 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       use_filtered_shocks_in_shockdec::Bool = false,
                       shock_name::Symbol = :none,
                       shock_var_name::Symbol = :none,
-                      shock_var_value::Float64 = 0.0)
+                      shock_var_value::Float64 = 0.0,
+                      check_empty_columns = true)
 
     ### Common Setup
 
     # Add necessary output_vars and load data
     output_vars, df = prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
                                                df = df, verbose = verbose,
-                                               subset_inds = subset_inds)
+                                               subset_inds = subset_inds,
+                                               check_empty_columns = check_empty_columns)
 
     # Get output file names
     forecast_output = Dict{Symbol, Array{Float64}}()
