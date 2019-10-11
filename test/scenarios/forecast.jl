@@ -1,5 +1,7 @@
 using DSGE, Test
 
+writing_output = true
+
 # Initialize model object
 m = AnSchorfheide(testing = true)
 m <= Setting(:forecast_horizons, 12)
@@ -65,3 +67,24 @@ end
         @test scale.instruments[var] == forecastshocks[ind, :]
     end
 end
+
+###########################
+# forecast_scenario
+###########################
+#=
+file = "$path/../reference/forecast_scenario_draw.jld2"
+sys = compute_scenario_system(m, scen)
+
+forecast_output = DSGE.forecast_scenario_draw(m, scen, sys, 1)
+
+if writing_output
+    JLD2.jldopen(file, true, true, true, IOStream) do file
+        file["forecast_output"] = forecast_output
+    end
+end
+forecast_output_test = load(file, "forecast_output")
+
+@testset "Test forecast_scenario_draw, forecast_scenario" begin
+    @test forecast_output == forecast_output_test
+end
+=#
