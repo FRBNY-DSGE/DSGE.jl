@@ -75,7 +75,7 @@ function plot_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::S
         end
     end
     if :irf in sections
-        plot_irf_section(m, input_type, cond_type,output_vars;
+        plot_irf_section(m, input_type, cond_type, output_vars;
                          forecast_string = forecast_string)
     end
 end
@@ -477,7 +477,7 @@ end
 
 function print_variable_means(m::AbstractModel, cond_type::Symbol, output_var::Symbol,
                               varname::Symbol, vardesc::Vector{String}, fcast_dates::Vector{Date},
-                              last_row::Bool; forecast_string)
+                              last_row::Bool; forecast_string::String = "")
     n_fcast_dates = length(fcast_dates)
 
     mb_curr = read_mb(m, :full, cond_type, output_var; forecast_string = forecast_string)
@@ -631,7 +631,7 @@ is not specified, plots from `figurespath(m, \"forecast\")` are used.
 We assume the default number of columns for the joint plot is 3.
 """
 function plot_irf_section(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
-                          otuput_vars::Vector{Symbol};
+                          output_vars::Vector{Symbol};
                           forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4)
     # Create file name related strings
     if isempty(plotroot)
