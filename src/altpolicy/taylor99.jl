@@ -13,7 +13,6 @@ end
 function taylor99_eqcond(m::AbstractDSGEModel)
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = eqcond(m)
-nn
     eq   = m.equilibrium_conditions
     endo = m.endogenous_states
 
