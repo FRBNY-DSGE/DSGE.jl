@@ -55,7 +55,7 @@ static_out = sum(DSGE.filter_likelihood(pm, data))
     @test post_at_start == static_out
 
     Random.seed!(1793)
-    global y = x + (1 - x) ./ 2
+    global y = x + (1 .- x) ./ 2
     post_not_at_start = posterior!(pm, y, data)
     ϵ = 1
     @test abs(post_at_start - post_not_at_start) > ϵ

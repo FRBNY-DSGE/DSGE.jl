@@ -13,19 +13,19 @@ m = AnSchorfheide()
     m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
     # Test with df passed in
     df_in = load_data(m)
-    output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs], df = df_in)
+    global output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs], df = df_in)
     @test output_vars == [:histobs, :forecastobs, :bddforecastobs]
     @test isapprox(df_to_matrix(m, df_in), df_to_matrix(m, df_out), atol = 0., nans = true)
     # Test without df passed in
-    output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs])
+    global output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs])
     @test output_vars == [:histobs, :forecastobs, :bddforecastobs]
     @test isapprox(df_to_matrix(m, df_in), df_to_matrix(m, df_out), atol = 0., nans = true)
 end
 
 @testset "Test load draws" begin
-    overrides = forecast_input_file_overrides(m)
-    overrides[:mode] = "$path/../reference/paramsmode_.h5"
-    overrides[:mode_draw_shocks] = "$path/../reference/paramsmode_.h5"
+    global overrides = forecast_input_file_overrides(m)
+    global overrides[:mode] = "$path/../reference/paramsmode_.h5"
+    global overrides[:mode_draw_shocks] = "$path/../reference/paramsmode_.h5"
 
     # Init
     @test typeof(load_draws(m, :init, verbose = :none)) == Vector{Float64}
@@ -37,7 +37,7 @@ end
 
     # MH
     m <= Setting(:sampling_method, :MH)
-    overrides[:full] = "$path/../reference/mhsave_.h5"
+    global overrides[:full] = "$path/../reference/mhsave_.h5"
     # load_draws without blocks
     @test typeof(load_draws(m, :mode, verbose = :none)) == Vector{Float64}
     @test typeof(load_draws(m, :mode_draw_shocks, verbose = :none)) == Vector{Float64}
@@ -55,7 +55,7 @@ end
 
     # SMC
     m <= Setting(:sampling_method, :SMC)
-    overrides[:full] = "$path/../reference/smcsave_.h5"
+    global overrides[:full] = "$path/../reference/smcsave_.h5"
     # load draws without blocks
     @test typeof(load_draws(m, :mode, verbose = :none)) == Vector{Float64}
     @test typeof(load_draws(m, :mode_draw_shocks, verbose = :none)) == Vector{Float64}

@@ -8,6 +8,9 @@ save_output = true
 m = AnSchorfheide(testing = true)
 dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
 
+output_vars = [:histstates, :histobs, :histpseudo, :histshocks,
+                   :forecastobs, :shockdecobs, :dettrendobs, :trendobs, :irfobs]
+
 @testset "Test main forecast I/O functions and metadata writing" begin
     # get_forecast_input_file
     @test get_forecast_input_file(m, :init) == ""
@@ -45,8 +48,6 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
 
     # get_forecast_output_files
     dict = Dict{Symbol, String}()
-    output_vars = [:histstates, :histobs, :histpseudo, :histshocks,
-                   :forecastobs, :shockdecobs, :dettrendobs, :trendobs, :irfobs]
 
     for var in output_vars
         dict[var] = get_forecast_filename(m, :mode, :none, var)

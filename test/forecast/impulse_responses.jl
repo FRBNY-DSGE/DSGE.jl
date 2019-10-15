@@ -190,11 +190,11 @@ end
     global m = SmetsWouters(
         custom_settings = Dict{Symbol, Setting}(:n_anticipated_shocks => Setting(:n_anticipated_shocks, 8)))
     global system = compute_system(m)
-    for H=1:8
-        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :all_periods, real_rate = false)
-        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :all_periods, real_rate = true)
-        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :some_periods, real_rate = false)
-        DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :some_periods, real_rate = true)
+    for hor=1:8
+        DSGE.impulse_responses_peg(m, system, horizon, H = hor, peg = :all_periods, real_rate = false)
+        DSGE.impulse_responses_peg(m, system, horizon, H = hor, peg = :all_periods, real_rate = true)
+        DSGE.impulse_responses_peg(m, system, horizon, H = hor, peg = :some_periods, real_rate = false)
+        DSGE.impulse_responses_peg(m, system, horizon, H = hor, peg = :some_periods, real_rate = true)
     end
 end
 
