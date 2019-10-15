@@ -8,7 +8,7 @@ function init_observable_mappings!(m::PoolModel)
         return levels[:p904]
     end
 
-    if subspec(m) in ["ss1", "ss3", "ss5"]
+    if subspec(m) in ["ss1", "ss3", "ss5", "ss7"]
         ############################################################################
         ## 1. Model 904 predictive density
         ############################################################################
@@ -27,7 +27,7 @@ function init_observable_mappings!(m::PoolModel)
                                             identity_transform_805,
                                             "Model 805 predictive density",
                                             "Model 805 conditional predictive density scores")
-    elseif subspec(m) in ["ss2", "ss4", "ss6"]
+    elseif subspec(m) in ["ss2", "ss4", "ss6", "ss8"]
         ############################################################################
         ## 1. Model 904 predictive density
         ############################################################################
