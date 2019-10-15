@@ -1,7 +1,7 @@
 save_output = true
 
 using DSGE, ModelConstructors, Test, JLD2, FileIO, OrderedCollections, CSV
-path = "/home/rceexm14/.julia/dev/DSGE/test/analysis"
+path = dirname(@__FILE__)
 
 m = AnSchorfheide()
 
@@ -10,6 +10,8 @@ m <= Setting(:cond_id, 0)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:forecast_block_size, 5)
+m <= Setting(:data_vintage, "REF", true, "vint", "Date of data")
+m <= Setting(:dataroot, "$path/../reference/input_data")
 
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
 overrides = forecast_input_file_overrides(m)

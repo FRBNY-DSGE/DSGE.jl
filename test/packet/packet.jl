@@ -32,7 +32,7 @@ end
 
     @test DSGE.print_variable_means(m, :none, :histobs, :obs_gdp, ["a", "b"], [quartertodate("2007-Q1")], true) == "a                                 & 0.9 \\\\\nb                                 &     \\\\\n\\end{tabular}"
 
-    plot_irf_section(m, :mode, :none, [:hist_obs])
+    DSGE.plot_irf_section(m, :mode, :none, [:hist_obs])
 
     packet_help()
 

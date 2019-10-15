@@ -1,6 +1,7 @@
 using DSGE, Test, Dates
-using JLD2, OrderedCollections, HDF5
+using JLD2, OrderedCollections, HDF5, Nullables
 
+path = dirname(@__FILE__)
 save_output = true
 
 # Initialize model object
@@ -55,15 +56,15 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
     # write_forecast_outputs
     df = load_data(m)
     overrides = forecast_input_file_overrides(m)
-    overrides[:full] = "$(path)/smcsave_.h5"
+    overrides[:full] = "$(path)/../reference/smcsave_.h5"
     m <= Setting(:sampling_method, :SMC)
     m <= Setting(:forecast_block_size, 100)
     block_inds, block_inds_thin = DSGE.forecast_block_inds(m, :full)
     forecast_output_files = DSGE.get_forecast_output_files(m, :full, :none, [:histstates, :histobs, :forecaststates, :forecastobs])
     # Test that write_forecast_outputs and combine_raw_forecast_output_and_metadata run without deprecration
     for block in 1:20
-        forecast_output = load("$(path)/write_forecast_outputs_$(block)_in.jld2", "forecast_output")
-        @test DSGE.write_forecast_outputs(m, :full, [:histstates, :histobs, :forecaststates, :forecastobs],forecast_output_files, forecast_output, df = df, block_number = Nullables.Nullable(block), block_inds = block_inds_thin[block])
+        forecast_output = load("$(path)/../reference/write_forecast_outputs_$(block)_in.jld2", "forecast_output")
+        DSGE.write_forecast_outputs(m, :full, [:histstates, :histobs, :forecaststates, :forecastobs],forecast_output_files, forecast_output, df = df, block_number = Nullables.Nullable(block), block_inds = block_inds_thin[block])
     end
     DSGE.combine_raw_forecast_output_and_metadata(m, forecast_output_files)
 

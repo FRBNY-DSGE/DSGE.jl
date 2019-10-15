@@ -1,4 +1,6 @@
 m = AnSchorfheide()
+sys = compute_system(m)
+path = dirname(@__FILE__)
 
 @testset "Testing get_jstep " begin
     @test DSGE.get_jstep(m, 1)==1
@@ -66,7 +68,6 @@ end
 
     histstates = ones(8, 100)
     forecastobs = ones(3, 5)
-    sys = compute_system(m)
     @test size(DSGE.transplant_forecast_observables(histstates, forecastobs, sys, 99)) == (3, 6)
 end
 
