@@ -1,5 +1,8 @@
 using DSGE, Test, ModelConstructors
 
+m = AnSchorfheide()
+load_data(m)
+
 @testset "Test util functions" begin
     @test get_class(:histobs) == :obs
     @test get_class(:histpseudo) == :pseudo
@@ -19,8 +22,6 @@ using DSGE, Test, ModelConstructors
     @test DSGE.parse_transform(Symbol("DSGE.loggrowthtopct_annualized"))([1.0]) ==
         DSGE.loggrowthtopct_annualized([1.0])
 
-    m = AnSchorfheide()
-    load_data(m)
     m <= Setting(:use_population_forecast, false)
     m <= Setting(:hpfilter_population, true)
     DSGE.load_population_growth(m)
@@ -46,7 +47,6 @@ using DSGE, Test, ModelConstructors
 end
 
 @testset "Test prior_table works" begin
-    m = AnSchorfheide()
     DSGE.prior_table(m)
 
     DSGE.posterior_table(m, ones(16), ones(16, 2))

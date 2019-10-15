@@ -12,6 +12,8 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
+df = load_data(m)
+
 # Make sure output_vars ignores the untransformed and 4Q things because they are
 # computed in compute_meansbands
 output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
@@ -112,8 +114,6 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
 end
 
 @testset "Test forecast_one_draw" begin
-    df = load_data(m)
-
     for input_type in [:mode, :full]
         params = if input_type == :mode
             load_draws(m, input_type)

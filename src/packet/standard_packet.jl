@@ -431,9 +431,9 @@ function write_forecast_table(fid::IOStream, m::AbstractModel, cond_type::Symbol
     end
 
     # Open output file, write header
-    year2 = string(parse(curr_year)+1)
-    year3 = string(parse(curr_year)+2)
-    year4 = string(parse(curr_year)+3)
+    year2 = string(Meta.parse(curr_year)+1)
+    year3 = string(Meta.parse(curr_year)+2)
+    year4 = string(Meta.parse(curr_year)+3)
 
     write(fid, "\\begin{table}[h!]\n")
     write(fid, "\\centering\n")
@@ -485,7 +485,7 @@ function print_variable_means(m::AbstractModel, cond_type::Symbol, output_var::S
     # Index out Q4 values for current forecast
     all_dates   = mb_curr.metadata[:date_inds]
     table_dates = map(date -> all_dates[date], fcast_dates)
-    cur_val     = round.(mb_curr.means[[:date, varname]][table_dates, 2], 1)
+    cur_val     = round.(mb_curr.means[[:date, varname]][table_dates, 2], digits = 1)
 
     # The following works because all_dates is an ordered dictionary so can just treat keys as a array and take their indices.
     # The commented out part stopped working because Julia7 doesn't like indexing with a Date key

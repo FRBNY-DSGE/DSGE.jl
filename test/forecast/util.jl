@@ -13,13 +13,13 @@ end
     @test DSGE.n_forecast_draws(m, :mean) == 1
 
     m <= Setting(:sampling_method, :MH)
-    overrides = forecast_input_file_overrides(m)
-    overrides[:full] = "$path/../reference/mhsave_.h5"
+    global overrides = forecast_input_file_overrides(m)
+    global overrides[:full] = "$path/../reference/mhsave_.h5"
     @test DSGE.n_forecast_draws(m, :full) == 100000
 
     m <= Setting(:sampling_method, :SMC)
-    overrides = forecast_input_file_overrides(m)
-    overrides[:full] = "$path/../reference/smcsave_.h5"
+    global overrides = forecast_input_file_overrides(m)
+    global overrides[:full] = "$path/../reference/smcsave_.h5"
     @test DSGE.n_forecast_draws(m, :full) == 2000
     @test DSGE.n_forecast_draws(m, :prior) == 5000
     @test_throws ArgumentError DSGE.n_forecast_draws(m, :invalid_input)
@@ -75,16 +75,17 @@ end
     @test DSGE.standardize_shocks(ones(3, 3), sys[:QQ]) ==ones(3,3) ./ sqrt.(diag(sys[:QQ]))
 end
 
+df = load_data(m)
+output_vars = [:histstates, :histobs, :forecaststates, :forecastobs]
+ndraws = 10
+paras = load_draws(m, :full, 1:ndraws, verbose = :none)
+
+forecast_outputs = map(p -> DSGE.forecast_one_draw(m, :full, :none, output_vars,
+                                                   p, df, verbose = :none),
+                       paras)
+forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+out = DSGE.assemble_block_outputs(forecast_outputs)
 @testset "Testing assemble_block_outputs" begin
-    df = load_data(m)
-    ndraws = 10
-    paras = load_draws(m, :full, 1:ndraws, verbose = :none)
-    output_vars = [:histstates, :histobs, :forecaststates, :forecastobs]
-    forecast_outputs = map(p -> DSGE.forecast_one_draw(m, :full, :none, output_vars,
-                                                      p, df, verbose = :none),
-                                                      paras)
-    forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-    out = DSGE.assemble_block_outputs(forecast_outputs)
     @test size(out[:histstates]) == (ndraws, n_states_augmented(m), n_mainsample_periods(m))
     @test size(out[:forecaststates]) == (ndraws, n_states_augmented(m), forecast_horizons(m))
     @test size(out[:forecastobs]) == (ndraws, n_observables(m), forecast_horizons(m))

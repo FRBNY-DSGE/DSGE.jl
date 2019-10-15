@@ -4,7 +4,7 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
 my_tests = [
 
-           #= "core",
+            "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
@@ -39,7 +39,7 @@ my_tests = [
             "estimate/smc/initialization",
             "estimate/smc/util",
             "estimate/smc/mutation",
-            "estimate/smc/resample", =#
+            "estimate/smc/resample",
 
             "forecast/drivers",
             "forecast/smooth",

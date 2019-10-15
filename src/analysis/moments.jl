@@ -30,7 +30,7 @@ function load_posterior_moments(m::AbstractDSGEModel;
             params = load_draws(m, :full)
             params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params # TODO
             params = params'
-            weights = Vector{Float64}(0)
+            weights = Vector{Float64}(undef, 0)
             weighted = false
         elseif get_setting(m, :sampling_method) == :SMC
             cloud = get_cloud(m)
@@ -103,7 +103,7 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
         params_std = vec(std(params, Weights(weights), 2, corrected = false))
     else
         params_mean = vec(mean(params, dims = 2))
-        params_std  = vec(std(params, 2))
+        params_std  = vec(std(params, dims = 2))
     end
 
     df = DataFrame()

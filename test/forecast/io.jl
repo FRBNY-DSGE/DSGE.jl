@@ -54,7 +54,7 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
     @test get_forecast_output_files(m, :mode, :none, output_vars) == dict
 
     # write_forecast_outputs
-    df = load_data(m)
+    global df = load_data(m, verbose = :none)
     overrides = forecast_input_file_overrides(m)
     overrides[:full] = "$(path)/../reference/smcsave_.h5"
     m <= Setting(:sampling_method, :SMC)
@@ -66,7 +66,7 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
         forecast_output = load("$(path)/../reference/write_forecast_outputs_$(block)_in.jld2", "forecast_output")
         DSGE.write_forecast_outputs(m, :full, [:histstates, :histobs, :forecaststates, :forecastobs],forecast_output_files, forecast_output, df = df, block_number = Nullables.Nullable(block), block_inds = block_inds_thin[block])
     end
-    DSGE.combine_raw_forecast_output_and_metadata(m, forecast_output_files)
+    DSGE.combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = :none)
 
     # write_forecast_metadata
     for var in output_vars

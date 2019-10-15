@@ -32,9 +32,9 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
 
 Random.seed!(47)
 df = CSV.read("$path/../reference/input_data/data/data_dsid=00_vint=REF.csv")
-forecast_one(m, :full, :none, output_vars, df = df)
+forecast_one(m, :full, :none, output_vars, df = df, verbose = :none)
 compute_meansbands(m, :full, :none, [:histobs, :forecastobs, :histpseudo, :forecastpseudo,
-                                     :hist4qobs, :forecast4qobs, :hist4qpseudo, :forecast4qpseudo, :shockdecobs, :irfobs], df = df)
+                                     :hist4qobs, :forecast4qobs, :hist4qpseudo, :forecast4qpseudo, :shockdecobs, :irfobs], df = df, verbose = :none)
 
 hist, fore = construct_fcast_and_hist_dfs(m, :none, [:obs_gdp, :obs_cpi, :obs_nominalrate])
 hist_noT, fore_noT = construct_fcast_and_hist_dfs(m, :none, [:obs_gdp, :obs_cpi, :obs_nominalrate], include_T_in_df_forecast = false)
@@ -74,7 +74,7 @@ end
 @testset "Test auxiliary methods" begin
     header_mappings = DSGE.create_table_header_mappings(m, collect(keys(m.observables)))
     @test header_mappings == Dict(:obs_gdp => Symbol("Real GDP Growth"), :obs_cpi => Symbol("CPI Inflation"), :obs_nominalrate => Symbol("Nominal FFR"))
-    df = load_data(m)
+    #df = load_data(m)
     @test DSGE.unit_mappings(m, df, header_mappings) == OrderedDict(Symbol("Real GDP Growth") =>
                                                              "(Q/Q) \\% Annualized",
                                                              Symbol("CPI Inflation") =>
@@ -116,7 +116,7 @@ end
     m <= Setting(:n_parts, 20)
     m <= Setting(:n_Φ, 10)
     m <= Setting(:adaptive_tempering_target_smc, false)
-    estimate(m)
+    estimate(m, verbose = :none)
     load_posterior_moments(m)
 
 end

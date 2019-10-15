@@ -1,9 +1,9 @@
 path = dirname(@__FILE__)
 
 # Set up arguments
-m = AnSchorfheide(testing = true)
+global m = AnSchorfheide(testing = true)
 
-system = JLD2.jldopen("$path/../reference/forecast_args.jld2","r") do file
+global system = JLD2.jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system")
 end
 
@@ -187,9 +187,9 @@ exp_states_shockobs, exp_obs_shockobs, exp_pseudo_shockobs =
 end
 
 @testset "Check impulse responses to pegged interest rate" begin
-    m = SmetsWouters(
+    global m = SmetsWouters(
         custom_settings = Dict{Symbol, Setting}(:n_anticipated_shocks => Setting(:n_anticipated_shocks, 8)))
-    system = compute_system(m)
+    global system = compute_system(m)
     for H=1:8
         DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :all_periods, real_rate = false)
         DSGE.impulse_responses_peg(m, system, horizon, H = H, peg = :all_periods, real_rate = true)

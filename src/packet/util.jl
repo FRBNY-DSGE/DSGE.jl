@@ -107,10 +107,10 @@ Create the correct month labels for a forecast.
 function month_label(m::AbstractModel)
     date =
     # If within the same year
-    if (Dates.year(date_forecast_start(m)) - 2000) == parse(data_vintage(m)[1:2])
-        max(Dates.month(date_forecast_start(m)), parse(data_vintage(m)[3:4]))
-    elseif (Dates.year(date_forecast_start(m)) - 2000) < parse(data_vintage(m)[1:2])
-        parse(data_vintage(m)[3:4])
+    if (Dates.year(date_forecast_start(m)) - 2000) == Meta.parse(data_vintage(m)[1:2])
+        max(Dates.month(date_forecast_start(m)), Meta.parse(data_vintage(m)[3:4]))
+    elseif (Dates.year(date_forecast_start(m)) - 2000) < Meta.parse(data_vintage(m)[1:2])
+        Meta.parse(data_vintage(m)[3:4])
     else
         Dates.month(date_forecast_start(m))
     end
@@ -118,6 +118,6 @@ function month_label(m::AbstractModel)
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
               "Aug", "Sep", "Oct", "Nov", "Dec"]
     monthnums = collect(1:12)
-    ind = findin(monthnums, date)[1]
+    ind = findall((in)(date), monthnums)[1]
     return months[ind]
 end

@@ -140,7 +140,7 @@ function print_single_benchmark(title::Symbol, new::T, old::T, times::Bool = fal
     bad_state = times ? "slower" : "larger"
     good_state = times ? "faster" : "smaller"
 
-    diff = round((new/old - 1)*100, 2)
+    diff = round((new/old - 1)*100, digits = 2)
     if diff > 0
         state = bad_state
     else
