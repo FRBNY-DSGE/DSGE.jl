@@ -209,13 +209,15 @@ function optimize!(m::AbstractDSGEModel,
 
     elseif method == :combined_optimizer
         opt_result = optimizer(f_opt, x_opt;
-                        xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations, step_size = step_size,
-                        store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
-                        neighbor! = neighbor_dsge!, verbose = verbose, rng = rng, temperature = temperature,
-                               max_cycles = max_cycles)
+                               xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
+                               step_size = step_size, store_trace = store_trace,
+                               show_trace = show_trace, extended_trace = extended_trace,
+                               neighbor! = neighbor_dsge!, verbose = verbose, rng = rng,
+                               temperature = temperature, max_cycles = max_cycles)
         converged = opt_result.g_converged || opt_result.f_converged || opt_result.x_converged
         converged = opt_result.method == "Simulated Annealing" ? opt_result.iteration_converged : converged
-        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
+        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
+                                  opt_result.iterations)
     end
 
     ########################################################################################

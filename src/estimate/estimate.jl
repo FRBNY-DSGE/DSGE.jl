@@ -165,17 +165,17 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
 
             hessian
 
-    # Read in a pre-calculated Hessian
-    else
-        fn = hessian_path(m)
-        println(verbose, :low, "Using pre-calculated Hessian from $fn")
+        ## Read in a pre-calculated Hessian
+        else
+            fn = hessian_path(m)
+            println(verbose, :low, "Using pre-calculated Hessian from $fn")
 
-        hessian = h5open(fn,"r") do file
-            read(file, "hessian")
-        end
+            hessian = h5open(fn,"r") do file
+                read(file, "hessian")
+            end
 
-        hessian
-	end
+            hessian
+	    end
 
         # Compute inverse hessian and create proposal distribution, or
         # just create it with the given cov matrix if we have it
