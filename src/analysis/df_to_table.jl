@@ -138,7 +138,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
     savedir = savedir[end] == "/" ? savedir : savedir*"/"
     if !ispath(savedir)
         println("The savedir path provided does not currently exist. Do you want to create the path '"*savedir*"'? y/n")
-        answer = readline(STDIN)
+        answer = readline(stdin)
         if answer == "y"
             mkpath(savedir)
         else

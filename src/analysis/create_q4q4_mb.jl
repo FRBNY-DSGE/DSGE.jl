@@ -18,7 +18,7 @@ function create_q4q4_mb(mb::MeansBands)
     q4_metadata  = deepcopy(mb.metadata)
     q4_dates     = sort(Base.filter(isq4, collect(keys(mb.metadata[:date_inds]))))
     q4_metadata[:date_inds] = Dict(d::Date => i::Int for (i, d) in enumerate(q4_dates))
-    q4_metadata[:product]   = Symbol(replace(string(prod), r"(.)4q", s"\g<1>q4q4")) # Replace "4q" with "q4q4" in product
+    q4_metadata[:product]   = Symbol(replace(string(prod), r"(.)4q" => s"\g<1>q4q4")) # Replace "4q" with "q4q4" in product
 
     # Index out Q4 observations
     q4_means = mb.means[isq4.(mb.means[:date]), :]
