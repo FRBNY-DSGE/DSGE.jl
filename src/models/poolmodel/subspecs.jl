@@ -24,6 +24,10 @@ function init_subspec!(m::PoolModel)
         return ss7!(m)
     elseif subspec(m) == "ss8"
         return ss8!(m)
+    elseif subspec(m) == "ss9"
+        return ss9!(m)
+    elseif subspec(m) == "ss10"
+        return ss10!(m)
     else
         error("This subspec is not defined")
     end
@@ -185,4 +189,45 @@ This uses Prior 2 in the paper:
 """
 function ss8!(m::PoolModel)
     ss7!(m)
+end
+
+"""
+```
+ss9!(m::PoolModel)
+```
+
+Initialize subspec 9 of `PoolModel` which uses the original Matlab predictive densities.
+This uses Prior 3 in the paper.
+
+```
+ρ ∼ Β(0.8,0.1),
+σ^2 ∼ IG(2,1)
+```
+"""
+function ss9!(m::PoolModel)
+    m <= parameter(:ρ, 0.5, (1e-5, 0.999), (1e-5,0.999), SquareRoot(), Beta(0.8,0.1),
+                   fixed = false,
+                   description="ρ: persistence of AR processing underlying λ.",
+                   tex_label="\\rho")
+    m <= parameter(:σ, 1., (1e-5, Inf), (1e-5, Inf), ModelConstructors.Exponential(), RootInverseGamma(4., 1 / sqrt(2.)),
+                   fixed = false,
+                   description="σ: volatility of AR processing underlying λ.",
+                   tex_label="\\sigma")
+end
+
+"""
+```
+ss10!(m::PoolModel)
+```
+
+Initialize subspec 10 of `PoolModel` which uses the corrected `Model805` predictive density.
+This uses Prior 3 in the paper.
+
+```
+ρ ∼ Β(0.8,0.1),
+σ^2 ∼ IG(2,1)
+```
+"""
+function ss10!(m::PoolModel)
+    ss9!(m)
 end
