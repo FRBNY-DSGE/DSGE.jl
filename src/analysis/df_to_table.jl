@@ -58,19 +58,19 @@ function construct_fcast_and_hist_dfs(m::AbstractDSGEModel, cond_type::Symbol,
     obs = intersect(vars, m.observables.keys)
     pseudo = intersect(vars, m.pseudo_observables.keys)
 
-    df_histobs    = mb_histobs.means[vcat(:date, obs)]
-    df_histpseudo = mb_histpseudo.means[vcat(:date, pseudo)]
-    hist_start_ind = findfirst(x -> x == hist_start, df_histobs[:date])
+    df_histobs    = mb_histobs.means[:, vcat(:date, obs)]
+    df_histpseudo = mb_histpseudo.means[:, vcat(:date, pseudo)]
+    hist_start_ind = findfirst(x -> x == hist_start, df_histobs[!, :date])
     df_histobs    = df_histobs[hist_start_ind:end, :]
     df_histpseudo = df_histpseudo[hist_start_ind:end, :]
 
-    df_forecastobs      = mb_forecastobs.means[vcat(:date, obs)]
-    df_forecastpseudo   = mb_forecastpseudo.means[vcat(:date, pseudo)]
+    df_forecastobs      = mb_forecastobs.means[:, vcat(:date, obs)]
+    df_forecastpseudo   = mb_forecastpseudo.means[:, vcat(:date, pseudo)]
     if use_4q
         # If producing 4q figures, then the forecast_end date must be a Q4 date
         forecast_end = quartertodate(string(Dates.year(forecast_end))*"-Q4")
     end
-    forecast_end_ind = findfirst(x -> x == forecast_end, df_forecastobs[:date])
+    forecast_end_ind = findfirst(x -> x == forecast_end, df_forecastobs[!, :date])
     df_forecastobs      = df_forecastobs[1:forecast_end_ind, :]
     df_forecastpseudo   = df_forecastpseudo[1:forecast_end_ind, :]
 
@@ -217,7 +217,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
 
         df_subset[:date] = df[:date]
         for unit in units_keys
-            df_subset[unit] = df[unit]
+            df_subset[unit] = df[!, unit]
             units_subset[unit] = units[unit]
         end
         write_single_table(fid, df_subset, units_subset)

@@ -21,12 +21,12 @@ function create_q4q4_mb(mb::MeansBands)
     q4_metadata[:product]   = Symbol(replace(string(prod), r"(.)4q" => s"\g<1>q4q4")) # Replace "4q" with "q4q4" in product
 
     # Index out Q4 observations
-    q4_means = mb.means[isq4.(mb.means[:date]), :]
+    q4_means = mb.means[isq4.(mb.means[!, :date]), :]
 
     q4_bands = Dict{Symbol, DataFrame}()
     for var in keys(mb.bands)
         dict = mb.bands[var]
-        q4_bands[var] = dict[isq4.(dict[:date]), :]
+        q4_bands[var] = dict[isq4.(dict[!, :date]), :]
     end
 
     # Return new MeansBands object
