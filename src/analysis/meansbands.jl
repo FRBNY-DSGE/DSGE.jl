@@ -477,7 +477,7 @@ Also assumes the startdate is same for all observables in MeansBands
 startdate_bands(mb::MeansBands) = if isempty(mb)
     Date(0000, 1, 1)
 else
-    first(mb.bands)[2][:date][1]
+    first(mb.bands)[2][:, :date][1]
 end
 
 """
@@ -491,7 +491,7 @@ Also assumes the startdate is same for all observables in MeansBands
 enddate_bands(mb::MeansBands) = if isempty(mb)
     Date(0000, 1, 1)
 else
-    first(mb.bands)[2][:date][end]
+    first(mb.bands)[2][:, :date][end]
 end
 
 """
@@ -630,8 +630,8 @@ function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
     my_bands = map(Symbol, vcat(lowers, uppers))
 
     # Extract this variable from Means and bands
-    means = mb.means[[:date, var]]
-    bands = mb.bands[var][[:date; my_bands]]
+    means = mb.means[:, [:date, var]]
+    bands = mb.bands[var][:, [:date; my_bands]]
 
     # Join so mean is on far right and date is on far left
     df = join(bands, means, on = :date)

@@ -1,3 +1,4 @@
+path = dirname(@__FILE__)
 using DSGE
 
 m = AnSchorfheide()

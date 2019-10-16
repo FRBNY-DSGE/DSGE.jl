@@ -196,12 +196,12 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
             for (j, key) in enumerate(column_keys)
                 if j != length(column_keys)
                     if key == :date
-                        @printf fid "%s " df[key][i]
+                        @printf fid "%s " df[:, key][i]
                     else
-                        @printf fid "& %.2f " df[key][i]
+                        @printf fid "& %.2f " df[:, key][i]
                     end
                 else
-                    @printf fid "& %.2f \\\\\n" df[key][i]
+                    @printf fid "& %.2f \\\\\n" df[:, key][i]
                 end
             end
         end
@@ -215,9 +215,9 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
         df_subset    = DataFrame()
         units_subset = OrderedDict{Symbol, String}()
 
-        df_subset[:date] = df[:date]
+        df_subset[!, :date] = df[!, :date]
         for unit in units_keys
-            df_subset[unit] = df[!, unit]
+            df_subset[!, unit] = df[!, unit]
             units_subset[unit] = units[unit]
         end
         write_single_table(fid, df_subset, units_subset)

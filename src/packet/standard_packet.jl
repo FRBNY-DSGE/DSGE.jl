@@ -485,7 +485,7 @@ function print_variable_means(m::AbstractModel, cond_type::Symbol, output_var::S
     # Index out Q4 values for current forecast
     all_dates   = mb_curr.metadata[:date_inds]
     table_dates = map(date -> all_dates[date], fcast_dates)
-    cur_val     = round.(mb_curr.means[[:date, varname]][table_dates, 2], digits = 1)
+    cur_val     = round.(mb_curr.means[:, [:date, varname]][table_dates, 2], digits = 1)
 
     # The following works because all_dates is an ordered dictionary so can just treat keys as a array and take their indices.
     # The commented out part stopped working because Julia7 doesn't like indexing with a Date key

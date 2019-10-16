@@ -107,7 +107,7 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
         last_filler  = iterate_quarters(last_provided, n_filler_periods)
         filler_dates = quarter_range(first_filler, last_filler)
         filler = DataFrame(date = filler_dates)
-        filler[:,mnemonic] .= population_forecast[end, mnemonic]
+        filler[!,mnemonic] .= population_forecast[end, mnemonic]
         return vcat(population_forecast, filler)
     end
 end
