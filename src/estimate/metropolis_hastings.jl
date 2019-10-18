@@ -136,7 +136,9 @@ function metropolis_hastings(propdist::Distribution,
                 d_subset    = DegenerateMvNormal(propdist.μ[block_a],
                                        (propdist.σ[block_a, block_a] +
                                        propdist.σ[block_a, block_a]') / 2.,
-                                       propdist.σ_inv[block_a, block_a],
+                                       inv((propdist.σ[block_a, block_a] +
+                                       propdist.σ[block_a, block_a]') / 2.),
+                                      #propdist.σ_inv[block_a, block_a],
                                        propdist.λ_vals[block_a])
 
                 para_draw   = rand(d_subset, rng; cc = cc)
