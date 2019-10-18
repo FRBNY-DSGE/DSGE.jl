@@ -105,6 +105,8 @@ end
     @test @test_matrix_approx_eq meas[:QQ] Q_exp
     @test @test_matrix_approx_eq meas[:EE] E_exp
 
-  #  @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo] Z_pseudo_exp
-  #  @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp
+    @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo] Z_pseudo_exp
+    @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp
 end
+
+nothing

@@ -5,10 +5,10 @@ m <= Setting(:dataroot, "$(fp)/../reference/")
 m <= Setting(:data_vintage, "190822")
 observables = OrderedDict{Symbol,Observable}()
 identity_transform_805 = function(levels)
-    return levels[:p805]
+    return levels[!,:p805]
 end
 identity_transform_904 = function(levels)
-    return levels[:p904]
+    return levels[!k:p904]
 end
 observables[:Model904] = Observable(:Model904, [:p904__wrongorigmatlab],
                                     identity_transform_904,
@@ -22,8 +22,6 @@ observables[:Model805] = Observable(:Model805, [:p805__wrongorigmatlab],
                                     "Model 805 conditional predictive density scores")
 
 @testset "Test various forms of data loading" begin
-    @test df1[!,:Model904] == df2[!,:p904]
-    @test df1[!,:Model805] == df2[!,:p805]
     m.observable_mappings = observables
     df1 = load_data(m; try_disk = false)
     df1 = load_data(m)

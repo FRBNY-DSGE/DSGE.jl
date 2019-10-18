@@ -74,6 +74,23 @@ truefilt_out = sum(log.(sum(data[:,1:2] ./ 2, dims = 1)))
     @test filtlik_out == truefilt_out
 end
 
+@testset "Check warning and error conditions" begin
+    pm = PoolModel("ss1")
+    pm <= Setting(:data_vintage, "190822")
+    filepath = dirname(@__FILE__)
+    pm <= Setting(:dataroot, "$(filepath)/../reference/")
+    tuning = get_setting(pm, :tuning)
+    tuning[:n_particles] = 10
+    pm <= Setting(:tuning, tuning)
+    @test_throws ErrorException DSGE.filter(pm, data, vec([1. 1.; 1. 1.]))
+    delete!(pm.settings, :tuning)
+    @test_logs (:warn, "no tuning parameters provided; using default tempered particle filter values") DSGE.filter(pm, data)
+    pm = PoolModel("ss1", weight_type = :bma)
+    pm <= Setting(:data_vintage, "190822")
+    filepath = dirname(@__FILE__)
+    pm <= Setting(:dataroot, "$(filepath)/../reference/")
+    @test_throws ErrorException DSGE.filter(pm, data)
+end
 
 
 nothing
