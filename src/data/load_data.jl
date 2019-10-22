@@ -75,7 +75,8 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
         end
         df = df[start_date .<= df[!,:date] .<= end_date, :]
 
-        missing_cond_vars!(m, df; cond_type = cond_type)
+        missing_cond_vars!(m, df; cond_type = cond_type,
+                           check_empty_columns = check_empty_columns)
 
         # check that dataset is valid
         isvalid_data(m, df; check_empty_columns = check_empty_columns)

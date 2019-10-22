@@ -185,7 +185,8 @@ missing_cond_vars!(m, df; cond_type = :none)
 Make conditional period variables not in `cond_semi_names(m)` or
 `cond_full_names(m)` missing if necessary.
 """
-function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none)
+function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none,
+                            check_empty_columns::Bool = true)
     if cond_type in [:semi, :full]
         # Get appropriate
         cond_names = if cond_type == :semi
@@ -201,11 +202,25 @@ function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symb
             df[df[!,:date] .>= date_forecast_start(m), var_name] .= missing
         end
 
-        # Warn if any conditional variables are missing
+        # Throw an error if any conditional variables are missing
+        missing_vars = Vector{Symbol}(undef,0)
         for var in cond_names
             if any(ismissing.(df[df[!,:date] .>= date_forecast_start(m), var]))
-                @warn "Missing some conditional observations for " * string(var)
+                if check_empty_columns
+                    push!(missing_vars, var)
+                else
+                    @warn "Missing some conditional observations for " * string(var)
+                end
             end
+        end
+        if check_empty_columns && !isempty(missing_vars)
+            # parse missing_vars
+            to_print = Vector{String}(undef,0)
+            for var in missing_vars
+                push!(to_print, string(var) * ", ")
+            end
+            as_str = join(to_print)
+            error("Column(s) $(as_str[1:end-2]) are missing conditional observations.")
         end
     end
 end
