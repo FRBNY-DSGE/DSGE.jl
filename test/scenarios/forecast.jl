@@ -52,19 +52,19 @@ end
     end
 
     # Test scenario with shock scaling
-    global scale = Scenario(:scaledscen, "Test Shock Scaling Scenario",
+    global scale_scenario = Scenario(:scaledscen, "Test Shock Scaling Scenario",
                             [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
                             shock_scaling = 2.0)
-    scale.targets = scen.targets
+    scale_scenario.targets = scen.targets
 
-    global forecastshocks = filter_shocks!(m, scale, sys)
-    for var in scale.target_names
+    global forecastshocks = filter_shocks!(m, scale_scenario, sys)
+    for var in scale_scenario.target_names
         ind = m.observables[var]
-        @test scale.targets[!, var] == scen.targets[!, var]
+        @test scale_scenario.targets[!, var] == scen.targets[!, var]
     end
-    for var in scale.instrument_names
+    for var in scale_scenario.instrument_names
         ind = m.exogenous_shocks[var]
-        @test scale.instruments[!, var] == forecastshocks[ind, :]
+        @test scale_scenario.instruments[!, var] == forecastshocks[ind, :]
     end
 end
 

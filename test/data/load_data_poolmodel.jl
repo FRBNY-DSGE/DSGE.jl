@@ -8,7 +8,7 @@ identity_transform_805 = function(levels)
     return levels[!,:p805]
 end
 identity_transform_904 = function(levels)
-    return levels[!k:p904]
+    return levels[!,:p904]
 end
 observables[:Model904] = Observable(:Model904, [:p904__wrongorigmatlab],
                                     identity_transform_904,
@@ -23,6 +23,7 @@ observables[:Model805] = Observable(:Model805, [:p805__wrongorigmatlab],
 
 @testset "Test various forms of data loading" begin
     m.observable_mappings = observables
+    @info "The following warnings are expected"
     df1 = load_data(m; try_disk = false)
     df1 = load_data(m)
     df2 = CSV.read(joinpath(dataroot(m), "raw/wrongorigmatlab_190822.csv"))

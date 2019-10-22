@@ -27,22 +27,29 @@ path = dirname(@__FILE__)
             end
 
         # Check high summary statistics runs without an error
-        load_data(m; try_disk = false, summary_statistics = :high, verbose=:none)
-        load_data(m; try_disk = false, summary_statistics = :low, verbose=:none)
+        @info "The following summary statistics are expected."
+        load_data(m; try_disk = false, summary_statistics = :high, verbose=:none,
+                  check_empty_columns = false)
+        load_data(m; try_disk = false, summary_statistics = :low, verbose=:none,
+                  check_empty_columns = false)
 
         # Unconditional data
         println("The following warnings are expected test behavior:")
-        global df = load_data(m; try_disk=false, verbose=:none, summary_statistics=:none)
+        global df = load_data(m; try_disk=false, verbose=:none, summary_statistics=:none,
+                              check_empty_columns = false)
         global data = df_to_matrix(m, df)
         @test @test_matrix_approx_eq exp_data data
 
         # Conditional data
-        cond_df = load_data(m; cond_type=:full, try_disk=false, verbose=:none, summary_statistics=:none)
+        cond_df = load_data(m; cond_type=:full, try_disk=false, verbose=:none,
+                            summary_statistics=:none,
+                            check_empty_columns = false)
         cond_data = df_to_matrix(m, cond_df; cond_type=:full)
         @test @test_matrix_approx_eq exp_cond_data cond_data
 
         # Semiconditional data
-        semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none, summary_statistics=:none)
+        semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none,
+                                summary_statistics=:none, check_empty_columns = false)
         semicond_data = df_to_matrix(m, semicond_df; cond_type=:semi)
         @test @test_matrix_approx_eq exp_semicond_data semicond_data
 

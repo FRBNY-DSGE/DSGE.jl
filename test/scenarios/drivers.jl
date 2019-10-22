@@ -154,11 +154,11 @@ aggrep2 = ScenarioAggregate(:aggrep2, "Test Scenario Aggregate", AbstractScenari
                             [0.0, 1.0], 20, true, "REF")
 
 # Simulate dummy scenario with shock scaling
-scale = Scenario(:altscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
+scale_scenario = Scenario(:altscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
                  shock_scaling = 2.0)
-forecast_scenario(m, scale, verbose = :none)
+forecast_scenario(m, scale_scenario, verbose = :none)
 
-expect = JLD2.jldopen(get_scenario_input_file(m, scale), "r") do file
+expect = JLD2.jldopen(get_scenario_input_file(m, scale_scenario), "r") do file
     2.0 * read(file, "arr")
 end
 

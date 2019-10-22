@@ -56,21 +56,22 @@ pop_forecast[!,:date] = DSGE.get_quarter_ends(DSGE.next_quarter(fred[!,:date][en
 end
 
 @testset "Test transform_data for different conditional data" begin
+    @info "The following warnings are expected."
     df = transform_data(m, levels; cond_type = :none, verbose = :none)
     start_date = date_presample_start(m)
     end_date = date_mainsample_end(m)
     df = df[start_date .<= df[!,:date] .<= end_date, :]
-    DSGE.missing_cond_vars!(m, df, cond_type = :none)
+    DSGE.missing_cond_vars!(m, df, cond_type = :none, check_empty_columns = false)
     @test @test_matrix_approx_eq df_to_matrix(m,df) exp_data
     df = transform_data(m, semi_levels; cond_type = :semi, verbose = :none)
     end_date = date_conditional_end(m)
     df = df[start_date .<= df[!,:date] .<= end_date, :]
-    DSGE.missing_cond_vars!(m, df, cond_type = :semi)
+    DSGE.missing_cond_vars!(m, df, cond_type = :semi, check_empty_columns = false)
     @test @test_matrix_approx_eq df_to_matrix(m,df, cond_type = :semi) exp_semicond_data
     df = transform_data(m, full_levels; cond_type = :full, verbose = :none)
     end_date = date_conditional_end(m)
     df = df[start_date .<= df[!,:date] .<= end_date, :]
-    DSGE.missing_cond_vars!(m, df, cond_type = :full)
+    DSGE.missing_cond_vars!(m, df, cond_type = :full, check_empty_columns = false)
     @test @test_matrix_approx_eq df_to_matrix(m,df, cond_type = :full) exp_cond_data
 end
 
