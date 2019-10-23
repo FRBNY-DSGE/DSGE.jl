@@ -1,4 +1,4 @@
-using DSGE
+using DSGE, ModelConstructors
 using JLD2
 
 # Initialize a new instance of an An Schorfheide model

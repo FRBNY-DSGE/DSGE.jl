@@ -1,5 +1,11 @@
-using DSGE
+using DSGE, ModelConstructors
 using Nullables, DataFrames, OrderedCollections, Dates
+
+#############################
+# To use:
+# Just run in the Julia REPL
+# include("run_default.jl")
+#############################
 
 ##############
 # Model Setup
@@ -11,12 +17,27 @@ m = Model1002()
 m <= Setting(:data_vintage, "181115")
 m <= Setting(:date_forecast_start, quartertodate("2018-Q4"))
 
+# The following settings ensure that this script runs in
+# a short amount of time. To properly estimate and
+# forecast, we recommend either using the default settings
+# (i.e. comment out the settings below) or
+# changing the settings yourself.
+m <= Setting(:n_mh_simulations, 100) # Do 100 MH steps during estimation
+m <= Setting(:use_population_forecast, false) # Population forecast not available as data to turn off
+m <= Setting(:forecast_block_size, 5) # adjust block size to run on small number of estimations
+
 #############
 # Estimation
 #############
-# reoptimize parameter vector, compute Hessian at mode, and full posterior
-# parameter sampling
-estimate(m)
+# Reoptimize parameter vector, compute Hessian at mode, and full posterior
+# parameter sampling.
+#
+# Note some columns will have missing data because not all our data
+# is publicly available. Warnings will be thrown after calling load_data as a result.
+# However, estimate will still run when data is missing.
+df = load_data(m, try_disk = false, check_empty_columns = false, summary_statistics = :none)
+data = df_to_matrix(m, df)
+estimate(m, data)
 
 # produce LaTeX tables of parameter moments
 moment_tables(m)
@@ -34,21 +55,20 @@ moment_tables(m)
 # The variables we want to forecast. In this case, all of the model observables
 output_vars = [:histobs, :forecastobs]
 
-m <= Setting(:use_population_forecast, false)
-
 # Modal forecast (point forecast)
-forecast_one(m, :mode, :none, output_vars)
-compute_meansbands(m, :mode, :none, output_vars)
+forecast_one(m, :mode, :none, output_vars; check_empty_columns = false)
+compute_meansbands(m, :mode, :none, output_vars; check_empty_columns = false)
 
 # Full-distribution forecast (point forecast (mean) and uncertainty bands)
 # Optionally add 10 processes to run the forecast in parallel (uncomment the 3 lines below).
 # Alternatively, you can load the ClusterManagers package and add processes
 # using one of the schedulers such as SGE or Slurm.
-addprocs(10)
-@everywhere using DSGE
-m <= Setting(:use_parallel_workers, true)
+# addprocs(10)
+# @everywhere using DSGE
+# m <= Setting(:use_parallel_workers, true)
 
-forecast_one(m, :full, :none, output_vars)
-compute_meansbands(m, :full, :none, output_vars)
+forecast_one(m, :full, :none, output_vars; check_empty_columns = false)
+compute_meansbands(m, :full, :none, output_vars; check_empty_columns = false)
 
-rmprocs(procs())
+# Comment out the line below if you did not run the forecast in parallel.
+# rmprocs(procs())

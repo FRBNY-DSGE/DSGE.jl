@@ -38,7 +38,7 @@ usual_forecast(m, input_type, cond_type,
     output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo];
     est_override = "", forecast_string = "",
     density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
-    mb_matrix = false)
+    mb_matrix = false, check_empty_columns = true)
 ```
 
 Forecast, compute means and bands, and optionally (if `mb_matrix`) convert
