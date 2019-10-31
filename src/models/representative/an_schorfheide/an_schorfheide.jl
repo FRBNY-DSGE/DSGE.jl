@@ -219,7 +219,7 @@ function init_parameters!(m::AnSchorfheide)
                    description="τ: The inverse of the intemporal elasticity of substitution.",
                    tex_label="\\tau")
 
-    m <= parameter(:κ, 0.7306, (1e-20, 1e1), (1e-20, 1e1), ModelConstructors.SquareRoot(), Uniform(0,1), fixed=false,
+    m <= parameter(:κ, 0.7306, (1e-20, 1-1e-7), (1e-20, 1-1e-7), ModelConstructors.SquareRoot(), Uniform(0,1), fixed=false,
                    description="κ: Composite parameter in New Keynesian Phillips Curve.",
                    tex_label="\\kappa")
 
