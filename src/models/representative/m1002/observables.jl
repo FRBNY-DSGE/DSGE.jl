@@ -29,8 +29,16 @@ function init_observable_mappings!(m::Model1002)
         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
         # TO:   log (3 * per-capita weekly hours / 100)
         # Note: Not sure why the 3 is there.
-        # As of 9/19/2019: the 3 is there because we have monthly data
-        # on weekly hours worked. Multiply by 3 to get quarterly average.
+        # As of 11/6/2019: It is unclear where the 3 came from.
+        #                  It is suspected that b/c the hours data is monthly,
+        #                  the data had been processed so that you got the amount of hours
+        #                  worked per month (on average), and multiplied by 3 to get a
+        #                  quarterly guess of total hours worked.
+        #                  Regardless, it doesn't matter for results b/c
+        #                  it just shifts the value of Lmean, which doesn't appear anywhere
+        #                  else and is just a normalizing constant for the model.
+        #                  For consistency across the codebase, we maintain it as 3,
+        #                  although it may be more accurate to do weeklyhours * 13.
 
         levels[!,:temp] = levels[!,:AWHNONAG] .* levels[!,:CE16OV]
         weeklyhours = percapita(m, :temp, levels)
