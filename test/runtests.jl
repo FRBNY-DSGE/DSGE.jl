@@ -1,4 +1,4 @@
-using ModelConstructors, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2
+using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 
@@ -20,7 +20,7 @@ my_tests = [
             "data/simulate_data",
             "data/transformations",
             "data/transform_data",
-            "data/util",
+            "data/util", # gets to here
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",
@@ -32,10 +32,8 @@ my_tests = [
             "estimate/estimate_bma",
             "estimate/hessian",
             "estimate/csminwel",
-            # "estimate/optimize",
+            "estimate/optimize",
             # "estimate/metropolis_hastings",
-
-    #"estimate/metropolis_hastings"
 
             # "estimate/smc/smc",
             # "estimate/smc/helpers",
