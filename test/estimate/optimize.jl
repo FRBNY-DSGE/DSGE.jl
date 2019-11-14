@@ -1,7 +1,7 @@
 using DSGE
 using HDF5
 path = dirname(@__FILE__)
-writing_output = true
+writing_output = false
 
 #-----------------------------------------------------------------
 # csminwel
