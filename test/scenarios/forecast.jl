@@ -1,6 +1,6 @@
 using DSGE, Test
 
-writing_output = true
+writing_output = false
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
