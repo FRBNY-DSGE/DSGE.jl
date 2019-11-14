@@ -20,7 +20,7 @@ my_tests = [
             "data/simulate_data",
             "data/transformations",
             "data/transform_data",
-            "data/util", # gets to here
+            "data/util",
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",
@@ -33,7 +33,7 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
-            # "estimate/metropolis_hastings",
+            "estimate/metropolis_hastings",
 
             # "estimate/smc/smc",
             # "estimate/smc/helpers",
@@ -65,8 +65,8 @@ my_tests = [
             "scenarios/drivers",
             "decomp/decompose_forecast",
             "plot/plot",
-  	        "plot/util",
-            "packet/packet"
+  	        "plot/util"
+            #"packet/packet"
             ]
 
 for test in my_tests
