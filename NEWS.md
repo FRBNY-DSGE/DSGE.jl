@@ -1,16 +1,24 @@
+# DSGE.jl 1.0.0
+## New features and enhancements
++ Package officially compatible with 0.7, 1.0, 1.1
++ Enable parameter blocking in Metropolis-Hastings algorithm
++ Functionality to simulate data from a model
++ Expanded test suite and example files
+
 # DSGE.jl 0.8.1
 Bug fixes and cleanup
 
 # DSGE.jl 0.8.0
- ## New features and enhancements
-    + Breaks out SMC and Model Constructor objects into SMC.jl and ModelConstructors.jl
-    + MH can just take vector of Parameters, likelihood function, and data (like SMC but still exists only in DSGE.jl package)
-    + DSGE.jl depends on SMC.jl and ModelConstructors.jl but for users who only need SMC or Model Constructor utilities, don't need to load DSGE.jl package anymore
+
+## New features and enhancements
++ Breaks out SMC and Model Constructor objects into SMC.jl and ModelConstructors.jl
++ MH can just take vector of Parameters, likelihood function, and data (like SMC but still exists only in DSGE.jl package)
++ DSGE.jl depends on SMC.jl and ModelConstructors.jl but for users who only need SMC or Model Constructor utilities, don't need to load DSGE.jl package anymore
 
 # DSGE.jl 0.7.2
 
 ## New features and enhancements
-   + Adds the ability to easily create packets of results from estimating and forecasting a DSGE model. An example script is provided in docs/examples/make_packet.jl.
++ Adds the ability to easily create packets of results from estimating and forecasting a DSGE model. An example script is provided in docs/examples/make_packet.jl.
 
 # DSGE.jl 0.7.1
 Bug fixes and cleanup
