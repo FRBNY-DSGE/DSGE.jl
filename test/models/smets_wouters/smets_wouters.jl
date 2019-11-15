@@ -1,4 +1,5 @@
 path = dirname(@__FILE__)
+writing_output = false
 
 ### Model
 sw = SmetsWouters()
@@ -80,6 +81,19 @@ close(h5)
 end
 
 ### Measurement equation
+sw = SmetsWouters()
+TTT, RRR, CCC = solve(sw)
+actual = measurement(sw, TTT, RRR, CCC)
+
+if writing_output
+    h5open("$path/measurement.h5","w") do file
+        write(file, "ZZ", actual[:ZZ])
+        write(file, "DD", actual[:DD])
+        write(file, "QQ", actual[:QQ])
+        write(file, "EE", actual[:EE])
+    end
+end
+
 expect = Dict{Symbol, Matrix}()
 h5 = h5open("$path/measurement.h5")
 expect[:ZZ] = read(h5, "ZZ")
@@ -88,9 +102,6 @@ expect[:QQ] = read(h5, "QQ")
 expect[:EE] = read(h5, "EE")
 close(h5)
 
-sw = SmetsWouters()
-TTT, RRR, CCC = solve(sw)
-actual = measurement(sw, TTT, RRR, CCC)
 @testset "Checking measurement equation" begin
     for d in (:ZZ, :DD, :QQ, :EE)
         @test @test_matrix_approx_eq expect[d] actual[d]
