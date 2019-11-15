@@ -58,25 +58,25 @@ function construct_fcast_and_hist_dfs(m::AbstractDSGEModel, cond_type::Symbol,
     obs = intersect(vars, m.observables.keys)
     pseudo = intersect(vars, m.pseudo_observables.keys)
 
-    df_histobs    = mb_histobs.means[vcat(:date, obs)]
-    df_histpseudo = mb_histpseudo.means[vcat(:date, pseudo)]
-    hist_start_ind = findfirst(x -> x == hist_start, df_histobs[:date])
+    df_histobs    = mb_histobs.means[:, vcat(:date, obs)]
+    df_histpseudo = mb_histpseudo.means[:, vcat(:date, pseudo)]
+    hist_start_ind = findfirst(x -> x == hist_start, df_histobs[!, :date])
     df_histobs    = df_histobs[hist_start_ind:end, :]
     df_histpseudo = df_histpseudo[hist_start_ind:end, :]
 
-    df_forecastobs      = mb_forecastobs.means[vcat(:date, obs)]
-    df_forecastpseudo   = mb_forecastpseudo.means[vcat(:date, pseudo)]
+    df_forecastobs      = mb_forecastobs.means[:, vcat(:date, obs)]
+    df_forecastpseudo   = mb_forecastpseudo.means[:, vcat(:date, pseudo)]
     if use_4q
         # If producing 4q figures, then the forecast_end date must be a Q4 date
         forecast_end = quartertodate(string(Dates.year(forecast_end))*"-Q4")
     end
-    forecast_end_ind = findfirst(x -> x == forecast_end, df_forecastobs[:date])
+    forecast_end_ind = findfirst(x -> x == forecast_end, df_forecastobs[!, :date])
     df_forecastobs      = df_forecastobs[1:forecast_end_ind, :]
     df_forecastpseudo   = df_forecastpseudo[1:forecast_end_ind, :]
 
     if include_T_in_df_forecast
-        df_forecastobs = append!(df_histobs[end, :], df_forecastobs)
-        df_forecastpseudo = append!(df_histpseudo[end, :], df_forecastpseudo)
+        df_forecastobs = append!(DataFrame(df_histobs[end, :]), df_forecastobs)
+        df_forecastpseudo = append!(DataFrame(df_histpseudo[end, :]), df_forecastpseudo)
     end
 
     df_forecast = join(df_forecastobs, df_forecastpseudo, on = :date)
@@ -138,11 +138,11 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
     savedir = savedir[end] == "/" ? savedir : savedir*"/"
     if !ispath(savedir)
         println("The savedir path provided does not currently exist. Do you want to create the path '"*savedir*"'? y/n")
-        answer = readline(STDIN)
+        answer = readline(stdin)
         if answer == "y"
             mkpath(savedir)
         else
-            throw("Create the proper savedir and call df_to_table again.")
+            error("Create the proper savedir and call df_to_table again.")
         end
     else
         mkpath(savedir)
@@ -154,7 +154,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
     function write_single_table(fid::IOStream, df::DataFrame, units::OrderedDict{Symbol, String})
 
         # Write header
-        n_columns = length(df.columns)
+        n_columns = length(names(df))
         col_str   = repeat("c", n_columns)
 
         @printf fid "%s%s%s" "\\begin{longtable}{" col_str "}\n"
@@ -162,7 +162,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
         @printf fid "\\\\ \\hline\n"
 
         # Write column names
-        date_range = df[:date].data
+        date_range = Vector(df[:, :date])
 
         column_keys = names(df)
 
@@ -196,12 +196,12 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
             for (j, key) in enumerate(column_keys)
                 if j != length(column_keys)
                     if key == :date
-                        @printf fid "%s " df[key][i]
+                        @printf fid "%s " df[:, key][i]
                     else
-                        @printf fid "& %.2f " df[key][i]
+                        @printf fid "& %.2f " df[:, key][i]
                     end
                 else
-                    @printf fid "& %.2f \\\\\n" df[key][i]
+                    @printf fid "& %.2f \\\\\n" df[:, key][i]
                 end
             end
         end
@@ -215,9 +215,9 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
         df_subset    = DataFrame()
         units_subset = OrderedDict{Symbol, String}()
 
-        df_subset[:date] = df[:date]
+        df_subset[!, :date] = df[!, :date]
         for unit in units_keys
-            df_subset[unit] = df[unit]
+            df_subset[!, unit] = df[!, unit]
             units_subset[unit] = units[unit]
         end
         write_single_table(fid, df_subset, units_subset)

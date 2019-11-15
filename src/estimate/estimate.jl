@@ -165,17 +165,17 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
 
             hessian
 
-    # Read in a pre-calculated Hessian
-    else
-        fn = hessian_path(m)
-        println(verbose, :low, "Using pre-calculated Hessian from $fn")
+        ## Read in a pre-calculated Hessian
+        else
+            fn = hessian_path(m)
+            println(verbose, :low, "Using pre-calculated Hessian from $fn")
 
-        hessian = h5open(fn,"r") do file
-            read(file, "hessian")
-        end
+            hessian = h5open(fn,"r") do file
+                read(file, "hessian")
+            end
 
-        hessian
-	end
+            hessian
+	    end
 
         # Compute inverse hessian and create proposal distribution, or
         # just create it with the given cov matrix if we have it
@@ -185,19 +185,24 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
             @assert (n, n) == size(hessian)
 
             # Compute the inverse of the Hessian via eigenvalue decomposition
-            S_diag, U = eigen(hessian)
-            big_eig_vals = findall(x -> x > 1e-6, S_diag)
+            #S_diag, U = eigen(hessian)
+            F = svd(hessian)
+
+            big_eig_vals = findall(x -> x > 1e-6, F.S)
             hessian_rank = length(big_eig_vals)
 
             S_inv = zeros(n, n)
-            for i = (n-hessian_rank+1):n
-                S_inv[i, i] = 1/S_diag[i]
+            #for i = (n-hessian_rank+1):n
+            for i = 1:hessian_rank
+                S_inv[i, i] = 1/F.S[i]
             end
 
-            hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
-            DegenerateMvNormal(params, hessian_inv)
+            #hessian_inv = U*sqrt.(S_inv) # this is the inverse of the hessian
+            hessian_inv = F.V * S_inv * F.U'#sqrt.(S_inv) * F.U'
+            DegenerateMvNormal(params, hessian_inv, hessian, diag(S_inv))
         else
-            DegenerateMvNormal(params, proposal_covariance)
+            DegenerateMvNormal(params, proposal_covariance, pinv(proposal_covariance),
+                               eigen(proposal_covariance).values)
         end
 
         if rank(propdist) != n_parameters_free(m)

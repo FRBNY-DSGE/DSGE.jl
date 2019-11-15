@@ -34,3 +34,7 @@ metropolis_hastings
 ## State Space Filters and Smoothers
 
 See [StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl).
+
+## Sequential Monte Carlo
+
+See [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl).

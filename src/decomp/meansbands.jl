@@ -21,7 +21,8 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         # Get to work!
         mapfcn = use_parallel_workers(m_new) ? pmap : map
         decomp_vec = mapfcn(var -> decomposition_means(m_new, m_old, input_type,
-                                                       cond_new, cond_old, class, var, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old),
+                                                       cond_new, cond_old, class, var, forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old,
+                                                       verbose = verbose),
                             variable_names)
         decomps = OrderedDict{Symbol, DataFrame}()
         for (var, decomp) in zip(variable_names, decomp_vec)
@@ -48,7 +49,9 @@ end
 
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
-                             class::Symbol, var::Symbol; forecast_string_new = "", forecast_string_old = "") where M<:AbstractDSGEModel
+                             class::Symbol, var::Symbol;
+forecast_string_new = "", forecast_string_old = "",
+                             verbose::Symbol = :low) where M<:AbstractDSGEModel
     # Read in dates
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class], forecast_string_new = forecast_string_new, forecast_string_old = forecast_string_old)
     input_file = input_files[Symbol(:decomptotal, class)]
@@ -84,7 +87,9 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         for key in loopkeys
             # Read in raw output: ndraws x nperiods
             decomp_series = if comp == :shockdec
-                @show key
+                if verbose in [:low, :high]
+                    @show key
+                end
                 shock_key = shock_indices[key]
                 read_forecast_series(input_file, var_ind, shock_key)
             else
@@ -95,7 +100,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
             transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
 
             # Compute mean and add to DataFrame
-            decomp[key] = vec(mean(transformed_decomp, dims = 1))
+            decomp[!,key] = vec(mean(transformed_decomp, dims = 1))
         end
     end
     return decomp

@@ -107,8 +107,7 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
         last_filler  = iterate_quarters(last_provided, n_filler_periods)
         filler_dates = quarter_range(first_filler, last_filler)
         filler = DataFrame(date = filler_dates)
-
-        filler[mnemonic] = population_forecast[end, mnemonic]
+        filler[!,mnemonic] .= population_forecast[end, mnemonic]
         return vcat(population_forecast, filler)
     end
 end
@@ -153,7 +152,7 @@ function load_population_growth(m::AbstractDSGEModel; verbose::Symbol = :low)
             DataFrame()
         end
         if (isempty(unfiltered_forecast) && use_population_forecast(m))
-            throw("Must set use_population_forecast setting to false if no population_forecast_$vint.csv file is provided as data. This file should be manually added to the saveroot in the raw sub-directory if the user wants to use a population forecast.")
+            error("Must set use_population_forecast setting to false if no population_forecast_$vint.csv file is provided as data. This file should be manually added to the saveroot in the raw sub-directory if the user wants to use a population forecast.")
         end
 
         # HP filter if necessary
@@ -169,11 +168,11 @@ function load_population_growth(m::AbstractDSGEModel; verbose::Symbol = :low)
         end
 
         # Prepare output variables
-        data = data[[:date, data_mnemonic]]
+        data = data[!, [:date, data_mnemonic]]
         rename!(data, data_mnemonic => :population_growth)
 
         if use_population_forecast(m)
-            forecast = forecast[[:date, forecast_mnemonic]]
+            forecast = forecast[!, [:date, forecast_mnemonic]]
             rename!(forecast, forecast_mnemonic => :population_growth)
         else
             forecast = DataFrame()
@@ -231,11 +230,11 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         unpadded_data = if population_data[1, :date] < end_date < population_data[end, :date]
             # Dates entirely in past
-            population_data[start_date .<= population_data[:date] .<= end_date, :]
+            population_data[start_date .<= population_data[!, :date] .<= end_date, :]
         else
             # Dates span past and forecast
-            data  = population_data[start_date .<= population_data[:date], :]
-            fcast = population_forecast[population_forecast[:date] .<= end_date, :]
+            data  = population_data[start_date .<= population_data[!, :date], :]
+            fcast = population_forecast[population_forecast[!, :date] .<= end_date, :]
             vcat(data, fcast)
         end
 
@@ -246,13 +245,13 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
         # Dates entirely in forecast
-        population_forecast[start_date .<= population_forecast[:date] .<= end_date, :]
+        population_forecast[start_date .<= population_forecast[!, :date] .<= end_date, :]
     else
         # start_date comes after population_forecast[end, :date]
         error("Start date $start_date comes after population forecast ends")
     end
 
-    return population_insample[mnemonic]
+    return population_insample[!, mnemonic]
 end
 
 """

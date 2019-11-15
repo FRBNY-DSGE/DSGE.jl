@@ -44,7 +44,7 @@ function pseudo_measurement(m::Model1010{T},
 	ZZ_pseudo[pseudo[:OutputGap],endo[:y_t]] = 1
 	ZZ_pseudo[pseudo[:OutputGap],endo[:y_f_t]] = -1
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
 	    ## π_t
 	    ZZ_pseudo[pseudo[:π_t],endo[:π_t]] = 1.
 	    DD_pseudo[pseudo[:π_t]]            = 100*(m[:π_star]-1)
@@ -52,6 +52,9 @@ function pseudo_measurement(m::Model1010{T},
 	    ## Long Run Inflation
 	    ZZ_pseudo[pseudo[:LongRunInflation],endo[:π_star_t]] = 1.
 	    DD_pseudo[pseudo[:LongRunInflation]]                 = 100.0*(m[:π_star]-1.)
+
+        ## Marginal Cost
+        ZZ_pseudo[pseudo[:MarginalCost],endo[:mc_t]] = 1.
 
 	    ## Wages
 	    ZZ_pseudo[pseudo[:Wages],endo[:w_t]] = 1.
@@ -66,7 +69,7 @@ function pseudo_measurement(m::Model1010{T},
 	## Hours
 	ZZ_pseudo[pseudo[:Hours],endo[:L_t]] = 1.
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
 	    ## Flexible Hours
 	    ZZ_pseudo[pseudo[:FlexibleHours],endo[:L_f_t]] = 1.
     end
@@ -84,7 +87,7 @@ function pseudo_measurement(m::Model1010{T},
 	ZZ_pseudo[pseudo[:NominalFFR], endo[:R_t]] = 1.
 	DD_pseudo[pseudo[:NominalFFR]] = m[:Rstarn]
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         ## Expected Average Nominal Natural Rate
         ZZ_pseudo[pseudo[:ExpectedAvgNominalNaturalRate], endo[:r_f_t]] = 1.
         ZZ_pseudo[pseudo[:ExpectedAvgNominalNaturalRate], endo[:Eπ_t]]  = 1.
@@ -104,7 +107,7 @@ function pseudo_measurement(m::Model1010{T},
     ZZ_pseudo[pseudo[:ExpectedAvg10YearRealNaturalRate], :] = TTT10[endo[:r_f_t], :]
     DD_pseudo[pseudo[:ExpectedAvg10YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         ## Expected Average 10-Year Nominal Interest Rate
         ZZ_pseudo[pseudo[:ExpectedAvg10YearNominalRate], :] = TTT10[endo[:R_t], :]
         DD_pseudo[pseudo[:ExpectedAvg10YearNominalRate]]    = m[:Rstarn]
@@ -125,7 +128,7 @@ function pseudo_measurement(m::Model1010{T},
     ZZ_pseudo[pseudo[:ExpectedAvg5YearRealNaturalRate], :] = TTT5[endo[:r_f_t], :]
     DD_pseudo[pseudo[:ExpectedAvg5YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         ## Expected Average 5-Year Nominal Interest Rate
         ZZ_pseudo[pseudo[:ExpectedAvg5YearNominalRate], :] = TTT5[endo[:R_t], :]
         DD_pseudo[pseudo[:ExpectedAvg5YearNominalRate]]    = m[:Rstarn]
@@ -147,7 +150,7 @@ function pseudo_measurement(m::Model1010{T},
     ZZ_pseudo[pseudo[:ExpectedAvg20YearRealNaturalRate], :] = TTT20[endo[:r_f_t], :]
     DD_pseudo[pseudo[:ExpectedAvg20YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         ## Expected Average 20-Year Nominal Interest Rate
         ZZ_pseudo[pseudo[:ExpectedAvg20YearNominalRate], :] = TTT20[endo[:R_t], :]
         DD_pseudo[pseudo[:ExpectedAvg20YearNominalRate]]    = m[:Rstarn]
@@ -188,7 +191,7 @@ function pseudo_measurement(m::Model1010{T},
     ZZ_pseudo[pseudo[:Forward30YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :]' * TTT30_fwd
     DD_pseudo[pseudo[:Forward30YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
-    if !(subspec(m) in ["ss2", "ss4"])
+    if !(subspec(m) in ["ss2", "ss4", "ss22"])
         ## Nominal Natural Rate
         ZZ_pseudo[pseudo[:NominalNaturalRate], endo[:r_f_t]] = 1.
         ZZ_pseudo[pseudo[:NominalNaturalRate], endo[:Eπ_t]]  = 1.
@@ -233,6 +236,19 @@ function pseudo_measurement(m::Model1010{T},
 
         ZZ_pseudo[pseudo[:Forward20YearSDF], :] = ZZ_pseudo[pseudo[:SDF], :]' * TTT20_fwd
         DD_pseudo[pseudo[:Forward20YearSDF]]    = m[:Rstarn] - 100*(m[:π_star]-1) + 100*log(m[:lnb_liq]) + 100*log(m[:lnb_safe])
+    end
+
+    ## Exogenous processes
+    if subspec(m) in ["ss22"]
+        to_add = [:g_t, :b_liq_t, :b_safe_t, :μ_t, :z_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
+                  :γ_t, :π_star_t]
+        to_add_addl = [:lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_BBB_t, :e_AAA_t]
+        for i in to_add
+            ZZ_pseudo[pseudo[i], endo[i]] = 1.
+        end
+        for i in to_add_addl
+            ZZ_pseudo[pseudo[i], endo_addl[i]] = 1.
+        end
     end
 
     # Collect indices and transforms

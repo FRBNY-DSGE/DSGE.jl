@@ -674,15 +674,15 @@ function steadystate!(m::Model1010)
     nkstar      = nk_fn(zω_star, σ_ω_star, m[:spr])
     Rhostar     = 1/nkstar - 1
 
-    # define betabar
+    # define betabar_inverse
     if subspec(m) == "ss20"
-        betabar = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+        betabar_inverse = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
     else
-        betabar = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+        betabar_inverse = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
     end
 
     # evaluate wekstar and vkstar
-    wekstar     = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
+    wekstar     = (1-(m[:γ_star]*betabar_inverse))*nkstar - m[:γ_star]*betabar_inverse*(m[:spr]*(1-μ_estar*Gstar) - 1)
     vkstar      = (nkstar-wekstar)/m[:γ_star]
 
     # evaluate nstar and vstar
@@ -719,9 +719,9 @@ function steadystate!(m::Model1010)
 
     # elasticities for the net worth evolution
     m[:ζ_nRk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1 - ζ_gw/ζ_zw))
-    m[:ζ_nR]    = m[:γ_star]*betabar*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
-    m[:ζ_nqk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar*(1+Rhostar)
-    m[:ζ_nn]    = m[:γ_star]*betabar + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    m[:ζ_nR]    = m[:γ_star]*betabar_inverse*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+    m[:ζ_nqk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar_inverse*(1+Rhostar)
+    m[:ζ_nn]    = m[:γ_star]*betabar_inverse + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
     m[:ζ_nμ_e]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(1 - ζ_gw*ζ_zμ_e/ζ_zw)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 

@@ -195,3 +195,101 @@ function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::System{S},
 
     return ϵ_filt
 end
+
+"""
+```
+This section defines filter and filter_likelihood for the PoolModel type
+```
+"""
+function filter(m::PoolModel, data::AbstractArray,
+                s_0::AbstractArray{S} = Matrix{Float64}(undef,0,0);
+                start_date::Date = date_presample_start(m),
+                cond_type::Symbol = :none, include_presample::Bool = true,
+                in_sample::Bool = true,
+                tol::Float64 = 0., parallel::Bool = false,
+                tuning::Dict{Symbol,Any} = Dict{Symbol,Any}()) where {S<:AbstractFloat}
+
+    # Handle data
+    Nt0 = include_presample ? 0 : n_presample_periods(m)
+    if haskey(tuning, :n_presample_periods)
+        tuning[:n_presample_periods] = Nt0
+    end
+
+    # Compute transition and measurement equations
+    Φ, Ψ, F_ϵ, F_u, F_λ = compute_system(m)
+
+    # Check initial states
+    n_particles = haskey(tuning, :n_particles) ? tuning[:n_particles] : 1000
+    if isempty(s_0)
+        s_0 = reshape(rand(F_λ, n_particles), 1, n_particles)
+        s_0 = [s_0; 1 .- s_0]
+    elseif get_setting(m, :weight_type) == :dynamic
+        if size(s_0,2) != n_particles
+            error("s0 does not contain enough particles")
+        end
+    end
+
+    # Check tuning
+    if isempty(tuning)
+        try
+            tuning = get_setting(m, :tuning)
+        catch
+            if get_setting(m, :weight_type) == :dynamic
+                @warn "no tuning parameters provided; using default tempered particle filter values"
+            end
+        end
+    end
+    if haskey(tuning, :parallel) # contains parallel? change keyword to that if so
+        parallel = tuning[:parallel]
+    end
+
+    # Check if PoolModel has fixed_sched. If not, assume no tempering
+    fixed_sched = [1.]
+    try
+        fixed_sched = get_setting(m, :fixed_sched)
+    catch KeyError
+    end
+
+    weight_type = get_setting(m, :weight_type)
+    if weight_type == :dynamic
+        return tempered_particle_filter(data, Φ, Ψ, F_ϵ, F_u, s_0; parallel = parallel,
+                                        poolmodel = true,
+                                        fixed_sched = fixed_sched,
+                                        tuning..., verbose = :none)
+    elseif weight_type == :equal
+        loglhconditional = log.(mapslices(x -> Ψ([0.], x), data, dims = 1))
+        return sum(loglhconditional), loglhconditional
+    elseif weight_type == :static
+        loglhconditional = log.(mapslices(x -> Ψ([m[:λ].value; 1 - m[:λ].value], x), data, dims = 1))
+        return sum(loglhconditional), loglhconditional
+    elseif weight_type == :bma
+        error("Estimation for Bayesian Model Averaging is computed directly by the estimate_bma function, so the filter function does not return anything.")
+    end
+end
+
+
+function filter_likelihood(m::PoolModel, data::AbstractArray,
+                           s_0::AbstractArray{S} = Matrix{Float64}(undef,0,0);
+                           start_date::Date = date_presample_start(m),
+                           cond_type::Symbol = :none, include_presample::Bool = true,
+                           in_sample::Bool = true, parallel::Bool = false, tol::Float64 = 0.,
+                           tuning::Dict{Symbol,Any} = Dict{Symbol,Any}()) where {S<:AbstractFloat}
+
+    # Guarantee output settings in tuning give desired output
+    tuning[:allout] = true
+    tuning[:get_t_particle_dist] = false
+
+    if get_setting(m, :weight_type) == :dynamic_weight
+        ~, loglhconditional, ~ = filter(m, data, s_0; start_date = start_date,
+                                        include_presample = include_presample,
+                                        cond_type = cond_type, in_sample = in_sample, tol = tol,
+                                        parallel = parallel, tuning = tuning)
+    else
+        ~, loglhconditional = filter(m, data, s_0; start_date = start_date,
+                                     include_presample = include_presample,
+                                     cond_type = cond_type, in_sample = in_sample, tol = tol,
+                                     parallel = parallel, tuning = tuning)
+    end
+
+    return loglhconditional
+end

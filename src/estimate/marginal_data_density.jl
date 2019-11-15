@@ -16,7 +16,8 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 """
-function marginal_data_density(m::AbstractDSGEModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
+function marginal_data_density(m::AbstractDSGEModel,
+                               data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
                                parallel::Bool = false)
@@ -29,10 +30,10 @@ function marginal_data_density(m::AbstractDSGEModel, data::Matrix{Float64} = Mat
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
-        return sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
+        return sum(log.(sum(w_W, dims = 1))) # sum across particles, take log, sum across params
 
     elseif calculation_method == :harmonic_mean
-        free_para_inds = find(x -> x.fixed == false, m.parameters)
+        free_para_inds = findall(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
             cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
@@ -48,7 +49,7 @@ function marginal_data_density(m::AbstractDSGEModel, data::Matrix{Float64} = Mat
             end
             all_params = h5read(rawpath(m, "estimate", "mhsave.h5"), "mhparams")
             all_params = map(Float64, all_params)
-            params = thin_mh_draws(m, all_params; jstep = 5)'
+            params = Matrix(thin_mh_draws(m, all_params; jstep = 5)')
 
             n_para = n_parameters(m)
             n_draws = size(params, 2)
@@ -85,7 +86,8 @@ function tt2string(time_temper::Symbol)
     end
 end
 
-function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}, free_para_inds::Vector{Int64})
+function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64},
+                               free_para_inds::Vector{Int64})
     # From margdensim.m
     n_draws = size(params, 2)
     n_free_para = length(free_para_inds)
@@ -112,11 +114,12 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     # Outright invert it
     # Σ_bar_inv = inv(Σ_bar)
     # Or
-    U, S, V = svd(Σ_bar)
-    bigev = find(x -> x > 1e-6, S)
+    F = svd(Σ_bar)
+    U, S, V = F.U, F.S, F.V
+    bigev = findall(x -> x > 1e-6, S)
     parasigdim = length(bigev)
     parasiglndet = 0
-    S = diagm(S)
+    S = diagm(0 => S)
     for i in 1:n_free_para
         if i > parasigdim
             S[i, i] = 0
@@ -145,14 +148,14 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
         # If outright inverting Σ_bar
         # lnfpara = -log.(p) - .5 * n_free_para * log(2*pi) - .5 * log(det(Σ_bar)) - .5 * res' * Σ_bar_inv * res
         # If not outright inverting Σ_bar
-        lnfpara = -log.(p) - .5 * n_free_para * log(2*pi) - .5 * parasiglndet - .5 * res' * Σ_bar_inv * res
+        lnfpara = -log.(p) .- .5 * n_free_para * log(2*pi) .- .5 * parasiglndet .- .5 * res' * Σ_bar_inv * res
         indpara = (res' * Σ_bar_inv * res) .< pcrit
-        invlike = exp.(lnfpara - post + densfac) .* indpara
+        invlike = exp.(lnfpara .- post .+ densfac) .* indpara
 
         ####################################
         # TEMPORARY
         ####################################
-        all_exp_terms[:, i] = lnfpara - post + densfac
+        all_exp_terms[:, i] = lnfpara .- post .+ densfac
 
         all_lnfpara[:, i] = lnfpara
         all_indpara[:, i] = indpara
@@ -164,7 +167,7 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
     mean_invlike = mean(all_invlike, dims = 2)
     mean_invlike = Base.filter(x -> isfinite(x), mean_invlike)
 
-    return mean(densfac - log.(mean_invlike))
+    return mean(densfac .- log.(mean_invlike))
 end
 
 function marginal_data_density_weighted(params::Matrix{Float64},
@@ -199,11 +202,12 @@ function marginal_data_density_weighted(params::Matrix{Float64},
     # Outright invert it
     # Σ_bar_inv = inv(Σ_bar)
     # Or
-    U, S, V = svd(Σ_bar)
-    bigev = find(x -> x > 1e-6, S)
+    F = svd(Σ_bar)
+    U, S, V = F.U, F.S, F.V
+    bigev = findall(x -> x > 1e-6, S)
     parasigdim = length(bigev)
     parasiglndet = 0
-    S = diagm(S)
+    S = diagm(0 => S)
     for i in 1:n_free_para
         if i > parasigdim
             S[i, i] = 0
@@ -255,11 +259,14 @@ function marginal_data_density_weighted(params::Matrix{Float64},
 end
 
 
-function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
-                                        estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
+function marginal_data_density_frontier(m::AbstractDSGEModel,
+                                        data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
+                                        estimation_method::Symbol = :smc,
+                                        calculation_method = :incremental_weights,
                                         parallel::Bool = false)
+
     if estimation_method == :mh && calculation_method == :incremental_weights
-        throw("Can only calculation the MDD with incremental weights if the estimation method is :smc")
+        throw("Can only calculation the MDD with incremental weights if estimation method is :smc")
     end
 
     if calculation_method == :incremental_weights
@@ -268,10 +275,10 @@ function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float
         cloud, w, W = file["cloud"], file["w"], file["W"]
         w_W = w[:, 2:end] .* W[:, 1:end-1]
 
-        return sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
+        return sum(log.(sum(w_W, dims = 1))) # sum across particles, take log, sum across params
 
     elseif calculation_method == :harmonic_mean
-        free_para_inds = find(x -> x.fixed == false, m.parameters)
+        free_para_inds = findall(x -> x.fixed == false, m.parameters)
 
         if estimation_method == :smc
             cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
@@ -309,7 +316,7 @@ function marginal_data_density_frontier(m::AbstractDSGEModel, data::Matrix{Float
             throw("Invalid estimation method. Must use either :smc or :mh")
         end
     else
-        throw("Invalid MDD calculation method. Must use either :incremental_weights or :harmonic_mean")
+        throw("Invalid MDD calculation method. Must use either " *
+              ":incremental_weights or :harmonic_mean")
     end
-
 end

@@ -10,7 +10,7 @@ function init_observable_mappings!(m::Model990)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
-        levels[:temp] = percapita(m, :GDP, levels)
+        levels[!,:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
         oneqtrpctchange(gdp)
     end
@@ -30,7 +30,7 @@ function init_observable_mappings!(m::Model990)
         # TO:   log (3 * per-capita weekly hours / 100)
         # Note: Not sure why the 3 is there.
 
-        levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
+        levels[!,:temp] = levels[!,:AWHNONAG] .* levels[!,:CE16OV]
         weeklyhours = percapita(m, :temp, levels)
         100*log.(3 * weeklyhours / 100)
     end
@@ -69,7 +69,7 @@ function init_observable_mappings!(m::Model990)
         # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
         #       i.e.  quarterly gdp deflator inflation
 
-        oneqtrpctchange(levels[:GDPDEF])
+        oneqtrpctchange(levels[!,:GDPDEF])
     end
 
 
@@ -89,7 +89,7 @@ function init_observable_mappings!(m::Model990)
         # INTO: Approximate quarter-to-quarter percent change of Core PCE,
         # i.e. quarterly core pce inflation
 
-        oneqtrpctchange(levels[:PCEPILFE])
+        oneqtrpctchange(levels[!,:PCEPILFE])
     end
 
     pce_rev_transform = loggrowthtopct_annualized
@@ -109,7 +109,7 @@ function init_observable_mappings!(m::Model990)
         #       quarterly frequency at an annual rate)
         # TO:   Nominal effective fed funds rate, at a quarterly rate
 
-        annualtoquarter(levels[:DFF])
+        annualtoquarter(levels[!,:DFF])
     end
 
     nominalrate_rev_transform = quartertoannual
@@ -128,7 +128,7 @@ function init_observable_mappings!(m::Model990)
         # TO:   Real consumption, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(m, :PCE, levels)
+        levels[!,:temp] = percapita(m, :PCE, levels)
         cons = 1000 * nominal_to_real(:temp, levels)
         oneqtrpctchange(cons)
     end
@@ -150,7 +150,7 @@ function init_observable_mappings!(m::Model990)
         # INTO: Real investment, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(m, :FPI, levels)
+        levels[!,:temp] = percapita(m, :FPI, levels)
         inv = 10000 * nominal_to_real(:temp, levels)
         oneqtrpctchange(inv)
     end
@@ -174,7 +174,7 @@ function init_observable_mappings!(m::Model990)
         # Note: Moody's corporate bond yields on the H15 are based on corporate
         #       bonds with remaining maturities of at least 20 years.
 
-        annualtoquarter(levels[:BAA] - levels[:GS10])
+        annualtoquarter(levels[!,:BAA] - levels[!,:GS10])
     end
 
     spread_rev_transform = quartertoannual
@@ -196,7 +196,7 @@ function init_observable_mappings!(m::Model990)
         #       the assumed long-term rate of 2 percent inflation, but the
         #       data are measuring expectations of actual inflation.
 
-        annualtoquarter(levels[:ASACX10]  .- 0.5)
+        annualtoquarter(levels[!,:ASACX10]  .- 0.5)
     end
 
     longinflation_rev_transform = loggrowthtopct_annualized
@@ -214,7 +214,7 @@ function init_observable_mappings!(m::Model990)
         # FROM: pre-computed long rate at an annual rate
         # TO:   10T yield - 10T term premium at a quarterly rate
 
-        annualtoquarter(levels[:FYCCZA] - levels[:THREEFYTP10])
+        annualtoquarter(levels[!,:FYCCZA] - levels[!,:THREEFYTP10])
     end
 
     longrate_rev_transform = quartertoannual
@@ -239,13 +239,13 @@ function init_observable_mappings!(m::Model990)
 
         start_date = Dates.lastdayofquarter(date_presample_start(m) - Dates.Month(3))
         end_date   = date_mainsample_end(m)
-        date_range = start_date .<= levels[:date] .<= end_date
+        date_range = start_date .<= levels[!,:date] .<= end_date
         tfp_unadj_inrange = levels[date_range, :TFPKQ]
 
-        tfp_unadj      = levels[:TFPKQ]
+        tfp_unadj      = levels[!,:TFPKQ]
         tfp_unadj_inrange_nonmissing = tfp_unadj_inrange[.!ismissing.(tfp_unadj_inrange)]
         tfp_unadj_mean = isempty(tfp_unadj_inrange_nonmissing) ? missing : mean(tfp_unadj_inrange_nonmissing)
-        (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[:TFPJQ]))
+        (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[!,:TFPJQ]))
     end
 
     tfp_rev_transform = quartertoannual
@@ -266,7 +266,7 @@ function init_observable_mappings!(m::Model990)
         # TO:   Same
 
         ant_fwd_transform = function (levels)
-            levels[Symbol("ant$i")]
+            levels[!, Symbol("ant$i")]
         end
 
         ant_rev_transform = quartertoannual

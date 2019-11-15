@@ -1,7 +1,7 @@
 path = dirname(@__FILE__)
 
 ### Model
-sub = "ss2"
+sub = "ss3"
 model = Model990(sub)
 
 ### Parameters
@@ -62,54 +62,6 @@ end
     @test size(Π) == (60, 13)
 end
 
-# Check output matrices against reference output (ϵ = 1e-4)
-h5 = h5open("$path/eqcond.h5")
-Γ0_ref = read(h5, "G0")
-Γ1_ref = read(h5, "G1")
-C_ref  = reshape(read(h5, "C"), 60, 1)
-Ψ_ref  = read(h5, "PSI")
-Π_ref  = read(h5, "PIE")
-close(h5)
-
-@testset "Checking eqconds against reference output" begin
-    @test @test_matrix_approx_eq Γ0_ref Γ0
-    @test @test_matrix_approx_eq Γ1_ref Γ1
-    @test @test_matrix_approx_eq C_ref C
-    @test @test_matrix_approx_eq Ψ_ref Ψ
-    @test @test_matrix_approx_eq Π_ref Π
-end
-
-### Measurement equation
-expect = Dict{Symbol, Matrix}()
-h5 = h5open("$path/measurement.h5")
-expect[:ZZ] = read(h5, "ZZ")
-expect[:DD] = reshape(read(h5, "DD"), 12, 1)
-expect[:QQ] = read(h5, "QQ")
-expect[:EE] = read(h5, "EE")
-close(h5)
-
-TTT, RRR, CCC = solve(model)
-actual = measurement(model, TTT, RRR, CCC)
-@testset "Checking measurement equation" begin
-    for d in (:ZZ, :DD, :QQ, :EE)
-        @test @test_matrix_approx_eq expect[d] actual[d]
-    end
-end
-
-### Pseudo-measurement equation
-expect = Dict{Symbol, Any}()
-jld = JLD2.jldopen("$path/pseudo_measurement.jld2")
-expect[:ZZ_pseudo] = read(jld, "ZZ_pseudo")
-expect[:DD_pseudo] = read(jld, "DD_pseudo")
-close(jld)
-
-actual = pseudo_measurement(model, TTT, RRR, CCC)
-@testset "Checking pseudo-measurement equation" begin
-    for d in (:ZZ_pseudo, :DD_pseudo)
-        @test @test_matrix_approx_eq expect[d] getfield(actual,d)
-    end
-end
-
 ### Custom settings
 custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
@@ -163,5 +115,46 @@ end
     @test size(Ψ) == (66, 22)
     @test size(Π) == (66, 13)
 end
+
+### Reference matrices
+G0_exp, G1_exp, C_exp, PSI_exp, PIE_exp = h5open("$path/eqcond.h5") do file
+    read(file, "G0"), read(file, "G1"), read(file, "C"),
+    read(file, "PSI"), read(file, "PIE")
+end
+TTT_exp, RRR_exp, CCC_exp = h5open("$path/transition.h5") do file
+    read(file, "TTT"), read(file, "RRR"), read(file, "CCC")
+end
+Z_exp, D_exp, Q_exp, E_exp = h5open("$path/measurement.h5") do file
+    read(file, "ZZ"), read(file, "DD"), read(file, "QQ"), read(file, "EE")
+end
+Z_pseudo_exp, D_pseudo_exp = h5open("$path/pseudo_measurement.h5") do file
+    read(file, "ZZ_pseudo"), read(file, "DD_pseudo")
+end
+
+Γ0, Γ1, C, Ψ, Π = eqcond(model)
+TTT, RRR, CCC = solve(model)
+meas = measurement(model, TTT, RRR, CCC)
+pseudo_meas = pseudo_measurement(model, TTT, RRR, CCC)
+
+@testset "Compare eqcond, transition, measurement, and pseudo-measurement matrices against reference matrices" begin
+    @test @test_matrix_approx_eq Γ0 G0_exp
+    @test @test_matrix_approx_eq Γ1 G1_exp
+    @test @test_matrix_approx_eq C C_exp
+    @test @test_matrix_approx_eq Ψ PSI_exp
+    @test @test_matrix_approx_eq Π PIE_exp
+
+    @test @test_matrix_approx_eq TTT TTT_exp
+    @test @test_matrix_approx_eq RRR RRR_exp
+    @test @test_matrix_approx_eq CCC CCC_exp
+
+    @test @test_matrix_approx_eq meas[:ZZ] Z_exp
+    @test @test_matrix_approx_eq meas[:DD] D_exp
+    @test @test_matrix_approx_eq meas[:QQ] Q_exp
+    @test @test_matrix_approx_eq meas[:EE] E_exp
+
+    @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo] Z_pseudo_exp
+    @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp
+end
+
 
 nothing

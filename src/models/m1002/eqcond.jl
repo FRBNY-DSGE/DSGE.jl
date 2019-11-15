@@ -322,20 +322,20 @@ function eqcond(m::Model1002)
 
     # Ez_t
     Γ0[eq[:eq_Ez], endo[:Ez_t]]   = 1.
-    Γ0[eq[:eq_Ez], endo[:ztil_t]] = -(m[:ρ_z]-1)/(1-m[:α])
+    Γ0[eq[:eq_Ez], endo[:ztil_t]] = -(m[:ρ_ztil]-1)/(1-m[:α])
     Γ0[eq[:eq_Ez], endo[:zp_t]]   = -m[:ρ_z_p]
 
     ### EXOGENOUS SHOCKS ###
 
     # Neutral technology
     Γ0[eq[:eq_z], endo[:z_t]]    = 1.
-    Γ1[eq[:eq_z], endo[:ztil_t]] = (m[:ρ_z] - 1)/(1 - m[:α])
+    Γ1[eq[:eq_z], endo[:ztil_t]] = (m[:ρ_ztil] - 1)/(1 - m[:α])
     Γ0[eq[:eq_z], endo[:zp_t]]   = -1.
-    Ψ[eq[:eq_z], exo[:z_sh]]     = 1/(1 - m[:α])
+    Ψ[eq[:eq_z], exo[:ztil_sh]]     = 1/(1 - m[:α])
 
     Γ0[eq[:eq_ztil], endo[:ztil_t]] = 1.
-    Γ1[eq[:eq_ztil], endo[:ztil_t]] = m[:ρ_z]
-    Ψ[eq[:eq_ztil], exo[:z_sh]]     = 1.
+    Γ1[eq[:eq_ztil], endo[:ztil_t]] = m[:ρ_ztil]
+    Ψ[eq[:eq_ztil], exo[:ztil_sh]]     = 1.
 
     # Long-run changes to productivity
     Γ0[eq[:eq_zp], endo[:zp_t]] = 1.
@@ -346,7 +346,7 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_g], endo[:g_t]] = 1.
     Γ1[eq[:eq_g], endo[:g_t]] = m[:ρ_g]
     Ψ[eq[:eq_g], exo[:g_sh]]  = 1.
-    Ψ[eq[:eq_g], exo[:z_sh]]  = m[:η_gz]
+    Ψ[eq[:eq_g], exo[:ztil_sh]]  = m[:η_gz]
 
     # Asset shock
     Γ0[eq[:eq_b], endo[:b_t]] = 1.

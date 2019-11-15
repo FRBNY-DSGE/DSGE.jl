@@ -71,6 +71,9 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:u_t1],     endo[:u_t]] = 1.0
     TTT_aug[endo_new[:e_gdp_t1], endo_new[:e_gdp_t]] = 1.0
     TTT_aug[endo_new[:e_gdi_t1], endo_new[:e_gdi_t]] = 1.0
+    if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
+        TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
+    end
 
     # Expected inflation
     TTT_aug[endo_new[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
@@ -78,12 +81,27 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     # The 8th column of the addition to TTT corresponds to "v_lr" which is set equal to
     # e_lr – measurement errors for the two real wage observables built in
     # as exogenous structural shocks.
-    TTT_aug[endo_new[:lr_t], endo_new[:lr_t]]               = m[:ρ_lr]
-    TTT_aug[endo_new[:tfp_t], endo_new[:tfp_t]]             = m[:ρ_tfp]
+    TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_t]]               = m[:ρ_lr]
+    TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_t]]             = m[:ρ_tfp]
     TTT_aug[endo_new[:e_gdpdef_t], endo_new[:e_gdpdef_t]]   = m[:ρ_gdpdef]
     TTT_aug[endo_new[:e_corepce_t], endo_new[:e_corepce_t]] = m[:ρ_corepce]
     TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_t]]         = m[:ρ_gdp]
     TTT_aug[endo_new[:e_gdi_t], endo_new[:e_gdi_t]]         = m[:ρ_gdi]
+
+    # Fundamental inflation
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+        betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
+        κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+             (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+        (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+        κcoef = κ * (1 + m[:ι_p] * betabar)
+        sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT) # infinite horizon expectation of state vector
+
+        TTT_aug[endo_new[:Sinf_t], 1:n_endo] = sₜ∞[endo[:mc_t],:]
+        TTT_aug[endo_new[:πtil_t], endo_new[:Sinf_t]] = κcoef
+        TTT_aug[endo_new[:πtil_t], endo_new[:πtil_t1]] = m[:ι_p]
+        TTT_aug[endo_new[:πtil_t1], endo_new[:πtil_t]] = 1.
+    end
 
     ### RRR modfications
 
@@ -91,10 +109,10 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     RRR_aug[endo_new[:Et_π_t], :] = (TTT*RRR)[endo[:π_t], :]
 
     # Measurement Error on long rate
-    RRR_aug[endo_new[:lr_t], exo[:lr_sh]] = 1.0
+    RRR_aug[endo_new[:e_lr_t], exo[:lr_sh]] = 1.0
 
     # Measurement Error on TFP
-    RRR_aug[endo_new[:tfp_t], exo[:tfp_sh]] = 1.0
+    RRR_aug[endo_new[:e_tfp_t], exo[:tfp_sh]] = 1.0
 
     # Measurement Error on GDP Deflator
     RRR_aug[endo_new[:e_gdpdef_t], exo[:gdpdef_sh]] = 1.0
@@ -102,7 +120,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     # Measurement Error on Core PCE
     RRR_aug[endo_new[:e_corepce_t], exo[:corepce_sh]] = 1.0
 
-    # Measurement Error on GDP Deflator
+    # Measurement Error on GDP and GDI
     RRR_aug[endo_new[:e_gdp_t], exo[:gdp_sh]] = 1.0
     RRR_aug[endo_new[:e_gdp_t], exo[:gdi_sh]] = m[:ρ_gdpvar] * m[:σ_gdp] ^ 2
 

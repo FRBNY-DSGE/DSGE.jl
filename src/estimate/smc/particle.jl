@@ -769,6 +769,6 @@ for op in (:(Base.:+),
     @eval ($op)(p::Particle, x::Number)     = ($op)(p.value,x)
     @eval ($op)(x::Integer, p::Particle)    = ($op)(p.value,x)
     @eval ($op)(x::Number, p::Particle)     = ($op)(p.value,x)
-    @eval ($op)(p::Particle, q::Vector{Float64})   = ($op)(p.value,q)
-    @eval ($op)(p::Vector{Float64}, q::Particle)   = ($op)(p,q.value)
+    @eval ($op)(p::Particle, q::Vector{Float64})   = @. ($op)(p.value,q)
+    @eval ($op)(p::Vector{Float64}, q::Particle)   = @. ($op)(p,q.value)
 end

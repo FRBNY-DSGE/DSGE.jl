@@ -35,7 +35,7 @@ test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]
-test_z = test_file["z"]
+# test_z = test_file["z"]
 
 if writing_output
     jldopen("$path/../../reference/smc_cloud_fix=true.jld2", true, true, true, IOStream) do file

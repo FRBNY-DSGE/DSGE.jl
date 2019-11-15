@@ -19,8 +19,8 @@ function plot_posterior_intervals(m::AbstractDSGEModel; cloud::ParticleCloud = P
 
     # Indexing out a block of the parameters
     df = df[param_range, :]
-    df[:param_inds] = param_range
-    parameter_labels = df[:param]
+    df[!,:param_inds] = param_range
+    parameter_labels = df[!,:param]
 
     # Plot non-outliers
     p = @df df plot(:param_inds, :post_ub, label = "", linealpha = 0, marker =

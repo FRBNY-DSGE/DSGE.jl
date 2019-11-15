@@ -54,6 +54,26 @@ function solve(m::AbstractDSGEModel; apply_altpolicy = false, verbose::Symbol = 
 end
 
 """
+solve(m::PoolModel)
+```
+
+Driver to compute the model solution when using the PoolModel type
+
+### Inputs
+
+- `m`: the PoolModel object
+
+### Outputs
+- Φ: transition function
+- F_ϵ: distribution of structural shock
+- F_λ: prior on the initial λ_0
+
+"""
+function solve(m::PoolModel)
+    return transition(m)
+end
+
+"""
 ```
 GensysError <: Exception
 ```

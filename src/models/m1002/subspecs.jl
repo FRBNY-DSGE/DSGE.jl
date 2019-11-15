@@ -19,6 +19,22 @@ function init_subspec!(m::Model1002)
         # variance of the contemporaneous shock
         # See measurement equation
         return ss10!(m)
+    elseif subspec(m) == "ss12"
+        return ss12!(m)
+    elseif subspec(m) == "ss13"
+        return ss13!(m)
+    elseif subspec(m) == "ss14"
+        return ss14!(m)
+    elseif subspec(m) == "ss15"
+        return ss15!(m)
+    elseif subspec(m) == "ss16"
+        return ss16!(m)
+    elseif subspec(m) == "ss17"
+        return ss17!(m)
+    elseif subspec(m) == "ss18"
+        return ss18!(m)
+    elseif subspec(m) == "ss19"
+        return ss19!(m)
     else
         error("This subspec is not defined.")
     end
@@ -108,9 +124,9 @@ function ss9!(m::Model1002)
                    description = "ρ_μ: AR(1) coefficient in capital adjustment cost process.",
                    tex_label = "\\rho_{\\mu}")
 
-    m <= parameter(:ρ_z, 0.9446, (0.0, 1.0), (0.0, 1.0), SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_z: AR(1) coefficient in the technology process.",
-                   tex_label = "\\rho_z")
+    m <= parameter(:ρ_ztil, 0.9446, (0.0, 1.0), (0.0, 1.0), SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
+                   description = "ρ_ztil: AR(1) coefficient in the technology process.",
+                   tex_label = "\\rho_ztil")
 
     m <= parameter(:ρ_λ_f, 0.8827, (0.0, 1.0), (0.0, 1.0), SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
@@ -182,4 +198,111 @@ except `betabar` is defined with `m[:σ_c]` instead of `σ_ω_star`.
 """
 function ss10!(m::Model1002)
     ss9!(m)
+end
+
+"""
+```
+ss12!(m::Model1002)
+```
+
+Initializes subspec 12 of `Model1002`. This subspecification is the same as ss10,
+but exogenous processes are added as pseudo-observables.
+"""
+function ss12!(m::Model1002)
+    ss10!(m)
+end
+
+"""
+```
+ss13!(m::Model1002)
+```
+
+Initializes subspec 13 of `Model1002`. This subspecification is the same as ss10,
+but tracks Sinf_t, the contribution of expected future marginal cost, as a pseudo-obs.
+"""
+function ss13!(m::Model1002)
+    ss10!(m)
+end
+
+"""
+```
+ss14!(m::Model1002)
+```
+
+Initializes subspec 14 of `Model1002`. This subspecification is the same as ss13,
+but with stationarity in the levels (rather than growth) of the measurement
+error in the TFP process.
+"""
+function ss14!(m::Model1002)
+    ss13!(m)
+end
+
+"""
+```
+ss15!(m::Model1002)
+```
+
+Initializes subspec 15 of `Model1002`. This subspecification is the same as ss14,
+but with the TFP observables series now being Fernald's TFP adjusted to utilization.
+"""
+function ss15!(m::Model1002)
+    ss14!(m)
+end
+
+"""
+```
+ss16!(m::Model1002)
+```
+
+Initializes subspec 16 of `Model1002`. This subspecification is the same as ss15,
+but with the measurement equation using log labor share instead of wage growth.
+"""
+function ss16!(m::Model1002)
+    ss15!(m)
+end
+
+"""
+```
+ss17!(m::Model1002)
+```
+
+Initializes subspec 17 of `Model1002`. This subspecification is the same as ss13,
+but with the measurement equation using log labor share instead of wage growth.
+"""
+function ss17!(m::Model1002)
+    ss13!(m)
+end
+
+"""
+```
+ss18!(m::Model1002)
+```
+
+Initializes subspec 18 of `Model1002`. This subspecification is the same as ss14,
+but with ρ_tfp = 0 (fixed) and a near-zero prior on σ_tfp
+"""
+function ss18!(m::Model1002)
+    ss14!(m)
+    m <= parameter(:ρ_tfp, 0., (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(),
+                   BetaAlt(0.5, 0.2), fixed = true, tex_label = "\\rho_{tfp}")
+    m <= parameter(:σ_tfp, 0.01, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                   RootInverseGamma(2, sqrt(0.0001)), fixed=false,
+                   tex_label="\\sigma_{tfp}")
+end
+
+"""
+```
+ss19!(m::Model1002)
+```
+
+Initializes subspec 19 of `Model1002`. This subspecification is the same as ss14,
+but with a near zero prior on ρ_tfp and σ_tfp
+"""
+function ss19!(m::Model1002)
+    ss14!(m)
+    m <= parameter(:ρ_tfp, 0.01, (1e-5, 0.999999), (1e-5, 0.999999), ModelConstructors.SquareRoot(),
+                   BetaAlt(0.01, 0.02), fixed = false, tex_label = "\\rho_{tfp}")
+    m <= parameter(:σ_tfp, 0.01, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                   RootInverseGamma(2, sqrt(0.0001)), fixed=false,
+                   tex_label="\\sigma_{tfp}")
 end

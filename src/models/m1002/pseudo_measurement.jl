@@ -113,5 +113,41 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:LaborProductivityGrowth], endo_addl[:L_t1]]     = 1.
     DD_pseudo[pseudo[:LaborProductivityGrowth]]                       = 100*(exp(m[:z_star]) - 1)
 
+    ## u_t
+    ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
+
+    ## Fundamental inflation related pseudo-obs
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+        # Compute coefficient on Sinf
+        betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
+        κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+             (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+        (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+        κcoef = κ * (1 + m[:ι_p] * betabar)
+
+        ZZ_pseudo[pseudo[:Sinf_t], endo_addl[:Sinf_t]] = 1.
+        ZZ_pseudo[pseudo[:Sinf_w_coef_t], endo_addl[:Sinf_t]] = κcoef
+        DD_pseudo[pseudo[:ι_p]] = m[:ι_p]
+        ZZ_pseudo[pseudo[:πtil_t], endo_addl[:πtil_t]] = 1.
+        DD_pseudo[pseudo[:πtil_t]] = 100 * (m[:π_star] - 1)
+        ZZ_pseudo[pseudo[:e_tfp_t], endo_addl[:e_tfp_t]] = 1.
+        if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
+            ZZ_pseudo[pseudo[:e_tfp_t1], endo_addl[:e_tfp_t1]] = 1.
+        end
+    end
+
+    ## Exogenous processes
+    if subspec(m) == "ss12"
+        to_add = [:g_t, :b_t, :μ_t, :z_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
+                  :γ_t, :π_star_t]
+        to_add_addl = [:e_lr_t, :e_tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t]
+        for i in to_add
+            ZZ_pseudo[pseudo[i], endo[i]] = 1.
+        end
+        for i in to_add_addl
+            ZZ_pseudo[pseudo[i], endo_addl[i]] = 1.
+        end
+    end
+
     return PseudoMeasurement(ZZ_pseudo, DD_pseudo)
 end

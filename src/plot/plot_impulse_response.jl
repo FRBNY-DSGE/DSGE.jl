@@ -46,6 +46,7 @@ end
 
 function plot_impulse_response(m::AbstractDSGEModel, shock::Symbol, vars::Vector{Symbol}, class::Symbol,
                                input_type::Symbol, cond_type::Symbol;
+                               input_type2::Symbol = Symbol(),
                                forecast_string::String = "",
                                plotroot::String = figurespath(m, "forecast"),
                                titles::Vector{String} = String[],
@@ -53,7 +54,11 @@ function plot_impulse_response(m::AbstractDSGEModel, shock::Symbol, vars::Vector
                                kwargs...)
     # Read in MeansBands
     mb = read_mb(m, input_type, cond_type, Symbol(:irf, class), forecast_string = forecast_string)
-
+    if input_type2 != Symbol()
+        mb2 = read_mb(m, input_type2, cond_type, Symbol(:irf, class), forecast_string = forecast_string)
+    else
+        mb2 = MeansBands()
+    end
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
@@ -64,7 +69,7 @@ function plot_impulse_response(m::AbstractDSGEModel, shock::Symbol, vars::Vector
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
         # Call recipe
-        plots[var] = irf(shock, var, mb; title = title, kwargs...)
+        plots[var] = irf(shock, var, mb, mb2; title = title, input_type = input_type, input_type2 = input_type2, kwargs...)
 
         # Save plot
         if !isempty(plotroot)
@@ -113,15 +118,17 @@ irf
                    label_mean_bands = false,
                    mean_color = :black,
                    bands_color = :blue,
-                   bands_pcts = which_density_bands(irf.args[3], uniquify = true))
+                   bands_pcts = which_density_bands(irf.args[3], uniquify = true),
+                   input_type::Symbol = Symbol(),
+                   input_type2::Symbol = Symbol())
     # Error checking
-    if length(irf.args) != 3 || typeof(irf.args[1]) != Symbol || typeof(irf.args[2]) != Symbol ||
+   #= if length(irf.args) != 3 || typeof(irf.args[1]) != Symbol || typeof(irf.args[2]) != Symbol ||
         typeof(irf.args[3]) != MeansBands
 
         error("irf must be given two Symbols and a MeansBands. Got $(typeof(irf.args))")
-    end
+    end=#
 
-    shock, var, mb = irf.args
+    shock, var, mb, mb2 = irf.args
     varshock = Symbol(var, "__", shock)
     sign = flip_sign ? -1 : 1
 
@@ -133,16 +140,25 @@ irf
             linealpha := 0
             label     := label_mean_bands ? "$pct Bands" : ""
 
-            fillrange := sign * mb.bands[varshock][Symbol(pct, " UB")]
-            sign * mb.bands[varshock][Symbol(pct, " LB")]
+            fillrange := sign * mb.bands[varshock][!,Symbol(pct, " UB")]
+            sign * mb.bands[varshock][!,Symbol(pct, " LB")]
         end
     end
 
     # Mean
     @series begin
-        label     := label_mean_bands ? "Mean" : ""
+        label     := label_mean_bands ? "Mean"*string(input_type) : ""
         linewidth := 2
         linecolor := mean_color
-        sign * mb.means[varshock]
+        sign * mb.means[!, varshock]
+    end
+
+    if input_type2 != Symbol()
+        @series begin
+            label     := label_mean_bands ? "Mean"*string(input_type2) : ""
+            linewidth := 2
+            linecolor := :blue
+            sign * mb2.means[varshock]
+        end
     end
 end

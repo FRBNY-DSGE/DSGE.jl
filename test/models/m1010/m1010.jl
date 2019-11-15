@@ -1,10 +1,7 @@
-using DSGE
-using Test
-
 path = dirname(@__FILE__)
 
 ### Model
-model = Model1010("ss18")
+model = Model1010("ss20")
 
 ### Parameters
 
@@ -79,4 +76,39 @@ pseudo_meas = pseudo_measurement(model, TTT, RRR, CCC)
     @test size(TTT) == (91,91)
     @test size(RRR) == (91,29)
     @test size(CCC) == (91,)
+end
+
+### Reference matrices
+G0_exp, G1_exp, C_exp, PSI_exp, PIE_exp = h5open("$path/eqcond.h5") do file
+    read(file, "G0"), read(file, "G1"), read(file, "C"),
+    read(file, "PSI"), read(file, "PIE")
+end
+TTT_exp, RRR_exp, CCC_exp = h5open("$path/transition.h5") do file
+    read(file, "TTT"), read(file, "RRR"), read(file, "CCC")
+end
+Z_exp, D_exp, Q_exp, E_exp = h5open("$path/measurement.h5") do file
+    read(file, "ZZ"), read(file, "DD"), read(file, "QQ"), read(file, "EE")
+end
+Z_pseudo_exp, D_pseudo_exp = h5open("$path/pseudo_measurement.h5") do file
+    read(file, "ZZ_pseudo"), read(file, "DD_pseudo")
+end
+
+@testset "Compare eqcond, transition, measurement, and pseudo-measurement matrices against reference matrices" begin
+    @test @test_matrix_approx_eq Γ0 G0_exp
+    @test @test_matrix_approx_eq Γ1 G1_exp
+    @test @test_matrix_approx_eq C C_exp
+    @test @test_matrix_approx_eq Ψ PSI_exp
+    @test @test_matrix_approx_eq Π PIE_exp
+
+    @test @test_matrix_approx_eq TTT TTT_exp
+    @test @test_matrix_approx_eq RRR RRR_exp
+    @test @test_matrix_approx_eq CCC CCC_exp
+
+    @test @test_matrix_approx_eq meas[:ZZ] Z_exp
+    @test @test_matrix_approx_eq meas[:DD] D_exp
+    @test @test_matrix_approx_eq meas[:QQ] Q_exp
+    @test @test_matrix_approx_eq meas[:EE] E_exp
+
+    @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo] Z_pseudo_exp
+    @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp
 end

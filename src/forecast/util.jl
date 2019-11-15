@@ -6,7 +6,7 @@ get_jstep(m, n_sim)
 Retrieve `forecast_jstep` setting (thinning step size for forecast
 step) from `m.settings`. If `n_sim ==  1`, returns 1.
 """
-function get_jstep(m, n_sim)
+function get_jstep(m::AbstractDSGEModel, n_sim::Int)
     if n_sim == 1
         jstep = 1
     else
@@ -38,6 +38,8 @@ function n_forecast_draws(m::AbstractDSGEModel, input_type::Symbol)
             size(dataset)[1]
         end
         return draws
+    elseif input_type == :prior
+        return 5000
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
     end
@@ -73,6 +75,13 @@ function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_in
 
     # Make sure block_size is a multiple of jstep
     block_size = forecast_block_size(m)
+    if end_ind_thin < block_size
+        if input_type != :subset
+            error("Number of draw ($(end_ind_thin)) divided by jstep ($(jstep)) is less than forecast block size.")
+        else
+            error("Last index of subset of draws ($(end_ind_thin)) divided by jstep ($(jstep)) is less than forecast block size.")
+        end
+    end
     if block_size % jstep != 0
         error("forecast_block_size(m) must be a multiple of jstep = $jstep")
     end
@@ -92,7 +101,6 @@ function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_in
     end
     block_inds[end]      = (current_draw+jstep):jstep:end_ind
     block_inds_thin[end] = (current_draw_thin+1):end_ind_thin
-
     return block_inds, block_inds_thin
 end
 

@@ -70,9 +70,9 @@ function scenario_means_bands(m::AbstractDSGEModel, scen::AbstractScenario, outp
     means = DataFrame(date = date_list)
     bands = Dict{Symbol,DataFrame}()
     for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)
-        means[var_name] = var_means
+        means[!, var_name] = var_means
         bands[var_name] = var_bands
-        bands[var_name][:date] = date_list
+        bands[var_name][!, :date] = date_list
     end
     mb = MeansBands(metadata, means, bands)
 

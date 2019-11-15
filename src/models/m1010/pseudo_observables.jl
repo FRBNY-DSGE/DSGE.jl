@@ -1,10 +1,10 @@
 function init_pseudo_observable_mappings!(m::Model1010)
 
-    pseudo_names = if subspec(m) in ["ss2", "ss4"]
+    pseudo_names = if subspec(m) in ["ss2", "ss4", "ss22"]
 	    [:y_t, :y_f_t, :OutputGap,
-	     :π_t, :LongRunInflation,
+	     :π_t, :LongRunInflation, :MarginalCost,
 	     :Wages, :FlexibleWages, :z_t, :Hours, :FlexibleHours,
-	     :RealNaturalRate, :ExAnteRealRate,
+	     :RealNaturalRate, :ExAnteRealRate, :NominalNaturalRate,
 	     :NominalFFR, :ExpectedAvgNominalNaturalRate, :NominalRateGap,
 	     :ExpectedAvg10YearRealRate,    :ExpectedAvg10YearRealNaturalRate,
 	     :ExpectedAvg10YearNominalRate, :ExpectedAvg10YearNominalNaturalRate,:ExpectedAvg10YearRateGap,
@@ -31,6 +31,16 @@ function init_pseudo_observable_mappings!(m::Model1010)
          :Forward30YearRealRate, :Forward30YearRealNaturalRate]
     end
 
+    if subspec(m) in ["ss22"]
+        to_add = [:g_t, :b_liq_t, :b_safe_t, :μ_t, :z_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
+                  :γ_t, :π_star_t, :lr_t, :tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t,
+                  :e_BBB_t, :e_AAA_t]
+        if subspec(m) in ["ss22"]
+            to_add = setdiff(to_add, [:z_t])
+        end
+        push!(pseudo_names, to_add...)
+    end
+
     if subspec(m) in ["ss13", "ss18"]
         push!(pseudo_names, :LiquidityConvenienceYield, :SafetyConvenienceYield,
               :Forward20YearLiquidityConvenienceYield, :Forward20YearSafetyConvenienceYield,
@@ -53,7 +63,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	pseudo[:OutputGap].name = "Output Gap"
 	pseudo[:OutputGap].longname = "Output Gap"
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
 	    pseudo[:π_t].name = "Inflation"
 	    pseudo[:π_t].longname = "Inflation"
 	    pseudo[:π_t].rev_transform = quartertoannual
@@ -61,6 +71,10 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	    pseudo[:LongRunInflation].name = "Long Run Inflation"
 	    pseudo[:LongRunInflation].longname = "Long Run Inflation"
 	    pseudo[:LongRunInflation].rev_transform = quartertoannual
+
+        pseudo[:MarginalCost].name = "Marginal Cost"
+        pseudo[:MarginalCost].longname = "Marginal Cost"
+
 
 	    pseudo[:Wages].name = "Wages"
 	    pseudo[:Wages].longname = "Wages"
@@ -75,7 +89,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	pseudo[:Hours].name = "Hours"
 	pseudo[:Hours].longname = "Hours"
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
 	    pseudo[:FlexibleHours].name     = "Flexible Hours"
 	    pseudo[:FlexibleHours].longname = "Flexible Hours"
     end
@@ -92,7 +106,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
 	pseudo[:NominalFFR].longname = "Nominal FFR at an annual rate"
 	pseudo[:NominalFFR].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvgNominalNaturalRate].name     = "Expected Average Nominal Natural Rate"
         pseudo[:ExpectedAvgNominalNaturalRate].longname = "Natural Rate + Expected Inflation"
         pseudo[:ExpectedAvgNominalNaturalRate].rev_transform = quartertoannual
@@ -110,7 +124,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:ExpectedAvg10YearRealNaturalRate].longname = "Expected Average 10-Year Real Natural Rate of Interest"
     pseudo[:ExpectedAvg10YearRealNaturalRate].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvg10YearNominalRate].name     = "Expected Average 10-Year Nominal Rate"
         pseudo[:ExpectedAvg10YearNominalRate].longname = "Expected Average 10-Year Nominal Interest Rate"
         pseudo[:ExpectedAvg10YearNominalRate].rev_transform = quartertoannual
@@ -132,7 +146,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:ExpectedAvg5YearRealNaturalRate].longname = "Expected Average 5-Year Real Natural Rate of Interest"
     pseudo[:ExpectedAvg5YearRealNaturalRate].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvg5YearNominalRate].name     = "Expected Average 5-Year Rate"
         pseudo[:ExpectedAvg5YearNominalRate].longname = "Expected Average 5-Year Interest Rate"
         pseudo[:ExpectedAvg5YearNominalRate].rev_transform = quartertoannual
@@ -154,7 +168,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:ExpectedAvg20YearRealNaturalRate].longname = "Expected Average 20-Year Real Natural Rate of Interest"
     pseudo[:ExpectedAvg20YearRealNaturalRate].rev_transform = quartertoannual
 
-    if subspec(m) in ["ss2", "ss4"]
+    if subspec(m) in ["ss2", "ss4", "ss22"]
         pseudo[:ExpectedAvg20YearNominalRate].name     = "Expected Average 20-Year Nominal Rate"
         pseudo[:ExpectedAvg20YearNominalRate].longname = "Expected Average 20-Year Nominal Interest Rate"
         pseudo[:ExpectedAvg20YearNominalRate].rev_transform = quartertoannual
@@ -192,7 +206,7 @@ function init_pseudo_observable_mappings!(m::Model1010)
     pseudo[:Forward30YearRealNaturalRate].longname = "Forward 30-Year Real Natural Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
     pseudo[:Forward30YearRealNaturalRate].rev_transform = quartertoannual
 
-    if !(subspec(m) in ["ss2", "ss4"])
+    if !(subspec(m) in ["ss2", "ss4", "ss22"])
         pseudo[:NominalNaturalRate].name     = "Nominal Natural Rate"
         pseudo[:NominalNaturalRate].longname = "Natural Rate + Expected Inflation"
         pseudo[:NominalNaturalRate].rev_transform = quartertoannual
@@ -238,6 +252,14 @@ function init_pseudo_observable_mappings!(m::Model1010)
         pseudo[:Forward20YearSDF].name = "20-year forward stochastic discount factor"
         pseudo[:Forward20YearSDF].longname = "20-year forward stochastic discount factor"
         pseudo[:Forward20YearSDF].rev_transform = quartertoannual
+    end
+
+    # Exogenous processes
+    if subspec(m) in ["ss22"]
+        for i in to_add
+            pseudo[i].name = DSGE.detexify(i)
+            pseudo[i].longname = DSGE.detexify(i)
+        end
     end
 
     # Add to model object

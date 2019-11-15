@@ -24,7 +24,12 @@ function load_fred_data(m::AbstractDSGEModel;
                         verbose::Symbol  = :low)
 
     data_series = parse_data_series(m)
-    mnemonics = data_series[:FRED]
+    if haskey(data_series, :FRED)
+        mnemonics = data_series[:FRED]
+    else
+        # Then no FRED data used, return DataFrame with dates
+        return DataFrame(date = get_quarter_ends(start_date,end_date))
+    end
     vint = data_vintage(m)
     dateformat = "yymmdd"
 
@@ -44,7 +49,7 @@ function load_fred_data(m::AbstractDSGEModel;
         qstart = lastdayofquarter(start_date)
         qend = lastdayofquarter(end_date)
 
-        if !in(qstart, data[:date]) || !in(qend, data[:date])
+        if !in(qstart, data[!,:date]) || !in(qend, data[!,:date])
             println(verbose, :low, "FRED dataset on disk missing start or end date. Fetching data from FRED.")
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
@@ -113,8 +118,8 @@ function load_fred_data(m::AbstractDSGEModel;
                 series = fredseries[i]
                 series_id = Symbol(series.id)
                 rename!(series.df, :value => series_id)
-                map!(x->lastdayofquarter(x), series.df[:date], series.df[:date])
-                data = join(data, series.df[[:date, series_id]], on=:date, kind=:outer)
+                map!(x->lastdayofquarter(x), series.df[!, :date], series.df[!, :date])
+                data = join(data, series.df[!, [:date, series_id]], on=:date, kind=:outer)
             end
         end
 
@@ -134,7 +139,7 @@ function load_fred_data(m::AbstractDSGEModel;
     # Make sure to only return the series and dates that are specified for this
     # model (there may be additional series in the file)
 
-    rows = start_date .<= data[:date] .<= end_date
+    rows = start_date .<= data[!, :date] .<= end_date
     cols = [:date; mnemonics]
     return data[rows, cols]
 end

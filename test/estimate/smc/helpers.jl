@@ -84,7 +84,7 @@ for (block_f, block_a) in zip(blocks_free, blocks_all)
 end
 =#
 
-file = JLD2.jldopen("reference/mvnormal_inputs.jld2")
+file = JLD2.jldopen("$path/../../reference/mvnormal_inputs.jld2")
 para_subset = read(file, "para_subset")
 d_subset    = read(file, "d_subset")
 α           = read(file, "α")
@@ -100,7 +100,7 @@ test_θ_new, test_new_mix_density, test_old_mix_density = DSGE.mvnormal_mixture_
     write(file, "old_mix_density", test_old_mix_density)
 end=#
 
-file = JLD2.jldopen("reference/mvnormal_output.jld2")
+file = JLD2.jldopen("$path/../../reference/mvnormal_output.jld2")
     saved_θ_new = read(file, "θ_new")
     saved_new_mix_density = read(file, "new_mix_density")
     saved_old_mix_density = read(file, "old_mix_density")
@@ -142,14 +142,14 @@ jldopen("reference/ess_output.jld2", true, true, true, IOStream) do file
     write(file, "ess", ess)
 end
 =#
-file = JLD2.jldopen("reference/ess_inputs.jld2")
+file = JLD2.jldopen("$path/../../reference/ess_inputs.jld2")
 loglh = read(file, "loglh")
 current_weights = read(file, "current_weights")
 ϕ_n = read(file, "ϕ_n")
 ϕ_n1 = read(file, "ϕ_n1")
 close(file)
 
-file = JLD2.jldopen("reference/ess_output.jld2")
+file = JLD2.jldopen("$path/../../reference/ess_output.jld2")
 saved_ESS = read(file, "ess")
 close(file)
 

@@ -48,6 +48,8 @@ function init_subspec!(m::Model1010)
         return ss20!(m)
     elseif subspec(m) == "ss21"
         return ss21!(m)
+    elseif subspec(m) == "ss22"
+        return ss22!(m)
     else
         error("This subspec is not defined.")
     end
@@ -549,4 +551,9 @@ function ss21!(m::Model1010)
                        tex_label=@sprintf("\\sigma_{%d,r}",i))
     end
 
+end
+
+function ss22!(m::Model1010)
+    # ss20 but with inflation, long run inflation, etc. as pseudo-observables
+    ss20!(m)
 end

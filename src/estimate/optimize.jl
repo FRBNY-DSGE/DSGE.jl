@@ -99,8 +99,8 @@ function optimize!(m::AbstractDSGEModel,
     # variables used across several optimizers
     rng = m.rng
     temperature = get_setting(m, :simulated_annealing_temperature)
-    max_cycles = get_setting(m, :combined_optimizer_max_cycles)
-    block_frac = get_setting(m, :simulated_annealing_block_proportion)
+    max_cycles  = get_setting(m, :combined_optimizer_max_cycles)
+    block_frac  = get_setting(m, :simulated_annealing_block_proportion)
     H_ = nothing
 
     function neighbor_dsge!(x, x_proposal)
@@ -168,11 +168,14 @@ function optimize!(m::AbstractDSGEModel,
     temperature = get_setting(m, :simulated_annealing_temperature)
     if method == :simulated_annealing
        opt_result = optimizer(f_opt, x_opt;
-                        iterations = iterations, step_size = step_size,
-                        store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
-                        neighbor! = neighbor_dsge!, verbose = verbose, rng = rng, temperature = temperature)
-       converged = opt_result.iteration_converged
-       out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
+                              iterations = iterations, step_size = step_size,
+                              store_trace = store_trace, show_trace = show_trace,
+                              extended_trace = extended_trace,
+                              neighbor! = neighbor_dsge!, verbose = verbose, rng = rng,
+                              temperature = temperature)
+        converged = opt_result.iteration_converged
+        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
+                                  opt_result.iterations)
 
     elseif method == :nelder_mead
         opt_result = optimizer(f_opt, x_opt;
@@ -180,33 +183,41 @@ function optimize!(m::AbstractDSGEModel,
                                store_trace = store_trace, show_trace = show_trace,
                                extended_trace = extended_trace, verbose = verbose, rng = rng)
        converged = opt_result.iteration_converged
-       out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
+       out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
+                                 opt_result.iterations)
 
     elseif method == :csminwel
         opt_result, H_ = optimizer(f_opt, x_opt, H0;
-                        xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
-                        store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
-                        verbose = verbose, rng = rng)
+                                   xtol = xtol, ftol = ftol, grtol = grtol,
+                                   iterations = iterations,
+                                   store_trace = store_trace, show_trace = show_trace,
+                                   extended_trace = extended_trace,
+                                   verbose = verbose, rng = rng)
         converged = opt_result.g_converged || opt_result.f_converged #|| opt_result.x_converged
-        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
+        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
+                                  opt_result.iterations)
 
     elseif method == :lbfgs
         opt_result = optimizer(f_opt, x_opt;
-                        xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
-                        store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
-                        verbose = verbose, rng = rng)
+                               xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
+                               store_trace = store_trace, show_trace = show_trace,
+                               extended_trace = extended_trace,
+                               verbose = verbose, rng = rng)
         converged = opt_result.g_converged || opt_result.f_converged #|| opt_result.x_converged
-        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
+        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
+                                  opt_result.iterations)
 
     elseif method == :combined_optimizer
         opt_result = optimizer(f_opt, x_opt;
-                        xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations, step_size = step_size,
-                        store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
-                        neighbor! = neighbor_dsge!, verbose = verbose, rng = rng, temperature = temperature,
-                               max_cycles = max_cycles)
+                               xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
+                               step_size = step_size, store_trace = store_trace,
+                               show_trace = show_trace, extended_trace = extended_trace,
+                               neighbor! = neighbor_dsge!, verbose = verbose, rng = rng,
+                               temperature = temperature, max_cycles = max_cycles)
         converged = opt_result.g_converged || opt_result.f_converged || opt_result.x_converged
         converged = opt_result.method == "Simulated Annealing" ? opt_result.iteration_converged : converged
-        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
+        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
+                                  opt_result.iterations)
     end
 
     ########################################################################################

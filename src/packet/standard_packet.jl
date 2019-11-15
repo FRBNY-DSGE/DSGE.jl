@@ -51,7 +51,7 @@ end
 plot_standard_packet(m, input_type, cond_type,
     output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
     sections = [:estimation, :forecast]
-    forecast_string = "")
+    forecast_string = "", hist_start-date = 0001-01-01)
 ```
 
 Plot parameter prior/posterior histograms to `figurespath(m, \"estimate\")` and
@@ -61,7 +61,8 @@ function plot_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::S
                               output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                               :shockdecobs, :shockdecpseudo];
                               sections::Vector{Symbol} = [:estimation, :forecast],
-                              forecast_string::String = "")
+                              forecast_string::String = "",
+                              hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"))
     @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast, :irf]."
     if :estimation in sections
         plot_prior_posterior(m)
@@ -69,11 +70,12 @@ function plot_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::S
     if :forecast in sections
         for output_var in setdiff(output_vars, [:irfstates, :irfobs, :irfpseudo])
             make_forecast_plots(m, input_type, cond_type, output_var,
-                                forecast_string = forecast_string)
+                                forecast_string = forecast_string,
+                                hist_start_date = hist_start_date)
         end
     end
     if :irf in sections
-        plot_irf_section(m, input_type, cond_type,output_vars;
+        plot_irf_section(m, input_type, cond_type, output_vars;
                          forecast_string = forecast_string)
     end
 end
@@ -261,7 +263,7 @@ end
 """
 ```
 make_forecast_plots(m, input_type, cond_type, output_var;
-    forecast_string = "", plotroot = "")
+    forecast_string = "", plotroot = "", hist_start_date = 0001-01-01)
 ```
 
 Generate all `output_var` plots for the forecast of `m` specified by the
@@ -270,7 +272,8 @@ specified, plots are saved to `figurespath(m, \"forecast\")`.
 """
 function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
-                             plotroot::String = "")
+                             plotroot::String = "",
+                             hist_start_date = Date("0001-01-01", "yyyy-mm-dd"))
 
     # Output directory
     if isempty(plotroot)
@@ -295,7 +298,11 @@ function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Sy
     end
 
     # Added min() so forecasts that are starting from a year before 2007 will plot properly
-    start_date = min(DSGE.quartertodate("2007-Q1"), date_mainsample_end(m) - Dates.Year(5))
+    if hist_start_date != Date("0001-01-01", "yyyy-mm-dd")
+        start_date = hist_start_date
+    else
+        start_date = min(DSGE.quartertodate("2007-Q1"), date_mainsample_end(m) - Dates.Year(5))
+    end
     if haskey(m.settings, :date_forecast_end)
         end_date = get_setting(m, :date_forecast_end)
 
@@ -307,8 +314,8 @@ function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Sy
             end_date = get_setting(m, :date_forecast_end)
         end
     elseif haskey(m.settings, :forecast_horizons)
-        end_date = get_setting(m, :forecast_start_date) # this will become the end date
-        end_date += Dates.Month(get_setting(m, :forecast_horizons) * 3)
+        end_date = get_setting(m, :date_forecast_start) # this will become the end date
+        end_date += Dates.Month((get_setting(m, :forecast_horizons)-1) * 3)
     else
         end_date = DSGE.quartertodate("2020-Q1")
     end
@@ -414,9 +421,9 @@ function write_forecast_table(fid::IOStream, m::AbstractModel, cond_type::Symbol
     fcast_years = [first_fcast_year, first_fcast_year + 1, first_fcast_year + 2, first_fcast_year + 3]
     fcast_dates = map(year -> Date(year, 12, 31), fcast_years)
 
-    curr_BB_month = month_label(m)
+    curr_month = month_label(m)
 
-    if curr_BB_month != "Jan" && curr_BB_month != "Feb"
+    if curr_month != "Jan" && curr_month != "Feb"
         curr_year = "20"*data_vintage(m)[1:2]
     else
         # Because the first forecast of the year still forecasts the previous year.
@@ -424,9 +431,9 @@ function write_forecast_table(fid::IOStream, m::AbstractModel, cond_type::Symbol
     end
 
     # Open output file, write header
-    year2 = string(parse(curr_year)+1)
-    year3 = string(parse(curr_year)+2)
-    year4 = string(parse(curr_year)+3)
+    year2 = string(Meta.parse(curr_year)+1)
+    year3 = string(Meta.parse(curr_year)+2)
+    year4 = string(Meta.parse(curr_year)+3)
 
     write(fid, "\\begin{table}[h!]\n")
     write(fid, "\\centering\n")
@@ -470,19 +477,18 @@ end
 
 function print_variable_means(m::AbstractModel, cond_type::Symbol, output_var::Symbol,
                               varname::Symbol, vardesc::Vector{String}, fcast_dates::Vector{Date},
-                              last_row::Bool; forecast_string)
+                              last_row::Bool; forecast_string::String = "")
     n_fcast_dates = length(fcast_dates)
 
     mb_curr = read_mb(m, :full, cond_type, output_var; forecast_string = forecast_string)
 
     # Index out Q4 values for current forecast
     all_dates   = mb_curr.metadata[:date_inds]
-    table_dates = map(date -> all_dates[date], fcast_dates)
-    cur_val     = round.(mb_curr.means[[:date, varname]][table_dates, 2], 1)
 
     # The following works because all_dates is an ordered dictionary so can just treat keys as a array and take their indices.
     # The commented out part stopped working because Julia7 doesn't like indexing with a Date key
     table_dates = findall(x -> x in fcast_dates, collect(keys(all_dates))) #map(date -> all_dates[date], fcast_dates)
+    cur_val     = round.(mb_curr.means[:, [:date, varname]][table_dates, 2], digits = 1)
 
     row1_string = vardesc[1]*repeat(" ", 34-length(vardesc[1])) * "& "
     for i in 1:n_fcast_dates
@@ -624,7 +630,7 @@ is not specified, plots from `figurespath(m, \"forecast\")` are used.
 We assume the default number of columns for the joint plot is 3.
 """
 function plot_irf_section(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
-                          otuput_vars::Vector{Symbol};
+                          output_vars::Vector{Symbol};
                           forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4)
     # Create file name related strings
     if isempty(plotroot)

@@ -16,10 +16,10 @@ exp_kal = JLD2.jldopen("$path/../reference/filter_out.jld2", "r") do file
     read(file, "exp_kal")
 end
 df2 = DataFrame()
-df2[:date] = df[:date]
-df2[:obs_cpi] = df[:obs_cpi]
-df2[:obs_gdp] = df[:obs_gdp]
-df2[:obs_nominalrate] = df[:obs_nominalrate]
+df2[!, :date] = df[!, :date]
+df2[!, :obs_cpi] = df[!, :obs_cpi]
+df2[!, :obs_gdp] = df[!, :obs_gdp]
+df2[!, :obs_nominalrate] = df[!, :obs_nominalrate]
 
 # Without providing z0 and P0
 @testset "Check Kalman filter outputs without initializing state/state-covariance" begin

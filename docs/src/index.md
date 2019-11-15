@@ -13,8 +13,8 @@ This Julia-language implementation mirrors the MATLAB code included in the
 Liberty Street Economics blog post
 [The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
 
-The New York Fed DSGE team is currently working on extending the code to include
-forecasts and other features. Extensions of the DSGE model code may be released
+The New York Fed DSGE team is currently working on adding methods to solve nonlinear and
+heterogeneous agent DSGE models. Extensions of the DSGE model code may be released
 in the future at the discretion of the New York Fed.
 
 ## Table of Contents
@@ -30,6 +30,7 @@ Pages = [
   "solving.md",
   "estimation.md",
   "forecast.md",
+  "irf.md",
   "means_bands.md",
   "altpolicy.md",
   "scenarios.md",

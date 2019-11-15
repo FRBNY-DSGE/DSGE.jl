@@ -2,10 +2,10 @@
 
 *DSGE.jl* is an object-oriented approach to solving the New York Fed DSGE model
 that takes advantage of Julia's type system, multiple dispatch, package-handling
-mechanism, and other features. A single model object centralizes all information
-about the model's parameters, states, equilibrium conditions, and settings in a
-single data structure. The model object also keeps track of file locations for
-all I/O operations.
+mechanism, and other features. A single model object[^1] centralizes
+ all information about the model's parameters, states, equilibrium conditions, and
+settings in a single data structure. The model object also keeps track of file locations
+for all I/O operations.
 
 The following objects define a model:
 
@@ -36,3 +36,11 @@ via the following chain:
   in state-space form
 - Transition matrices + Data -> Estimated parameter values
 - Estimated parameters + Transition matrices + Data -> Forecast
+
+[^1]: As of v0.7.3, DSGE.jl no longer houses the code for creating a
+                      model object. We have created a separate package
+                      [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl),
+                      which defines a bare-bones AbstractModel type
+                      for a generic model a user might want to estimate. In DSGE.jl,
+                      we now define a subtype AbstractDSGEModel that includes additional
+                      methods, defaults, etc. that a standard DSGE model would have.

@@ -231,7 +231,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     end
 
     # date indices
-    date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[:date]))
+    date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[!, :date]))
 
     # variable indices
     indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(names(means)))
@@ -396,7 +396,7 @@ startdate_means(mb::MeansBands)
 Get first period in`mb.means`. Assumes `mb.means[product]` is already sorted by
 date.
 """
-startdate_means(mb::MeansBands) = mb.means[:date][1]
+startdate_means(mb::MeansBands) = mb.means[!, :date][1]
 
 """
 ```
@@ -406,7 +406,7 @@ enddate_means(mb::MeansBands)
 Get last period for which `mb` stores means. Assumes `mb.means[product]` is
 already sorted by date.
 """
-enddate_means(mb::MeansBands) = mb.means[:date][end]
+enddate_means(mb::MeansBands) = mb.means[!, :date][end]
 
 
 """
@@ -472,8 +472,13 @@ startdate_bands(mb::MeansBands)
 ```
 
 Get first period for which `mb` stores bands. Assumes `mb.bands` is already sorted by date.
+Also assumes the startdate is same for all observables in MeansBands
 """
-startdate_bands(mb::MeansBands) = mb.bands[collect(keys(mb.bands))][:date][1]
+startdate_bands(mb::MeansBands) = if isempty(mb)
+    Date(0000, 1, 1)
+else
+    first(mb.bands)[2][:, :date][1]
+end
 
 """
 ```
@@ -481,8 +486,13 @@ enddate_bands(mb::MeansBands)
 ```
 
 Get last period in `mb.bands`. Assumes `mb.bands` is already sorted by date.
+Also assumes the startdate is same for all observables in MeansBands
 """
-enddate_bands(mb::MeansBands) = mb.bands[:date][end]
+enddate_bands(mb::MeansBands) = if isempty(mb)
+    Date(0000, 1, 1)
+else
+    first(mb.bands)[2][:, :date][end]
+end
 
 """
 ```
@@ -620,66 +630,14 @@ function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
     my_bands = map(Symbol, vcat(lowers, uppers))
 
     # Extract this variable from Means and bands
-    means = mb.means[[:date, var]]
-    bands = mb.bands[var][[:date; my_bands]]
+    means = mb.means[:, [:date, var]]
+    bands = mb.bands[var][:, [:date; my_bands]]
 
     # Join so mean is on far right and date is on far left
     df = join(bands, means, on = :date)
     rename!(df, var => Symbol("mean"))
 
     return df
-end
-
-"""
-```
-prepare_meansbands_table_irf(mb, var, shock)
-```
-
-Returns a `DataFrame` of means and bands for a particular impulse
-response function of variable (observable, pseudoobservable, or state)
-`v` to shock `s`. Columns are sorted such that the bands are ordered from
-smallest to largest, and the means are on the far right. For example,
-a MeansBands object containing 50\\% and 68\\% bands would be ordered as
-follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
-
-### Inputs
-- `mb::MeansBands`: time-series MeansBands object
-- `var::Symbol`: an economic variable stored in `mb`. If `mb` stores
-  observables, `var` would be an element of `names(m.observables)`. If
-  it stores pseudoobservables, `var` would be the name of a
-  pseudoobservable defined in the pseudomeasurement equation.
-"""
-function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, var::Symbol)
-
-    @assert get_product(mb) in [:irf] "prepare_meansbands_table_irf can only be used for irfs"
-    @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
-
-    # get the variable-shock combination we want to print
-    # varshock = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for var in vars]
-    varshock = Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock")
-
-    # extract the means and bands for this irf
-    df = mb.bands[varshock][map(Symbol, which_density_bands(mb))]
-    df[:mean] = mb.means[varshock]
-
-    return df
-end
-function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, vars::Vector{Symbol})
-
-    # Print all vars by default
-    if isempty(vars)
-        vars = get_variables(mb)
-    end
-
-    # Make dictionary to return
-    irfs = Dict{Symbol, DataFrame}()
-
-    # Make tables for each irf
-    for var in vars
-        irfs[var] = prepare_meansbands_table_irf(mb, shock, var)
-    end
-
-    return irfs
 end
 
 """
@@ -727,9 +685,9 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     # Get the variable-shock combinations we want to print
     varshocks = [Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock") for shock in shocks]
     # Fetch the columns corresponding to varshocks
-    df_shockdec = mb_shockdec.means[union([:date], varshocks)]
-    df_trend    = mb_trend.means[[:date, var]]
-    df_dettrend = mb_dettrend.means[[:date, var]]
+    df_shockdec = mb_shockdec.means[!,union([:date], varshocks)]
+    df_trend    = mb_trend.means[!,[:date, var]]
+    df_dettrend = mb_dettrend.means[!,[:date, var]]
 
     # Line up dates between trend, dettrend and shockdec
     df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
@@ -738,11 +696,11 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     rename!(df_shockdec, var => :dettrend)
 
     # Add each shock's contribution and deterministic trend to output DataFrame
-    df = DataFrame(date = df_shockdec[:date])
+    df = DataFrame(date = df_shockdec[!,:date])
     for col in setdiff(names(df_shockdec), [:date, :trend])
-        df[col] = df_shockdec[col]
+        df[!,col] = df_shockdec[!,col]
     end
-    df_shockdec[:dettrend] = df_shockdec[:dettrend]
+    df_shockdec[!,:dettrend] = df_shockdec[!,:dettrend]
 
     # Rename columns to just the shock names
     map(x -> rename!(df, x => parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
@@ -755,10 +713,10 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         # Truncate to just the dates we want
         startdate = df[1, :date]
         enddate   = df[end, :date]
-        df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[:date] .<= enddate, [:date, var]]
+        df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[!,:date] .<= enddate, [:date, var]]
 
         df_shockdec = join(df_shockdec, df_mean, on = :date, kind = :inner)
-        df[:detrendedMean] = df_shockdec[var] - df_shockdec[:trend]
+        df[!,:detrendedMean] = df_shockdec[!,var] - df_shockdec[!,:trend]
     end
 
     # Group shocks if desired
@@ -766,12 +724,12 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     v0 = zeros(nperiods)
     for group in groups
         # Sum shock values for each group
-        shock_vectors = [df[shock] for shock in group.shocks]
+        shock_vectors = [df[!,shock] for shock in group.shocks]
         shock_sum = reduce(+, shock_vectors; init = v0)
-        df[Symbol(group.name)] = shock_sum
+        df[!,Symbol(group.name)] = shock_sum
 
         # Delete original (ungrouped) shocks from df
-        deletecols!(df, setdiff(group.shocks, [Symbol(group.name)]))
+        select!(df, Not(setdiff(group.shocks, [Symbol(group.name)])))
     end
 
     # Remove Unicode characters from shock names
@@ -786,3 +744,63 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     return df
 end
+
+
+#="""
+```
+prepare_meansbands_table_irf(mb, var, shock)
+```
+
+Returns a `DataFrame` of means and bands for a particular impulse
+response function of variable (observable, pseudoobservable, or state)
+`v` to shock `s`. Columns are sorted such that the bands are ordered from
+smallest to largest, and the means are on the far right. For example,
+a MeansBands object containing 50\\% and 68\\% bands would be ordered as
+follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
+
+### Inputs
+- `mb::MeansBands`: time-series MeansBands object
+- `var::Symbol`: an economic variable stored in `mb`. If `mb` stores
+  observables, `var` would be an element of `names(m.observables)`. If
+  it stores pseudoobservables, `var` would be the name of a
+  pseudoobservable defined in the pseudomeasurement equation.
+"""
+function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, var::Symbol)
+
+    @assert get_product(mb) in [:irf] "prepare_meansbands_table_irf can only be used for irfs"
+    @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
+
+    # get the variable-shock combination we want to print
+    # varshock = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for var in vars]
+    varshock = Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock")
+
+    # extract the means and bands for this irf
+    df = mb.bands[varshock][map(Symbol, which_density_bands(mb))]
+    df[:mean] = mb.means[varshock]
+
+    return df
+end
+
+function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, vars::Vector{Symbol})
+
+    # Print all vars by default
+    if isempty(vars)
+        vars = get_variables(mb)
+    end
+
+    # Make dictionary to return
+    irfs = Dict{Symbol, DataFrame}()
+    df = DataFrame()
+
+    # Make tables for each irf
+    for var in vars
+        @show df
+        if isempty(df)
+            df = prepare_meansbands_table_irf(mb, shock, var)
+        else
+            join(df, prepare_meansbands_table_irf(mb, shock, var), on = :date)
+        end
+    end
+
+    return df
+end=#

@@ -40,6 +40,7 @@ meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
                                          pathfcn = workpath, fileformat = :jld2)
         @test @test_matrix_approx_eq exp_modal_means[var] load(filename, "means")
         @test @test_matrix_approx_eq exp_modal_bands[var] load(filename, "bands")
+        @test_throws ErrorException compute_meansbands(m, :mode, :none, [:invalid]; compute_shockdec_bands = true, verbose = :none)
     end
 end
 
@@ -57,6 +58,17 @@ meansbands_to_matrix(m, :full, :none, output_vars; verbose = :none)
         @test @test_matrix_approx_eq exp_full_means[var] load(filename, "means")
         @test @test_matrix_approx_eq exp_full_bands[var] load(filename, "bands")
     end
+end
+
+fcast_series = load("$(path)/../reference/mb_reverse_transform.jld2", "fcast_series")
+transform = load("$(path)/../reference/mb_reverse_transform.jld2", "transform")
+y0_index = load("$(path)/../reference/mb_reverse_transform.jld2", "y0_index")
+pop_growth = load("$(path)/../reference/mb_reverse_transform.jld2", "pop_growth")
+data = load("$(path)/../reference/mb_reverse_transform.jld2", "data")
+transformed_series = load("$(path)/../reference/mb_reverse_transform.jld2", "transformed_series")
+
+@testset "Test mb_reverse_transform" begin
+    @test DSGE.mb_reverse_transform(fcast_series, transform, :forecast, :obs, y0_index = y0_index, data = data, pop_growth = pop_growth) == transformed_series
 end
 
 nothing

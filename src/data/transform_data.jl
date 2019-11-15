@@ -52,14 +52,14 @@ function transform_data(m::AbstractDSGEModel, levels::DataFrame;
 
     # Step 2: apply transformations to each series
     transformed = DataFrame()
-    transformed[:date] = levels[:date]
+    transformed[!,:date] = levels[!,:date]
 
     data_transforms = collect_data_transforms(m)
 
     for series in keys(data_transforms)
         println(verbose, :high, "Transforming series $series...")
         f = data_transforms[series]
-        transformed[series] = f(levels)
+        transformed[!, series] = f(levels)
     end
 
     sort!(transformed, [:date])
@@ -131,13 +131,13 @@ function transform_population_data(population_data::DataFrame, population_foreca
                                    pad_forecast_start::Bool = false)
 
     # Unfiltered population data
-    population_recorded = population_data[[:date, population_mnemonic]]
+    population_recorded = population_data[:, [:date, population_mnemonic]]
 
     # Make sure first period of unfiltered population forecast is the first forecast quarter
     if !isempty(population_forecast) && !pad_forecast_start
         last_recorded_date = population_recorded[end, :date]
         if population_forecast[1, :date] <= last_recorded_date
-            last_recorded_ind   = findall(population_forecast[:date] .== last_recorded_date)[1]
+            last_recorded_ind   = findall(population_forecast[!,:date] .== last_recorded_date)[1]
             population_forecast = population_forecast[(last_recorded_ind+1):end, :]
         end
         @assert subtract_quarters(population_forecast[1, :date], last_recorded_date) == 1
@@ -145,10 +145,10 @@ function transform_population_data(population_data::DataFrame, population_foreca
 
     # population_all: full unfiltered series (including forecast)
     population_all = if isempty(population_forecast)
-        population_recorded[population_mnemonic]
+        population_recorded[!,population_mnemonic]
     else
         pop_all = vcat(population_recorded, population_forecast)
-        pop_all[population_mnemonic]
+        pop_all[!,population_mnemonic]
     end
 
     # HP filter
@@ -159,27 +159,27 @@ function transform_population_data(population_data::DataFrame, population_foreca
 
     # Output dictionary for population data
     population_data_out = DataFrame()
-    population_data_out[:date] = convert(Array{Date}, population_recorded[:date])
-    population_data_out[:dlpopulation_recorded] = difflog(population_recorded[population_mnemonic])
+    population_data_out[!,:date] = convert(Array{Date}, population_recorded[!,:date])
+    population_data_out[!,:dlpopulation_recorded] = difflog(population_recorded[!,population_mnemonic])
 
     n_population_forecast_obs = size(population_forecast,1)
 
     if use_hpfilter
         filt_pop_recorded = filtered_population[1:end-n_population_forecast_obs]
-        population_data_out[:filtered_population_recorded] = filt_pop_recorded
-        population_data_out[:dlfiltered_population_recorded] = difflog(filt_pop_recorded)
+        population_data_out[!,:filtered_population_recorded] = filt_pop_recorded
+        population_data_out[!,:dlfiltered_population_recorded] = difflog(filt_pop_recorded)
     end
 
     # Output dictionary for population forecast
     population_forecast_out = DataFrame()
     if n_population_forecast_obs > 0
-        population_forecast_out[:date] = convert(Array{Date}, population_forecast[:date])
-        population_forecast_out[:dlpopulation_forecast] = difflog(population_forecast[population_mnemonic])
+        population_forecast_out[!,:date] = convert(Array{Date}, population_forecast[!,:date])
+        population_forecast_out[!,:dlpopulation_forecast] = difflog(population_forecast[!,population_mnemonic])
 
         if use_hpfilter
             filt_pop_fcast = filtered_population[end-n_population_forecast_obs:end]
-            population_forecast_out[:filtered_population_forecast]   = filt_pop_fcast[2:end]
-            population_forecast_out[:dlfiltered_population_forecast] = difflog(filt_pop_fcast)[2:end]
+            population_forecast_out[!,:filtered_population_forecast]   = filt_pop_fcast[2:end]
+            population_forecast_out[!,:dlfiltered_population_forecast] = difflog(filt_pop_fcast)[2:end]
         end
     end
 

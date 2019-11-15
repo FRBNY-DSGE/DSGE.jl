@@ -20,7 +20,7 @@ function write_forecast_centric_packet(m::AbstractModel, input_type::Symbol, con
     @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast, :irf]."
 
     # Title and authors
-    title = "Estimation and Forecasting Results \\\\ " * description(m)
+    title = "Estimation and Forecasting Results \\\\ " * DSGE.description(m)
     authors = "User"
 
     # Compute file name

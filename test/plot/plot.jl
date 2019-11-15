@@ -46,6 +46,11 @@ plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :non
                       verbose = :none)
 plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none,
                       flip = true, verbose = :none)
+plot_prior_posterior(m, :τ)
+plot_prior_posterior(m, [:τ, :σ_g])
+cloud = load("$path/../reference/output_data/an_schorfheide/ss0/estimate/raw/smc_cloud_vint=151001.jld2")["cloud"]
+plot_posterior_intervals(m, cloud = cloud)
+plot_posterior_intervals(m, [cloud, cloud])
 
 # Plot scenario, zeroing out measurement error
 for para in [:e_y, :e_π, :e_R]
@@ -68,3 +73,38 @@ hist_mb = read_mb(m, :full, :none, :histobs)
 fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
 hair_plot(:obs_nominalrate, realized, [hist_mb], [fcast_mb];
           plotroot = saveroot(m), verbose = :none)
+
+# Things requiring estimated files
+tmp_saveroot = saveroot(m)
+m <= Setting(:saveroot, "$path/../reference")
+plot_history_and_forecast(m, :y_t, :pseudo, :full, :none,
+                          bdd_and_unbdd = true,
+                          start_date = DSGE.quartertodate("2007-Q1"),
+                          verbose = :none, plotroot = tmp_saveroot)
+plot_forecast_comparison(m, m, :y_t, :pseudo, :full, :none,
+                         bdd_and_unbdd = true,
+                         start_date = DSGE.quartertodate("2007-Q1"),
+                         verbose = :none, plotroot = tmp_saveroot)
+plot_shock_decomposition(m, :y_t, :pseudo, :full, :none, verbose = :none, plotroot = tmp_saveroot)
+plot_impulse_response(m, :rm_sh, collect(keys(m.pseudo_observables)), :pseudo, :full, :none,
+                      verbose = :none, plotroot = tmp_saveroot)
+plot_impulse_response(m, :rm_sh, collect(keys(m.pseudo_observables)), :pseudo, :full, :none,
+                      flip = true, verbose = :none, plotroot = tmp_saveroot)
+plot_altpolicies([m], :obs_gdp, :obs, :none, plotroot = tmp_saveroot)
+plot_altpolicies([m], :y_t, :pseudo, :none, plotroot = tmp_saveroot)
+plot_forecast_comparison(m, m, :obs_gdp, :obs, :full, :none, plotroot = tmp_saveroot)
+plot_forecast_comparison(m, m, :y_t, :pseudo, :full, :none, plotroot = tmp_saveroot)
+plot_forecast_decomposition(m, m, :obs_gdp, :obs, :full, :none, :none, plotroot = tmp_saveroot)
+plot_forecast_decomposition(m, m, :y_t, :pseudo, :full, :none, :none, plotroot = tmp_saveroot)
+plot_forecast_sequence([m,m], [:mode, :mode], [:none, :none], m, :mode, :none, :obs, :obs_gdp,
+                       plotroot = tmp_saveroot, start_date = DSGE.quartertodate("1960-Q1"),
+                       end_date = DSGE.quartertodate("1961-Q1"))
+plot_forecast_sequence([m,m], [:full, :full], [:none, :none], m, :full, :none, :obs, :obs_gdp,
+                       plotroot = tmp_saveroot, start_date = DSGE.quartertodate("1960-Q1"),
+                       end_date = DSGE.quartertodate("1961-Q1"))
+plot_forecast_sequence([m,m], [:mode, :mode], [:none, :none], m, :mode, :none, :pseudo, :y_t,
+                       plotroot = tmp_saveroot, start_date = DSGE.quartertodate("1960-Q1"),
+                       end_date = DSGE.quartertodate("1961-Q1"))
+plot_forecast_sequence([m,m], [:full, :full], [:none, :none], m, :full, :none, :pseudo, :y_t,
+                       plotroot = tmp_saveroot, start_date = DSGE.quartertodate("1960-Q1"),
+                       end_date = DSGE.quartertodate("1961-Q1"))

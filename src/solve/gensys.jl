@@ -65,7 +65,6 @@ function gensys(Γ0::Array{Float64, 2}, Γ1::Array{Float64, 2}, c::Array{Float64
             #ywt = Vector{Complex{Float64}}(undef,0)
             #gev = Vector{Complex{Float64}}(undef,0)
             #loose = Array{Float64, 2}(undef,0,0)
-
             return G1, C, impact, eu #G1, C, impact, fmat, fwt, ywt, gev, eu, loose
         else
             rethrow(ex)
@@ -105,12 +104,12 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Arr
     nunstab = n - sum(select)
 
     if zxz == 1
-        @warn "Coincident zeros. Indeterminacy and/or nonexistence."
+        @warn "Coincident zeros. Indeterminancy and/or nonexistence."
         eu=[-2, -2]
 
         G1     = Array{Float64, 2}(undef,0, 0)
         C      = Array{Float64, 1}(undef,0)
-        impact = Array{Float64, 2}(undef,0)
+        impact = Array{Float64, 2}(undef,0,0)
         #fmat   = Array{Complex{Float64}, 2}(undef,0,0)
         #fwt    = Array{Complex{Float64}, 2}(undef,0,0)
         #ywt    = Vector{Complex{Float64}}(undef,0)
@@ -186,7 +185,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Arr
         eu[2] = 1
     else
         if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @warn "Indeterminacy: $(nloose) loose endogeneous error(s)"
+            @warn "Indeterminancy: $(nloose) loose endogenous error(s)"
         end
     end
 

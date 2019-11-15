@@ -109,8 +109,8 @@ Change column `col` of dates in `df` from String to Date, and map any dates give
 interior of a quarter to the last day of the quarter.
 """
 function format_dates!(col::Symbol, df::DataFrame)
-    df[col] = Dates.Date.(df[col])
-    map!(lastdayofquarter, df[col], df[col])
+    df[!,col] = Dates.Date.(df[!,col])
+    map!(lastdayofquarter, df[!,col], df[!,col])
 end
 
 """
@@ -128,12 +128,21 @@ function missing2nan(a::Array)
     return a_new
 end
 
+function missing2nan!(df::DataFrame)
+    for col in names(df)
+        if col != :date
+            df[!, col] = map(x -> ismissing(x) ? NaN : x, df[!, col])
+            df[!, col] = convert(Vector{Float64}, df[!, col])
+        end
+    end
+end
+
 # Temp function to ensure proper transition into 0.7
 function nan2missing!(df::DataFrame)
     for col in names(df)
         if col != :date
-            df[col] = convert(Vector{Union{Missing, Float64}}, df[col])
-            df[col] = replace(x -> isnan(x) ? missing : x, df[col])
+            df[!,col] = convert(Vector{Union{Missing, Float64}}, df[!,col])
+            df[!,col] = replace(x -> isnan(x) ? missing : x, df[!,col])
         end
     end
 end
@@ -147,10 +156,10 @@ Convert all NAs in a DataFrame to NaNs.
 """
 function na2nan!(df::DataFrame)
     for col in names(df)
-        if typeof(df[col])==Vector{Date}
+        if typeof(df[!,col])==Vector{Date}
             nothing
         else
-            df[ismissing.(df[col]), col] = NaN
+            df[ismissing.(df[!,col]), col] = NaN
         end
     end
 end
@@ -176,7 +185,8 @@ missing_cond_vars!(m, df; cond_type = :none)
 Make conditional period variables not in `cond_semi_names(m)` or
 `cond_full_names(m)` missing if necessary.
 """
-function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none)
+function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none,
+                            check_empty_columns::Bool = true)
     if cond_type in [:semi, :full]
         # Get appropriate
         cond_names = if cond_type == :semi
@@ -188,15 +198,29 @@ function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symb
         # Make non-conditional variables missing
         cond_names_missing = setdiff(names(df), [cond_names; :date])
         for var_name in cond_names_missing
-            df[var_name] = convert(Vector{Union{Missing, eltype(df[var_name])}}, df[var_name])
-            df[df[:date] .>= date_forecast_start(m), var_name] = missing
+            df[!,var_name] = convert(Vector{Union{Missing, eltype(df[!,var_name])}}, df[!,var_name])
+            df[df[!,:date] .>= date_forecast_start(m), var_name] .= missing
         end
 
-        # Warn if any conditional variables are missing
+        # Throw an error if any conditional variables are missing
+        missing_vars = Vector{Symbol}(undef,0)
         for var in cond_names
-            if any(ismissing.(df[df[:date] .>= date_forecast_start(m), var]))
-                @warn "Missing some conditional observations for " * string(var)
+            if any(ismissing.(df[df[!,:date] .>= date_forecast_start(m), var]))
+                if check_empty_columns
+                    push!(missing_vars, var)
+                else
+                    @warn "Missing some conditional observations for " * string(var)
+                end
             end
+        end
+        if check_empty_columns && !isempty(missing_vars)
+            # parse missing_vars
+            to_print = Vector{String}(undef,0)
+            for var in missing_vars
+                push!(to_print, string(var) * ", ")
+            end
+            as_str = join(to_print)
+            error("Column(s) $(as_str[1:end-2]) are missing conditional observations.")
         end
     end
 end
@@ -268,10 +292,10 @@ function reconcile_column_names(a::DataFrame, b::DataFrame)
     new_a_cols = setdiff(names(b), names(a))
     new_b_cols = setdiff(names(a), names(b))
     for col in new_a_cols
-        a[col] = fill(missing, size(a, 1))
+        a[!, col] = fill(missing, size(a, 1))
     end
     for col in new_b_cols
-        b[col] = fill(missing, size(b, 1))
+        b[!, col] = fill(missing, size(b, 1))
     end
     return a, b
 end

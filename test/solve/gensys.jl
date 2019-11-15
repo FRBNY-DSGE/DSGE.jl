@@ -23,3 +23,47 @@ eu_exp = h5read(file, "eu")
 
     @test isequal(eu_exp, eu)
 end
+
+G1, C, impact, eu = gensys(Γ0, Γ1, C, Ψ, Π)
+
+# trigger indeterminancy error
+m = Model1002()
+Γ0, Γ1, C, Ψ, Π = eqcond(m)
+Γ1[m.equilibrium_conditions[:eq_z], m.endogenous_states[:y_t]] = 1.
+Γ1[m.equilibrium_conditions[:eq_z], m.endogenous_states[:y_f_t]] = 1.
+
+@testset "Check indeterminancy zeros warning" begin
+    @test_logs (:warn, "Indeterminancy: 1 loose endogenous error(s)") gensys(Γ0, Γ1, C, Ψ, Π)
+end
+
+# trigger coincident zeros
+m = Model1002()
+Γ0, Γ1, C, Ψ, Π = eqcond(m)
+Γ1[1,:] .= 0.
+Γ0[1,:] .= 0.
+Ψ[1,:] .= 0.
+Π[1,:] .= 0.
+@testset "Check output coincident zeros warning" begin
+    @test_logs (:warn, "Coincident zeros. Indeterminancy and/or nonexistence.") gensys(Γ0, Γ1, C, Ψ, Π)
+    @info "After this message, a warning will be intentionally printed."
+    G1, tmpC, impact, eu = gensys(Γ0, Γ1, C, Ψ, Π)
+    @test eu == vec([-2, -2])
+    @test isempty(G1)
+    @test isempty(tmpC)
+    @test isempty(impact)
+end
+
+Γ1[1,1] = 1e3
+@testset "Check nonexistence warning" begin
+    @test_logs (:warn, "Nonexistence: number of unstable roots exceeds number of jump variables") (:warn, "Indeterminancy: 1 loose endogenous error(s)") gensys(Γ0, Γ1, C, Ψ, Π)
+end
+
+Random.seed!(1793)
+F = schur!(complex(rand(3,3)), complex(rand(3,3)))
+F.T[1,1] = abs(F.S[1,1]) * (1 + 1e-3)
+Γ0, Γ1, ~, ~, ~ = eqcond(m)
+Fm = schur!(complex(Γ0), complex(Γ1))
+@testset "Check new_div function" begin
+    @test DSGE.new_div(F) == (1+5e-4)
+    @test DSGE.new_div(Fm) == 1.01
+end

@@ -54,14 +54,14 @@ function load_scenario_targets!(m::AbstractDSGEModel, scen::Scenario, draw_index
         @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
 
         for (target_name, target_index) in target_inds
-            scen.targets[target_name] = raw_targets[target_index, :]
+            scen.targets[!, target_name] = raw_targets[target_index, :]
         end
     end
 
     @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
 
     for (target_name, target_index) in target_inds
-        scen.targets[target_name] = raw_targets[target_index, :]
+        scen.targets[!, target_name] = raw_targets[target_index, :]
     end
 
     return scen.targets
@@ -308,7 +308,7 @@ function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg
 end
 
 
-function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
+#=function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
@@ -382,7 +382,7 @@ function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg
     end
 
     return fcast_series, transform
-end
+end=#
 
 function read_scenario_output(m::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)

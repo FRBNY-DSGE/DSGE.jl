@@ -32,6 +32,7 @@ necessary.
 function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
+    check_empty_columns::Bool = true,
     verbose::Symbol = :none) where {S<:AbstractFloat}
 
     # Compute everything that will be needed to plot original output_vars
@@ -65,7 +66,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     if !irfs_only
         if isempty(df)
             data_verbose = verbose == :none ? :none : :low
-            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = data_verbose)
+            df = load_data(m; cond_type = cond_type, try_disk = true, check_empty_columns = check_empty_columns, verbose = data_verbose)
         else
             @assert df[1, :date] == date_presample_start(m)
             @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
@@ -118,15 +119,20 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
         if get_setting(m, :sampling_method) == :MH
             params = convert(Vector{Float64}, h5read(input_file_name, "params"))
         elseif get_setting(m, :sampling_method) == :SMC
-            if :mode in collect(keys(forecast_input_file_overrides(m)))
-                params = convert(Vector{Float64}, h5read(input_file_name, "params"))
+            if input_type in [:mode, :mode_draw_shocks]
+                # If mode is in forecast overrides, want to use the file specified
+                if :mode in collect(keys(forecast_input_file_overrides(m)))
+                    params = convert(Vector{Float64}, h5read(input_file_name, "params"))
+                    # If not, load it from the cloud
+                else
+                    cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
+                    params = cloud.particles[argmax(get_logpost(cloud))].value
+                end
             else
-                cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
-                params = cloud.particles[argmax(get_logpost(cloud))].value
+                error("SMC mean not implemented yet")
             end
-            #params = map(Float64, h5read(input_file_name, "smcparams"))
         else
-            throw("Invalid :sampling method specification. Change in setting :sampling_method")
+            error("Invalid :sampling method specification. Change in setting :sampling_method")
         end
     # Load full distribution
     elseif input_type == :full
@@ -143,7 +149,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
 
             params = Matrix{Float64}(params_unweighted[:, inds]')
         else
-            throw("Invalid :sampling method specification. Change in setting :sampling_method")
+            error("Invalid :sampling method specification. Change in setting :sampling_method")
         end
 
     # Load subset of full distribution
@@ -165,11 +171,11 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
     # Return initial parameters of model object
     elseif input_type == :init || input_type == :init_draw_shocks
 
-        if m.spec == "het_dsge"
+#=        if m.spec == "het_dsge"
             init_parameters!(m, testing_gamma = false)
         else
             init_parameters!(m)
-        end
+        end =#
         tmp = map(α -> α.value, m.parameters)
         params = convert(Vector{Float64}, tmp)
 
@@ -228,6 +234,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
         for (i, j) in zip(1:ndraws, block_inds)
             try_again = true
             param_try = vec(rand(m.parameters, ndraws)[:, i])
+            # Need to do this to ensure that draws from prior don't return -Inf likelihood
             while try_again
                 param_try = vec(rand(m.parameters, ndraws)[:, i])
                 try
@@ -309,14 +316,16 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       use_filtered_shocks_in_shockdec::Bool = false,
                       shock_name::Symbol = :none,
                       shock_var_name::Symbol = :none,
-                      shock_var_value::Float64 = 0.0)
+                      shock_var_value::Float64 = 0.0,
+                      check_empty_columns = true)
 
     ### Common Setup
 
     # Add necessary output_vars and load data
     output_vars, df = prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
                                                df = df, verbose = verbose,
-                                               subset_inds = subset_inds)
+                                               subset_inds = subset_inds,
+                                               check_empty_columns = check_empty_columns)
 
     # Get output file names
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -359,7 +368,28 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     ### Multiple-Draw Forecasts
 
     elseif input_type in [:full, :subset, :prior, :init_draw_shocks, :mode_draw_shocks]
+        if get_setting(m, :sampling_method) == :SMC
+            subset_cond = input_type == :subset && get_jstep(m, length(subset_inds)) > 1
+            other_cond = input_type in [:full, :prior, :init_draw_shocks, :mode_draw_shocks] &&
+                get_jstep(m, n_forecast_draws(m, :full)) > 1
+            if subset_cond || other_cond
+                answer = ""
+                invalid_answer = true
+                while invalid_answer
+                    println("WARNING: The forecast draws are being thinned by $(get_jstep(m, n_forecast_draws(m,:full))). This is not recommended for forecasts using an SMC estimation. Do you want to continue? (y/n)")
+                    answer = readline(stdin)
+                    if (answer == "y" || answer == "n")
+                        invalid_answer = false
+                    else
+                        println("Invalid answer! Must be `y` or `n`")
+                    end
+                end
 
+                if answer == "n"
+                    throw(error("Forecast halted by user."))
+                end
+            end
+        end
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)

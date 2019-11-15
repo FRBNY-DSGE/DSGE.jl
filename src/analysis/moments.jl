@@ -28,8 +28,10 @@ function load_posterior_moments(m::AbstractDSGEModel;
     if isempty(cloud)
         if get_setting(m, :sampling_method) == :MH
             params = load_draws(m, :full)
-            params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
+            params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params # TODO
             params = params'
+            weights = Vector{Float64}(undef, 0)
+            weighted = false
         elseif get_setting(m, :sampling_method) == :SMC
             cloud = get_cloud(m)
             params = get_vals(cloud)
@@ -40,7 +42,7 @@ function load_posterior_moments(m::AbstractDSGEModel;
     else
         params = get_vals(cloud)
         weights = get_weights(cloud)
-    end
+   end
 
     # Index out the fixed parameters
     if include_fixed
@@ -79,28 +81,14 @@ function load_posterior_moments(m::AbstractDSGEModel,
 
     for (i, c) in enumerate(clouds)
         df_i = load_posterior_moments(m; weighted = weighted, cloud = c, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
-        p_mean[:, i] = df_i[:post_mean]
-        p_lb[:, i] = df_i[:post_lb]
-        p_ub[:, i] = df_i[:post_ub]
+        p_mean[:, i] = df_i[!,:post_mean]
+        p_lb[:, i] = df_i[!,:post_lb]
+        p_ub[:, i] = df_i[!,:post_ub]
     end
-    param = load_posterior_moments(m; cloud = clouds[1], load_bands = true, include_fixed = false)[:param]
+    param = load_posterior_moments(m; cloud = clouds[1], load_bands = true, include_fixed = false)[!,:param]
     df = DataFrame(param = param, post_mean = dropdims(mean(p_mean, dims = 2), dims = 2), post_std = dropdims(std(p_mean, dims = 2),dims = 2), post_lb = dropdims(mean(p_lb, dims = 2), dims = 2), post_ub = dropdims(mean(p_ub, dims = 2), dims = 2))
 
     return df
-
-    #=all_draws = Matrix{Float64}(n_params, n_particles*n_clouds)
-    all_weights = Vector{Float64}(n_particles*n_clouds)
-
-    for (i, c) in enumerate(clouds)
-        all_draws[:, ((i-1)*n_particles+1):(i*n_particles)] = get_vals(c)
-        all_weights[((i-1)*n_particles+1):(i*n_particles)] = get_weights(c)
-    end
-
-    cloud = ParticleCloud(m, n_particles*n_clouds)
-    update_draws!(cloud, all_draws)
-    update_weights!(cloud, all_weights)
-
-    load_posterior_moments(m; weighted = weighted, cloud = cloud, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)=#
 end
 
 # Base method
@@ -115,25 +103,30 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
         params_std = vec(std(params, Weights(weights), 2, corrected = false))
     else
         params_mean = vec(mean(params, dims = 2))
-        params_std  = vec(std(params, 2))
+        params_std  = vec(std(params, dims = 2))
     end
 
     df = DataFrame()
-    df[:param] = tex_labels
-    df[:post_mean] = params_mean
-    df[:post_std]  = params_std
+    df[!,:param] = tex_labels
+    df[!,:post_mean] = params_mean
+    df[!,:post_std]  = params_std
 
     if load_bands
         post_lb = Vector{Float64}(undef, length(params_mean))
         post_ub = similar(post_lb)
         for i in 1:length(params_mean)
-            post_lb[i] = quantile(params[i, :], Weights(weights), .05)
-            post_ub[i] = quantile(params[i, :], Weights(weights), .95)
+            if weighted
+                post_lb[i] = quantile(params[i, :], Weights(weights), .05)
+                post_ub[i] = quantile(params[i, :], Weights(weights), .95)
+            else
+                post_lb[i] = quantile(params[i, :], .05)
+                post_ub[i] = quantile(params[i, :], .95)
+            end
         end
     end
 
-    df[:post_lb] = post_lb
-    df[:post_ub] = post_ub
+    df[!,:post_lb] = post_lb
+    df[!,:post_ub] = post_ub
 
     return df
 end
@@ -804,8 +797,8 @@ function find_density_bands(draws::AbstractArray, percents::Vector{T};
 
     for p in percents
         out = find_density_bands(draws, p, minimize = minimize)
-        bands[Symbol("$(100*p)% UB")] = vec(out[2,:])
-        bands[Symbol("$(100*p)% LB")] = vec(out[1,:])
+        bands[!, Symbol("$(100*p)% UB")] = vec(out[2,:])
+        bands[!, Symbol("$(100*p)% LB")] = vec(out[1,:])
     end
     bands
 end
@@ -842,4 +835,230 @@ function write_table_postamble(fid::IOStream; small::Bool=false, tabular::Bool=f
     end
 
     @printf fid "\\end{document}"
+end
+
+"""
+```
+sample_λ(m, pred_dens, θs, T = -1; parallel = true) where S<:AbstractFloat
+sample_λ(m, pred_dens, T = -1; parallel = true) where S<:AbstractFloat
+```
+
+Computes and samples from the conditional density p(λ_t|θ, I_t, P) for
+particle in `θs`, which represents the posterior distribution. The sampled
+λ particles represent the posterior distribution p(λ_{t|t} | I_t, P).
+
+If no posterior distribution is passed in, then the function computes
+the distribution of λ_{t|t} for a static pool.
+
+### Inputs
+
+- `m::PoolModel{S}`: `PoolModel` object
+- `pred_dens::Matrix{S}`: matrix of predictive densities
+- `θs::Matrix{S}`: matrix of particles representing posterior distribution of θ
+- `T::Int64`: final period for tempered particle filter
+
+where `S<:AbstractFloat`.
+
+### Keyword Argument
+
+- `parallel::Bool`: use parallel computing to compute and sample draws of λ
+
+### Outputs
+
+- `λ_sample::Vector{Float64}`: sample of draws of λs; together with (θ,λ) represents a joint density
+
+```
+"""
+function sample_λ(m::PoolModel{S}, pred_dens::Matrix{S}, θs::Matrix{S}, T::Int64 = -1;
+                  parallel::Bool = false,
+                  tuning0::Dict{Symbol,Any} = Dict{Symbol,Any}()) where S<:AbstractFloat
+    # Check size and orientation of θs is correct: assume particle_num x parameter_num
+    if length(m.parameters) != size(θs,2)
+        error("number of parameters in PoolModel do not match number of parameters in matrix of posterior draws of θ")
+    end
+
+    # Initialize necessary objects
+    if T <= 0
+         error("T must be positive") # No period provided or is invalid
+    end
+    tuning = isempty(tuning0) ? deepcopy(get_setting(m, :tuning)) : deepcopy(tuning0)
+    tuning[:get_t_particle_dist] = true
+    tuning[:parallel] = false
+    tuning[:allout] = false
+
+    # Sample from p(λ|θ, I_t^P, P) for each θ in posterior
+    data = (T == 1) ? reshape(pred_dens[:,1], 2, 1) : pred_dens[:,1:T]
+    if parallel
+        # Send variables to workers to avoid issues with serialization
+        # across workers with different Julia system images
+        sendto(workers(), m = m)
+        sendto(workers(), data = data)
+        sendto(workers(), θs = θs)
+        sendto(workers(), tuning = tuning)
+
+        # Sample from λ distribution given θ
+        λ_sample = @sync @distributed (vcat) for i in 1:size(θs,1)
+            sample_λ(m, data, vec(θs[i,:]), tuning)
+        end
+        if sum(λ_sample) == 0
+            error("Sums to zero")
+        end
+        λ_sample = Array(λ_sample)
+    else
+        # Same as above but everything is serialized
+        λ_sample = Vector{Float64}(undef, size(θs,1))
+        for i in 1:size(θs,1)
+            λ_sample[i] = sample_λ(m, data, vec(θs[i,:]), tuning)
+        end
+    end
+
+    return λ_sample
+end
+
+# This function actually does the sampling for a given θ,
+# but we provide a wrapper for an easier user experience
+function sample_λ(m::PoolModel{S}, data::Matrix{S}, θ::Vector{S},
+                  tuning::Dict{Symbol,Any}) where S<:AbstractFloat
+    update!(m, θ)
+    loglik, λ_particles, λ_weights = DSGE.filter(m, data; tuning = tuning)
+    return λ_particles[size(data,2)][1,DSGE.sample(DSGE.Weights(λ_weights[:,end]))]
+end
+
+function sample_λ(m::PoolModel{S}, pred_dens::Matrix{S}, T::Int64 = -1;
+                  parallel::Bool = false,
+                  filestring_addl::Vector{String} = Vector{String}(undef,0),
+                  tuning0::Dict{Symbol,Any} = Dict{Symbol,Any}()) where S<:AbstractFloat
+
+    # Check m is static
+    if get_setting(m, :weight_type) != :static
+        error("PoolModel is not static. Set the keyword argument weight_type = :static to create a static PoolModel object.")
+    end
+
+    # Initialize necessary objects
+    if T <= 0
+         error("T must be positive") # No period provided or is invalid
+    end
+    tuning = isempty(tuning0) ? deepcopy(get_setting(m, :tuning)) : deepcopy(tuning0)
+    tuning[:get_t_particle_dist] = true
+    tuning[:parallel] = parallel
+    tuning[:allout] = false
+    orig_samp_method = get_setting(m, :sampling_method)
+    m <= Setting(:sampling_method, :MH)
+
+    # Compute posterior from a static pool
+    data = (T == 1) ? reshape(pred_dens[:,1], 2, 1) : pred_dens[:,1:T] # make sure it is matrix
+    estimate(m, data; filestring_addl = filestring_addl, proposal_covariance = ones(1,1))
+    m <= Setting(:sampling_method, orig_samp_method)
+
+    return h5read(rawpath(m, "estimate", "mhsave.h5", filestring_addl), "mhparams")
+end
+
+"""
+```
+compute_Eλ(m, h, λvec, θmat = [], weights = [];
+    current_period = true, parallel = true) where T<:AbstractFloat
+```
+
+Computes and samples from the conditional density p(λ_t|θ, I_t, P) for
+particle in `θs`, which represents the posterior distribution.
+
+### Inputs
+
+- `m::PoolModel{T}`: `PoolModel` object
+- `h::Int64`: forecast horizon
+- `λvec::Vector{T}`: vector of particles of λ samples from (θ,λ) joint distribution
+- `θmat::Matrix{T}': matrix of posterior parameter samples
+- `weights::Vector{T}`: weights of λ particles, defaults to equal weights
+
+### Keyword Argument
+
+- `current_period::Bool`: compute Eλ for current period t
+- `parallel::Bool`: use parallel computing to compute and sample λ
+- `get_dpp_pred_dens::Bool`: compute predictive densities according to dynamic prediction pools
+
+### Outputs
+
+- `λhat_tplush::Float64`: E[λ_{t+h|t} | I_t^P, P]
+- `λhat_t::Float64`: E[λ_{t|t} | I_t^P, P]
+```
+"""
+function compute_Eλ(m::PoolModel{T}, h::Int64, λvec::Vector{T},
+                    θmat::Matrix{T} = Matrix{Float64}(undef,0,0),
+                    weights::Vector{T} = Vector{Float64}(undef,0);
+                    current_period::Bool = true, parallel::Bool = false) where T<:AbstractFloat
+
+    # Set up
+    if isempty(weights)
+        weights = ones(length(λvec)) # assume equal weights
+    end
+    update_param = !isempty(θmat)
+    if update_param # save so we can reset the parameters of the PoolModel
+        old_param = map(x -> x.value, m.parameters)
+    end
+    λhat_t = if current_period mean(λvec .* weights) end # compute expected lambda in current period t
+
+    # Push forward states and compute mean
+    if parallel
+        # Send data to all workers
+        sendto(workers(), m = m)
+        sendto(workers(), h = h)
+        if update_param
+            sendto(workers(), θmat = θmat)
+
+            # Propagate forward!
+            λ_vec = @sync @distributed (vcat) for i in 1:length(λvec)
+                propagate_λ(λvec[i], h, m, vec(θmat[i,:]))
+            end
+        else
+            λ_vec = @sync @distributed (vcat) for i in 1:length(λvec)
+                propagate_λ(λvec[i], h, m)
+            end
+        end
+    else
+        if update_param
+            λ_vec = map(i -> propagate_λ(λvec[i], h, m, vec(θmat[i,:])), collect(1:length(λvec)))
+        else
+            λ_vec = map(x -> propagate_λ(x, h, m), λvec)
+        end
+    end
+    λhat_tplush = mean(λ_vec .* weights)
+
+    if update_param
+        # Update m to take original parameters
+        DSGE.update!(m, old_param)
+    end
+
+    if current_period
+        return λhat_tplush, λhat_t
+    else
+        return λhat_tplush
+    end
+end
+
+"""
+```
+propgate_λ(λvec, h, m, θvec) where T<:AbstractFloat
+```
+
+Propagates a λ particle h periods forward.
+
+### Inputs
+
+- `λ::T`: λ sample from (θ,λ) joint distribution
+- `h::Int64`: forecast horizon
+- `m::PoolModel`: PoolModel object
+- `θvec::Vector{T}`: optional vector of parameters to update PoolModel
+
+```
+"""
+function propagate_λ(λ::T, h::Int64, m::PoolModel,
+                     θvec = Vector{Float64}(undef,0)) where T<:AbstractFloat
+    if !isempty(θvec)
+        update!(m, θvec)
+    end
+    Φ, ~, ~ = solve(m)
+    for j in 1:h
+        λ = Φ([λ; 1 - λ], [0.])[1]
+    end
+    return λ
 end

@@ -7,9 +7,12 @@ function metropolis_hastings(propdist::Distribution,
                              cc0::T,
                              cc::T;
                              n_blocks::Int = 1,
-                             n_sim::Int    = 100,
-                             n_burn::Int   = 0,
-                             mhthin::Int   = 1,
+                             n_param_blocks::Int64 = 1,
+                             n_sim::Int64          = 100,
+                             n_burn::Int64         = 0,
+                             mhthin::Int64         = 1,
+                             adaptive_accpt::Bool  = false,
+                             α::T = 1.0,      c::T = 1.0,
                              verbose::Symbol=:low,
                              savepath::String = "mhsave.h5",
                              rng::MersenneTwister = MersenneTwister(0),
@@ -21,7 +24,7 @@ distribution of the parameters.
 
 ### Arguments
 
-- `propdist`: The proposal distribution that Metropolis-Hastings begins sampling from.
+- `proposal_dist`: The proposal distribution that Metropolis-Hastings begins sampling from.
 - `m`: The model object
 - `data`: Data matrix for observables
 - `cc0`: Jump size for initializing Metropolis-Hastings.
@@ -36,8 +39,9 @@ distribution of the parameters.
 - `n_burn::Int   = 0`: Length of burn-in period
 - `mhthin::Int   = 1`: Thinning parameter (for mhthin = d, keep only every dth draw)
 - `adaptive_accpt::Bool = false`: Whether or not to adaptively adjust acceptance prob.
-- `α::T = 1.0`: Tuning parameter for proposal density computation in adaptive case
-- `c::T = 1.0`:  Tuning parameter for proposal density computation in adaptive case
+- `α::T = 1.0`: Tuning parameter (step size) for proposal density computation in adaptive case
+- `c::T = 0.5`: Tuning parameter (mixture proportion) for proposal density computation in
+    adaptive case
 - `verbose::Bool`: The desired frequency of function progress messages printed to
   standard out. One of:
 ```
@@ -49,7 +53,7 @@ distribution of the parameters.
 - `rng::MersenneTwister = MersenneTwister(0)`: Chosen seed (overridden if testing = true)
 - `testing::Bool = false`: Conditional for use when testing (determines fixed seeding)
 """
-function metropolis_hastings(propdist::Distribution,
+function metropolis_hastings(proposal_dist::Distribution,
                              loglikelihood::Function,
                              parameters::ParameterVector{S},
                              data::Matrix{T},
@@ -61,7 +65,7 @@ function metropolis_hastings(propdist::Distribution,
                              n_burn::Int64         = 0,
                              mhthin::Int64         = 1,
                              adaptive_accpt::Bool  = false,
-                             α::T = 1.0,      c::T = 1.0,
+                             α::T = 1.0,      c::T = 0.5,
                              verbose::Symbol       = :low,
                              savepath::String      = "mhsave.h5",
                              rng::MersenneTwister  = MersenneTwister(0),
@@ -71,6 +75,8 @@ function metropolis_hastings(propdist::Distribution,
     if testing
         Random.seed!(rng, 654)
     end
+
+    propdist = init_deg_mvnormal(proposal_dist.μ, proposal_dist.σ)
 
     # Initialize algorithm by drawing para_old from normal distribution centered at the
     # posterior mode, until parameters within bounds (indicated by posterior value > -∞)
@@ -92,7 +98,7 @@ function metropolis_hastings(propdist::Distribution,
     free_para_inds = findall([!θ.fixed for θ in parameters])
     n_free_para    = length(free_para_inds)
     n_params       = length(parameters)
-    param_blocks   = SMC.generate_param_blocks(n_params, n_param_blocks)
+    blocks_all     = SMC.generate_param_blocks(n_free_para, n_param_blocks)
 
     # Report number of blocks that will be used
     println(verbose, :low, "Blocks: $n_blocks")
@@ -123,16 +129,21 @@ function metropolis_hastings(propdist::Distribution,
 
         for j = 1:(n_sim * mhthin)
 
-            for (k, p_block) in enumerate(param_blocks)
+            for (k, block_a) in enumerate(blocks_all)
 
                 # Draw para_new from the proposal distribution
-                para_subset = para_old[p_block]
-                d_subset    = DegenerateMvNormal(propdist.μ[p_block],
-                                                 propdist.σ[p_block, p_block])
-                para_draw = rand(d_subset, rng; cc = cc)
+                para_subset = para_old[block_a]
+                d_subset    = DegenerateMvNormal(propdist.μ[block_a],
+                                       (propdist.σ[block_a, block_a] +
+                                       propdist.σ[block_a, block_a]') / 2.,
+                                       inv((propdist.σ[block_a, block_a] +
+                                       propdist.σ[block_a, block_a]') / 2.),
+                                       propdist.λ_vals[block_a])
+
+                para_draw   = rand(d_subset, rng; cc = cc)
 
                 para_new          = deepcopy(para_old)
-                para_new[p_block] = para_draw
+                para_new[block_a] = para_draw
 
                 q0, q1 = if adaptive_accpt
                     SMC.compute_proposal_densities(para_draw, para_subset, d_subset;
@@ -177,41 +188,40 @@ function metropolis_hastings(propdist::Distribution,
 
                 # Save every (mhthin)th draw
                 if j % mhthin == 0
-                    draw_index = convert(Int, j / mhthin)
+                    draw_index = convert(Int, ((j / mhthin) - 1) * n_param_blocks + k)
                     mhparams[draw_index, :]  = para_old'
                 end
-            end # of block
+            end # of loop over parameter blocks
+        end # of block
 
-            all_rejections += block_rejections
-            block_rejection_rate = block_rejections / (n_sim * mhthin * n_param_blocks)
+        all_rejections += block_rejections
+        block_rejection_rate = block_rejections / (n_sim * mhthin * n_param_blocks)
 
-            ## Once every iblock times, write parameters to a file
+        ## Once every iblock times, write parameters to a file
 
-            # Calculate starting, ending indices for this block (corresponds to new chunk in memory)
-            block_start = n_sim * n_param_blocks * (block - n_burn - 1)+1
-            block_end   = block_start + (n_sim * n_param_blocks) - 1
+        # Calculate start/end indices for this block (corresponds to new chunk in memory)
+        block_start = n_sim * n_param_blocks * (block - n_burn - 1)+1
+        block_end   = block_start + (n_sim * n_param_blocks) - 1
 
-            # Write parameters to file if we're past n_burn blocks
-            if block > n_burn
-                parasim[block_start:block_end, :] = map(Float64, mhparams)
-            end
+        # Write parameters to file if we're past n_burn blocks
+        if block > n_burn
+            parasim[block_start:block_end, :] = map(Float64, mhparams)
+        end
 
-            # Calculate time to complete this block, average block time, and
-            # expected time to completion
-            block_time                      = (time_ns() - begin_time) / 1e9
-            total_sampling_time            += block_time
-            total_sampling_time_minutes     = total_sampling_time / 60
-            expected_time_remaining_sec     = (total_sampling_time / block) * (n_blocks - block)
-            expected_time_remaining_minutes = expected_time_remaining_sec / 60
+        # Calculate time to complete this block, average block time, and
+        # expected time to completion
+        block_time                      = (time_ns() - begin_time) / 1e9
+        total_sampling_time            += block_time
+        total_sampling_time_minutes     = total_sampling_time / 60
+        expected_time_remaining_sec     = (total_sampling_time / block) * (n_blocks - block)
+        expected_time_remaining_minutes = expected_time_remaining_sec / 60
 
-            println(verbose, :low, "Completed $block of $n_blocks blocks.")
-            println(verbose, :low, "Total time to compute $block blocks: " *
-                    "$total_sampling_time_minutes minutes")
-            println(verbose, :low, "Expected time remaining for Metropolis-Hastings: " *
-                    "$expected_time_remaining_minutes minutes")
-            println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
-
-        end # of loop over parameter blocks
+        println(verbose, :low, "Completed $block of $n_blocks blocks.")
+        println(verbose, :low, "Total time to compute $block blocks: " *
+                "$total_sampling_time_minutes minutes")
+        println(verbose, :low, "Expected time remaining for Metropolis-Hastings: " *
+                "$expected_time_remaining_minutes minutes")
+        println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
     end # of loop over blocks
     close(simfile)
 
@@ -248,17 +258,23 @@ sampling from the posterior distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-       m::AbstractDSGEModel,
-       data::Matrix{T},
-       cc0::T,
-       cc::T;
-       verbose::Symbol=:low,
-       filestring_addl::Vector{String} = Vector{String}(undef, 0)) where {T<:AbstractFloat}
+                             m::AbstractDSGEModel,
+                             data::Matrix{T},
+                             cc0::T,
+                             cc::T;
+                             filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                             verbose::Symbol = :low) where {T<:AbstractFloat}
 
     n_blocks = n_mh_blocks(m)
     n_sim    = n_mh_simulations(m)
     n_burn   = n_mh_burn(m)
     mhthin   = mh_thin(m)
+
+    n_param_blocks = n_mh_param_blocks(m)
+    adaptive_accpt = get_setting(m, :mh_adaptive_accpt)
+    c              = get_setting(m, :mh_c)
+    α              = get_setting(m, :mh_α)
+
     rng      = m.rng
     testing  = m.testing
     savepath = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
@@ -272,7 +288,8 @@ function metropolis_hastings(propdist::Distribution,
                    use_chand_recursion = use_chand_recursion)
     end
     return metropolis_hastings(propdist, loglikelihood, m.parameters, data, cc0, cc;
-                               n_blocks = n_blocks, n_sim = n_sim, n_burn = n_burn,
-                               mhthin = mhthin, verbose = verbose, savepath = savepath,
-                               rng = rng, testing = testing)
+                               n_blocks = n_blocks, n_param_blocks = n_param_blocks,
+                               adaptive_accpt = adaptive_accpt, c = c, α = α, n_sim = n_sim,
+                               n_burn = n_burn, mhthin = mhthin, verbose = verbose,
+                               savepath = savepath, rng = rng, testing = testing)
 end

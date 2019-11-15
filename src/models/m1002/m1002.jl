@@ -129,8 +129,8 @@ function init_model_indices!(m::Model1002)
 
     # Exogenous shocks
     exogenous_shocks = [[
-        :g_sh, :b_sh, :μ_sh, :z_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
-        :γ_sh, :π_star_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh];
+        :g_sh, :b_sh, :μ_sh, :ztil_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
+        :γ_sh, :π_star_sh, :zp_sh, :lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh];
         [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
@@ -152,8 +152,14 @@ function init_model_indices!(m::Model1002)
     # Additional states added after solving model
     # Lagged states and observables measurement error
     endogenous_states_augmented = [
-        :y_t1, :c_t1, :i_t1, :w_t1, :π_t1_dup, :L_t1, :u_t1, :Et_π_t, :lr_t, :tfp_t, :e_gdpdef_t,
+        :y_t1, :c_t1, :i_t1, :w_t1, :π_t1_dup, :L_t1, :u_t1, :Et_π_t, :e_lr_t, :e_tfp_t, :e_gdpdef_t,
         :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_gdp_t1, :e_gdi_t1]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+        push!(endogenous_states_augmented, :Sinf_t, :πtil_t, :πtil_t1)
+    end
+    if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
+        push!(endogenous_states_augmented, :e_tfp_t1)
+    end
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -367,9 +373,9 @@ function init_parameters!(m::Model1002)
                    description="ρ_μ: AR(1) coefficient in capital adjustment cost process.",
                    tex_label="\\rho_{\\mu}")
 
-    m <= parameter(:ρ_z, 0.9446, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                   description="ρ_z: AR(1) coefficient in the technology process.",
-                   tex_label="\\rho_z")
+    m <= parameter(:ρ_ztil, 0.9446, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                   description="ρ_ztil: AR(1) coefficient in the technology process.",
+                   tex_label="\\rho_{\\tilde{z}}")
 
     m <= parameter(:ρ_λ_f, 0.8827, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
@@ -442,9 +448,9 @@ function init_parameters!(m::Model1002)
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label="\\sigma_{\\mu}")
 
-    m <= parameter(:σ_z, 0.6742, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                   description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
-                   tex_label="\\sigma_{z}")
+    m <= parameter(:σ_ztil, 0.6742, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_ztil: The standard deviation of the process describing the stationary component of productivity.",
+                   tex_label="\\sigma_{\\tilde{z}}")
 
     m <= parameter(:σ_λ_f, 0.1314, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
@@ -625,11 +631,11 @@ function steadystate!(m::Model1002)
         wekstar = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
     else
         if subspec(m) == "ss9"
-            betabar = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+            betabar_inverse = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
         else
-            betabar = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+            betabar_inverse = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
         end
-        wekstar = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
+        wekstar = (1-(m[:γ_star]*betabar_inverse))*nkstar - m[:γ_star]*betabar_inverse*(m[:spr]*(1-μ_estar*Gstar) - 1)
     end
     vkstar      = (nkstar-wekstar)/m[:γ_star]
 
@@ -682,9 +688,9 @@ function steadystate!(m::Model1002)
         m[:ζ_nqk] = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/m[:β]*(1+Rhostar)
         m[:ζ_nn]  = m[:γ_star]/m[:β] + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
     else
-        m[:ζ_nR]  = m[:γ_star]*betabar*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
-        m[:ζ_nqk] = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar*(1+Rhostar)
-        m[:ζ_nn]  = m[:γ_star]*betabar + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+        m[:ζ_nR]  = m[:γ_star]*betabar_inverse*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+        m[:ζ_nqk] = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar_inverse*(1+Rhostar)
+        m[:ζ_nn]  = m[:γ_star]*betabar_inverse + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
     end
 
     m[:ζ_nμ_e]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(1 - ζ_gw*ζ_zμ_e/ζ_zw)
@@ -714,6 +720,10 @@ function model_settings!(m::Model1002)
     end
     m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
+    if subspec(m) in ["ss16", "ss17"]
+        m <= Setting(:laborshare_base_period, DSGE.quartertodate("1964-Q1"), "Base year for labor share series to provide an initial condition")
+    end
+
 
     # Forecast
     m <= Setting(:use_population_forecast, true,
@@ -741,8 +751,8 @@ function parameter_groupings(m::Model1002)
     other_endo = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Φ, :S′′, :ppsi, :π_star,
                   :Γ_gdpdef, :δ_gdpdef, :Lmean, :λ_w, :g_star]
     financial  = [:Fω, :spr, :ζ_spb, :γ_star]
-    processes  = [:ρ_g, :ρ_b, :ρ_μ, :ρ_z, :ρ_σ_w, :ρ_π_star, :ρ_z_p, :ρ_λ_f, :ρ_λ_w, :η_λ_f, :η_λ_w,
-                  :σ_g, :σ_b, :σ_μ, :σ_z, :σ_σ_ω, :σ_π_star, :σ_z_p, :σ_λ_f, :σ_λ_w, :η_gz]
+    processes  = [:ρ_g, :ρ_b, :ρ_μ, :ρ_ztil, :ρ_σ_w, :ρ_π_star, :ρ_z_p, :ρ_λ_f, :ρ_λ_w, :η_λ_f, :η_λ_w,
+                  :σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_σ_ω, :σ_π_star, :σ_z_p, :σ_λ_f, :σ_λ_w, :η_gz]
     error      = [:me_level, :ρ_gdp, :ρ_gdi, :ρ_lr, :ρ_tfp, :ρ_gdpdef, :ρ_corepce,
                   :ρ_gdpvar, :σ_gdp, :σ_gdi, :σ_lr, :σ_tfp, :σ_gdpdef, :σ_corepce]
 
@@ -773,19 +783,33 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 `plot_shock_decomposition`. See `?ShockGroup` for details.
 """
 function shock_groupings(m::Model1002)
-    gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
-    bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
-    fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
-    tfp = ShockGroup("z", [:z_sh], RGB(1.0, 0.55, 0.0)) # darkorange
-    pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
-    wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
-    pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
-                     RGB(1.0, 0.84, 0.0)) # gold
-    pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
-    mei = ShockGroup("mu", [:μ_sh], :cyan)
-    mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
-    zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
-    det = ShockGroup("dt", [:dettrend], :gray40)
+    if subspec(m) != "ss12"
+        gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+        bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
+        fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
+        tfp = ShockGroup("z", [:ztil_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+        pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+        wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
+        pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+                         RGB(1.0, 0.84, 0.0)) # gold
+        pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
+        mei = ShockGroup("mu", [:μ_sh], :cyan)
+        mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+        zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
+        det = ShockGroup("dt", [:dettrend], :gray40)
 
-    return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
+        return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
+    else
+        # financial, productivity, other, measurement errors
+        fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
+        prod = ShockGroup("Prod", [:ztil_sh, :zp_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+        mea = ShockGroup("Measurement", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh,
+                                         :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+        other = ShockGroup("Other", [:g_sh, :b_sh, :λ_f_sh, :λ_w_sh,
+                                     vcat([:rm_sh],
+                                     [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)])...,
+                                     :π_star_sh, :μ_sh,
+                                     :dettrend], RGB(0.70, 0.13, 0.13)) # firebrick
+        return [fin, prod, mea, other]
+    end
 end

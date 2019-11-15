@@ -10,7 +10,7 @@ function init_observable_mappings!(m::AnSchorfheide)
         # FROM: Level of GDP (from FRED)
         # TO: Quarter-to-quarter percent change of real GDP per capita
 
-        levels[:temp] = percapita(m, :GDP, levels)
+        levels[!,:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
         oneqtrpctchange(gdp)
     end
@@ -29,7 +29,7 @@ function init_observable_mappings!(m::AnSchorfheide)
         # FROM: CPI urban consumers index (from FRED)
         # TO: Annualized quarter-to-quarter percent change of CPI index
 
-        quartertoannual(oneqtrpctchange(levels[:CPIAUCSL]))
+        quartertoannual(oneqtrpctchange(levels[!,:CPIAUCSL]))
     end
 
     cpi_rev_transform = loggrowthtopct_annualized
@@ -48,7 +48,7 @@ function init_observable_mappings!(m::AnSchorfheide)
         #       quarterly frequency at an annual rate)
         # TO:   Nominal effective fed funds rate, at a quarterly rate annualized
 
-        levels[:DFF]
+        levels[!,:DFF]
     end
 
     nominalrate_rev_transform = identity

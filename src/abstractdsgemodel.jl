@@ -150,10 +150,11 @@ hessian_path(m::AbstractDSGEModel)      = get_setting(m, :hessian_path)
 n_hessian_test_params(m::AbstractDSGEModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
-n_mh_blocks(m::AbstractDSGEModel)      =  get_setting(m, :n_mh_blocks)
-n_mh_simulations(m::AbstractDSGEModel) =  get_setting(m, :n_mh_simulations)
-n_mh_burn(m::AbstractDSGEModel)        =  get_setting(m, :n_mh_burn)
-mh_thin(m::AbstractDSGEModel)          =  get_setting(m, :mh_thin)
+n_mh_blocks(m::AbstractDSGEModel)       =  get_setting(m, :n_mh_blocks)
+n_mh_param_blocks(m::AbstractDSGEModel) =  get_setting(m, :n_mh_param_blocks)
+n_mh_simulations(m::AbstractDSGEModel)  =  get_setting(m, :n_mh_simulations)
+n_mh_burn(m::AbstractDSGEModel)         =  get_setting(m, :n_mh_burn)
+mh_thin(m::AbstractDSGEModel)           =  get_setting(m, :mh_thin)
 
 # Interface for forecast settings
 date_forecast_start(m::AbstractDSGEModel)   = get_setting(m, :date_forecast_start)
@@ -262,13 +263,13 @@ end
 
 """
 ```
-specify_hessian(m::AbstractDSGEModel, path::String=""; verbose=:low)
+specify_hessian!(m::AbstractDSGEModel, path::String=""; verbose=:low)
 ```
 
 Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
 no path is provided, will attempt to detect location.
 """
-function specify_hessian(m::AbstractDSGEModel, path::String=""; verbose=:low)
+function specify_hessian!(m::AbstractDSGEModel, path::String=""; verbose=:low)
     if isempty(path)
         path = inpath(m, "user", "hessian.h5")
     end
@@ -360,3 +361,9 @@ function ShockGroup(name::String, shocks::Vector{Symbol}, color_name::Symbol)
     color = parse(Colorant, color_name)
     return ShockGroup(name, shocks, color)
 end
+
+mutable struct SteadyStateConvergenceError <: Exception
+    msg::String
+end
+SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't converge")
+Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)

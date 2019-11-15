@@ -83,7 +83,7 @@ function meansbands_to_matrix(mb::MeansBands)
     nvars      = length(vars)                   # get number of variables
 
     tmp        = setdiff(names(mb.means), [:date])[1]
-    T          = eltype(mb.means[tmp])          # type of elements of mb structure
+    T          = eltype(mb.means[!, tmp])          # type of elements of mb structure
 
     nperiods   = n_periods_means(mb)            # get number of periods
     prod       = get_product(mb)                # history? forecast? shockdec?
@@ -103,10 +103,10 @@ function meansbands_to_matrix(mb::MeansBands)
         # extract each series and place in arrays
         for series in setdiff(names(mb.means), [:date])
             ind = inds[series]
-            means[ind,:] = convert(Array{T},mb.means[series])
+            means[ind,:] = convert(Array{T},mb.means[!, series])
 
             for (i,band) in enumerate(bands_list)  # these are ordered properly already
-                bands[i,ind,:] = convert(Array{T},mb.bands[series][Symbol(band)])
+                bands[i,ind,:] = convert(Array{T},mb.bands[series][!, Symbol(band)])
             end
         end
 
@@ -125,11 +125,11 @@ function meansbands_to_matrix(mb::MeansBands)
             ind = inds[var]
 
             shock_ind = shock_inds[shock]
-            means[ind,:,shock_ind] = convert(Array{T}, mb.means[series])
+            means[ind,:,shock_ind] = convert(Array{T}, mb.means[!, series])
 
             for (band_ind, band) in enumerate(bands_list)
                 bands[band_ind, ind, :, shock_ind] =
-                    convert(Array{T}, mb.bands[series][Symbol(band)])
+                    convert(Array{T}, mb.bands[series][!, Symbol(band)])
             end
         end
     end

@@ -64,7 +64,9 @@ rmprocs(my_procs)
 ```
 
 Notice that it is necessary to load DSGE on all processes using
-`@everywhere using DSGE` before calling `forecast_one`.
+`@everywhere using DSGE` before calling `forecast_one`. It is
+also sometimes necessary to load OrderedCollections on all processes
+using `@everywhere using OrderedCollections`.
 
 By default, full-distribution forecasts start from the first block. However, if
 you want to start the forecast from a later block, you can also do so. For
@@ -183,6 +185,10 @@ wish to truncate some periods before returning. This behavior is governed by the
 
 Deterministic trends are also saved only for `date_shockdec_start(m)` and
 `date_shockdec_end(m)`. Trends are not time-dependent.
+
+Note that shock decompositions are memory intensive. For a typical forecast
+of `Model1002` without shock decompositions, only 1-2GB of memory are needed.
+For a forecast with shock decompositions, roughtly 14-16GB will be needed.
 
 **Impulse Response Functions:**
 

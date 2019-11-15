@@ -48,7 +48,7 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     n_parts     = get_setting(m, :n_particles)
     n_blocks    = get_setting(m, :n_smc_blocks)
     n_mh_steps  = get_setting(m, :n_mh_steps_smc)
-    old_vintage = get_setting(m, :previous_data_vintage) ##
+    old_vintage = get_setting(m, :previous_data_vintage)
 
     smc_iteration = get_setting(m, :smc_iteration)
 

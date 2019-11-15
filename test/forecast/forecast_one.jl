@@ -12,16 +12,21 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
+df = load_data(m)
+
 # Make sure output_vars ignores the untransformed and 4Q things because they are
 # computed in compute_meansbands
-output_vars = add_requisite_output_vars([:histpseudo, :histobs,
+output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
                                          :histutpseudo, :histutobs,
                                          :hist4qpseudo, :hist4qobs,
-                                         :forecastpseudo, :forecastobs,
+                                         :forecaststates, :forecastpseudo, :forecastobs, :forecaststdshocks,
                                          :forecastutpseudo, :forecastutobs,
                                          :forecast4qpseudo, :forecast4qobs,
+                                         :bddforecaststates, :bddforecastshocks, :bddforecastpseudo, :bddforecastobs,
                                          :shockdecpseudo, :shockdecobs,
-                                         :irfpseudo, :irfobs])
+                                         :trendstates, :trendobs, :trendpseudo,
+                                         :dettrendstates, :dettrendobs, :dettrendpseudo,
+                                         :irfstates, :irfpseudo, :irfobs])
 
 # Check error handling for input_type = :subset
 @testset "Ensure properly error handling for input_type = :subset" begin
@@ -37,6 +42,7 @@ end
 out = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
 for cond_type in [:none, :semi, :full]
     forecast_one(m, :mode, cond_type, output_vars, verbose = :none)
+    forecast_one(m, :init, cond_type, output_vars, verbose = :none)
 
     # Read output
     out[cond_type] = Dict{Symbol, Array{Float64}}()
@@ -77,6 +83,22 @@ specify_mode!(m, DSGE.get_forecast_input_file(m, :mode); verbose = :none)
     end
 end
 
+@testset "Test full-distribution forecasts run" begin
+    m <= Setting(:forecast_block_size, 5)
+    forecast_one(m, :prior, :none, output_vars, verbose = :none)
+    for sampling_method in [:MH]
+        m <= Setting(:sampling_method, sampling_method)
+        for cond_type in [:none, :semi, :full]
+            forecast_one(m, :full, cond_type, output_vars, verbose = :none)
+            @test_throws ErrorException forecast_one(m, :subset, cond_type, output_vars, subset_inds = 1:10, verbose = :none)
+            forecast_one(m, :subset, cond_type, output_vars, subset_inds = 1:10, forecast_string = "test", verbose = :none)
+            forecast_one(m, :init_draw_shocks, cond_type, output_vars, verbose = :none)
+            forecast_one(m, :mode_draw_shocks, cond_type, output_vars, verbose = :none)
+        end
+    end
+end
+
+
 # Test full-distribution blocking
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
@@ -88,6 +110,22 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
         @test ndims(DSGE.read_forecast_series(output_files[:trendobs], :trend, m.observables[:obs_gdp])) == 2
         @test ndims(DSGE.read_forecast_series(output_files[:forecastobs], :forecast, m.observables[:obs_gdp])) == 2
         @test ndims(DSGE.read_forecast_series(output_files[:irfobs], m.observables[:obs_gdp], m.exogenous_shocks[:rm_sh])) == 2
+    end
+end
+
+@testset "Test forecast_one_draw" begin
+    for input_type in [:mode, :full]
+        params = if input_type == :mode
+            load_draws(m, input_type)
+        else
+            load_draws(m, input_type)[1, :]
+        end
+        m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
+        @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
+
+        # Test with alternative policy
+        m <= Setting(:alternative_policy, AltPolicy(:taylor93, eqcond, solve))
+        @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
     end
 end
 

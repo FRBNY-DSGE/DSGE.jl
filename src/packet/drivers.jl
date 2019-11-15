@@ -38,7 +38,7 @@ usual_forecast(m, input_type, cond_type,
     output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo];
     est_override = "", forecast_string = "",
     density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
-    mb_matrix = false)
+    mb_matrix = false, check_empty_columns = true)
 ```
 
 Forecast, compute means and bands, and optionally (if `mb_matrix`) convert
@@ -54,7 +54,8 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                         mb_matrix::Bool = false,
                         shock_name::Symbol = :none,
                         shock_var_name::Symbol = :none,
-                        shock_var_value::Float64 = 0.0)
+                        shock_var_value::Float64 = 0.0,
+                        check_empty_columns = true)
 
     # Override estimation file if necessary
     if !isempty(est_override)
@@ -67,11 +68,13 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  verbose = :high,
                  shock_name = shock_name,
                  shock_var_name = shock_var_name,
-                 shock_var_value = shock_var_value)
+                 shock_var_value = shock_var_value,
+                 check_empty_columns = check_empty_columns)
 
     # Compute means and bands
     compute_meansbands(m, input_type, cond_type, output_vars; forecast_string = forecast_string,
-                       density_bands = density_bands, verbose = :high)
+                       density_bands = density_bands, check_empty_columns = check_empty_columns,
+                       verbose = :high)
 
     # Convert MeansBands to matrices if desired
     if mb_matrix

@@ -170,7 +170,8 @@ function read_mb(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
     end
 end
 
-
+# The following function seems to be something we wrote for an adhoc exercise and does exactly what read_mb does except appends ma4Qavg to the name. Commented out for cleaning/writing tests/code coverage but here in case we need it to run specific specfiles.
+#=
 function read_mb_4q(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
                  bdd_and_unbdd::Bool = false,
@@ -193,7 +194,7 @@ function read_mb_4q(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
     else
         read_mb(unbdd_file)
     end
-end
+end=#
 
 """
 ```
@@ -430,69 +431,6 @@ function write_means_tables_shockdec(write_dirname::String, filestring_base::Vec
     end
 end
 
-"""
-```
-write_meansbands_tables_irf(m, input_type, cond_type, class;
-    forecast_string = "", dirname = tablespath(m, \"forecast\"),
-    kwargs...)
-
-write_meansbands_tables_irf(dirname, filestring_base, mb;
-    tablevars = get_shocks(mb), columnvars = get_variables(mb))
-```
-
-### Inputs
-
-**Method 1 only:**
-
-- `m::AbstractDSGEModel`
-- `input_type::Symbol`
-- `cond_type::Symbol`
-- `class::Symbol`
-
-**Method 2 only:**
-
-- `dirname::String`: directory to which tables are saved
-- `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
-  typically `[\"vint=yymmdd\"]``
-- `mb::MeansBands`
-
-### Keyword Arguments
-
-- `tablevars::Vector{Symbol}`: which shocks to write tables for
-- `columnvars::Vector{Symbol}`: which series' impulse responses to include as
-  columns in the tables
-
-**Method 1 only:**
-
-- `forecast_string::String`
-- `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
-  bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
-- `dirname::String`: directory to which tables are saved
-"""
-function write_meansbands_tables_irf(m::AbstractDSGEModel, input_type::Symbol,
-                                     cond_type::Symbol, class::Symbol;
-                                     forecast_string::String = "",
-                                     write_dirname::String = tablespath(m, "forecast"),
-                                     kwargs...)
-    output_var = Symbol(:irf, class)
-
-    # Read in MeansBands
-    mb = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string)
-
-    # Call second method
-    write_meansbands_tables_irf(write_dirname, filestring_base(m), mbs...;
-                                kwargs...)
-end
-
-function write_meansbands_tables_irf(dirname::String, filestring_base::Vector{String},
-                                     mb::MeansBands,
-                                     tablevars::Vector{Symbol} = get_shocks(mb),
-                                     columnvars::Vector{Symbol} = get_variables(mb))
-    for tablevar in tablevars
-        df = prepare_meansbands_table_irf(mb, tablevar, columnvars)
-        write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
-    end
-end
 
 """
 ```
@@ -585,16 +523,18 @@ function write_meansbands_tables_all(m::AbstractDSGEModel, input_type::Symbol, c
                                         write_dirname = write_dirname,
                                         groups = shock_groups)
 
-        elseif prod == :irf
+        #=elseif prod == :irf
             write_means_tables(m, input_type, cond_type, class,
                                tablevars = shocks, columnvars = vars,
                                forecast_string = forecast_string,
-                               write_dirname = write_dirname)
+                               write_dirname = write_dirname)=#
+        else
+            error("Invalid Product")
         end
     end
 end
 
-function add_requisite_output_vars_meansbands(output_vars)
+function add_requisite_output_vars_meansbands(output_vars::Vector{Symbol})
 
     all_output_vars = add_requisite_output_vars(output_vars)
 
@@ -607,3 +547,71 @@ function add_requisite_output_vars_meansbands(output_vars)
 
     return all_output_vars
 end
+
+
+#=
+"""
+```
+write_meansbands_tables_irf(m, input_type, cond_type, class;
+    forecast_string = "", dirname = tablespath(m, \"forecast\"),
+    kwargs...)
+
+write_meansbands_tables_irf(dirname, filestring_base, mb;
+    tablevars = get_shocks(mb), columnvars = get_variables(mb))
+```
+
+### Inputs
+
+**Method 1 only:**
+
+- `m::AbstractDSGEModel`
+- `input_type::Symbol`
+- `cond_type::Symbol`
+- `class::Symbol`
+
+**Method 2 only:**
+
+- `dirname::String`: directory to which tables are saved
+- `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
+  typically `[\"vint=yymmdd\"]``
+- `mb::MeansBands`
+
+### Keyword Arguments
+
+- `tablevars::Vector{Symbol}`: which shocks to write tables for
+- `columnvars::Vector{Symbol}`: which series' impulse responses to include as
+  columns in the tables
+
+**Method 1 only:**
+
+- `forecast_string::String`
+- `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
+  bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
+- `dirname::String`: directory to which tables are saved
+"""
+function write_meansbands_tables_irf(m::AbstractDSGEModel, input_type::Symbol,
+                                     cond_type::Symbol, class::Symbol;
+                                     forecast_string::String = "",
+                                     write_dirname::String = tablespath(m, "forecast"),
+                                     kwargs...)
+    output_var = Symbol(:irf, class)
+
+    # Read in MeansBands
+    mb = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string)
+
+    # Call second method
+    @show get_shocks(mb)
+    write_meansbands_tables_irf(write_dirname, filestring_base(m), mb;
+                                kwargs...)
+end
+
+function write_meansbands_tables_irf(dirname::String, filestring_base::Vector{String},
+                                     mb::MeansBands,
+                                     tablevars::Vector{Symbol} = get_shocks(mb),
+                                     columnvars::Vector{Symbol} = get_variables(mb))
+    @show tablevars
+    for tablevar in tablevars
+        df = prepare_meansbands_table_irf(mb, tablevar, columnvars)
+        write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
+    end
+end =#

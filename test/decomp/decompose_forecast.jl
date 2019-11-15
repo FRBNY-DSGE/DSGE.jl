@@ -27,11 +27,11 @@ m_old = make_test_model(2014)
 cond_types = [(:none, :none), (:none, :full), (:full, :none), (:full, :full)]
 for (cond_new, cond_old) in cond_types
     # Test inner method
-    @time decomps = decompose_forecast(m_new, m_old,
-                                       cond_new == :full ? df_new : df_new[1:end-1, :],
-                                       cond_old == :full ? df_old : df_old[1:end-1, :],
-                                       params_new, params_old, cond_new, cond_old,
-                                       [:obs, :pseudo]; check = true)
+    decomps = decompose_forecast(m_new, m_old,
+                                 cond_new == :full ? df_new : df_new[1:end-1, :],
+                                 cond_old == :full ? df_old : df_old[1:end-1, :],
+                                 params_new, params_old, cond_new, cond_old,
+                                 [:obs, :pseudo]; check = true)
 
     for k in keys(decomps)
         @test decomps[k] ≈ exp_decomps[(cond_new, cond_old)][k]
@@ -49,6 +49,8 @@ m_new <= Setting(:forecast_horizons, 12)
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
 overrides = forecast_input_file_overrides(m_new)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
+overrides[:full] = joinpath(estroot, "mhsave_test.h5")
+m_new <= Setting(:forecast_block_size, 20)
 
 m_old = deepcopy(m_new)
 m_old <= Setting(:date_forecast_start, quartertodate("2014-Q4"))
@@ -57,9 +59,11 @@ m_old <= Setting(:date_conditional_end, quartertodate("2014-Q4"))
 df_new = load_data(m_new)
 df_old = df_new[1:end-4, :]
 
-@time decompose_forecast(m_new, m_old, df_new, df_old, :mode, :none, :none, [:obs, :pseudo];
+decompose_forecast(m_new, m_old, df_new, df_old, :mode, :none, :none, [:obs, :pseudo];
                          verbose = :none)
-@time decomposition_means(m_new, m_old, :mode, :none, :none, [:obs, :pseudo], verbose = :none)
+decomposition_means(m_new, m_old, :mode, :none, :none, [:obs, :pseudo]; verbose = :none)
+decompose_forecast(m_new, m_old, df_new, df_old, :full, :none, :none, [:obs, :pseudo], verbose = :none)
+decomposition_means(m_new, m_old, :full, :none, :none, [:obs, :pseudo], verbose = :none)
 
-
+# To do: full distribution decomp
 nothing

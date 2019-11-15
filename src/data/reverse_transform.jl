@@ -80,11 +80,11 @@ function reverse_transform(m::AbstractDSGEModel, untransformed::AbstractArray, s
     df = DataFrame()
     nperiods = size(untransformed, 2)
     end_date = iterate_quarters(start_date, nperiods - 1)
-    df[:date] = quarter_range(start_date, end_date)
+    df[!, :date] = quarter_range(start_date, end_date)
 
     for (ind, var) in enumerate(vars)
         series = untransformed[ind, :]
-        df[var] = series
+        df[!, var] = series
     end
 
     reverse_transform(m, df, class; fourquarter = fourquarter, verbose = verbose)
@@ -94,7 +94,7 @@ function reverse_transform(m::AbstractDSGEModel, untransformed::DataFrame, class
                            fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
     @assert (:date in names(untransformed)) "untransformed must have a date column"
-    date_list  = convert(Vector{Dates.Date}, untransformed[:date])
+    date_list  = convert(Vector{Dates.Date}, untransformed[!,:date])
     start_date = date_list[1]
     end_date   = date_list[end]
 
@@ -112,19 +112,22 @@ function reverse_transform(m::AbstractDSGEModel, untransformed::DataFrame, class
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
     population_series = convert(Vector{Float64}, population_series)
+    if fourquarter
+        population_series = vcat(fill(NaN,3), population_series)
+    end
 
     # Apply reverse transform
     transformed = DataFrame()
-    transformed[:date] = untransformed[:date]
+    transformed[!,:date] = untransformed[!,:date]
 
     vars = setdiff(names(untransformed), [:date])
     for var in vars
-        y = convert(Vector{Float64}, untransformed[var])
+        y = convert(Vector{Float64}, untransformed[!,var])
         rev_transform = dict[var].rev_transform
         if fourquarter
             rev_transform = get_transform4q(rev_transform)
         end
-        transformed[var] = reverse_transform(y, rev_transform; fourquarter = fourquarter,
+        transformed[!,var] = reverse_transform(y, rev_transform; fourquarter = fourquarter,
                                              pop_growth = population_series)
     end
     return transformed
@@ -173,72 +176,71 @@ function reverse_transform(y::AbstractArray, rev_transform::Function;
     end
 end
 
-function reverse_transform(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
-                           class::Symbol, product::Symbol, vars::Vector{Symbol};
-                           forecast_string = "", fourquarter::Bool = false, verbose::Symbol = :low)
-    # Figure out dates
-    start_date, end_date  = if product in [:hist]
-        date_mainsample_start(m), date_mainsample_end(m)
-    elseif product in [:forecast, :bddforecast, :forecast4q, :bddforecast4q]
-        date_forecast_start(m), date_forecast_end(m)
-    elseif product in [:shockdec, :trend, :dettrend]
-        date_shockdec_start(m), date_shockdec_end(m)
-    else
-        error("reverse_transform not supported for product $product")
-    end
+# function reverse_transform(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
+#                            class::Symbol, product::Symbol, vars::Vector{Symbol};
+#                            forecast_string = "", fourquarter::Bool = false, verbose::Symbol = :low)
+#     # Figure out dates
+#     start_date, end_date  = if product in [:hist]
+#         date_mainsample_start(m), date_mainsample_end(m)
+#     elseif product in [:forecast, :bddforecast, :forecast4q, :bddforecast4q]
+#         date_forecast_start(m), date_forecast_end(m)
+#     elseif product in [:shockdec, :trend, :dettrend]
+#         date_shockdec_start(m), date_shockdec_end(m)
+#     else
+#         error("reverse_transform not supported for product $product")
+#     end
 
-    # Load population series
-    population_mnemonic = parse_population_mnemonic(m)[1]
-    vint = data_vintage(m)
-    population_data_file     = inpath(m, "raw", "population_data_levels_$vint.csv")
-    population_forecast_file = inpath(m, "raw", "population_forecast_$vint.csv")
-    population_data, population_forecast =
-        load_population_growth(population_data_file, population_forecast_file,
-                               get(population_mnemonic);
-                               use_population_forecast = use_population_forecast(m),
-                               use_hpfilter = hpfilter_population(m),
-                               verbose = verbose)
-    population_series = get_population_series(:population_growth, population_data,
-                                              population_forecast, start_date, end_date)
+#     # Load population series
+#     population_data, population_forecast = load_population_growth(m,
+#                                                                   verbose = verbose)
+#     population_series = get_population_series(:population_growth, population_data,
+#                                               population_forecast,
+#                                               start_date, end_date)
+#     if sum(ismissing.(population_series)) > 0
+#         error("Population series being loaded has a missing value.")
+#     else
+#         population_series = Vector{Float64}(population_series)
+#     end
 
-    if class == :obs
-        dict = m.observable_mappings
-    elseif class == :pseudo
-        dict = m.pseudo_observable_mappings
-    else
-        error("Class $class does not have reverse transformations")
-    end
+#     if class == :obs
+#         dict = m.observable_mappings
+#     elseif class == :pseudo
+#         dict = m.pseudo_observable_mappings
+#     else
+#         error("Class $class does not have reverse transformations")
+#     end
 
-    # Determine which file to read in
-    path       = get_forecast_filename(m, input_type, cond_type, Symbol(product, class);
-                                 forecast_string = forecast_string)
+#     # Determine which file to read in
+#     path       = get_forecast_filename(m, input_type, cond_type, Symbol(product, class);
+#                                  forecast_string = forecast_string)
 
-    # Apply reverse transform to each desired variable
-    results    = Dict{Symbol, Array{Float64,2}}()
-    for var in vars
-        series = dict[var]
-        transformed = reverse_transform(path, class, product,
-                                        var, series.rev_transform, pop_growth = population_series,
-                                        fourquarter = fourquarter)
-        results[var] = transformed
-    end
+#     # Apply reverse transform to each desired variable
+#     results    = Dict{Symbol, Array{Float64,2}}()
+#     for var in vars
+#         series = dict[var]
+#         transformed = reverse_transform(path, class, product,
+#                                         var, series.rev_transform,
+#                                         pop_growth = population_series,
+#                                         fourquarter = fourquarter)
+#         results[var] = transformed
+#     end
 
-    return results
-end
+#     return results
+# end
 
-function reverse_transform(path::String, class::Symbol, product::Symbol,
-                           var::Symbol, rev_transform::Function;
-                           pop_growth::Vector{Float64} = Vector{Float64}(),
-                           fourquarter::Bool = false)
+# function reverse_transform(path::String, class::Symbol, product::Symbol,
+#                            var::Symbol, rev_transform::Function;
+#                            pop_growth::Vector{Float64} = Vector{Float64}(),
+#                            fourquarter::Bool = false)
 
-    # Read in the draws for this variable
-    draws = JLD2.jldopen(path, "r") do jld
-        read_forecast_output(jld, class, product, var)
-    end
+#     # Read in the draws for this variable
+#     draws = JLD2.jldopen(path, "r") do jld
+#         read_forecast_output(jld, class, product, var)
+#     end
 
-    # Transform and return
-    transformed = reverse_transform(draws, rev_transform, pop_growth = pop_growth,
-                                    fourquarter = fourquarter)
+#     # Transform and return
+#     transformed = reverse_transform(draws, rev_transform, pop_growth = pop_growth,
+#                                     fourquarter = fourquarter)
 
-    return transformed
-end
+#     return transformed
+# end

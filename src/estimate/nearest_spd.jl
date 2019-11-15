@@ -19,10 +19,10 @@ http://www.sciencedirect.com/science/article/pii/0024379588902236
 - `Ahat::Matrix`: The symmetric, square positive semidefinite matrix closest to A
 """
 function nearest_spd(A::Matrix)
+#=function nearest_spd(A::Matrix)
     @show "WHAT ARE YOU DOING? WHY ARE YOU CALLING THIS?"
     return "WHAT ARE YOU DOING? WHY ARE YOU CALLING THIS?"
-end
-#=function nearest_spd(A::Matrix)
+end=#
 
     if size(A,1) != size(A,2)
         error("A must be a square matrix")
@@ -64,10 +64,10 @@ end
             eig_list = eigvals(Ahat)
             mineig = eig_list[1]
             mineig_factor = mineig != 0 ? abs(mineig) : eps(Float64)
-            Ahat = Ahat + (mineig_factor*k^2 + eps(Float64))*eye(size(A)...)
+            Ahat = Ahat + (mineig_factor*k^2 + eps(Float64))*Matrix(I, size(A)) #eye(size(A)...)
             eig_matrix = hcat(eig_matrix, eigvals(Ahat))
         end
     end
 
     return Ahat
-end =#
+end

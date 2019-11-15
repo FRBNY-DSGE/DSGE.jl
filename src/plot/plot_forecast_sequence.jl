@@ -127,12 +127,12 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
     n_forecasts = length(dfs_forecast)
 
     # Construct realized series date indices
-    realized_date_range_raw = Base.filter(x -> start_date <= x <= end_date, df_realized[:date])
+    realized_date_range_raw = Base.filter(x -> start_date <= x <= end_date, df_realized[!,:date])
     realized_date_range = map(quarter_date_to_number, realized_date_range_raw)
-    date_inds  = findall(start_date .<= df_realized[:date] .<= end_date)
+    date_inds  = findall(start_date .<= df_realized[!,:date] .<= end_date)
 
     # Plot realized
-    p = plot(realized_date_range, df_realized[forecast_var][date_inds],
+    p = plot(realized_date_range, df_realized[!,forecast_var][date_inds],
              label = "Realized", title = title, linecolor = realized_linecolor,
              linestyle = realized_linestyle, ylims = ylims)
 
@@ -177,7 +177,7 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
         else
             # Construct forecast date indices
             forecast_date_range_raw = Base.filter(x -> start_date <= x <= end_date,
-                                                  dfs_forecast[i][:date])
+                                                  dfs_forecast[i][!,:date])
             forecast_date_range = map(quarter_date_to_number, forecast_date_range_raw)
 
             # Truncate
@@ -191,7 +191,7 @@ function plot_forecast_sequence(dfs_forecast::Vector{DataFrame},
             label = ""
         end
 
-        plot!(p, forecast_date_range, dfs_forecast[i][forecast_var][date_inds],
+        plot!(p, forecast_date_range, dfs_forecast[i][!,forecast_var][date_inds],
               label = label, linecolor = :red, legend = :bottomright)
 
         if !isinf(constant_to_plot)

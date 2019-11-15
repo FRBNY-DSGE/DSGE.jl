@@ -8,7 +8,6 @@ module DSGE
     using StateSpaceRoutines, StatsPlots
     using CSV, DataFrames, DataStructures, OrderedCollections
     using DataStructures: SortedDict, insert!, ForwardOrdering
-    using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
@@ -17,9 +16,10 @@ module DSGE
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
-    import ModelConstructors: <=
-    import ModelConstructors: posterior!, posterior,
-                              @test_matrix_approx_eq, @test_matrix_approx_eq_eps, <=
+    import ModelConstructors
+    import ModelConstructors: posterior!, posterior, <=,
+                              @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+    import SMC: get_vals
 
     export
         # defaults.jl
@@ -52,7 +52,7 @@ module DSGE
         forecast_zlb_value, forecast_tdist_shocks, forecast_tdist_df_val,
         shockdec_startdate, date_shockdec_end,
         n_shockdec_periods, impulse_response_horizons,
-        load_parameters_from_file, specify_mode!, specify_hessian,
+        load_parameters_from_file, specify_mode!, specify_hessian!,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
         ShockGroup, alternative_policy,
@@ -86,7 +86,7 @@ module DSGE
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
         compute_moments, find_density_bands, mutation, resample, smc,
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
-        initial_draw!, ParticleCloud, Particle,
+        initial_draw!, ParticleCloud, Particle, estimate_bma,
 
         # backwards_compatibility.jl
         smc2, old_to_new_cloud,# TO REMOVE
@@ -108,7 +108,8 @@ module DSGE
         write_meansbands_tables_timeseries, write_means_tables_shockdec,
         prepare_meansbands_table_irf,
         write_meansbands_tables_all, construct_fcast_and_hist_dfs,
-        df_to_table, load_posterior_moments,
+        df_to_table, load_posterior_moments, sample_λ, compute_Eλ,
+        create_q4q4_mb,
 
         # decomp/
         decompose_forecast, decomposition_means,
@@ -138,14 +139,15 @@ module DSGE
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
         plot_posterior_intervals, plot_posterior_interval_comparison, plot_forecast_decomposition,
-        plot_forecast_sequence,
+        plot_forecast_sequence, date_to_float,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
         init_pseudo_observable_mappings!,
-        Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide, eqcond, measurement,
+        Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
+    PoolModel, eqcond, measurement,
         pseudo_measurement,
-        shock_groupings
+        shock_groupings, transition
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -154,6 +156,7 @@ module DSGE
 
     include("abstractdsgemodel.jl")
     include("defaults.jl")
+    include("models/poolmodel/poolmodel.jl")
     include("statespace.jl")
     include("util.jl")
 
@@ -187,6 +190,7 @@ module DSGE
     include("estimate/nelder_mead.jl")
     include("estimate/marginal_data_density.jl")
     include("estimate/estimate.jl")
+    include("estimate/estimate_bma.jl")
     include("estimate/nearest_spd.jl")
 
     include("estimate/metropolis_hastings.jl")
@@ -217,6 +221,7 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
     include("analysis/df_to_table.jl")
+    include("analysis/create_q4q4_mb.jl")
 
     include("decomp/drivers.jl")
     include("decomp/io.jl")
@@ -302,5 +307,9 @@ module DSGE
     include("models/an_schorfheide/pseudo_measurement.jl")
     include("models/an_schorfheide/augment_states.jl")
 
-
+    # PoolModel
+    include("models/poolmodel/subspecs.jl")
+    include("models/poolmodel/observables.jl")
+    include("models/poolmodel/measurement.jl")
+    include("models/poolmodel/transition.jl")
 end

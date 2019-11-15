@@ -2,8 +2,23 @@ function init_pseudo_observable_mappings!(m::Model1002)
 
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
                     :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t,
-                    :Expected10YearRateGap, :NominalFFR, :Expected10YearRate, :Expected10YearNaturalRate,
-                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth]
+                    :Expected10YearRateGap, :NominalFFR, :Expected10YearRate,
+                    :Expected10YearNaturalRate,
+                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth,
+                    :u_t]
+
+    if subspec(m) == "ss12"
+        to_add = [:g_t, :b_t, :μ_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
+                  :γ_t, :π_star_t, :e_lr_t, :e_tfp_t, :e_gdpdef_t, :e_corepce_t, :e_gdp_t, :e_gdi_t]
+        pseudo_names = vcat(pseudo_names, to_add)
+    end
+
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+        push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t)
+        if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
+            push!(pseudo_names, :e_tfp_t1)
+        end
+    end
 
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
@@ -52,8 +67,8 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:FlexibleHours].name     = "Flexible Hours"
     pseudo[:FlexibleHours].longname = "Flexible Hours"
 
-    pseudo[:z_t].name     = "z_t"
-    pseudo[:z_t].longname = "z_t"
+    pseudo[:z_t].name     = "z_t (Technology Growth minus Steady State Growth)"
+    pseudo[:z_t].longname = "z_t (Technology Growth minus Steady State Growth)"
 
     pseudo[:Expected10YearRateGap].name     = "Expected 10-Year Rate Gap"
     pseudo[:Expected10YearRateGap].longname = "Expected 10-Year Rate Gap"
@@ -82,6 +97,36 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:LaborProductivityGrowth].name     = "Labor Productivity Growth"
     pseudo[:LaborProductivityGrowth].longname = "Labor Productivity Growth Rate"
     pseudo[:LaborProductivityGrowth].rev_transform = quartertoannual
+
+    pseudo[:u_t].name     = "u_t"
+    pseudo[:u_t].longname = "u_t"
+
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+        pseudo[:Sinf_t].name     = "Sinf_t"
+        pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
+        pseudo[:Sinf_w_coef_t].name     = "Sinf_w_coef_t"
+        pseudo[:Sinf_w_coef_t].longname = "Sinf_w_coef_t, PDV of Emc_t multiplied by coefficient"
+        pseudo[:ι_p].name = "iota_p"
+        pseudo[:ι_p].longname = "iota_p"
+        pseudo[:πtil_t].name     = "pitil_t"
+        pseudo[:πtil_t].longname = "Fundamental Inflation"
+        pseudo[:πtil_t1].name     = "pitil_t1"
+        pseudo[:πtil_t1].longname = "Fundamental Inflation Lag 1"
+        pseudo[:e_tfp_t].name = "e_tfp_t"
+        pseudo[:e_tfp_t].longname = "e_tfp_t"
+        if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
+            pseudo[:e_tfp_t1].name = "e_tfp_t1"
+            pseudo[:e_tfp_t1].longname = "e_tfp_t1"
+        end
+    end
+
+    # Other exogenous processes
+    if subspec(m) == "ss12"
+        for i in to_add
+            pseudo[i].name = DSGE.detexify(i)
+            pseudo[i].longname = DSGE.detexify(i)
+        end
+    end
 
     # Add to model object
     m.pseudo_observable_mappings = pseudo

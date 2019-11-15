@@ -76,7 +76,7 @@ function series_ylabel(m::AbstractDSGEModel, var::Symbol, class::Symbol;
             else
                 return "Percent Q/Q Annualized"
             end
-        elseif transform in [quartertoannual, loggrowthtopct]
+        elseif transform in [quartertoannual]
             if untrans
                 return "Percent Q/Q"
             else
@@ -149,4 +149,16 @@ function relocate_annotations!(p::Plots.Plot{Plots.GRBackend},
             p.series_list[i].plotattributes[:series_annotations].font.valign = vert_position
         end
     end
+end
+
+function date_to_float(datevec::Vector{Date}, reps::Int64 = 1)
+    date_floats = zeros(reps, length(datevec))
+    tofloats = Dict{String,Float64}("03" => .25, "06" => .5, "09" => .75, "12" => 1.)
+    for j = 1:length(datevec)
+        tmp = string(datevec[j])
+        s = tmp[6:7]
+        num = parse(Float64,tmp[1:4]) + tofloats[s]
+        date_floats[:,j] .= num
+    end
+    return date_floats
 end

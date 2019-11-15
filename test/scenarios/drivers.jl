@@ -99,33 +99,31 @@ end
 scenario_means_bands(m, alt, verbose = :none)
 scenario_means_bands(m, allalt, verbose = :none)
 global actual = dropdims(mean(original_draws, dims = 1), dims=1)
-
 @testset "Test single scenarios" begin
     mb1 = read_scenario_mb(m, alt, :forecastutobs)
     mb2 = read_scenario_mb(m, allalt, :forecastutobs)
     for mb in [mb1, mb2]
         for (var, ind) in mb.metadata[:indices]
-            @test mb.means[var] ≈ actual[ind, :]
+            @test mb.means[!, var] ≈ actual[ind, :]
         end
     end
 
     mb1 = read_scenario_mb(m, alt, :forecastobs)
     mb2 = read_scenario_mb(m, allalt, :forecastobs)
     for mb in [mb1, mb2]
-        @test mb.means[:obs_gdp] ≈ quartertoannual(actual[1, :])
-        @test mb.means[:obs_cpi] ≈ quartertoannual(actual[2, :])
-        @test mb.means[:obs_nominalrate] ≈ actual[3, :]
+        @test mb.means[!, :obs_gdp] ≈ quartertoannual(actual[1, :])
+        @test mb.means[!, :obs_cpi] ≈ quartertoannual(actual[2, :])
+        @test mb.means[!, :obs_nominalrate] ≈ actual[3, :]
     end
 
     mb1 = read_scenario_mb(m, alt, :forecast4qobs)
     mb2 = read_scenario_mb(m, allalt, :forecast4qobs)
     for mb in [mb1, mb2]
-        @test mb.means[:obs_gdp] ≈ loggrowthtopct_4q_approx(actual[1, :], zeros(3))
-        @test mb.means[:obs_cpi] ≈ loggrowthtopct_4q_approx(actual[2, :], zeros(3))
-        @test mb.means[:obs_nominalrate] ≈ actual[3, :]
+        @test mb.means[!, :obs_gdp] ≈ loggrowthtopct_4q_approx(actual[1, :], zeros(3))
+        @test mb.means[!, :obs_cpi] ≈ loggrowthtopct_4q_approx(actual[2, :], zeros(3))
+        @test mb.means[!, :obs_nominalrate] ≈ actual[3, :]
     end
 end
-
 # Aggregate scenarios equally
 aggall = ScenarioAggregate(:aggall, "Test Scenario Aggregate", AbstractScenario[def, alt],
                            [0.5, 0.5], 20, false, "REF")
@@ -135,9 +133,8 @@ global actual = dropdims(mean(cat(default_draws, original_draws, dims = 1), dims
 @testset "Test scenario aggregation" begin
     mb = read_scenario_mb(m, aggall, :forecastutobs)
     for (var, ind) in mb.metadata[:indices]
-        @test mb.means[var] ≈ actual[ind, :]
+        @test mb.means[!, var] ≈ actual[ind, :]
     end
-
     # Aggregate scenarios to only have alternative scenaro
     aggalt = ScenarioAggregate(:aggalt, "Test Scenario Aggregate", AbstractScenario[def, alt],
                                [0.0, 1.0], 20, false, "REF")
@@ -146,7 +143,7 @@ global actual = dropdims(mean(cat(default_draws, original_draws, dims = 1), dims
 
     mb = read_scenario_mb(m, aggalt, :forecastutobs)
     for (var, ind) in mb.metadata[:indices]
-        @test mb.means[var] ≈ actual[ind, :]
+        @test mb.means[!, var] ≈ actual[ind, :]
     end
 end
 
@@ -157,11 +154,11 @@ aggrep2 = ScenarioAggregate(:aggrep2, "Test Scenario Aggregate", AbstractScenari
                             [0.0, 1.0], 20, true, "REF")
 
 # Simulate dummy scenario with shock scaling
-scale = Scenario(:altscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
+scale_scenario = Scenario(:altscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
                  shock_scaling = 2.0)
-forecast_scenario(m, scale, verbose = :none)
+forecast_scenario(m, scale_scenario, verbose = :none)
 
-expect = JLD2.jldopen(get_scenario_input_file(m, scale), "r") do file
+expect = JLD2.jldopen(get_scenario_input_file(m, scale_scenario), "r") do file
     2.0 * read(file, "arr")
 end
 

@@ -44,10 +44,10 @@ function get_forecast_input_file(m, input_type;
         elseif get_setting(m, :sampling_method) == :SMC
             return rawpath(m, "estimate", "smcsave.h5", filestring_addl)
         else
-            throw("Invalid sampling method specification. Change in setting :sampling_method")
+            error("Invalid sampling method specification. Change in setting :sampling_method")
         end
     else
-        throw(ArgumentError("Invalid input_type: $(input_type)"))
+        error(ArgumentError("Invalid input_type: $(input_type)"))
     end
 end
 
@@ -206,7 +206,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
         # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
         # is executed.
         if isnull(block_number) || get(block_number) == 1
-            JLD2.jldopen(filepath, "w") do file
+            JLD2.jldopen(filepath, true, true, true, IOStream) do file
                 write_forecast_metadata(m, file, var)
             end
             h5open(replace(filepath, "jld2" => "h5"), "w") do file
@@ -214,7 +214,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
                     # :histobs just refers to data, so we only write one draw
                     # (as all draws would be the same)
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
-                    df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
+                    df1 = df[date_mainsample_start(m) .<= df[!, :date] .<= date_mainsample_end(m), :]
                     data = df_to_matrix(m, df1)
 
                     # Must call missing2nan since you cannot write Missing types to HDF5 files
@@ -345,11 +345,10 @@ Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
 function write_forecast_block(file, arr::Array,
                               block_inds::AbstractRange{Int64})
-    #pfile = file #.plain
     dataset = HDF5.d_open(file, "arr")
     dims = size(dataset)
     ndims = length(dims)
-    dataset[block_inds, fill(Colon(), ndims-1)...] = arr #pfile was dataset before
+    dataset[block_inds, fill(Colon(), ndims-1)...] = arr
     set_dims!(dataset, dims)
 end
 

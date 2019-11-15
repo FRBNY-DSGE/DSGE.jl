@@ -24,7 +24,7 @@ y_t &= Z s_t + D + u_t & u_t &\sim N(0, E) & \mathrm{(measurement)}
 using the `gensys` routine of Chris Sims, introduced in
 [this paper](http://sims.princeton.edu/yftp/gensys/LINRE3A.pdf). We provide a
 standalone native Julia implementation of the routine ([`gensys`](@ref)) as well
-as a wrapper for `AbstractModel` subtypes ([`solve`](@ref)). When the Gensys.jl
+as a wrapper for `AbstractDSGEModel` subtypes ([`solve`](@ref)). When the Gensys.jl
 package becomes ready for use, we intend to deprecate our `gensys` code and
 substitute the `gensysdt` method for our code.
 

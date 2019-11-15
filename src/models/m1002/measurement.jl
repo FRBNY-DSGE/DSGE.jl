@@ -57,11 +57,18 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_hours]]             = m[:Lmean]
 
     ## Labor Share/real wage growth
-    ZZ[obs[:obs_wages], endo[:w_t]]      = 1.0
-    ZZ[obs[:obs_wages], endo_new[:w_t1]] = -1.0
-    ZZ[obs[:obs_wages], endo[:z_t]]      = 1.0
-    DD[obs[:obs_wages]]                  = 100*(exp(m[:z_star])-1)
-
+    if subspec(m) in ["ss16", "ss17"]
+        # log(labor_share) = log(wage) + log(hours) - log(GDP)
+        ZZ[obs[:obs_laborshare], endo[:w_t]] = 1.
+        ZZ[obs[:obs_laborshare], endo[:L_t]] = 1.
+        DD[obs[:obs_laborshare]] = 100. * log(m[:wstar] * m[:Lstar] / m[:ystar])
+        ZZ[obs[:obs_laborshare], endo[:y_t]] = -1.
+    else
+        ZZ[obs[:obs_wages], endo[:w_t]]      = 1.0
+        ZZ[obs[:obs_wages], endo_new[:w_t1]] = -1.0
+        ZZ[obs[:obs_wages], endo[:z_t]]      = 1.0
+        DD[obs[:obs_wages]]                  = 100*(exp(m[:z_star])-1)
+    end
     ## Inflation (GDP Deflator)
     ZZ[obs[:obs_gdpdeflator], endo[:π_t]]            = m[:Γ_gdpdef]
     ZZ[obs[:obs_gdpdeflator], endo_new[:e_gdpdef_t]] = 1.0
@@ -102,19 +109,26 @@ function measurement(m::Model1002{T},
 
     ## Long Rate
     ZZ[obs[:obs_longrate], :]               = ZZ[6, :]' * TTT10
-    ZZ[obs[:obs_longrate], endo_new[:lr_t]] = 1.0
+    ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
     DD[obs[:obs_longrate]]                  = m[:Rstarn]
 
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
-    ZZ[obs[:obs_tfp], endo_new[:tfp_t]] = 1.0
-    ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
-    ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
+    if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
+        ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]]  = 1.0
+        ZZ[obs[:obs_tfp], endo_new[:e_tfp_t1]] = -m[:me_level]
+    else
+        ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]] = 1.0
+    end
+    if !(subspec(m) in ["ss15", "ss16"])
+        ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
+        ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
+    end
 
     QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
     QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
-    QQ[exo[:z_sh], exo[:z_sh]]            = m[:σ_z]^2
+    QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil]^2
     QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
     QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
     QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2

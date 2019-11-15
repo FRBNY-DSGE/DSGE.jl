@@ -82,11 +82,11 @@ function targets_to_data(m::AbstractDSGEModel, scen::Scenario)
     horizons   = n_target_horizons(scen)
     start_date = date_forecast_start(m)
     end_date   = iterate_quarters(start_date, horizons - 1)
-    df[:date]  = quarter_range(start_date, end_date)
+    df[!, :date]  = quarter_range(start_date, end_date)
 
     for var in keys(m.observables)
-        df[var] = if var in scen.target_names
-            scen.targets[var]
+        df[!, var] = if var in scen.target_names
+            scen.targets[!, var]
         else
             fill(missing, horizons)
         end

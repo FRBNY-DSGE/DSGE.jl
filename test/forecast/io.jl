@@ -1,16 +1,32 @@
 using DSGE, Test, Dates
-using JLD2, OrderedCollections, HDF5
+using JLD2, OrderedCollections, HDF5, Nullables
+
+path = dirname(@__FILE__)
+save_output = true
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
 dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
 
+output_vars = [:histstates, :histobs, :histpseudo, :histshocks,
+                   :forecastobs, :shockdecobs, :dettrendobs, :trendobs, :irfobs]
+
 @testset "Test main forecast I/O functions and metadata writing" begin
     # get_forecast_input_file
     @test get_forecast_input_file(m, :init) == ""
+    @test get_forecast_input_file(m, :init_draw_shocks) == ""
+    @test get_forecast_input_file(m, :prior) == ""
     @test get_forecast_input_file(m, :mode) == rawpath(m, "estimate", "paramsmode.h5")
+    @test get_forecast_input_file(m, :mode_draw_shocks) == rawpath(m, "estimate", "paramsmode.h5")
+    m <= Setting(:sampling_method, :invalid_method)
+    @test_throws ErrorException get_forecast_input_file(m, :full) == rawpath(m, "estimate", "smcsave.h5")
+    m <= Setting(:sampling_method, :SMC)
+    @test get_forecast_input_file(m, :full) == rawpath(m, "estimate", "smcsave.h5")
+    m <= Setting(:sampling_method, :MH)
     @test get_forecast_input_file(m, :full) == rawpath(m, "estimate", "mhsave.h5")
     global overrides = forecast_input_file_overrides(m)
+    overrides[:full] = "invalidpath"
+    @test_throws ErrorException get_forecast_input_file(m, :full)
     overrides[:mode] = tempname()
     @test_throws ErrorException get_forecast_input_file(m, :mode)
     overrides[:full] = mktemp()[1]
@@ -28,15 +44,30 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
     # get_forecast_filestring_addl
     @test DSGE.get_forecast_filestring_addl(:mode, :none) == ["para=mode", "cond=none"]
     @test DSGE.get_forecast_filestring_addl(:mode, :none; forecast_string = "test") == ["para=mode", "cond=none", "fcid=test"]
+    @test_throws ErrorException DSGE.get_forecast_filestring_addl(:subset, :none)
 
     # get_forecast_output_files
     dict = Dict{Symbol, String}()
-    output_vars = [:histstates, :histobs, :histpseudo, :histshocks,
-                   :forecastobs, :shockdecobs, :dettrendobs, :trendobs, :irfobs]
+
     for var in output_vars
         dict[var] = get_forecast_filename(m, :mode, :none, var)
     end
     @test get_forecast_output_files(m, :mode, :none, output_vars) == dict
+
+    # write_forecast_outputs
+    global df = load_data(m, verbose = :none)
+    overrides = forecast_input_file_overrides(m)
+    overrides[:full] = "$(path)/../reference/smcsave_.h5"
+    m <= Setting(:sampling_method, :SMC)
+    m <= Setting(:forecast_block_size, 100)
+    block_inds, block_inds_thin = DSGE.forecast_block_inds(m, :full)
+    forecast_output_files = DSGE.get_forecast_output_files(m, :full, :none, [:histstates, :histobs, :forecaststates, :forecastobs])
+    # Test that write_forecast_outputs and combine_raw_forecast_output_and_metadata run without deprecration
+    for block in 1:20
+        forecast_output = load("$(path)/../reference/write_forecast_outputs_$(block)_in.jld2", "forecast_output")
+        DSGE.write_forecast_outputs(m, :full, [:histstates, :histobs, :forecaststates, :forecastobs],forecast_output_files, forecast_output, df = df, block_number = Nullables.Nullable(block), block_inds = block_inds_thin[block])
+    end
+    DSGE.combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = :none)
 
     # write_forecast_metadata
     for var in output_vars

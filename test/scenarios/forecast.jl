@@ -1,5 +1,7 @@
 using DSGE, Test
 
+writing_output = false
+
 # Initialize model object
 m = AnSchorfheide(testing = true)
 m <= Setting(:forecast_horizons, 12)
@@ -34,34 +36,55 @@ end
 
     # Test filter_shocks!
     for var in scen.target_names
-        scen.targets[var] = rand(forecast_horizons(m))
+        scen.targets[!, var] = rand(forecast_horizons(m))
     end
     global forecastshocks = filter_shocks!(m, scen, sys)
     for var in scen.instrument_names
         ind = m.exogenous_shocks[var]
-        @test scen.instruments[var] == forecastshocks[ind, :]
+        @test scen.instruments[!, var] == forecastshocks[ind, :]
     end
 
     s_T = zeros(n_states_augmented(m))
     global _, forecastobs,_ ,_  = forecast(m, sys, s_T, shocks = forecastshocks)
     for var in scen.target_names
         ind = m.observables[var]
-        @test scen.targets[var] ≈ forecastobs[ind, :]
+        @test scen.targets[!, var] ≈ forecastobs[ind, :]
     end
 
     # Test scenario with shock scaling
-    global scale = Scenario(:scaledscen, "Test Shock Scaling Scenario",
+    global scale_scenario = Scenario(:scaledscen, "Test Shock Scaling Scenario",
                             [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
                             shock_scaling = 2.0)
-    scale.targets = scen.targets
+    scale_scenario.targets = scen.targets
 
-    global forecastshocks = filter_shocks!(m, scale, sys)
-    for var in scale.target_names
+    global forecastshocks = filter_shocks!(m, scale_scenario, sys)
+    for var in scale_scenario.target_names
         ind = m.observables[var]
-        @test scale.targets[var] == scen.targets[var]
+        @test scale_scenario.targets[!, var] == scen.targets[!, var]
     end
-    for var in scale.instrument_names
+    for var in scale_scenario.instrument_names
         ind = m.exogenous_shocks[var]
-        @test scale.instruments[var] == forecastshocks[ind, :]
+        @test scale_scenario.instruments[!, var] == forecastshocks[ind, :]
     end
 end
+
+###########################
+# forecast_scenario
+###########################
+#=
+file = "$path/../reference/forecast_scenario_draw.jld2"
+sys = compute_scenario_system(m, scen)
+
+forecast_output = DSGE.forecast_scenario_draw(m, scen, sys, 1)
+
+if writing_output
+    JLD2.jldopen(file, true, true, true, IOStream) do file
+        file["forecast_output"] = forecast_output
+    end
+end
+forecast_output_test = load(file, "forecast_output")
+
+@testset "Test forecast_scenario_draw, forecast_scenario" begin
+    @test forecast_output == forecast_output_test
+end
+=#
