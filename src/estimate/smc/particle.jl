@@ -397,7 +397,6 @@ end
 
 """
 ```
-function set_weights!(c::ParticleCloud, weights::Vector{Float64})
 @inline function set_weights!(c::Cloud, weights::Vector{Float64})
 ```
 Set weights to specific values. Contrast to update_weights, which multiplies

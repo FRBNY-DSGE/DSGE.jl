@@ -20,6 +20,7 @@ module DSGE
     import ModelConstructors: posterior!, posterior, <=,
                               @test_matrix_approx_eq, @test_matrix_approx_eq_eps
     import SMC: get_vals
+    import SparseArrays: sparse
 
     export
         # defaults.jl
@@ -175,6 +176,7 @@ module DSGE
 
     include("solve/gensys.jl")
     include("solve/solve.jl")
+    include("solve/klein.jl")
 
     include("estimate/util.jl")
     include("estimate/kalman.jl")
