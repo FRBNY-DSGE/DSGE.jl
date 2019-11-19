@@ -1,0 +1,636 @@
+\documentclass{beamer}
+\usetheme{Boadilla}
+\usepackage{/data/dsge_data_dir/LatexTemplates/dsgestyle}
+\newcommand{\bfc}{\mathbf{c}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfd}{\mathbf{d}}
+\newcommand{\bff}{\mathbf{f}}
+\newcommand{\bfh}{\mathbf{h}}
+\newcommand{\bfg}{\mathbf{g}}
+\newcommand{\bfi}{\mathbf{i}}
+\newcommand{\bfj}{\mathbf{j}}
+\newcommand{\bfk}{\mathbf{k}}
+\newcommand{\bfl}{\mathbf{l}}
+\newcommand{\bfm}{\mathbf{m}}
+\newcommand{\bfn}{\mathbf{n}}
+\newcommand{\bfo}{\mathbf{o}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfq}{\mathbf{q}}
+\newcommand{\bfr}{\mathbf{r}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bft}{\mathbf{t}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfy}{\mathbf{y}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\bfu}{\mathbf{u}}
+\newcommand{\bfv}{\mathbf{v}}
+\newcommand{\bfw}{\mathbf{w}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfY}{\mathbf{Y}}
+\newcommand{\bfA}{\mathbf{A}}
+\newcommand{\bfB}{\mathbf{B}}
+\newcommand{\bfC}{\mathbf{C}}
+\newcommand{\bfD}{\mathbf{D}}
+\newcommand{\bfE}{\mathbf{E}}
+\newcommand{\bfF}{\mathbf{F}}
+\newcommand{\bfG}{\mathbf{G}}
+\newcommand{\bfH}{\mathbf{H}}
+\newcommand{\bfI}{\mathbf{I}}
+\newcommand{\bfJ}{\mathbf{J}}
+\newcommand{\bfK}{\mathbf{K}}
+\newcommand{\bfL}{\mathbf{L}}
+\newcommand{\bfU}{\mathbf{U}}
+\newcommand{\bfV}{\mathbf{V}}
+\newcommand{\bfW}{\mathbf{W}}
+\newcommand{\bfZ}{\mathbf{Z}}
+\newcommand{\bfM}{\mathbf{M}}
+\newcommand{\bfN}{\mathbf{N}}
+\newcommand{\bfQ}{\mathbf{Q}}
+\newcommand{\bfO}{\mathbf{O}}
+\newcommand{\bfR}{\mathbf{R}}
+\newcommand{\bfS}{\mathbf{S}}
+\newcommand{\bfT}{\mathbf{T}}
+\newcommand{\bfP}{\mathbf{P}}
+\newcommand{\bfzero}{\mathbf{0}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\curA}{\mathscr{A}}
+\newcommand{\curC}{\mathscr{C}}
+\newcommand{\curD}{\mathscr{D}}
+\newcommand{\curE}{\mathscr{E}}
+\newcommand{\curH}{\mathscr{H}}
+\newcommand{\curI}{\mathscr{I}}
+\newcommand{\curJ}{\mathscr{J}}
+\newcommand{\curK}{\mathscr{K}}
+\newcommand{\curN}{\mathscr{N}}
+\newcommand{\curO}{\mathscr{O}}
+\newcommand{\curQ}{\mathscr{Q}}
+\newcommand{\curS}{\mathscr{S}}
+\newcommand{\curT}{\mathscr{T}}
+\newcommand{\curU}{\mathscr{U}}
+\newcommand{\curV}{\mathscr{V}}
+\newcommand{\curW}{\mathscr{W}}
+\newcommand{\curZ}{\mathscr{Z}}
+\newcommand{\curB}{\mathscr{B}}
+\newcommand{\curF}{\mathscr{F}}
+\newcommand{\curG}{\mathscr{G}}
+\newcommand{\curM}{\mathscr{M}}
+\newcommand{\curL}{\mathscr{L}}
+\newcommand{\curP}{\mathscr{P}}
+\newcommand{\curR}{\mathscr{R}}
+\newcommand{\curX}{\mathscr{X}}
+\newcommand{\curY}{\mathscr{Y}}
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\calF}{\mathcal{F}}
+\newcommand{\calK}{\mathcal{K}}
+\newcommand{\calO}{\mathcal{O}}
+\newcommand{\RA}{\Rightarrow}
+\newcommand{\ra}{\rightarrow}
+
+% Title slide
+\begin{document}
+\title{HANK Theory}
+\author{William Chen and Emily Martell}
+\institute{DSGE Interns 2018}
+\date{\today}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+
+% Table of contents
+\begin{frame}
+\frametitle{Outline}
+\tableofcontents
+\end{frame}
+
+\section{Steady State Theory}
+
+
+\begin{frame}
+\frametitle{Agent Problem}
+Consumers face the problem
+\begin{equation}
+\label{eq:hjb}
+\rho v_t = \max_c u(c) + \dfrac{1}{dt}\E[dv_t]
+\end{equation}
+subject to the dynamic budget constraint
+\begin{equation}
+\label{wealth law of motion}
+da_t = \left(w_tz_t + ra_t - c_t\right)\,dt.
+\end{equation}
+\end{frame}
+
+\begin{frame}
+\frametitle{Simplified HJB}
+\begin{equation}\label{hjb simplified}
+\rho v_t = \max_c u(c) + \calA v_t + \frac{1}{dt}\E_t[dv_t],
+\end{equation}
+\begin{itemize}
+\item $\calA$: generator of idiosyncratic states' stochastic process
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Kolmogorov Forward Equation and Market-Clearing}
+\begin{equation}  \label{kfe}
+\dfrac{dg_t}{dt} = \calA^*g_t,
+\end{equation}
+\begin{itemize}
+\item $g_t$: cross-sectional distribution of agents
+\item $\calA^*$: adjoint of $\calA$
+\end{itemize}
+
+\begin{equation}\label{market clearing}
+\bfp_t = \calF(g_t),
+\end{equation}
+\begin{itemize}
+\item $\bfp_t$: price vector
+\item $\calF$: functional mapping distribution to prices
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Discretized Steady State System}
+\begin{equation}\label{eq:steady state system}
+  \begin{split}
+    \rho \bfv & = \bfu(\bfv) + \bfA(\bfv;\bfp)\bfv\\
+    \bfzero & = \bfA(\bfv;\bfp)^T\bfg\\
+    \bfp & = \bfF(\bfg),
+\end{split}
+\end{equation}
+\begin{itemize}
+\item In steady state, $\E_t[dv_t] = 0$
+\item $\bfA$: matrix approximation of $\calA$
+\item $\bfA^T$: adjoint becomes the transpose
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Finite Differences}
+Let $f:\mathbb{R}\ra\mathbb{R}$ be some differentiable function and $\{x_0,x_1,\dots, x_n\}$ a grid of points. A first-order forward finite difference is
+\begin{equation}
+\label{eq:ex first order finite difference}
+  \dfrac{d f(x_i)}{d x} \approx \dfrac{f(x_{i+1}) - f(x_i)}{(x_{i+1} - x_i)}.
+\end{equation}
+and a second-order forward finite difference is
+\begin{equation}
+\label{eq:ex second order finite difference}
+  \dfrac{d f(x_i)}{d x} \approx \dfrac{f(x_{i+2}) - 2f(x_{i+1}) + f(x_i)}{(x_{i+2} - x_{i+1})(x_{i+1} - x_i)}.
+\end{equation}
+
+\end{frame}
+\begin{frame}
+\frametitle{Upwind Scheme}
+  \begin{itemize}
+  \item Use forward difference when drift in state variable is positive
+  \item Use backward difference when drift in state variable is negative
+  \item Example: Wealth $a_t$ is a state variable. When an agent is saving and accumulating wealth, $\dot{a}_t >0\Rightarrow$ positive drift $\Rightarrow$ use forward difference to approximate value function derivative
+  \end{itemize}
+  \end{frame}
+
+
+\begin{frame}
+  \frametitle{Discretized Dynamic System}
+Now we add aggregate shocks back in \textit{around} the steady state:
+\begin{equation}
+\begin{split}
+\rho \bfv_t & = \bfu(\bfv_t) + \bfA(\bfv_t;\bfp_t)\bfv_t + \dfrac{1}{dt}\E_t[d\bfv_t]\\
+\dfrac{d\bfg_t}{dt} & = \bfA(\bfv_t;\bfp_t)^T\bfg_t\\
+\bfp_t & = \bfF(\bfg_t),\\
+dZ_t & = \eta Z_t\,dt + \sigma\, dW_t,
+\end{split}
+\end{equation}
+\begin{itemize}
+\item $Z_t$: vector of aggregate state shocks
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Linearizing}
+\begin{equation}
+\begin{split}
+\E_t[d\bfv_t] & = \left(\rho \bfv_t- \bfu(\bfv_t)- \bfA(\bfv_t;\bfp_t)\bfv_t\right)\,dt\\
+d\bfg_t & = \bfA(\bfv_t;\bfp_t)^T\bfg_t\,dt\\
+\bfp_t & = \bfF(\bfg_t),\\
+dZ_t & = \eta Z_t\,dt + \sigma\, dW_t,
+\end{split}
+\end{equation}
+which is the same as
+\begin{equation}
+  \begin{bmatrix}
+    \E[d\bfv_t]\\d\bfg_t\\dZ_t
+  \end{bmatrix} = \bff(\bfv_t;\bfg_t;\bfp_t;Z_t),
+\end{equation}
+where $\bff(\cdot) = \bfzero$ in the steady state.
+\end{frame}
+
+\begin{frame}
+\frametitle{Linearized System}
+\begin{equation}\label{linearized system}
+  \begin{bmatrix}
+    \E[d\hat{\bfv}_t]\\d\hat{\bfg}_t\\dZ_t
+  \end{bmatrix} = \Gamma_1
+  \begin{bmatrix}
+    \hat{\bfv}_t\\\hat{\bfg}_t\\ Z_t
+  \end{bmatrix} + \Psi\, dW_t + \Pi\, \eta_t + C
+\end{equation}
+\begin{itemize}
+\item $\eta_t$: generally, expectational errors of value functions
+\end{itemize}
+\end{frame}
+
+
+  \begin{frame}
+    \frametitle{Some Terminology}
+    \begin{itemize}
+    \item Jump/control variable: Any variable that some agent directly controls, e.g. value function, inflation target
+    \item Aggregate/endogenous state variable: Any variable agents take as given, e.g. cross-sectional distribution, aggregate productivity
+    \item Static conditions: Any conditions statically solved, e.g. market-clearing for capital
+    \item When solving the code, reduction steps require a specific ordering of jump and aggregate state variables:
+      \begin{enumerate}
+      \item Value function variables first, then any other jump variables, followed by ...
+      \item Cross-sectional distribution variables, then any other aggregage state variables
+      \end{enumerate}
+    \end{itemize}
+\end{frame}
+
+\section{Krylov Subspace Methods and Aggregate State Variable Reduction}
+
+\begin{frame}
+\frametitle{Goal}
+Find a basis $\bfX_\gamma$ for a lower dimensional subspace $S$ such that
+\[
+\begin{bmatrix}
+  \hat{\bfg}_t\\Z_t
+\end{bmatrix} \approx \bfX_\gamma \gamma_t,
+\]
+where $\gamma_t\in S$.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Observability Matrix}
+We can re-write the linearized system as
+\[ \E \begin{bmatrix}
+    \E[d\hat{\bfv}_t]\\d\hat{\bfg}_t
+  \end{bmatrix} =
+  \begin{bmatrix}
+    \bfB_{vv} & \bfB_{vp} \bfB_{pg} & \bfB_{vp}\bfB_{pz}\\
+    \bfB_{gb} & \bfB_{gg} + \bfB_{gp}\bfB_{pg} & \bfB_{gp} \bfB_{pZ}
+  \end{bmatrix}
+  \begin{bmatrix}
+    \hat{\bfv}_t\\\hat{\bfg}_t\\ Z_t
+  \end{bmatrix}.
+\]
+Our desired observability matrix is $\calO(\bfB_{pg}, \bfB_{gg} + \bfB_{gp}\bfB_{pg})^T$. For reasons described in Ahn et al. (2017), we project aggregate state variables onto the subspace generated by the observability matrix.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Krylov Subspaces}
+\begin{definition}
+Let $\bfA\in \R^{n\times n}$ and $\bfb\in \R^n$. Then the order-$k$ Krylov subspace is
+\[ \calK_k(\bfA,\bfb) = \text{span}(\{\bfb, \bfA\bfb, \bfA^2\bfb,\dots, \bfA^{k-1}\bfb\}), \]
+\end{definition}
+Inspection of this definition should indicate that the observability matrix is an order-$k$ Krylov subspace, namely
+\[\calK_k(\bfB_{gg}^T + \bfB_{gp}^T\bfB_{pg}^T, \bfB_{pg}^T).  \]
+\end{frame}
+
+\begin{frame}
+  \frametitle{Algorithm}
+  \begin{itemize}
+  \item Partition $\Gamma_1$ matrix in linearized system \eqref{linearized system} into blocks used to create an order-$k$ Krylov subspace.
+\item Use deflated block Arnoldi iteration to find a basis for this subspae
+  \begin{enumerate}
+  \item Stable method for orthogonalizing basis
+  \item Handles multicollinearity that arises from the polynomial-esque definition of Krylov subspaces via deflation
+  \end{enumerate}
+  \end{itemize}
+\end{frame}
+
+
+\section{Spline Basis Projection and Value Function Reduction}
+
+\begin{frame}
+\frametitle{Spline Theory}
+  Assuming that $\hat{\bfv}_t$ is smooth, splines provide a sufficient approximation. We reduce $\hat{\bfv}_t$ by projecting into a spline basis:
+\begin{equation}
+  \label{spline projection}
+\hat{\bfv}_t \approx \bfX_\nu \nu_t.
+\end{equation}
+\begin{itemize}
+\item $\bfX_\nu$: creates linear combination of spline knot points
+\item $\nu_t$: coefficients at knot points in spline basis
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Constructing Basis}
+  \begin{itemize}
+  \item Use quadratic splines: maintains monotoncity and concavity b/n knot points
+  \item Non-uniform grid: better approximate complicated regions of value function
+  \item Create $\bfX_\nu$ by mapping actual state space to knot points in spline basis
+    \[\bfx  = \bfX_\nu \bfk_t,\]
+    where $\bfx$ are the actual state space grid points and $\bfk_t$ are the knot points.
+ \end{itemize}
+\end{frame}
+
+
+\section{Description of KrusellSmith and OneAssetHANK}
+
+\begin{frame}
+  \frametitle{KrusellSmith}
+  Basic RBC model with the following features:
+  \begin{itemize}
+  \item Bewley-Aiyagari structure for the consumption-savings problem $\RA$ cross-sectional distribution in income/wealth matters
+  \item Incomplete markets (consequence of Bewley-Aiyagari structure)
+  \item Perfectly inelastic labor supply
+  \item Wealth is held in capital
+  \item Aggregate productivity shocks
+  \end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Consumption-Savings Problem}
+Consumers solve the following problem
+\begin{align*}
+&\max_{c_{jt}}\E_0\left[\int_0^\infty e^{-\rho t}\dfrac{c_{jt}^{1-\gamma}}{1-\gamma}\,dt\right],  \\
+&\dot{a}_{jt} =  w_t z_{jt} + r_ta_{jt} -c_{jt},\\
+&z_{jt}\in \{z_L, z_H\},\, z_L< z_H,\quad\text{with Poisson arrival rates}\quad \lambda_L, \, \lambda_H\\
+& a_{jt}\geq 0.
+\end{align*}
+\end{frame}
+\begin{frame}
+  \frametitle{Production Side}
+Perfectly competitive firms $\RA$ representative firm produces according to
+\[Y_t = e^{Z_t}K_t^{\alpha}N_t^{1-\alpha} \]
+\begin{itemize}
+\item $Z_t$ is logarithm of aggregate productivity and follows mean-reverting Ornstein-Uhlenbeck process
+\item $K_t$ is aggregate capital
+\item $N_t$ is aggregate labor
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{OneAssetHANK}
+  New Keynesian model in continuous time with
+  \begin{itemize}
+  \item Bewley-Aiyagari structure for the consumption-savings problem $\RA$ cross-sectional distribution in income/wealth matters
+  \item Incomplete markets (consequence of Bewley-Aiyagari structure)
+  \item Fiscal policy and government bonds for saving
+  \item Monetary policy due to nominal rigidities from Rotemberg pricing and monopolistic competition in intermediate goods
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Consumption-Savings Problem}
+Consumers solve the following problem
+\begin{align*}
+&\max_{c_{jt}}\E_0\left[\int_0^\infty e^{-\rho t}\left( \dfrac{c_{jt}^{1-\gamma}}{1-\gamma} - \phi_0\dfrac{l_{jt}^{1+1/\phi_1}}{1+1/\phi_1}\right)\,dt\right],  \\
+& da_{jt} = (r_t\cdot a_{jt}+ (1-\tau)\cdot w_t\cdot z_{jt}\cdot l_{jt} + T_t + \Pi_t - c_{jt})\,dt\\
+&z_{jt}\in \{z_L, z_H\},\, z_L< z_H,\quad\text{with Poisson arrival rates}\quad \lambda_L, \, \lambda_H\\
+& a_{jt}\geq \underline{a}.
+\end{align*}
+\end{frame}
+\begin{frame}
+  \frametitle{Production Side}
+\begin{itemize}
+\item Final goods created from a variety of intermediates according to a CES aggregator
+\item Rotemberg pricing: quadratic adjustment costs to price re-setting
+\item Labor is the only input into intermediates
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Government Policy}
+  Fiscal policy satisfies
+\[\dot{B}_t^g + G_t + T_t = \tau_t\int w_tzl_t(a,z)g(a,z)\,da\,dz+r_tB_t^g.  \]
+Monetary policy follows
+\begin{align*}
+ i_t& = \overline{r}_t + \phi_\pi\pi_t + \phi_y(y - \overline{y}) + \varepsilon_{MP,t},\\
+ d\varepsilon_t &= -\theta_{MP}\varepsilon_t\,dt + \sigma_t\cdot dW_t.
+\end{align*}
+\end{frame}
+
+\section{Estimation}
+
+\begin{frame}
+  \frametitle{Kalman Filter w/ Continuous-Time State \& Discrete Observations}
+\begin{itemize}
+\item Transition and measurement equations:
+\begin{align*}
+  ds_t & = Ts_t\,dt + R\, dW_t\\
+  y_\tau & = Zs_\tau + D + u_\tau,
+\end{align*}
+where $t\in [0,\infty)$ and $\tau\in\N$.
+\item Update step the same as in discrete Kalman Filter.
+\item Prediction step changes to solving deterministic ODE
+\begin{align*}
+  \dfrac{\E[ds_t]}{dt} & = Ts_t.
+\end{align*}
+\item Intuition: States driven by Brownian motion $\RA$ shock can be treated as if it all occurs at once in period $\tau\RA$ predict between periods as if deterministic motion and update as if we had an instantenous normal shock in $\tau$
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Kalman Filter w/Simulated Subintervals}
+Let $\tau$ be the length of time in between discrete observations. Approximate path of $s_t$ by subdividing $[0,\tau]$ into $n$ subintervals and using Euler-Maruyama scheme to guess how $s_t$ moves:
+\[s_{t,i+1} = Ts_{t, i}\cdot\dfrac{\tau}{n} + R\epsilon_{t,i+1},\quad\text{for }i =0,1,2,\dots, n  \]
+where $\epsilon_{t,i+1}\sim N(0, \frac{\tau}{n}I)$, $s_{t,0} = s_{t}$, and $s_{t,n} = s_{t+\tau}$. Our new ``state'' vector is
+\[S_t =
+\begin{bmatrix}
+  s_{t,1}\\s_{t,2}\\.\\.\\.\\s_{t,n}
+\end{bmatrix}
+\]
+\end{frame}
+
+\begin{frame}
+  \frametitle{Transformed Matrices for Simulated Subintervals KF}
+Let $I$ be the identity matrix. The new transition equation
+\[S_{t+\tau} = TT\, S_t + RR\,\vec{\epsilon}_t, \]
+where
+\[TT =
+\begin{bmatrix}
+  0 & 0 & \cdots &  0 & (T+I)\\
+0 & 0 & \cdots & 0 & (T+I)^2\\
+\cdot & \cdot & \cdots & \cdot & \cdot\\
+0 & 0 & \cdots & 0 & (T+I)^n
+\end{bmatrix} + I\]
+\[RR =
+\begin{bmatrix}
+  R & 0 & 0 & \cdots & 0 & 0 \\
+(T+I)R & R & 0 & \cdots & 0 & 0\\
+(T+I)^2R & (T+I)R & R & \cdots & 0 & 0\\
+\cdot & \cdot &  \cdot & \cdots & \cdot & \cdot\\
+(T+I)^{n-1}R & (T+I)^{n-2}R & (T+I)^{n-3}R & \cdots & (T+I)R & R\\
+\end{bmatrix}.
+\]
+\end{frame}
+
+\begin{frame}
+  \frametitle{Data Generation}
+\begin{enumerate}
+\item Initialize $s_0 = \bfzero$, i.e. we start at the steady state.
+\item Set $dt = 1/90$ so that 1 period is a quarter, and each time step $dt$ is equivalent to a day.
+\item To generate $N$ years of data, perform the following calculation $360\cdot N$ times:
+\[s_{t+1} = (I + T\,dt)s_t + R \varepsilon_{t+1},  \]
+where $T$ and $R$ are the transition matrices from the true state transition equation
+\[ds_t = Ts_t\, dt + R\, dW_t,  \]
+and $\varepsilon_{t+1}\sim N(0, dt * I)$, i.e. $\varepsilon_{t+1}$ is a mean-zero normal shock with variance $dt$, \
+per shock.
+\item Save the path of $s_t$, which generates $360\cdot N + 1$ data points.
+\end{enumerate}
+\end{frame}
+\begin{frame}
+  \frametitle{Example Data Generation}
+  \begin{itemize}
+  \item Our state vector, when unreduced, is $406\times 1$, with flow output in the 404th entry
+  \item $Z$ matrix is $1\times 406$ matrix and is all zeros except for a 1 in the 404 entry
+  \item $Zs_t$ returns the flow output whenever data is available
+  \item No measurement noise added
+  \item Resulting system:
+    \begin{align*}
+      ds_t & = Ts_t\,dt + R\, dW_t\\
+      y_\tau & = Zs_\tau,
+    \end{align*}
+  \item Computing likelihoods on this system is the same as evaluating the Kalman filter's behavior when we can only see the true state vector every 90th data point.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Timing}
+\begin{center}
+  \begin{tabular}{|c|c|c|c|}
+    \hline
+    Method & Time (ms) & Allocations & Memory (MiB)\\
+\hline
+    ODE - Euler & 418.813  & 440419 & 634.9 \\
+    ODE - Tsitouras 5/4 & 421.565 & 440019  & 634.89\\
+    Subintervals - 2  & 50.181 & 15071 & 67.84 \\
+    Subintervals - 3  & 126.252 & 15071 & 149.88\\
+    Subintervals - 12 & 4601 & 16214 & 2300\\
+\hline
+  \end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Accuracy}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+Method &  Mean absolute distance & Std(error) & Max abs error\\
+\hline
+ODE Integration - Tsitouras 5/4 & .00122 & .0004855 & .00199\\
+Subintervals - 2 &.00157 & .000438 & .00199\\
+Subintervals - 3 & .00158 & .000436 & .00199\\
+Subintervals - 12 & .00159 & .000423 & .00199\\
+\hline
+\end{tabular}
+\end{center}
+\begin{itemize}
+\item max\_lik\_$\sigma$: $\sigma$ predicted by MLE when using Kalman filter and varying the estimated parameter
+\item true\_$\sigma$: $\sigma$ that generated the data, which is .007 for KrusellSmith
+\item mean abs dist: mean(max\_lik\_$\sigma$ - true\_$\sigma$)
+\item std(error): std(max\_lik\_$\sigma$ - true\_$\sigma$)\\
+\item max abs err: maximum(abs.(max\_lik\_$\sigma$ - true\_$\sigma$))\\
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Other Kalman Filters}
+We made some notes and found some references for block kalman filters, which use block multiplication to speed up Kalman Filter, and ensemble Kalman Filters. See the ``working paper'' documentation for these notes.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Measurement Equation: Set Up}
+Suppose we have the continuous-time transition equation
+\[dX_t = TX_t\,dt + R\, dW_t,  \]
+where $X_t\in \R^n$, $T\in \R^{n\times n}$, $R\in \R^{n\times m}$, and $dW_t$ is an $m$-dimensional standard Brownian motion. In expectation, we have
+\[ dX_t = TX_t\,dt \RA \dfrac{dX_t}{dt} = TX_t\RA X_t = \exp((t- \tau)T)X_{\tau}. \]
+\end{frame}
+
+\begin{frame}
+  \frametitle{From Flows to Stocks}
+  \begin{itemize}
+  \item $X_t$ represents flows like output per second
+  \item Data is on stock variables $\RA$
+  \item Need to construct $Z$ so that $ZX_t$ yields stock variables
+  \item Time is continuous $\RA$ integrate
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Integrating Exponential Matrix}
+We have $X_t = \exp((t - \tau)T)X_{\tau}$. $T$ is not invertible usually, so we integrate power series definition:
+\begin{align*}
+& \int_{\tau}^S \exp((t-\tau)T) X_\tau\, dt \\
+& = \int_{\tau}^S \left(\sum_{ n = 0}^\infty \dfrac{((t-\tau)T)^n}{n!}\right)\, dt \, X_\tau\\
+& = \left(\sum_{ n = 0}^\infty \int_\tau^S \dfrac{((t-\tau)T)^n}{n!}dt\right)\,X_\tau \\
+& = \left((S-\tau) +\dfrac{(S-\tau)^2 T}{2!} + \dfrac{(S-\tau)^3T^2}{3!} + \dfrac{(S-\tau)^4T^3}{4!} + \cdots\right)X_\tau\\
+& = \left((S-\tau)\sum_{n = 0}^\infty \dfrac{((S-\tau)T)^n}{n!}\right)X_\tau
+\end{align*}
+We make $Z$ by choosing rows of the parenthetical term in last line.
+\end{frame}
+
+\begin{frame}
+  \frametitle{track\_lag and Subinterval Kalman Filter}
+  \begin{itemize}
+  \item Since the subinterval KF has the state vector
+\[S_t = (s_{t,1},\dots, s_{t,n}),\]
+we want
+\[ ZS_{t} = \sum_{i = 1}^n \int \exp( (\Delta t) T)s_{t,i-1}\, d(\Delta t).\]
+\item But $S_t$ doesn't have $s_{t, 0} = s_{t-1,n}$
+\item track\_lag adjusts our $TT$ and $RR$ matrix in
+\[S_{t+\tau} = TT\, S_t + RR\,\vec{\epsilon}_t \]
+so that
+\[ S_t = (s_{t,0},s_{t,1},\dots, s_{t,n}) = (s_{t-1,n}, s_{t,1},\dots, s_{t,n}). \]
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Why track\_lag rather than augment states?}
+  \begin{itemize}
+    \item solve returns $T,C,R$ matrices, but with augment states, we would have
+\[T = \begin{bmatrix}
+0 & I \\
+0 & T_{orig}
+\end{bmatrix}, \quad\quad R =
+\begin{bmatrix}
+  0 \\
+R_{orig}
+\end{bmatrix}
+\]
+where $T_{orig}$ is the unaugmented $T$ matrix, and $R_{orig}$ is the unaugmented $R$ matrix.
+    \item Not all measurement equations need to integrate flows (e.g. asset prices) $\RA$ user would have to slice $T$ to get $T_{orig}$.
+    \item Users may want to conduct theoretical experiments, e.g. impulse responses
+  \end{itemize}
+\end{frame}
+
+\section{Future Work}
+
+\begin{frame}
+\frametitle{Immediately Doable Work}
+\begin{enumerate}
+\item Internal consistency check to allow for endogenous decision rules. Currently, the methods ignore feedback from changes in endogenous decision rules (from the value function) and get around it by simply raising $k$, the dimension of Krylov subspace, to a sufficiently high power. Experimentation by Ahn et al. (2017) suggests that this is fine for many models, but it may be desirable to have this method available.
+\item Translate two-asset HANK, as described in the Ahn et al. (2017) paper and ``Monetary Policy according to\
+ HANK''.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Larger Extensions for Heterogeneous-Agent Models}
+\begin{enumerate}
+\item Translate Smets-Wouters into a HANK format (e.g. idiosyncratic labor)
+\item Create a HANK model with heterogeneity among firms. For example, we could investigate heterogeneity in firms' balance sheets/funding constraints.
+\item Ben Moll developed a method for choosing optimal policies in the steady state of HACT models. We may wish to implement this as part of the toolkit to allow users to conduct welfare analysis. See ``working paper'' for link.
+\item Fernandez-Villaverde extends Krusell-Smith's original methods by using neural network instead of linear regression to approximate perceived law of motion. This allows the inclusion of a Brunnermeier-Sannikov style financial friction and its nonlinearities while maintaining heterogeneity among consumers. See ``working paper'' for link.
+\end{enumerate}
+\end{frame}
+
+\end{document}
