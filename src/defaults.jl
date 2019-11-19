@@ -66,6 +66,10 @@ function default_settings!(m::AbstractDSGEModel)
     settings[:use_parallel_workers] = Setting(:use_parallel_workers, true,
         "Use available parallel workers in computations")
 
+    # Solution
+    settings[:solution_method] = Setting(:solution_method, :gensys, "What method the model uses to solve for the
+                                         state space model form. The options are :gensys and :klein")
+
     # Optimization
     settings[:reoptimize] = Setting(:reoptimize, true,
         "Optimize the posterior mode. If false, reads in mode from a file.")

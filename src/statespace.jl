@@ -154,12 +154,49 @@ corresponding to model `m`. Returns a `System` object.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                         verbose::Symbol = :high) where T<:AbstractFloat
-    # Solve model
-    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
-    transition_equation = Transition(TTT, RRR, CCC)
 
-    # Solve measurement equation
-    measurement_equation = measurement(m, TTT, RRR, CCC)
+    # Solve model
+    if solution_method == :gensys
+
+        TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+        transition_equation = Transition(TTT, RRR, CCC)
+
+        # Solve measurement equation
+        measurement_equation = measurement(m, TTT, RRR, CCC)
+
+    elseif solution_method == :klein
+        # Unpacking the method from solve to hang on to TTT_jump
+        if m.spec == "het_dsge"
+            TTT_jump, TTT_state, eu, dF2_dRZ, dF2_dWH, dF2_dTT  = klein(m)
+        else
+            TTT_jump, TTT_state, eu = klein(m)
+        end
+        if eu==-1
+            throw(KleinError())
+        end
+
+        TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+        CCC = zeros(n_model_states(m))
+
+        if m.spec=="real_bond_mkup"
+            GDPeqn = construct_GDPeqn(m, TTT_jump)
+            TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
+            # Measurement (needs the additional TTT_jump argument)
+            measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
+        elseif m.spec == "het_dsge"
+            C_eqn = construct_consumption_eqn(m, TTT_jump, dF2_dRZ, dF2_dWH, dF2_dTT)
+            TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, C_eqn)
+            measurement_equation = measurement(m, TTT, RRR, CCC, C_eqn)
+        else
+            TTT, RRR, CCC        = augment_states(m, TTT, RRR, CCC)
+            measurement_equation = measurement(m, TTT, RRR, CCC)
+        end
+
+        transition_equation = Transition(TTT, RRR, CCC)
+
+    else
+        throw("solution_method provided does not exist.")
+    end
 
     type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
     if hasmethod(pseudo_measurement, type_tuple)
