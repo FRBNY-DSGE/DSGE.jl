@@ -3,12 +3,7 @@ function klein(m::AbstractModel)
     #################
     # Linearization:
     #################
-    if m.spec=="het_dsge"
-        Jac1, dF2_dRZ, dF2_dWH, dF2_dTT = jacobian(m)
-    else
-        Jac1 = jacobian(m)
-    end
-    Jac1 = Matrix{Float64}(Jac1)
+    Jac1 = Matrix{Float64}(jacobian(m))
     ##################################################################################
     # Klein Solution Method---apply generalized Schur decomposition a la Klein (2000)
     ##################################################################################
@@ -68,11 +63,7 @@ function klein(m::AbstractModel)
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of U22*U22'"
-            if m.spec == "het_dsge"
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1, dF2_dRZ, dF2_dWH, dF2_dTT
-            else
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
-            end
+            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
         else
             rethrow(ex)
         end
@@ -83,15 +74,11 @@ function klein(m::AbstractModel)
 	S11invT11 = S11\T11;
 	Ustuff = (U11 + U12*gx_coef);
 	invterm = try
-        pinv(eye(NK)+gx_coef'*gx_coef)
+        pinv(eye(NK) + gx_coef' * gx_coef)
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             #@info "LAPACK exception thrown while computing pseudo inverse of eye(NK) + gx_coef'*gx_+coef"
-            if m.spec == "het_dsge"
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1, dF2_dRZ, dF2_dWH, dF2_dTT
-            else
-                return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
-            end
+            return gx_coef, Array{Float64, 2}(undef, NK, NK), -1
         else
             rethrow(ex)
         end
@@ -111,12 +98,7 @@ function klein(m::AbstractModel)
 	# next, want to represent policy functions in terms of meaningful things
 	# gx_fval = Qy'*gx_coef*Qx
 	# hx_fval = Qx'*hx_coef*Qx
-
-    if m.spec == "het_dsge"
-	    return gx_coef, hx_coef, 0, dF2_dRZ, dF2_dWH, dF2_dTT
-    else
-        return gx_coef, hx_coef, 0
-    end
+    return gx_coef, hx_coef, 0
 end
 
 # Need an additional transition_equation function to properly stack the

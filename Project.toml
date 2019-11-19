@@ -26,9 +26,13 @@ HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
 MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
-Missings = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
 ModelConstructors = "e47e5152-bd14-11e9-1b46-c951f0a7041d"
+
+MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+Missings = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
+
 Nullables = "4d1e1d77-625e-5b40-9113-a560ec7a8ecd"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"

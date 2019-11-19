@@ -39,17 +39,16 @@ function impulse_responses_augmented(m::AbstractHetModel, system::System{S};
     Qx = get_setting(m, :Qx)
     Qy = get_setting(m, :Qy)
 
-    TTT_jump, TTT_state, eu, dF2_dRZ, dF2_dWH, dF2_dTT = klein(m)
+    TTT_jump, TTT_state, eu  = klein(m)
     if eu == -1
         throw(KleinError())
     end
 
     TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
     CCC      = zeros(n_model_states(m))
-    C_eqn    = construct_consumption_eqn(m, TTT_jump, dF2_dRZ, dF2_dWH, dF2_dTT)
-    TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, C_eqn)
+    TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC)
 
-    measurement_equation = measurement(m, TTT, RRR, CCC, C_eqn)
+    measurement_equation = measurement(m, TTT, RRR, CCC)
     transition_equation = Transition(TTT, RRR, CCC)
     system = System(transition_equation, measurement_equation)
 

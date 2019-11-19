@@ -11,16 +11,24 @@ module DSGE
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
+    using Statistics: std
+
     import Calculus
     import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
     import ModelConstructors
-    import ModelConstructors: posterior!, posterior, <=,
-                              @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+    import ModelConstructors: posterior!, posterior, <=, n_states,
+                              @test_matrix_approx_eq, @test_matrix_approx_eq_eps,
+                              n_states, n_states_augmented, n_shocks_exogenous,
+                              n_shocks_expectational, n_observables, n_pseudo_observables,
+                              n_equilibrium_conditions, n_parameters, n_parameters_steady_state,
+                              n_parameters_free
     import SMC: get_vals
-    import SparseArrays: sparse
+    import Calculus, Missings, Nullables
+    import StateSpaceRoutines: KalmanFilter
+    import SparseArrays: sparse, spdiagm, spzeros
 
     export
         # defaults.jl
@@ -157,6 +165,9 @@ module DSGE
         # models
         solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT,
         SteadyStateParameterArray, OneAssetHANK, calibrate_pLH_pHL,
+
+	# TwoAssetHANK
+        TwoAssetHANK,
 
         # solve/
         gensysct, gensysct!, new_divct, decomposition_svdct!, <,
@@ -486,4 +497,12 @@ module DSGE
     include("models/heterogeneous_agent/one_asset_hank/measurement.jl")
     include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
     include("models/heterogeneous_agent/one_asset_hank/helpers.jl")
+
+    include("models/heterogeneous_agent/two_asset_hank/income_transition.jl")
+    include("models/heterogeneous_agent/two_asset_hank/two_asset_hank.jl")
+    #include("models/heterogeneous_agent/two_asset_hank/measurement.jl")
+    include("models/heterogeneous_agent/two_asset_hank/eqcond.jl")
+    include("models/heterogeneous_agent/two_asset_hank/util.jl")
+    include("models/heterogeneous_agent/two_asset_hank/helpers.jl")
+    include("models/heterogeneous_agent/two_asset_hank/interp.jl")
 end

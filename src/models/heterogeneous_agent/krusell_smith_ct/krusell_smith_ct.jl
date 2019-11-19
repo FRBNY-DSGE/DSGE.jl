@@ -553,7 +553,7 @@ function model_settings!(m::KrusellSmithCT)
     m <= Setting(:sampling_method, :SMC, "Set sampling method to SMC")
 
     # SMC settings
-    m <= Setting(:n_particles, 3000)
+    m <= Setting(:n_particles, 3_000)
     m <= Setting(:n_Φ, 200)
     m <= Setting(:λ, 2.0)
     m <= Setting(:n_smc_blocks, 1)

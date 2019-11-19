@@ -1,14 +1,13 @@
 # Lightweight Representative Agent Version of HetDSGEGovDebt
 mutable struct RepDSGEGovDebt{T} <: AbstractRepModel{T}
-    parameters::ParameterVector{T}               # vector of all time-invariant model parameters
-    steady_state::ParameterVector{T}             # model steady-state values
+    parameters::ParameterVector{T}                # vector of all time-invariant model parameters
+    steady_state::ParameterVector{T}              # model steady-state values
 
-    grids::OrderedDict{Symbol,Union{Grid, Array}}
-    keys::OrderedDict{Symbol,Int}                    # Human-readable names for all the model
-                                                     # parameters and steady-states
+    grids::OrderedDict{Symbol,Union{Grid, Array}} # Human-readable names for all the model
+    keys::OrderedDict{Symbol,Int}                 # parameters and steady-states
 
-    state_variables::Vector{Symbol}                  # Vector of symbols of the state variables
-    jump_variables::Vector{Symbol}                   # Vector of symbols of the jump variables
+    state_variables::Vector{Symbol}               # Vector of symbols of the state variables
+    jump_variables::Vector{Symbol}                # Vector of symbols of the jump variables
 
     # Vector of unnormalized ranges of indices
     endogenous_states::OrderedDict{Symbol,Int}
@@ -18,10 +17,10 @@ mutable struct RepDSGEGovDebt{T} <: AbstractRepModel{T}
     endogenous_states_augmented::OrderedDict{Symbol, Int}
     observables::OrderedDict{Symbol,Int}
 
-    spec::String                                     # Model specification number (eg "m990")
-    subspec::String                                  # Model subspecification (eg "ss0")
-    settings::Dict{Symbol,Setting}                   # Settings/flags for computation
-    testing::Bool                                    # Whether we are in testing mode or not
+    spec::String                                  # Model specification number (eg "m990")
+    subspec::String                               # Model subspecification (eg "ss0")
+    settings::Dict{Symbol,Setting}                # Settings/flags for computation
+    testing::Bool                                 # Whether we are in testing mode or not
     observable_mappings::OrderedDict{Symbol, Observable}
 end
 
@@ -40,7 +39,9 @@ function RepDSGEGovDebt(het::HetDSGEGovDebt;
     # initialize empty model
     m = RepDSGEGovDebt{Float64}(
             # model parameters and steady state values
-            Vector{AbstractParameter{Float64}}(), Vector{Float64}(),
+            Vector{AbstractParameter{Float64}}(),
+            Vector{Float64}(),
+
             # grids and keys
             OrderedDict{Symbol,Union{Grid, Array}}(), OrderedDict{Symbol,Int}(),
 

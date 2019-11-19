@@ -50,7 +50,7 @@ Draw from a general starting distribution (set by default to be from the prior) 
 initialize the SMC algorithm. Returns a tuple (logpost, loglh) and modifies the
 particle objects in the particle cloud in place.
 """
-function initial_draw!(m::AbstractDSGEModel, data::Matrix{Float64},
+function initial_draw!(m::AbstractModel, data::Matrix{Float64},
                        c::Union{Cloud, ParticleCloud};
                        parallel::Bool = false, use_chand_recursion::Bool = true,
                        verbose::Symbol = :low)
