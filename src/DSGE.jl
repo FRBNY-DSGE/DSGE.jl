@@ -181,6 +181,7 @@ module DSGE
     include("models/poolmodel/poolmodel.jl")
     include("statespace.jl")
     include("util.jl")
+    include("grids.jl")
 
     include("benchmark/util.jl")
     include("benchmark/benchmark.jl")
@@ -235,7 +236,7 @@ module DSGE
     include("estimate/transform_transition_matrices.jl")
     include("estimate/ct_filters/ct_kalman_filter.jl")
     include("estimate/ct_filters/block_kalman_filter.jl")
-    #include("estimate/ct_filters/ct_block_kalman_filter.jl")
+    # include("estimate/ct_filters/ct_block_kalman_filter.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
