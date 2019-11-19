@@ -78,7 +78,7 @@ module DSGE
         simulate_data, simulate_observables, simulate_states,
 
         # solve/
-        gensys, solve,
+        gensys, solve, klein,
 
         # estimate/
         simulated_annealing, combined_optimizer, lbfgs,
@@ -146,9 +146,30 @@ module DSGE
         init_parameters!, steadystate!, init_observable_mappings!,
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
-    PoolModel, eqcond, measurement,
-        pseudo_measurement,
-        shock_groupings, transition
+        PoolModel, eqcond, measurement, pseudo_measurement,
+        shock_groupings, transition,
+
+        # models/heterogeneous_agent/
+        KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
+        RepDSGEGovDebt, HetDSGESimpleTaylor, HetDSGELag, Grid,
+
+        #### Continuous time
+        # models
+        solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT,
+        SteadyStateParameterArray, OneAssetHANK, calibrate_pLH_pHL,
+
+        # solve/
+        gensysct, gensysct!, new_divct, decomposition_svdct!, <,
+        krylov_reduction, valueref_reduction, deflated_block_arnoldi, change_basis,
+        oneDquad_spline, extend_to_nd, projection_for_subset, spline_basis,
+        solve_static_conditions,
+
+        # estimate
+        hessizero, hess_diag_element, hess_offdiag_element, transform_transition_matrices,
+
+        # estimate/ct_filters
+        BlockKalmanFilter, init_stationary_states, block_kalman_filter, CTBlockKalmanFilter,
+        ct_block_kalman_filter, ct_kalman_filter, forecast!
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -208,6 +229,14 @@ module DSGE
     include("estimate/smc.jl")
     include("estimate/backwards_compatibility.jl")
 
+    # CT HANK code
+    include("estimate/filter_hank.jl")
+    include("estimate/hessizero_hank.jl")
+    include("estimate/transform_transition_matrices.jl")
+    include("estimate/ct_filters/ct_kalman_filter.jl")
+    include("estimate/ct_filters/block_kalman_filter.jl")
+    #include("estimate/ct_filters/ct_block_kalman_filter.jl")
+
     include("forecast/util.jl")
     include("forecast/io.jl")
     include("forecast/smooth.jl")
@@ -258,7 +287,7 @@ module DSGE
     include("plot/plot_forecast_sequence.jl")
 
     include("models/financial_frictions.jl")
-
+    # >>>
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
     include("models/m990/eqcond.jl")
@@ -314,4 +343,146 @@ module DSGE
     include("models/poolmodel/observables.jl")
     include("models/poolmodel/measurement.jl")
     include("models/poolmodel/transition.jl")
+
+    #=======
+
+    # Representative Agent Models
+    include("models/representative_agent/financial_frictions.jl")
+
+    include("models/representative_agent/m990/m990.jl")
+    include("models/representative_agent/m990/subspecs.jl")
+    include("models/representative_agent/m990/eqcond.jl")
+    include("models/representative_agent/m990/observables.jl")
+    include("models/representative_agent/m990/measurement.jl")
+    include("models/representative_agent/m990/pseudo_observables.jl")
+    include("models/representative_agent/m990/pseudo_measurement.jl")
+    include("models/representative_agent/m990/augment_states.jl")
+
+    include("models/representative_agent/m1002/m1002.jl")
+    include("models/representative_agent/m1002/subspecs.jl")
+    include("models/representative_agent/m1002/eqcond.jl")
+    include("models/representative_agent/m1002/observables.jl")
+    include("models/representative_agent/m1002/measurement.jl")
+    include("models/representative_agent/m1002/pseudo_observables.jl")
+    include("models/representative_agent/m1002/pseudo_measurement.jl")
+    include("models/representative_agent/m1002/augment_states.jl")
+
+    include("models/representative_agent/m1010/m1010.jl")
+    include("models/representative_agent/m1010/subspecs.jl")
+    include("models/representative_agent/m1010/eqcond.jl")
+    include("models/representative_agent/m1010/observables.jl")
+    include("models/representative_agent/m1010/measurement.jl")
+    include("models/representative_agent/m1010/pseudo_observables.jl")
+    include("models/representative_agent/m1010/pseudo_measurement.jl")
+    include("models/representative_agent/m1010/augment_states.jl")
+
+    include("models/representative_agent/smets_wouters/smets_wouters.jl")
+    include("models/representative_agent/smets_wouters/subspecs.jl")
+    include("models/representative_agent/smets_wouters/eqcond.jl")
+    include("models/representative_agent/smets_wouters/observables.jl")
+    include("models/representative_agent/smets_wouters/measurement.jl")
+    include("models/representative_agent/smets_wouters/augment_states.jl")
+
+    include("models/representative_agent/an_schorfheide/an_schorfheide.jl")
+    include("models/representative_agent/an_schorfheide/subspecs.jl")
+    include("models/representative_agent/an_schorfheide/eqcond.jl")
+    include("models/representative_agent/an_schorfheide/observables.jl")
+    include("models/representative_agent/an_schorfheide/measurement.jl")
+    include("models/representative_agent/an_schorfheide/pseudo_observables.jl")
+    include("models/representative_agent/an_schorfheide/pseudo_measurement.jl")
+    include("models/representative_agent/an_schorfheide/augment_states.jl")
+
+    =#
+    # Heterogeneous Agent Models
+    include("models/heterogeneous_agent/util.jl")
+
+    include("models/heterogeneous_agent/krusell_smith/krusell_smith.jl")
+    include("models/heterogeneous_agent/krusell_smith/steady_state.jl")
+    include("models/heterogeneous_agent/krusell_smith/subspecs.jl")
+    include("models/heterogeneous_agent/krusell_smith/jacobian.jl")
+    include("models/heterogeneous_agent/krusell_smith/shock_loading.jl")
+    include("models/heterogeneous_agent/krusell_smith/observables.jl")
+    include("models/heterogeneous_agent/krusell_smith/measurement.jl")
+
+    include("models/heterogeneous_agent/bond_labor/bond_labor.jl")
+    include("models/heterogeneous_agent/bond_labor/steady_state.jl")
+    include("models/heterogeneous_agent/bond_labor/jacobian.jl")
+    include("models/heterogeneous_agent/bond_labor/shock_loading.jl")
+    include("models/heterogeneous_agent/bond_labor/observables.jl")
+    include("models/heterogeneous_agent/bond_labor/measurement.jl")
+
+    include("models/heterogeneous_agent/real_bond/real_bond.jl")
+    include("models/heterogeneous_agent/real_bond/steady_state.jl")
+    include("models/heterogeneous_agent/real_bond/jacobian.jl")
+    include("models/heterogeneous_agent/real_bond/shock_loading.jl")
+    include("models/heterogeneous_agent/real_bond/observables.jl")
+    include("models/heterogeneous_agent/real_bond/measurement.jl")
+
+    include("models/heterogeneous_agent/real_bond_mkup/real_bond_mkup.jl")
+    include("models/heterogeneous_agent/real_bond_mkup/steady_state.jl")
+    include("models/heterogeneous_agent/real_bond_mkup/subspecs.jl")
+    include("models/heterogeneous_agent/real_bond_mkup/jacobian.jl")
+    include("models/heterogeneous_agent/real_bond_mkup/shock_loading.jl")
+    include("models/heterogeneous_agent/real_bond_mkup/observables.jl")
+    include("models/heterogeneous_agent/real_bond_mkup/measurement.jl")
+    include("models/heterogeneous_agent/real_bond_mkup/augment_states.jl")
+
+    include("models/heterogeneous_agent/het_dsge/het_dsge.jl")
+    include("models/heterogeneous_agent/het_dsge/steady_state.jl")
+    include("models/heterogeneous_agent/het_dsge/subspecs.jl")
+    include("models/heterogeneous_agent/het_dsge/jacobian.jl")
+    include("models/heterogeneous_agent/het_dsge/shock_loading.jl")
+    include("models/heterogeneous_agent/het_dsge/observables.jl")
+    include("models/heterogeneous_agent/het_dsge/measurement.jl")
+    include("models/heterogeneous_agent/het_dsge/augment_states.jl")
+
+    include("models/heterogeneous_agent/het_dsge_gov_debt/util.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/het_dsge_gov_debt.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/steady_state.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/subspecs.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/jacobian.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/shock_loading.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/observables.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/measurement.jl")
+    include("models/heterogeneous_agent/het_dsge_gov_debt/augment_states.jl")
+
+    include("models/representative_agent/rep_dsge_gov_debt/rep_dsge_gov_debt.jl")
+    include("models/representative_agent/rep_dsge_gov_debt/subspecs.jl")
+    include("models/representative_agent/rep_dsge_gov_debt/jacobian.jl")
+    include("models/representative_agent/rep_dsge_gov_debt/shock_loading.jl")
+    include("models/representative_agent/rep_dsge_gov_debt/measurement.jl")
+    include("models/representative_agent/rep_dsge_gov_debt/augment_states.jl")
+
+    include("models/heterogeneous_agent/het_dsge_lag/het_dsge_lag.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/steady_state.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/subspecs.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/jacobian.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/shock_loading.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/observables.jl")
+    include("models/heterogeneous_agent/het_dsge_lag/measurement.jl")
+
+    #=
+    include("models/heterogeneous_agent/het_dsge_simple_taylor/het_dsge_simple_taylor.jl")
+    include("models/heterogeneous_agent/het_dsge_simple_taylor/steady_state.jl")
+    include("models/heterogeneous_agent/het_dsge_simple_taylor/subspecs.jl")
+    include("models/heterogeneous_agent/het_dsge_simple_taylor/jacobian.jl")
+    =#
+
+    # Continuous Time Heterogenous Agent Models
+    include("solve/solve_hank.jl")
+    include("solve/gensysct.jl")
+    include("solve/reduction.jl")
+    include("solve/sparse_reduction.jl")
+
+    include("models/heterogeneous_agent/solve_hjb.jl")
+    include("models/heterogeneous_agent/solve_kfe.jl")
+
+    include("models/heterogeneous_agent/krusell_smith_ct/krusell_smith_ct.jl")
+    include("models/heterogeneous_agent/krusell_smith_ct/measurement.jl")
+    include("models/heterogeneous_agent/krusell_smith_ct/eqcond.jl")
+
+    include("models/heterogeneous_agent/one_asset_hank/one_asset_hank.jl")
+    include("models/heterogeneous_agent/one_asset_hank/measurement.jl")
+    include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
+    include("models/heterogeneous_agent/one_asset_hank/helpers.jl")
 end

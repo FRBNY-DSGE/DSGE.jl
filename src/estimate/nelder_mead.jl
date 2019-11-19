@@ -26,7 +26,8 @@ function Optim.simplexer(A::MatlabSimplexer, initial_x::Array{T, N}) where {T, N
     n = length(initial_x)
     initial_simplex = Array{T, N}[initial_x for i = 1:n+1]
     for j = 1:n
-        initial_simplex[j+1][j] += initial_simplex[j+1][j] == zero(T) ? A.b * initial_simplex[j+1][j] : A.a
+        initial_simplex[j+1][j] += initial_simplex[j+1][j] == zero(T) ?
+            A.b * initial_simplex[j+1][j] : A.a
     end
     initial_simplex
 end
