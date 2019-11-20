@@ -1,6 +1,7 @@
 using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
+HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
             "core",
@@ -14,8 +15,8 @@ my_tests = [
 
             "models/poolmodel/poolmodel",
 
-            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
-            # "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
+            #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
+            #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
             # "models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
             # "models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
             # "models/heterogeneous/het_dsge/het_dsge",
