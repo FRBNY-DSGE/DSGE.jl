@@ -148,7 +148,7 @@ function ss4!(m::RealBondMkup)
                    fixed = true,
                    description = "κ: The slope of the Phillips curve",
                    tex_label = "\\kappa")
-    m <= parameter(:phipi, 1.5, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.25),
+    m <= parameter(:phipi, 1.5, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25),
                    fixed = true,
                    description = "phipi: The slope of the taylor rule",
                    tex_label = "\\phi_\\pi")
@@ -189,7 +189,7 @@ function ss5!(m::RealBondMkup)
                    fixed = true,
                    description = "κ: The slope of the Phillips curve",
                    tex_label = "\\kappa")
-    m <= parameter(:phipi, 1.5, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.25),
+    m <= parameter(:phipi, 1.5, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25),
                    fixed = true,
                    description = "phipi: The slope of the taylor rule",
                    tex_label = "\\phi_\\pi")

@@ -269,7 +269,7 @@ function init_parameters!(m::KrusellSmithCT)
                    description="α: Capital share.",
                    tex_label="\\alpha")
 
-    m <= parameter(:σ_tfp, .007, (1e-20, 1e5), (1e-20, 1e5), Exponential(), RootInverseGamma(4, 0.5),
+    m <= parameter(:σ_tfp, .007, (1e-20, 1e5), (1e-20, 1e5), ModelConstructors.Exponential(), RootInverseGamma(4, 0.5),
                    fixed=false, description="σ_tfp: The standard deviation of the TFP shock.",
                    tex_label="\\sigma_tfp")
 

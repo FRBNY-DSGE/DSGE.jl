@@ -33,7 +33,7 @@ function ss1!(m::RealBond)
     m <= parameter(:ρmon, 0.0, fixed = true,
                    description="ρmon: AR(1) coefficient in the monetary policy process.",
                    tex_label="\\rho_z")
-    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
     m <= parameter(:σ_mon, 0.0, fixed = true,
@@ -60,7 +60,7 @@ function ss2!(m::RealBond)
     m <= parameter(:σ_z, 0.0, fixed = true,
                    description="σ_mon: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{mon}")
-    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_mon: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{mon}")
 end

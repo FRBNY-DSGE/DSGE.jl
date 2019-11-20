@@ -54,7 +54,7 @@ function ss1!(m::HetDSGE)
                    BetaAlt(0.75, 0.10), fixed = true,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
-    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
+    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), ModelConstructors.Exponential(),
                    Normal(1.5, 0.25), fixed = true,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
@@ -89,31 +89,31 @@ function ss1!(m::HetDSGE)
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label = "\\rho_{r^m}")
 
-    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label = "\\sigma_{b}")
-    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label = "\\sigma_{\\mu}")
-    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label = "\\sigma_z")
-    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
                    tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                 GammaAlt(0.62, 0.1), fixed=true, scaling = x -> 1 + x/100,
                 description="π_star: The steady-state rate of inflation.",
                 tex_label="\\pi_*")
@@ -135,7 +135,7 @@ function ss1!(m::HetDSGE)
                    Normal(0.12, 0.05), fixed = true,
                    description = "ψy: Weight on output growth in monetary policy rule")
 
-    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                    Normal(2, 0.75), fixed = true, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 end
@@ -157,7 +157,7 @@ function ss2!(m::HetDSGE)
                    BetaAlt(0.75, 0.10), fixed = true,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
-    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
+    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), ModelConstructors.Exponential(),
                    Normal(1.5, 0.25), fixed = true,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
@@ -193,31 +193,31 @@ function ss2!(m::HetDSGE)
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label = "\\rho_{r^m}")
 
-    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_g: The standard deviation of the government spending process.",
                    tex_label = "\\sigma_{g}")
-    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label = "\\sigma_{\\mu}")
-    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label = "\\sigma_z")
-    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
                    tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                 GammaAlt(0.62, 0.1), fixed=true, scaling = x -> 1 + x/100,
                 description="π_star: The steady-state rate of inflation.",
                 tex_label="\\pi_*")
@@ -239,7 +239,7 @@ function ss2!(m::HetDSGE)
                    Normal(0.12, 0.05), fixed = true,
                    description = "ψy: Weight on output growth in monetary policy rule")
 
-    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                    Normal(2, 0.75), fixed = true, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 end
@@ -261,7 +261,7 @@ function ss3!(m::HetDSGE)
                    BetaAlt(0.75, 0.10), fixed = true,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
-    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
+    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), ModelConstructors.Exponential(),
                    Normal(1.5, 0.25), fixed = true,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
@@ -297,31 +297,31 @@ function ss3!(m::HetDSGE)
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label = "\\rho_{r^m}")
 
-    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_g: The standard deviation of the government spending process.",
                    tex_label = "\\sigma_{g}")
-    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label = "\\sigma_{b}")
-    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label = "\\sigma_z")
-    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
                    tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                 GammaAlt(0.62, 0.1), fixed=true, scaling = x -> 1 + x/100,
                 description="π_star: The steady-state rate of inflation.",
                 tex_label="\\pi_*")
@@ -343,7 +343,7 @@ function ss3!(m::HetDSGE)
                    Normal(0.12, 0.05), fixed = true,
                    description = "ψy: Weight on output growth in monetary policy rule")
 
-    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                    Normal(2, 0.75), fixed = true, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 end
@@ -365,7 +365,7 @@ function ss4!(m::HetDSGE)
                    BetaAlt(0.75, 0.10), fixed = true,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
-    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
+    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), ModelConstructors.Exponential(),
                    Normal(1.5, 0.25), fixed = true,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
@@ -401,31 +401,31 @@ function ss4!(m::HetDSGE)
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label = "\\rho_{r^m}")
 
-    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_g: The standard deviation of the government spending process.",
                    tex_label = "\\sigma_{g}")
-    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label = "\\sigma_{b}")
-    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label = "\\sigma_{\\mu}")
-    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
                    tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                 GammaAlt(0.62, 0.1), fixed=true, scaling = x -> 1 + x/100,
                 description="π_star: The steady-state rate of inflation.",
                 tex_label="\\pi_*")
@@ -447,7 +447,7 @@ function ss4!(m::HetDSGE)
                    Normal(0.12, 0.05), fixed = true,
                    description = "ψy: Weight on output growth in monetary policy rule")
 
-    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                    Normal(2, 0.75), fixed = true, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 
@@ -470,7 +470,7 @@ function ss5!(m::HetDSGE)
                    BetaAlt(0.75, 0.10), fixed = true,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
-    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
+    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), ModelConstructors.Exponential(),
                    Normal(1.5, 0.25), fixed = true,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
@@ -506,31 +506,31 @@ function ss5!(m::HetDSGE)
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label = "\\rho_{r^m}")
 
-    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_g: The standard deviation of the government spending process.",
                    tex_label = "\\sigma_{g}")
-    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label = "\\sigma_{b}")
-    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label = "\\sigma_{\\mu}")
-    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label = "\\sigma_z")
-    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                 GammaAlt(0.62, 0.1), fixed=true, scaling = x -> 1 + x/100,
                 description="π_star: The steady-state rate of inflation.",
                 tex_label="\\pi_*")
@@ -552,7 +552,7 @@ function ss5!(m::HetDSGE)
                    Normal(0.12, 0.05), fixed = true,
                    description = "ψy: Weight on output growth in monetary policy rule")
 
-    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                    Normal(2, 0.75), fixed = true, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 
@@ -575,7 +575,7 @@ function ss6!(m::HetDSGE)
                    BetaAlt(0.75, 0.10), fixed = true,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
-    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
+    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), ModelConstructors.Exponential(),
                    Normal(1.5, 0.25), fixed = true,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
@@ -610,31 +610,31 @@ function ss6!(m::HetDSGE)
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label = "\\rho_{r^m}")
 
-    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_g: The standard deviation of the government spending process.",
                    tex_label = "\\sigma_{g}")
-    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label = "\\sigma_{b}")
-    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label = "\\sigma_{\\mu}")
-    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label = "\\sigma_z")
-    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
                    tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_rm, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_r_m: The standard deviation of the monetary policy shock.", tex_label = "\\sigma_{r^m}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                 GammaAlt(0.62, 0.1), fixed=true, scaling = x -> 1 + x/100,
                 description="π_star: The steady-state rate of inflation.",
                 tex_label="\\pi_*")
@@ -656,7 +656,7 @@ function ss6!(m::HetDSGE)
                    Normal(0.12, 0.05), fixed = true,
                    description = "ψy: Weight on output growth in monetary policy rule")
 
-    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                    Normal(2, 0.75), fixed = true, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 
@@ -680,7 +680,7 @@ function ss7!(m::HetDSGE)
                    BetaAlt(0.75, 0.10), fixed = true,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
-    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), Exponential(),
+    m <= parameter(:ψπ , 1.5, (1e-5, 10.), (1e-5, 10.0), ModelConstructors.Exponential(),
                    Normal(1.5, 0.25), fixed = true,
                    description = "ψ1: Weight on inflation gap in monetary policy rule.",
                    tex_label = "\\psi_1")
@@ -715,32 +715,32 @@ function ss7!(m::HetDSGE)
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label = "\\rho_{r^m}")
 
-    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_g, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_g: The standard deviation of the government spending process.",
                    tex_label = "\\sigma_{g}")
-    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_b, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label = "\\sigma_{b}")
-    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_μ, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label = "\\sigma_{\\mu}")
-    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_z, 0.0,(1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label = "\\sigma_z")
-    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_f, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f,t}).",
                    tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), Exponential(),
+    m <= parameter(:σ_λ_w, 0.0, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, 0.10), fixed = true,
                    description = "σ_λ_w",
                    tex_label = "\\sigma_{\\lambda_w}")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                 GammaAlt(0.62, 0.1), fixed=true, scaling = x -> 1 + x/100,
                 description="π_star: The steady-state rate of inflation.",
                 tex_label="\\pi_*")
@@ -761,7 +761,7 @@ function ss7!(m::HetDSGE)
                    Normal(0.12, 0.05), fixed = true,
                    description = "ψy: Weight on output growth in monetary policy rule")
 
-    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), Exponential(),
+    m <= parameter(:ϕh, 2., (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(),
                    Normal(2, 0.75), fixed = true, description = "inverse frisch elasticity",
                    tex_label = "\\phi_h")
 end

@@ -401,7 +401,7 @@ function init_parameters!(m::HetDSGESimpleTaylor)
     m <= parameter(:ρ_sp, 0.7, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_sp: AR(1) coefficient in the skill process.",
                    tex_label="\\rho_{sp}")
-    m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_sp: The standard deviation of the skill process.",
                    tex_label="\\sigma_{sp}")
     m <= parameter(:γ, 0.0, description = "γ: TFP growth")

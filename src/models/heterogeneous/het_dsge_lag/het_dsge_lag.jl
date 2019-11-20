@@ -260,7 +260,7 @@ function init_parameters!(m::HetDSGELag)
     m <= parameter(:ρ_sp, 0.7, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                    description="ρ_sp: AR(1) coefficient in the skill process.",
                    tex_label="\\rho_{sp}")
-    m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=true,
+    m <= parameter(:σ_sp, 0.01, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=true,
                    description="σ_sp: The standard deviation of the skill process.",
                    tex_label="\\sigma_{sp}")
     m <= parameter(:γ, 0.0, description = "γ: TFP growth")
@@ -284,19 +284,19 @@ function init_parameters!(m::HetDSGELag)
     m <= parameter(:ρ_mon, 0.5, (1e-3, 0.999), (1e-3, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),
                      fixed=true, description = " # persistence of mon policy shock", tex_label = "\\rho_{mon}")
 
-    m <= parameter(:σ_b, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_b, 0.5, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = "# standard deviation of discount factor shock", tex_label = "\\sigma_B")
-    m <= parameter(:σ_g, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_g, 0.5, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = "# standard deviation of govt spending shock", tex_label = "\\sigma_G")
-    m <= parameter(:σ_z, 0.5,(1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_z, 0.5,(1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.1),
                    fixed=false, description = "# standard deviation of tfp growth shock", tex_label = "\\sigma_z")
-    m <= parameter(:σ_μ, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_μ, 0.5, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = " # standard deviation of investment shock", tex_label = "\\sigma_\\mu")
-    m <= parameter(:σ_λ_w, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_λ_w, 0.5, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = "# standard deviation of wage mkup shock", tex_label = "\\sigma_{\\lambda_w}")
-    m <= parameter(:σ_λ_f, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_λ_f, 0.5, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = " # standard deviation of price mkup shock", tex_label = "\\sigma_{\\lambda_f}")
-    m <= parameter(:σ_MON, 0.5, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.1),
+    m <= parameter(:σ_MON, 0.5, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.1),
                    fixed=true, description = " # standard deviation of mon policy shock", tex_label = "\\sigma_{mon}")
 
 

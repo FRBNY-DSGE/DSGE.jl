@@ -287,15 +287,15 @@ function init_parameters!(m::RealBondMkup)
                    fixed = false,
                    tex_label = "\\rho_{mkp}", description = "ρ_mkp: Persistence of the markup shock")
 
-    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10),
+    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
-    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10),
+    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10),
                    fixed = false,
                    description="σ_mon: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{mon}")
-    m <= parameter(:σ_mkp, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10),
+    m <= parameter(:σ_mkp, 0.1314, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_mkp: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
@@ -309,7 +309,7 @@ function init_parameters!(m::RealBondMkup)
                    fixed = false,
                    description = "κ: The slope of the Phillips curve",
                    tex_label = "\\kappa")
-    m <= parameter(:phipi, 1.5, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.25),
+    m <= parameter(:phipi, 1.5, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25),
                    fixed = false,
                    description = "phipi: The slope of the taylor rule",
                    tex_label = "\\phi_\\pi")

@@ -326,7 +326,7 @@ function init_parameters!(m::OneAssetHANK)
                    tex_label="labdisutil")
 
     # Aggregate shocks
-    m <= parameter(:σ_MP, sqrt(0.05), (1e-20, 1e5), (1e-20, 1e5), Exponential(),
+    m <= parameter(:σ_MP, sqrt(0.05), (1e-20, 1e5), (1e-20, 1e5), ModelConstructors.Exponential(),
                    RootInverseGamma(4, .4), fixed=false,
                    description="Volatility of monetary policy shocks", tex_label="σ_MP")
 

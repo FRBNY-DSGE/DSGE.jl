@@ -261,11 +261,11 @@ function init_parameters!(m::RealBond)
     m <= parameter(:ρ_z, 0.0, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
-    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
     m <= parameter(:ρmon, 0., fixed = true, description = "ρmon: Persistence of monetary policy shock")
-    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=true,
+    m <= parameter(:σ_mon, 0.2380, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=true,
                    description="σ_mon: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{mon}")
     m <= parameter(:κ, 1.0, fixed = true, description = "κ: The slope of the Phillips curve")
