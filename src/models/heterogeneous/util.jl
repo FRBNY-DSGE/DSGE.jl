@@ -144,7 +144,7 @@ Stacks the indices of a OrderedDict{Symbol, AbstractRange} into a Vector of Ints
 """
 function stack_indices(key_dict::AbstractDict, keys::Vector{Symbol})
     indices = Vector{Int64}(undef, 0)
-    for i in getindex.(key_dict, keys)
+    for i in getindex.(Ref(key_dict), keys)
         indices = [indices; i]
     end
     return indices
