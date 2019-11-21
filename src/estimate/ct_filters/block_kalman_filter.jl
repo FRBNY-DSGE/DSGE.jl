@@ -104,44 +104,6 @@ end
 
 """
 ```
-init_stationary_states(T, R, C, Q)
-```
-
-Compute the initial state `s_0` and state covariance matrix `P_0` under the
-stationarity condition:
-
-```
-s_0  = (I - T)\\C
-P_0 = reshape(I - kron(T, T))\\vec(R*Q*R'), Ns, Ns)
-```
-
-where:
-
-- `kron(T, T)` is a matrix of dimension `Ns^2` x `Ns^2`, the Kronecker
-  product of `T`
-- `vec(R*Q*R')` is the `Ns^2` x 1 column vector constructed by stacking the
-  `Ns` columns of `R*Q*R'`
-
-All eigenvalues of `T` are inside the unit circle when the state space model
-is stationary. When the preceding formula cannot be applied, the initial state
-vector estimate is set to `C` and its covariance matrix is given by `1e6 * I`.
-"""
-function init_stationary_states(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-                                Q::Matrix{S}) where {S<:AbstractFloat}
-    e, _ = eigen(T)
-    if all(abs.(e) .< 1)
-        s_0 = (UniformScaling(1) - T)\C
-        P_0 = solve_discrete_lyapunov(T, R*Q*R')
-    else
-        Ns = size(T, 1)
-        s_0 = C
-        P_0 = 1e6 * eye(Ns)
-    end
-    return s_0, P_0
-end
-
-"""
-```
 kalman_filter(y, T, R, C, Q, Z, D, E, s_0 = Vector(), P_0 = Matrix();
     outputs = [:loglh, :pred, :filt], Nt0 = 0)
 

@@ -17,7 +17,7 @@ module DSGE
     import Base.isempty, Base.<, Base.min, Base.max
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
-    import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks
+    import StateSpaceRoutines: KalmanFilter, augment_states_with_shocks, solve_discrete_lyapunov
     import ModelConstructors
     import ModelConstructors: posterior!, posterior, <=, n_states,
                               n_states, n_states_augmented, n_shocks_exogenous,
