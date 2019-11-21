@@ -1,6 +1,4 @@
-using DSGE
-using Test, BenchmarkTools, DelimitedFiles
-using JLD2
+using DSGE, Test, BenchmarkTools, DelimitedFiles, JLD2
 import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_states
 
 # What do you want to do?
@@ -8,7 +6,7 @@ check_steady_state = true
 check_jacobian = true
 check_solution = true
 check_irfs = true
-check_steady_state_calibrate = false
+check_steady_state_calibrate = true
 write_steady_state_calibrate = false
 check_likelihood = true
 write_likelihood = false
@@ -23,7 +21,6 @@ m <= Setting(:binsize, 10)
 # Steady-state computation
 if check_steady_state
     steadystate!(m)
-    # @btime steadystate!(m)
 
     file = jldopen("$path/reference/steady_state_reduce_ell.jld2", "r")
     saved_Rk   = read(file, "Rk")
@@ -32,7 +29,6 @@ if check_steady_state
     saved_k    = read(file, "k")
     saved_y    = read(file, "y")
     saved_T    = read(file, "T")
-
     saved_ell  = read(file, "ell")
     saved_c    = read(file, "c")
     saved_μ    = read(file, "mu")
@@ -47,20 +43,19 @@ if check_steady_state
         @test saved_y  ≈ m[:ystar].value
         @test saved_T  ≈ m[:Tstar].value
 
-        @test isapprox(saved_ell, m[:lstar].value, atol = .01) #saved_ell ≈ m[:lstar].value
-        @test isapprox(saved_c, m[:cstar].value, atol = .01) #saved_c   ≈ m[:cstar].value
-        @test isapprox(saved_μ, m[:μstar].value, atol = .01) #saved_μ   ≈ m[:μstar].value
+        @test isapprox(saved_ell, m[:lstar].value, atol = .01)
+        @test isapprox(saved_c, m[:cstar].value, atol = .01)
+        @test isapprox(saved_μ, m[:μstar].value, atol = .01)
         # Tolerance of convergence of β is 1e-5
-        @test isapprox(saved_β, m[:βstar].value, atol = .01) #abs(saved_β - m[:βstar].value) <= 1e-5
+        @test isapprox(saved_β, m[:βstar].value, atol = .01)
     end
 end
 
 if check_jacobian
-    m.testing = true        # So that it will test against the unnormalized Jacobian
+    m.testing = true # Ensures it tests against the unnormalized Jacobian
     m <= Setting(:steady_state_only, true)
     steadystate!(m)
     JJ = DSGE.jacobian(m)
-    # @btime JJ = DSGE.jacobian(m)
 
     file = jldopen("$path/reference/jacobian_reduce_ell.jld2", "r")
     saved_JJ  = read(file, "JJ")
@@ -155,14 +150,15 @@ if check_jacobian
     F41 = read(file, "F41")
     F42 = read(file, "F42")
     close(file)
-    endo = DSGE.augment_model_states(m.endogenous_states_original, DSGE.n_model_states_original(m))
+    endo = DSGE.augment_model_states(m.endogenous_states_original,
+                                     DSGE.n_model_states_original(m))
 
     eq = m.equilibrium_conditions
     @testset "Check indices" begin
-        @testset "function blocks which output a function" begin
+        @testset "Function blocks which output a function" begin
             @test KFP == endo[:kf′_t]  ## lagged ell function
         end
-        @testset "endogenous scalar-valued states:" begin
+        @testset "Endogenous scalar-valued states:" begin
             @test KKP   == first(endo[:k′_t])
             @test LIIP  == first(endo[:i′_t1])
             @test LYP   == first(endo[:y′_t1])
@@ -171,7 +167,7 @@ if check_jacobian
             @test BG == first(endo[:bg_t])
             @test BGP == first(endo[:bg′_t])
         end
-        @testset "# exogenous scalar-valued states" begin
+        @testset "Exogenous scalar-valued states" begin
             @test BP    == first(endo[:b′_t])
             @test GP    == first(endo[:g′_t])
             @test ZP    == first(endo[:z′_t])
@@ -180,64 +176,64 @@ if check_jacobian
             @test LAMFP == first(endo[:λ_f′_t])
             @test MONP  == first(endo[:rm′_t])
         end
-        @testset "function-valued jumps" begin
+        @testset "Function-valued jumps" begin
             @test ELLP  == endo[:l′_t]
         end
-        @testset "scalar-valued jumps" begin
+        @testset "Scalar-valued jumps" begin
             @test CP   == first(endo[:C′_t])
-            @test RRP   == first(endo[:R′_t])
-            @test IIP   == first(endo[:i′_t])
-            @test TTP   == first(endo[:t′_t])
-            @test WP    == first(endo[:w′_t])
-            @test HHP   == first(endo[:L′_t])
-            @test PIP   == first(endo[:π′_t])
-            @test PIWP  == first(endo[:π_w′_t])
-            @test LAMP  == first(endo[:margutil′_t])
-            @test YP    == first(endo[:y′_t])
-            @test XP    == first(endo[:I′_t])
-            @test MCP   == first(endo[:mc′_t])
-            @test QP    == first(endo[:Q′_t])
-            @test RKP   == first(endo[:capreturn′_t])
-            @test KF    == endo[:kf_t]
-            @test KK    == first(endo[:k_t])
-            @test LII   == first(endo[:i_t1])
-            @test LY    == first(endo[:y_t1])
-            @test LW    == first(endo[:w_t1])
-            @test LX    == first(endo[:I_t1])
-            @test B     == first(endo[:b_t])
-            @test G     == first(endo[:g_t])
-            @test Z     == first(endo[:z_t])
-            @test MU    == first(endo[:μ_t])
-            @test LAMW  == first(endo[:λ_w_t])
-            @test LAMF  == first(endo[:λ_f_t])
-            @test MON   == first(endo[:rm_t])
-            @test ELL   == endo[:l_t]
-            @test C     == first(endo[:C_t])
-            @test RR    == first(endo[:R_t])
-            @test II    == first(endo[:i_t])
-            @test TT == first(endo[:t_t])
-            @test W == first(endo[:w_t])
-            @test HH == first(endo[:L_t])
-            @test PI == first(endo[:π_t])
-            @test PIW == first(endo[:π_w_t])
-            @test LAM == first(endo[:margutil_t])
-            @test Y == first(endo[:y_t])
-            @test X == first(endo[:I_t])
-            @test MC == first(endo[:mc_t])
-            @test Q == first(endo[:Q_t])
-            @test RK == first(endo[:capreturn_t])
-            @test TG == first(endo[:tg_t])
-            @test TGP == first(endo[:tg′_t])
+            @test RRP  == first(endo[:R′_t])
+            @test IIP  == first(endo[:i′_t])
+            @test TTP  == first(endo[:t′_t])
+            @test WP   == first(endo[:w′_t])
+            @test HHP  == first(endo[:L′_t])
+            @test PIP  == first(endo[:π′_t])
+            @test PIWP == first(endo[:π_w′_t])
+            @test LAMP == first(endo[:margutil′_t])
+            @test YP   == first(endo[:y′_t])
+            @test XP   == first(endo[:I′_t])
+            @test MCP  == first(endo[:mc′_t])
+            @test QP   == first(endo[:Q′_t])
+            @test RKP  == first(endo[:capreturn′_t])
+            @test KF   == endo[:kf_t]
+            @test KK   == first(endo[:k_t])
+            @test LII  == first(endo[:i_t1])
+            @test LY   == first(endo[:y_t1])
+            @test LW   == first(endo[:w_t1])
+            @test LX   == first(endo[:I_t1])
+            @test B    == first(endo[:b_t])
+            @test G    == first(endo[:g_t])
+            @test Z    == first(endo[:z_t])
+            @test MU   == first(endo[:μ_t])
+            @test LAMW == first(endo[:λ_w_t])
+            @test LAMF == first(endo[:λ_f_t])
+            @test MON  == first(endo[:rm_t])
+            @test ELL  == endo[:l_t]
+            @test C    == first(endo[:C_t])
+            @test RR   == first(endo[:R_t])
+            @test II   == first(endo[:i_t])
+            @test TT   == first(endo[:t_t])
+            @test W    == first(endo[:w_t])
+            @test HH   == first(endo[:L_t])
+            @test PI   == first(endo[:π_t])
+            @test PIW  == first(endo[:π_w_t])
+            @test LAM  == first(endo[:margutil_t])
+            @test Y    == first(endo[:y_t])
+            @test X    == first(endo[:I_t])
+            @test MC   == first(endo[:mc_t])
+            @test Q    == first(endo[:Q_t])
+            @test RK   == first(endo[:capreturn_t])
+            @test TG   == first(endo[:tg_t])
+            @test TGP  == first(endo[:tg′_t])
         end
-        @testset "function blocks" begin
+        @testset "Function blocks" begin
             @test F1  == eq[:eq_euler]
             @test F2  == eq[:eq_kolmogorov_fwd]
         end
-        @testset "function blocks which map functions to scalars" begin
+        @testset "Function blocks which map functions to scalars" begin
             @test F5  == eq[:eq_agg_consumption]
             @test F6  == eq[:eq_lambda]
         end
-        @testset "# scalar blocks involving endogenous variables" begin
+        @testset "Scalar blocks involving endogenous variables" begin
             @test F7  == eq[:eq_transfers]
             @test F8  == eq[:eq_investment]
             @test F9  == eq[:eq_tobin_q]
@@ -251,13 +247,13 @@ if check_jacobian
             @test F17 == eq[:eq_fisher]
             @test F18 == eq[:eq_nominal_wage_inflation]
         end
-        @testset "lagged variables" begin
+        @testset "Lagged variables" begin
             @test F20 == eq[:LI]
             @test F24 == eq[:LY]
             @test F31 == eq[:LW]
             @test F32 == eq[:LX]
         end
-        @testset "shocks" begin
+        @testset "Shocks" begin
             @test F33 == eq[:eq_b]
             @test F34 == eq[:eq_g]
             @test F35 == eq[:eq_z]
@@ -266,14 +262,14 @@ if check_jacobian
             @test F38 == eq[:eq_λ_f]
             @test F39 == eq[:eq_rm]
         end
-        @testset "new eqns" begin
+        @testset "New equations" begin
             @test F40 == eq[:eq_fiscal_rule]
             @test F41 == eq[:eq_g_budget_constraint]
             @test F42 == eq[:eq_resource_constraint]
         end
     end
 
-    @testset "Check jacobian outputs" begin
+    @testset "Check Jacobian outputs" begin
         @testset "Euler Equation" begin
             @test saved_JJ[F1,ELLP] ≈ JJ[F1, ELLP]
             @test saved_JJ[F1,ZP] ≈ JJ[F1,ZP]
@@ -295,20 +291,20 @@ if check_jacobian
             @test saved_JJ[F2,TT] ≈ JJ[F2,TT]
         end
         @testset "Check aggregate consumption" begin
-            @test saved_JJ[F5,C] ≈ JJ[F5,C]
+            @test saved_JJ[F5,C]   ≈ JJ[F5,C]
             @test saved_JJ[F5,ELL] ≈ JJ[F5,ELL]
-            @test saved_JJ[F5,KF] ≈ JJ[F5,KF]
-            @test saved_JJ[F5,Z] ≈ JJ[F5,Z]
-            @test saved_JJ[F5,W] ≈ JJ[F5,W]
-            @test saved_JJ[F5,HH] ≈ JJ[F5,HH]
-            @test saved_JJ[F5,TT] ≈ JJ[F5,TT]
+            @test saved_JJ[F5,KF]  ≈ JJ[F5,KF]
+            @test saved_JJ[F5,Z]   ≈ JJ[F5,Z]
+            @test saved_JJ[F5,W]   ≈ JJ[F5,W]
+            @test saved_JJ[F5,HH]  ≈ JJ[F5,HH]
+            @test saved_JJ[F5,TT]  ≈ JJ[F5,TT]
         end
         @testset "Check lambda = average marginal utility" begin
             @test saved_JJ[F6,LAM] ≈ JJ[F6,LAM]
             @test saved_JJ[F6,KF]  ≈ JJ[F6,KF]
             @test saved_JJ[F6,RR]  ≈ JJ[F6,RR]
             @test saved_JJ[F6,Z]   ≈ JJ[F6,Z]
-            @test saved_JJ[F6,W]  ≈ JJ[F6,W]
+            @test saved_JJ[F6,W]   ≈ JJ[F6,W]
             @test saved_JJ[F6,HH]  ≈ JJ[F6,HH]
             @test saved_JJ[F6,TT]  ≈ JJ[F6,TT]
             @test saved_JJ[F6,ELL] ≈ JJ[F6,ELL]
@@ -317,26 +313,26 @@ if check_jacobian
             @test saved_JJ[F7,TT] ≈ JJ[F7,TT]
             @test saved_JJ[F7,RK] ≈ JJ[F7,RK]
             @test saved_JJ[F7,KK] ≈ JJ[F7,KK]
-            @test saved_JJ[F7,Z] ≈ JJ[F7,Z]
-            @test saved_JJ[F7,X] ≈ JJ[F7,X]
+            @test saved_JJ[F7,Z]  ≈ JJ[F7,Z]
+            @test saved_JJ[F7,X]  ≈ JJ[F7,X]
             @test saved_JJ[F7,MC] ≈ JJ[F7,MC]
-            @test saved_JJ[F7,Y] ≈ JJ[F7,Y]
-            @test saved_JJ[F7,G] ≈ JJ[F7,G]
+            @test saved_JJ[F7,Y]  ≈ JJ[F7,Y]
+            @test saved_JJ[F7,G]  ≈ JJ[F7,G]
         end
         @testset "investment" begin
-            @test saved_JJ[F8,Q] ≈ JJ[F8,Q]
+            @test saved_JJ[F8,Q]  ≈ JJ[F8,Q]
             @test saved_JJ[F8,MU] ≈ JJ[F8,MU]
             @test saved_JJ[F8,XP] ≈ JJ[F8,XP]
             @test saved_JJ[F8,ZP] ≈ JJ[F8,ZP]
-            @test saved_JJ[F8,X] ≈ JJ[F8,X]
+            @test saved_JJ[F8,X]  ≈ JJ[F8,X]
             @test saved_JJ[F8,LX] ≈ JJ[F8,LX]
-            @test saved_JJ[F8,Z] ≈ JJ[F8,Z]
+            @test saved_JJ[F8,Z]  ≈ JJ[F8,Z]
         end
         @testset "tobins q" begin
-            @test saved_JJ[F9,RR] ≈ JJ[F9,RR]
-            @test saved_JJ[F9,Q] ≈ JJ[F9,Q]
+            @test saved_JJ[F9,RR]  ≈ JJ[F9,RR]
+            @test saved_JJ[F9,Q]   ≈ JJ[F9,Q]
             @test saved_JJ[F9,RKP] ≈ JJ[F9,RKP]
-            @test saved_JJ[F9,QP] ≈ JJ[F9,QP]
+            @test saved_JJ[F9,QP]  ≈ JJ[F9,QP]
         end
         @testset "capital accumulation" begin
             @test saved_JJ[F10,KKP] ≈ JJ[F10,KKP]
@@ -477,10 +473,7 @@ if check_solution
 end
 
 if check_irfs
-    #if check_steady_state==false
-        steadystate!(m)
-    #end
-
+    steadystate!(m)
     file = jldopen("$path/reference/irfs_reduce_ell.jld2", "r")
 
     IRFkf = read(file, "IRFkf")
@@ -535,52 +528,57 @@ if check_irfs
 end
 
 m <= Setting(:steady_state_only, false)
+
 # Steady-state computation
-if check_steady_state_calibrate
+if check_steady_state_calibrate || write_steady_state_calibrate
     Random.seed!(0)
     steadystate!(m)
 
     if write_steady_state_calibrate
         JLD2.jldopen("$path/reference/steady_state_calibration.jld2", "w") do file
-            file["c"] = m[:cstar].value
-            file["m"] = m[:μstar].value
-            file["mpc"] = m[:mpc].value
-            file["pc0"] = m[:pc0].value
+            file["c"]    = m[:cstar].value
+            file["m"]    = m[:μstar].value
+            file["mpc"]  = m[:mpc].value
+            file["pc0"]  = m[:pc0].value
             file["beta"] = m[:βstar].value
         end
     end
 
-    file = jldopen("$path/reference/steady_state_calibration.jld2", "r")
-    saved_c    = read(file, "c")
-    saved_μ    = read(file, "m")
-    saved_mpc  = read(file, "mpc")
-    saved_β    = read(file, "beta")
-    saved_pc0  = read(file, "pc0")
-    close(file)
+    if check_steady_state_calibrate
+        file = jldopen("$path/reference/steady_state_calibration.jld2", "r")
+        saved_c    = read(file, "c")
+        saved_μ    = read(file, "m")
+        saved_mpc  = read(file, "mpc")
+        saved_β    = read(file, "beta")
+        saved_pc0  = read(file, "pc0")
+        close(file)
 
-    @testset "Check steady state outputs" begin
-        @test saved_c   ≈ m[:cstar].value
-        @test saved_μ   ≈ m[:μstar].value
-        @test saved_pc0 ≈ m[:pc0].value
-        @test saved_mpc ≈ m[:mpc].value
-        # Tolerance of convergence of β is 1e-5
-        @test saved_β ≈ m[:βstar].value
+        @testset "Check steady state outputs" begin
+            @test saved_c   ≈ m[:cstar].value
+            @test saved_μ   ≈ m[:μstar].value
+            @test saved_pc0 ≈ m[:pc0].value
+            @test saved_mpc ≈ m[:mpc].value
+            # Tolerance of convergence of β is 1e-5
+            @test saved_β ≈ m[:βstar].value
+        end
     end
 end
 
-if check_likelihood
+if check_likelihood || write_likelihood
     data = Matrix{Float64}(readdlm("$path/../../../reference/YY.txt")')
 
     if write_likelihood
-        print("Overwriting likelihood")
-        jldopen("$path/reference/likelihood_reduce_ell.jld2", "w") do file
+        println("Overwriting likelihood...")
+        JLD2.jldopen("$path/reference/likelihood_reduce_ell.jld2", true, true,
+                     true, IOStream) do file
             file["likelihood"] = likelihood(m, data)
         end
     end
+    if check_likelihood
+        lik_save = load("$path/reference/likelihood_reduce_ell.jld2", "likelihood")
 
-    lik_save = load("$path/reference/likelihood_reduce_ell.jld2", "likelihood")
-
-    @testset begin
-        @test likelihood(m, data) ≈ lik_save
+        @testset "Checking Likelihood output" begin
+            @test likelihood(m, data) ≈ lik_save
+        end
     end
 end
