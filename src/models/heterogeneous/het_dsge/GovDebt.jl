@@ -92,12 +92,12 @@ SIMPLE_TAYLOR = false # default: false
 # here I am assuming firms are subsidized in ss so that real mc = 1
 Rk = r + δ                               # rental rate on capital
 ω = (α^(α/(1-α)))*(1-α)*Rk^(-α/(1-α))    # real wage
-kl = (α/(1-α))*(ω/Rk)*e^γ                # capital/labor ratio
+kl = (α/(1-α))*(ω/Rk)*ℯ^γ                # capital/labor ratio
 k = kl*H                                 # capital
-x = (1-(1-δ)*e^(-γ))*k                   # investment
-y = (e^(-α*γ))*(k^α)*H^(1-α)             # gdp
+x = (1-(1-δ)*ℯ^(-γ))*k                   # investment
+y = (ℯ^(-α*γ))*(k^α)*H^(1-α)             # gdp
 bg = BoverY*y                            # govt debt
-T = Rk*k*e^(-γ) - x - (1-(1/g))*y - ((1+r)*e^(-γ)-1)*bg        # net transfer to hhs
+T = Rk*k*ℯ^(-γ) - x - (1-(1/g))*y - ((1+r)*ℯ^(-γ)-1)*bg        # net transfer to hhs
 
 function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat, pHL::AbstractFloat, ns::Int)
     f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
@@ -114,7 +114,7 @@ end
 function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat, r::AbstractFloat, η::AbstractFloat, γ::AbstractFloat,
                    T::AbstractFloat, zlo::AbstractFloat, na::Int)
     smin = minimum(sgrid)*zlo                           # lowest possible skill
-    alo_ss = ω*smin*H - (1+r)*η*e^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
+    alo_ss = ω*smin*H - (1+r)*η*ℯ^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
 
     alo = alo_ss                    # lower bound on cash on hand - could be < alo_ss
     ahi = max(alo*2,alo+5.)                      # upper bound on cash on hand
@@ -126,7 +126,7 @@ function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat, r:
     return (agrid, awts)
 end
 smin = minimum(sgrid)*zlo                           # lowest possible skill
-alo_ss = ω*smin*H - (1+r)*η*e^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
+alo_ss = ω*smin*H - (1+r)*η*ℯ^(-γ) + T + sgrid[1]*ω*H*0.05       # lowest possible cash on hand in ss
 
 alo = alo_ss                    # lower bound on cash on hand - could be < alo_ss
 ahi = max(alo*2,alo+5.)                      # upper bound on cash on hand
@@ -245,10 +245,10 @@ function parameterized_expectations(na::Int,ns::Int, β::AbstractFloat, R::Abstr
             sumn = 0.0
             for isp=1:ns
                 for iap=1:na
-                    sumn += (aswts[na*(isp-1)+iap]/c[na*(isp-1)+iap])*qfunction((agrid[iap] - R*(e^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./sgrid[isp]
+                    sumn += (aswts[na*(isp-1)+iap]/c[na*(isp-1)+iap])*qfunction((agrid[iap] - R*(ℯ^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./sgrid[isp]
                 end
             end
-            l_out[na*(iss-1)+ia] = (β*R*(e^(-γ))/ω*H)*sumn
+            l_out[na*(iss-1)+ia] = (β*R*(ℯ^(-γ))/ω*H)*sumn
         end
     end
     return l_out
@@ -263,7 +263,7 @@ function kolmogorov_fwd(na::Int, ns::Int, ω::AbstractFloat,
         for ia=1:na
             for isp=1:ns
                 for iap=1:na
-                    tr[na*(isp-1)+iap,na*(iss-1)+ia] = qfunction((agrid[iap] - R*(e^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./(ω*H*sgrid[isp])
+                    tr[na*(isp-1)+iap,na*(iss-1)+ia] = qfunction((agrid[iap] - R*(ℯ^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./(ω*H*sgrid[isp])
                 end
             end
         end
@@ -273,8 +273,8 @@ end
 
 # just to test if code returns
 R = 1+r
-βlo = 0.5*(e^γ)/R # excess should be -ve
-βhi = (e^γ)/R # excess should be +ve
+βlo = 0.5*(ℯ^γ)/R # excess should be -ve
+βhi = (ℯ^γ)/R # excess should be +ve
 
 β = (βlo+βhi)/2.0
 

@@ -147,16 +147,16 @@ function jacobian(m::RepDSGEGovDebt)
     # fiscal rule
     JJ[eq[:eq_fiscal_rule],endo[:tg_t]]  = -Tg
     JJ[eq[:eq_fiscal_rule],endo[:R_t]]   = δb*bg/R
-    JJ[eq[:eq_fiscal_rule],endo[:bg_t]]  = δb*bg*e^(-γ)
-    JJ[eq[:eq_fiscal_rule],endo[:z_t]]   = -δb*bg*e^(-γ)
+    JJ[eq[:eq_fiscal_rule],endo[:bg_t]]  = δb*bg*ℯ^(-γ)
+    JJ[eq[:eq_fiscal_rule],endo[:z_t]]   = -δb*bg*ℯ^(-γ)
     JJ[eq[:eq_fiscal_rule],endo[:y_t]]   = δb*(1-(1/g))*y
     JJ[eq[:eq_fiscal_rule],endo[:g_t]]   = δb*y/g
 
     # govt budget constraint
     JJ[eq[:eq_g_budget_constraint],endo[:bg′_t]] = -(bg/R)
     JJ[eq[:eq_g_budget_constraint],endo[:R_t]]   = bg/R
-    JJ[eq[:eq_g_budget_constraint],endo[:bg_t]]  = bg*e^(-γ)
-    JJ[eq[:eq_g_budget_constraint],endo[:z_t]]   = -bg*e^(-γ)
+    JJ[eq[:eq_g_budget_constraint],endo[:bg_t]]  = bg*ℯ^(-γ)
+    JJ[eq[:eq_g_budget_constraint],endo[:z_t]]   = -bg*ℯ^(-γ)
     JJ[eq[:eq_g_budget_constraint],endo[:y_t]]   = (1-(1/g))*y
     JJ[eq[:eq_g_budget_constraint],endo[:g_t]]   = y/g
     JJ[eq[:eq_g_budget_constraint],endo[:tg_t]]  = -Tg

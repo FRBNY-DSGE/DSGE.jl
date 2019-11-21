@@ -6,8 +6,8 @@ Frictions in US Business Cycles: A Bayesian DSGE Approach\" (2007) by Frank
 Smets and Rafael Wouters.
 
 In this version of the model (`SmetsWoutersOrig`), variables are detrended using
-the deterministic trend e^{γt}. Contrast with the `SmetsWouters` version, which
-detrends variables using Z_t e^{(γ + α/(1-α) log Υ)t}.
+the deterministic trend ℯ^{γt}. Contrast with the `SmetsWouters` version, which
+detrends variables using Z_t ℯ^{(γ + α/(1-α) log Υ)t}.
 
 ### Fields
 
