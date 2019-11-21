@@ -75,11 +75,11 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     # figure out a more flexible way to define
     # "grids" that are not necessarily quadrature
     # grids within the model
-    grids::Dict{Symbol,Union{Grid, Array}}
-    keys::Dict{Symbol,Int}                    # Human-readable names for all the model
-                                                     # parameters and steady-states
+    grids::OrderedDict{Symbol,Union{Grid, Array}}
+    keys::OrderedDict{Symbol,Int}                    # Human-readable names for all the model
+                                              # parameters and steady-states
 
-    state_variables::Vector{Symbol}                  # Vector of symbols of the state variables
+    state_variables::Vector{Symbol}            # Vector of symbols of the state variables
     jump_variables::Vector{Symbol}                   # Vector of symbols of the jump variables
     normalized_model_states::Vector{Symbol}          # All of the distributional model
                                                      # state variables that need to be normalized
@@ -87,14 +87,14 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     # endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange}
 
     # Vector of ranges corresponding to normalized (post Klein solution) indices
-    endogenous_states::Dict{Symbol,UnitRange}
-    endogenous_states_original::Dict{Symbol,UnitRange}
+    endogenous_states::OrderedDict{Symbol,UnitRange}
+    endogenous_states_original::OrderedDict{Symbol,UnitRange}
 
-    exogenous_shocks::Dict{Symbol,Int}
-    expected_shocks::Dict{Symbol,Int}
-    equilibrium_conditions::Dict{Symbol,UnitRange}
-    endogenous_states_augmented::Dict{Symbol, Int}
-    observables::Dict{Symbol,Int}
+    exogenous_shocks::OrderedDict{Symbol,Int}
+    expected_shocks::OrderedDict{Symbol,Int}
+    equilibrium_conditions::OrderedDict{Symbol,UnitRange}
+    endogenous_states_augmented::OrderedDict{Symbol, Int}
+    observables::OrderedDict{Symbol,Int}
 
     spec::String                                     # Model specification number (eg "m990")
     subspec::String                                  # Model subspecification (eg "ss0")
@@ -102,7 +102,7 @@ mutable struct HetDSGEGovDebt{T} <: AbstractHetModel{T}
     test_settings::Dict{Symbol,Setting}              # Settings/flags for testing mode
     rng::MersenneTwister                             # Random number generator
     testing::Bool                                    # Whether we are in testing mode or not
-    observable_mappings::Dict{Symbol, Observable}
+    observable_mappings::OrderedDict{Symbol, Observable}
 end
 
 description(m::HetDSGEGovDebt) = "HetDSGEGovDebt, $(m.subspec)"
@@ -181,17 +181,17 @@ function HetDSGEGovDebt(subspec::String="ss0";
             # model parameters and steady state values
             Vector{AbstractParameter{Float64}}(), Vector{Float64}(),
             # grids and keys
-            Dict{Symbol,Union{Grid, Array}}(), Dict{Symbol,Int}(),
+            OrderedDict{Symbol,Union{Grid, Array}}(), OrderedDict{Symbol,Int}(),
 
             # normalized_model_states, state_inds, jump_inds
             Vector{Symbol}(), Vector{Symbol}(), Vector{Symbol}(),
 
             # model indices
             # endogenous states unnormalized, endogenous states normalized
-            Dict{Symbol,UnitRange}(), Dict{Symbol,UnitRange}(),
-            Dict{Symbol,Int}(), Dict{Symbol,Int}(),
-            Dict{Symbol,UnitRange}(), # OrderedDict{Symbol,UnitRange}(),
-            Dict{Symbol,Int}(), Dict{Symbol,Int}(),
+            OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
+            OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
+            OrderedDict{Symbol,UnitRange}(), # OrderedOrderedDict{Symbol,UnitRange}(),
+            OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
 
             spec,
             subspec,
@@ -199,9 +199,10 @@ function HetDSGEGovDebt(subspec::String="ss0";
             test_settings,
             rng,
             testing,
-            Dict{Symbol,Observable}())
+            OrderedDict{Symbol,Observable}())
 
     default_settings!(m)
+
     m <= Setting(:ref_dir, ref_dir, "Absolute filepath to reference directory")
 
     # # Set observable transformations
@@ -209,6 +210,7 @@ function HetDSGEGovDebt(subspec::String="ss0";
 
     # Set settings
     model_settings!(m)
+
     # default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -531,7 +533,7 @@ function init_grids!(m::HetDSGEGovDebt)
     ns      = get_setting(m, :ns)
     λ       = get_setting(m, :λ)
 
-    grids = Dict()
+    grids = OrderedDict()
 
     # Skill grid
     f, sgrid, swts, sscale = persistent_skill_process(m[:sH_over_sL].value, m[:pLH].value,
