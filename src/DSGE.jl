@@ -2,7 +2,7 @@ isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
     using ModelConstructors, SMC
-    using Dates, Test, BasisMatrices, BenchmarkTools
+    using Dates, Test, BenchmarkTools
     using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra
     using Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions
     using StateSpaceRoutines, StatsPlots

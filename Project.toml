@@ -4,7 +4,6 @@ authors = ["Michael Cai <michael.cai@ny.frb.org>", "Ethan Matlin <ethan.matlin@n
 version = "1.0.0"
 
 [deps]
-BasisMatrices = "08854c51-b66b-5062-a90d-8e7ae4547a49"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
