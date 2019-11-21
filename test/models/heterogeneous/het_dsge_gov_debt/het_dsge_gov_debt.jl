@@ -19,8 +19,8 @@ m <= Setting(:reduce_ell, false)
 
 # Steady-state computation
 if check_steady_state
+    Random.seed!(0)
     steadystate!(m)
-    # @btime steadystate!(m)
 
     file = jldopen("$path/reference/steady_state.jld2", "r")
     saved_Rk   = read(file, "Rk")
@@ -44,20 +44,19 @@ if check_steady_state
         @test saved_y  ≈ m[:ystar].value
         @test saved_T  ≈ m[:Tstar].value
 
-        @test isapprox(saved_ell, m[:lstar].value, atol = .01) #saved_ell ≈ m[:lstar].value
-        @test isapprox(saved_c, m[:cstar].value, atol = .01) #saved_c   ≈ m[:cstar].value
-        @test isapprox(saved_μ, m[:μstar].value, atol = .01) #saved_μ   ≈ m[:μstar].value
+        @test isapprox(saved_ell, m[:lstar].value, atol = .1)
+        @test isapprox(saved_c, m[:cstar].value, atol = .1)
+        @test isapprox(saved_μ, m[:μstar].value, atol = .01)
         # Tolerance of convergence of β is 1e-5
-        @test isapprox(saved_β, m[:βstar].value, atol = .01) #abs(saved_β - m[:βstar].value) <= 1e-5
+        @test isapprox(saved_β, m[:βstar].value, atol = .01)
     end
 end
 
 if check_jacobian
-    m.testing = true        # So that it will test against the unnormalized Jacobian
+    m.testing = true # So that it will test against the unnormalized Jacobian
     m <= Setting(:steady_state_only, true)
     steadystate!(m)
     JJ = DSGE.jacobian(m)
-    # @btime JJ = DSGE.jacobian(m)
 
     file = jldopen("$path/reference/jacobian.jld2", "r")
     saved_JJ  = read(file, "JJ")
@@ -117,17 +116,17 @@ if check_jacobian
     MC = read(file, "MC")
     Q = read(file, "Q")
     RK = read(file, "RK")
-    TG = read(file, "TG")
+    TG  = read(file, "TG")
     TGP = read(file, "TGP")
-    BG = read(file, "BG")
+    BG  = read(file, "BG")
     BGP = read(file, "BGP")
-    F1 = read(file, "F1")
-    F2 = read(file, "F2")
-    F5 = read(file, "F5")
-    F6 = read(file, "F6")
-    F7 = read(file, "F7")
-    F8 = read(file, "F8")
-    F9 = read(file, "F9")
+    F1  = read(file, "F1")
+    F2  = read(file, "F2")
+    F5  = read(file, "F5")
+    F6  = read(file, "F6")
+    F7  = read(file, "F7")
+    F8  = read(file, "F8")
+    F9  = read(file, "F9")
     F10 = read(file, "F10")
     F11 = read(file, "F11")
     F12 = read(file, "F12")
