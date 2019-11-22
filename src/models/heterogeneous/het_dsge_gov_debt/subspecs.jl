@@ -204,7 +204,7 @@ fix_all_but_shocks!(m::HetDSGEGovDebt)
 ```
 Fixes all parameters except the ρ's and the σ's.
 """
-function fix_all_but_shocks!(m::HetDSGEGovDeb)
+function fix_all_but_shocks!(m::HetDSGEGovDebt)
     m <= parameter(:α, 0.3, fixed = true, (1e-5, 0.999), (1e-5, 0.999),
                    SquareRoot(), Normal(0.30, 0.05),
                    description = "α: Capital elasticity in the intermediate goods" *
