@@ -635,9 +635,9 @@ function model_settings!(m::HetDSGEGovDebt)
     # Important settings for likelihood penalty
     m <= Setting(:use_likelihood_penalty, true)
     m <= Setting(:ψ_likelihood, 1.0,
-                 "Multiplier on likelihood in penalty function")
+                 "Multiplier on time series likelihood in penalty function")
     m <= Setting(:ψ_penalty, 1.0,
-                 "Multiplier on likelihood in penalty function")
+                 "Multiplier on moment penalties in penalty function")
 
     m <= Setting(:targets, [0.16, 0.10],
                  "Targets for: [MPC, proportion of individuals with 0 income]")
