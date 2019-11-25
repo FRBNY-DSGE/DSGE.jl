@@ -791,6 +791,8 @@ ss12!(m::HetDSGEGovDebt)
 Initializes model for run when we don't calibrate for varlinc and vardlinc, and only estimate shocks.
 """
 function ss12!(m::HetDSGEGovDebt)
+    fix_all_but_shocks!(m)
+
     m <= Setting(:calibrate_income_targets, false, "Calibrate for varlinc and vardlinc")
 
     # Only want time series likelihood
