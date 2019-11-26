@@ -10,7 +10,7 @@ function init_observable_mappings!(m::HetDSGEGovDebt)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
-        levels[:temp] = percapita(m, :GDP, levels)
+        levels[!,:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
         oneqtrpctchange(gdp)
     end
@@ -30,7 +30,7 @@ function init_observable_mappings!(m::HetDSGEGovDebt)
         # TO:   log (3 * per-capita weekly hours / 100)
         # Note: Not sure why the 3 is there.
 
-        levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
+        levels[!,:temp] = levels[!,:AWHNONAG] .* levels[!,:CE16OV]
         weeklyhours = percapita(m, :temp, levels)
         100*log.(3 * weeklyhours / 100)
     end
@@ -68,14 +68,15 @@ function init_observable_mappings!(m::HetDSGEGovDebt)
         # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
         #       i.e.  quarterly gdp deflator inflation
 
-        oneqtrpctchange(levels[:GDPDEF])
+        oneqtrpctchange(levels[!,:GDPDEF])
     end
 
 
     gdpdeflator_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_gdpdeflator] = Observable(:obs_gdpdeflator, [:GDPDEF__FRED],
-                                               gdpdeflator_fwd_transform, gdpdeflator_rev_transform,
+                                               gdpdeflator_fwd_transform,
+                                               gdpdeflator_rev_transform,
                                                "GDP Deflator",
                                                "Q-to-Q Percent Change of GDP Deflator")
 
@@ -88,7 +89,7 @@ function init_observable_mappings!(m::HetDSGEGovDebt)
         #       quarterly frequency at an annual rate)
         # TO:   Nominal effective fed funds rate, at a quarterly rate
 
-        annualtoquarter(levels[:DFF])
+        annualtoquarter(levels[!,:DFF])
     end
 
     nominalrate_rev_transform = quartertoannual
@@ -107,7 +108,7 @@ function init_observable_mappings!(m::HetDSGEGovDebt)
         # TO:   Real consumption, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(m, :PCE, levels)
+        levels[!,:temp] = percapita(m, :PCE, levels)
         cons = 1000 * nominal_to_real(:temp, levels)
         oneqtrpctchange(cons)
     end
@@ -128,7 +129,7 @@ function init_observable_mappings!(m::HetDSGEGovDebt)
         # INTO: Real investment, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(m, :FPI, levels)
+        levels[!,:temp] = percapita(m, :FPI, levels)
         inv = 10000 * nominal_to_real(:temp, levels)
         oneqtrpctchange(inv)
     end
