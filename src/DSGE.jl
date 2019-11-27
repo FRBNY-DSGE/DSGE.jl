@@ -248,14 +248,6 @@ module DSGE
     include("estimate/ct_filters/block_kalman_filter.jl")
     # include("estimate/ct_filters/ct_block_kalman_filter.jl")
 
-    include("forecast/util.jl")
-    include("forecast/io.jl")
-    include("forecast/smooth.jl")
-    include("forecast/forecast.jl")
-    include("forecast/shock_decompositions.jl")
-    include("forecast/impulse_responses.jl")
-    include("forecast/drivers.jl")
-
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
     include("analysis/compute_meansbands.jl")
@@ -457,4 +449,12 @@ module DSGE
     include("models/heterogeneous/two_asset_hank/util.jl")
     include("models/heterogeneous/two_asset_hank/helpers.jl")
     include("models/heterogeneous/two_asset_hank/interp.jl")
+
+    include("forecast/util.jl")
+    include("forecast/io.jl")
+    include("forecast/smooth.jl")
+    include("forecast/forecast.jl")
+    include("forecast/shock_decompositions.jl")
+    include("forecast/impulse_responses.jl")
+    include("forecast/drivers.jl")
 end

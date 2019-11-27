@@ -32,7 +32,7 @@ function impulse_responses(m::AbstractRepModel, system::System{S};
     return states, obs, pseudo
 end
 
-function impulse_responses_augmented(m::AbstractHetModel, system::System{S};
+function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, system::System{S};
                                      flip_shocks::Bool = false,
                                      use_alternate_consumption = false) where {S<:AbstractFloat}
     horizon = impulse_response_horizons(m)
@@ -95,7 +95,7 @@ function impulse_responses_augmented(m::AbstractHetModel, system::System{S};
     return model_states_unnormalized, obs, pseudo
 end
 
-function impulse_responses(m::AbstractHetModel, system::System{S};
+function impulse_responses(m::Union{AbstractHetModel,RepDSGEGovDebt}, system::System{S};
                            flip_shocks::Bool = false,
                            use_augmented_states::Bool = true,
                            use_alternate_consumption::Bool = false) where {S<:AbstractFloat}
