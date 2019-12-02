@@ -1,6 +1,7 @@
 """
 meansbands_to_matrix(m, input_type, cond_type, output_vars;
-    forecast_string = "", verbose = :low)
+    forecast_string = "", verbose = :low,
+    do_cond_obs_shocks = false)
 
 Reformat `MeansBands` object into matrices, and save to individual files.
 
@@ -17,10 +18,13 @@ Reformat `MeansBands` object into matrices, and save to individual files.
   desired). Required if `input_type == :subset`
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
+- `do_cond_obs_shocks::Bool`: if true, we search for files
+    with "cond_obs_shocks" appended to the output_vars.
 """
 function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
                               cond_type::Symbol, output_vars::Vector{Symbol};
-                              forecast_string::String = "", verbose::Symbol = :low)
+                              forecast_string::String = "", verbose::Symbol = :low,
+                              do_cond_obs_shocks::Bool = false)
 
     # Determine full set of output_vars necessary for plotting desired results
     output_vars = add_requisite_output_vars(output_vars)
@@ -33,7 +37,9 @@ function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
 
     for output_var in output_vars
         meansbands_to_matrix(m, input_type, cond_type, output_var;
-                             forecast_string = forecast_string, verbose = verbose)
+                             forecast_string = forecast_string, verbose = verbose,
+                             do_cond_obs_shocks =
+                             do_cond_obs_shocks)
     end
 
     println(verbose, :low, "\nConversion of means and bands complete: $(now())")
@@ -41,10 +47,12 @@ end
 
 function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
                               cond_type::Symbol, output_var::Symbol;
-                              forecast_string::String = "", verbose::Symbol = :low)
+                              forecast_string::String = "", verbose::Symbol = :low,
+                              do_cond_obs_shocks::Bool = false)
 
     mb = read_mb(m, input_type, cond_type, output_var,
-                 forecast_string = forecast_string)
+                 forecast_string = forecast_string,
+                 do_cond_obs_shocks = do_cond_obs_shocks)
 
     prod     = get_product(mb)   # history? forecast? shockdec?
     cl       = get_class(mb)     # pseudo? obs? state?
@@ -52,7 +60,8 @@ function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
 
     ## Get name of file to write
     outfile = get_forecast_filename(m, input_type, cond_type,
-                                    Symbol("mb_matrix_", output_var);
+                                    Symbol("mb_matrix_", output_var,
+                                           do_cond_obs_shocks ? "_cond_obs_shocks" : "");
                                     pathfcn = workpath,
                                     forecast_string = forecast_string,
                                     fileformat = :jld2)

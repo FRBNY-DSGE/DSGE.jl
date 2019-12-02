@@ -492,6 +492,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
         end # of loop through blocks
 
     end # of input_type
+    if !isempty(cond_obs_shocks)
+        combine_raw_forecast_output_and_metadata(m, cond_forecast_output_files,
+                                                 verbose = verbose)
+    end
     combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
 
     println(verbose, :low, "\nForecast complete: $(now())")
@@ -869,7 +873,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         cond_df[end,obs] += shock
     end
 
-    cond_forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
+    # Must set cond_type to :semi or :full here, or you won't get a conditional forecast
+    cond_forecast_output = forecast_one_draw(m, input_type, cond_type in [:semi,:full] ?
+                                             cond_type : :full, output_vars,
                                         params, cond_df, verbose = verbose,
                                         shock_name = shock_name,
                                         shock_var_name = shock_var_name,

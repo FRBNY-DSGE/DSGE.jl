@@ -437,10 +437,17 @@ end
 function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                               output_var::Symbol, var_name::Symbol,
                               shock_name::Nullable{Symbol} = Nullable{Symbol}();
-                              forecast_string::String = "")
+                              forecast_string::String = "",
+                              do_cond_obs_shocks::Bool = false)
     # Get filename
-    filename = get_meansbands_input_file(m, input_type, cond_type, output_var,
-                                         forecast_string = forecast_string)
+    if do_cond_obs_shocks
+        filename = get_meansbands_input_file(m, input_type, cond_type,
+                                             Symbol(string(output_var), "_cond_obs_shocks"),
+                                             forecast_string = forecast_string)
+    else
+        filename = get_meansbands_input_file(m, input_type, cond_type, output_var,
+                                             forecast_string = forecast_string)
+    end
 
     # Determine class and product
     product = get_product(output_var)

@@ -29,12 +29,19 @@ the results to a file. Other methods are for one `output_var` and one `var_name`
 
 - `verbose`: level of error messages to be printed to screen. One of `:none`,
   `:low`, `:high`
+
+- `check_empty_columns::Bool`: if true, throw an error if
+    calling load_data yields an empty column.
+
+- `do_cond_obs_shocks::Bool`: if true, append "cond_obs_shocks"
+    to names of computed meansbands files
 """
 function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                             cond_type::Symbol, output_vars::Vector{Symbol};
                             forecast_string::String = "",
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
                             check_empty_columns::Bool = true,
+                            do_cond_obs_shocks::Bool = false,
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -73,6 +80,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                                     population_data = population_data,
                                     population_forecast = population_forecast,
                                     verbose = verbose,
+                                    do_cond_obs_shocks =
+                                    do_cond_obs_shocks,
                                     kwargs...)
             GC.gc()
         end
@@ -92,6 +101,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                             population_data::DataFrame = DataFrame(),
                             population_forecast::DataFrame = DataFrame(),
                             verbose::Symbol = :none,
+                            do_cond_obs_shocks::Bool = false,
                             kwargs...)
 
     # Determine class and product
@@ -114,7 +124,9 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
         for i in 1:length(mb_vec)
             mb_vec[i] = compute_meansbands(m, input_type, cond_type, output_var,
                                            variable_names[i], df; pop_growth = pop_growth,
-                                           forecast_string = forecast_string, kwargs...)
+                                           forecast_string = forecast_string,
+                                           do_cond_obs_shocks = do_cond_obs_shocks,
+                                           kwargs...)
         end
         # mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
         #                               pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
@@ -140,7 +152,9 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
 
             mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullables.Nullable(shock_name),
-                                          forecast_string = forecast_string, kwargs...),
+                                                         forecast_string = forecast_string,
+                                                         do_cond_obs_shocks = do_cond_obs_shocks,
+                                                         kwargs...),
                           variable_names)
 
             # Re-assemble pmap outputs
@@ -161,7 +175,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
 
     # Write to file
     filepath = get_meansbands_output_file(m, input_type, cond_type, output_var,
-                                          forecast_string = forecast_string)
+                                          forecast_string = forecast_string,
+                                          do_cond_obs_shocks = do_cond_obs_shocks)
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
     JLD2.jldopen(filepath, true, true, true, IOStream) do file
@@ -181,7 +196,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                             shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false,
-                            compute_shockdec_bands::Bool = false)
+                            compute_shockdec_bands::Bool = false,
+                            do_cond_obs_shocks::Bool = false)
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -195,7 +211,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
     # Read in forecast draws
     fcast_series, transform = read_forecast_output(m, input_type, cond_type,
                                                    output_var, var_name, shock_name,
-                                                   forecast_string = forecast_string)
+                                                   forecast_string = forecast_string,
+                                                   do_cond_obs_shocks = do_cond_obs_shocks)
 
     # Reverse transform
     y0_index = get_y0_index(m, product)

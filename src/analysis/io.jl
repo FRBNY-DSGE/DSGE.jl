@@ -71,12 +71,14 @@ end
 """
 ```
 get_meansbands_output_file(m, input_type, cond_type, output_var;
-    forecast_string = "", fileformat = :jld2)
+    forecast_string = "", fileformat = :jld2,
+    do_cond_obs_shocks = false)
 ```
 
 ```
 get_meansbands_output_file(directory, filestring_base, input_type, cond_type, output_var;
-    forecast_string = "", fileformat = :jld2)
+    forecast_string = "", fileformat = :jld2,
+    do_cond_obs_shocks = false)
 ```
 
 Returns a dictionary of raw forecast output files in which to save
@@ -103,26 +105,35 @@ computed means and bands.
 - `output_vars::Symbol`: See `?forecast_one`
 - `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
+- `do_cond_obs_shocks`: if true, append "cond_obs_shocks"
+    to output_vars to indicate these are meansbands
+    corresponding to forecasts conditional on shocks
+    to observables.
 """
 function get_meansbands_output_file(m::AbstractDSGEModel, input_type::Symbol,
                                     cond_type::Symbol, output_var::Symbol;
                                     forecast_string::String = "",
                                     fileformat::Symbol = :jld2,
-                                    directory::String = workpath(m, "forecast"))
+                                    directory::String = workpath(m, "forecast"),
+                                    do_cond_obs_shocks::Bool = false)
 
     directory = directory
     base = filestring_base(m)
     get_meansbands_output_file(directory, base, input_type, cond_type, output_var;
-                               forecast_string = forecast_string, fileformat = fileformat)
+                               forecast_string = forecast_string, fileformat = fileformat,
+                               do_cond_obs_shocks = do_cond_obs_shocks)
 end
 
 function get_meansbands_output_file(directory::String,
                                     filestring_base::Vector{String},
                                     input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                                    forecast_string::String = "", fileformat = :jld2)
+                                    forecast_string::String = "", fileformat = :jld2,
+                                    do_cond_obs_shocks::Bool = false)
 
     get_forecast_filename(directory, filestring_base,
-                          input_type, cond_type, Symbol("mb", output_var);
+                          input_type, cond_type,
+                          Symbol("mb", output_var,
+                                 do_cond_obs_shocks ? "_cond_obs_shocks" : "");
                           forecast_string = forecast_string,
                           fileformat = fileformat)
 end
@@ -132,7 +143,8 @@ end
 read_mb(fn::String)
 
 read_mb(m, input_type, cond_type, output_var; forecast_string = "",
-    bdd_and_unbdd::Bool = false, directory = workpath(m, \"forecast\"))
+    bdd_and_unbdd::Bool = false, directory = workpath(m, \"forecast\"),
+    do_cond_obs_shocks::Bool = false)
 ```
 
 Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
@@ -152,17 +164,21 @@ end
 function read_mb(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
                  bdd_and_unbdd::Bool = false,
-                 directory::String = workpath(m, "forecast"))
+                 directory::String = workpath(m, "forecast"),
+                 do_cond_obs_shocks::Bool = false)
     unbdd_file = get_meansbands_output_file(m, input_type, cond_type, output_var;
                                             forecast_string = forecast_string,
-                                            directory = directory)
+                                            directory = directory,
+                                            do_cond_obs_shocks =
+                                            do_cond_obs_shocks)
 
     if bdd_and_unbdd
         @assert get_product(output_var) in [:forecast, :forecast4q]
         bdd_output_var = Symbol(:bdd, output_var)
         bdd_file = get_meansbands_output_file(m, input_type, cond_type, bdd_output_var;
                                               forecast_string = forecast_string,
-                                              directory = directory)
+                                              directory = directory,
+                                              do_cond_obs_shocks = do_cond_obs_shocks)
 
         read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
     else
