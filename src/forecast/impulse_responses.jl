@@ -36,8 +36,6 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
                                      flip_shocks::Bool = false,
                                      use_alternate_consumption = false) where {S<:AbstractFloat}
     horizon = impulse_response_horizons(m)
-    Qx = get_setting(m, :Qx)
-    Qy = get_setting(m, :Qy)
 
     TTT_jump, TTT_state, eu  = klein(m)
     if eu == -1
@@ -46,7 +44,12 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
 
     TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
     CCC      = zeros(n_model_states(m))
-    TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC)
+
+    TTT, RRR, CCC = if typeof(m) != RepDSGEGovDebt{Float64}
+        augment_states(m, TTT, TTT_jump, RRR, CCC)
+    else
+        TTT, RRR, CCC
+    end
 
     measurement_equation = measurement(m, TTT, RRR, CCC)
     transition_equation = Transition(TTT, RRR, CCC)
@@ -57,6 +60,13 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
     state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
     jump_indices_orig  = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
 
+    if typeof(m) == RepDSGEGovDebt{Float64}
+        return states, obs, pseudo
+    end
+
+    Qx = get_setting(m, :Qx)
+    Qy = get_setting(m, :Qy)
+
     # In this case, the length of state_indices and jump_indices seems to give the number of
     # UNNORMALIZED states/jumps however I'm not sure if this will always be the case/if this is
     # really what we want saved into these settings...so might need to modify in future.
@@ -66,7 +76,8 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
 
     model_states_unnormalized = Array{Float64}(undef, length(state_indices_orig) +
                                                length(jump_indices_orig) +
-                                               length(m.endogenous_states_augmented), horizon, size(states, 3))
+                                               length(m.endogenous_states_augmented), horizon,
+                                               size(states, 3))
     for i in 1:size(states, 3)
         state_inds = 1:n_backward_looking_states(m)
         states_unnormalized[:, :, i] = Matrix(Qx')*states[state_inds, :, i]
@@ -82,7 +93,11 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
     if use_alternate_consumption
         endo = m.endogenous_states_original
         c_implied = (m[:ystar]/m[:g]) - m[:xstar]
-        IRFC_implied = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t], :, :]  - model_states_unnormalized[endo[:g′_t], :, :]) - (m[:xstar]/c_implied)*model_states_unnormalized[endo[:I′_t], :, :]
+        IRFC_implied = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t], :, :] -
+                                                    model_states_unnormalized[endo[:g′_t], :, :])-
+                                                    (m[:xstar]/c_implied)*
+        model_states_unnormalized[endo[:I′_t], :, :]
+
         model_states_unnormalized[1229, :, :] = IRFC_implied
 
         z_consumption = model_states_unnormalized[endo[:z′_t], :, :]
@@ -105,10 +120,14 @@ function impulse_responses(m::Union{AbstractHetModel,RepDSGEGovDebt}, system::Sy
     end
 
     horizon = impulse_response_horizons(m)
+    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+
+    if typeof(m) == RepDSGEGovDebt
+        return states, obs, pseudo
+    end
+
     Qx = get_setting(m, :Qx)
     Qy = get_setting(m, :Qy)
-
-    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
 
     state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
     jump_indices_orig  = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
