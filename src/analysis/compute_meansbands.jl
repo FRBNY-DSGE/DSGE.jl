@@ -1,15 +1,16 @@
 """
 ```
 compute_meansbands(m, input_type, cond_type, output_vars; forecast_string = "",
-    verbose = :low, kwargs...)
+    verbose = :low, do_cond_obs_shocks = false, kwargs...)
 
 compute_meansbands(m, input_type, cond_type, output_var, df; forecast_string = "",
     population_data = DataFrame(), population_forecast = DataFrame(),
-    verbose = :none, kwargs...)
+    verbose = :none, do_cond_obs_shocks = false, kwargs...)
 
 compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
     forecast_string = "", population_data = DataFrame(),
-    population_forecast = DataFrame(), verbose = :low, kwargs...)
+    population_forecast = DataFrame(), verbose = :low,
+    do_cond_obs_shocks = false, kwargs...)
 ```
 
 Compute means and bands for pseudo-observables, observables, and shocks, and write

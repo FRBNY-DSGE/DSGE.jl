@@ -145,6 +145,15 @@ read_mb(fn::String)
 read_mb(m, input_type, cond_type, output_var; forecast_string = "",
     bdd_and_unbdd::Bool = false, directory = workpath(m, \"forecast\"),
     do_cond_obs_shocks::Bool = false)
+
+function read_mb(op, m1, m2, input_type, cond_type,
+                 output_var; forecast_string1 = "",
+                 forecast_string2 = "",
+                 bdd_and_unbdd = false,
+                 directory = workpath(m1, \"forecast\"),
+                 output_model = 1,
+                 do_cond_obs_shocks1 = false,
+                 do_cond_obs_shocks2 = false)
 ```
 
 Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
@@ -153,6 +162,9 @@ determine the file location.
 If `bdd_and_unbdd`, then `output_var` must be either `:forecast` or
 `:forecast4q`. Then this function calls `read_bdd_and_unbdd` to return a
 `MeansBands` with unbounded means and bounded bands.
+
+The third method reads in a `MeansBands` object produced by
+an arithmetic operation between two `MeansBands` objects.
 """
 function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
@@ -180,6 +192,49 @@ function read_mb(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                               directory = directory,
                                               do_cond_obs_shocks = do_cond_obs_shocks)
 
+        read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
+    else
+        read_mb(unbdd_file)
+    end
+end
+
+function read_mb(op::Function, m1::AbstractDSGEModel, m2::AbstractDSGEModel,
+                 input_type::Symbol, cond_type::Symbol,
+                 output_var::Symbol; forecast_string1::String = "",
+                 forecast_string2::String = "",
+                 bdd_and_unbdd::Bool = false,
+                 directory::String = workpath(m1, "forecast"),
+                 output_model::Int = 1,
+                 do_cond_obs_shocks1::Bool = false,
+                 do_cond_obs_shocks2::Bool = false)
+    unbdd_file = get_meansbands_arithmetic_output_file(op, m1, m2,
+                                                       input_type, cond_type,
+                                                       output_var,
+                                                       output_model = output_model,
+                                                       forecast_string1 =
+                                                       forecast_string1,
+                                                       forecast_string2 =
+                                                       forecast_string2,
+                                                       do_cond_obs_shocks1 =
+                                                       do_cond_obs_shocks1,
+                                                       do_cond_obs_shocks2 =
+                                                       do_cond_obs_shocks2)
+
+    if bdd_and_unbdd
+        @assert get_product(output_var) in [:forecast, :forecast4q]
+        bdd_output_var = Symbol(:bdd, output_var)
+        bdd_file = get_meansbands_arithmetic_output_file(op, m1, m2,
+                                                         input_type, cond_type,
+                                                         bdd_output_var,
+                                                         output_model = output_model,
+                                                         forecast_string1 =
+                                                         forecast_string1,
+                                                         forecast_string2 =
+                                                         forecast_string2,
+                                                         do_cond_obs_shocks1 =
+                                                         do_cond_obs_shocks1,
+                                                         do_cond_obs_shocks2 =
+                                                         do_cond_obs_shocks2)
         read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
     else
         read_mb(unbdd_file)
@@ -564,7 +619,96 @@ function add_requisite_output_vars_meansbands(output_vars::Vector{Symbol})
     return all_output_vars
 end
 
+"""
+```
+get_meansbands_arithmetic_output_file(op, m1, m2, input_type,
+                                      cond_type, output_var;
+                                      fileformat = :jld2,
+                                      output_model = 1,
+                                      forecast_string1 = "",
+                                      forecast_string2 = "",
+                                      do_cond_obs_shocks1 = false,
+                                      do_cond_obs_shocks2 = false)
+```
+Returns a string specifying the output file for
+the result of an arithmetic operation on two `MeansBands` objects.
 
+### Inputs
+- `op::Function`: arithmetic operation. Must be +, -, *, /, or ^.
+
+- `m1::AbstractDSGEModel`: DSGE model object corresponding to the first `MeansBands`
+
+- `m2::AbstractDSGEModel`:DSGE model object corresponding to the second `MeansBands`
+
+- `cond_type::Symbol`: type of conditional forecast.
+
+- `input_type::Symbol`: type of forecast used. Typically `:full` or `:mode`.
+
+### Keyword Arguments
+- `fileformat`: format of the output file
+
+- `output_model::Int`: specifies to which model's folder (`m1` or `m2`)
+    output will be written. Must be either 1 or 2.
+
+- `forecast_string1::String`: forecast identifier for forecast of model `m1`
+
+- `forecast_string2::String`: forecast identifier for forecast of model `m2`
+
+- `do_cond_obs_shocks1::Bool`: true if the forecast for `m1` was conditional
+    on shocks to observables.
+
+- `do_cond_obs_shocks2::Bool`: true if the forecast for `m2` was conditional
+    on shocks to observables.
+"""
+function get_meansbands_arithmetic_output_file(op::Function,
+                                               m1::AbstractDSGEModel,
+                                               m2::AbstractDSGEModel,
+                                               input_type::Symbol,
+                                               cond_type::Symbol,
+                                               output_var::Symbol;
+                                               fileformat = :jld2,
+                                               output_model::Int = 1,
+                                               forecast_string1::String = "",
+                                               forecast_string2::String = "",
+                                               do_cond_obs_shocks1::Bool = false,
+                                               do_cond_obs_shocks2::Bool = false)
+
+    op_sym = if op == Base.:+
+        :add
+    elseif op == Base.:-
+        :minus
+    elseif op == Base.:*
+        :multiply
+    elseif op == Base.:/
+        :divide
+    elseif op == Base.:^
+        :exponent
+    end
+
+    file_name = String("mb$(output_var)_$(op_sym).$fileformat")
+
+    # Determine directory into which we save meansbands and
+    # base of filename.
+    if output_model == 1
+        save_directory = workpath(m1, "forecast")
+        save_base      = filestring_base(m1)
+    else
+        save_directory = workpath(m2, "forecast")
+        save_base      = filestring_base(m2)
+    end
+
+    # Add additional strings
+    mb_filestring_addl = get_forecast_filestring_addl(input_type, cond_type,
+                                                      forecast_string = "")
+    push!(mb_filestring_addl, "fcid1=$forecast_string1") # identifier of forecasts
+    push!(mb_filestring_addl, "fcid2=$forecast_string2")
+    push!(mb_filestring_addl, "model1=$(spec(m1))$(subspec(m1))") # model identifier
+    push!(mb_filestring_addl, "model2=$(spec(m2))$(subspec(m2))")
+    push!(mb_filestring_addl, "cobssh1=$(string(do_cond_obs_shocks1))")
+    push!(mb_filestring_addl, "cobssh2=$(string(do_cond_obs_shocks2))")
+
+    return savepath(save_directory, file_name, save_base, mb_filestring_addl)
+end
 #=
 """
 ```
