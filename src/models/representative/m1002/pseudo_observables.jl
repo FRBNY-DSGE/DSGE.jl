@@ -20,6 +20,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            push!(pseudo_names, :laborshare_t)
+        end
+    end
+
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names
@@ -123,8 +129,15 @@ function init_pseudo_observable_mappings!(m::Model1002)
     # Other exogenous processes
     if subspec(m) == "ss12"
         for i in to_add
-            pseudo[i].name = DSGE.detexify(i)
-            pseudo[i].longname = DSGE.detexify(i)
+            pseudo[i].name = string(DSGE.detexify(i))
+            pseudo[i].longname = string(DSGE.detexify(i))
+        end
+    end
+
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            pseudo[:laborshare_t].name     = "Log Labor Share"
+            pseudo[:laborshare_t].longname = "Log Labor Share"
         end
     end
 
