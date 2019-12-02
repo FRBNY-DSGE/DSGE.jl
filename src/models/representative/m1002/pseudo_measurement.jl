@@ -116,6 +116,16 @@ function pseudo_measurement(m::Model1002{T},
     ## u_t
     ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
+    ## labor share
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            ZZ_pseudo[pseudo[:laborshare_t], endo[:w_t]] = 1.
+            ZZ_pseudo[pseudo[:laborshare_t], endo[:L_t]] = 1.
+            ZZ_pseudo[pseudo[:laborshare_t], endo[:y_t]] = -1.
+            DD[obs[:obs_laborshare]] = 100. * log(m[:wstar] * m[:Lstar] / m[:ystar])
+        end
+    end
+
     ## Fundamental inflation related pseudo-obs
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         # Compute coefficient on Sinf
