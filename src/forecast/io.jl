@@ -31,7 +31,11 @@ function get_forecast_input_file(m, input_type;
     end
 
     if input_type == :mode || input_type == :mode_draw_shocks
-        return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
+        if get_setting(m, :sampling_method) == :MH
+            return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
+        else
+            return rawpath(m,"estimate","smc_cloud.jld2", filestring_addl)
+        end
     elseif input_type == :mean
         return workpath(m,"estimate","paramsmean.h5", filestring_addl)
     elseif input_type == :init || input_type == :init_draw_shocks
@@ -119,10 +123,12 @@ end
 """
 ```
 get_forecast_output_files(m, input_type, cond_type, output_vars;
-    forecast_string = "", fileformat = :jld2)
+    forecast_string = "", fileformat = :jld2,
+    do_cond_obs_shocks = false)
 
 get_forecast_output_files(directory, filestring_base, input_type, cond_type,
-    output_vars; forecast_string = "", fileformat = :jld2)
+    output_vars; forecast_string = "", fileformat = :jld2,
+    do_cond_obs_shocks = false)
 ```
 
 Compute the appropriate output filenames for model `m`, forecast input
@@ -138,6 +144,8 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 - `forecast_string::String`: subset identifier for when `input_type = :subset`
 - `fileformat::Symbol`: file extension, without a period. Defaults to
   `:jld2`, though `:h5` is another common option.
+- `do_cond_obs_shocks::Bool`: returns a set of file names for
+   forecasts that condition on shocks to observables.
 
 ### Notes
 
@@ -146,28 +154,44 @@ See `get_forecast_filename` for more information.
 function get_forecast_output_files(m::AbstractDSGEModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
                                    forecast_string::String = "",
-                                   fileformat::Symbol = :jld2)
+                                   fileformat::Symbol = :jld2,
+                                   do_cond_obs_shocks::Bool = false)
 
     directory = rawpath(m, "forecast")
     base      = filestring_base(m)
 
     get_forecast_output_files(directory, base, input_type, cond_type, output_vars,
                               forecast_string = forecast_string,
-                              fileformat = fileformat)
+                              fileformat = fileformat,
+                              do_cond_obs_shocks = do_cond_obs_shocks)
 end
 
 function get_forecast_output_files(directory::String, filestring_base::Vector{String},
-                                   input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::String = "", fileformat::Symbol = :jld2)
+                                   input_type::Symbol, cond_type::Symbol,
+                                   output_vars::Vector{Symbol};
+                                   forecast_string::String = "", fileformat::Symbol = :jld2,
+                                   do_cond_obs_shocks::Bool = false)
 
-    output_files    = Dict{Symbol, String}()
-    for var in remove_meansbands_only_output_vars(output_vars)
-        output_files[var] = get_forecast_filename(directory, filestring_base,
-                                                  input_type, cond_type, var,
-                                                  forecast_string = forecast_string,
-                                                  fileformat = fileformat)
+    output_files = Dict{Symbol, String}()
+    if do_cond_obs_shocks
+        non_mb = remove_meansbands_only_output_vars(output_vars)
+        if do_cond_obs_shocks
+            var_filenames = map(x -> Symbol(string(x) * "_cond_obs_shocks"), non_mb)
+        end
+        for (var,var_fn) in zip(non_mb, var_filenames)
+            output_files[var] = get_forecast_filename(directory, filestring_base,
+                                                      input_type, cond_type, var_fn,
+                                                      forecast_string = forecast_string,
+                                                      fileformat = fileformat)
+        end
+    else
+        for var in remove_meansbands_only_output_vars(output_vars)
+            output_files[var] = get_forecast_filename(directory, filestring_base,
+                                                      input_type, cond_type, var,
+                                                      forecast_string = forecast_string,
+                                                      fileformat = fileformat)
+        end
     end
-
     return output_files
 end
 
@@ -191,7 +215,8 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
                                 block_inds::AbstractRange{Int64} = 1:0,
                                 subset_inds::AbstractRange{Int64} = 1:0,
-                                verbose::Symbol = :low)
+                                verbose::Symbol = :low,
+                                do_cond_obs_shocks = false)
 
     for var in output_vars
         prod = get_product(var)
