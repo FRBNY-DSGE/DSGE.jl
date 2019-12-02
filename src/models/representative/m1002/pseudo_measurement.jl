@@ -122,7 +122,7 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudo[pseudo[:laborshare_t], endo[:w_t]] = 1.
             ZZ_pseudo[pseudo[:laborshare_t], endo[:L_t]] = 1.
             ZZ_pseudo[pseudo[:laborshare_t], endo[:y_t]] = -1.
-            DD[obs[:obs_laborshare]] = 100. * log(m[:wstar] * m[:Lstar] / m[:ystar])
+            DD_pseudo[pseudo[:laborshare_t]] = 100. * log(m[:wstar] * m[:Lstar] / m[:ystar])
         end
     end
 
