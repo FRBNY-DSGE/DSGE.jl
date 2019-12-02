@@ -89,7 +89,8 @@ write_spec_section(fid, m1, m2; purpose = "")
 
 Write user, model, and data specification section.
 """
-function write_spec_section(fid::IOStream, m::AbstractModel; purpose::String = "")
+function write_spec_section(fid::IOStream, m::AbstractModel; purpose::String = "",
+                            additional_text::Vector{String} = Vector{String}(undef,0))
     @printf fid "\n\n"
     @printf fid "\\section{Specification}\n"
     @printf fid "\n"
@@ -131,6 +132,10 @@ function write_spec_section(fid::IOStream, m::AbstractModel; purpose::String = "
     @printf fid "  \\item Last quarter of data: %d-Q%d\n" Dates.year(date_mainsample_end(m)) Dates.quarterofyear(date_mainsample_end(m))
     @printf fid "  \\item Last quarter of conditional data: %d-Q%d\n" Dates.year(date_conditional_end(m)) Dates.quarterofyear(date_conditional_end(m))
     @printf fid "\\end{itemize}\n"
+
+    for txt in additional_text
+        @printf fid "%s" txt
+    end
 end
 
 """
@@ -599,7 +604,7 @@ function write_irf_plots(fid::IOStream, m::AbstractModel, input_type::Symbol, co
         @printf fid "\\centering\n"
         @printf fid "\\begin{longtable}{cccc}\n"
         loc = 1 # location within row
-        for k in rowvars
+        for k in rowvars # dependent variables responding to shock
             if loc < 4
                 endstr = "&"
                 loc += 1
