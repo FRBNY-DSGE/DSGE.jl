@@ -106,6 +106,16 @@ function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :l
     end
 end
 
+function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :low)
+    if !isempty(output_file)
+        output_dir = dirname(output_file)
+        !isdir(output_dir) && mkpath(output_dir)
+        Plots.savefig(p, output_file)
+
+        println(verbose, :low, "Saved $output_file")
+    end
+end
+
 function rescale_annotations_fontsize!(p::Plots.Plot{Plots.GRBackend}, fontsize::Int64)
     for i in 1:length(p.series_list)
         if typeof(p.series_list[i].plotattributes[:series_annotations]) == Nothing
