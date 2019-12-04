@@ -23,7 +23,7 @@ Further extensions of the DSGE model code may be released at the discretion of t
 
 ## Installation
 
-`DSGE.jl` is a registered Julia package. To install it, open your Julia REPL, type `]` (enter package manager), and run
+`DSGE.jl` is a registered Julia package in the [`General`](https://github.com/JuliaRegistries/General) registry. To install it, open your Julia REPL, type `]` (enter package manager), and run
 
 ```julia
 pkg> add DSGE
