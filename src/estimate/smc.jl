@@ -97,6 +97,7 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     particle_store_path = rawpath(m, "estimate", "smcsave.h5", filestring_addl)
 
     # Calls SMC package's generic SMC
+    println("Calling SMC.jl's SMC estimation routine...")
     SMC.smc(my_likelihood, m.parameters, data;
             verbose = verbose,
             testing = m.testing,
@@ -138,7 +139,7 @@ function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
-    return smc(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
+    return smc2(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
                filestring_addl = filestring_addl)
 end
 
@@ -147,6 +148,6 @@ function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
-    return smc(m, data_mat, verbose=verbose, save_intermediate = save_intermediate,
+    return smc2(m, data_mat, verbose=verbose, save_intermediate = save_intermediate,
                filestring_addl = filestring_addl)
 end

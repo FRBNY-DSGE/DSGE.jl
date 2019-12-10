@@ -15,7 +15,7 @@ function write_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::
                                forecast_string::String = "",
                                outdir::String = joinpath(saveroot(m), "Packets", spec(m), subspec(m)),
                                purpose::String = "")
-    @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast]."
+    @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast, :irf]."
 
     # Title and authors
     title = "Estimation and Forecasting Results. \\\\ " * description(m)

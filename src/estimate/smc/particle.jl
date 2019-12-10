@@ -143,7 +143,7 @@ function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
 ```
 Returns a ParticleCloud in the place of a Cloud.
 """
-function ParticleCloud(cloud::Cloud, para_symbols::Vector{Symbol})
+function ParticleCloud(cloud::Union{SMC.Cloud, DSGE.Cloud}, para_symbols::Vector{Symbol})
     N = size(cloud.particles, 2)
     return ParticleCloud([Particle(cloud.particles[k, ind_weight(N)], para_symbols,
                                    cloud.particles[k, 1:ind_para_end(N)],
@@ -397,7 +397,6 @@ end
 
 """
 ```
-function set_weights!(c::ParticleCloud, weights::Vector{Float64})
 @inline function set_weights!(c::Cloud, weights::Vector{Float64})
 ```
 Set weights to specific values. Contrast to update_weights, which multiplies

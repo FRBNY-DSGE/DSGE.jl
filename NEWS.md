@@ -30,8 +30,7 @@ Bug fixes and cleanup
 # DSGE.jl 0.7.0 Release Notes
 
 ## New features and enhancements
-    + Adds Sequential Monte Carlo (SMC) as an alternative to Metropolis Hastings for estimating models. Latest release with all bug fixes and speed improvements
-
++ Adds Sequential Monte Carlo (SMC) as an alternative to Metropolis Hastings for estimating models. Latest release with all bug fixes and speed improvements
 
 # DSGE.jl 0.6.0 Release Notes
 

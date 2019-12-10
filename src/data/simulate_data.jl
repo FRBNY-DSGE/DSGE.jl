@@ -28,7 +28,7 @@ function simulate_data(m::AbstractDSGEModel;
                        para_init::OrderedDict{Symbol, Float64} = OrderedDict{Symbol, Float64}(),
                        savepath::String = "",
                        save_aux_dir::String = "",
-                       filestring_addl::Vector{String} = Vector{String}(0),
+                       filestring_addl::Vector{String} = Vector{String}(undef,0),
                        burnin::Int = 1, n_periods::Int = 200,
                        s_0::Vector{Float64} = Vector{Float64}(undef, 0),
                        P_0::Matrix{Float64} = Matrix{Float64}(undef, 0, 0),

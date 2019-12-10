@@ -82,12 +82,73 @@ n_model_states_original(m::AbstractDSGEModel) = get_setting(m, :n_model_states_o
 
 """
 ```
+AbstractCTModel{T} <: AbstractDSGEModel{T}
+```
+
+The AbstractCTModel is defined as a subtype of AbstractDSGEModel to accomodate the
+numerical methods and procedures specific to continuous time models.
+"""
+abstract type AbstractCTModel{T} <: AbstractDSGEModel{T} end
+
+n_states(m::AbstractCTModel) = sum(map(i -> length(collect(m.endogenous_states)[i][2]), 1:length(keys(m.endogenous_states))))
+n_shocks_expectational(m::AbstractCTModel) = sum(map(i -> length(collect(m.expected_shocks)[i][2]), 1:length(keys(m.expected_shocks))))
+
+"""
+```
+AbstractHetModel{T} <: AbstractDSGEModel{T}
+```
+
+The AbstractHetModel is defined as a subtype of AbstractDSGEModel to accomodate a bunch of stuff, but for now just different impulse response functions.
+"""
+abstract type AbstractHetModel{T} <: AbstractDSGEModel{T} end
+
+"""
+```
 AbstractRepModel{T} <: AbstractDSGEModel{T}
 ```
 
 The AbstractRepresentativeModel is defined as a subtype of AbstractDSGEModel to accomodate a bunch of stuff, but for now just different impulse response functions.
 """
 abstract type AbstractRepModel{T} <: AbstractDSGEModel{T} end
+
+"""
+```
+get_dict(m, class, index)
+```
+"""
+function get_dict(m::AbstractDSGEModel, class::Symbol)
+    if class == :states
+        m.endogenous_states
+    elseif class == :obs
+        m.observables
+    elseif class == :pseudo
+        m.pseudo_observables
+    elseif class in [:shocks, :stdshocks]
+        m.exogenous_shocks
+    else
+        throw(ArgumentError("Invalid class: $class. Must be :states, :obs, :pseudo, :shocks, or :stdshocks"))
+    end
+end
+
+"""
+```
+get_key(m, class, index)
+```
+Returns the name of the state (`class = :states`), observable (`:obs`),
+pseudo-observable (`:pseudo`), or shock (`:shocks` or `:stdshocks`)
+corresponding to the given `index`.
+"""
+function get_key(m::AbstractDSGEModel, class::Symbol, index::Int)
+    dict = get_dict(m, class)
+    out = Base.filter(key -> dict[key] == index, collect(keys(dict)))
+    if length(out) == 0
+        error("Key corresponding to index $index not found for class: $class")
+    elseif length(out) > 1
+        error("Multiple keys corresponding to index $index found for class: $class")
+    else
+        return out[1]
+    end
+end
 
 
 # Parse population mnemonic into 2 Nullable{Symbol}s from one

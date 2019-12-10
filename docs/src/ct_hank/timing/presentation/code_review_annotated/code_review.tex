@@ -1,0 +1,462 @@
+\documentclass{beamer}
+\usetheme{Boadilla}
+\usepackage{/data/dsge_data_dir/LatexTemplates/dsgestyle}
+
+% Title slide
+\begin{document}
+\title{EHANK Code Review}
+\author{William Chen and Emily Martell}
+\institute{DSGE Interns 2018}
+\date{\today}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Table of contents
+\begin{frame}
+\frametitle{Outline}
+\begin{itemize}
+\item Overview of src\textbackslash directory structure
+\item Models
+\item Solve
+\item Estimate
+\item Other files
+\end{itemize}
+\end{frame}
+
+\section{Directory structure}
+\begin{frame}
+\frametitle{src\textbackslash}
+\begin{itemize}
+  \item abstractdsgemodel\_hank.jl
+  \item EHANK.jl
+  \item parameters\_hank.jl
+  \item statespace\_hank.jl
+  \item util\_hank.jl
+  \item models\textbackslash
+  \item solve\textbackslash
+  \item estimate\textbackslash
+  \item runfiles\textbackslash
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{models\textbackslash}
+  \begin{itemize}
+    \item solve\_hjb.jl
+    \item solve\_kfe.jl
+    \item krusell\_smith\textbackslash
+    \item one\_asset\_hank\textbackslash
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{models\textbackslash krusell\_smith\textbackslash}
+    \begin{itemize}
+      \item augment\_states.jl
+      \item data\textbackslash
+      \begin{itemize}
+        \item generate\_data.jl
+       \end{itemize}
+      \item eqcond.jl
+      \item krusell\_smith.jl
+      \item measurement.jl
+      \item observables.jl
+      \item subspecs.jl
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{models\textbackslash one\_asset\_hank\textbackslash}
+    \begin{itemize}
+      \item augment\_states.jl
+      \item data\textbackslash
+      \begin{itemize}
+        \item generate\_data.jl
+       \end{itemize}
+      \item eqcond.jl
+      \item helpers.jl
+      \item one\_asset\_hank.jl
+      \item measurement.jl
+      \item observables.jl
+      \item subspecs.jl
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{solve\textbackslash}
+   \begin{itemize}
+    \item gensysct.jl
+    \item reduction.jl
+    \item solve.jl
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{estimate\textbackslash}
+\begin{itemize}
+  \item filter\_hank.jl
+  \item hessizero\_hank.jl
+  \item transform\_transition\_matrices.jl
+  \item  ct\_filter\textbackslash
+  \begin{itemize}
+    \item block\_kalman\_filter.jl
+    \item ct\_block\_kalman\_filter.jl
+    \item ct\_kalman\_filter.jl
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{runfiles\textbackslash}
+  \begin{itemize}
+    \item run.jl
+  \end{itemize}
+\end{frame}
+
+\section{Models}
+
+\begin{frame}
+  \frametitle{Major Changes}
+  \begin{itemize}
+  \item Computation of model indices
+  \item Storage of steady state parameters
+  \item Use of Settings for much more than estimation settings
+  \item Steady state computation
+  \item Note: We will be using the KrusellSmith object as our demonstration example
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Model Indices}
+  \begin{itemize}
+  \item Store endogenous\_states indices as vectors of Ints (rather than just Ints)
+  \item Reason: value function/cross-sectional distribution are described by vectors
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Steady State Parameters}
+  \begin{itemize}
+  \item Created new types SteadyStateParameterVector, SteadyStateParameterArray
+  \item Reasons
+    \begin{enumerate}
+    \item Some steady state parameters, like the steady state value functions, are vectors. Others, like the ones which indicate when forward/backward differentiation occurs, are matrices.
+    \item SteadyStateParameter doesn't allow for storage of vectors and methods for updating SteadyStateParameter are not adapted for updating vector values
+    \end{enumerate}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Settings} % basically why we populated settings w/more functionality
+\begin{itemize}
+\item Need place to store info on ....
+  \begin{enumerate}
+  \item chosen state space grid discretization
+  \item number of jump variables, aggregate state variables, static relations, expectation errors, and shocks.
+  \item variables governing the accuracy of the steady-state approximation
+  \item variables governing application of reduction
+  \item filtering method (e.g. are we tracking the last lag- more on this in theory portion later today)
+  \item SMC
+  \end{enumerate}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{More on Settings}
+\begin{itemize}
+  \item Most grid-related settings don't have economic meaning (e.g. fineness of wealth grid), but some do (e.g. idiosyncratic income Markov chain has values 0 and 1, corresponding to unemployment and employment)
+  \item Some settings are required. We made error messages in later parts of the code that will tell the user when a certain setting is needed for a certain functionality (e.g. reduction).
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Mandatory Settings}
+\begin{itemize}
+\item n\_jump\_vars: Number of jump/control variables
+\item n\_state\_vars: Number of aggregate state variables (taken as given by agent)
+\item n\_state\_vars\_unreduce: Number of state vars not to be reduced, usually zero
+\item n\_static\_conditions: Number of static conditions
+\item n\_shocks: Number of aggregate shocks
+\item n\_expectation\_errors: Expectational errors for canonical form, usually the value function
+\item n\_vars: n\_jump\_vars + n\_state\_vars + n\_static\_conditions
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Mandatory Settings for Reduction}
+\begin{itemize}
+\item reduce\_state\_vars: Boolean for whether we reduce state variables like $g_t$
+\item reduce\_v: Boolean for whether we do spline reduction of value function
+\item krylov\_dim: Dimension of Krylov subspace
+\item n\_prior: How many non-wealth dimensions are accounted for by spline basis
+\item n\_post: How many non-wealth dimensions should be accounted for by spline basis
+\item knots\_dict: Dictionary holding knot points for each dimension used for spline basis
+\item spline\_grid: grid of knot point locations
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Steady State Computation}
+\begin{itemize}
+\item Algorithm
+  \begin{enumerate}
+  \item Read in all parameters and relevant settings
+  \item Initialize guesses and storage variables (e.g. matrices for flow utility)
+  \item Iterate the following steps until some market-clearing condition is met
+    \begin{enumerate}
+    \item Solve for HJB given prices and other quantities
+    \item Solve KFE given value function and prices
+    \item Compute market-clearing conditions. Check if steady state is found
+    \end{enumerate}
+  \end{enumerate}
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Auxiliary Steady-State Functions}
+\begin{itemize}
+\item solve\_kfe.jl:
+  \begin{enumerate}
+  \item Holds a variety of solvers that return a stacked distribution vector.
+  \item Reason: given A matrix from HJB, solving KFE is model-invariant. Makes sense to collect this in a function
+  \item Contains both exact (via left divide) and iterative methods for computing $g_t$.
+  \item Exact method generalizes to any number of state space grid dims.
+  \item Iterative method may not generalize (we don't know as we didn't test this)
+  \item Many redundant function definitions b/c some arrays may be complex, vectors, matrices, etc.
+  \end{enumerate}
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Auxiliary Steady-State Functions}
+\begin{itemize}
+\item solve\_hjb.jl:
+  \begin{enumerate}
+  \item Reason: solving HJB has several steps which may be model invariant, makes sense to collect this in a function
+  \item Holds 3 main functions: upwind\_value\_function, upwind\_matrix, solve\_hjb
+  \item Has an upwind function: wrapper script for upwind\_value\_function and upwind\_matrix
+  \item upwind\_value\_function: determines which parts of the state space uses forward difference, backward difference, etc.
+  \item upwind\_matrix: Constructs A matrix for HJB.
+  \item solve\_hjb: Exact method (left-divide) for solving HJB (we don't have an iterative method yet, though this should be a straightforward extension)
+  \end{enumerate}
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Reasons for upwind\_value\_function}
+\begin{itemize}
+\item Exact upwind scheme only depends on value function finite differences -> model agnostic
+\item Inexact method may not generalize beyond CRRA utility and CRRA utility w/labor disutility b/c how we decide which points in state space grid get a forward difference, backward difference etc.
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Reasons for upwind\_matrix}
+  \begin{itemize}
+  \item Upwind matrix assumes wealth is a state variable, but this should be true for most HANK models
+  \item Creates part of A matrix that applies to the drift of wealth in value function
+  \item Given A\_switch, which summarizes idiosyncratic shocks, procedure for creating A is model invariant
+  \end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Reasons for solve\_hjb}
+  \begin{itemize}
+  \item Left-divide exact method is model invariant as long as discount rate is constant
+  \end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Algorithm for eqcond}
+\begin{itemize}
+\item Need to know number of
+  \begin{enumerate}
+  \item total variables (jump + states + static)
+  \item expectation errors (usually jump vars)
+  \item shocks
+  \end{enumerate}
+\item Grab all relevant parameters/settings
+\item Create a vector holding steady state values, time derivatives, expectational errors, and shocks
+\item Compute one iteration of the HJB solution method
+\item Compute residuals of jump/state/static variables based off that iteration
+\item Apply automatic differentiation to the residuals
+\item Grab the relevant gensys matrices
+\item Didn't do much generalization here, but could conceivably make helper functions for hjb and kfe\_residuals
+\end{itemize}
+\end{frame}
+
+\section{Solve}
+\begin{frame}
+  \frametitle{solve function}
+\begin{itemize}
+\item Check for whether mandatory settings are populated (can be turned off for speed)
+\item Returns T, C, R, inverse\_basis, basis
+\item inverse\_basis moves matrices from reduced basis to full dimension, basis does opposite
+\item inverse\_basis $\times$ basis $ = I$ but basis $\times$ inverse\_basis $\neq I$
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{gensysct}
+\begin{itemize}
+\item Four versions
+  \begin{enumerate}
+  \item $\Gamma_0$ need not be identity, in place Schur factorization
+  \item $\Gamma_0$ need not be identity, not in place Schur factorization
+  \item $\Gamma_0$ is identity, in place Schur factorization
+  \item $\Gamma_0$ is identity, not in place Schur factorization
+  \end{enumerate}
+\item Initial speed tests suggest that the in place gensysct may actually be slower (see timing in docs)
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{reduction}
+\begin{itemize}
+\item Main functions: krylov\_reduction and valuef\_reduction
+\item Auxiliary functions: deflated\_block\_arnoldi, change\_basis, spline\_basis, extend\_to\_nd, projection\_for\_subset, solve\_static\_conditions
+\item Function we probably want to remove: oneDquad\_spline (spline\_basis is the generalization of this function; we no longer call oneDquad\_spline)
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{krylov\_reduction}
+\begin{itemize}
+\item Slices up $\Gamma_1$
+\item Performs projection onto Krylov subspace
+\item Constructs basis projection matrices
+\item Saves number of state variables after reduction
+\item Return canonical matrices after reduction
+\item IMPORTANT: static conditions are dropped from state vector after Krylov reduction b/c these depend entirely on jump and aggregate state variables.
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{valuef\_reduction}
+\begin{itemize}
+\item Construct spline basis projection matrix
+\item Use extend\_to\_nd to extend spline basis projection to other dimensions which we did not include in the construction of the spline basis
+\item If non-value function jump vars, expand basis matrix and insert an identity on diagonal
+\item Expand basis matrix to leave aggregate state variables unchanged via projection\_for\_subset
+\item Save number of jump variables
+\item Return canonical matrices after reduction
+\end{itemize}
+\end{frame}
+
+\section{Estimate}
+
+\begin{frame}
+\frametitle{Modified Files}
+\begin{itemize}
+\item filter\_hank: Returns output of Kalman filter with state transition matrices transformed to accommodate simulated subintervals
+\item hessizero\_hank: allow for just one free parameter, as both OneAssetHANK and KrusellSmith have one shock (original code assumed more than 1)
+\item transform\_transition\_matrices: Transform state transition matrices if estimating by simulating subintervals
+\end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{Future Directions}
+\begin{itemize}
+\item Since we don't estimate in any other way, we assume that the user will simulate subintervals via an Euler-Maruyama scheme.
+\item If we add other schemes for CT Kalman filtering, then we need to alter filter\_hank.jl to not make this assumption
+\item track\_lag: It seemed sensible not to augment states because it's only necessary depending on how we implement the measurement equation. So we leave track\_lag as a setting and make transform\_transition\_matrices work w/ and w/out this setting.
+\item If we choose to augment states (we currently don't), it will require refactoring transform\_transition\_matrices (and maybe other functions) since solve will return a T matrix which is twice as large, is half zero, and has an identity in the upper right block.
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{ct\_filters}
+\begin{itemize}
+\item block\_kalman\_filter: Implements a Kalman Filter that speeds up multiplication by taking advantage of the block structure of matrices common to DSGE models. Only implemented one case of the referenced paper
+\item ct\_block\_kalman\_filter: Incomplete Kalman Filter that exploits the structure of the TTT and RRR matrices when using simulated subintervals.
+\item ct\_kalman\_filter: Kalman filter with method to allow for ODE integration scheme for prediction step
+\end{itemize}
+\end{frame}
+
+\section{Other Files}
+\begin{frame}
+\frametitle{Source Files}
+\begin{itemize}
+\item parameter\_hank: Implement SteadyStateParameterVector and SteadyStateParameterArray
+\item abstractdsgemodel\_hank: Implement assignment via <= and setindex! for new parameter types
+\item statespace\_hank.jl: Update compute\_system since we track states in the reduced basis but setting up measurement equation is easier in the full state space.
+\item util\_hank.jl: Perform inequality with complex numbers
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Future Directions}
+\begin{itemize}
+\item Should naming convention change? (e.g. files end with \_hank)
+\item Can we suppress warnings issued when loading package?
+\item parameter\_hank
+  \begin{enumerate}
+  \item In the past, we were unable to add or insert a ScaledParameter type to a sparse matrix. There may also be other functionalities that cannot be used because matrix/scalar operations with DSGE Parameter types are not defined for everything that could come up (e.g. will they work with .* and left divide?)
+  \end{enumerate}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Run Files}
+\begin{itemize}
+\item These just run SMC. These are for testing purposes
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{test and test\_outputs}
+\begin{itemize}
+\item test holds test files for krusell\_smith.jl, one\_asset\_hank.jl, gensysct.jl, reduction.jl, and solve.jl
+\item test\_outputs: Holds saved data that is used by test files.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Doc files}
+\begin{itemize}
+\item G0\_identity holds the explanation for why $\Gamma_0$ is the identity
+\item kalman\_filter holds experimentation files assessing the accuracy of MLE with different Kalman Filters and the run times.
+\item measurement holds
+  \begin{enumerate}
+  \item  the explanation for how we approximate the integral used to convert flow variables to stock variables in the measurement equation
+  \item experimentation files for how many terms in the power series expansion are needed to well approximate the integral
+  \end{enumerate}
+\item presentation holds the code review and theory presentation docs; it also holds the ``working paper'' form of the theory documentation
+\item  timing assesses how long it takes to solve KrusellSmith and OneAssetHANK, with comparisons against Matlab times.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Timing KrusellSmith}
+  \begin{center}
+    \begin{tabular}{|c|c|c|}
+      \hline
+      Code Section & Julia & Matlab\\
+      \hline
+      All, Do Checks & 239 ms & 234 ms\\
+      All, No Checks & 249 ms & ---\\
+      steadystate! & 57.89 ms & 130 ms\\
+      eqcond & 164.427 ms & 54.9 ms\\
+      reduction & 11.43 ms & 33.525 ms\\
+      gensys & 646$\mu$s & 9.09 ms\\
+      gensys! & 5.53 ms & ---
+    \end{tabular}
+\item Do Checks: ensure mandatory settings defined, $\Gamma_0$ is identity, so not checking should be faster, right?
+\item eqcond is slower for some reason. Automatic differentiation was tested to be faster earlier though, right?
+\item gensys is faster when I don't use in-place Schur factorization. Ideas?
+  \end{center}
+\end{frame}
+\begin{frame}
+  \frametitle{Timing OneAssetHANK}
+  \begin{center}
+    \begin{tabular}{|c|c|c|}
+      \hline
+      Code Section & Julia & Matlab\\
+      \hline
+      All, Do Checks & 1.097 s & 791.2 ms\\
+      All, No Checks & 1.101 s & ---\\
+      steadystate! & 547.767 ms & 537.8 ms\\
+      eqcond & 414.913  ms & 240.07 ms\\
+      reduction & 130.938 ms & 55.002 ms\\
+      gensys & 2.503 ms & 11.852 ms\\
+      gensys! & 2.606 ms & ---
+    \end{tabular}
+\item eqcond is substantially slower again
+\item Reduction here is substantially slower, too
+\item gensys! is still slower...
+  \end{center}
+\end{frame}
+
+
+
+
+\end{document}

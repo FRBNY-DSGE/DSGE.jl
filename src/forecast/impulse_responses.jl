@@ -32,6 +32,139 @@ function impulse_responses(m::AbstractRepModel, system::System{S};
     return states, obs, pseudo
 end
 
+function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, system::System{S};
+                                     flip_shocks::Bool = false,
+                                     use_alternate_consumption = false) where {S<:AbstractFloat}
+    horizon = impulse_response_horizons(m)
+
+    TTT_jump, TTT_state, eu  = klein(m)
+    if eu == -1
+        throw(KleinError())
+    end
+
+    TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+    CCC      = zeros(n_model_states(m))
+
+    TTT, RRR, CCC = if typeof(m) != RepDSGEGovDebt{Float64}
+        augment_states(m, TTT, TTT_jump, RRR, CCC)
+    else
+        TTT, RRR, CCC
+    end
+
+    measurement_equation = measurement(m, TTT, RRR, CCC)
+    transition_equation = Transition(TTT, RRR, CCC)
+    system = System(transition_equation, measurement_equation)
+
+    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+
+    state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
+    jump_indices_orig  = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
+
+    if typeof(m) == RepDSGEGovDebt{Float64}
+        return states, obs, pseudo
+    end
+
+    Qx = get_setting(m, :Qx)
+    Qy = get_setting(m, :Qy)
+
+    # In this case, the length of state_indices and jump_indices seems to give the number of
+    # UNNORMALIZED states/jumps however I'm not sure if this will always be the case/if this is
+    # really what we want saved into these settings...so might need to modify in future.
+    states_unnormalized = Array{Float64}(undef, length(state_indices_orig),
+                                         horizon, size(states, 3))
+    jumps_unnormalized = Array{Float64}(undef, length(jump_indices_orig), horizon, size(states, 3))
+
+    model_states_unnormalized = Array{Float64}(undef, length(state_indices_orig) +
+                                               length(jump_indices_orig) +
+                                               length(m.endogenous_states_augmented), horizon,
+                                               size(states, 3))
+    for i in 1:size(states, 3)
+        state_inds = 1:n_backward_looking_states(m)
+        states_unnormalized[:, :, i] = Matrix(Qx')*states[state_inds, :, i]
+        jump_inds = n_backward_looking_states(m)+1:n_backward_looking_states(m) + n_jumps(m)
+        jumps_unnormalized[:, :, i] = Matrix(Qy')*states[jump_inds, :, i]
+
+        augmented_states = states[n_backward_looking_states(m) + n_jumps(m) + 1 : end, :, i]
+        model_states_unnormalized[:, :, i] = vcat(states_unnormalized[:, :, i],
+                                                  jumps_unnormalized[:, :, i],
+                                                  augmented_states)
+    end
+
+    if use_alternate_consumption
+        endo = m.endogenous_states_original
+        c_implied = (m[:ystar]/m[:g]) - m[:xstar]
+        IRFC_implied = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t], :, :] -
+                                                    model_states_unnormalized[endo[:g′_t], :, :])-
+                                                    (m[:xstar]/c_implied)*
+        model_states_unnormalized[endo[:I′_t], :, :]
+
+        model_states_unnormalized[1229, :, :] = IRFC_implied
+
+        z_consumption = model_states_unnormalized[endo[:z′_t], :, :]
+        g_lag = cat(0, model_states_unnormalized[endo[:g′_t], :, :], dims = 2)[:, 1:40, :]
+        IRFC_implied_lag = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t1], :, :]  - g_lag) - (m[:xstar]/c_implied)*model_states_unnormalized[endo[:I′_t1], :, :]
+        IRF_observable_implied = IRFC_implied - IRFC_implied_lag .+ z_consumption
+        obs[m.observables[:obs_consumption], :, :] = IRF_observable_implied
+    end
+
+    return model_states_unnormalized, obs, pseudo
+end
+
+function impulse_responses(m::Union{AbstractHetModel,RepDSGEGovDebt}, system::System{S};
+                           flip_shocks::Bool = false,
+                           use_augmented_states::Bool = true,
+                           use_alternate_consumption::Bool = false) where {S<:AbstractFloat}
+    if use_augmented_states
+        return impulse_responses_augmented(m, system, flip_shocks = flip_shocks,
+                                           use_alternate_consumption = use_alternate_consumption)
+    end
+
+    horizon = impulse_response_horizons(m)
+    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+
+    if typeof(m) == RepDSGEGovDebt
+        return states, obs, pseudo
+    end
+
+    Qx = get_setting(m, :Qx)
+    Qy = get_setting(m, :Qy)
+
+    state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
+    jump_indices_orig  = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
+
+    # In this case, the length of state_indices and jump_indices seems to give the number of
+    # UNNORMALIZED states/jumps however I'm not sure if this will always be the case/if this is
+    # really what we want saved into these settings...so might need to modify in future.
+    states_unnormalized = Array{Float64}(undef, length(state_indices_orig),
+                                         horizon, size(states, 3))
+    jumps_unnormalized = Array{Float64}(undef, length(jump_indices_orig), horizon, size(states, 3))
+    model_states_unnormalized = Array{Float64}(undef, length(state_indices_orig) +
+                                               length(jump_indices_orig), horizon, size(states, 3))
+    for i in 1:size(states, 3)
+        state_inds = 1:n_backward_looking_states(m)
+        states_unnormalized[:, :, i] = Matrix(Qx')*states[state_inds, :, i]
+        jump_inds = n_backward_looking_states(m)+1:n_backward_looking_states(m) + n_jumps(m)
+        jumps_unnormalized[:, :, i] = Matrix(Qy')*states[jump_inds, :, i]
+
+        model_states_unnormalized[:, :, i] = vcat(states_unnormalized[:, :, i],
+                                                  jumps_unnormalized[:, :, i])
+    end
+
+    if use_alternate_consumption
+        endo_orig = m.endogenous_states_original
+        c_implied = (m[:ystar]/m[:g]) - m[:xstar]
+        IRFC_implied = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo_orig[:y′_t], :, :]  - model_states_unnormalized[endo_orig[:g′_t], :, :]) - (m[:xstar]/c_implied)*model_states_unnormalized[endo_orig[:I′_t], :, :]
+        model_states_unnormalized = vcat(model_states_unnormalized, IRFC_implied)
+
+        z_consumption = model_states_unnormalized[m.endogenous_states_original[:z′_t], :, :]
+        IRFC_implied_lag = cat(0, IRFC_implied, dims = 2)[:, 1:40, :]
+        IRF_observable_implied = IRFC_implied - IRFC_implied_lag .+ z_consumption
+        obs[m.observables[:obs_consumption], :, :] = IRF_observable_implied
+    end
+
+    return model_states_unnormalized, obs, pseudo
+end
+
 function impulse_responses(system::System{S}, horizon::Int;
                            flip_shocks::Bool = false) where {S<:AbstractFloat}
     # Setup

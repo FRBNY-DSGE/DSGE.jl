@@ -1,18 +1,12 @@
 using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
+HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
             "core",
             "parameters",
-            "models/an_schorfheide/an_schorfheide",
-            "models/smets_wouters/smets_wouters",
-            "models/smets_wouters_orig/smets_wouters_orig",
-            "models/m990/m990",
-            "models/m1002/m1002",
-            "models/m1010/m1010",
-            "models/poolmodel/poolmodel",
-            #"data/fred_data",
+            "data/fred_data",
             "data/load_data",
             "data/load_data_poolmodel",
             "data/misc",
@@ -24,6 +18,9 @@ my_tests = [
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",
+            #"solve/solve_ct",
+            #"solve/gensys_ct",
+            #"solve/reduction",
             "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
@@ -33,16 +30,13 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
-
             "estimate/metropolis_hastings",
-
-            # "estimate/smc/smc",
-            # "estimate/smc/helpers",
-            # "estimate/smc/initialization",
-            # "estimate/smc/util",
-            # "estimate/smc/mutation",
-            # "estimate/smc/resample",
-
+            #"estimate/smc/smc",
+            #"estimate/smc/helpers",
+            #"estimate/smc/initialization",
+            #"estimate/smc/util",
+            #"estimate/smc/mutation",
+            #"estimate/smc/resample",
             "forecast/drivers",
             "forecast/smooth",
             "forecast/forecast",
@@ -65,6 +59,28 @@ my_tests = [
             "scenarios/switching",
             "scenarios/drivers",
             "decomp/decompose_forecast",
+            "models/representative/an_schorfheide/an_schorfheide",
+            "models/representative/smets_wouters/smets_wouters",
+            "models/representative/smets_wouters_orig/smets_wouters_orig",
+            "models/representative/m990/m990",
+            "models/representative/m1002/m1002",
+            "models/representative/m1010/m1010",
+            "models/poolmodel/poolmodel",
+            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
+            #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
+            #"models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
+            #"models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
+            #"models/heterogeneous/het_dsge/het_dsge",
+            #"models/heterogeneous/het_dsge_lag/het_dsge_lag",
+            #"models/heterogeneous/het_dsge/het_dsge",
+
+            #"models/heterogeneous/krusell_smith/krusell_smith",
+            #"models/heterogeneous/bond_labor/bond_labor",
+            #"models/heterogeneous/real_bond/real_bond",
+            #"models/heterogeneous/real_bond_mkup/real_bond_mkup",
+            #"models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
+            #"models/heterogeneous/one_asset_hank/one_asset_hank",
+            #"models/heterogeneous/one_asset_hank/interns",
             "plot/plot",
   	        "plot/util"
             #"packet/packet"
