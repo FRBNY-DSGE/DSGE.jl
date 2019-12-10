@@ -20,7 +20,7 @@ my_tests = [
             "data/simulate_data",
             "data/transformations",
             "data/transform_data",
-            "data/util",
+            #"data/util",
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",
