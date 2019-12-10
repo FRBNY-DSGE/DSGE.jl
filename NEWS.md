@@ -1,6 +1,10 @@
+# DSGE.jl 1.0.1
+## Patches
++ Sorted out compatibility issues with `StateSpaceRoutines.jl`. Dropped compatibility with `v0.7`.
+
 # DSGE.jl 1.0.0
 ## New features and enhancements
-+ Package officially compatible with 0.7, 1.0, 1.1
++ Package officially compatible with `v0.7`, `v1.0`, `v1.1`
 + Enable parameter blocking in Metropolis-Hastings algorithm
 + Functionality to simulate data from a model
 + Expanded test suite and example files
