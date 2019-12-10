@@ -27,9 +27,11 @@ pkg> add DSGE
 ```
 ## Versioning
 
-`DSGE.jl` is currently compatible with Julia `v0.7`, `v1.0`, and `v1.1`.
+`DSGE.jl` is currently compatible with Julia `v1.0` and `v1.1`.
 
-To use `DSGE.jl` with Julia `v0.6`, please check out tag `0.4.1`. To do this, click on the drop-down menu that reads `branch:master` on the left-hand side of the page. Select `tags`, then `v0.4.1`.  If you've already cloned the repo, you can simply run `git checkout v0.4.1`.
+To use `DSGE.jl` with Julia `v0.7`, please check out tag `0.8.1`. To do this, click on the drop-down menu that reads `branch:master` on the left-hand side of the page. Select `tags`, then `v0.8.1`.  If you've already cloned the repo, you can simply run `git checkout v0.8.1`.
+
+To use `DSGE.jl` with Julia `v0.6`, please check out tag `0.4.1`.
 
 Disclaimer
 ------
