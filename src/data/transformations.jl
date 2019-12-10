@@ -518,7 +518,6 @@ function loggrowthtopct_4q_percapita(y::AbstractArray, pop_growth::AbstractVecto
         nperiods = length(y_4q)
     else
         y_4q = y[:, 1:end-3] + y[:, 2:end-2] + y[:, 3:end-1] + y[:, 4:end]
-
         nperiods = size(y_4q, 2)
 
         # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be

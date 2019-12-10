@@ -61,9 +61,6 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             levels, cond_levels = reconcile_column_names(levels, cond_levels)
             levels = vcat(levels, cond_levels)
         end
-        # JLD2.jldopen("/home/rcewyc01/.julia/dev/DSGE/test/transform_data_inputs_$(string(cond_type)).jld2", true, true, true, IOStream) do file
-        #     write(file, string(cond_type), levels)
-        # end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
