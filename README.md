@@ -12,18 +12,15 @@ This Julia-language implementation mirrors the MATLAB code included in the
 Liberty Street Economics blog post
 [The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
 
-For the latest documentation on the *code*, click on the `docs|latest` button
-above. Documentation for the most recent *model version* is available
-[here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
+Documentation for the most recent *model version* is available [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf). For the latest documentation on *code*, click on the `docs|latest` button above.
 
-The New York Fed DSGE team is currently extending the code to solve and estimate
-heterogeneous agent models.
+The New York Fed DSGE team is currently extending the code to solve and estimate heterogeneous agent models.
 An implementation of Sequential Monte Carlo (SMC) sampling can be found in the registered package [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl).
 Further extensions of the DSGE model code may be released at the discretion of the New York Fed.
 
 ## Installation
 
-`DSGE.jl` is a registered Julia package in the [`General`](https://github.com/JuliaRegistries/General) registry. To install it, open your Julia REPL, type `]` (enter package manager), and run
+`DSGE.jl` is a registered Julia package in the [`General`](https://github.com/JuliaRegistries/General) registry. To install it, open your Julia REPL, type `]` to enter the package manager, and run
 
 ```julia
 pkg> add DSGE
@@ -32,11 +29,7 @@ pkg> add DSGE
 
 `DSGE.jl` is currently compatible with Julia `v0.7`, `v1.0`, and `v1.1`.
 
-To use `DSGE.jl` with Julia version 0.6, please check out tag
-`0.4.1`. To do this, click on the drop-down menu that reads `branch:
-master` on the left-hand side of the page. Select `tags`, then
-`v0.4.1`.  If you've already cloned the repo, you can simply run
-`git checkout v0.4.1`.
+To use `DSGE.jl` with Julia `v0.6`, please check out tag `0.4.1`. To do this, click on the drop-down menu that reads `branch:master` on the left-hand side of the page. Select `tags`, then `v0.4.1`.  If you've already cloned the repo, you can simply run `git checkout v0.4.1`.
 
 Disclaimer
 ------
