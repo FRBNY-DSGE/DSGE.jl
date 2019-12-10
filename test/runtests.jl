@@ -12,7 +12,7 @@ my_tests = [
             "models/m1002/m1002",
             "models/m1010/m1010",
             "models/poolmodel/poolmodel",
-            "data/fred_data",
+            #"data/fred_data",
             "data/load_data",
             "data/load_data_poolmodel",
             "data/misc",
