@@ -35,16 +35,21 @@ m <= Setting(:rate_expectations_source, :ois)
     DSGE.nan2missing!(df_nan2miss)
     @test sum(ismissing.(df_nan2miss[!,:a])) == 1
 
-    @info "The following warnings are expected."
-    df_full = load_data(m; cond_type = :full, check_empty_columns = false,
-                        verbose = :none, summary_statistics = :none)
-    df_semi = load_data(m; cond_type = :semi, check_empty_columns = false,
-                        verbose = :none, summary_statistics = :none)
+    # Can we actually test? Require that FRED API key exists
+    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+        @info "The following warnings are expected."
+        df_full = load_data(m; cond_type = :full, check_empty_columns = false,
+                            verbose = :none, summary_statistics = :none)
+        df_semi = load_data(m; cond_type = :semi, check_empty_columns = false,
+                            verbose = :none, summary_statistics = :none)
 
-    @test_throws ErrorException load_data(m; cond_type = :full, summary_statistics = :none,
-                                          verbose = :none)
-    @test_throws ErrorException load_data(m; cond_type = :semi, summary_statistics = :none,
-                                          verbose = :none)
+        @test_throws ErrorException load_data(m; cond_type = :full, summary_statistics = :none,
+                                              verbose = :none)
+        @test_throws ErrorException load_data(m; cond_type = :semi, summary_statistics = :none,
+                                              verbose = :none)
+    else
+        @warn "Skipping portion of util test on checks for empty columns when calling load_data because FRED_API_KEY not present"
+    end
 
     df1, df2 = DSGE.reconcile_column_names(DataFrame(a = [1, 2]), DataFrame(b = [2, 3]))
     @test sum(ismissing.(df1[!,:b])) == 2 && sum(ismissing.(df2[!,:a])) == 2
