@@ -52,7 +52,7 @@ function transform_data(m::AbstractDSGEModel, levels::DataFrame;
 
     # Step 2: apply transformations to each series
     transformed = DataFrame()
-    transformed[!,:date] = levels[!,:date]
+    transformed[!, :date] = levels[:, :date]
 
     data_transforms = collect_data_transforms(m)
 
