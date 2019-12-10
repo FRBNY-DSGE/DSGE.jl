@@ -12,8 +12,13 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
-df = load_data(m)
-
+skip_forecast_one_draw = false
+if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+    df = load_data(m)
+    skip_forecast_one_draw = true
+else
+    @warn "Skipping forecast_one_draw tests because FRED_API_KEY not present"
+end
 # Make sure output_vars ignores the untransformed and 4Q things because they are
 # computed in compute_meansbands
 output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
@@ -114,18 +119,20 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
 end
 
 @testset "Test forecast_one_draw" begin
-    for input_type in [:mode, :full]
-        params = if input_type == :mode
-            load_draws(m, input_type)
-        else
-            load_draws(m, input_type)[1, :]
-        end
-        m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
-        @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
+    if !skip_forecast_one_draw
+        for input_type in [:mode, :full]
+            params = if input_type == :mode
+                load_draws(m, input_type)
+            else
+                load_draws(m, input_type)[1, :]
+            end
+            m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
+            @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
 
-        # Test with alternative policy
-        m <= Setting(:alternative_policy, AltPolicy(:taylor93, eqcond, solve))
-        @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
+            # Test with alternative policy
+            m <= Setting(:alternative_policy, AltPolicy(:taylor93, eqcond, solve))
+            @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
+        end
     end
 end
 
