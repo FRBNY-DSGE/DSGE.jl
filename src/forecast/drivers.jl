@@ -317,7 +317,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       shock_name::Symbol = :none,
                       shock_var_name::Symbol = :none,
                       shock_var_value::Float64 = 0.0,
-                      check_empty_columns = true)
+                      check_empty_columns = true,
+                      pegFFR::Bool = false,
+                      FFRpeg::Float64 = -0.25/4,
+                      H::Int = 4)
 
     ### Common Setup
 
@@ -349,7 +352,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 params, df, verbose = verbose,
                                                 shock_name = shock_name,
                                                 shock_var_name = shock_var_name,
-                                                shock_var_value = shock_var_value)
+                                                shock_var_value = shock_var_value,
+                                                pegFFR = pegFFR,
+                                                FFRpeg = FFRpeg,
+                                                H = H)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -506,8 +512,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            use_filtered_shocks_in_shockdec::Bool = false,
                            shock_name::Symbol = :none,
                            shock_var_name::Symbol = :none,
-                           shock_var_value::Float64 = 0.0
-                           )
+                           shock_var_value::Float64 = 0.0,
+                           pegFFR::Bool = false,
+                           FFRpeg::Float64 = -0.25/4,
+                           H::Int = 4)
 
     ### Setup
 
@@ -620,10 +628,30 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
         # 2A. Unbounded forecasts
         if !isempty(intersect(output_vars, unbddforecast_vars))
-            forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, system, s_T;
-                         cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
-
+            if pegFFR
+                nshocks = size(system[:RRR], 2)
+                nstates = size(system[:TTT], 1)
+                shocks = m.exogenous_shocks
+                PsiR1 = 0
+                PsiR2 = zeros(nstates)
+                PsiR2[m.endogenous_states[:R_t]] = 1.
+                Rht = system[:RRR][:, vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")])]
+                bb = zeros(H+1, 1)
+                MH = zeros(H+1, H+1)
+                for hh = 1:H+1
+                    bb[hh, 1] = (FFRpeg - PsiR1 - PsiR2'*(system[:TTT])^hh*s_T)[1]
+                    MH[hh, :] = PsiR2'*(system[:TTT])^(hh-1)*Rht
+                end
+                monshocks = MH\bb
+                etpeg = zeros(nshocks, forecast_horizons(m))
+                etpeg[vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")]), 1] = monshocks
+                forecaststates, forecastobs, forecastpseudo, forecastshocks = forecast(system, s_T, etpeg)
+                @show forecastobs[m.observables[:obs_nominalrate], :]
+            else
+                forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                    forecast(m, system, s_T,
+                             cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
+            end
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
                 forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
@@ -647,10 +675,32 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         # 2B. Bounded forecasts
 
         if !isempty(intersect(output_vars, bddforecast_vars))
-            forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, system, s_T;
-                         cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
-
+            if pegFFR
+                nshocks = size(system[:RRR], 2)
+                nstates = size(system[:TTT], 1)
+                shocks = m.exogenous_shocks
+                PsiR1 = 0
+                PsiR2 = zeros(nstates)
+                PsiR2[m.endogenous_states[:R_t]] = 1.
+                Rht = system[:RRR][:, vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")])]
+                bb = zeros(H+1, 1)
+                MH = zeros(H+1, H+1)
+                @show s_T[m.endogenous_states[:R_t]] + 400*log(m[:Rstarn])
+                for hh = 1:H+1
+                    bb[hh, 1] = (FFRpeg - PsiR1 - PsiR2'*(system[:TTT])^hh*s_T)[1]
+                    MH[hh, :] = PsiR2'*(system[:TTT])^(hh-1)*Rht
+                end
+                monshocks = MH\bb
+                etpeg = zeros(nshocks, forecast_horizons(m))
+                etpeg[vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")]), 1] = monshocks
+                forecaststates, forecastobs, forecastpseudo, forecastshocks = forecast(system, s_T, etpeg)
+                @show forecaststates[m.endogenous_states[:R_t], :]
+                @show forecastobs[m.observables[:obs_nominalrate], :]
+            else
+                forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                    forecast(m, system, s_T;
+                             cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty) #enforce_zlb = true, draw_shocks = uncertainty)
+            end
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
                 forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
