@@ -25,6 +25,7 @@ Further extensions of the DSGE model code may be released at the discretion of t
 ```julia
 pkg> add DSGE
 ```
+
 ## Versioning
 
 `DSGE.jl` is currently compatible with Julia `v1.0` and `v1.1`.
