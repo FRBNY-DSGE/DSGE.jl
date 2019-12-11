@@ -293,7 +293,7 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
     end
     outfile = tablespath(m, "estimate", "$basename.tex")
     if !isempty(outdir)
-        outfile = replace(outfile, dirname(outfile), outdir)
+        outfile = replace(outfile, dirname(outfile) => outdir)
     end
     fid = open(outfile, "w")
 
@@ -427,7 +427,7 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
     end
     outfile = tablespath(m, "estimate", "$basename.tex")
     if !isempty(outdir)
-        outfile = replace(outfile, dirname(outfile), outdir)
+        outfile = replace(outfile, dirname(outfile) => outdir)
     end
     fid = open(outfile, "w")
 
@@ -536,7 +536,7 @@ function prior_posterior_moments_table(m::AbstractDSGEModel,
     end
     outfile = tablespath(m, "estimate", "$basename.tex")
     if !isempty(outdir)
-        outfile = replace(outfile, dirname(outfile), outdir)
+        outfile = replace(outfile, dirname(outfile) => outdir)
     end
     fid = open(outfile, "w")
 
@@ -639,7 +639,7 @@ function prior_posterior_table(m::AbstractDSGEModel, post_values::Vector;
     end
     table_out = tablespath(m, "estimate", "$basename.tex")
     if !isempty(outdir)
-        outfile = replace(outfile, dirname(outfile), outdir)
+        outfile = replace(outfile, dirname(outfile) => outdir)
     end
     fid = open(table_out, "w")
 

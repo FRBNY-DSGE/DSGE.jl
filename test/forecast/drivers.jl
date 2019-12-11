@@ -12,14 +12,18 @@ m = AnSchorfheide()
     # Go back to normal policy rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
     # Test with df passed in
-    df_in = load_data(m)
-    global output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs], df = df_in)
-    @test output_vars == [:histobs, :forecastobs, :bddforecastobs]
-    @test isapprox(df_to_matrix(m, df_in), df_to_matrix(m, df_out), atol = 0., nans = true)
-    # Test without df passed in
-    global output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs])
-    @test output_vars == [:histobs, :forecastobs, :bddforecastobs]
-    @test isapprox(df_to_matrix(m, df_in), df_to_matrix(m, df_out), atol = 0., nans = true)
+    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+        df_in = load_data(m)
+        global output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs], df = df_in)
+        @test output_vars == [:histobs, :forecastobs, :bddforecastobs]
+        @test isapprox(df_to_matrix(m, df_in), df_to_matrix(m, df_out), atol = 0., nans = true)
+        # Test without df passed in
+        global output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs])
+        @test output_vars == [:histobs, :forecastobs, :bddforecastobs]
+        @test isapprox(df_to_matrix(m, df_in), df_to_matrix(m, df_out), atol = 0., nans = true)
+    else
+        @warn "Skipping prepare forecast inputs test because FRED_API_KEY not present"
+    end
 end
 
 @testset "Test load draws" begin

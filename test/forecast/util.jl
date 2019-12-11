@@ -75,43 +75,46 @@ end
     @test DSGE.standardize_shocks(ones(3, 3), sys[:QQ]) ==ones(3,3) ./ sqrt.(diag(sys[:QQ]))
 end
 
-df = load_data(m)
-output_vars = [:histstates, :histobs, :forecaststates, :forecastobs]
-ndraws = 10
-paras = load_draws(m, :full, 1:ndraws, verbose = :none)
+if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+    df = load_data(m)
+    output_vars = [:histstates, :histobs, :forecaststates, :forecastobs]
+    ndraws = 10
+    paras = load_draws(m, :full, 1:ndraws, verbose = :none)
 
-forecast_outputs = map(p -> DSGE.forecast_one_draw(m, :full, :none, output_vars,
-                                                   p, df, verbose = :none),
-                       paras)
-forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-out = DSGE.assemble_block_outputs(forecast_outputs)
-@testset "Testing assemble_block_outputs" begin
-    @test size(out[:histstates]) == (ndraws, n_states_augmented(m), n_mainsample_periods(m))
-    @test size(out[:forecaststates]) == (ndraws, n_states_augmented(m), forecast_horizons(m))
-    @test size(out[:forecastobs]) == (ndraws, n_observables(m), forecast_horizons(m))
-end
+    forecast_outputs = map(p -> DSGE.forecast_one_draw(m, :full, :none, output_vars,
+                                                       p, df, verbose = :none),
+                           paras)
+    forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+    out = DSGE.assemble_block_outputs(forecast_outputs)
+    @testset "Testing assemble_block_outputs" begin
+        @test size(out[:histstates]) == (ndraws, n_states_augmented(m), n_mainsample_periods(m))
+        @test size(out[:forecaststates]) == (ndraws, n_states_augmented(m), forecast_horizons(m))
+        @test size(out[:forecastobs]) == (ndraws, n_observables(m), forecast_horizons(m))
+    end
 
-@testset "Testing get_forecast_output_dims" begin
-    @test DSGE.get_forecast_output_dims(m, :mode, :histobs)[1] == 1
-    @test DSGE.get_forecast_output_dims(m, :mean, :histobs)[1] == 1
-    @test DSGE.get_forecast_output_dims(m, :init, :histobs)[1] == 1
-    m <= Setting(:forecast_block_size, 5)
-    @test DSGE.get_forecast_output_dims(m, :full, :histobs)[1] == 400
+    @testset "Testing get_forecast_output_dims" begin
+        @test DSGE.get_forecast_output_dims(m, :mode, :histobs)[1] == 1
+        @test DSGE.get_forecast_output_dims(m, :mean, :histobs)[1] == 1
+        @test DSGE.get_forecast_output_dims(m, :init, :histobs)[1] == 1
+        m <= Setting(:forecast_block_size, 5)
+        @test DSGE.get_forecast_output_dims(m, :full, :histobs)[1] == 400
 
-    @test DSGE.get_forecast_output_dims(m, :mode, :histstates)[2] == n_states_augmented(m)
-    @test DSGE.get_forecast_output_dims(m, :mode, :histobs)[2] == n_observables(m)
-    @test DSGE.get_forecast_output_dims(m, :mode, :histpseudo)[2] == n_pseudo_observables(m)
-    @test DSGE.get_forecast_output_dims(m, :mode, :histshocks)[2] == n_shocks_exogenous(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :histstates)[2] == n_states_augmented(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :histobs)[2] == n_observables(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :histpseudo)[2] == n_pseudo_observables(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :histshocks)[2] == n_shocks_exogenous(m)
 
-    @test DSGE.get_forecast_output_dims(m, :mode, :histstates)[3] == n_mainsample_periods(m)
-    @test DSGE.get_forecast_output_dims(m, :mode, :forecaststates)[3] == forecast_horizons(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :histstates)[3] == n_mainsample_periods(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :forecaststates)[3] == forecast_horizons(m)
 
-    @test DSGE.get_forecast_output_dims(m, :mode, :histshockdec)[3] == n_mainsample_periods(m)
-    @test DSGE.get_forecast_output_dims(m, :mode, :irfobs)[3] == impulse_response_horizons(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :histshockdec)[3] == n_mainsample_periods(m)
+        @test DSGE.get_forecast_output_dims(m, :mode, :irfobs)[3] == impulse_response_horizons(m)
 
-    @test DSGE.get_forecast_output_dims(m, :mode, :trendobs) == (1, n_observables(m))
+        @test DSGE.get_forecast_output_dims(m, :mode, :trendobs) == (1, n_observables(m))
 
-    @test DSGE.get_forecast_output_dims(m, :mode, :shockdecobs) == (1, n_observables(m), n_shockdec_periods(m), n_shocks_exogenous(m))
-    @test DSGE.get_forecast_output_dims(m, :mode, :irfobs) == (1, n_observables(m), impulse_response_horizons(m), n_shocks_exogenous(m))
-
+        @test DSGE.get_forecast_output_dims(m, :mode, :shockdecobs) == (1, n_observables(m), n_shockdec_periods(m), n_shocks_exogenous(m))
+        @test DSGE.get_forecast_output_dims(m, :mode, :irfobs) == (1, n_observables(m), impulse_response_horizons(m), n_shocks_exogenous(m))
+    end
+else
+    @warn "Skipping some tests because FRED_API_KEY not present"
 end
