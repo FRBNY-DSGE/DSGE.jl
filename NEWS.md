@@ -1,4 +1,9 @@
-# DSGE.jl 1.0.1
+# DSGE.jl 1.1.0
+## New features and enhancements
++ Functionality to specify heterogeneous agent models, in addition to representative agent models.
++ Methods for the solution of heterogeneous agent continuous time models
++ Example model implementations
+
 ## Patches
 + Sorted out compatibility issues with `StateSpaceRoutines.jl`. Dropped compatibility with `v0.7`.
 
