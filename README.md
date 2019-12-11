@@ -2,9 +2,7 @@
 [![Build Status](https://travis-ci.org/FRBNY-DSGE/DSGE.jl.svg)](https://travis-ci.org/FRBNY-DSGE/DSGE.jl)
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://frbny-dsge.github.io/DSGE.jl/latest)
 
-The *DSGE.jl* package implements the New York Fed DSGE model and provides
-general code to estimate many user-specified DSGE models. The package is
-introduced in the Liberty Street Economics blog post
+The `DSGE.jl` package implements the New York Fed dynamic stochastic general equilibrium (DSGE) model and provides general code to estimate many user-specified DSGE models. The package is introduced in the Liberty Street Economics blog post
 [The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
 (We previously referred to our model as the "FRBNY DSGE Model".)
 
@@ -14,8 +12,9 @@ Liberty Street Economics blog post
 
 Documentation for the most recent *model version* is available [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf). For the latest documentation on *code*, click on the `docs|latest` button above.
 
-The New York Fed DSGE team is currently extending the code to solve and estimate heterogeneous agent models.
-An implementation of Sequential Monte Carlo (SMC) sampling can be found in the registered package [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl).
+The New York Fed DSGE team is currently extending the code to solve and estimate heterogeneous agent models. Filtering and smoothing algorithms are available in the registered package [StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl).
+An implementation of Sequential Monte Carlo (SMC) sampling, used for the estimation of DSGE models, can be found in the registered package [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl). The foundational `AbstractModel` type, from which the `AbstractDSGEModel` type derives, is defined in the registered package [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
+
 Further extensions of the DSGE model code may be released at the discretion of the New York Fed.
 
 ## Installation

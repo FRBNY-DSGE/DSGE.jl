@@ -1,5 +1,5 @@
 using DSGE, SparseArrays, MAT, FileIO
-#include("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/stateSpaceReduction.jl")
+
 # Script for doing all that MATLAB does
 #m = TwoAssetHANK()
 #steadystate!(m)
@@ -14,7 +14,7 @@ n_p = 4 #get_setting(m, :n_p)
 n_Z = 1 #get_setting(m, :n_Z)
 
 #Γ0, Γ1, Ψ, Π C = eqcond(m)
-test_out = load("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/data/eqcond_output_matlab.jld2")
+test_out = load("data/eqcond_output_matlab.jld2")
 Γ0 = test_out["g0"]
 Γ1 = test_out["g1"]
 Ψ = test_out["psi"]
