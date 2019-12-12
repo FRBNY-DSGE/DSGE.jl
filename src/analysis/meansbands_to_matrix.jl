@@ -24,10 +24,10 @@ Reformat `MeansBands` object into matrices, and save to individual files.
 function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
                               cond_type::Symbol, output_vars::Vector{Symbol};
                               forecast_string::String = "", verbose::Symbol = :low,
-                              do_cond_obs_shocks::Bool = false)
+                              do_cond_obs_shocks::Bool = false, bdd_fcast::Bool = true)
 
     # Determine full set of output_vars necessary for plotting desired results
-    output_vars = add_requisite_output_vars(output_vars)
+    output_vars = add_requisite_output_vars(output_vars; bdd_fcast = bdd_fcast)
     output_dir  = workpath(m, "forecast")
 
     println(verbose, :low, )

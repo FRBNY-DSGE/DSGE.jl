@@ -32,11 +32,11 @@ necessary.
 function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-    check_empty_columns::Bool = true,
+    check_empty_columns::Bool = true, bdd_fcast::Bool = true,
     verbose::Symbol = :none) where {S<:AbstractFloat}
 
     # Compute everything that will be needed to plot original output_vars
-    output_vars = add_requisite_output_vars(output_vars)
+    output_vars = add_requisite_output_vars(output_vars; bdd_fcast = bdd_fcast)
     if input_type == :prior
         output_vars = setdiff(output_vars, [:bddforecastobs])
     end
@@ -320,7 +320,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       shock_var_name::Symbol = :none,
                       shock_var_value::Float64 = 0.0,
                       check_empty_columns = true,
-                      cond_obs_shocks::Dict{Symbol,Float64} = Dict{Symbol,Float64}())
+                      cond_obs_shocks::Dict{Symbol,Float64} = Dict{Symbol,Float64}(),
+                      smooth_conditional::Symbol = :hist_cond,
+                      cond_deviation_shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+                      bdd_fcast::Bool = true)
 
     ### Common Setup
 
@@ -328,7 +331,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     output_vars, df = prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
                                                df = df, verbose = verbose,
                                                subset_inds = subset_inds,
-                                               check_empty_columns = check_empty_columns)
+                                               check_empty_columns = check_empty_columns,
+                                               bdd_fcast = bdd_fcast)
 
     # Get output file names
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -361,14 +365,20 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                     params, df, verbose = verbose,
                                                     shock_name = shock_name,
                                                     shock_var_name = shock_var_name,
-                                                    shock_var_value = shock_var_value)
+                                                    shock_var_value = shock_var_value,
+                                                    smooth_conditional = smooth_conditional,
+                                                    cond_deviation_shocks =
+                                                    cond_deviation_shocks)
             else
                 forecast_output, cond_forecast_output =
                     forecast_one_draw(m, input_type, cond_type, output_vars,
                                       params, df, cond_obs_shocks, verbose = verbose,
                                       shock_name = shock_name,
                                       shock_var_name = shock_var_name,
-                                      shock_var_value = shock_var_value)
+                                      shock_var_value = shock_var_value,
+                                      smooth_conditional = smooth_conditional,
+                                      cond_deviation_shocks =
+                                      cond_deviation_shocks)
 
                 write_forecast_outputs(m, input_type, output_vars,
                                        cond_forecast_output_files,
@@ -439,7 +449,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                             use_filtered_shocks_in_shockdec,
                                                             shock_name = shock_name,
                                                             shock_var_name = shock_var_name,
-                                                            shock_var_value = shock_var_value),
+                                                            shock_var_value = shock_var_value,
+                                                            smooth_conditional = smooth_conditional,
+                                                            cond_deviation_shocks =
+                                                            cond_deviation_shocks),
                                           params)
             else
                 forecast_outputs = mapfcn(param ->
@@ -451,7 +464,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                             use_filtered_shocks_in_shockdec,
                                                             shock_name = shock_name,
                                                             shock_var_name = shock_var_name,
-                                                            shock_var_value = shock_var_value),
+                                                            shock_var_value = shock_var_value,
+                                                            smooth_conditional = smooth_conditional,
+                                                            cond_deviation_shocks =
+                                                            cond_deviation_shocks),
                                           params)
 
                 # Unwrap tuple into Vector{Dict{Symbol, Array{Float64}}}
@@ -571,7 +587,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            use_filtered_shocks_in_shockdec::Bool = false,
                            shock_name::Symbol = :none,
                            shock_var_name::Symbol = :none,
-                           shock_var_value::Float64 = 0.0)
+                           shock_var_value::Float64 = 0.0,
+                           smooth_conditional::Symbol = :hist_cond,
+                           cond_deviation_shocks::Vector{Symbol} =
+                           collect(keys(m.exogenous_shocks)),
+                           cond_deviation_obs_shocks::DataFrame = DataFrame())
+
 
     ### Setup
 
@@ -617,13 +638,21 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         (cond_type in [:semi, :full] && !irfs_only)
 
     if run_smoother
-        # Call smoother
+        # Call smoother on history and/or conditional data
+        # If smooth_conditional is not :hist_cond, then we will compute
+        # the forecast using deviations of a conditional
+        # forecast from an unconditional forecast.
+        # Note that if we set cond_type = :none, then
+        # even if the last row of df contains conditional data,
+        # it will be ignored during smoothing
         histstates, histshocks, histpseudo, initial_states =
-            smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty)
+            smooth(m, df, system;
+                   cond_type = smooth_conditional == :hist_cond ? cond_type : :none,
+                   draw_states = uncertainty)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        if cond_type in [:full, :semi]
-            T = n_mainsample_periods(m)
+        if cond_type in [:full, :semi]  # still true even if
+            T = n_mainsample_periods(m) # smooth_conditional != :hist_cond
 
             forecast_output[:histstates] = transplant_history(histstates, T)
             forecast_output[:histshocks] = transplant_history(histshocks, T)
@@ -637,6 +666,46 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         # Standardize shocks if desired
         if :histstdshocks in output_vars
             forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
+        end
+
+        if smooth_conditional != :hist_cond && cond_type in [:semi, :full]
+            date_start = date_forecast_start(m) # when forecast & conditional start
+            date_end   = date_conditional_end(m) # when conditional data end
+
+            # Compute unconditional forecasts over conditional data dates
+            _, uncondobs, _ = forecast(system, histstates[:,end],
+                                       zeros(n_shocks_exogenous(m), subtract_quarters(date_start, date_end) + 1);
+                                       enforce_zlb = false)
+
+            # Compute deviations from unconditional forecast
+            if smooth_conditional == :cond
+                # Infer deviations from df
+                cond_df = df[date_start .<= df[!,:date] .<= date_end, :]
+                for i = 2:size(cond_df,2)
+                    cond_df[:,i] -= (system[:measurement][:DD] +
+                        system[:measurement][:ZZ] * uncondobs[i-1,:])
+                end
+            elseif smooth_conditional == :deviations
+                if isempty(cond_deviation_obs_shocks)
+                    error("The DataFrame `cond_deviation_obs_shocks` cannot be empty if smooth_conditional " *
+                          "is set to :deviations")
+                end
+                cond_df =
+                    cond_deviation_obs_shocks[date_start .<=
+                                              cond_deviation_obs_shocks[!,:date] .<= date_end, :]
+            else
+                error("Keyword smooth_conditional cannot be $smooth_conditional. The options " *
+                      "are :hist_cond, :cond, and :deviations")
+            end
+
+            @show cond_df
+            system_deviation = compute_deviations_system(m, system, cond_deviation_shocks)
+            _, forecast_deviation_shocks, _ =
+                smooth(m, cond_df, system_deviation, zeros(n_states_augmented(m)),
+                       zeros(n_states_augmented(m), n_states_augmented(m));
+                       cond_type = cond_type, draw_states = uncertainty,
+                       include_presample = true, in_sample = false)
+            @show forecast_deviation_shocks
         end
     end
 
@@ -683,12 +752,22 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
         # 2A. Unbounded forecasts
         if !isempty(intersect(output_vars, unbddforecast_vars))
-            forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, system, s_T;
-                         cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
 
-            # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-            if cond_type in [:full, :semi]
+            forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                if smooth_conditional != :hist_cond && cond_type in [:semi, :full]
+                    forecast(m, system, s_T; shocks = forecast_deviation_shocks,
+                             enforce_zlb = false, cond_type = :none, draw_shocks = uncertainty)
+                    # Must set cond_type to none, or you won't compute enough
+                    # forecasts. This is because hist_cond computes at least
+                    # the first forecast period
+                else
+                    forecast(m, system, s_T;
+                             cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
+                end
+
+            # For conditional data when the smoother is run on history and conditional data,
+            # transplant the obs/state/pseudo vectors from hist to forecast
+            if smooth_conditional == :hist_cond && cond_type in [:full, :semi]
                 forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
@@ -706,13 +785,17 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
         end
 
-
         # 2B. Bounded forecasts
 
         if !isempty(intersect(output_vars, bddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, system, s_T;
-                         cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
+                if smooth_conditional != :hist_cond && cond_type in [:semi, :full]
+                    forecast(m, system, s_T; shocks = forecast_deviation_shocks,
+                             enforce_zlb = true, cond_type = :none, draw_shocks = uncertainty)
+                else
+                    forecast(m, system, s_T;
+                             cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
+                end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
@@ -754,7 +837,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:shockdecpseudo] = shockdecpseudo
     end
 
-
     ### 4. Trend
 
     trend_vars = [:trendstates, :trendobs, :trendpseudo]
@@ -770,7 +852,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
 
     ### 5. Deterministic Trend
-
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
 
     if !isempty(dettrends_to_compute)
@@ -783,7 +864,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
 
     ### 6. Impulse Responses
-
     irf_vars = [:irfstates, :irfobs, :irfpseudo]
     irfs_to_compute = intersect(output_vars, irf_vars)
 
@@ -803,7 +883,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
 
     ### Return only desired output_vars
-
     for key in keys(forecast_output)
         if !(key in output_vars)
             delete!(forecast_output, key)
@@ -819,7 +898,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            use_filtered_shocks_in_shockdec::Bool = false,
                            shock_name::Symbol = :none,
                            shock_var_name::Symbol = :none,
-                           shock_var_value::Float64 = 0.0)
+                           shock_var_value::Float64 = 0.0,
+                           smooth_conditional::Symbol = :hist_cond,
+                           cond_deviation_shocks::Vector{Symbol} =
+                           collect(keys(m.exogenous_shocks)))
     # # Checks to make sure conditional forecast will work
     # if cond_type in [:semi, :full]
     #     condnames = if cond_type == :semi
@@ -854,32 +936,82 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         push!(tmp_output_vars, :forecastobs)
     end
     uncond_forecast_output = forecast_one_draw(m, input_type, cond_type, tmp_output_vars,
-                                        params, df, verbose = verbose,
-                                        shock_name = shock_name,
-                                        shock_var_name = shock_var_name,
-                                        shock_var_value = shock_var_value)
+                                               params, df, verbose = verbose,
+                                               shock_name = shock_name,
+                                               shock_var_name = shock_var_name,
+                                               shock_var_value = shock_var_value,
+                                               smooth_conditional = :hist_cond)
 
-    # Prepare conditional data
-    fcast_date = date_forecast_start(m)
-    cond_df = copy(df)
-    newrow = Vector{Union{Date,Float64}}(undef,size(cond_df,2))
-    newrow[1] = cond_df[end,:date]
-    newrow[2:end] = uncond_forecast_output[:forecastobs][:,1]
-    push!(cond_df, newrow)
-    if !(:forecastobs in output_vars) # clean uncond_forecast_output
-        delete!(uncond_forecast_output, :forecastobs)
-    end
-    for (obs,shock) in cond_obs_shocks
-        cond_df[end,obs] += shock
-    end
+    # Prepare conditional data and run conditional forecast
+    if smooth_conditional in [:hist_cond, :cond]
+        # Data
+        cond_df = copy(df)
+        if cond_type in [:semi, :full] # then last row is already forecast of future period
+            for (obs,shock) in cond_obs_shocks
+                if ismissing(cond_df[end,obs]) # then need to add unconditional forecast first
+                    ind = findfirst(setdiff(names(cond_df), [:date]) .== obs)
+                    cond_df[end,obs] = uncond_forecast_output[:forecastobs][ind,1]
+                end
+                cond_df[end,obs] += shock
+            end
+        else # then we need to construct new row
+            newrow = Vector{Union{Date,Float64}}(undef,size(cond_df,2))
+            newrow[1] = date_forecast_start(m)
+            newrow[2:end] = uncond_forecast_output[:forecastobs][:,1]
+            push!(cond_df, newrow) # add unconditional forecasts
+            for (obs,shock) in cond_obs_shocks # add conditional shocks
+                cond_df[end,obs] += shock
+            end
+            non_shock_cols = setdiff(setdiff(names(cond_df), [:date]), keys(cond_obs_shocks))
+            nrows = size(cond_df,1)
+            for col in non_shock_cols # set to missing any observables without conditional shocks
+                newcol = Vector{Union{Float64,Missing}}(undef,nrows)
+                newcol[1:end-1] = cond_df[1:end-1,col]
+                newcol[end] = missing
+                cond_df[!,col] = newcol
+            end
+        end
+        if !(:forecastobs in output_vars) # clean uncond_forecast_output
+            delete!(uncond_forecast_output, :forecastobs)
+        end
+        # @show names(cond_df)
+        # @show collect(keys(m.observables))
+        # @show uncond_forecast_output[:forecastobs][1:5,1]'
+        # @show Matrix(DataFrame(cond_df[end,1:5]))
 
-    # Must set cond_type to :semi or :full here, or you won't get a conditional forecast
-    cond_forecast_output = forecast_one_draw(m, input_type, cond_type in [:semi,:full] ?
-                                             cond_type : :full, output_vars,
-                                        params, cond_df, verbose = verbose,
-                                        shock_name = shock_name,
-                                        shock_var_name = shock_var_name,
-                                        shock_var_value = shock_var_value)
+
+        # Conditional forecast
+        # Must set cond_type to :semi or :full here, or you won't get a conditional forecast
+        cond_forecast_output = forecast_one_draw(m, input_type, cond_type in [:semi,:full] ?
+                                                 cond_type : :full, output_vars,
+                                                 params, cond_df, verbose = verbose,
+                                                 shock_name = shock_name,
+                                                 shock_var_name = shock_var_name,
+                                                 shock_var_value = shock_var_value,
+                                                 smooth_conditional = smooth_conditional,
+                                                 cond_deviation_shocks = cond_deviation_shocks)
+    elseif smooth_conditional == :deviations
+        cond_df = df
+        cond_deviation_obs_shocks =
+            DataFrame(date = DSGE.get_quarter_ends(date_forecast_start(m),
+                                                   date_conditional_end(m)))
+        # nrows = n_conditional_periods(m) # to be added back in for generalization
+        for col in setdiff(names(cond_df), [:date])
+            # cond_deviation_obs_shocks[end-nrows+1:end,col] = # to be added in generalization
+            cond_deviation_obs_shocks[!,col] .=
+                haskey(cond_obs_shocks, col) ? cond_obs_shocks[col] : missing
+        end
+        cond_forecast_output = forecast_one_draw(m, input_type, cond_type in [:semi,:full] ?
+                                                 cond_type : :full, output_vars,
+                                                 params, cond_df, verbose = verbose,
+                                                 shock_name = shock_name,
+                                                 shock_var_name = shock_var_name,
+                                                 shock_var_value = shock_var_value,
+                                                 smooth_conditional = smooth_conditional,
+                                                 cond_deviation_shocks = cond_deviation_shocks,
+                                                 cond_deviation_obs_shocks =
+                                                 cond_deviation_obs_shocks)
+    end
 
     return uncond_forecast_output, cond_forecast_output
 end

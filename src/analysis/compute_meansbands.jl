@@ -43,6 +43,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
                             check_empty_columns::Bool = true,
                             do_cond_obs_shocks::Bool = false,
+                            bdd_fcast::Bool = true,
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -54,7 +55,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
     end
     elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
-        output_vars = add_requisite_output_vars(output_vars)
+        output_vars = add_requisite_output_vars(output_vars; bdd_fcast = bdd_fcast)
         if input_type == :prior
             output_vars = setdiff(output_vars, [:bddforecastobs])
         end

@@ -141,8 +141,9 @@ function forecast(system::System{S}, z0::Vector{S},
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
-                ϵ_t[ind_r_sh] = 0.
-                z_t = C + T*z_t1 + R*ϵ_t
+                ϵ_t[ind_r_sh] = 0. # get forecast when MP shock
+                z_t = C + T*z_t1 + R*ϵ_t # is zeroed out
+                z_t_old = C + T*z_t1 + R*ϵ_t
                 ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
 
                 # Forecast again with new shocks
@@ -150,7 +151,9 @@ function forecast(system::System{S}, z0::Vector{S},
 
                 # Confirm procedure worked
                 interest_rate_forecast = getindex(D + Z*z_t, ind_r)
-                @assert interest_rate_forecast >= zlb_value - 0.01 "interest_rate_forecast = $interest_rate_forecast must be >= zlb_value - 0.01 = $(zlb_value - 0.01)"
+
+                # Subtract a small number to deal with numerical imprecision
+                @assert interest_rate_forecast >= zlb_value - 0.01 "interest_rate_forecast = $interest_rate_forecast must be >= zlb_value - 0.01 = $(zlb_value - 0.01)."
             end
         end
         return z_t, ϵ_t

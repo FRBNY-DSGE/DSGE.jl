@@ -605,9 +605,10 @@ function write_meansbands_tables_all(m::AbstractDSGEModel, input_type::Symbol, c
     end
 end
 
-function add_requisite_output_vars_meansbands(output_vars::Vector{Symbol})
+function add_requisite_output_vars_meansbands(output_vars::Vector{Symbol};
+                                              bdd_fcast::Bool = true)
 
-    all_output_vars = add_requisite_output_vars(output_vars)
+    all_output_vars = add_requisite_output_vars(output_vars; bdd_fcast = bdd_fcast)
 
     if :shockdecpseudo in all_output_vars
         push!(all_output_vars, :histforecastpseudo)

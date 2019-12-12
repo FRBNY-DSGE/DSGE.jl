@@ -57,7 +57,11 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                         shock_var_name::Symbol = :none,
                         shock_var_value::Float64 = 0.0,
                         check_empty_columns::Bool = true,
-                        cond_obs_shocks::Dict{Symbol,Float64} = Dict{Symbol,Float64}())
+                        cond_obs_shocks::Dict{Symbol,Float64} = Dict{Symbol,Float64}(),
+                        smooth_conditional::Symbol = :hist_cond,
+                        cond_deviation_shocks::Vector{Symbol} =
+                        collect(keys(m.exogenous_shocks)),
+                        bdd_fcast::Bool = true)
 
     # Override estimation file if necessary
     if !isempty(est_override)
@@ -72,17 +76,21 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  shock_var_name = shock_var_name,
                  shock_var_value = shock_var_value,
                  check_empty_columns = check_empty_columns,
-                 cond_obs_shocks = cond_obs_shocks)
+                 cond_obs_shocks = cond_obs_shocks,
+                 smooth_conditional = smooth_conditional,
+                 cond_deviation_shocks = cond_deviation_shocks,
+                 bdd_fcast = bdd_fcast)
 
     # Compute means and bands
     compute_meansbands(m, input_type, cond_type, output_vars; forecast_string = forecast_string,
                        density_bands = density_bands, check_empty_columns = check_empty_columns,
-                       verbose = :high)
+                       bdd_fcast = bdd_fcast, verbose = :high)
 
     # Convert MeansBands to matrices if desired
     if mb_matrix
-        meansbands_to_matrix(m, input_type, cond_type, output_vars; forecast_string = forecast_string,
-                             verbose = :high)
+        meansbands_to_matrix(m, input_type, cond_type, output_vars;
+                             forecast_string = forecast_string,
+                             bdd_fcast = bdd_fcast, verbose = :high)
     end
 
     # Do the same if conditional forecasts on shocks
@@ -92,12 +100,13 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                                Symbol(string(x) * "_cond_obs_shocks"), output_vars)
         compute_meansbands(m, input_type, cond_type,
                            output_vars; forecast_string = forecast_string,
-                           density_bands = density_bands, check_empty_columns = check_empty_columns, do_cond_obs_shocks = true,
-                           verbose = :high)
+                           density_bands = density_bands,
+                           check_empty_columns = check_empty_columns, do_cond_obs_shocks = true,
+                           bdd_fcast = bdd_fcast, verbose = :high)
 
         meansbands_to_matrix(m, input_type, cond_type,
                              output_vars; forecast_string = forecast_string,
-                             verbose = :high,
-                             do_cond_obs_shocks = true)
+                             do_cond_obs_shocks = true, bdd_fcast = bdd_fcast,
+                             verbose = :high)
     end
 end

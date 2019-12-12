@@ -129,11 +129,11 @@ not be saved to produce plots later on. Therefore, `histstates` is not
 added to `output_vars` when calling
 `add_requisite_output_vars([shockdecstates])`.
 """
-function add_requisite_output_vars(output_vars::Vector{Symbol})
+function add_requisite_output_vars(output_vars::Vector{Symbol}; bdd_fcast::Bool = true)
     # Add :bddforecast<class> if :forecast<class> is in output_vars
     forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q],
                                    output_vars)
-    if !isempty(forecast_outputs)
+    if !isempty(forecast_outputs) && bdd_fcast
         bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
     end
@@ -313,4 +313,29 @@ function get_forecast_output_dims(m::AbstractDSGEModel, input_type::Symbol, outp
         nshocks = n_shocks_exogenous(m)
         return (ndraws, nvars, nperiods, nshocks)
     end
+end
+
+
+
+function compute_deviations_system(m::AbstractDSGEModel, system0::System, shock_names::Vector{Symbol})
+    # Set constant system matrices to 0
+    system = deepcopy(system0)
+    system = zero_system_constants(system)
+
+    # Zero out non-instrument shocks
+    system.measurement.QQ = copy(system[:QQ])
+    for shock in keys(m.exogenous_shocks)
+        if !(shock in shock_names)
+            shock_index = m.exogenous_shocks[shock]
+            system[:QQ][shock_index, :] .= 0
+            system[:QQ][:, shock_index] .= 0
+        end
+    end
+
+    # Error out if there is nonzero measurement error
+    if any(x -> x != 0, system[:EE])
+        error("Can't simulate scenarios under nonzero measurement error")
+    end
+
+    return system
 end
