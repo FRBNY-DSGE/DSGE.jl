@@ -698,14 +698,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                       "are :hist_cond, :cond, and :deviations")
             end
 
-            @show cond_df
             system_deviation = compute_deviations_system(m, system, cond_deviation_shocks)
             _, forecast_deviation_shocks, _ =
                 smooth(m, cond_df, system_deviation, zeros(n_states_augmented(m)),
                        zeros(n_states_augmented(m), n_states_augmented(m));
                        cond_type = cond_type, draw_states = uncertainty,
                        include_presample = true, in_sample = false)
-            @show forecast_deviation_shocks
         end
     end
 
@@ -974,11 +972,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         if !(:forecastobs in output_vars) # clean uncond_forecast_output
             delete!(uncond_forecast_output, :forecastobs)
         end
-        # @show names(cond_df)
-        # @show collect(keys(m.observables))
-        # @show uncond_forecast_output[:forecastobs][1:5,1]'
-        # @show Matrix(DataFrame(cond_df[end,1:5]))
-
 
         # Conditional forecast
         # Must set cond_type to :semi or :full here, or you won't get a conditional forecast
