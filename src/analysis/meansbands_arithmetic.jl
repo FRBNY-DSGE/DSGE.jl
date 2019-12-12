@@ -15,7 +15,7 @@ meansbands_arithmetic(op, m1, m2, input_type, cond_type, output_var, var_name, d
 Calculates arithmetic on means and bands for pseudo-observables, observables, and shocks
 from two different computations, and write
 the results to a file. Other methods are for one `output_var` and one `var_name` respectively.
-For additional keywords, see the list below.
+For the (many) additional keywords, see the list below.
 
 ### Inputs
 - `op::Function`: arithmetic operation. Must be +, -, *, /, or ^.
@@ -62,6 +62,9 @@ For additional keywords, see the list below.
 
 - `output_model::Int`: specifies to which model's saveroot
     output will be written. Must be either 1 or 2.
+
+- `bdd_fcast::Bool`: if true, the function will compute
+    arithmetic for output from bounded forecasts.
 ```
 """
 function meansbands_arithmetic(op::Function, m1::AbstractDSGEModel, m2::AbstractDSGEModel,
@@ -74,7 +77,7 @@ function meansbands_arithmetic(op::Function, m1::AbstractDSGEModel, m2::Abstract
                                check_empty_columns::Bool = true,
                                do_cond_obs_shocks1::Bool = false,
                                do_cond_obs_shocks2::Bool = false,
-                               output_model::Int = 1,
+                               output_model::Int = 1, bdd_fcast::Bool = true,
                                kwargs...)
     mb = meansbands_arithmetic(op, m1, m2, input_type, cond_type, [output_var];
                                forecast_string1 = forecast_string1,
@@ -83,7 +86,7 @@ function meansbands_arithmetic(op::Function, m1::AbstractDSGEModel, m2::Abstract
                                df2 = df2, check_empty_columns = check_empty_columns,
                                do_cond_obs_shocks1 = do_cond_obs_shocks1,
                                do_cond_obs_shocks2 = do_cond_obs_shocks2,
-                               output_model = output_model,
+                               output_model = output_model, bdd_fcast = bdd_fcast,
                                kwargs...)
     return mb
 end
@@ -97,7 +100,7 @@ function meansbands_arithmetic(op::Function, m1::AbstractDSGEModel, m2::Abstract
                                check_empty_columns::Bool = true,
                                do_cond_obs_shocks1::Bool = false,
                                do_cond_obs_shocks2::Bool = false,
-                               output_model::Int = 1,
+                               output_model::Int = 1, bdd_fcast::Bool = true,
                                kwargs...)
     if !(op in [Base.:+, Base.:-, Base.:*, Base.:/, Base.:^])
         error("Operator $op is not an accepted arithmetic operator. The only allowed operators are" *
@@ -115,7 +118,7 @@ function meansbands_arithmetic(op::Function, m1::AbstractDSGEModel, m2::Abstract
     mb_dict = Dict{Symbol,MeansBands}()
     elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
-        output_vars = add_requisite_output_vars(output_vars)
+        output_vars = add_requisite_output_vars(output_vars; bdd_fcast = bdd_fcast)
         if input_type == :prior
             output_vars = setdiff(output_vars, [:bddforecastobs])
         end
