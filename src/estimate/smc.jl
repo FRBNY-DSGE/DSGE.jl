@@ -38,7 +38,8 @@ navigating the DSGE package.
 function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-             old_cloud::ParticleCloud  = DSGE.ParticleCloud(m, 0),
+             old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
+                              SMC.Cloud} = DSGE.ParticleCloud(m, 0),
              run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
@@ -79,7 +80,15 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     tempered_update = !isempty(old_data)
 
     # This step is purely for backwards compatibility purposes
-    old_cloud_conv = isempty(old_cloud) ? SMC.Cloud(0,0) : SMC.Cloud(old_cloud)
+    if isempty(old_cloud)
+        old_cloud_conv = SMC.Cloud(0,0)
+    elseif typeof(old_cloud) == DSGE.ParticleCloud
+        old_cloud_conv = SMC.Cloud(DSGE.Cloud(old_cloud))
+    elseif typeof(old_cloud) == DSGE.Cloud
+        old_cloud_conv = old_to_new_cloud(old_coud)
+    else
+        old_cloud_conv = old_cloud
+    end
 
     # Initialize Paths
     loadpath = ""
