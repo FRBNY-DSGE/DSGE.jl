@@ -185,8 +185,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy = false,
             TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
             # Measurement (needs the additional TTT_jump argument)
             measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-        elseif m.spec == "het_dsge"
-            TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC)
+        elseif m.spec == "het_dsge" || m.spec == "rep_dsge"
+            TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
             measurement_equation = measurement(m, TTT, RRR, CCC)
         else
             TTT, RRR, CCC        = augment_states(m, TTT, RRR, CCC)
