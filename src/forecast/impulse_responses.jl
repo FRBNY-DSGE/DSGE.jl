@@ -45,11 +45,11 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
     TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
     CCC      = zeros(n_model_states(m))
 
-    TTT, RRR, CCC = if typeof(m) != RepDSGEGovDebt{Float64}
-        augment_states(m, TTT, TTT_jump, RRR, CCC)
-    else
+    TTT, RRR, CCC = #if typeof(m) != RepDSGEGovDebt{Float64}
+        augment_states(m, TTT, RRR, CCC)
+   #= else
         TTT, RRR, CCC
-    end
+    end=#
 
     measurement_equation = measurement(m, TTT, RRR, CCC)
     transition_equation = Transition(TTT, RRR, CCC)
@@ -57,12 +57,12 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
 
     states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
 
-    state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
-    jump_indices_orig  = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
-
     if typeof(m) == RepDSGEGovDebt{Float64}
         return states, obs, pseudo
     end
+
+    state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
+    jump_indices_orig  = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
 
     Qx = get_setting(m, :Qx)
     Qy = get_setting(m, :Qy)

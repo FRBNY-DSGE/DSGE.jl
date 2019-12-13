@@ -1,4 +1,4 @@
-function augment_states(m::HetDSGEGovDebt{T}, TTT::Matrix{T}, TTT_jump::Matrix{T}, RRR::Matrix{T},
+function augment_states(m::HetDSGEGovDebt{T}, TTT::Matrix{T}, RRR::Matrix{T},
                         CCC::Vector{T}) where {T<:AbstractFloat}
     endo     = m.endogenous_states #augment_model_states(m.endogenous_states, n_model_states(m))
     endo_new = m.endogenous_states_augmented
