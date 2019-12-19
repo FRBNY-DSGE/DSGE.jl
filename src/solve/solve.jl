@@ -32,9 +32,6 @@ function solve(m::AbstractDSGEModel; apply_altpolicy = false, verbose::Symbol = 
             # Get equilibrium condition matrices
             Γ0, Γ1, C, Ψ, Π  = eqcond(m)
 
-            # Get equilibrium condition matrices
-            Γ0, Γ1, C, Ψ, Π  = eqcond(m)
-
             # Solve model
             TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
 
