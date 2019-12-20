@@ -170,7 +170,7 @@ shockdec
     inds = intersect(findall(x -> start_date .<= x .<= end_date,  dates),
                      findall(x -> Dates.month(x) == 3,            dates),
                      findall(x -> Dates.year(x) % tick_size == 0, dates))
-    #xticks --> (xnums[inds], map(Dates.year, dates[inds]))
+    xticks --> (xnums[inds], map(Dates.year, dates[inds]))
 
     # Set date axis limits
     x0 = xnums[findfirst(dates .== start_date)]
