@@ -96,7 +96,7 @@ function series_ylabel(m::AbstractDSGEModel, var::Symbol, class::Symbol;
     end
 end
 
-function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :low)
+function save_plot(output_file::String = ""; verbose::Symbol = :low)
     if !isempty(output_file)
         output_dir = dirname(output_file)
         !isdir(output_dir) && mkpath(output_dir)
