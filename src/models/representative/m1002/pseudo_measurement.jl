@@ -126,6 +126,15 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
+    ## labor productivity
+    if haskey(m.settings, :add_laborproductivity_measurement)
+        if get_setting(m, :add_laborproductivity_measurement)
+            ZZ_pseudo[pseudo[:laborproductivity], endo[:y_t]] = 1.
+            ZZ_pseudo[pseudo[:laborproductivity], endo[:L_t]] = -1.
+            DD_pseudo[pseudo[:laborproductivity]] = 100. * log(m[:ystar] / m[:Lstar])
+        end
+    end
+
     ## Fundamental inflation related pseudo-obs
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         # Compute coefficient on Sinf

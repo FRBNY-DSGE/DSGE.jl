@@ -26,6 +26,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_laborproductivity_measurement)
+        if get_setting(m, :add_laborproductivity_measurement)
+            push!(pseudo_names, :laborproductivity)
+        end
+    end
+
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names
@@ -138,6 +144,13 @@ function init_pseudo_observable_mappings!(m::Model1002)
         if get_setting(m, :add_laborshare_measurement)
             pseudo[:laborshare_t].name     = "Log Labor Share"
             pseudo[:laborshare_t].longname = "Log Labor Share"
+        end
+    end
+
+    if haskey(m.settings, :add_laborproductivity_measurement)
+        if get_setting(m, :add_laborproductivity_measurement)
+            pseudo[:laborproductivity].name     = "Log Labor Productivity"
+            pseudo[:laborproductivity].longname = "Log Labor Productivity"
         end
     end
 
