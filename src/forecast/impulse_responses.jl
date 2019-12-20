@@ -282,6 +282,171 @@ function impulse_responses(m::AbstractDSGEModel, system::System{S},
     return states, obs, pseudo
 end
 
+### Method for computing impulse responses after permuting
+### the measurement matrix ZZ, with the option
+### to compute the impulse response to a Cholesky identified
+### shock to observables
+function impulse_responses(m::AbstractRepModel, system::System{S},
+                           horizon::Int, permute_mat::Matrix,
+                           shocks::Vector{Float64} =
+                           Vector{Float64}(undef,0);
+                           cholesky_obs_shock::Bool = false,
+                           flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S<:Real}
+    # Copy matrices so we can put them back at the end
+    ZZ_old = copy(system[:ZZ])
+    DD_old = copy(system[:DD])
+
+    # Permute matrices
+    system.measurement.ZZ = permute_mat * system[:ZZ]
+    system.measurement.DD = permute_mat * system[:DD]
+
+    # Run IRF
+    out = impulse_responses(m, system, horizon, shocks;
+                            flip_shocks = flip_shocks,
+                            cholesky_obs_shock =
+                            cholesky_obs_shock,
+                            observables_order =
+                            convert(Vector{Int64},
+                                    permute_mat *
+                                    collect(values(m.observables))),
+                            get_shocks =
+                            get_shocks)
+    states, obs, pseudo = out[1:3]
+    if get_shocks
+        cholesky_shock   = permute_mat * out[4]
+        structural_shock = out[5]
+    end
+
+    # Permute obs back to original order
+    obs = permute_mat * obs
+
+    # Change system back
+    system.measurement.ZZ = ZZ_old
+    system.measurement.DD = DD_old
+
+    if get_shocks
+        return states, obs, pseudo, cholesky_shock, structural_shock
+    else
+        return states, obs, pseudo
+    end
+end
+
+function impulse_responses(m::AbstractRepModel,
+                           system::System{S}, horizon::Int64,
+                           shock_vector::Vector{S};
+                           flip_shocks::Bool = false,
+                           cholesky_obs_shock::Bool = false,
+                           observables_order::Vector{<:Int} =
+                           collect(values(m.observables)),
+                           get_shocks::Bool = false) where {S<:Real}
+    # Set up IRFs
+    nshocks = size(system[:RRR], 2)
+    nstates = size(system[:TTT], 1)
+    nobs    = size(system[:ZZ], 1)
+    npseudo = size(system[:ZZ_pseudo], 1)
+
+    system = DSGE.zero_system_constants(system) # Set constant system matrices to 0
+    s₀ = zeros(S, nstates)
+
+    # Back out structural shocks corresponding to Cholesky shock to observables
+    if cholesky_obs_shock
+        # Compute Cholesky shock
+        obs_cov_mat = (system[:ZZ] * system[:RRR]) * system[:QQ] *
+            (system[:ZZ] * system[:RRR])'
+        cholmat = cholesky((obs_cov_mat + obs_cov_mat') ./ 2).U'
+        deviation = cholmat * shock_vector
+
+        # Filter and smooth Cholesky shock
+        df = DataFrame(date = date_forecast_start(m))
+        mobs = collect(keys(m.observables))
+        for (dev_i,obs_i) in enumerate(observables_order)
+            df[!,mobs[obs_i]] .= deviation[dev_i]
+        end
+
+        for (k,new_i) in zip(keys(m.observables), observables_order)
+            m.observables[k] = new_i
+        end
+        _, struct_shock_vector, _ = smooth(m, df, system,
+                                           zeros(S, nstates),
+                                           zeros(S, nstates, nstates),
+                                           draw_states = false,
+                                           include_presample = true,
+                                           in_sample = false)
+
+        for (old_i,k) in enumerate(keys(m.observables))
+            m.observables[k] = old_i
+        end
+    elseif length(shock_vector) != nshocks
+        if length(shock_vector) == nobs
+            error("Length of shock_vector $(length(shock_vector)) does not match" *
+                  " the number of exogenous shocks $nshocks. The length matches the " *
+                  "number of observables, but cholesky_obs_shock was set to false." *
+                  " Did you mean otherwise?")
+        else
+            error("Length of shock_vector $(length(shock_vector)) does not match" *
+                  " the number of exogenous shocks $nshocks.")
+        end
+    end
+
+    # Run IRF
+    shocks_augmented = zeros(S, nshocks, horizon)
+    shocks_augmented[:,1] = flip_shocks ? struct_shock_vector : -struct_shock_vector # negative shock by default
+    states, obs, pseudo = forecast(system, s₀, shocks_augmented)
+
+    # Check Cholesky shock worked
+    if cholesky_obs_shock
+        chol_check = (obs[:,1] ≈ deviation) || (obs[:,1] ≈ -deviation)
+        @assert chol_check "Cholesky shock does not match impulse response of observables."
+    end
+
+    if get_shocks
+        return states, obs, pseudo, deviation, struct_shock_vector
+    else
+        return states, obs, pseudo
+    end
+end
+
+# Method for specifying impulse response to a shock that maximizes the business-cycle
+# variance of a shock to a given observable, whose location is
+# specified by n_obs_var.
+function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tuple{S,S},
+                           n_obs_var::Int; flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S<:Real}
+    # Setup
+    nshocks = size(system[:RRR], 2)
+    nstates = size(system[:TTT], 1)
+    nobs    = size(system[:ZZ], 1)
+    npseudo = size(system[:ZZ_pseudo], 1)
+    system  = zero_system_constants(system)
+
+    # Compute business-cycle variance maximizing shock
+    increment = abs(frequency_band[1] - frequency_band[2]) / 200.
+    variance = zeros(S, nshocks, nshocks)
+    sd_shock = system[:RRR] * sqrt.(system[:QQ]) # one standard deviation shock
+    I_state = Matrix{S}(I, nstates, nstates)
+    for f = frequency_band[1]:increment:frequency_band[2]
+        sumG = system[:TTT] .* exp(-im * f)
+        invA = system[:ZZ] * ((I_state - sumG) \ sd_shock)
+        variance += real.(invA[n_obs_var,:] * invA[n_obs_var,:]') .* increment ./
+            abs(frequency_band[1] - frequency_band[2])
+    end
+    eigout = eigen(variance)
+    q = eigout.vectors[:, argmax(eigout.values)]
+
+    # Compute IRFs
+    states = zeros(S, nstates, horizon)
+    shocks_augmented      = zeros(S, nshocks, horizon)
+    shocks_augmented[:,1] = flip_shocks ? -(sqrt.(system[:QQ]) * q) : (sqrt.(system[:QQ]) * q) # q -> negative shock. To stick with convention, "flip_shock" should yield a positive shock.
+    states, obs, pseudo = forecast(system, zeros(S, nstates), shocks_augmented)
+
+    if get_shocks
+        return states, obs, pseudo, vec(shocks_augmented[:,1])
+    else
+        return states, obs, pseudo
+    end
+end
+
 function impulse_responses_peg(m::AbstractRepModel, system::System{S}, horizon::Int;
                            flip_shocks::Bool = false, H::Int = 0, peg::Symbol = :all_periods, real_rate = false) where {S<:AbstractFloat}
     ## H is peg horizon
