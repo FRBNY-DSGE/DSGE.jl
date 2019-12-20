@@ -186,6 +186,25 @@ exp_states_shockobs, exp_obs_shockobs, exp_pseudo_shockobs =
     @test pseudo ≈ exp_pseudo_shockobs
 end
 
+
+# Test impulse response method for computing
+# a shock to maximizes business-cycle variance
+states_bc1, obs_bc1, pseudo_bc1 = impulse_responses(system, 4, (2 * π / 32, 2 * π / 6), 2)
+states_bc2, _ = impulse_responses(system, 4, (2 * π / 32, 2 * π / 6), 2,
+                                                    flip_shocks = true)
+exp_states_bc, exp_obs_bc, exp_pseudo_bc =
+    JLD2.jldopen("$path/../reference/impulse_responses_out.jld2", "r") do file
+        read(file, "exp_states_bc"), read(file, "exp_obs_bc"), read(file, "exp_pseudo_bc")
+    end
+
+@testset "Compare irfs to expected output for shock maximizing business cycle variance of an observable" begin
+    @test @test_matrix_approx_eq states_bc1 -states_bc2
+    @test @test_matrix_approx_eq states_bc1  exp_states_bc
+    @test @test_matrix_approx_eq obs_bc1  exp_obs_bc
+    @test @test_matrix_approx_eq pseudo_bc1  exp_pseudo_bc
+end
+
+
 @testset "Check impulse responses to pegged interest rate" begin
     global m = SmetsWouters(
         custom_settings = Dict{Symbol, Setting}(:n_anticipated_shocks => Setting(:n_anticipated_shocks, 8)))
