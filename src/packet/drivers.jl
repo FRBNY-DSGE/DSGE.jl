@@ -99,13 +99,25 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
         cond_output_vars = map(x ->
                                Symbol(string(x) * "_cond_obs_shocks"), output_vars)
         compute_meansbands(m, input_type, cond_type,
-                           output_vars; forecast_string = forecast_string,
+                           setdiff(output_vars,
+                                   [:shockdecobs, :shockdecstates,
+                                    :shockdecpseudo,
+                                    :dettrendobs, :dettrendpseudo,
+                                    :trendobs, :trendpseudo,
+                                    :dettrendstates, :trendstates]);
+                           forecast_string = forecast_string,
                            density_bands = density_bands,
                            check_empty_columns = check_empty_columns, do_cond_obs_shocks = true,
                            bdd_fcast = bdd_fcast, verbose = :high)
 
         meansbands_to_matrix(m, input_type, cond_type,
-                             output_vars; forecast_string = forecast_string,
+                             setdiff(output_vars,
+                                     [:shockdecobs, :shockdecstates,
+                                      :shockdecpseudo,
+                                      :dettrendobs, :dettrendpseudo,
+                                      :trendobs, :trendpseudo,
+                                      :dettrendstates, :trendstates]);
+                             forecast_string = forecast_string,
                              do_cond_obs_shocks = true, bdd_fcast = bdd_fcast,
                              verbose = :high)
     end
