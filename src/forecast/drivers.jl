@@ -338,6 +338,12 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_forecast_output_files(m, input_type, cond_type, output_vars;
                                                       forecast_string = forecast_string)
+
+    if !isempty(cond_obs_shocks) && all(prod -> prod == :irf, map(x->get_product(x), output_vars))
+        @warn "The input variable output_vars includes only IRFs. Skipping computation of conditional forecast on shocks to observables."
+        cond_obs_shocks = Dict{Symbol,Float64}()
+    end
+
     if !isempty(cond_obs_shocks)
         cond_forecast_output_files =
             get_forecast_output_files(m, input_type, cond_type,
