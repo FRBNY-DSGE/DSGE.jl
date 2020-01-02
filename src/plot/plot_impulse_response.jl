@@ -130,10 +130,10 @@ irf
 
     varshock = Symbol(var, "__", shock)
     sign = flip_sign ? -1 : 1
-
     quarters_ahead = collect(1:size(mb.means,1))
+
     # Bands
-   for pct in bands_pcts
+    for pct in bands_pcts
         @series begin
             fillcolor := bands_color
             fillalpha := 0.1
@@ -157,8 +157,7 @@ irf
             label     := label_mean_bands ? "Mean"*string(input_type2) : ""
             linewidth := 2
             linecolor := :blue
-            @show typeof(sign * mb2.means[varshock])
-            sign * mb2.means[varshock]
+            quarters_ahead, sign * mb2.means[varshock]
         end
     end =#
 end
