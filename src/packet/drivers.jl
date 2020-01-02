@@ -61,7 +61,8 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                         smooth_conditional::Symbol = :hist_cond,
                         cond_deviation_shocks::Vector{Symbol} =
                         collect(keys(m.exogenous_shocks)),
-                        bdd_fcast::Bool = true)
+                        bdd_fcast::Bool = true,
+                        df::DataFrame = DataFrame())
 
     # Override estimation file if necessary
     if !isempty(est_override)
@@ -79,7 +80,8 @@ function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  cond_obs_shocks = cond_obs_shocks,
                  smooth_conditional = smooth_conditional,
                  cond_deviation_shocks = cond_deviation_shocks,
-                 bdd_fcast = bdd_fcast)
+                 bdd_fcast = bdd_fcast,
+                 df = df)
 
     # Compute means and bands
     compute_meansbands(m, input_type, cond_type, output_vars; forecast_string = forecast_string,

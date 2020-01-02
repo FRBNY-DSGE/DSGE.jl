@@ -112,7 +112,6 @@ Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
 are supported as keyword arguments.
 """
 irf
-
 @recipe function f(irf::Irf;
                    flip_sign = false,
                    label_mean_bands = false,
@@ -122,26 +121,26 @@ irf
                    input_type::Symbol = Symbol(),
                    input_type2::Symbol = Symbol())
     # Error checking
-   #= if length(irf.args) != 3 || typeof(irf.args[1]) != Symbol || typeof(irf.args[2]) != Symbol ||
+  #=  if length(irf.args) != 3 || typeof(irf.args[1]) != Symbol || typeof(irf.args[2]) != Symbol ||
         typeof(irf.args[3]) != MeansBands
 
         error("irf must be given two Symbols and a MeansBands. Got $(typeof(irf.args))")
     end=#
-
     shock, var, mb, mb2 = irf.args
+
     varshock = Symbol(var, "__", shock)
     sign = flip_sign ? -1 : 1
 
+    quarters_ahead = collect(1:size(mb.means,1))
     # Bands
-    for pct in bands_pcts
+   for pct in bands_pcts
         @series begin
             fillcolor := bands_color
             fillalpha := 0.1
             linealpha := 0
             label     := label_mean_bands ? "$pct Bands" : ""
-
             fillrange := sign * mb.bands[varshock][!,Symbol(pct, " UB")]
-            sign * mb.bands[varshock][!,Symbol(pct, " LB")]
+            quarters_ahead, sign * mb.bands[varshock][!,Symbol(pct, " LB")]
         end
     end
 
@@ -150,15 +149,16 @@ irf
         label     := label_mean_bands ? "Mean"*string(input_type) : ""
         linewidth := 2
         linecolor := mean_color
-        sign * mb.means[!, varshock]
+        quarters_ahead, sign * mb.means[!, varshock]
     end
 
-    if input_type2 != Symbol()
+   #= if input_type2 != Symbol()
         @series begin
             label     := label_mean_bands ? "Mean"*string(input_type2) : ""
             linewidth := 2
             linecolor := :blue
+            @show typeof(sign * mb2.means[varshock])
             sign * mb2.means[varshock]
         end
-    end
+    end =#
 end
