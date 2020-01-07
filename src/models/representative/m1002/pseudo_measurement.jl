@@ -116,6 +116,11 @@ function pseudo_measurement(m::Model1002{T},
     ## u_t
     ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
+    ## Nominal Wages
+    ZZ_pseudo[pseudo[:NominalWages],endo[:w_t]] = 1.
+    ZZ_pseudo[pseudo[:NominalWages],endo[:π_t]] = 1.
+    DD_pseudo[pseudo[:NominalWages]]            = 100*(m[:π_star]-1);
+
     ## labor share
     if haskey(m.settings, :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
