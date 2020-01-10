@@ -102,6 +102,7 @@ function plot_impulse_response(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                                plotroot::String =
                                figurespath((which_model == 1) ? m1 : m2, "forecast"),
                                titles::Vector{String} = String[],
+                               addl_text::String = "",
                                verbose::Symbol = :low,
                                kwargs...)
     # Read in MeansBands
@@ -135,7 +136,7 @@ function plot_impulse_response(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
             output_file = get_forecast_filename(plotroot, filestring_base((which_model == 1) ? m1 : m2),
                                                 (which_model == 1) ? input_type1 : input_type2,
                                                 (which_model == 1) ? cond_type1 : cond_type2,
-                                                Symbol("irf_", detexify(shock), "_", detexify(var)),
+                                                Symbol("irf_", detexify(shock), "_", detexify(var), addl_text),
                                                 forecast_string = (which_model == 1) ?
                                                 forecast_string1 : forecast_string2,
                                                 fileformat = plot_extension())
