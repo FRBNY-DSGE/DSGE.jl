@@ -214,7 +214,34 @@ function eqcond(m::Model1002)
         exp((1 - m[:σ_c])*m[:z_star]))
 
     # Comment out for counterfactual with no price mark up shock
-    Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -1.
+    if subspec(m) == "ss20"
+        # Re-scale markup shock so that it is the shock corresponds to the size of the real
+        # markup shock. We use this spec for counterfactual analysis when using different
+        # parameter values for parameters governing κ, e.g. ζ_p.
+        #
+        # The standard implementation scales the actual markup shock, say
+        # markup_t, by κ, i.e. λ_f = κ * markup_t.
+        # The real level and standard deviation of markup_t are λ_f / kappa and
+        # σ_λ_f / κ, respectively. The other parameters are accurately estimated
+        # in the ARMA(1,1) governing λ_f.
+        #
+        # To rescale, we set the coefficient on λ_f to be κnum / κden,
+        # where κnum = κ (i.e. it is the correct kappa), but
+        # κden fixes the value of specific parameters and retrieves those desired values
+        # from the settings, which are provided through custom_settings during
+        # instantiation of a model object. In this way,
+        # we can back out the correct markup shock after estimating
+        # on the more numerically stable implementation we usually use.
+        κnum = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star])) # kappa numerator
+        fix_ζ_p = get_setting(m, :fix_ζ_p)
+        κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star])) # kappa denominator
+
+        Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
+    else
+        Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -1.
+    end
 
     # Flexible prices and wages not necessary
 

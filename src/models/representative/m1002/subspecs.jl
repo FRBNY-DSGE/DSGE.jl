@@ -35,6 +35,8 @@ function init_subspec!(m::Model1002)
         return ss18!(m)
     elseif subspec(m) == "ss19"
         return ss19!(m)
+    elseif subspec(m) == "ss20"
+        return ss20!(m)
     else
         error("This subspec is not defined.")
     end
@@ -305,4 +307,17 @@ function ss19!(m::Model1002)
     m <= parameter(:σ_tfp, 0.01, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                    RootInverseGamma(2, sqrt(0.0001)), fixed=false,
                    tex_label="\\sigma_{tfp}")
+end
+
+
+"""
+```
+ss20!(m::Model1002)
+```
+
+Initializes subspec 20 of `Model1002`. This subspecification is the same as ss10,
+but the coefficient on markup shocks in the price Phillips curve is re-scaled.
+"""
+function ss20!(m::Model1002)
+    ss10!(m)
 end
