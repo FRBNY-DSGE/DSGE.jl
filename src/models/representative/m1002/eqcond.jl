@@ -214,8 +214,7 @@ function eqcond(m::Model1002)
         exp((1 - m[:σ_c])*m[:z_star]))
 
     # Comment out for counterfactual with no price mark up shock
-    Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))/
-        (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+    Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -1.
 
     # Flexible prices and wages not necessary
 
