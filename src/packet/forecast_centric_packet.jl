@@ -10,7 +10,7 @@ Write standard estimation and forecast result packet to `outdir`, with an emphas
 on the forecasting results. The main difference with the standard packet is that the
 prior posterior plots at placed at the very end.
 """
-function write_forecast_centric_packet(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function write_forecast_centric_packet(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                               :shockdecobs, :shockdecpseudo];
                                sections::Vector{Symbol} = [:estimation, :forecast],
@@ -60,7 +60,7 @@ write_estimation_table_section(fid, m; plotroot = "")
 
 Write parameter moment tables.
 """
-function write_estimation_table_section(fid::IOStream, m::AbstractModel;
+function write_estimation_table_section(fid::IOStream, m::AbstractDSGEModel;
                                   plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
@@ -79,7 +79,7 @@ write_estimation_plot_section(fid, m; plotroot = "")
 
 Write prior/posterior plots.
 """
-function write_estimation_plot_section(fid::IOStream, m::AbstractModel;
+function write_estimation_plot_section(fid::IOStream, m::AbstractDSGEModel;
                                   plotroot::String = "")
 
     @printf fid "\\clearpage\n"

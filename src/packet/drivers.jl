@@ -13,7 +13,7 @@ Apply usual defaults for the following settings:
 - `alternative_policy`: given by input argument `altpolicy`. If this argument is
   specified, then `altpolicy_settings!` and `altpolicy.setup` are also called.
 """
-function usual_settings!(m::AbstractModel, vint::String;
+function usual_settings!(m::AbstractDSGEModel, vint::String;
                          cdvt::String = vint,
                          dsid::Int = data_id(m),
                          cdid::Int = cond_id(m),
@@ -45,7 +45,7 @@ Forecast, compute means and bands, and optionally (if `mb_matrix`) convert
 `MeansBands` to matrices. If the path `est_override` is provided, it will be
 added to `forecast_input_file_overrides(m)`.
 """
-function usual_forecast(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function usual_forecast(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                         output_vars::Vector{Symbol} = [:histobs, :histpseudo, :forecastobs, :forecastpseudo,
                                                        :shockdecobs, :shockdecpseudo];
                         est_override::String = "",
