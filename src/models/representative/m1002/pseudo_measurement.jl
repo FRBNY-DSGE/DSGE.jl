@@ -1,4 +1,4 @@
- """
+"""
 ```
 pseudo_measurement(m::Model1002{T},
     TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
@@ -116,10 +116,11 @@ function pseudo_measurement(m::Model1002{T},
     ## u_t
     ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
-    ## Nominal Wages
-    ZZ_pseudo[pseudo[:NominalWages],endo[:w_t]] = 1.
-    ZZ_pseudo[pseudo[:NominalWages],endo[:π_t]] = 1.
-    DD_pseudo[pseudo[:NominalWages]]            = 100*(m[:π_star]-1);
+    ## Nominal Wage Growth
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
+    DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1);
 
     ## labor share
     if haskey(m.settings, :add_laborshare_measurement)

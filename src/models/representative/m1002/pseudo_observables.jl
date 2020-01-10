@@ -5,7 +5,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
                     :Expected10YearRateGap, :NominalFFR, :Expected10YearRate,
                     :Expected10YearNaturalRate,
                     :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth,
-                    :u_t, :NominalWages]
+                    :u_t, :NominalWageGrowth]
 
     if subspec(m) == "ss12"
         to_add = [:g_t, :b_t, :μ_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
@@ -113,8 +113,8 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:u_t].name     = "u_t"
     pseudo[:u_t].longname = "u_t"
 
-    pseudo[:NominalWages].name = "Nominal Wages"
-    pseudo[:NominalWages].longname = "Nominal Wages"
+    pseudo[:NominalWageGrowth].name = "Nominal Wage Growth"
+    pseudo[:NominalWageGrowth].longname = "Nominal Wage Growth"
 
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         pseudo[:Sinf_t].name     = "Sinf_t"

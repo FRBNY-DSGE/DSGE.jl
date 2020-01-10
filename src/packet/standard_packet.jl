@@ -8,7 +8,7 @@ write_standard_packet(m, input_type, cond_type,
 
 Write standard estimation and forecast result packet to `outdir`.
 """
-function write_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function write_standard_packet(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                               :shockdecobs, :shockdecpseudo];
                                sections::Vector{Symbol} = [:estimation, :forecast],
@@ -57,7 +57,7 @@ plot_standard_packet(m, input_type, cond_type,
 Plot parameter prior/posterior histograms to `figurespath(m, \"estimate\")` and
 forecasts/shock decompositions to `figurespath(m, \"forecast\')`.
 """
-function plot_standard_packet(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function plot_standard_packet(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                               output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                               :shockdecobs, :shockdecpseudo];
                               sections::Vector{Symbol} = [:estimation, :forecast],
@@ -89,7 +89,7 @@ write_spec_section(fid, m1, m2; purpose = "")
 
 Write user, model, and data specification section.
 """
-function write_spec_section(fid::IOStream, m::AbstractModel; purpose::String = "",
+function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String = "",
                             additional_text::Vector{String} = Vector{String}(undef,0))
     @printf fid "\n\n"
     @printf fid "\\section{Specification}\n"
@@ -145,7 +145,7 @@ write_estimation_section(fid, m; plotroot = "")
 
 Write parameter moment tables and prior/posterior plots.
 """
-function write_estimation_section(fid::IOStream, m::AbstractModel;
+function write_estimation_section(fid::IOStream, m::AbstractDSGEModel;
                                   plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
@@ -171,7 +171,7 @@ write_estimation_plots(fid, m; plotroot = "")
 Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
 `plotroot` is not specified, plots from `figurespath(m, \"estimate\")` are used.
 """
-function write_estimation_plots(fid::IOStream, m::AbstractModel;
+function write_estimation_plots(fid::IOStream, m::AbstractDSGEModel;
                                 plotroot::String = "")
     if isempty(plotroot)
         plotroot = figurespath(m, "estimate")
@@ -204,7 +204,7 @@ write_forecast_section(fid, m, input_type, cond_type,
 Write forecast specification and plots for the given `output_vars`. If `plotroot`
 is not specified, plots from `figurespath(m, \"forecast\")` are used.
 """
-function write_forecast_section(fid::IOStream, m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                 output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                                :shockdecobs, :shockdecpseudo];
                                 forecast_string::String = "",
@@ -275,7 +275,7 @@ Generate all `output_var` plots for the forecast of `m` specified by the
 `input_type`, `cond_type`, and optional `forecast_string`. If `plotroot` is not
 specified, plots are saved to `figurespath(m, \"forecast\")`.
 """
-function make_forecast_plots(m::AbstractModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
+function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
                              plotroot::String = "",
                              hist_start_date = Date("0001-01-01", "yyyy-mm-dd"))
@@ -365,7 +365,7 @@ write_forecast_plots(fid, m, input_type, cond_type, output_var;
 Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
 `plotroot` is not specified, plots from `figurespath(m, \"forecast\")` are used.
 """
-function write_forecast_plots(fid::IOStream, m::AbstractModel,
+function write_forecast_plots(fid::IOStream, m::AbstractDSGEModel,
                               input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                               forecast_string::String = "",
                               plotroot::String = "")
@@ -409,7 +409,7 @@ Write the standard packet's forecast table listing forecasts 3 years out.
 ### Inputs
 
 - `fid::IOStream`: file to write to
-- `m::AbstractModel`: model object for current Snapshot forecast
+- `m::AbstractDSGEModel`: model object for current Snapshot forecast
 - `cond_type::Symbol`: type of conditional forecast
 - `output_vars`: which type of forecast variables to print out
 
@@ -417,7 +417,7 @@ Write the standard packet's forecast table listing forecasts 3 years out.
 
 - `forecast_str::String`: string to use
 """
-function write_forecast_table(fid::IOStream, m::AbstractModel, cond_type::Symbol,
+function write_forecast_table(fid::IOStream, m::AbstractDSGEModel, cond_type::Symbol,
                               output_vars::Vector{Symbol};
                               forecast_string::String = "")
 
@@ -480,7 +480,7 @@ function write_forecast_table(fid::IOStream, m::AbstractModel, cond_type::Symbol
     write(fid, "\\end{table}")
 end
 
-function print_variable_means(m::AbstractModel, cond_type::Symbol, output_var::Symbol,
+function print_variable_means(m::AbstractDSGEModel, cond_type::Symbol, output_var::Symbol,
                               varname::Symbol, vardesc::Vector{String}, fcast_dates::Vector{Date},
                               last_row::Bool; forecast_string::String = "")
     n_fcast_dates = length(fcast_dates)
@@ -521,7 +521,7 @@ write_irf_section(fid, m, input_type, cond_type, forecast_string = "", plotroot 
 Write impulse responses. If `plotroot`
 is not specified, plots from `figurespath(m, \"forecast\")` are used.
 """
-function write_irf_section(fid::IOStream, m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function write_irf_section(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                            output_vars::Vector{Symbol}; forecast_string::String = "",
                            plotroot = "")
     @printf fid "\n\n"
@@ -553,7 +553,7 @@ write_irf_plots(fid, m, input_type, cond_type, output_var; forecast_string = "",
 Plot impulse responses. If `plotroot`
 is not specified, plots from `figurespath(m, \"forecast\")` are used.
 """
-function write_irf_plots(fid::IOStream, m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function write_irf_plots(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                          output_var::Symbol; forecast_string::String = "", plotroot::String = "")
     if isempty(plotroot)
         plotroot = figurespath(m, "forecast")
@@ -628,15 +628,19 @@ end
 """
 ```
 plot_irf_section(fid, m, input_type, cond_type; forecast_string = "", plotroot = "", ncols = 4)
+plot_irf_section(fid, m1, m2, input_type1, input_type2,
+                 cond_type1, cond_type2; forecast_string1 = "", forecast_string2 = "",
+                 which_model = 1, plotroot = "", ncols = 4)
 ```
 
 Plot impulse responses. If `plotroot`
 is not specified, plots from `figurespath(m, \"forecast\")` are used.
 We assume the default number of columns for the joint plot is 3.
 """
-function plot_irf_section(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+function plot_irf_section(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                           output_vars::Vector{Symbol};
-                          forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4)
+                          forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4,
+                          kwargs...)
     # Create file name related strings
     if isempty(plotroot)
         plotroot = figurespath(m, "forecast")
@@ -683,7 +687,7 @@ function plot_irf_section(m::AbstractModel, input_type::Symbol, cond_type::Symbo
         for shock in shocks
             # Create individual plots
             plots = plot_impulse_response(m, shock, vars, class, input_type, cond_type,
-                                          forecast_string = forecast_string)
+                                          forecast_string = forecast_string, kwargs...)
 
             # Plot all variables together
             varplots = if mod(nvars, ncols) > 0
@@ -697,6 +701,93 @@ function plot_irf_section(m::AbstractModel, input_type::Symbol, cond_type::Symbo
 
             # Save
             fn = joinpath(plotroot, "irf_" * string(DSGE.detexify(shock)) * "_" * string(class))
+            fn *= filestr * ".pdf"
+            DSGE.save_plot(p, fn)
+        end
+    end
+end
+
+# Extends to using two different models
+function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
+                          input_type1::Symbol, input_type2::Symbol,
+                          cond_type1::Symbol, cond_type2::Symbol,
+                          output_vars::Vector{Symbol};
+                          forecast_string1::String = "",
+                          forecast_string2::String = "",
+                          which_model::Int = 1,
+                          plotroot::String = "", ncols::Int64 = 4,
+                          bands_pcts::Vector{String} = Vector{String}(undef,0),
+                          addl_text::String = "")
+    # Create file name related strings
+    m = which_model == 1 ? m1 : m2
+    if isempty(plotroot)
+        plotroot = figurespath(m, "forecast")
+    end
+    base = DSGE.filestring_base(m)
+    addl = DSGE.get_forecast_filestring_addl((which_model == 1) ? input_type1 :
+                                             input_type2, (which_model == 2) ?
+                                             cond_type1 : cond_type2,
+                                             forecast_string = (which_model == 1) ?
+                                             forecast_string1 : forecast_string2)
+    filestr = DSGE.filestring(base, addl)
+
+
+    # Find shocks to remove from list of shocks to compute IRFs
+    ant_obs = [Symbol("obs_nominalrate" * string(i)) for i = 1:n_anticipated_shocks(m)]
+    ant_sh  = [Symbol("rm_shl" * string(i)) for i = 1:n_anticipated_shocks(m)]
+    zero_shocks = Vector{Symbol}(undef,0)
+    for k in setdiff(keys(m.exogenous_shocks),
+                     [Symbol("rm_shl" * string(i)) for i = 1:n_anticipated_shocks(m)])
+        if k == :rm_sh && m[:σ_r_m].value == 0. && m[:σ_r_m].fixed
+            zero_shocks = vcat(zero_shocks, :rm_sh)
+        elseif k == :zp_sh && m[:σ_z_p].value == 0. && m[:σ_z_p].fixed
+            zero_shocks = vcat(zero_shocks, :zp_sh)
+        elseif k != :rm_sh && k != :zp_sh
+            sig_name = Symbol("σ_" * replace(string(k), "_sh" => ""))
+            if m[sig_name].value == 0. && m[sig_name].fixed
+                zero_shocks = vcat(zero_shocks, k)
+            end
+        end
+    end
+
+    shocks = setdiff(setdiff(collect(keys(m.exogenous_shocks)), ant_sh), zero_shocks)
+
+    for output_var in intersect(output_vars, [:irfstates, :irfobs, :irfpseudo])
+        class = get_class(output_var)
+        if class == :obs
+            vars = setdiff(collect(keys(m.observables)), ant_obs)
+        elseif class == :pseudo
+            vars = collect(keys(m.pseudo_observables))
+        elseif class == :states
+            vars = collect(keys(m.endogenous_states))
+        end
+        nvars = length(vars)
+        nrows = convert(Int, ceil(nvars/ncols))
+
+
+        for shock in shocks
+            # Create individual plots
+            plots = plot_impulse_response(m1, m2, shock, vars, class,
+                                          input_type1, input_type2,
+                                          cond_type1, cond_type2,
+                                          forecast_string1 = forecast_string1,
+                                          forecast_string2 = forecast_string2,
+                                          which_model = which_model,
+                                          bands_pcts = bands_pcts,
+                                          addl_text = addl_text)
+
+            # Plot all variables together
+            varplots = if mod(nvars, ncols) > 0
+                empty = plot(grid = false, foreground_color_axis = :white, ticks = [])
+                n_empty = ncols - mod(nvars, ncols)
+                vcat(collect(values(plots)), repeat([empty], n_empty))
+            else
+                collect(values(plots))
+            end
+            p = plot(varplots..., layout = grid(nrows, ncols), size = (650, 775))
+
+            # Save
+            fn = joinpath(plotroot, "irf_" * string(DSGE.detexify(shock)) * "_" * string(class) * addl_text)
             fn *= filestr * ".pdf"
             DSGE.save_plot(p, fn)
         end
