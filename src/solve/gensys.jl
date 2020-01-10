@@ -104,7 +104,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Arr
     nunstab = n - sum(select)
 
     if zxz == 1
-        @warn "Coincident zeros. Indeterminancy and/or nonexistence."
+        @warn "Coincident zeros. Indeterminacy and/or nonexistence."
         eu=[-2, -2]
 
         G1     = Array{Float64, 2}(undef,0, 0)
@@ -185,7 +185,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64, 1}, Ψ::Arr
         eu[2] = 1
     else
         if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @warn "Indeterminancy: $(nloose) loose endogenous error(s)"
+            @warn "Indeterminacy: $(nloose) loose endogenous error(s)"
         end
     end
 

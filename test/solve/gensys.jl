@@ -26,14 +26,14 @@ end
 
 G1, C, impact, eu = gensys(Γ0, Γ1, C, Ψ, Π)
 
-# trigger indeterminancy error
+# trigger indeterminacy error
 m = Model1002()
 Γ0, Γ1, C, Ψ, Π = eqcond(m)
 Γ1[m.equilibrium_conditions[:eq_z], m.endogenous_states[:y_t]] = 1.
 Γ1[m.equilibrium_conditions[:eq_z], m.endogenous_states[:y_f_t]] = 1.
 
-@testset "Check indeterminancy zeros warning" begin
-    @test_logs (:warn, "Indeterminancy: 1 loose endogenous error(s)") gensys(Γ0, Γ1, C, Ψ, Π)
+@testset "Check indeterminacy zeros warning" begin
+    @test_logs (:warn, "Indeterminacy: 1 loose endogenous error(s)") gensys(Γ0, Γ1, C, Ψ, Π)
 end
 
 # trigger coincident zeros
@@ -44,7 +44,7 @@ m = Model1002()
 Ψ[1,:] .= 0.
 Π[1,:] .= 0.
 @testset "Check output coincident zeros warning" begin
-    @test_logs (:warn, "Coincident zeros. Indeterminancy and/or nonexistence.") gensys(Γ0, Γ1, C, Ψ, Π)
+    @test_logs (:warn, "Coincident zeros. Indeterminacy and/or nonexistence.") gensys(Γ0, Γ1, C, Ψ, Π)
     @info "After this message, a warning will be intentionally printed."
     G1, tmpC, impact, eu = gensys(Γ0, Γ1, C, Ψ, Π)
     @test eu == vec([-2, -2])
@@ -55,7 +55,7 @@ end
 
 Γ1[1,1] = 1e3
 @testset "Check nonexistence warning" begin
-    @test_logs (:warn, "Nonexistence: number of unstable roots exceeds number of jump variables") (:warn, "Indeterminancy: 1 loose endogenous error(s)") gensys(Γ0, Γ1, C, Ψ, Π)
+    @test_logs (:warn, "Nonexistence: number of unstable roots exceeds number of jump variables") (:warn, "Indeterminacy: 1 loose endogenous error(s)") gensys(Γ0, Γ1, C, Ψ, Π)
 end
 
 Random.seed!(1793)
