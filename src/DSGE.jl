@@ -127,7 +127,7 @@ module DSGE
         decompose_forecast, decomposition_means,
 
         # altpolicy/
-        AltPolicy, taylor93, taylor99,
+        AltPolicy, taylor93, taylor99, alt_inflation,
 
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
@@ -266,6 +266,7 @@ module DSGE
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
+    include("altpolicy/alt_inflation.jl")
 
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")
