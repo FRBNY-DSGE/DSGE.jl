@@ -321,3 +321,17 @@ but the coefficient on markup shocks in the price Phillips curve is re-scaled.
 function ss20!(m::Model1002)
     ss10!(m)
 end
+
+
+"""
+```
+ss21!(m::Model1002)
+```
+
+Has two ζ_p parameters for the regime-switching estimation of DSGE.
+"""
+function ss21!(m::Model1002)
+    m <= parameter(:ζ_p2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
+end
