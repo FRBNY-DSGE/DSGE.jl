@@ -216,7 +216,7 @@ function eqcond_regimes(m::Model1002)
         if subspec(m) == "ss21"
             if regime==1
                 Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                                            (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m        [:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+                                                            (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
             elseif regime==2
                 Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
                                             (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
@@ -560,6 +560,6 @@ function eqcond_regimes(m::Model1002)
         Γ0[regime][eq[:eq_ERktil], endo[:Rktil_t]]  = 1.
         Γ1[regime][eq[:eq_ERktil], endo[:ERtil_k_t]] = 1.
         Π[regime][eq[:eq_ERktil], ex[:ERktil_sh]]    = 1.
-
+    end
     return (Γ0[1], Γ1[1], C[1], Ψ[1], Π[1]), (Γ0[2], Γ1[2], C[2], Ψ[2], Π[2])
 end

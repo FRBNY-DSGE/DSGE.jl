@@ -116,6 +116,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:NominalWageGrowth].name = "Nominal Wage Growth"
     pseudo[:NominalWageGrowth].longname = "Nominal Wage Growth"
 
+
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         pseudo[:Sinf_t].name     = "Sinf_t"
         pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"

@@ -137,6 +137,7 @@ function pseudo_measurement(m::Model1002{T},
         if get_setting(m, :add_laborproductivity_measurement)
             ZZ_pseudo[pseudo[:laborproductivity], endo[:y_t]] = 1.
             ZZ_pseudo[pseudo[:laborproductivity], endo[:L_t]] = -1.
+            ZZ_pseudo[pseudo[:laborproductivity], endo_addl[:Z_Cum]] = 1.
             DD_pseudo[pseudo[:laborproductivity]] = 100. * log(m[:ystar] / m[:Lstar])
         end
     end
