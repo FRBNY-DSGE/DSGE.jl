@@ -108,6 +108,41 @@ end
     @test @test_matrix_approx_eq meas[:QQ] Q_exp
     @test @test_matrix_approx_eq meas[:EE] E_exp
 
-    @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo] Z_pseudo_exp
-    @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp
+    @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo][1:21,:] Z_pseudo_exp
+    @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo][1:21] D_pseudo_exp
 end
+
+model1 = Model1002("ss10", custom_settings =
+                   Dict{Symbol,Setting}(:add_laborproductivity_measurement =>
+                                        Setting(:add_laborproductivity_measurement, true)))
+
+# Equilibrium conditions
+Γ0ur, Γ1ur, Cur, Ψur, Πur = eqcond(model1)
+
+# Transition and measurement equations
+TTTur, RRRur, CCCur = solve(model1)
+measur = measurement(model1, TTTur, RRRur, CCCur)
+
+### Pseudo-measurement equation
+pseudo_measur = pseudo_measurement(model1, TTTur, RRRur, CCCur)
+
+@testset "Verify handling of unit roots/integrated series" begin
+    @test @test_matrix_approx_eq Γ0 Γ0ur
+    @test @test_matrix_approx_eq Γ1 Γ1ur
+    @test @test_matrix_approx_eq C Cur
+    @test @test_matrix_approx_eq Ψ Ψur
+    @test @test_matrix_approx_eq Π Πur
+
+    no_integ_inds = DSGE.inds_states_no_integ_series(model1)
+    @test @test_matrix_approx_eq TTT TTTur[no_integ_inds, no_integ_inds]
+    @test @test_matrix_approx_eq RRR RRRur[no_integ_inds, :]
+    @test @test_matrix_approx_eq CCC CCCur[no_integ_inds]
+    @test @test_matrix_approx_eq meas[:ZZ] measur[:ZZ][:,no_integ_inds]
+    @test @test_matrix_approx_eq meas[:DD] measur[:DD]
+    @test @test_matrix_approx_eq meas[:QQ] measur[:QQ]
+    @test @test_matrix_approx_eq meas[:EE] measur[:EE]
+    @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo] pseudo_measur[:ZZ_pseudo][1:end-1,no_integ_inds]
+    @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] pseudo_measur[:DD_pseudo][1:end-1]
+end
+
+nothing

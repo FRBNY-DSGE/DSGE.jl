@@ -91,7 +91,9 @@ end
     @test @test_matrix_approx_eq inds_shocks_no_ant(m1) collect(1:18)
     @test @test_matrix_approx_eq inds_obs_no_ant(m) collect(1:3)
     @test @test_matrix_approx_eq inds_obs_no_ant(m1) collect(1:13)
-
+    @test @test_matrix_approx_eq inds_states_no_integ_series(m1) collect(1:84)
+    m1 <= Setting(:integrated_series, [:e_gdp_t1])
+    @test @test_matrix_approx_eq inds_states_no_integ_series(m1) vcat(collect(1:82),84)
 
     m <= Setting(:date_forecast_start, DSGE.quartertodate("2019-Q3"))
     m <= Setting(:forecast_horizons, 10)
