@@ -373,5 +373,5 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
     end
-    return PseudoMeasurement(ZZ_pseudos[1], DD_pseudos[1]), PseudoMeasurement(ZZ_pseudos[2], DD_pseudos[2])
+    return [PseudoMeasurement(ZZ_pseudos[1], DD_pseudos[1]), PseudoMeasurement(ZZ_pseudos[2], DD_pseudos[2])]
 end
