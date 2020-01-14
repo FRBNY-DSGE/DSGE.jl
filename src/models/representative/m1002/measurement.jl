@@ -22,6 +22,7 @@ function measurement(m::Model1002{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
                      CCC::Vector{T}) where {T<:AbstractFloat}
+
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
@@ -35,6 +36,13 @@ function measurement(m::Model1002{T},
     DD = zeros(_n_observables)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
+
+    no_integ_inds = inds_states_no_integ_series(m)
+    if get_setting(m, :add_laborproductivity_measurement)
+        # Remove integrated states (e.g. states w/unit roots)
+        TTT = @view TTT[no_integ_inds, no_integ_inds]
+        CCC = @view CCC[no_integ_inds]
+    end
 
     ## GDP growth - Quarterly!
     ZZ[obs[:obs_gdp], endo[:y_t]]          = 1.0
@@ -101,16 +109,15 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
     ## 10 yrs infl exp
-
     TTT10                          = (1/40)*((Matrix{Float64}(I, size(TTT, 1), size(TTT,1))
                                               - TTT)\(TTT - TTT^41))
-    ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
-    DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
+    ZZ[obs[:obs_longinflation], no_integ_inds] = TTT10[endo[:π_t], :]
+    DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]' * TTT10
+    ZZ[obs[:obs_longrate], no_integ_inds]     = ZZ[6, no_integ_inds]' * TTT10
     ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
-    DD[obs[:obs_longrate]]                  = m[:Rstarn]
+    DD[obs[:obs_longrate]]                    = m[:Rstarn]
 
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
@@ -146,7 +153,7 @@ function measurement(m::Model1002{T},
 
     # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+        ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
         if subspec(m) == "ss11"
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_anticipated_shocks(m)
@@ -157,7 +164,7 @@ function measurement(m::Model1002{T},
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0)
-        DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+        DD += ZZ[no_integ_inds,no_integ_inds]*((UniformScaling(1) - TTT)\CCC)
     end
 
     return Measurement(ZZ, DD, QQ, EE)

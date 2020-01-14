@@ -22,12 +22,25 @@ function pseudo_measurement(m::Model1002{T},
     _n_states = n_states_augmented(m)
     _n_pseudo = n_pseudo_observables(m)
 
-    # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
-    TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
-
     # Initialize pseudo ZZ and DD matrices
     ZZ_pseudo = zeros(_n_pseudo, _n_states)
     DD_pseudo = zeros(_n_pseudo)
+
+    no_integ_inds = inds_states_no_integ_series(m)
+    if get_setting(m, :add_laborproductivity_measurement)
+        # Construct pseudo-obs from integrated states first
+        ZZ_pseudo[pseudo[:laborproductivity], endo[:y_t]] = 1.
+        ZZ_pseudo[pseudo[:laborproductivity], endo[:L_t]] = -1.
+        ZZ_pseudo[pseudo[:laborproductivity], endo_addl[:cum_z_t]] = 1.
+        DD_pseudo[pseudo[:laborproductivity]] = 100. * log(m[:ystar] / m[:Lstar])
+
+        # Remove integrated states (e.g. states w/unit roots)
+        # RRR and CCC aren't used, so we don't do anything with them
+        TTT = @view TTT[no_integ_inds, no_integ_inds]
+    end
+
+    # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
+    TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
 
     ##########################################################
     ## PSEUDO-OBSERVABLE EQUATIONS
@@ -79,18 +92,18 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:z_t], endo[:z_t]] = 1.
 
     ## Expected 10-Year Rate Gap
-    ZZ_pseudo[pseudo[:Expected10YearRateGap], :] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearRateGap], no_integ_inds] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
 
     ## Nominal FFR
     ZZ_pseudo[pseudo[:NominalFFR], endo[:R_t]] = 1.
     DD_pseudo[pseudo[:NominalFFR]] = m[:Rstarn]
 
     ## Expected 10-Year Interest Rate
-    ZZ_pseudo[pseudo[:Expected10YearRate], :] = TTT10[endo[:R_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearRate], no_integ_inds] = TTT10[endo[:R_t], :]
     DD_pseudo[pseudo[:Expected10YearRate]]    = m[:Rstarn]
 
     ## Expected 10-Year Natural Rate
-    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], :] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], no_integ_inds] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
     DD_pseudo[pseudo[:Expected10YearNaturalRate]]    = m[:Rstarn]
 
     ## Expected Nominal Natural Rate
@@ -132,15 +145,6 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
-    ## labor productivity
-    if haskey(m.settings, :add_laborproductivity_measurement)
-        if get_setting(m, :add_laborproductivity_measurement)
-            ZZ_pseudo[pseudo[:laborproductivity], endo[:y_t]] = 1.
-            ZZ_pseudo[pseudo[:laborproductivity], endo[:L_t]] = -1.
-            ZZ_pseudo[pseudo[:laborproductivity], endo_addl[:Z_Cum]] = 1.
-            DD_pseudo[pseudo[:laborproductivity]] = 100. * log(m[:ystar] / m[:Lstar])
-        end
-    end
 
     ## Fundamental inflation related pseudo-obs
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]

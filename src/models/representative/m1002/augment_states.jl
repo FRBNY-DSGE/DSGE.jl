@@ -63,9 +63,6 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
 
     # Track Lags
     TTT_aug[endo_new[:y_t1],     endo[:y_t]] = 1.0
-    TTT_aug[endo_new[:Z_Cum_t1], endo_new[:Z_Cum]] = 1.0
-    TTT_aug[endo_new[:Z_Cum],    endo[:z_t]] = 1.0
-    TTT_aug[endo_new[:Z_Cum],    endo_new[:Z_Cum_t1]] = 1.0
     TTT_aug[endo_new[:c_t1],     endo[:c_t]] = 1.0
     TTT_aug[endo_new[:i_t1],     endo[:i_t]] = 1.0
     TTT_aug[endo_new[:w_t1],     endo[:w_t]] = 1.0
@@ -76,6 +73,11 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:e_gdi_t1], endo_new[:e_gdi_t]] = 1.0
     if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
         TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
+    end
+    if get_setting(m, :add_laborproductivity_measurement)
+        TTT_aug[endo_new[:cum_z_t1], endo_new[:cum_z_t]] = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo[:z_t]] = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo_new[:cum_z_t1]] = 1.0
     end
 
     # Expected inflation
