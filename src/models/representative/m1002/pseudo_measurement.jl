@@ -147,7 +147,7 @@ function pseudo_measurement(m::Model1002{T},
 
 
     ## Fundamental inflation related pseudo-obs
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"]
         # Compute coefficient on Sinf
         betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
         κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*

@@ -13,7 +13,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
         pseudo_names = vcat(pseudo_names, to_add)
     end
 
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20", "ss21"]
         push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t)
         if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
             push!(pseudo_names, :e_tfp_t1)

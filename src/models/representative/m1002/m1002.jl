@@ -154,7 +154,7 @@ function init_model_indices!(m::Model1002)
     endogenous_states_augmented = [
         :y_t1, :c_t1, :i_t1, :w_t1, :π_t1_dup, :L_t1, :u_t1, :Et_π_t, :e_lr_t, :e_tfp_t, :e_gdpdef_t,
         :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_gdp_t1, :e_gdi_t1]
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20", "ss21"]
         push!(endogenous_states_augmented, :Sinf_t, :πtil_t, :πtil_t1)
     end
     if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
@@ -321,6 +321,31 @@ function init_parameters!(m::Model1002)
     m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
+
+    if subspec(m) in ["ss21", "ss22"]
+        m <= parameter(:ζ_p2, NaN, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                       description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                       tex_label="\\zeta_p")
+    end
+
+    if subspec(m) in ["ss23", "ss24", "ss25", "ss26"]
+        m <= parameter(:ρ2, NaN, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+        m <= parameter(:ψ12, NaN, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                       description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                       tex_label="\\psi_1")
+
+        m <= parameter(:ψ22, NaN, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+        m <= parameter(:ψ32, NaN, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                       description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                       tex_label="\\psi_3")
+
+    end
 
     m <= parameter(:ϵ_p, 10.000, fixed=true,
                    description="ϵ_p: Curvature parameter in the Kimball aggregator for prices.",

@@ -213,16 +213,12 @@ function eqcond_regimes(m::Model1002)
 
         # Sticky prices and wages
         Γ0[regime][eq[:eq_phlps], endo[:π_t]]  = 1.
-        if subspec(m) == "ss21"
-            if regime==1
-                Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                                                            (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
-            elseif regime==2
-                Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                                            (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
-            end
+        if subspec(m) in ["ss21", "ss22", "ss25", "ss26"] && regime == 2
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                                                        (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         else
-
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                                                        (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         end
         Γ1[regime][eq[:eq_phlps], endo[:π_t]]  = m[:ι_p]/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         Γ0[regime][eq[:eq_phlps], endo[:Eπ_t]] = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:ι_p]*m[:β]*
@@ -324,13 +320,23 @@ function eqcond_regimes(m::Model1002)
 
         # Sticky prices and wages
         Γ0[regime][eq[:eq_mp], endo[:R_t]]      = 1.
-        Γ1[regime][eq[:eq_mp], endo[:R_t]]      = m[:ρ]
-        Γ0[regime][eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
-        Γ0[regime][eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
-        Γ0[regime][eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
-        Γ0[regime][eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
-        Γ1[regime][eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
-        Γ1[regime][eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
+        if subspec(m) in ["ss23", "ss24", "ss25", "ss26"] && regime == 2
+            Γ1[regime][eq[:eq_mp], endo[:R_t]]      = m[:ρ2]
+            Γ0[regime][eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ2])*m[:ψ12]
+            Γ0[regime][eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ2])*m[:ψ12]
+            Γ0[regime][eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ2])*m[:ψ22] - m[:ψ32]
+            Γ0[regime][eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ2])*m[:ψ22] + m[:ψ32]
+            Γ1[regime][eq[:eq_mp], endo[:y_t]]      = -m[:ψ32]
+            Γ1[regime][eq[:eq_mp], endo[:y_f_t]]    = m[:ψ32]
+        else
+            Γ1[regime][eq[:eq_mp], endo[:R_t]]      = m[:ρ]
+            Γ0[regime][eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
+            Γ0[regime][eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
+            Γ0[regime][eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
+            Γ0[regime][eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
+            Γ1[regime][eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
+            Γ1[regime][eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
+        end
         Γ0[regime][eq[:eq_mp], endo[:rm_t]]     = -1.
 
         # Flexible prices and wages not necessary
