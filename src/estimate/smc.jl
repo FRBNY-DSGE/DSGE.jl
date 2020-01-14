@@ -43,7 +43,8 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
              run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
-             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
+             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
+              regime_switching::Bool = false)
 
     parallel    = get_setting(m, :use_parallel_workers)
     n_parts     = get_setting(m, :n_particles)
@@ -74,7 +75,7 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     function my_likelihood(parameters::ParameterVector, data::Matrix{Float64})::Float64
         update!(m, parameters)
         likelihood(m, data; sampler = false, catch_errors = true,
-                   use_chand_recursion = use_chand_recursion, verbose = verbose)
+                   use_chand_recursion = use_chand_recursion, verbose = verbose, regime_swtiching = regime_switching)
     end
 
     tempered_update = !isempty(old_data)

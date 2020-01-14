@@ -110,6 +110,29 @@ function zlb_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
     return regime_inds
 end
 
+
+function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
+                            start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
+
+    T = size(data, 2)
+    if n_anticipated_shocks(m) > 0 && !isempty(data)
+        if start_date < date_presample_start(m)
+            error("Start date $start_date must be >= date_presample_start(m)")
+        elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
+            n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
+            n_regime1_periods = subtract_quarters(get_setting(m, :date_regime_switch), start_date)
+            regime_inds::Vector{UnitRange{Int64}} = [1:n_nozlb_periods, (n_nozlb_periods+1):T, (n_regime1_periods+1):T]
+        else
+            regime_inds = UnitRange{Int64}[1:T]
+        end
+    else
+        regime_inds = UnitRange{Int64}[1:T]
+    end
+    return regime_inds
+end
+
+
+
 """
 ```
 zlb_regime_matrices(m, system, start_date = date_presample_start(m))
@@ -151,6 +174,44 @@ function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::System{S},
     ZZs  = fill(system[:ZZ], n_regimes)
     DDs  = fill(system[:DD], n_regimes)
     EEs  = fill(system[:EE], n_regimes)
+
+    return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
+end
+
+function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
+                             start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
+    if n_anticipated_shocks(m) > 0
+        if start_date < date_presample_start(m)
+            error("Start date $start_date must be >= date_presample_start(m)")
+
+        # TODO: This technically doesn't handle the case where the end_date of the sample
+        # is before the start of the ZLB
+        elseif date_presample_start(m) <= start_date <= get_setting(m, :date_regime_switch) #date_zlb_start(m)
+            n_regimes = 3
+
+            shock_inds = inds_shocks_no_ant(m)
+            QQ_ZLB = system[2][:QQ]
+            QQ_preZLB_R1 = zeros(size(QQ_ZLB))
+            QQ_preZLB_R2 = zeros(size(QQ_ZLB))
+            QQ_preZLB_R1[shock_inds, shock_inds] = system[1][:QQ][shock_inds, shock_inds]
+            QQ_preZLB_R2[shock_inds, shock_inds] = system[1][:QQ][shock_inds, shock_inds]
+            QQs = Matrix{S}[QQ_preZLB_R1, QQ_preZLB_R2, QQ_ZLB]
+
+        elseif date_zlb_start(m) < start_date
+            n_regimes = 2
+            QQs = Matrix{S}[system[1][:QQ], system[2][:QQ]]
+        end
+    else
+        n_regimes = 2
+        QQs = Matrix{S}[system[1][:QQ], system[2][:QQ]]
+    end
+
+    TTTs = vcat([system[1][:TTT]], fill(system[2][:TTT], n_regimes-1))
+    RRRs = vcat([system[1][:RRR]], fill(system[2][:RRR], n_regimes-1))
+    CCCs = vcat([system[1][:CCC]], fill(system[2][:CCC], n_regimes-1))
+    ZZs  = vcat([system[1][:ZZ]], fill(system[2][:ZZ], n_regimes-1))
+    DDs  = vcat([system[1][:DD]], fill(system[2][:DD], n_regimes-1))
+    EEs  = vcat([system[1][:EE]], fill(system[2][:EE], n_regimes-1))
 
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
 end

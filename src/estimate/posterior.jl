@@ -169,6 +169,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
             rethrow(err)
         end
     end
+    @show typeof(system)
 
     # Return total log-likelihood, excluding the presample
     try
@@ -177,6 +178,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
                                                tuning = get_setting(m, :tuning))) + ψ_p * penalty
         elseif use_chand_recursion == false
             return ψ_l * sum(filter_likelihood(m, data, system;
+                                               regime_switching = regime_switching,
                                                include_presample = false, tol = tol)) +
                                                    ψ_p * penalty
         else
