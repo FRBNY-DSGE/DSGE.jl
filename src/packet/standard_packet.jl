@@ -766,6 +766,8 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                                           forecast_string2 = forecast_string2,
                                           which_model = which_model,
                                           bands_pcts = bands_pcts,
+                                          bands_alpha1 = 0.4,
+                                          bands_alpha2 = 0.4,
                                           addl_text = addl_text)
 
             # Plot all variables together

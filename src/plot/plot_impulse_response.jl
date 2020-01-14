@@ -125,11 +125,11 @@ function plot_impulse_response(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
         plots[var] = irf(shock, var, mb1, MeansBands();
                          title = title, input_type = input_type1, input_type2 = Symbol(),
                          bands_color = bands_color1, bands_alpha = bands_alpha1,
-                         bands_pcts = bands_pcts, kwargs...)
+                         bands_pcts = bands_pcts, mean_color = bands_color1, kwargs...)
         irf!(shock, var, mb2, MeansBands();
              title = title, input_type = input_type2, input_type2 = Symbol(),
              bands_color = bands_color2, bands_alpha = bands_alpha2,
-             bands_pcts = bands_pcts, kwargs...)
+             bands_pcts = bands_pcts, mean_color = bands_color2, kwargs...)
 
         # Save plot
         if !isempty(plotroot)
