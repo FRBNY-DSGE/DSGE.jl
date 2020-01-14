@@ -121,7 +121,7 @@ function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
             # THIS IS NOT ROBUST TO MULTIPLE REGIMES
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
             n_regime1_periods = subtract_quarters(get_setting(m, :date_regime_switch), start_date)
-            regime_inds::Vector{UnitRange{Int64}} = [1:n_nozlb_periods, (n_nozlb_periods+1):T, (n_regime1_periods+1):T]
+            regime_inds::Vector{UnitRange{Int64}} = [1:n_regime1_periods, (n_regime1_periods+1):n_nozlb_periods, (n_nozlb_periods+1):T]
         else
             regime_inds = UnitRange{Int64}[1:T]
         end
