@@ -222,11 +222,11 @@ function pseudo_measurement(m::Model1002{T},
 
             # Remove integrated states (e.g. states w/unit roots)
             # RRR and CCC aren't used, so we don't do anything with them
-            TTT = @view TTT[no_integ_inds, no_integ_inds]
+            TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
         end
 
         # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
-        TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
+        TTT10 = (1/40)*((UniformScaling(1.) - TTTs[reg])\(TTTs[reg] - TTTs[reg]^41))
 
         ##########################################################
         ## PSEUDO-OBSERVABLE EQUATIONS
