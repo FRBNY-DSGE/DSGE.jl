@@ -115,6 +115,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
                     sampler::Bool = false,
                     catch_errors::Bool = false,
                     use_chand_recursion::Bool = false,
+                    regime_switching::Bool = false,
                     tol::Float64 = 0.0,
                     verbose::Symbol = :high) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
@@ -160,7 +161,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
 
     # Compute state-space system
     system = try
-        compute_system(m, verbose = verbose)
+        compute_system(m, verbose = verbose, regime_switching = regime_switching)
     catch err
         if catch_errors && (isa(err, GensysError) || isa(err, KleinError))
             return -Inf
@@ -171,10 +172,10 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
 
     # Return total log-likelihood, excluding the presample
     try
-        if typeof(m) == PoolModel{Float64}
+        if typeof(m) <: PoolModel
             return ψ_l * sum(filter_likelihood(m, data; tol = tol,
                                                tuning = get_setting(m, :tuning))) + ψ_p * penalty
-        elseif use_chand_recursion==false
+        elseif use_chand_recursion == false
             return ψ_l * sum(filter_likelihood(m, data, system;
                                                include_presample = false, tol = tol)) +
                                                    ψ_p * penalty

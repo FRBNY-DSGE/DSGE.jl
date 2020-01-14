@@ -22,46 +22,63 @@ Driver to compute the model solution and augment transition matrices.
     S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
     ```
 """
-function solve(m::AbstractDSGEModel; apply_altpolicy = false, verbose::Symbol = :high)
+function solve(m::AbstractDSGEModel; apply_altpolicy = false,
+               regime_switching::Bool = false, verbose::Symbol = :high)
 
     altpolicy_solve = alternative_policy(m).solve
 
-    if get_setting(m, :solution_method) == :gensys
-        if altpolicy_solve == solve || !apply_altpolicy
+    if regime_switching
+        if get_setting(m, :solution_method) == :gensys
+            if altpolicy_solve == solve || !apply_altpolicy
+                # Get equilibrium condition matrices for each regime
 
-            # Get equilibrium condition matrices
-            Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+                # Solve model for each regime
 
-            # Get equilibrium condition matrices
-            Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+                # Check for LAPACK exception, existence and uniqueness
 
-            # Solve model
-            TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
-
-            # Check for LAPACK exception, existence and uniqueness
-            if eu[1] != 1 || eu[2] != 1
-                throw(GensysError())
+                # Augment states
+            else
+                # Change the policy rule
+                TTTs, RRRs, CCCs = altpolicy_solve(m)
             end
-
-            TTT_gensys = real(TTT_gensys)
-            RRR_gensys = real(RRR_gensys)
-            CCC_gensys = real(CCC_gensys)
-
-            # Augment states
-            TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
         else
-            # Change the policy rule
-            TTT, RRR, CCC = altpolicy_solve(m)
+            error("Solution method $(get_setting(m, :solution_method)) has not been implemented.")
         end
-    elseif get_setting(m, :solution_method) == :klein
-        TTT_jump, TTT_state = klein(m)
+    else
+        if get_setting(m, :solution_method) == :gensys
+            if altpolicy_solve == solve || !apply_altpolicy
 
-        # Transition
-        TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
-        CCC = zeros(n_model_states(m))
+                # Get equilibrium condition matrices
+                Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+
+                # Solve model
+                TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
+
+                # Check for LAPACK exception, existence and uniqueness
+                if eu[1] != 1 || eu[2] != 1
+                    throw(GensysError())
+                end
+
+                TTT_gensys = real(TTT_gensys)
+                RRR_gensys = real(RRR_gensys)
+                CCC_gensys = real(CCC_gensys)
+
+                # Augment states
+                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+            else
+                # Change the policy rule
+                TTT, RRR, CCC = altpolicy_solve(m)
+            end
+        elseif get_setting(m, :solution_method) == :klein
+            TTT_jump, TTT_state = klein(m)
+
+            # Transition
+            TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+            CCC = zeros(n_model_states(m))
+        end
+
+        return TTT, RRR, CCC
     end
-
-    return TTT, RRR, CCC
 end
 
 """
