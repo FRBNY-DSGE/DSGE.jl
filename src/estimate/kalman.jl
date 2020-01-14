@@ -114,35 +114,19 @@ function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
                         start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
 
     T = size(data, 2)
-
-    n_regime1_periods = subtract_quarters(get_setting(m, :date_regime2_start), start_date)
-    # THIS HANDLES ONLY 2 CASES OF REGIME-SWITCHING
-    # It can happen only once (aside from ZLB)
-    # and it can either occur before or after the ZLB (but not both b/c it can happen once only)
-    if !(n_mon_anticipated_shocks(m) > 0 && !isempty(data))
-        regime_inds = [1:n_regime1_periods, (n_regime1_periods+1):T]
-    elseif n_mon_anticipated_shocks(m) > 0 && !isempty(data)
+    if !isempty(data)
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
+            # THIS IS NOT ROBUST TO MULTIPLE REGIMES
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            if n_regime1_periods > n_nozlb_periods
-                if n_regime1_periods < T
-                    regime_inds = [1:n_nozlb_periods, n_nozlb_periods+1:n_regime1_periods,
-                                   n_regime1_periods+1:T]
-                else
-                    regime_inds = [1:n_nozlb_periods, n_nozlb_periods+1:T]
-                end
-            else
-                regime_inds = [1:n_regime1_periods,
-                               (n_regime1_periods+1):n_nozlb_periods,
-                               (n_nozlb_periods+1):T]
-            end
+            n_regime1_periods = subtract_quarters(get_setting(m, :date_regime_switch), start_date)
+            regime_inds::Vector{UnitRange{Int64}} = [1:n_nozlb_periods, (n_nozlb_periods+1):T, (n_regime1_periods+1):T]
         else
-            # if zlb_starts after end of sample, then the whole thing is n_nozlb_periods
-            regime_inds = [1:n_regime1_periods,
-                           (n_regime1_periods+1):T]
+            regime_inds = UnitRange{Int64}[1:T]
         end
+    else
+        regime_inds = UnitRange{Int64}[1:T]
     end
     return regime_inds
 end
@@ -192,8 +176,8 @@ function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::System{S},
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
 end
 
-function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
-                                  start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
+function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
+                             start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
     ### THIS IS WORK IN PROGRES, DOES NOT COVER ALL CASES FOR REGIME SWITCHING, ALSO ONLY FOR SWITCHING JUST ONCE.
     if n_mon_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
