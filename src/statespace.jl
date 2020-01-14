@@ -177,6 +177,18 @@ function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
     return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
 end
 
+function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
+                               measurement::Measurement{T},
+                               pseudo_measurements::Vector{PseudoMeasurement{T}}) where {T<:AbstractFloat}
+
+   #= if length(transitions) != length(measurements)
+        error("The number of Transition (n = $(length(transitions)))" *
+              " and Measurement (n = $(length(measurements))) objects must match.")
+    end=#
+    return RegimeSwitchingSystem(transitions, [measurement; measurement], pseudo_measurements)
+end
+
+
 # Retrieve System correspond to a regime
 function System(system::RegimeSwitchingSystem, regime::Int)
     return System(system.transitions[regime],
@@ -257,7 +269,7 @@ Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                        regime_switching::Bool = false,
+                        regime_switching::Bool = false, num_regimes::Int = 2,
                         verbose::Symbol = :high) where T<:AbstractFloat
 
     solution_method = get_setting(m, :solution_method)
@@ -265,18 +277,27 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # Solve model
     if regime_switching
         if solution_method == :gensys
-            TTTs = Vector{Matrix{T}}(undef,0)
-            RRRs = Vector{Matrix{T}}(undef,0)
-            CCCs = Vector{Vector{T}}(undef,0)
-            transition_equations = Vector{Transition{T}}(undef,0)
+            TTTs = Vector{Matrix{T}}(undef,num_regimes)
+            RRRs = Vector{Matrix{T}}(undef,num_regimes)
+            CCCs = Vector{Vector{T}}(undef,num_regimes)
+            transition_equations = Vector{Transition{T}}(undef,num_regimes)
 
-            transition_equations = Vector{Transition{T}}(undef,length(TTTs))
-            for i = 1:length(TTTs)
+            for i = 1:num_regimes
+                TTTs[i], RRRs[i], CCCs[i] = solve(m; apply_altpolicy = apply_altpolicy,
+                                                  regime_switching = true, regime = i, verbose = verbose)
                 transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])
             end
+            # Measurement eqn doesn't depend on the time-varying parameters (so just pick 1st)
+            measurement_equation = measurement(m, TTTs[1], RRRs[1], CCCs[1])
+
+            pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+            return RegimeSwitchingSystem(transition_equations,
+                                         measurement_equation,
+                                         pseudo_measurement_equations)
+
 
             # Infer which measurement and pseudo-measurement equations to use
-            type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
+        #=    type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
             if hasmethod(measurement, type_tuple)
                 measurement_equations = measurement(m, TTTs, RRRs, CCCs)
             else
@@ -290,7 +311,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                                              pseudo_measurement_equations)
             else
                 return RegimeSwitchingSystem(transition_equations, measurement_equations)
-            end
+            end=#
         else
             throw("solution_method $solution_method has not been implemented.")
         end

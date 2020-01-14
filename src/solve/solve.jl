@@ -23,13 +23,30 @@ Driver to compute the model solution and augment transition matrices.
     ```
 """
 function solve(m::AbstractDSGEModel; apply_altpolicy = false,
-               regime_switching::Bool = false, verbose::Symbol = :high)
+               regime_switching::Bool = false, regime::Int = 1, verbose::Symbol = :high)
 
     altpolicy_solve = alternative_policy(m).solve
 
     if regime_switching
         if get_setting(m, :solution_method) == :gensys
             if altpolicy_solve == solve || !apply_altpolicy
+
+                # Get equilibrium condition matrices
+                Γ0, Γ1, C, Ψ, Π  = eqcond_regimes(m)[regime]
+                # Solve model
+                TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
+
+                # Check for LAPACK exception, existence and uniqueness
+                if eu[1] != 1 || eu[2] != 1
+                    throw(GensysError())
+                end
+
+                TTT_gensys = real(TTT_gensys)
+                RRR_gensys = real(RRR_gensys)
+                CCC_gensys = real(CCC_gensys)
+
+                # Augment states
+                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
                 # Get equilibrium condition matrices for each regime
 
                 # Solve model for each regime
@@ -37,6 +54,7 @@ function solve(m::AbstractDSGEModel; apply_altpolicy = false,
                 # Check for LAPACK exception, existence and uniqueness
 
                 # Augment states
+                return TTT, RRR, CCC
             else
                 # Change the policy rule
                 TTTs, RRRs, CCCs = altpolicy_solve(m)
