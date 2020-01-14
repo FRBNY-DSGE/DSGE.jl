@@ -709,6 +709,8 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                           which_model::Int = 1,
                           plotroot::String = "", ncols::Int64 = 4,
                           bands_pcts::Vector{String} = Vector{String}(undef,0),
+                          bands_alpha1::Float64 = 0.5,
+                          bands_alpha2::Float64 = 0.5,
                           addl_text::String = "")
     # Create file name related strings
     m = which_model == 1 ? m1 : m2
@@ -766,8 +768,8 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                                           forecast_string2 = forecast_string2,
                                           which_model = which_model,
                                           bands_pcts = bands_pcts,
-                                          bands_alpha1 = 0.4,
-                                          bands_alpha2 = 0.4,
+                                          bands_alpha1 = bands_alpha1,
+                                          bands_alpha2 = bands_alpha2,
                                           addl_text = addl_text)
 
             # Plot all variables together
