@@ -152,15 +152,22 @@ function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray, system::Sy
                            P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                            start_date::Date = date_presample_start(m),
                            include_presample::Bool = true,
-                           tol::Float64 = 0.0,
-                           regime_switching::Bool = false) where {S<:AbstractFloat}
+                           tol::Float64 = 0.0) where {S<:AbstractFloat}
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
     regime_inds = zlb_regime_indices(m, data, start_date)
 
+ #   regime_inds = [1:100, 101:size(data, 2)]
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system, start_date)
+  #=  TTTs = fill(TTTs[1], length(TTTs))
+    RRRs = fill(RRRs[1], length(RRRs))
+    CCCs = fill(CCCs[1], length(CCCs))
+    QQs = fill(QQs[1], length(QQs))
+    ZZs = fill(ZZs[1], length(ZZs))
+    DDs = fill(DDs[1], length(DDs))
+    EEs = fill(EEs[1], length(EEs))=#
 
     # If s_0 and P_0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P_0
@@ -185,24 +192,23 @@ function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray,
                            P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                            start_date::Date = date_presample_start(m),
                            include_presample::Bool = true,
-                           tol::Float64 = 0.0,
-                           regime_switching::Bool = false) where {S<:AbstractFloat}
-
+                           tol::Float64 = 0.0) where {S<:AbstractFloat}
+#    @show "regime switching filter like"
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    zlb_regime_inds = zlb_regime_indices(m, data, start_date)
     regime_inds = regime_indices(m, data, start_date)
+    #zlb_regime_inds = zlb_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date)
 
-    #=@show all(TTTs[1] .== TTTs[2])
+  #=  @show all(TTTs[1] .== TTTs[2])
     @show all(RRRs[1] .== RRRs[2])
     @show all(CCCs[1] .== CCCs[2])
     @show all(QQs[1] .== QQs[2])
     @show all(ZZs[1] .== ZZs[2])
     @show all(DDs[1] .== DDs[2])
-    @show all(EEs[1] .== EEs[2]) =#
+    @show all(EEs[1] .== EEs[2])=#
 
     # If s_0 and P_0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P_0

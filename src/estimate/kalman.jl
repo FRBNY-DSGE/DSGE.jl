@@ -115,18 +115,24 @@ function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
                             start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
 
     T = size(data, 2)
-    if n_anticipated_shocks(m) > 0 && !isempty(data)
+
+    n_regime1_periods = subtract_quarters(get_setting(m, :date_regime2_start), start_date)
+
+    if !(n_anticipated_shocks(m) > 0 && !isempty(data))
+        regime_inds = [1:n_regime1_periods, (n_regime1_periods+1):T]
+    elseif n_anticipated_shocks(m) > 0 && !isempty(data)
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            n_regime1_periods = subtract_quarters(get_setting(m, :date_regime2_start), start_date)
-            regime_inds::Vector{UnitRange{Int64}} = [1:n_regime1_periods, (n_regime1_periods+1):n_nozlb_periods, (n_nozlb_periods+1):T]
+            regime_inds = [1:n_regime1_periods,
+                           (n_regime1_periods+1):n_nozlb_periods,
+                           (n_nozlb_periods+1):T]
         else
-            regime_inds = UnitRange{Int64}[1:T]
+            # if zlb_starts after end of sample, then the whole thing is n_nozlb_periods
+            regime_inds = [1:n_regime1_periods,
+                           (n_regime1_periods+1):T]
         end
-    else
-        regime_inds = UnitRange{Int64}[1:T]
     end
     return regime_inds
 end
@@ -192,19 +198,20 @@ function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchi
 
             shock_inds = inds_shocks_no_ant(m)
             QQ_ZLB = system[2][:QQ]
-            QQ_preZLB_R1 = zeros(size(QQ_ZLB))
+            QQ_preZLB_R1 = zeros(size(system[1][:QQ]))
             QQ_preZLB_R1[shock_inds, shock_inds] = system[1][:QQ][shock_inds, shock_inds]
-            QQ_preZLB_R2 = zeros(size(QQ_ZLB))
+            QQ_preZLB_R2 = zeros(size(system[2][:QQ]))
             QQ_preZLB_R2[shock_inds, shock_inds] = system[2][:QQ][shock_inds, shock_inds]
-            QQs = Matrix{S}[QQ_preZLB_R1, QQ_preZLB_R1, QQ_ZLB]
+            QQs = Matrix{S}[QQ_preZLB_R1, QQ_preZLB_R2, QQ_ZLB]
 
         elseif date_zlb_start(m) < start_date
             n_regimes = 1
             QQs = Matrix{S}[system[:QQ]]
         end
     else
-        n_regimes = 1
-        QQs = Matrix{S}[system[:QQ]]
+#        @show "no ant"
+        n_regimes = 2
+        QQs = Matrix{S}[system[1][:QQ], system[2][:QQ]]
     end
 
     TTTs = vcat([system[1][:TTT]], fill(system[2][:TTT], n_regimes-1))

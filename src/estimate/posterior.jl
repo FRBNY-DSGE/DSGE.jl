@@ -162,6 +162,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
     end
 
     # Compute state-space system
+#    @show regime_switching
     system = try
         compute_system(m, verbose = verbose, regime_switching = regime_switching, n_regimes = n_regimes)
     catch err
@@ -180,7 +181,6 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
                                                tuning = get_setting(m, :tuning))) + ψ_p * penalty
         elseif use_chand_recursion == false
             return ψ_l * sum(filter_likelihood(m, data, system;
-                                               regime_switching = regime_switching,
                                                include_presample = false, tol = tol)) +
                                                    ψ_p * penalty
         else
