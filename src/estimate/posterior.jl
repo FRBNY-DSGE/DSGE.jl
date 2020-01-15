@@ -38,9 +38,9 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 """
 function posterior(m::AbstractDSGEModel{T}, data::AbstractArray;
                    sampler::Bool = false, ϕ_smc::Float64 = 1.,
-                   catch_errors::Bool = false) where {T<:AbstractFloat}
+                   catch_errors::Bool = false, regime_switching::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
-    like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
+    like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors, regime_switching = regime_switching)
     post = ϕ_smc*like + prior(m)
     return post
 end
@@ -116,8 +116,10 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
                     catch_errors::Bool = false,
                     use_chand_recursion::Bool = false,
                     regime_switching::Bool = false,
+                    n_regimes::Int = 2,
                     tol::Float64 = 0.0,
                     verbose::Symbol = :high) where {T<:AbstractFloat}
+#    @show regime_switching
     catch_errors = catch_errors | sampler
     use_penalty  = try get_setting(m, :use_likelihood_penalty) catch; false end
     auto_reject  = try get_setting(m, :auto_reject) catch; false end
@@ -161,7 +163,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
 
     # Compute state-space system
     system = try
-        compute_system(m, verbose = verbose, regime_switching = regime_switching)
+        compute_system(m, verbose = verbose, regime_switching = regime_switching, n_regimes = n_regimes)
     catch err
         if catch_errors && (isa(err, GensysError) || isa(err, KleinError))
             return -Inf
@@ -169,7 +171,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
             rethrow(err)
         end
     end
-    @show typeof(system)
+#    @show typeof(system)
 
     # Return total log-likelihood, excluding the presample
     try

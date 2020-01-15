@@ -269,20 +269,21 @@ Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                        regime_switching::Bool = false, num_regimes::Int = 2,
+                        regime_switching::Bool = false, n_regimes::Int = 2,
                         verbose::Symbol = :high) where T<:AbstractFloat
 
     solution_method = get_setting(m, :solution_method)
-
+#    @show "AAA"
     # Solve model
     if regime_switching
         if solution_method == :gensys
-            TTTs = Vector{Matrix{T}}(undef,num_regimes)
-            RRRs = Vector{Matrix{T}}(undef,num_regimes)
-            CCCs = Vector{Vector{T}}(undef,num_regimes)
-            transition_equations = Vector{Transition{T}}(undef,num_regimes)
+            TTTs = Vector{Matrix{T}}(undef,n_regimes)
+            RRRs = Vector{Matrix{T}}(undef,n_regimes)
+            CCCs = Vector{Vector{T}}(undef,n_regimes)
+            transition_equations = Vector{Transition{T}}(undef,n_regimes)
 
-            for i = 1:num_regimes
+            for i = 1:n_regimes
+#                @show i
                 TTTs[i], RRRs[i], CCCs[i] = solve(m; apply_altpolicy = apply_altpolicy,
                                                   regime_switching = true, regime = i, verbose = verbose)
                 transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])

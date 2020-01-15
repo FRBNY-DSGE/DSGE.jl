@@ -120,7 +120,7 @@ function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
             error("Start date $start_date must be >= date_presample_start(m)")
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            n_regime1_periods = subtract_quarters(get_setting(m, :date_regime_switch), start_date)
+            n_regime1_periods = subtract_quarters(get_setting(m, :date_regime2_start), start_date)
             regime_inds::Vector{UnitRange{Int64}} = [1:n_regime1_periods, (n_regime1_periods+1):n_nozlb_periods, (n_nozlb_periods+1):T]
         else
             regime_inds = UnitRange{Int64}[1:T]
@@ -180,22 +180,56 @@ end
 
 function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
                              start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
+
     if n_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
-        # TODO: This technically doesn't handle the case where the end_date of the sample
-        # is before the start of the ZLB
-        elseif date_presample_start(m) <= start_date <= get_setting(m, :date_regime_switch) #date_zlb_start(m)
+            # TODO: This technically doesn't handle the case where the end_date of the sample
+            # is before the start of the ZLB
+        elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
             n_regimes = 3
 
             shock_inds = inds_shocks_no_ant(m)
             QQ_ZLB = system[2][:QQ]
             QQ_preZLB_R1 = zeros(size(QQ_ZLB))
-            QQ_preZLB_R2 = zeros(size(QQ_ZLB))
             QQ_preZLB_R1[shock_inds, shock_inds] = system[1][:QQ][shock_inds, shock_inds]
-            QQ_preZLB_R2[shock_inds, shock_inds] = system[1][:QQ][shock_inds, shock_inds]
-            QQs = Matrix{S}[QQ_preZLB_R1, QQ_preZLB_R2, QQ_ZLB]
+            QQ_preZLB_R2 = zeros(size(QQ_ZLB))
+            QQ_preZLB_R2[shock_inds, shock_inds] = system[2][:QQ][shock_inds, shock_inds]
+            QQs = Matrix{S}[QQ_preZLB_R1, QQ_preZLB_R1, QQ_ZLB]
+
+        elseif date_zlb_start(m) < start_date
+            n_regimes = 1
+            QQs = Matrix{S}[system[:QQ]]
+        end
+    else
+        n_regimes = 1
+        QQs = Matrix{S}[system[:QQ]]
+    end
+
+    TTTs = vcat([system[1][:TTT]], fill(system[2][:TTT], n_regimes-1))
+    RRRs = vcat([system[1][:RRR]], fill(system[2][:RRR], n_regimes-1))
+    CCCs = vcat([system[1][:CCC]], fill(system[2][:CCC], n_regimes-1))
+    ZZs  = vcat([system[1][:ZZ]], fill(system[2][:ZZ], n_regimes-1))
+    DDs  = vcat([system[1][:DD]], fill(system[2][:DD], n_regimes-1))
+    EEs  = vcat([system[1][:EE]], fill(system[2][:EE], n_regimes-1))
+
+    return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
+end
+    #=  if n_anticipated_shocks(m) > 0
+        if start_date < date_presample_start(m)
+            error("Start date $start_date must be >= date_presample_start(m)")
+
+        # TODO: This technically doesn't handle the case where the end_date of the sample
+        # is before the start of the ZLB
+        elseif date_presample_start(m) <= start_date <= get_setting(m, :date_regime2_start) #date_zlb_start(m)
+            n_regimes = 3
+
+            shock_inds = inds_shocks_no_ant(m)
+            QQ_ZLB = system[2][:QQ]
+            QQ_preZLB = zeros(size(QQ_ZLB))
+            QQ_preZLB[shock_inds, shock_inds] = QQ_ZLB[shock_inds, shock_inds]
+            QQs = Matrix{S}[QQ_preZLB, QQ_preZLB, QQ_ZLB]
 
         elseif date_zlb_start(m) < start_date
             n_regimes = 2
@@ -214,4 +248,4 @@ function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchi
     EEs  = vcat([system[1][:EE]], fill(system[2][:EE], n_regimes-1))
 
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
-end
+end=#
