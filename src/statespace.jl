@@ -273,6 +273,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         verbose::Symbol = :high) where T<:AbstractFloat
 
     solution_method = get_setting(m, :solution_method)
+#    @show regime_switching
 #    @show "AAA"
     # Solve model
     if regime_switching
