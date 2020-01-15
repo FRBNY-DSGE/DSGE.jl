@@ -333,8 +333,8 @@ function pseudo_measurement(m::Model1002{T},
 
 
         ## Fundameantal inflation related pseudo-obs
-        if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20",
-                          "ss21", "ss22", "ss23","ss24", "ss25", "ss26"]
+        if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"] #,
+                          # "ss21", "ss22", "ss23","ss24", "ss25", "ss26"]
             # Compute coefficient on Sinf
             betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
             if subspec(m) in ["ss21", "ss22", "ss25", "ss26"] && reg == 2
