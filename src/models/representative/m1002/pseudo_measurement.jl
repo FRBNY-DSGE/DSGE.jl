@@ -31,7 +31,7 @@ function pseudo_measurement(m::Model1002{T},
         # Construct pseudo-obs from integrated states first
         ZZ_pseudo[pseudo[:laborproductivity], endo[:y_t]] = 1.
         ZZ_pseudo[pseudo[:laborproductivity], endo[:L_t]] = -1.
-        ZZ_pseudo[pseudo[:laborproductivity], endo_addl[:cum_z_t]] = 1.
+        # ZZ_pseudo[pseudo[:laborproductivity], endo_addl[:cum_z_t]] = 1.
         DD_pseudo[pseudo[:laborproductivity]] = 100. * log(m[:ystar] / m[:Lstar])
 
         # Remove integrated states (e.g. states w/unit roots)
@@ -132,8 +132,9 @@ function pseudo_measurement(m::Model1002{T},
     ## Nominal Wage Growth
     ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
     ZZ_pseudo[pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
     ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
-    DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) + 100*(exp(m[:z_star])-1)
 
     ## labor share
     if haskey(m.settings, :add_laborshare_measurement)
@@ -147,7 +148,7 @@ function pseudo_measurement(m::Model1002{T},
 
 
     ## Fundamental inflation related pseudo-obs
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         # Compute coefficient on Sinf
         betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
         if subspec in ["ss21", "ss22", "ss25", "ss26"] && reg == 2
