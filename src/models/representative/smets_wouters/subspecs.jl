@@ -176,14 +176,14 @@ Initializes subspec 6 of `SmetsWouters`. 'Diffuse prior' a la Herbst and Schorfh
 
 """
 function ss6!(m::SmetsWouters)
-    m <= parameter(:α, 0.24, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.15), fixed=false,
+    m <= parameter(:α, 0.24, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Normal(0.30, 0.15), fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
                    tex_label="\\alpha")
 
-    m <= parameter(:ζ_p, 0.7813, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+    m <= parameter(:ζ_p, 0.7813, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).", tex_label="\\zeta_p")
 
-    m <= parameter(:ι_p, 0.3291, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+    m <= parameter(:ι_p, 0.3291, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attributed to steady-state inflation.",
                    tex_label="\\iota_p")
 
@@ -203,22 +203,22 @@ function ss6!(m::SmetsWouters)
                    description="S'': The second derivative of households' cost of adjusting investment.",
                    tex_label="S''")
 
-    m <= parameter(:h, 0.7205, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+    m <= parameter(:h, 0.7205, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="h: Consumption habit persistence.",
                    tex_label="h")
 
-    m <= parameter(:ppsi, 0.2648, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+    m <= parameter(:ppsi, 0.2648, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="ppsi: Utilization costs.",
                    tex_label="\\psi")
 
     m <= parameter(:ν_l, 2.8401, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(), Normal(2.0, 2.25), fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", tex_label="\\nu_l")
 
-    m <= parameter(:ζ_w, 0.7937, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+    m <= parameter(:ζ_w, 0.7937, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
                    tex_label="\\zeta_w")
 
-    m <= parameter(:ι_w, 0.4425, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+    m <= parameter(:ι_w, 0.4425, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="ι_w: The weight attributed to last period's wage in wage indexation. (1-ι_w) is the weight attributed to steady-state wages.",
                    tex_label="\\iota_w")
 
@@ -248,7 +248,7 @@ function ss6!(m::SmetsWouters)
     m <= parameter(:σ_c, 1.2312, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(), Normal(1.5, 1.11), fixed=false,
                    tex_label="\\sigma_{c}")
 
-    m <= parameter(:ρ, .8258, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+    m <= parameter(:ρ, .8258, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
 
@@ -273,32 +273,32 @@ m <= parameter(:g_star, 0.1800, fixed=true,
                description="g_star: 1 - (c_star + i_star)/y_star.",
                tex_label="g_*")
 # exogenous processes - autocorrelation
-m <= parameter(:ρ_g, 0.9930, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:ρ_g, 0.9930, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_g: AR(1) coefficient in the government spending process.",
                tex_label="\\rho_g")
 
-m <= parameter(:ρ_b, 0.2703, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:ρ_b, 0.2703, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_b: AR(1) coefficient in the intertemporal preference shifter process.",
                tex_label="\\rho_b")
 
-m <= parameter(:ρ_μ, 0.5724, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:ρ_μ, 0.5724, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_μ: AR(1) coefficient in capital adjustment cost process.",
                tex_label="\\rho_{\\mu}")
 
-m <= parameter(:ρ_z, 0.9676, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:ρ_z, 0.9676, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_z: AR(1) coefficient in the technology process.",
                tex_label="\\rho_z")
 
-m <= parameter(:ρ_λ_f, 0.8692, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:ρ_λ_f, 0.8692, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
                tex_label="\\rho_{\\lambda_f}")
 
-m <= parameter(:ρ_λ_w, 0.9546, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:ρ_λ_w, 0.9546, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.", # CHECK THIS
                tex_label="\\rho_{\\lambda_w}")
 
 # monetary policy shock - see eqcond
-m <= parameter(:ρ_rm, 0.3000, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:ρ_rm, 0.3000, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="ρ_rm: AR(1) coefficient in the monetary policy shock process.", # CHECK THIS
                tex_label="\\rho_{r^m}")
 
@@ -331,15 +331,15 @@ m <= parameter(:σ_rm, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponen
                tex_label="\\sigma_{r^m}")
 
 
-m <= parameter(:η_gz, 0.0500, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:η_gz, 0.0500, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="η_gz: Correlate g and z shocks.",
                tex_label="\\eta_{gz}")
 
-m <= parameter(:η_λ_f, 0.7652, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:η_λ_f, 0.7652, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="η_λ_f: Moving average component in the price markup shock.",
                tex_label="\\eta_{\\lambda_f}")
 
-m <= parameter(:η_λ_w, 0.8936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
+m <= parameter(:η_λ_w, 0.8936, (1e-5, 0.999), (1e-5, 0.999),ModelConstructors.SquareRoot(), Distributions.Uniform(0.0, 1.0), fixed=false,
                description="η_λ_w: Moving average component in the wage markup shock.",
                tex_label="\\eta_{\\lambda_w}")
 
