@@ -864,9 +864,6 @@ function ss29!(m::Model1002)
                    tex_label="\\zeta_p^2")
 end
 
-
-aaa
-
 """
 ```
 ss41!(m::Model1002)
