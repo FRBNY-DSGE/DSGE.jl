@@ -55,6 +55,10 @@ function init_subspec!(m::Model1002)
         return ss28!(m)
     elseif subspec(m) == "ss29"
         return ss29!(m)
+    elseif subspec(m) == "ss30"
+        return ss30!(m)
+    elseif subspec(m) == "ss31"
+        return ss31!(m)
     elseif subspec(m) == "ss40"
         return ss40!(m)
     else
@@ -860,4 +864,28 @@ function ss29!(m::Model1002)
     m <= parameter(:ζ_p2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                    description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p^2")
+end
+
+"""
+```
+ss30!(m::Model1002)
+```
+
+Initializes subspec 30 of `Model1002`. This subspecification is the same as ss10,
+but we use it to save IRFs to a Cholesky shock with the Baa-Aaa spread ordered first.
+"""
+function ss30!(m::Model1002)
+    ss10!(m)
+end
+
+"""
+```
+ss31!(m::Model1002)
+```
+
+Initializes subspec 31 of `Model1002`. This subspecification is the same as ss10,
+but we use it to save IRFs to a Cholesky shock with the nominal FFR ordered last.
+"""
+function ss31!(m::Model1002)
+    ss10!(m)
 end
