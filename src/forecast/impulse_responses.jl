@@ -355,7 +355,7 @@ function impulse_responses(m::AbstractRepModel,
         # Compute Cholesky shock
         obs_cov_mat = (system[:ZZ] * system[:RRR]) * system[:QQ] *
             (system[:ZZ] * system[:RRR])'
-        cholmat = cholesky((obs_cov_mat + obs_cov_mat') ./ 2).U'
+        cholmat = cholesky((obs_cov_mat + obs_cov_mat') ./ 2).L
 
         # Filter and smooth Cholesky shock
         if use_pinv
@@ -435,11 +435,12 @@ function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tupl
     end
     eigout = eigen(variance)
     q = eigout.vectors[:, argmax(eigout.values)]
+    q .*= sign(q[n_obs_var])
 
     # Compute IRFs
     states = zeros(S, nstates, horizon)
     shocks_augmented      = zeros(S, nshocks, horizon)
-    shocks_augmented[:,1] = flip_shocks ? -(sqrt.(system[:QQ]) * q) : (sqrt.(system[:QQ]) * q) # q -> negative shock. To stick with convention, "flip_shock" should yield a positive shock.
+    shocks_augmented[:,1] = flip_shocks ? (sqrt.(system[:QQ]) * q) : -(sqrt.(system[:QQ]) * q) # q -> positive shock. To stick with convention, "flip_shock" should yield a positive shock.
     states, obs, pseudo = forecast(system, zeros(S, nstates), shocks_augmented)
 
     if get_shocks
