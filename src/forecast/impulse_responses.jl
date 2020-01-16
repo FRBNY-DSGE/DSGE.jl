@@ -320,7 +320,8 @@ function impulse_responses(m::AbstractRepModel,
                            cholesky_obs_shock::Bool = false,
                            observables_order::Vector{<:Int} =
                            collect(values(m.observables)),
-                           get_shocks::Bool = false) where {S<:Real}
+                           get_shocks::Bool = false,
+                           use_pinv::Bool = true) where {S<:Real}
     # Set up IRFs
     nshocks = size(system[:RRR], 2)
     nstates = size(system[:TTT], 1)
@@ -336,29 +337,35 @@ function impulse_responses(m::AbstractRepModel,
         obs_cov_mat = (system[:ZZ] * system[:RRR]) * system[:QQ] *
             (system[:ZZ] * system[:RRR])'
         cholmat = cholesky((obs_cov_mat + obs_cov_mat') ./ 2).U'
-        deviation = cholmat * shock_vector
 
         # Filter and smooth Cholesky shock
-        df = DataFrame(date = date_forecast_start(m))
-        mobs = collect(keys(m.observables))
-        for (dev_i,obs_i) in enumerate(observables_order)
-            df[!,mobs[obs_i]] .= deviation[dev_i]
-        end
+        if use_pinv
+            struct_shock_vector = pinv(system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])) *
+                cholmat * shock_vector
+        else
+            df = DataFrame(date = date_forecast_start(m))
+            mobs = collect(keys(m.observables))
+            for (dev_i,obs_i) in enumerate(observables_order)
+                df[!,mobs[obs_i]] .= deviation[dev_i]
+            end
 
-        for (k,new_i) in zip(keys(m.observables), observables_order)
-            m.observables[k] = new_i
-        end
-        _, struct_shock_vector, _ = smooth(m, df, system,
-                                           zeros(S, nstates),
-                                           zeros(S, nstates, nstates),
-                                           draw_states = false,
-                                           include_presample = true,
-                                           in_sample = false)
+            for (k,new_i) in zip(keys(m.observables), observables_order)
+                m.observables[k] = new_i
+            end
+            _, struct_shock_vector, _ = smooth(m, df, system,
+                                               zeros(S, nstates),
+                                               zeros(S, nstates, nstates),
+                                               draw_states = false,
+                                               include_presample = true,
+                                               in_sample = false)
 
-        for (old_i,k) in enumerate(keys(m.observables))
-            m.observables[k] = old_i
+            for (old_i,k) in enumerate(keys(m.observables))
+                m.observables[k] = old_i
+            end
         end
-    elseif length(shock_vector) != nshocks
+    elseif length(shock_vector) == nshocks
+        struct_shock_vector = shock_vector
+    else
         if length(shock_vector) == nobs
             error("Length of shock_vector $(length(shock_vector)) does not match" *
                   " the number of exogenous shocks $nshocks. The length matches the " *
@@ -375,13 +382,8 @@ function impulse_responses(m::AbstractRepModel,
     shocks_augmented[:,1] = flip_shocks ? struct_shock_vector : -struct_shock_vector # negative shock by default
     states, obs, pseudo = forecast(system, s₀, shocks_augmented)
 
-    # Check Cholesky shock worked
-    if cholesky_obs_shock
-        chol_check = (obs[:,1] ≈ deviation) || (obs[:,1] ≈ -deviation)
-        @assert chol_check "Cholesky shock does not match impulse response of observables."
-    end
-
     if get_shocks
+        deviation = cholmat * shock_vector
         return states, obs, pseudo, deviation, struct_shock_vector
     else
         return states, obs, pseudo
