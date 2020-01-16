@@ -292,10 +292,16 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 measurement_equations[i] = measurement(m, TTTs[i], RRRs[i], CCCs[i], regime = i)
             end
 
-            pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
-            return RegimeSwitchingSystem(transition_equations,
-                                         measurement_equations,
-                                         pseudo_measurement_equations)
+            type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
+            if hasmethod(pseudo_measurement, type_tuple)
+                pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+                return RegimeSwitchingSystem(transition_equations,
+                                             measurement_equations,
+                                             pseudo_measurement_equations)
+            else
+                return RegimeSwitchingSystem(transition_equations,
+                                             measurement_equations)
+            end
 
 
             # Infer which measurement and pseudo-measurement equations to use

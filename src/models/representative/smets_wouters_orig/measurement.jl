@@ -21,7 +21,7 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::SmetsWoutersOrig{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Vector{T}, regime::Int = 1) where T<:AbstractFloat
+                                       CCC::Vector{T}; regime::Int = 1) where T<:AbstractFloat
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
     exo       = m.exogenous_shocks
