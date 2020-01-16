@@ -75,9 +75,8 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
         TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
     end
     if get_setting(m, :add_laborproductivity_measurement)
-        TTT_aug[endo_new[:cum_z_t1], endo_new[:cum_z_t]] = 1.0
-        TTT_aug[endo_new[:cum_z_t],  endo[:z_t]] = 1.0
-        TTT_aug[endo_new[:cum_z_t],  endo_new[:cum_z_t1]] = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo[:z_t]]         = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo_new[:cum_z_t]] = 1.0
     end
 
     # Expected inflation
@@ -86,8 +85,8 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     # The 8th column of the addition to TTT corresponds to "v_lr" which is set equal to
     # e_lr – measurement errors for the two real wage observables built in
     # as exogenous structural shocks.
-    TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_t]]               = m[:ρ_lr]
-    TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_t]]             = m[:ρ_tfp]
+    TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_t]]           = m[:ρ_lr]
+    TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_t]]         = m[:ρ_tfp]
     TTT_aug[endo_new[:e_gdpdef_t], endo_new[:e_gdpdef_t]]   = m[:ρ_gdpdef]
     TTT_aug[endo_new[:e_corepce_t], endo_new[:e_corepce_t]] = m[:ρ_corepce]
     TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_t]]         = m[:ρ_gdp]
@@ -100,12 +99,13 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
              (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
         (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         κcoef = κ * (1 + m[:ι_p] * betabar)
-        sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT) # infinite horizon expectation of state vector
+        # infinite horizon expectation of state vector
+        sₜ∞ = inv(Matrix{Float64}(I,size(TTT)...) - betabar * TTT)
 
         TTT_aug[endo_new[:Sinf_t], 1:n_endo] = sₜ∞[endo[:mc_t],:]
-        TTT_aug[endo_new[:πtil_t], endo_new[:Sinf_t]] = κcoef
-        TTT_aug[endo_new[:πtil_t], endo_new[:πtil_t1]] = m[:ι_p]
-        TTT_aug[endo_new[:πtil_t1], endo_new[:πtil_t]] = 1.
+        TTT_aug[endo_new[:πtil_t],  endo_new[:Sinf_t]]  = κcoef
+        TTT_aug[endo_new[:πtil_t],  endo_new[:πtil_t1]] = m[:ι_p]
+        TTT_aug[endo_new[:πtil_t1], endo_new[:πtil_t]]  = 1.
     end
 
     ### RRR modfications

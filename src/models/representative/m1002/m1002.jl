@@ -161,8 +161,8 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states_augmented, :e_tfp_t1)
     end
     if get_setting(m, :add_laborproductivity_measurement)
-        push!(endogenous_states_augmented, :cum_z_t, :cum_z_t1)
-        m <= Setting(:integrated_series, [:cum_z_t, :cum_z_t1])
+        push!(endogenous_states_augmented, :cum_z_t)
+        m <= Setting(:integrated_series, [:cum_z_t])
     end
 
     # Observables
