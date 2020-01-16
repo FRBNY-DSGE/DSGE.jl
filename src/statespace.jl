@@ -282,19 +282,19 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             RRRs = Vector{Matrix{T}}(undef,n_regimes)
             CCCs = Vector{Vector{T}}(undef,n_regimes)
             transition_equations = Vector{Transition{T}}(undef,n_regimes)
+            measurement_equations = Vector{Measurement{T}}(undef,n_regimes)
 
             for i = 1:n_regimes
 #                @show i
                 TTTs[i], RRRs[i], CCCs[i] = solve(m; apply_altpolicy = apply_altpolicy,
                                                   regime_switching = true, regime = i, verbose = verbose)
                 transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])
+                measurement_equations[i] = measurement(m, TTTs[i], RRRs[i], CCCs[i], regime = i)
             end
-            # Measurement eqn doesn't depend on the time-varying parameters (so just pick 1st)
-            measurement_equation = measurement(m, TTTs[1], RRRs[1], CCCs[1])
 
             pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
             return RegimeSwitchingSystem(transition_equations,
-                                         measurement_equation,
+                                         measurement_equations,
                                          pseudo_measurement_equations)
 
 
