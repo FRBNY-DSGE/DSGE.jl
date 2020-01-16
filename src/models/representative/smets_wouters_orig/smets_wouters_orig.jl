@@ -306,6 +306,32 @@ function init_parameters!(m::SmetsWoutersOrig)
                    description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
                    tex_label="\\psi_3")
 
+  if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"]
+      m <= parameter(:ζ_p2, 0.7813, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                     description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                     tex_label="\\zeta_p")
+  end
+
+
+  if subspec(m) in ["ss23", "ss24", "ss25", "ss26", "ss28", "ss29", "ss43", "ss44"]
+      m <= parameter(:ψ12, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Distributions.Normal(1.5, 0.25), fixed=false,
+                     description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                     tex_label="\\psi_1")
+
+      m <= parameter(:ρ2, .8258, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                     description="ρ: The degree of inertia in the monetary policy rule.",
+                     tex_label="\\rho_R")
+
+      m <= parameter(:ψ22, 0.0893, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Distributions.Normal(0.12, 0.05), fixed=false,
+                     description="ψ₂: Weight on output gap in monetary policy rule.",
+                     tex_label="\\psi_2")
+
+      m <= parameter(:ψ32, 0.2239, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Distributions.Normal(0.12, 0.05), fixed=false,
+                     description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                     tex_label="\\psi_3")
+  end
+
+
     m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
                    description="π_star: The steady-state rate of inflation.",
                    tex_label="\\pi_*")
@@ -399,6 +425,37 @@ function init_parameters!(m::SmetsWoutersOrig)
 
     m <= parameter(:σ_λ_w, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{\\lambda_w}")
+
+   if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44"]
+       # exogenous processes - standard deviation
+       m <= parameter(:σ_z2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+   end
 
     # steady states
     m <= SteadyStateParameter(:Rstarn, NaN, tex_label="\\R_*_n")

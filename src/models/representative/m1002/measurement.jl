@@ -21,7 +21,7 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::Model1002{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}) where {T<:AbstractFloat}
+                     CCC::Vector{T}; regime::Int = 1) where {T<:AbstractFloat}
 
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
@@ -132,24 +132,45 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end
 
-    QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
-    QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
-    QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
-    QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil]^2
-    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
-    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
-    QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2
-    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω]^2
-    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e]^2
-    QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ]^2
-    QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star]^2
-    QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr]^2
-    QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p]^2
-    QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp]^2
-    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef]^2
-    QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce]^2
-    QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
-    QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
+    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44"] && regime == 2
+        QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g2]^2
+        QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b2]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ2]^2
+        QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil2]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f2]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w2]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m2]^2
+        QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω2]^2
+        QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e2]^2
+        QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ2]^2
+        QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star2]^2
+        QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr2]^2
+        QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p2]^2
+        QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp2]^2
+        QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef2]^2
+        QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce2]^2
+        QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp2]^2
+        QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi2]^2
+    else
+        QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
+        QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
+        QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2
+        QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω]^2
+        QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e]^2
+        QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ]^2
+        QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star]^2
+        QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr]^2
+        QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p]^2
+        QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp]^2
+        QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef]^2
+        QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce]^2
+        QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
+        QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
+    end
 
     # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_anticipated_shocks(m)
@@ -158,7 +179,11 @@ function measurement(m::Model1002{T},
         if subspec(m) == "ss11"
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_anticipated_shocks(m)
         else
-            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+            if subspec(m) in ["ss27", "ss28", "ss29"] && regime == 2
+                QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$(i)2")]^2
+            else
+                QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+            end
         end
     end
 

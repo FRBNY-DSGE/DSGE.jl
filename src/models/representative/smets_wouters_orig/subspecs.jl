@@ -214,12 +214,12 @@ end
 
 """
 ```
-ss21!(m::Model1002)
+ss21!(m::SmetsWoutersOrig)
 ```
 
 Has two ζ_p parameters for the regime-switching estimation of DSGE. Loose prior!
 """
-function ss21!(m::Model1002)
+function ss21!(m::SmetsWoutersOrig)
     m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
                    description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
@@ -231,12 +231,12 @@ end
 
 """
 ```
-ss22!(m::Model1002)
+ss22!(m::SmetsWoutersOrig)
 ```
 
 Has two ζ_p parameters for the regime-switching estimation of DSGE. Standard prior!
 """
-function ss22!(m::Model1002)
+function ss22!(m::SmetsWoutersOrig)
     m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                    description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
@@ -248,12 +248,12 @@ end
 
 """
 ```
-ss23!(m::Model1002)
+ss23!(m::SmetsWoutersOrig)
 ```
 
 Has two of the MP rule parameters for the regime-switching estimation of DSGE. Loose prior!
 """
-function ss23!(m::Model1002)
+function ss23!(m::SmetsWoutersOrig)
     m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
@@ -290,12 +290,12 @@ end
 
 """
 ```
-ss24!(m::Model1002)
+ss24!(m::SmetsWoutersOrig)
 ```
 
 Has two of the MP rule parameters for the regime-switching estimation of DSGE. Standard prior
 """
-function ss24!(m::Model1002)
+function ss24!(m::SmetsWoutersOrig)
     m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
@@ -331,11 +331,11 @@ end
 
 """
 ```
-ss25!(m::Model1002)
+ss25!(m::SmetsWoutersOrig)
 ```
 Has two of the MP rule parameters and zeta_p for the regime-switching estimation of DSGE. Loose prior!
 """
-function ss25!(m::Model1002)
+function ss25!(m::SmetsWoutersOrig)
     m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
@@ -378,12 +378,12 @@ end
 
 """
 ```
-ss26!(m::Model1002)
+ss26!(m::SmetsWoutersOrig)
 ```
 
 Has two of the MP rule parameters and zeta_p for the regime-switching estimation of DSGE. Standard prior
 """
-function ss26!(m::Model1002)
+function ss26!(m::SmetsWoutersOrig)
     m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
@@ -428,12 +428,12 @@ end
 
 """
 ```
-ss27!(m::Model1002)
+ss27!(m::SmetsWoutersOrig)
 ```
 
 Has two of each shock's sigma for the regime-switching esitmation of DSGE. Standard prior (because loose prior is the same for these)
 """
-function ss27!(m::Model1002)
+function ss27!(m::SmetsWoutersOrig)
     m <= parameter(:σ_g2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
@@ -502,12 +502,12 @@ end
 
 """
 ```
-ss28!(m::Model1002)
+ss28!(m::SmetsWoutersOrig)
 ```
 
  Has two of each shock's sigma and two zeta_p and two of each MP rule's parameters for the regime-switching esitmation of DSGE. Loose prior (but the sigmas have same as normal because their loose prior is same as standard)
 """
-function ss28!(m::Model1002)
+function ss28!(m::SmetsWoutersOrig)
     m <= parameter(:σ_g2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
@@ -616,12 +616,12 @@ end
 
 """
 ```
-ss29!(m::Model1002)
+ss29!(m::SmetsWoutersOrig)
 ```
 
 Has two of each shock's sigma and two zeta_p and two of each MP rule's parameters for the regime-switching esitmation of DSGE. Standard prior (but the sigmas have same as normal because their loose prior is same as standard)
 """
-function ss29!(m::Model1002)
+function ss29!(m::SmetsWoutersOrig)
     m <= parameter(:σ_g2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
@@ -717,7 +717,7 @@ function ss29!(m::Model1002)
 
     m <= parameter(:ρ2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
-               tex_label="\ρ_R")
+               tex_label="\\ρ_R")
 
     m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                    description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
