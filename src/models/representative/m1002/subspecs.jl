@@ -67,6 +67,8 @@ function init_subspec!(m::Model1002)
         return ss43!(m)
     elseif subspec(m) == "ss44"
         return ss44!(m)
+    elseif subspec(m) == "ss51"
+        return ss51!(m)
     else
         error("This subspec is not defined.")
     end
@@ -1301,4 +1303,16 @@ function ss44!(m::Model1002)
     m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
+end
+
+"""
+```
+ss51!(m::Model1002)
+```
+
+Two regimes for all parameters.
+"""
+function ss51!(m::Model1002)
+    println("ss51: All things are inside the model definition!")
+    nothing
 end
