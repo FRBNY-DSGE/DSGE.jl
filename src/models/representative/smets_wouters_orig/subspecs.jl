@@ -41,6 +41,8 @@ function init_subspec!(m::SmetsWoutersOrig)
         return ss43!(m)
     elseif subspec(m) == "ss44"
         return ss44!(m)
+    elseif subspec(m) == "ss51"
+        return ss51!(m)
     else
         error("This subspec is not defined.")
     end
