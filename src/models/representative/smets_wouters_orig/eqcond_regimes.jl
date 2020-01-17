@@ -196,21 +196,21 @@ function eqcond_regimes(m::SmetsWoutersOrig)
             # instantiation of a model object. In this way,
             # we can back out the correct markup shock after estimating
             # on the more numerically stable implementation we usually use.
-            κnum = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
-                    (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))         # kappa numerator
-            fix_ζ_p = get_setting(m, :fix_ζ_p)
-            κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
-                    (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))         # kappa denominator
+            κnum = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])))* #m[:zstar]))*
+                    (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c]))) #*m[:zstar]))         # kappa numerator
+            fix_ζ_p = m[:ζ_p2]
+            κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])))* #m[:zstar]))*
+                    (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c]))) #*m[:zstar]))         # kappa denominator
             Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
         elseif subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"]
             if regime == 1
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -1.
             elseif regime == 2
-                κnum = ((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
-                        (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))         # kappa numerator
+                κnum = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])))* #m[:zstar]))*
+                        (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c]))) #*m[:zstar]))         # kappa numerator
                 fix_ζ_p = m[:ζ_p2]
-                κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
-                        (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))         # kappa denominator
+                κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])))* #m[:zstar]))*
+                        (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c]))) #*m[:zstar]))         # kappa denominator
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
             end
         else
