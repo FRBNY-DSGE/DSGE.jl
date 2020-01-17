@@ -1,4 +1,4 @@
-"""
+g"""
 Smetswoutersorig{T} <: AbstractDSGEModel{T}
 
 The `SmetsWoutersOrig` type implements the *original* model from \"Shocks and
@@ -671,6 +671,17 @@ function steadystate!(m::SmetsWoutersOrig)
     m[:c_y]      = 1 - m[:g_star] - m[:i_y]
     m[:u_y]      = m[:rkstar] * m[:k_y]
     m[:wl_c]     = 1 / m[:λ_w] * (1-m[:α]) / m[:α] * m[:rkstar] * m[:k_y] / m[:c_y]
+
+    m[:Rstarn_r2]   = 100 * (m[:γ_r2]^m[:σ_c_r2] * m[:π_star_r2] / m[:β_r2] - 1)
+    m[:rkstar_r2]   = m[:γ_r2]^m[:σ_c_r2] / m[:β_r2] - (1 - m[:δ_r2])
+    m[:wstar_r2]    = (m[:α_r2]^m[:α_r2] * (1-m[:α_r2])^(1-m[:α_r2]) / (m[:Φ_r2] * m[:rkstar_r2]^m[:α_r2]))^(1/(1-m[:α_r2]))
+    m[:i_k_r2_r2]      = (1 - (1-m[:δ_r2])/m[:γ_r2]) * m[:γ_r2]
+    m[:l_k_r2]      = (1 - m[:α_r2])/m[:α_r2] * m[:rkstar_r2]/m[:wstar_r2]
+    m[:k_y_r2]      = m[:Φ_r2] * m[:l_k_r2]^(m[:α_r2] - 1)
+    m[:i_y_r2]      = (m[:γ_r2] - 1 +m[:δ_r2]) * m[:k_y_r2]
+    m[:c_y_r2]      = 1 - m[:g_star_r2] - m[:i_y_r2]
+    m[:u_y_r2]      = m[:rkstar_r2] * m[:k_y_r2]
+    m[:wl_c_r2]     = 1 / m[:λ_w_r2] * (1-m[:α_r2]) / m[:α_r2] * m[:rkstar_r2] * m[:k_y_r2] / m[:c_y_r2]
 
     return m
 end
