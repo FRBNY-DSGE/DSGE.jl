@@ -152,8 +152,8 @@ function pseudo_measurement(m::Model1002{T},
         # Compute coefficient on Sinf
         betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
         if subspec in ["ss21", "ss22", "ss25", "ss26"] && reg == 2
-            κ = ((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                 (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+            κ = ((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                 (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
                  (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         else
             κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
@@ -338,8 +338,8 @@ function pseudo_measurement(m::Model1002{T},
             # Compute coefficient on Sinf
             betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
             if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"] && reg == 2
-                κ = ((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                     (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+                κ = ((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                     (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
                 (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
             else
                 κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*

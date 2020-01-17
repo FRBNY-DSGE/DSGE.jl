@@ -215,8 +215,8 @@ function eqcond_regimes(m::Model1002)
         Γ0[regime][eq[:eq_phlps], endo[:π_t]]  = 1.
 #        @show subspec(m), regime
         if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"] && regime == 2
-            Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                                                        (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                                                        (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         else
             Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
                                                         (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
@@ -256,9 +256,9 @@ function eqcond_regimes(m::Model1002)
             if regime == 1
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -1.
             elseif regime == 2
-                κnum = ((1 - m[:ζ_p2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                        (1 - m[:ζ_p2]))/(m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))         # kappa numerator
-                fix_ζ_p = m[:ζ_p2]
+                κnum = ((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                        (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))         # kappa numerator
+                fix_ζ_p = m[:ζ_p_r2]
                 κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
                         (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))         # kappa denominator
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
@@ -322,13 +322,13 @@ function eqcond_regimes(m::Model1002)
         # Sticky prices and wages
         Γ0[regime][eq[:eq_mp], endo[:R_t]]      = 1.
         if subspec(m) in ["ss23", "ss24", "ss25", "ss26", "ss28", "ss29", "ss43", "ss44"] && regime == 2
-            Γ1[regime][eq[:eq_mp], endo[:R_t]]      = m[:ρ2]
-            Γ0[regime][eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ2])*m[:ψ12]
-            Γ0[regime][eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ2])*m[:ψ12]
-            Γ0[regime][eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ2])*m[:ψ22] - m[:ψ32]
-            Γ0[regime][eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ2])*m[:ψ22] + m[:ψ32]
-            Γ1[regime][eq[:eq_mp], endo[:y_t]]      = -m[:ψ32]
-            Γ1[regime][eq[:eq_mp], endo[:y_f_t]]    = m[:ψ32]
+            Γ1[regime][eq[:eq_mp], endo[:R_t]]      = m[:ρ_r2]
+            Γ0[regime][eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ_r2])*m[:ψ1_r2]
+            Γ0[regime][eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ_r2])*m[:ψ1_r2]
+            Γ0[regime][eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ_r2])*m[:ψ2_r2] - m[:ψ3_r2 ]
+            Γ0[regime][eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ_r2])*m[:ψ2_r2] + m[:ψ3_r2]
+            Γ1[regime][eq[:eq_mp], endo[:y_t]]      = -m[:ψ3_r2]
+            Γ1[regime][eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3_r2]
         else
             Γ1[regime][eq[:eq_mp], endo[:R_t]]      = m[:ρ]
             Γ0[regime][eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
