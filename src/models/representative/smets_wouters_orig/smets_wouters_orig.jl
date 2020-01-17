@@ -427,7 +427,6 @@ function init_parameters!(m::SmetsWoutersOrig)
                    tex_label="\\sigma_{\\lambda_w}")
 
    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44"]
-       # exogenous processes - standard deviation
        m <= parameter(:σ_z2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                       description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                       tex_label="\\sigma_{z}")

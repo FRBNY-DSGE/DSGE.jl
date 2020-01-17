@@ -59,6 +59,14 @@ function init_subspec!(m::Model1002)
         return ss30!(m)
     elseif subspec(m) == "ss31"
         return ss31!(m)
+    elseif subspec(m) == "ss41"
+        return ss41!(m)
+    elseif subspec(m) == "ss42"
+        return ss42!(m)
+    elseif subspec(m) == "ss43"
+        return ss43!(m)
+    elseif subspec(m) == "ss44"
+        return ss44!(m)
     else
         error("This subspec is not defined.")
     end
@@ -757,7 +765,7 @@ ss28!(m::Model1002)
 
 Has two of each shock's sigma and two zeta_p and two of each MP rule's parameters for the regime-switching esitmation of DSGE. Standard prior (but the sigmas have same as normal because their loose prior is same as standard)
 """
-function ss29!(m::Model1002)
+function ss28!(m::Model1002)
    m <= parameter(:σ_g2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_g: The standard deviation of the government spending process.",
                        tex_label="\\sigma_{g}")
