@@ -854,3 +854,14 @@ function ss44!(m::SmetsWoutersOrig)
                    description="ρ: The degree of inertia in the monetary policy rule.",
                tex_label="\\ρ_R")
 end
+
+"""
+```
+ss51!(m::SmetsWoutersOrig)
+```
+All the parameters, regime 1 and regime 2, standard priors!
+"""
+function ss51!(m::SmetsWoutersOrig)
+    println("Using ss51: note that all of this is defined in the model object.")
+    nothing
+end
