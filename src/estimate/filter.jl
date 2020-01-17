@@ -169,6 +169,11 @@ function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray, system::Sy
     DDs = fill(DDs[1], length(DDs))
     EEs = fill(EEs[1], length(EEs))=#
 
+  #=  @show regime_inds
+    @show all(QQs[1] .== QQs[2])
+    @show QQs[1][QQs[1] .!= QQs[2]]
+    @show QQs[2][QQs[1] .!= QQs[2]]=#
+
     # If s_0 and P_0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P_0
     if !isempty(s_0) && !isempty(P_0)
@@ -202,13 +207,19 @@ function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray,
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date)
 
-  #=  @show all(TTTs[1] .== TTTs[2])
-    @show all(RRRs[1] .== RRRs[2])
-    @show all(CCCs[1] .== CCCs[2])
+ #=   @show regime_inds
+  #  @show all(TTTs[1] .== TTTs[2])
+  #  @show all(RRRs[1] .== RRRs[2])
+  #  @show all(CCCs[1] .== CCCs[2])
     @show all(QQs[1] .== QQs[2])
-    @show all(ZZs[1] .== ZZs[2])
-    @show all(DDs[1] .== DDs[2])
-    @show all(EEs[1] .== EEs[2])=#
+    @show all(QQs[2] .== QQs[3])
+    @show QQs[1][QQs[1] .!= QQs[2]]
+    @show QQs[2][QQs[1] .!= QQs[2]]
+    @show QQs[2][QQs[2] .!= QQs[3]]
+    @show QQs[3][QQs[2] .!= QQs[3]]=#
+  #  @show all(ZZs[1] .== ZZs[2])
+  #  @show all(DDs[1] .== DDs[2])
+  #  @show all(EEs[1] .== EEs[2])
 
     # If s_0 and P_0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P_0
