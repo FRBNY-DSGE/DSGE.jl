@@ -67,8 +67,8 @@ function init_subspec!(m::Model1002)
         return ss43!(m)
     elseif subspec(m) == "ss44"
         return ss44!(m)
-    elseif subspec(m) == "ss51"
-        return ss51!(m)
+  #=  elseif subspec(m) == "ss51"
+        return ss51!(m) =#
     else
         error("This subspec is not defined.")
     end
@@ -1305,7 +1305,7 @@ function ss44!(m::Model1002)
                    tex_label="\\rho_R")
 end
 
-"""
+#="""
 ```
 ss51!(m::Model1002)
 ```
@@ -1315,4 +1315,4 @@ Two regimes for all parameters.
 function ss51!(m::Model1002)
     println("ss51: All things are inside the model definition!")
     nothing
-end
+end=#

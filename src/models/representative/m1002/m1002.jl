@@ -347,7 +347,7 @@ function init_parameters!(m::Model1002)
 
     end
 
-    if subspec(m) in ["ss51"]
+  #=  if subspec(m) in ["ss51"]
         m <= parameter(:α_r2, 0.1596, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), Normal(0.30, 0.05), fixed=false,
                        description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                        tex_label="\\alpha")
@@ -609,7 +609,7 @@ function init_parameters!(m::Model1002)
 
         m <= parameter(:σ_gdi_r2, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                        tex_label="\\sigma_{gdi}")
-    end
+    end =#
 
     m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
@@ -869,7 +869,7 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51"]
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44"] #, "ss51"]
                 m <= parameter(Symbol("σ_r_m$(i)_r2"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                                description="σ_r_m$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
                                tex_label=@sprintf("\\sigma_{ant%d}",i))
@@ -909,7 +909,7 @@ function init_parameters!(m::Model1002)
     m <= parameter(:δ_gdi, 0., (-10., 10.), (-10., -10.), ModelConstructors.Untransformed(), Normal(0.00, 2.), fixed=false,
                    tex_label="\\delta_{gdi}")
 
-    if subspec(m) == "ss51"
+  #=  if subspec(m) == "ss51"
 
         m <= parameter(:η_gz_r2, 0.8400, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                        description="η_gz: Correlate g and z shocks.",
@@ -917,7 +917,7 @@ function init_parameters!(m::Model1002)
 
         m <= parameter(:η_λ_f_r2, 0.7892, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                        description="η_λ_f: Moving average component in the price markup shock.",
-                       tex_label="\η_{\\lambda_f}")
+                       tex_label="\\η_{\\lambda_f}")
 
         m <= parameter(:η_λ_w_r2, 0.4226, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                        description="η_λ_w: Moving average component in the wage markup shock.",
@@ -938,7 +938,7 @@ function init_parameters!(m::Model1002)
 
         m <= parameter(:δ_gdi_r2, 0., (-10., 10.), (-10., -10.), ModelConstructors.Untransformed(), Normal(0.00, 2.), fixed=false,
                        tex_label="\\delta_{gdi}")
-    end
+    end=#
 
     # steady states
     m <= SteadyStateParameter(:z_star, NaN, tex_label="\\z_*")

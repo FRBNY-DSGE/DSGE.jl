@@ -11,7 +11,7 @@ specified in their proper positions.
 
 * `Γ0` (`n_states` x `n_states`) holds coefficients of current time states.
 * `Γ1` (`n_states` x `n_states`) holds coefficients of lagged states.
-* `C`  (`n_states` x `1`) is a vector of constants
+* `C`  (`n_statss54ges` x `1`) is a vector of constants
 * `Ψ`  (`n_states` x `n_shocks_exogenous`) holds coefficients of iid shocks.
 * `Π`  (`n_states` x `n_states_expectational`) holds coefficients of expectational states.
 """

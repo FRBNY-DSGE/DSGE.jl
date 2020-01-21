@@ -35,7 +35,7 @@ function measurement(m::SmetsWoutersOrig{T},
     DD = zeros(_n_observables)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
-
+  #  if subspec(m) != "ss51"
     ## Output growth - Quarterly!
     ZZ[obs[:obs_gdp], endo[:y_t]]       =  1.
     ZZ[obs[:obs_gdp], endo_addl[:y_t1]] = -1.
@@ -67,6 +67,39 @@ function measurement(m::SmetsWoutersOrig{T},
     ## Nominal interest rate
     ZZ[obs[:obs_nominalrate], endo[:R_t]] = 1.0
     DD[obs[:obs_nominalrate]]             = m[:Rstarn]
+  #=  elseif subspec(m) == "ss51"
+  ## Output growth - Quarterly!
+    ZZ[obs[:obs_gdp], endo[:y_t]]       =  1.
+    ZZ[obs[:obs_gdp], endo_addl[:y_t1]] = -1.
+    DD[obs[:obs_gdp]]                   =  m[:γ_r2].value # unscaled value
+
+    ## Consumption Growth
+    ZZ[obs[:obs_consumption], endo[:c_t]]       =  1.
+    ZZ[obs[:obs_consumption], endo_addl[:c_t1]] = -1.
+    DD[obs[:obs_consumption]]                   =  m[:γ_r2].value # unscaled value
+
+    ## Investment Growth
+    ZZ[obs[:obs_investment], endo[:i_t]]       =  1.
+    ZZ[obs[:obs_investment], endo_addl[:i_t1]] = -1.
+    DD[obs[:obs_investment]]                   =  m[:γ_r2].value # unscaled value
+
+    ## Labor Share/real wage growth
+    ZZ[obs[:obs_wages], endo[:w_t]]       =  1.
+    ZZ[obs[:obs_wages], endo_addl[:w_t1]] = -1.
+    DD[obs[:obs_wages]]                   =  m[:γ_r2].value # unscaled value
+
+    ## Hours growth
+    ZZ[obs[:obs_hours], endo[:L_t]] = 1.
+    DD[obs[:obs_hours]]             = m[:Lmean_r2]
+
+    ## Inflation (GDP Deflator)
+    ZZ[obs[:obs_gdpdeflator], endo[:π_t]] = 1.
+    DD[obs[:obs_gdpdeflator]]             = m[:π_star_r2].value # unscaled value
+
+    ## Nominal interest rate
+    ZZ[obs[:obs_nominalrate], endo[:R_t]] = 1.0
+    DD[obs[:obs_nominalrate]]             = m[:Rstarn_r2]
+end=#
 
     # Variance of innovations
     if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44"] && regime == 2
@@ -77,14 +110,14 @@ function measurement(m::SmetsWoutersOrig{T},
         QQ[exo[:λ_f_sh], exo[:λ_f_sh]] = m[:σ_λ_f2]^2
         QQ[exo[:λ_w_sh], exo[:λ_w_sh]] = m[:σ_λ_w2]^2
         QQ[exo[:rm_sh], exo[:rm_sh]]   = m[:σ_rm2]^2
-    elseif subspec(m) in ["ss51"] && regime == 2
+  #=  elseif subspec(m) in ["ss51"] && regime == 2
         QQ[exo[:g_sh], exo[:g_sh]]     = m[:σ_g_r2]^2
         QQ[exo[:b_sh], exo[:b_sh]]     = m[:σ_b_r2]^2
         QQ[exo[:μ_sh], exo[:μ_sh]]     = m[:σ_μ_r2]^2
         QQ[exo[:z_sh], exo[:z_sh]]     = m[:σ_z_r2]^2
         QQ[exo[:λ_f_sh], exo[:λ_f_sh]] = m[:σ_λ_f_r2]^2
         QQ[exo[:λ_w_sh], exo[:λ_w_sh]] = m[:σ_λ_w_r2]^2
-        QQ[exo[:rm_sh], exo[:rm_sh]]   = m[:σ_rm_r2]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]   = m[:σ_rm_r2]^2=#
     else
         QQ[exo[:g_sh], exo[:g_sh]]     = m[:σ_g]^2
         QQ[exo[:b_sh], exo[:b_sh]]     = m[:σ_b]^2
@@ -100,7 +133,11 @@ function measurement(m::SmetsWoutersOrig{T},
     for i = 1:n_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
-        QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / 16
+      #  if subspec(m) == "ss51"
+      #      QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm_r2")]^2 / 16
+      #  elseif subspec(m) != "ss51"
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / 16
+      #  end
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
