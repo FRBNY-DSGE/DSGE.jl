@@ -10,6 +10,9 @@ function init_subspec!(m::Model1002)
         return
     elseif subspec(m) == "ss3"
         return ss3!(m)
+    elseif subspec(m) == "ss5"
+        # loose brookings, whole separate halves
+        return ss5!(m)
     elseif subspec(m) == "ss8"
         return ss8!(m)
     elseif subspec(m) == "ss9"
@@ -393,6 +396,34 @@ function ss3!(m::Model1002)
                    tex_label="\\delta_{gdi}")
 
 
+end
+
+"""
+```
+ss5!(m::Model1002)
+```
+The loose prior subspec we ACTUALLY WANT since it's only loose on the parameters we allow to switch
+"""
+function ss5!(m::Model1002)
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
 end
 
 

@@ -15,6 +15,9 @@ function init_subspec!(m::SmetsWoutersOrig)
     elseif subspec(m) == "ss2"
         # Diffuse prior
         ss2!(m)
+    elseif subspec(m) == "ss3"
+        # Diffuse prior--WANT THIS ONE for brookings
+        ss3!(m)
     elseif subspec(m) == "ss21"
         return ss21!(m)
     elseif subspec(m) == "ss22"
@@ -222,6 +225,36 @@ m <= parameter(:σ_λ_w, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Expon
                tex_label="\\sigma_{\\lambda_w}")
 
 end
+
+"""
+```
+ss29!(m::SmetsWoutersOrig)
+```
+Diffuse prior on MP parameters and zeta_p. Want for brookings
+"""
+function ss3!(m::SmetsWoutersOrig)
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+               description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+               tex_label="\\psi_3")
+
+m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+               description="ρ: The degree of inertia in the monetary policy rule.",
+               tex_label="\\rho_R")
+
+m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+               description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+               tex_label="\\zeta_p")
+end
+
+
 
 """
 ```
