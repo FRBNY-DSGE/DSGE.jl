@@ -172,8 +172,8 @@ function eqcond_regimes(m::SmetsWoutersOrig)
         Γ0[regime][eq[:eq_phlps], endo[:π_t]]   = 1.
         Γ0[regime][eq[:eq_phlps], endo[:Eπ_t]]  = -m[:β] * m[:γ]^(1 - m[:σ_c]) / (1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p])
         if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"] && regime == 2
-            Γ0[regime][eq[:eq_phlps], endo[:mc_t]]  = ((1 - m[:ζ_p2])*(1 - m[:ζ_p2]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
-                (m[:ζ_p2]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]]  = ((1 - m[:ζ_p_r2])*(1 - m[:ζ_p_r2]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
+                (m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
         else
             Γ0[regime][eq[:eq_phlps], endo[:mc_t]]  = ((1 - m[:ζ_p])*(1 - m[:ζ_p]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
                 (m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
@@ -209,7 +209,7 @@ function eqcond_regimes(m::SmetsWoutersOrig)
             elseif regime == 2
                 κnum = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])))* #m[:zstar]))*
                         (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c]))) #*m[:zstar]))         # kappa numerator
-                fix_ζ_p = m[:ζ_p2]
+                fix_ζ_p = m[:ζ_p_r2]
                 κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])))* #m[:zstar]))*
                         (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c]))) #*m[:zstar]))         # kappa denominator
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
@@ -273,12 +273,12 @@ function eqcond_regimes(m::SmetsWoutersOrig)
     # Sticky prices and wages
             Γ0[regime][eq[:eq_mp], endo[:R_t]]   = 1.
         if subspec(m) in ["ss23", "ss24", "ss25", "ss26", "ss28", "ss29", "ss43", "ss44"] && regime == 2
-                Γ1[regime][eq[:eq_mp], endo[:R_t]]   = m[:ρ2]
-                Γ0[regime][eq[:eq_mp], endo[:π_t]]   = -(1 - m[:ρ2])*m[:ψ12]
-                Γ0[regime][eq[:eq_mp], endo[:y_t]]   = -(1 - m[:ρ2])*m[:ψ22] - m[:ψ32]
-                Γ1[regime][eq[:eq_mp], endo[:y_t]]   = -m[:ψ32]
-                Γ0[regime][eq[:eq_mp], endo[:y_f_t]] = (1 - m[:ρ2])*m[:ψ22] + m[:ψ32]
-                Γ1[regime][eq[:eq_mp], endo[:y_f_t]] = m[:ψ32]
+                Γ1[regime][eq[:eq_mp], endo[:R_t]]   = m[:ρ_r2]
+                Γ0[regime][eq[:eq_mp], endo[:π_t]]   = -(1 - m[:ρ_r2])*m[:ψ1_r2]
+                Γ0[regime][eq[:eq_mp], endo[:y_t]]   = -(1 - m[:ρ_r2])*m[:ψ2_r2] - m[:ψ3_r2]
+                Γ1[regime][eq[:eq_mp], endo[:y_t]]   = -m[:ψ3_r2]
+                Γ0[regime][eq[:eq_mp], endo[:y_f_t]] = (1 - m[:ρ_r2])*m[:ψ2_r2] + m[:ψ3_r2]
+                Γ1[regime][eq[:eq_mp], endo[:y_f_t]] = m[:ψ3_r2]
                 Γ0[regime][eq[:eq_mp], endo[:rm_t]]  = -1.
         else
                 Γ1[regime][eq[:eq_mp], endo[:R_t]]   = m[:ρ]
