@@ -172,10 +172,10 @@ function eqcond_regimes(m::SmetsWoutersOrig)
         Γ0[regime][eq[:eq_phlps], endo[:π_t]]   = 1.
         Γ0[regime][eq[:eq_phlps], endo[:Eπ_t]]  = -m[:β] * m[:γ]^(1 - m[:σ_c]) / (1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p])
         if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"] && regime == 2
-            Γ0[regime][eq[:eq_phlps], endo[:mc_t]]  = -((1 - m[:ζ_p_r2])*(1 - m[:ζ_p_r2]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]]  = ((1 - m[:ζ_p_r2])*(1 - m[:ζ_p_r2]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
                 (m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
         else
-            Γ0[regime][eq[:eq_phlps], endo[:mc_t]]  = -((1 - m[:ζ_p])*(1 - m[:ζ_p]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]]  = ((1 - m[:ζ_p])*(1 - m[:ζ_p]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
                 (m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
         end
 
