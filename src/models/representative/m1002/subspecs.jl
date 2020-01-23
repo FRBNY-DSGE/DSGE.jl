@@ -405,6 +405,7 @@ ss5!(m::Model1002)
 The loose prior subspec we ACTUALLY WANT since it's only loose on the parameters we allow to switch
 """
 function ss5!(m::Model1002)
+    ss10!(m)
     m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
