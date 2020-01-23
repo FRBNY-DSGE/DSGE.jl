@@ -26,6 +26,32 @@ function init_subspec!(m::SmetsWouters)
         return ss5!(m)
     elseif subspec(m) == "ss6"
         return ss6!(m)
+    elseif subspec(m) == "ss21"
+        return ss21!(m)
+    elseif subspec(m) == "ss22"
+        return ss22!(m)
+    elseif subspec(m) == "ss23"
+        return ss23!(m)
+    elseif subspec(m) == "ss24"
+        return ss24!(m)
+    elseif subspec(m) == "ss25"
+        return ss25!(m)
+    elseif subspec(m) == "ss26"
+        return ss26!(m)
+    elseif subspec(m) == "ss27"
+        return ss27!(m)
+    elseif subspec(m) == "ss28"
+        return ss28!(m)
+    elseif subspec(m) == "ss29"
+        return ss29!(m)
+    elseif subspec(m) == "ss41"
+        return ss41!(m)
+    elseif subspec(m) == "ss42"
+        return ss42!(m)
+    elseif subspec(m) == "ss43"
+        return ss43!(m)
+    elseif subspec(m) == "ss44"
+        return ss44!(m)
     else
         error("This subspec is not defined.")
     end
@@ -343,4 +369,644 @@ m <= parameter(:η_λ_w, 0.8936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Dis
                description="η_λ_w: Moving average component in the wage markup shock.",
                tex_label="\\eta_{\\lambda_w}")
 
+end
+
+"""
+```
+ss21!(m::SmetsWouters)
+```
+
+Has two ζ_p parameters for the regime-switching estimation of DSGE. Loose prior!
+"""
+function ss21!(m::SmetsWouters)
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
+end
+
+
+"""
+```
+ss22!(m::SmetsWouters)
+```
+
+Has two ζ_p parameters for the regime-switching estimation of DSGE. Standard prior!
+"""
+function ss22!(m::SmetsWouters)
+    m <= parameter(:ζ_p, 0.7813, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.7813, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
+end
+
+"""
+```
+ss23!(m::SmetsWouters)
+```
+
+Has two of the MP rule parameters for the regime-switching estimation of DSGE. Loose prior!
+"""
+function ss23!(m::SmetsWouters)
+    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0893, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2239, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.8258, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ψ1_r2, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2_r2, 0.0893, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3_r2, 0.2239, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ_r2, 0.8258, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+end
+
+
+
+"""
+```
+ss24!(m::SmetsWouters)
+```
+
+Has two of the MP rule parameters for the regime-switching estimation of DSGE. Standard prior
+"""
+function ss24!(m::SmetsWouters)
+    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0893, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2239, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.8258, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ψ1_r2, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2_r2, 0.0893, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3_r2, 0.2239, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ_r2, 0.8258, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+end
+
+"""
+```
+ss25!(m::SmetsWouters)
+```
+Has two of the MP rule parameters and zeta_p for the regime-switching estimation of DSGE. Loose prior!
+"""
+function ss25!(m::SmetsWouters)
+    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
+end
+
+
+"""
+```
+ss26!(m::SmetsWouters)
+```
+
+Has two of the MP rule parameters and zeta_p for the regime-switching estimation of DSGE. Standard prior
+"""
+function ss26!(m::SmetsWouters)
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
+end
+
+
+
+"""
+```
+ss27!(m::SmetsWouters)
+```
+
+Has two of each shock's sigma for the regime-switching esitmation of DSGE. Standard prior (because loose prior is the same for these)
+"""
+function ss27!(m::SmetsWouters)
+
+       m <= parameter(:σ_z_r2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b_r2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g_r2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ_r2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm_r2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f_r2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w_r2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+end
+
+
+"""
+```
+ss29!(m::SmetsWouters)
+```
+
+ Has two of each shock's sigma and two zeta_p and two of each MP rule's parameters for the regime-switching esitmation of DSGE. Loose prior (but the sigmas have same as normal because their loose prior is same as standard)
+"""
+function ss29!(m::SmetsWouters)
+          m <= parameter(:σ_z_r2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b_r2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g_r2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ_r2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm_r2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f_r2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w_r2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+               description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+               tex_label="\\psi_3")
+
+m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+               description="ρ: The degree of inertia in the monetary policy rule.",
+               tex_label="\\rho_R")
+
+m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+               description="ψ₁: Weight on inflation gap in monetary policy rule.",
+               tex_label="\\psi_1")
+
+m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+               description="ψ₂: Weight on output gap in monetary policy rule.",
+               tex_label="\\psi_2")
+
+m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+               description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+               tex_label="\\psi_3")
+
+m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+               description="ρ: The degree of inertia in the monetary policy rule.",
+               tex_label="\\rho_R")
+
+m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+               description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+               tex_label="\\zeta_p")
+
+m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+               description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+               tex_label="\\zeta_p^2")
+end
+
+"""
+```
+ss28!(m::SmetsWouters)
+```
+
+Has two of each shock's sigma and two zeta_p and two of each MP rule's parameters for the regime-switching esitmation of DSGE. Standard prior (but the sigmas have same as normal because their loose prior is same as standard)
+"""
+function ss28!(m::SmetsWouters)
+          m <= parameter(:σ_z_r2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b_r2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g_r2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ_r2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm_r2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f_r2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w_r2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+               tex_label="\\ρ_R")
+
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
+end
+
+"""
+```
+ss41!(m::SmetsWouters)
+```
+
+Has two of each shock's sigma and two zeta_p for the regime-switching esitmation of DSGE. Loose prior (but the sigmas have same as normal because their loose prior is same as standard)
+"""
+function ss41!(m::SmetsWouters)
+          m <= parameter(:σ_z_r2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b_r2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g_r2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ_r2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm_r2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f_r2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w_r2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+
+m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+               description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+               tex_label="\\zeta_p")
+
+m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+               description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+               tex_label="\\zeta_p^2")
+end
+
+"""
+```
+ss42!(m::Model1002)
+```
+
+Has two of each shock's sigma and two zeta_p for the regime-switching esitmation of DSGE. Standard prior (but the sigmas have same as normal because their loose prior is same as standard)
+"""
+function ss42!(m::SmetsWouters)
+          m <= parameter(:σ_z_r2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b_r2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g_r2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ_r2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm_r2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f_r2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w_r2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
+end
+
+
+"""
+```
+ss43!(m::SmetsWouters)
+```
+Has two of each shock's sigma and two of each MP rule's parameters for the regime-switching esitmation of DSGE. Loose prior (but the sigmas have same as normal because their loose prior is same as standard)
+"""
+function ss43!(m::SmetsWouters)
+          m <= parameter(:σ_z_r2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b_r2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g_r2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ_r2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm_r2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f_r2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w_r2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+               description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+               tex_label="\\psi_3")
+
+m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+               description="ρ: The degree of inertia in the monetary policy rule.",
+               tex_label="\\rho_R")
+
+m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+               description="ψ₁: Weight on inflation gap in monetary policy rule.",
+               tex_label="\\psi_1")
+
+m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+               description="ψ₂: Weight on output gap in monetary policy rule.",
+               tex_label="\\psi_2")
+
+m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+               description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+               tex_label="\\psi_3")
+
+m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+               description="ρ: The degree of inertia in the monetary policy rule.",
+               tex_label="\\rho_R")
+
+end
+
+"""
+```
+ss44!(m::SmetsWouters)
+```
+Has two of each shock's sigma and two of each MP rule's parameters for the regime-switching esitmation of DSGE. Standard prior (but the sigmas have same as normal because their loose prior is same as standard)
+"""
+function ss44!(m::SmetsWouters)
+          m <= parameter(:σ_z_r2, 0.4618, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
+                      tex_label="\\sigma_{z}")
+
+       m <= parameter(:σ_b_r2, 0.1818, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                      tex_label="\\sigma_{b}")
+
+       m <= parameter(:σ_g_r2, 0.6090, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_g: The standard deviation of the government spending process.",
+                      tex_label="\\sigma_{g}")
+
+       m <= parameter(:σ_μ_r2, 0.4601, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                      tex_label="\\sigma_{\\mu}")
+
+       m <= parameter(:σ_rm_r2, 0.2397, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_r_m: The standard deviation of the monetary policy shock.",
+                      tex_label="\\sigma_{r^m}")
+
+
+       m <= parameter(:σ_λ_f_r2, 0.1455, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                      tex_label="\\sigma_{\\lambda_f}")
+
+       m <= parameter(:σ_λ_w_r2, 0.2089, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                      tex_label="\\sigma_{\\lambda_w}")
+
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+               tex_label="\\ρ_R")
 end

@@ -21,7 +21,7 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::SmetsWouters{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}) where {T<:AbstractFloat}
+                     CCC::Vector{T}; regime::Int = 1) where {T<:AbstractFloat}
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
     exo       = m.exogenous_shocks
@@ -82,14 +82,23 @@ function measurement(m::SmetsWouters{T},
     EE[obs[:obs_investment],7] = m[:e_i]^2
 
     #Variance of innovations
-    QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
-    QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
-    QQ[exo[:μ_sh], exo[:μ_sh]]           = m[:σ_μ]^2
-    QQ[exo[:z_sh], exo[:z_sh]]           = m[:σ_z]^2
-    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]       = m[:σ_λ_f]^2
-    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]       = m[:σ_λ_w]^2
-    QQ[exo[:rm_sh], exo[:rm_sh]]         = m[:σ_rm]^2
-
+    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44"] && regime == 2
+        QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g_r2]^2
+        QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b_r2]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]           = m[:σ_μ_r2]^2
+        QQ[exo[:z_sh], exo[:z_sh]]           = m[:σ_z_r2]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]       = m[:σ_λ_f_r2]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]       = m[:σ_λ_w_r2]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]         = m[:σ_rm_r2]^2
+    else
+        QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
+        QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]           = m[:σ_μ]^2
+        QQ[exo[:z_sh], exo[:z_sh]]           = m[:σ_z]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]       = m[:σ_λ_f]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]       = m[:σ_λ_w]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]         = m[:σ_rm]^2
+    end
     # These lines set the standard deviations for the anticipated
     # shocks to be equal to the standard deviation for the
     # unanticipated policy shock

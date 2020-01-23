@@ -327,6 +327,7 @@ module DSGE
     include("models/representative/smets_wouters/smets_wouters.jl")
     include("models/representative/smets_wouters/subspecs.jl")
     include("models/representative/smets_wouters/eqcond.jl")
+    include("models/representative/smets_wouters/eqcond_regimes.jl")
     include("models/representative/smets_wouters/observables.jl")
     include("models/representative/smets_wouters/measurement.jl")
     include("models/representative/smets_wouters/augment_states.jl")
