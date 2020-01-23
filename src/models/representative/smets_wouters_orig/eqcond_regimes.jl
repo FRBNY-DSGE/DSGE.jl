@@ -207,8 +207,8 @@ function eqcond_regimes(m::SmetsWoutersOrig)
             if regime == 1
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -1.
             elseif regime == 2
-                κnum = ((1 - m[:ζ_p])*(1 - m[:ζ_p]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
-                    (m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
+                κnum = ((1 - m[:ζ_p_r2])*(1 - m[:ζ_p_r2]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
+                    (m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
                 fix_ζ_p = m[:ζ_p]
                 κden = ((1 - fix_ζ_p)*(1 - fix_ζ_p*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
                     (fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
