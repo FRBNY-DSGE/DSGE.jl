@@ -162,7 +162,7 @@ function eqcond(m::SmetsWoutersOrig)
     # Sticky prices and wages
     Γ0[eq[:eq_phlps], endo[:π_t]]   = 1.
     Γ0[eq[:eq_phlps], endo[:Eπ_t]]  = -m[:β] * m[:γ]^(1 - m[:σ_c]) / (1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p])
-    Γ0[eq[:eq_phlps], endo[:mc_t]]  = ((1 - m[:ζ_p])*(1 - m[:ζ_p]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
+    Γ0[eq[:eq_phlps], endo[:mc_t]]  = -((1 - m[:ζ_p])*(1 - m[:ζ_p]*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
         (m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
     Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -1.
     Γ1[eq[:eq_phlps], endo[:π_t]]   = m[:ι_p] / (1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p])
