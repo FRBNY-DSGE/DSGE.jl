@@ -258,7 +258,7 @@ function eqcond_regimes(m::Model1002)
             elseif regime == 2
                 κnum = ((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
                         (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))         # kappa numerator
-                fix_ζ_p = m[:ζ_p_r2]
+                fix_ζ_p = m[:ζ_p_r1]
                 κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
                         (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))         # kappa denominator
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
