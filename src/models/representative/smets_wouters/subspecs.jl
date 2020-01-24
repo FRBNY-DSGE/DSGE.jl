@@ -513,7 +513,7 @@ function ss25!(m::SmetsWouters)
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
 
-    m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+    m <= parameter(:ψ1_r2, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
 
