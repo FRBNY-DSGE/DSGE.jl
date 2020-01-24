@@ -101,7 +101,7 @@ module DSGE
         initial_draw!, ParticleCloud, Particle, estimate_bma,
 
         # backwards_compatibility.jl
-        smc2, old_to_new_cloud, # TO REMOVE
+        smc2, old_to_new_cloud, Cloud, # TO REMOVE
 
         # forecast/
         load_draws, forecast_one,
