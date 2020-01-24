@@ -203,7 +203,7 @@ function eqcond_regimes(m::SmetsWoutersOrig)
             κden = ((1 - fix_ζ_p*m[:β]*exp((1 - m[:σ_c])))* #m[:zstar]))*
                     (1 - fix_ζ_p))/(fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c]))) #*m[:zstar]))         # kappa denominator
             Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
-        elseif subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"]
+       #= elseif subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"]
             if regime == 1
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -1.
             elseif regime == 2
@@ -213,7 +213,7 @@ function eqcond_regimes(m::SmetsWoutersOrig)
                 κden = ((1 - fix_ζ_p)*(1 - fix_ζ_p*m[:β]*m[:γ]^(1 - m[:σ_c]))) /
                     (fix_ζ_p*((m[:Φ]- 1)*m[:ϵ_p] + 1)*(1 + m[:β]*m[:γ]^(1 - m[:σ_c])*m[:ι_p]))
                 Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -κnum / κden
-            end
+            end =#
         else
             Γ0[regime][eq[:eq_phlps], endo[:λ_f_t]] = -1.
         end
