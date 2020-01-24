@@ -719,6 +719,7 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                           bands_pcts::Vector{String} = Vector{String}(undef,0),
                           bands_alpha1::Float64 = 0.5,
                           bands_alpha2::Float64 = 0.5,
+                          annualize_inflation::Bool = true,
                           addl_text::String = "")
     # Create file name related strings
     m = which_model == 1 ? m1 : m2
@@ -778,6 +779,7 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                                           bands_pcts = bands_pcts,
                                           bands_alpha1 = bands_alpha1,
                                           bands_alpha2 = bands_alpha2,
+                                          annualize_inflation = annualize_inflation,
                                           addl_text = addl_text)
 
             # Plot all variables together

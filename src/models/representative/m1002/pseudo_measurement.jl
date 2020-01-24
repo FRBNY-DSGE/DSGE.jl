@@ -147,6 +147,18 @@ function pseudo_measurement(m::Model1002{T},
     end
 
 
+    ## Labor Productivity Growth, no measurement error
+    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+        if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
+            ZZ_pseudo[pseudo[:LaborProductivityGrowthNoME], endo[:y_t]]       = 1.
+            ZZ_pseudo[pseudo[:LaborProductivityGrowthNoME], endo_addl[:y_t1]] = -1.
+            ZZ_pseudo[pseudo[:LaborProductivityGrowthNoME], endo[:z_t]]       = 1.
+            ZZ_pseudo[pseudo[:LaborProductivityGrowthNoME], endo[:L_t]]       = -1
+            ZZ_pseudo[pseudo[:LaborProductivityGrowthNoME], endo_addl[:L_t1]] = 1.
+            DD_pseudo[pseudo[:LaborProductivityGrowthNoME]]                   = 100*(exp(m[:z_star]) - 1)
+        end
+    end
+
     ## Fundamental inflation related pseudo-obs
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         # Compute coefficient on Sinf
@@ -330,7 +342,6 @@ function pseudo_measurement(m::Model1002{T},
                 DD_pseudos[reg][pseudo[:laborshare_t]] = 100. * log(m[:wstar] * m[:Lstar] / m[:ystar])
             end
         end
-
 
         ## Fundameantal inflation related pseudo-obs
         if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"] #,

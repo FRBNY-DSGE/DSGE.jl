@@ -85,7 +85,7 @@ the model.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-mutable struct SmetsWoutersOrig{T} <: AbstractDSGEModel{T}
+mutable struct SmetsWoutersOrig{T} <: AbstractRepModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
@@ -159,7 +159,7 @@ function init_model_indices!(m::SmetsWoutersOrig)
     # Additional states added after solving model
     # Lagged states and observables measurement error
     endogenous_states_augmented = [
-        :y_t1, :c_t1, :i_t1, :w_t1]
+        :y_t1, :c_t1, :i_t1, :w_t1, :L_t1]
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -215,6 +215,7 @@ function SmetsWoutersOrig(subspec::String="ss0";
 
     # Set observable and pseudo-observable transformations
     init_observable_mappings!(m)
+    init_pseudo_observable_mappings!(m)
 
     # Initialize parameters
     init_parameters!(m)

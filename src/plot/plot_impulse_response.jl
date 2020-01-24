@@ -102,6 +102,7 @@ function plot_impulse_response(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                                plotroot::String =
                                figurespath((which_model == 1) ? m1 : m2, "forecast"),
                                titles::Vector{String} = String[],
+                               annualize_inflation::Bool = true,
                                addl_text::String = "",
                                verbose::Symbol = :low,
                                kwargs...)
@@ -125,11 +126,13 @@ function plot_impulse_response(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
         plots[var] = irf(shock, var, mb1, MeansBands();
                          title = title, input_type = input_type1, input_type2 = Symbol(),
                          bands_color = bands_color1, bands_alpha = bands_alpha1,
-                         bands_pcts = bands_pcts, mean_color = bands_color1, kwargs...)
+                         bands_pcts = bands_pcts, mean_color = bands_color1,
+                         annualize_inflation = annualize_inflation, kwargs...)
         irf!(shock, var, mb2, MeansBands();
              title = title, input_type = input_type2, input_type2 = Symbol(),
              bands_color = bands_color2, bands_alpha = bands_alpha2,
-             bands_pcts = bands_pcts, mean_color = bands_color2, kwargs...)
+             bands_pcts = bands_pcts, mean_color = bands_color2,
+             annualize_inflation = annualize_inflation, kwargs...)
 
         # Save plot
         if !isempty(plotroot)
@@ -183,7 +186,8 @@ irf
                    bands_alpha = 0.1,
                    bands_pcts = which_density_bands(irf.args[3], uniquify = true),
                    input_type::Symbol = Symbol(),
-                   input_type2::Symbol = Symbol())
+                   input_type2::Symbol = Symbol(),
+                   annualize_inflation = false)
     # Error checking
   #=  if length(irf.args) != 3 || typeof(irf.args[1]) != Symbol || typeof(irf.args[2]) != Symbol ||
         typeof(irf.args[3]) != MeansBands
@@ -203,6 +207,12 @@ irf
             fillalpha := bands_alpha
             linealpha := 0
             label     := label_mean_bands ? "$pct Bands" : ""
+            if annualize_inflation && var in [:obs_gdpdeflator, :obs_corepce, :NominalWageGrowth]
+                mb.bands[varshock][!,Symbol(pct, " LB")] = 4. .*
+                    mb.bands[varshock][!,Symbol(pct, " LB")]
+                mb.bands[varshock][!,Symbol(pct, " UB")] = 4. .*
+                    mb.bands[varshock][!,Symbol(pct, " UB")]
+            end
             fillrange := sign * mb.bands[varshock][!,Symbol(pct, " UB")]
             quarters_ahead, sign * mb.bands[varshock][!,Symbol(pct, " LB")]
         end
@@ -213,6 +223,9 @@ irf
         label     := label_mean_bands ? "Mean"*string(input_type) : ""
         linewidth := 2
         linecolor := mean_color
+        if annualize_inflation && var in [:obs_gdpdeflator, :obs_corepce, :NominalWageGrowth]
+            mb.means[!, varshock] = 4. .* mb.means[!, varshock]
+        end
         quarters_ahead, sign * mb.means[!, varshock]
     end
 

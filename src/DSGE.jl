@@ -336,7 +336,9 @@ module DSGE
     include("models/representative/smets_wouters_orig/eqcond.jl")
     include("models/representative/smets_wouters_orig/eqcond_regimes.jl")
     include("models/representative/smets_wouters_orig/observables.jl")
+    include("models/representative/smets_wouters_orig/pseudo_observables.jl")
     include("models/representative/smets_wouters_orig/measurement.jl")
+    include("models/representative/smets_wouters_orig/pseudo_measurement.jl")
     include("models/representative/smets_wouters_orig/augment_states.jl")
 
     include("models/representative/an_schorfheide/an_schorfheide.jl")

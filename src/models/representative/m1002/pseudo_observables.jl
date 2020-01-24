@@ -32,6 +32,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+        if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
+            push!(pseudo_names, :LaborProductivityGrowthNoME)
+        end
+    end
+
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names
@@ -155,6 +161,13 @@ function init_pseudo_observable_mappings!(m::Model1002)
         if get_setting(m, :add_laborproductivity_measurement)
             pseudo[:laborproductivity].name     = "Log Labor Productivity"
             pseudo[:laborproductivity].longname = "Log Labor Productivity"
+        end
+    end
+
+    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+        if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
+            pseudo[:LaborProductivityGrowthNoME].name     = "Labor Productivity Growth (No ME)"
+            pseudo[:LaborProductivityGrowthNoME].longname = "Labor Productivity Growth (No ME)"
         end
     end
 

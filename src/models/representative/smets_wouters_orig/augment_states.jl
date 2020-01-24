@@ -24,6 +24,7 @@ function augment_states(m::SmetsWoutersOrig{T}, TTT::Matrix{T}, RRR::Matrix{T}, 
     TTT_aug[endo_addl[:c_t1], endo[:c_t]] = 1.
     TTT_aug[endo_addl[:i_t1], endo[:i_t]] = 1.
     TTT_aug[endo_addl[:w_t1], endo[:w_t]] = 1.
+    TTT_aug[endo_addl[:L_t1], endo[:L_t]] = 1.
 
     return TTT_aug, RRR_aug, CCC_aug
 end
