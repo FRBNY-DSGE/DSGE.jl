@@ -26,6 +26,9 @@ function init_subspec!(m::SmetsWouters)
         return ss5!(m)
     elseif subspec(m) == "ss6"
         return ss6!(m)
+    elseif subspec(m) == "ss7"
+        # this is brookings loose
+        return ss7!(m)
     elseif subspec(m) == "ss21"
         return ss21!(m)
     elseif subspec(m) == "ss22"
@@ -369,6 +372,37 @@ m <= parameter(:η_λ_w, 0.8936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Dis
                description="η_λ_w: Moving average component in the wage markup shock.",
                tex_label="\\eta_{\\lambda_w}")
 
+end
+
+
+
+"""
+```
+ss7!(m::SmetsWouters)
+
+Initializes subspec 7 of `SmetsWouters`. 'Diffuse prior' for only the brookings changing parameters
+
+"""
+function ss7!(m::SmetsWouters)
+    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.75), fixed=false,
+                   description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                   tex_label="\\psi_1")
+
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.15), fixed=false,
+                   description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                   tex_label="\\psi_3")
+
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.30), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p^2")
 end
 
 """
