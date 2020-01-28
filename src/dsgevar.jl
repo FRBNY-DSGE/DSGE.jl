@@ -41,7 +41,7 @@ If `get_VAR = false`: we return the limit cross product matrices.
 
 Using these matrices, the VAR(p) representation is given by
 ```
-β = XXXXd \ XXyyd
+β = XXXXd \\ XXyyd
 Σ = yyyyd - XXyyd' * β
 ```
 """
@@ -65,7 +65,7 @@ function dsge_var!(m::AbstractDSGEModel, para::Vector{S},
                    zeros(S, length(observables), length(shocks)),
                    EE::AbstractMatrix{S} =
                    Matrix{S}(undef,0,0),
-                   get_VAR::Bool = true) {S<:Real}
+                   get_VAR::Bool = true) where {S<:Real}
     DSGE.update!(m, para)
     system = compute_system(m)
     system = compute_system(m, system; observables = observables,
@@ -115,7 +115,7 @@ If `get_VAR = false`: we return the limit cross product matrices.
 
 Using these matrices, the VAR(p) representation is given by
 ```
-β = XXXXd \ XXyyd
+β = XXXXd \\ XXyyd
 Σ = yyyyd - XXyyd' * β
 ```
 """

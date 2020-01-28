@@ -1,4 +1,4 @@
->"""
+"""
 ```
 function impulse_responses(m, input_type, method,
                            lags, observables, shocks,
