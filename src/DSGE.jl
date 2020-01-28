@@ -189,6 +189,7 @@ module DSGE
 
     include("abstractdsgemodel.jl")
     include("defaults.jl")
+    include("dsgevar.jl")
     include("models/poolmodel/poolmodel.jl")
     include("statespace.jl")
     include("util.jl")
@@ -330,6 +331,8 @@ module DSGE
     include("models/representative/smets_wouters/eqcond_regimes.jl")
     include("models/representative/smets_wouters/observables.jl")
     include("models/representative/smets_wouters/measurement.jl")
+    include("models/representative/smets_wouters/pseudo_observables.jl")
+    include("models/representative/smets_wouters/pseudo_measurement.jl")
     include("models/representative/smets_wouters/augment_states.jl")
 
     include("models/representative/smets_wouters_orig/smets_wouters_orig.jl")
@@ -464,5 +467,7 @@ module DSGE
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
     include("forecast/impulse_responses.jl")
+    include("forecast/var_impulse_responses.jl")
+    include("forecast/dsgevar_impulse_responses.jl")
     include("forecast/drivers.jl")
 end

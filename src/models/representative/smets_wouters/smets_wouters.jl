@@ -205,6 +205,7 @@ function SmetsWouters(subspec::String="ss0";
 
     # Set observable and pseudo-observable transformations
     init_observable_mappings!(m)
+    init_pseudo_observable_mappings!(m)
 
     # Initialize parameters
     init_parameters!(m)

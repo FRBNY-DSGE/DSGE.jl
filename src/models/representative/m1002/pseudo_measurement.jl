@@ -343,6 +343,18 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
 
+        ## Labor Productivity Growth, no measurement error
+        if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+            if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
+                ZZ_pseudos[reg][pseudo[:LaborProductivityGrowthNoME], endo[:y_t]]       = 1.
+                ZZ_pseudos[reg][pseudo[:LaborProductivityGrowthNoME], endo_addl[:y_t1]] = -1.
+                ZZ_pseudos[reg][pseudo[:LaborProductivityGrowthNoME], endo[:z_t]]       = 1.
+                ZZ_pseudos[reg][pseudo[:LaborProductivityGrowthNoME], endo[:L_t]]       = -1
+                ZZ_pseudos[reg][pseudo[:LaborProductivityGrowthNoME], endo_addl[:L_t1]] = 1.
+                DD_pseudos[reg][pseudo[:LaborProductivityGrowthNoME]]                   = 100*(exp(m[:z_star]) - 1)
+            end
+        end
+
         ## Fundameantal inflation related pseudo-obs
         if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"] #,
                           # "ss21", "ss22", "ss23","ss24", "ss25", "ss26"]
