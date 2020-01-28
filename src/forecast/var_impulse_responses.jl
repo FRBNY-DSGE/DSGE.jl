@@ -136,12 +136,12 @@ function maxBC_shock(β::Matrix{S}, Σ::Matrix{S}, n::Int, n_obs_shock::Int, sho
     increment = abs(frequency_band[1] - frequency_band[2]) / 200.
     V = zeros(S, n, n) # variance
     eminusif = zeros(Complex{S}, 1, 1, lags)
-    for f = frequency_band[1]:increment:frequency_band[2]
+    for f = frequency_band[1]:increment:round(frequency_band[2], digits=10) # not rounding sometimes leads to one fewer loop than desired
         eminusif[1, 1, :] = exp.(-im .* f .* collect(1:lags))
         sumB = dropdims(sum(reshape(β', n, n, lags) .*
                            repeat(eminusif, n, n, 1); dims = 3), dims = 3)
         invA = (Matrix{Complex{S}}(I, n, n) - sumB) \ cholmat
-        V += reshape(real.(kron(invA[n_obs_shock, :], invA[n_obs_shock, :])), n, n) .*
+        V += reshape(real.(kron(conj(invA[n_obs_shock, :]), invA[n_obs_shock, :])), n, n) .*
             increment ./ abs(frequency_band[1] - frequency_band[2])
     end
     eigout = eigen(V)
