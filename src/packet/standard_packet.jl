@@ -741,10 +741,18 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     zero_shocks = Vector{Symbol}(undef,0)
     for k in setdiff(keys(m.exogenous_shocks),
                      [Symbol("rm_shl" * string(i)) for i = 1:n_anticipated_shocks(m)])
-        if k == :rm_sh && m[:σ_r_m].value == 0. && m[:σ_r_m].fixed
-            zero_shocks = vcat(zero_shocks, :rm_sh)
-        elseif k == :zp_sh && m[:σ_z_p].value == 0. && m[:σ_z_p].fixed
-            zero_shocks = vcat(zero_shocks, :zp_sh)
+        if haskey(m.keys, :σ_r_m)
+            if k == :rm_sh && m[:σ_r_m].value == 0. && m[:σ_r_m].fixed
+                zero_shocks = vcat(zero_shocks, :rm_sh)
+            end
+        elseif haskey(m.keys, :σ_rm)
+            if k == :rm_sh && m[:σ_rm].value == 0. && m[:σ_rm].fixed
+                zero_shocks = vcat(zero_shocks, :rm_sh)
+            end
+        elseif haskey(m.keys, :σ_z_p)
+            if k == :zp_sh && m[:σ_z_p].value == 0. && m[:σ_z_p].fixed
+                zero_shocks = vcat(zero_shocks, :zp_sh)
+            end
         elseif k != :rm_sh && k != :zp_sh
             sig_name = Symbol("σ_" * replace(string(k), "_sh" => ""))
             if m[sig_name].value == 0. && m[sig_name].fixed

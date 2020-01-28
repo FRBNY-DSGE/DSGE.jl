@@ -214,7 +214,7 @@ function eqcond(m::Model1002)
         exp((1 - m[:σ_c])*m[:z_star]))
 
     # Comment out for counterfactual with no price mark up shock
-    if subspec(m) == "ss20"
+    if subspec(m) == "ss20" || haskey(m.settings, :fix_ζ_p)
         # Re-scale markup shock so that it is the shock corresponds to the size of the real
         # markup shock. We use this spec for counterfactual analysis when using different
         # parameter values for parameters governing κ, e.g. ζ_p.
