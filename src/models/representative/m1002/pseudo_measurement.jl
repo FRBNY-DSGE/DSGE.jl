@@ -343,6 +343,7 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
 
+<<<<<<< Updated upstream
         ## Labor Productivity Growth, no measurement error
         if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
             if get_setting(m, :add_laborproductivitygrowth_nome_measurement)

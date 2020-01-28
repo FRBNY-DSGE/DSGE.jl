@@ -917,7 +917,7 @@ function init_parameters!(m::Model1002)
 
         m <= parameter(:η_λ_f_r2, 0.7892, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                        description="η_λ_f: Moving average component in the price markup shock.",
-                       tex_label="\\η_{\\lambda_f}")
+                       tex_label="\\eta_{\\lambda_f}")
 
         m <= parameter(:η_λ_w_r2, 0.4226, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                        description="η_λ_w: Moving average component in the wage markup shock.",
