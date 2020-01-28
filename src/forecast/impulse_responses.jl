@@ -427,7 +427,7 @@ function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tupl
     variance = zeros(S, nshocks, nshocks)
     sd_shock = system[:RRR] * sqrt.(system[:QQ]) # one standard deviation shock
     I_state = Matrix{S}(I, nstates, nstates)
-    for f = frequency_band[1]:increment:frequency_band[2]
+    for f = frequency_band[1]:increment:round(frequency_band[2], digits=10) # not rounding sometimes leads to one fewer loop than desired
         sumG = system[:TTT] .* exp(-im * f)
         invA = system[:ZZ] * ((I_state - sumG) \ sd_shock)
         variance += real.(invA[n_obs_var,:] * invA[n_obs_var,:]') .* increment ./
