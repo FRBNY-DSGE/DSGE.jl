@@ -82,20 +82,35 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     tempered_update = !isempty(old_data)
 
     # This step is purely for backwards compatibility purposes
-    if isempty(old_cloud)
-        old_cloud_conv = SMC.Cloud(0,0)
+    if typeof(old_cloud) == SMC.Cloud
+        if SMC.cloud_isempty(old_cloud)
+            old_cloud_conv = SMC.Cloud(0,0)
+        else
+            old_cloud_conv = old_cloud
+        end
     elseif typeof(old_cloud) == DSGE.ParticleCloud
-        old_cloud_conv = SMC.Cloud(DSGE.Cloud(old_cloud))
+        if isempty(old_cloud)
+            old_cloud_conv = SMC.Cloud(0,0)
+        else
+            old_cloud_conv = SMC.Cloud(DSGE.Cloud(old_cloud))
+        end
     elseif typeof(old_cloud) == DSGE.Cloud
-        old_cloud_conv = old_to_new_cloud(old_coud)
-    else
-        old_cloud_conv = old_cloud
+        if isempty(old_cloud)
+            old_cloud_conv = SMC.Cloud(0, 0)
+        else
+            old_cloud_conv = old_to_new_cloud(old_coud)
+        end
     end
 
     # Initialize Paths
     loadpath = ""
     if tempered_update
-        if isempty(old_cloud)
+        if typeof(old_cloud) == SMC.Cloud
+            empty = SMC.cloud_isempty(old_cloud)
+        else
+            empty = isempty(old_cloud)
+        end
+        if empty
             loadpath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
             loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint=" * old_vintage)
         end
