@@ -4,7 +4,7 @@
 
 The `DSGE.jl` package implements the New York Fed dynamic stochastic general equilibrium (DSGE) model and provides general code to estimate many user-specified DSGE models. The package is introduced in the Liberty Street Economics blog post
 [The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
-(We previously referred to our model as the "FRBNY DSGE Model".)
+(We previously referred to our model as the "FRBNY DSGE Model.")
 
 This Julia-language implementation mirrors the MATLAB code included in the
 Liberty Street Economics blog post
