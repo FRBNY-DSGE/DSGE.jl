@@ -140,7 +140,7 @@ function impulse_responses(m::AbstractDSGEModel, paras::Matrix{S},
     irf_output =
         mapfcn((β, Σ) ->
                impulse_responses(β, Σ, n_obs_var, h; method = method,
-                                 beta_has_constant = false,
+                                 include_constant = false,
                                  flip_shocks = flip_shocks),
                β_draws, Σ_draws)
 
