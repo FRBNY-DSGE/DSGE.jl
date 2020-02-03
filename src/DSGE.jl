@@ -230,12 +230,12 @@ module DSGE
     include("estimate/metropolis_hastings.jl")
 
     include("estimate/smc/particle.jl")
-    include("estimate/smc/initialization.jl")
-    include("estimate/smc/helpers.jl")
-    include("estimate/smc/util.jl")
-    include("estimate/smc/mutation.jl")
-    include("estimate/smc/resample.jl")
-    include("estimate/smc/smc.jl")
+    #include("estimate/smc/initialization.jl")
+    #include("estimate/smc/helpers.jl")
+    #include("estimate/smc/util.jl")
+    #include("estimate/smc/mutation.jl")
+    #include("estimate/smc/resample.jl")
+    #include("estimate/smc/smc.jl")
 
     include("estimate/smc.jl")
     include("estimate/backwards_compatibility.jl")
