@@ -107,10 +107,6 @@ function generate_free_blocks(n_free_para::Int64, n_blocks::Int64)
     return blocks_free
 end
 
-function isempty(c::ParticleCloud)
-    length(c.particles) == 0
-end
-
 """
 ```
 function generate_all_blocks(blocks_free, free_para_inds)
@@ -134,10 +130,6 @@ function generate_all_blocks(blocks_free::Vector{Vector{Int64}}, free_para_inds:
         end
     end
     return blocks_all
-end
-
-function get_cloud(m::AbstractDSGEModel; filepath::String = rawpath(m, "estimate", "smc_cloud.jld2"))
-    return load(filepath, "cloud")
 end
 
 function init_stage_print(cloud::ParticleCloud;
