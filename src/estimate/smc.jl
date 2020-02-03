@@ -175,7 +175,6 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
 end
 
 function isempty(c::ParticleCloud)
-<<<<<<< HEAD
     length(c.particles) == 0
 end
 
@@ -209,7 +208,4 @@ function vector_particles_to_cloud(m::AbstractDSGEModel, particles::Vector{Parti
         cloud.particles[i, ind_weight(N)] = particles[i].weight
     end
     return cloud
-=======
-    return isempty(c.particles)
->>>>>>> Add option to test if ParticleCloud empty
 end
