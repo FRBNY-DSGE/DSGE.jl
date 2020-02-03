@@ -229,7 +229,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
         ### of the posterior. Portions of this method are executed in
         ### parallel.
         ########################################################################################
-        smc(m, data; verbose = verbose, filestring_addl = filestring_addl,
+        smc2(m, data; verbose = verbose, filestring_addl = filestring_addl,
             continue_intermediate = continue_intermediate,
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
