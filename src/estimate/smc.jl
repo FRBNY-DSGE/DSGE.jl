@@ -151,3 +151,7 @@ function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
     return smc2(m, data_mat, verbose=verbose, save_intermediate = save_intermediate,
                filestring_addl = filestring_addl)
 end
+
+function isempty(c::ParticleCloud)
+    return isempty(c.particles)
+end
