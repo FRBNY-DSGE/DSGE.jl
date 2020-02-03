@@ -145,7 +145,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
             # Re-sample SMC draws according to their weights
             W = load(replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2"), "W")
             weights = W[:, end]
-            inds = resample(weights)
+            inds = SMC.resample(weights)
 
             params = Matrix{Float64}(params_unweighted[:, inds]')
         else
@@ -215,7 +215,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
                 # Re-sample SMC draws according to their weights
                 @load replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2") W
                 weights = W[:, end][block_inds]
-                inds = resample(weights)
+                inds = SMC.resample(weights)
 
                 params = params_unweighted[inds]
             end
