@@ -162,9 +162,9 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
     end
 
     # Compute state-space system
-#    @show regime_switching
     system = try
-        compute_system(m, verbose = verbose, regime_switching = regime_switching, n_regimes = n_regimes)
+        compute_system(m; verbose = verbose,
+                       regime_switching = regime_switching, n_regimes = n_regimes)
     catch err
         if catch_errors && (isa(err, GensysError) || isa(err, KleinError))
             return -Inf
@@ -172,7 +172,6 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
             rethrow(err)
         end
     end
-#    @show typeof(system)
 
     # Return total log-likelihood, excluding the presample
     try
@@ -191,6 +190,98 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
         end
     catch err
         if catch_errors && isa(err, DomainError)
+            @warn "Log of incremental likelihood is negative; returning -Inf"
+            return -Inf
+        else
+            rethrow(err)
+        end
+    end
+end
+
+"""
+```
+likelihood(m::AbstractVARModel, data::Matrix{T};
+           sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
+```
+
+Evaluate the DSGE likelihood function. Can handle two-part estimation where the observed
+sample contains both a normal stretch of time (in which interest rates are positive) and
+a stretch of time in which interest rates reach the zero lower bound. If there is a
+zero-lower-bound period, then we filter over the 2 periods separately. Otherwise, we
+filter over the main sample all at once.
+
+### Arguments
+
+- `m`: The model object
+- `data`: matrix of data for observables
+
+### Optional Arguments
+- `sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the
+    transition matrices for the zero-lower-bound period are returned in a dictionary.
+- `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
+"""
+function likelihood(m::AbstractVARModel, data::AbstractMatrix;
+                    sampler::Bool = false,
+                    catch_errors::Bool = false,
+                    λ::T = 0.,
+                    regime_switching::Bool = false,
+                    n_regimes::Int = 2,
+                    tol::Float64 = 0.0,
+                    verbose::Symbol = :high) where {T<:AbstractFloat}
+
+    catch_errors = catch_errors | sampler
+    use_penalty  = try get_setting(m, :use_likelihood_penalty) catch; false end
+    auto_reject  = try get_setting(m, :auto_reject) catch; false end
+
+    if auto_reject
+        m <= Setting(:auto_reject, false)
+        return -Inf
+    end
+
+    # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
+    if sampler
+        if isa(m, DSGEVAR)
+            for θ in m.dsge.parameters
+                (left, right) = θ.valuebounds
+                if !θ.fixed && !(left <= θ.value <= right)
+                    return -Inf
+                end
+            end
+        end
+    end
+
+    # Likelihood penalties
+    ψ_l, ψ_p, penalty = 1.0, 1.0, 0.0
+    if use_penalty
+        ψ_l         = get_setting(m, :ψ_likelihood)
+        ψ_p         = get_setting(m, :ψ_penalty)
+        target_vars = get_setting(m, :target_vars)
+        target_σt   = get_setting(m, :target_σt)
+        targets     = get_setting(m, :targets)
+
+        for (var, target, σt) in zip(target_vars, targets, target_σt)
+            try
+                penalty +=  -0.5 * (log(target) - log(m[var].value))^2 / σt^2
+            catch err
+                println(err)
+                return -Inf
+            end
+        end
+        if ψ_l == 0.0
+            return ψ_p * penalty
+        end
+    end
+
+    # Return total log-likelihood (presample for VAR is excluded)
+    try
+        if isa(m, DSGEVAR)
+            return ψ_l * dsgevar_likelihood(m, data; λ = λ, regime_switching = regime_switching,
+                                            n_regimes = n_regimes) + ψ_p * penalty
+        end
+    catch err
+        if catch_errors && (isa(err, GensysError) || isa(err, KleinError))
+            return -Inf
+        elseif catch_errors && isa(err, DomainError)
             @warn "Log of incremental likelihood is negative; returning -Inf"
             return -Inf
         else

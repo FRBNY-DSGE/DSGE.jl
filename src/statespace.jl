@@ -149,7 +149,7 @@ end
 compute_system(m::AbstractDSGEModel, system::System;
         observables::Vector{Symbol}, pseudo_observables::Vector{Symbol},
         states::Vector{Symbol}, shocks::Vector{Symbol},
-        zero_DD = true, zero_DD_pseudo = true)
+        zero_DD = false, zero_DD_pseudo = false)
 ```
 computes the corresponding transition and measurement
 equations specified by the keywords (e.g. `states`, `pseudo_observables`)
@@ -248,7 +248,7 @@ function compute_system(m::AbstractDSGEModel{S}, system::System;
     end
 
     # Construct new system
-    return System(Transition(Tour, Rout),
+    return System(Transition(Tout, Rout),
                   Measurement(Zout, Dout, Qout, Eout),
                   PseudoMeasurement(Zpseudoout, Dpseudoout))
 end
@@ -382,8 +382,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         verbose::Symbol = :high) where T<:AbstractFloat
 
     solution_method = get_setting(m, :solution_method)
-#    @show regime_switching
-#    @show "AAA"
+
     # Solve model
     if regime_switching
         if solution_method == :gensys
@@ -394,7 +393,6 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             measurement_equations = Vector{Measurement{T}}(undef,n_regimes)
 
             for i = 1:n_regimes
-#                @show i
                 TTTs[i], RRRs[i], CCCs[i] = solve(m; apply_altpolicy = apply_altpolicy,
                                                   regime_switching = true, regime = i, verbose = verbose)
                 transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])
@@ -456,6 +454,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             if m.spec == "real_bond_mkup"
                 GDPeqn = construct_GDPeqn(m, TTT_jump)
                 TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
+
                 # Measurement (needs the additional TTT_jump argument)
                 measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
             elseif m.spec == "het_dsge"
@@ -479,6 +478,42 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         else
             return System(transition_equation, measurement_equation)
         end
+    end
+end
+
+"""
+```
+compute_system(m; apply_altpolicy = false,
+               regime_switching = false, n_regimes = 2,
+               check_system = false,
+               verbose = :high)
+```
+"""
+function compute_system(m::DSGEVAR{T}; apply_altpolicy::Bool = false,
+                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_covariances::Bool = false, verbose::Symbol = :high) where T<:Real
+    dsge = m.dsge
+    if regime_switching
+        regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
+                                       regime_switching = regime_switching, n_regimes = n_regimes,
+                                       verbose = verbose)
+        system = System(regime_system, regime)
+    else
+        system = compute_system(dsge; verbose = verbose)
+
+    end
+    system = compute_system(dsge, system; observables = get_observables(m),
+                            shocks = get_shocks(m), check_system = check_system)
+
+    EE, MM = measurement_error(m)
+
+    if get_system
+        return system
+    else
+        return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                      system[:DD], system[:ZZ], EE, MM, n_lags(m);
+                                      get_covariances = get_covariances)
     end
 end
 
@@ -553,4 +588,109 @@ function zero_system_constants(system::System{S}) where S<:AbstractFloat
     system.pseudo_measurement.DD_pseudo = zeros(size(system[:DD_pseudo]))
 
     return system
+end
+
+"""
+```
+var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_covariances = false) where {S<:Real}
+```
+computes the VAR(p) approximation of the linear state space system
+
+```
+sₜ = TTT * sₜ₋₁ + RRR * ϵₜ,
+yₜ = ZZ * sₜ + DD + uₜ,
+```
+where the disturbances are assumed to follow
+```
+ϵₜ ∼ 𝒩 (0, QQ),
+uₜ = ηₜ + MM * ϵₜ,
+ηₜ ∼ 𝒩 (0, EE).
+```
+The `MM` matrix implies
+```
+cov(ϵₜ, uₜ) = QQ * MM'.
+```
+
+### Outputs
+If `get_covariances = false`:
+* `β`: VAR(p) coefficients
+* `Σ`: innovations covariance matrix for the VAR(p) representation
+```
+yₜ = Xₜβ + μₜ
+```
+where `Xₜ` appropriately stacks the `p` lags of `yₜ` and `μₜ ∼ 𝒩 (0, Σ)`.
+
+If `get_covariances = true`: we return the limit cross product matrices.
+* `yyyyd`: 𝔼[y,y]
+* `XXXXd`: 𝔼[y,X(lag rr)]
+* `XXyyd`: 𝔼[X(lag rr),X(lag ll)]
+
+Using these matrices, the VAR(p) representation is given by
+```
+β = XXXXd \\ XXyyd
+Σ = yyyyd - XXyyd' * β
+```
+"""
+function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
+                                QQ::AbstractMatrix{S}, DD::AbstractVector{S},
+                                ZZ::AbstractMatrix{S}, EE::AbstractMatrix{S},
+                                MM::AbstractMatrix{S},
+                                p::Int; get_covariances::Bool = false) where {S<:Real}
+
+    nobs = size(ZZ,1)
+
+    yyyyd = zeros(S, nobs, nobs)
+    XXyyd = zeros(S, p * nobs, nobs)
+    XXXXd = zeros(S, p * nobs, p * nobs)
+
+    HH = EE + MM * QQ * MM';
+    VV = QQ * MM';
+
+    ## Compute p autocovariances
+
+    ## Initialize Autocovariances
+    GAMM0 = zeros(S, nobs ^ 2, p + 1)
+    GA0 =  solve_discrete_lyapunov(TTT, RRR * QQ * RRR')
+    Gl   = ZZ * GA0 * ZZ' + ZZ * RRR * VV + (ZZ * RRR * VV)' + HH
+    GAMM0[:, 1] = vec(Gl)
+    TTl = copy(TTT)
+    GA0ZZ = GA0 * ZZ'
+    RRRVV = RRR * VV
+    for l = 1:p
+        Gl = ZZ * TTl * GA0ZZ + ZZ * TTl * RRRVV # ZZ * (TTl * GA0Z) * ZZ' + ZZ * (TTl * RRR * VV)
+        GAMM0[:, l+1] = vec(Gl)
+        TTl = TTl * TTT
+    end
+
+    ## Create limit cross product matrices
+    yyyyd = reshape(GAMM0[:, 1], nobs, nobs) + DD * DD'
+
+    ## cointadd are treated as the first set of variables in XX
+    ## coint    are treated as the second set of variables in XX
+    ## composition: cointadd - coint - constant - lags
+    yyXXd = zeros(S, nobs, p * nobs)
+    XXXXd = zeros(S, p * nobs, p * nobs)
+    for rr = 1:p
+        ## E[yy,x(lag rr)]
+        yyXXd[:, nobs * (rr - 1) + 1:nobs * rr] =  reshape(GAMM0[:, rr + 1], nobs, nobs) + DD * DD'
+
+        ## E[x(lag rr),x(lag ll)]
+        for ll = rr:p
+            yyyydrrll = reshape(GAMM0[:, ll - rr + 1], nobs, nobs) + DD * DD';
+            XXXXd[nobs * (rr - 1) + 1:nobs * rr, nobs * (ll - 1) + 1:nobs * ll] =  yyyydrrll
+            XXXXd[nobs * (ll - 1) + 1:nobs * ll, nobs * (rr - 1) + 1:nobs * rr] =  yyyydrrll'
+        end
+    end
+
+    XXyyd = convert(Matrix{S}, yyXXd')
+
+    if get_covariances
+        return yyyyd, XXyyd, XXXXd
+    else
+        β = \(XXXXd, XXyyd)
+        Σ = yyyyd - XXyyd' * β
+        Σ += Σ'  # to correct for machine error
+        Σ ./= 2. # and guarantee Σ is symmetric
+        return β, Σ
+    end
 end

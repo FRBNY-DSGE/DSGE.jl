@@ -14,6 +14,9 @@ my_tests = [
             "models/representative/m1010/m1010",
 
             "models/poolmodel/poolmodel",
+            "models/var/dsgevar/dsgevar",
+            "models/var/dsgevar/util",
+            "models/var/util",
 
             "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
             #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
@@ -55,6 +58,7 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
+            "estimate/var/dsgevar_likelihood",
 
             "estimate/metropolis_hastings",
 
@@ -73,6 +77,8 @@ my_tests = [
             "forecast/io",
             "forecast/forecast_one",
             "forecast/util",
+            "forecast/var/impulse_responses",
+            "forecast/var/dsgevar/impulse_responses",
             "analysis/compute_meansbands",
             "analysis/df_to_table",
             "analysis/io",
