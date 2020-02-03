@@ -169,7 +169,8 @@ function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
-               filestring_addl = filestring_addl)
+                intermediate_stage_increment = intermediate_stage_increment,
+                filestring_addl = filestring_addl)
 end
 
 function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
@@ -178,5 +179,6 @@ function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose=verbose, save_intermediate = save_intermediate,
-               filestring_addl = filestring_addl)
+                intermediate_stage_increment = intermediate_stage_increment,
+                filestring_addl = filestring_addl)
 end
