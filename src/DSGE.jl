@@ -152,9 +152,9 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
         init_pseudo_observable_mappings!,
-        Model990, Model1002, Model1010, Model805, Model904, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
-        PoolModel, eqcond, measurement, pseudo_measurement,
-        shock_groupings, transition,
+        Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
+        PoolModel, eqcond, eqcond_regimes, measurement, pseudo_measurement,
+        shock_groupings, transition, # DSGEVAR,
 
         # models/heterogeneous/
         KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
@@ -187,8 +187,10 @@ module DSGE
     const DSGE_SHOCKDEC_DELIM = "__"
 
     include("abstractdsgemodel.jl")
+    include("abstractvarmodel.jl")
     include("defaults.jl")
     include("models/poolmodel/poolmodel.jl")
+    # include("models/var/dsgevar/dsgevar.jl")
     include("statespace.jl")
     include("util.jl")
     include("grids.jl")
@@ -466,6 +468,11 @@ module DSGE
     include("models/heterogeneous/two_asset_hank/helpers.jl")
     include("models/heterogeneous/two_asset_hank/interp.jl")
 
+    # DSGEVAR
+    # include("models/var/dsgevar/dsgevar.jl") # defined aboved
+    # include("models/var/dsgevar/measurement_error.jl")
+    # include("models/var/dsgevar/subspecs.jl")
+
     include("forecast/util.jl")
     include("forecast/io.jl")
     include("forecast/smooth.jl")
@@ -473,4 +480,9 @@ module DSGE
     include("forecast/shock_decompositions.jl")
     include("forecast/impulse_responses.jl")
     include("forecast/drivers.jl")
+
+    include("dsgevar/dsgevar.jl")
+    include("dsgevar/dsgevar_likelihood.jl")
+    include("dsgevar/impulse_responses.jl")
+    include("dsgevar/util.jl")
 end
