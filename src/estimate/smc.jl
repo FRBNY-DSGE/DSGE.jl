@@ -153,5 +153,31 @@ function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
 end
 
 function isempty(c::ParticleCloud)
-    return isempty(c.particles)
+    length(c.particles) == 0
+end
+
+function get_cloud(m::AbstractDSGEModel; filepath::String = rawpath(m, "estimate", "smc_cloud.jld2"))
+    return load(filepath, "cloud")
+end
+
+"""
+```
+function vector_particles_to_cloud(m::AbstractDSGEModel, particles::Vector{Particles})
+```
+Converts a ParticleCloud (old) to Cloud (new).
+"""
+function vector_particles_to_cloud(m::AbstractDSGEModel, particles::Vector{Particle})
+    cloud = Cloud(m, length(particles))
+    N = size(cloud.particles, 2)
+    for i in 1:size(cloud.particles,1)
+        cloud.particles[i, 1:length(m.parameters)] = particles[i].value
+        cloud.particles[i, ind_loglh(N)] = particles[i].loglh
+        cloud.particles[i, ind_logpost(N)] = particles[i].logpost
+        update!(m, particles[i].value)
+        cloud.particles[i, ind_logprior(N)] = prior(m)
+        cloud.particles[i, ind_old_loglh(N)] = particles[i].old_loglh
+        cloud.particles[i, ind_accept(N)] = particles[i].accept
+        cloud.particles[i, ind_weight(N)] = particles[i].weight
+    end
+    return cloud
 end
