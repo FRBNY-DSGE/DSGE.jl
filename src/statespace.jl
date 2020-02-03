@@ -146,6 +146,115 @@ end
 
 """
 ```
+compute_system(m::AbstractDSGEModel, system::System;
+        observables::Vector{Symbol}, pseudo_observables::Vector{Symbol},
+        states::Vector{Symbol}, shocks::Vector{Symbol},
+        zero_DD = false, zero_DD_pseudo = false)
+```
+computes the corresponding transition and measurement
+equations specified by the keywords (e.g. `states`, `pseudo_observables`)
+using the existing `ZZ`, `ZZ_pseudo`, and `TTT` matrices in `system`.
+
+Note that this function does not update the EE matrix, which is
+set to all zeros. To incorporate measurement errors, the user
+must specify the EE matrix after applying compute_system.
+
+### Keywords
+* `observables`: variables that should be
+    entered into the new `ZZ` matrix.
+    The `observables` can be both Observables and PseudoObservables,
+    but they must be an element of system already
+"""
+function compute_system(m::AbstractDSGEModel{S}, system::System;
+                        observables::Vector{Symbol} = collect(keys(m.observables)),
+                        pseudo_observables::Vector{Symbol} =
+                        collect(keys(m.pseudo_observables)),
+                        states::Vector{Symbol} =
+                        vcat(collect(keys(m.endogenous_states)),
+                             collect(keys(m.endogenous_states_augmented))),
+                        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+                        zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
+                        check_system::Bool = true) where {S<:Real}
+
+    # Set up indices
+    oid  = m.observables # observables indices dictionary
+    pid  = m.pseudo_observables # pseudo observables indices dictionary
+    sid  = m.endogenous_states
+    said = m.endogenous_states_augmented # states augmented
+
+    # Find shocks to keep
+    shock_inds = map(k -> m.exogenous_shocks[k], shocks)
+    Qout = system[:QQ][shock_inds, shock_inds]
+
+    # Find states to keep
+    if !isempty(setdiff(vcat(collect(keys(sid)), collect(keys(said))), states))
+        which_states = Vector{S}(undef, length(states))
+        for i = 1:length(states)
+            which_states[i] = haskey(sid, states[i]) ? sid[states[i]] : said[states[i]]
+        end
+        Tout = system[:TTT][which_states, which_states]
+        Rout = system[:RRR][which_states, shock_inds]
+    elseif !isempty(setdiff(states, vcat(collect(keys(sid)), collect(keys(said)))))
+        false_states = setdiff(states, vcat(collect(keys(sid)), collect(keys(said))))
+        error("The following states in keyword `states` do not exist in `system`: " *
+              join(string.(false_states), ", "))
+    else
+        Tout = copy(system[:TTT])
+        Rout = system[:RRR][:, shock_inds]
+    end
+
+    # Compute new ZZ and DD matrices if different observables than current system
+    if !isempty(symdiff(observables, collect(keys(oid))))
+        Zout = zeros(S, length(observables), n_states_augmented(m))
+        Dout = zeros(S, length(observables))
+        for (i,obs) in enumerate(observables)
+            Zout[i,:], Dout[i] = if haskey(oid, obs)
+                system[:ZZ][oid[obs], :], zero_DD ? zero(S) : system[:DD][oid[obs]]
+            elseif haskey(pid, obs)
+                system[:ZZ_pseudo][pid[obs], :], zero_DD ? zero(S) : system[:DD_pseudo][pid[obs]]
+            else
+                error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
+            end
+        end
+    else
+        Zout = copy(system[:ZZ])
+        Dout = zero_DD ? zeros(S, size(Zout, 1)) : system[:DD]
+    end
+    Eout = zeros(S, length(observables), length(observables)) # measurement errors are set to zero
+
+    # Compute new ZZ_pseudo, DD_pseudo if different pseudo_observables than current system
+    if !isempty(symdiff(pseudo_observables, collect(keys(pid))))
+        Zpseudoout = zeros(S, length(pseudo_observables), n_states_augmented(m))
+        Dpseudoout = zeros(S, length(pseudo_observables))
+        for (i, pseudoobs) in enumerate(pseudo_observables)
+            Zpseudoout[i,:], Dpseudoout[i] = if haskey(oid, pseudoobs)
+                system[:ZZ][oid[pseudoobs], :], zero_DD_pseudo ?
+                    zero(S) : system[:DD][oid[pseudoobs]]
+            elseif haskey(pid, pseudoobs)
+                system[:ZZ_pseudo][pid[pseudoobs], :], zero_DD_pseudo ?
+                    zero(S) : system[:DD_pseudo][pid[pseudoobs]]
+            else
+                error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
+            end
+        end
+    else
+        Zpseudoout = copy(system[:ZZ_pseudo])
+        Dpseudoout = zero_DD_pseudo ? zero(S, size(Zpseudoout, 1)) : copy(system[:DD_pseudo])
+    end
+
+    if check_system
+        @assert size(Zout, 2) == size(Tout, 1) "Dimension 2 ($(size(Zout,2))) of new ZZ does not match dimension of states ($(size(Tout,1)))."
+        @assert size(Qout, 1) == size(Rout, 2) "Dimension 2 ($(size(Zout,2))) of new RRR does not match dimension of shocks ($(size(Qout,1)))."
+    end
+
+    # Construct new system
+    return System(Transition(Tout, Rout),
+                  Measurement(Zout, Dout, Qout, Eout),
+                  PseudoMeasurement(Zpseudoout, Dpseudoout))
+end
+
+"""
+```
 compute_system(m; apply_altpolicy = false)
 ```
 
@@ -206,6 +315,42 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy = false,
         return System(transition_equation, measurement_equation, pseudo_measurement_equation)
     else
         return System(transition_equation, measurement_equation)
+    end
+end
+
+"""
+```
+compute_system(m; apply_altpolicy = false,
+               regime_switching = false, n_regimes = 2,
+               check_system = false,
+               verbose = :high)
+```
+"""
+function compute_system(m::DSGEVAR{T}; apply_altpolicy::Bool = false,
+                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_covariances::Bool = false, verbose::Symbol = :high) where T<:Real
+    dsge = m.dsge
+    if regime_switching
+        regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
+                                       regime_switching = regime_switching, n_regimes = n_regimes,
+                                       verbose = verbose)
+        system = System(regime_system, regime)
+    else
+        system = compute_system(dsge; verbose = verbose)
+
+    end
+    system = compute_system(dsge, system; observables = get_observables(m),
+                            shocks = get_shocks(m), check_system = check_system)
+
+    EE, MM = measurement_error(m)
+
+    if get_system
+        return system
+    else
+        return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                      system[:DD], system[:ZZ], EE, MM, n_lags(m);
+                                      get_covariances = get_covariances)
     end
 end
 
@@ -280,4 +425,109 @@ function zero_system_constants(system::System{S}) where S<:AbstractFloat
     system.pseudo_measurement.DD_pseudo = zeros(size(system[:DD_pseudo]))
 
     return system
+end
+
+"""
+```
+var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_covariances = false) where {S<:Real}
+```
+computes the VAR(p) approximation of the linear state space system
+
+```
+sₜ = TTT * sₜ₋₁ + RRR * ϵₜ,
+yₜ = ZZ * sₜ + DD + uₜ,
+```
+where the disturbances are assumed to follow
+```
+ϵₜ ∼ 𝒩 (0, QQ),
+uₜ = ηₜ + MM * ϵₜ,
+ηₜ ∼ 𝒩 (0, EE).
+```
+The `MM` matrix implies
+```
+cov(ϵₜ, uₜ) = QQ * MM'.
+```
+
+### Outputs
+If `get_covariances = false`:
+* `β`: VAR(p) coefficients
+* `Σ`: innovations covariance matrix for the VAR(p) representation
+```
+yₜ = Xₜβ + μₜ
+```
+where `Xₜ` appropriately stacks the `p` lags of `yₜ` and `μₜ ∼ 𝒩 (0, Σ)`.
+
+If `get_covariances = true`: we return the limit cross product matrices.
+* `yyyyd`: 𝔼[y,y]
+* `XXXXd`: 𝔼[y,X(lag rr)]
+* `XXyyd`: 𝔼[X(lag rr),X(lag ll)]
+
+Using these matrices, the VAR(p) representation is given by
+```
+β = XXXXd \\ XXyyd
+Σ = yyyyd - XXyyd' * β
+```
+"""
+function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
+                                QQ::AbstractMatrix{S}, DD::AbstractVector{S},
+                                ZZ::AbstractMatrix{S}, EE::AbstractMatrix{S},
+                                MM::AbstractMatrix{S},
+                                p::Int; get_covariances::Bool = false) where {S<:Real}
+
+    nobs = size(ZZ,1)
+
+    yyyyd = zeros(S, nobs, nobs)
+    XXyyd = zeros(S, p * nobs, nobs)
+    XXXXd = zeros(S, p * nobs, p * nobs)
+
+    HH = EE + MM * QQ * MM';
+    VV = QQ * MM';
+
+    ## Compute p autocovariances
+
+    ## Initialize Autocovariances
+    GAMM0 = zeros(S, nobs ^ 2, p + 1)
+    GA0 =  solve_discrete_lyapunov(TTT, RRR * QQ * RRR')
+    Gl   = ZZ * GA0 * ZZ' + ZZ * RRR * VV + (ZZ * RRR * VV)' + HH
+    GAMM0[:, 1] = vec(Gl)
+    TTl = copy(TTT)
+    GA0ZZ = GA0 * ZZ'
+    RRRVV = RRR * VV
+    for l = 1:p
+        Gl = ZZ * TTl * GA0ZZ + ZZ * TTl * RRRVV # ZZ * (TTl * GA0Z) * ZZ' + ZZ * (TTl * RRR * VV)
+        GAMM0[:, l+1] = vec(Gl)
+        TTl = TTl * TTT
+    end
+
+    ## Create limit cross product matrices
+    yyyyd = reshape(GAMM0[:, 1], nobs, nobs) + DD * DD'
+
+    ## cointadd are treated as the first set of variables in XX
+    ## coint    are treated as the second set of variables in XX
+    ## composition: cointadd - coint - constant - lags
+    yyXXd = zeros(S, nobs, p * nobs)
+    XXXXd = zeros(S, p * nobs, p * nobs)
+    for rr = 1:p
+        ## E[yy,x(lag rr)]
+        yyXXd[:, nobs * (rr - 1) + 1:nobs * rr] =  reshape(GAMM0[:, rr + 1], nobs, nobs) + DD * DD'
+
+        ## E[x(lag rr),x(lag ll)]
+        for ll = rr:p
+            yyyydrrll = reshape(GAMM0[:, ll - rr + 1], nobs, nobs) + DD * DD';
+            XXXXd[nobs * (rr - 1) + 1:nobs * rr, nobs * (ll - 1) + 1:nobs * ll] =  yyyydrrll
+            XXXXd[nobs * (ll - 1) + 1:nobs * ll, nobs * (rr - 1) + 1:nobs * rr] =  yyyydrrll'
+        end
+    end
+
+    XXyyd = convert(Matrix{S}, yyXXd')
+
+    if get_covariances
+        return yyyyd, XXyyd, XXXXd
+    else
+        β = \(XXXXd, XXyyd)
+        Σ = yyyyd - XXyyd' * β
+        Σ += Σ'  # to correct for machine error
+        Σ ./= 2. # and guarantee Σ is symmetric
+        return β, Σ
+    end
 end

@@ -23,7 +23,7 @@ module DSGE
                               n_states, n_states_augmented, n_shocks_exogenous,
                               n_shocks_expectational, n_observables, n_pseudo_observables,
                               n_equilibrium_conditions, n_parameters, n_parameters_steady_state,
-                              n_parameters_free, SteadyStateParameterGrid
+                              n_parameters_free, SteadyStateParameterGrid, get_setting
     import SMC: get_vals, get_logpost
     import Calculus, Missings, Nullables
     import StateSpaceRoutines: KalmanFilter
@@ -154,7 +154,7 @@ module DSGE
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
         PoolModel, eqcond, eqcond_regimes, measurement, pseudo_measurement,
-        shock_groupings, transition, # DSGEVAR,
+        shock_groupings, transition, DSGEVAR,
 
         # models/heterogeneous/
         KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
@@ -190,7 +190,7 @@ module DSGE
     include("abstractvarmodel.jl")
     include("defaults.jl")
     include("models/poolmodel/poolmodel.jl")
-    # include("models/var/dsgevar/dsgevar.jl")
+    include("models/var/dsgevar/dsgevar.jl")
     include("statespace.jl")
     include("util.jl")
     include("grids.jl")
@@ -249,6 +249,9 @@ module DSGE
     include("estimate/ct_filters/ct_kalman_filter.jl")
     include("estimate/ct_filters/block_kalman_filter.jl")
     # include("estimate/ct_filters/ct_block_kalman_filter.jl")
+
+    # VAR code
+    include("estimate/var/dsgevar_likelihood.jl")
 
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
@@ -469,9 +472,11 @@ module DSGE
     include("models/heterogeneous/two_asset_hank/interp.jl")
 
     # DSGEVAR
+    include("models/var/util.jl")
     # include("models/var/dsgevar/dsgevar.jl") # defined aboved
-    # include("models/var/dsgevar/measurement_error.jl")
-    # include("models/var/dsgevar/subspecs.jl")
+    include("models/var/dsgevar/measurement_error.jl")
+    include("models/var/dsgevar/subspecs.jl")
+    include("models/var/dsgevar/util.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
@@ -479,10 +484,12 @@ module DSGE
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
     include("forecast/impulse_responses.jl")
+    include("forecast/var/impulse_responses.jl")
+    include("forecast/var/dsgevar/impulse_responses.jl")
     include("forecast/drivers.jl")
 
-    include("dsgevar/dsgevar.jl")
-    include("dsgevar/dsgevar_likelihood.jl")
-    include("dsgevar/impulse_responses.jl")
-    include("dsgevar/util.jl")
+    # include("dsgevar/dsgevar.jl")
+    # include("dsgevar/dsgevar_likelihood.jl")
+    # include("dsgevar/impulse_responses.jl")
+    # include("dsgevar/util.jl")
 end
