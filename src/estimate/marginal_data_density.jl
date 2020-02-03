@@ -26,11 +26,13 @@ function marginal_data_density(m::AbstractDSGEModel,
     end
 
     if calculation_method == :incremental_weights
-        file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
+        file        = load(rawpath(m, "estimate", "smc_cloud.jld2"))
         cloud, w, W = file["cloud"], file["w"], file["W"]
-        w_W = w[:, 2:end] .* W[:, 1:end-1]
+        n_parts     = sum(W[:, 1])
 
-        return sum(log.(sum(w_W, dims = 1))) # sum across particles, take log, sum across params
+        w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
+
+        return sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
 
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, m.parameters)
