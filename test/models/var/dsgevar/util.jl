@@ -1,7 +1,6 @@
-using DSGE, MAT, Test
-
+fp = dirname(@__FILE__)
 @testset "Draw stationary VAR coefficients and covariance matrix" begin
-    matdata = matread("../../../reference/test_dsgevar_stationary_draws.mat")
+    matdata = matread(joinpath(fp, "../../../reference/test_dsgevar_stationary_draws.mat"))
     β_draw, Σ_draw = DSGE.draw_stationary_VAR(matdata["yyyyd"], matdata["xxyyd"],
                                          matdata["xxxxd"], Int(matdata["nobsc"]),
                                          Int(matdata["nvar"]), Int(matdata["nlags"]);

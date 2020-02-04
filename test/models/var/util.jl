@@ -1,9 +1,7 @@
-using DSGE, MAT, Test
-
-
+fp = dirname(@__FILE__)
 @testset "Creating lagged data" begin
     # lag
-    matdata = matread("../../reference/test_lag.mat")
+    matdata = matread(joinpath(fp, "../../reference/test_lag.mat"))
     nonzero = findfirst(vec(sum(matdata["lag_y"], dims = 2)) .!== 0.)
     lags = Int(matdata["lags"])
     @test DSGE.lag(matdata["y"], lags) ≈ matdata["lag_y"][nonzero:end, :]
@@ -51,7 +49,7 @@ using DSGE, MAT, Test
 end
 
 @testset "Check covariances in data" begin
-    matdata = matread("../../reference/test_covariance.mat")
+    matdata = matread(joinpath(fp, "../../reference/test_covariance.mat"))
     lags = Int(matdata["lags"])
     @test DSGE.lag_data(Matrix(matdata["YY"]'), Int(matdata["lags"])) ≈
         matdata["XX"][lags + 1:end, :]
