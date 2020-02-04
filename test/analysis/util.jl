@@ -30,6 +30,8 @@ load_data(m)
     m <= Setting(:use_population_forecast, true)
     @test_throws ErrorException DSGE.load_population_growth(m)
 
+    m <= Setting(:date_forecast_start, DSGE.quartertodate("2019-Q4"))
+    m <= Setting(:date_presample_start, DSGE.quartertodate("1959-Q3"))
     @test DSGE.get_y0_index(m, :forecast) == 241
     @test DSGE.get_y0_index(m, :forecast4q) == 238
     @test DSGE.get_y0_index(m, :shockdec) == 2
