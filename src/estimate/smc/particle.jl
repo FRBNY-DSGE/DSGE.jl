@@ -180,7 +180,7 @@ end
 @inline function get_weights(c::Matrix{Float64})
     return c[:, ind_weight(size(c,2))]
 end
-@inline function get_weights(c::Cloud)
+@inline function get_weights(c::Union{DSGE.Cloud, SMC.Cloud})
     return c.particles[:, ind_weight(size(c.particles,2))]
 end
 
