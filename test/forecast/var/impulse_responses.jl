@@ -1,7 +1,5 @@
-using DSGE, FileIO, Test, ModelConstructors
-
-# matdata = matread("reference/var_ols_gdp_ur.mat")
-data = load("../../reference/var_irf_out.jld2")
+fp = dirname(@__FILE__)
+data = load(joinpath(fp, "../../reference/var_irf_out.jld2"))
 β = data["bhat_full"]
 Σ = data["sigmahat_full"]
 irfs1 = data["irfs_full_choleskyLR"]

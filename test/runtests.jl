@@ -4,6 +4,12 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
+            "models/var/dsgevar/dsgevar",
+            "models/var/dsgevar/util",
+            "models/var/util",
+"estimate/var/dsgevar_likelihood",
+            "forecast/var/dsgevar/impulse_responses",
+            "forecast/var/impulse_responses",
             "core",
             "parameters",
             "models/representative/an_schorfheide/an_schorfheide",
