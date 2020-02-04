@@ -16,7 +16,7 @@ end
 function Base.show(io::IO, m::DSGEVAR)
     @printf io "DSGE-VAR Model\n"
     @printf io "observables:      %i\n" n_observables(m)
-    @printf io "data_vintage:     %i\n" data_vintage(m.dsge)
+    @printf io "data_vintage:     %s\n" data_vintage(m.dsge)
     @printf io "DSGE model:       %s\n" spec(get_dsge(m))
     @printf io "DSGE description: %s\n" description(get_dsge(m))
 end
@@ -139,12 +139,12 @@ end
 
 # Updating parameters
 function update!(m::DSGEVAR{T}, values::Vector{T}) where {T<:Real}
-    ModelConstructors.update!(m.dsge, values)
+    DSGE.update!(m.dsge, values)
     steadystate!(m.dsge)
 end
 
 function update!(m::DSGEVAR{T}, values::ParameterVector{T}) where {T<:Real}
-    ModelConstructors.update!(m.dsge, map(x -> x.value, values))
+    DSGE.update!(m.dsge, values)
     steadystate!(m.dsge)
 end
 
@@ -165,6 +165,12 @@ function (<=)(m::DSGEVAR, s::Setting)
     m.dsge <= s
 end
 
+# Setting access
 function get_setting(m::DSGEVAR, k::Symbol)
     return ModelConstructors.get_setting(m.dsge, k)
+end
+
+# Prior
+function prior(m::DSGEVAR)
+    return ModelConstructors.prior(m.dsge)
 end
