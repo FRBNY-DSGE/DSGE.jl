@@ -3,17 +3,20 @@
 
 Calculates log joint prior density of m.parameters.
 """
-function prior(m::AbstractDSGEModel{T}) where T<:AbstractFloat
-    free_params = Base.filter(θ -> !θ.fixed, m.parameters)
-    logpdfs = map(logpdf, free_params)
-    return sum(logpdfs)
+function prior(m::AbstractDSGEModel{T}) where {T<:AbstractFloat}
+    return ModelConstructors.prior(m.parameters)
 end
 
 """
 ```
 posterior(m::AbstractDSGEModel{T}, data::Matrix{T};
           sampler::Bool = false, catch_errors::Bool = false,
-          φ_smc = 1) where {T<:AbstractFloat}
+          φ_smc::Float64 = 1, regime_switching::Bool = false,
+          n_regimes::Int = 2) where {T<:AbstractFloat}
+posterior(m::AbstractVARModel{T}, data::Matrix{T};
+          sampler::Bool = false, catch_errors::Bool = false,
+          φ_smc::Float64 = 1, regime_switching::Bool = false,
+          n_regimes::Int = 2, λ::T = 0.) where {T<:AbstractFloat}
 ```
 
 Calculates and returns the log of the posterior distribution for `m.parameters`:
@@ -35,6 +38,9 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 -`catch_errors`: Whether to catch errors of type `GensysError` or `ParamBoundsError`
 - `φ_smc`: a tempering factor to change the relative weighting of the prior and
      the likelihood when calculating the posterior. It is used primarily in SMC.
+- `regime_switching`: Indicates whether to use the regime-switching system variant
+- `n_regimes`: Number of regimes
+- `λ`: weight on DSGE prior for a DSGEVAR
 """
 function posterior(m::AbstractDSGEModel{T}, data::AbstractArray;
                    sampler::Bool = false, ϕ_smc::Float64 = 1.,
@@ -45,11 +51,25 @@ function posterior(m::AbstractDSGEModel{T}, data::AbstractArray;
     return post
 end
 
+function posterior(m::AbstractVARModel{T}, data::AbstractArray;
+                   sampler::Bool = false, ϕ_smc::Float64 = 1.,
+                   λ::T = 0., catch_errors::Bool = false)
+    catch_errors = catch_errors | sampler
+    like = likelihood(m, data; sampler = sampler, catch_errors = catch_errors, λ = λ)
+    post = ϕ_smc*like + prior(m)
+    return post
+end
+
 """
 ```
 posterior!(m::AbstractDSGEModel{T}, parameters::Vector{T}, data::Matrix{T};
            sampler::Bool = false, catch_errors::Bool = false,
-           φ_smc = 1) where {T<:AbstractFloat}
+           φ_smc::Float64 = 1., regime_switching::Bool = false,
+           n_regimes::Int = 2) where {T<:AbstractFloat}
+posterior!(m::AbstractVARModel{T}, parameters::Vector{T}, data::Matrix{T};
+           sampler::Bool = false, catch_errors::Bool = false,
+           φ_smc::Float64 = 1., regime_switching::Bool = false,
+           n_regimes::Int = 2, λ::T = 0.) where {T<:AbstractFloat}
 ```
 
 Evaluates the log posterior density at `parameters`.
@@ -68,10 +88,14 @@ Evaluates the log posterior density at `parameters`.
      If `sampler = true`, both should always be caught.
 - `φ_smc`: a tempering factor to change the relative weighting of the prior and
      the likelihood when calculating the posterior. It is used primarily in SMC.
+- `regime_switching`: Indicates whether to use the regime-switching system variant
+- `n_regimes`: Number of regimes
+- `λ`: weight on DSGE prior for a DSGEVAR
 """
 function posterior!(m::AbstractDSGEModel{T}, parameters::Vector{T}, data::AbstractArray;
                     sampler::Bool = false, ϕ_smc::Float64 = 1.,
-                    catch_errors::Bool = false) where {T<:AbstractFloat}
+                    catch_errors::Bool = false, regime_switching::Bool = false,
+                    n_regimes::Int = 2) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
     if sampler
         try
@@ -86,7 +110,31 @@ function posterior!(m::AbstractDSGEModel{T}, parameters::Vector{T}, data::Abstra
     else
         DSGE.update!(m, parameters)
     end
-    return posterior(m, data; sampler=sampler, ϕ_smc=ϕ_smc, catch_errors=catch_errors)
+    return posterior(m, data; sampler = sampler, ϕ_smc = ϕ_smc, catch_errors = catch_errors,
+                     regime_switching = regime_switching, n_regimes = n_regimes)
+end
+
+function posterior!(m::AbstractVARModel{T},  parameters::Vector{T}, data::AbstractArray;
+                   sampler::Bool = false, ϕ_smc::Float64 = 1.,
+                   catch_errors::Bool = false, λ::T = 0.,
+                   regime_switching::Bool = false,
+                   n_regimes::Int = 2) where {T<:AbstractFloat}
+    catch_errors = catch_errors | sampler
+    if sampler
+        try
+            DSGE.update!(m, parameters)
+        catch err
+            if isa(err, ParamBoundsError)
+                return -Inf
+            else
+                throw(err)
+            end
+        end
+    else
+        DSGE.update!(m, parameters)
+    end
+    return posterior(m, data; sampler = sampler, ϕ_smc = ϕ_smc, catch_errors = catch_errors,
+                     regime_switching = regime_switching, n_regimes = n_regimes, λ = λ)
 end
 
 """
@@ -117,6 +165,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
                     use_chand_recursion::Bool = false,
                     tol::Float64 = 0.0,
                     verbose::Symbol = :high) where {T<:AbstractFloat}
+
     catch_errors = catch_errors | sampler
     use_penalty  = try get_setting(m, :use_likelihood_penalty) catch; false end
     auto_reject  = try get_setting(m, :auto_reject) catch; false end
@@ -197,7 +246,8 @@ end
 """
 ```
 likelihood(m::AbstractVARModel, data::Matrix{T};
-           sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
+           sampler::Bool = false, catch_errors::Bool = false,
+           λ::T = 0., verbose::Symbol = :high) where {T<:AbstractFloat}
 ```
 
 Evaluate the DSGE likelihood function. Can handle two-part estimation where the observed
@@ -215,6 +265,7 @@ filter over the main sample all at once.
 - `sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the
     transition matrices for the zero-lower-bound period are returned in a dictionary.
 - `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
+- `λ`:: weight on DSGE prior of DSGEVAR
 """
 function likelihood(m::AbstractVARModel, data::AbstractMatrix;
                     sampler::Bool = false,
@@ -222,7 +273,6 @@ function likelihood(m::AbstractVARModel, data::AbstractMatrix;
                     λ::T = 0.,
                     regime_switching::Bool = false,
                     n_regimes::Int = 2,
-                    tol::Float64 = 0.0,
                     verbose::Symbol = :high) where {T<:AbstractFloat}
 
     catch_errors = catch_errors | sampler
