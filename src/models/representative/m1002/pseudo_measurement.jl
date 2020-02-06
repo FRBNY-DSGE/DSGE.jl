@@ -159,6 +159,14 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
+    ## Labor Productivity Growth, no measurement error
+    if haskey(m.settings, :add_Epi_t_measurement)
+        if get_setting(m, :add_Epi_t_measurement)
+            ZZ_pseudo[pseudo[:Epi_t], endo[:Eπ_t]] = 1.
+            DD_pseudo[pseudo[:Epi_t]]              = 100. * (m[:π_star] - 1.)
+        end
+    end
+
     ## Fundamental inflation related pseudo-obs
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         # Compute coefficient on Sinf
@@ -352,6 +360,14 @@ function pseudo_measurement(m::Model1002{T},
                 ZZ_pseudos[reg][pseudo[:LaborProductivityGrowthNoME], endo[:L_t]]       = -1
                 ZZ_pseudos[reg][pseudo[:LaborProductivityGrowthNoME], endo_addl[:L_t1]] = 1.
                 DD_pseudos[reg][pseudo[:LaborProductivityGrowthNoME]]                   = 100*(exp(m[:z_star]) - 1)
+            end
+        end
+
+        ## Labor Productivity Growth, no measurement error
+        if haskey(m.settings, :add_Epi_t_measurement)
+            if get_setting(m, :add_Epi_t_measurement)
+                ZZ_pseudos[reg][pseudo[:Epi_t], endo[:Eπ_t]]       = 1.
+                DD_pseudos[reg][pseudo[:Epi_t]]                    = 100. * (m[:π_star] - 1.)
             end
         end
 

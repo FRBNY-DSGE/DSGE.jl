@@ -38,6 +38,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_Epi_t_measurement)
+        if get_setting(m, :add_Epi_t_measurement)
+            push!(pseudo_names, :Epi_t)
+        end
+    end
+
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names
@@ -168,6 +174,13 @@ function init_pseudo_observable_mappings!(m::Model1002)
         if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
             pseudo[:LaborProductivityGrowthNoME].name     = "Labor Productivity Growth (No ME)"
             pseudo[:LaborProductivityGrowthNoME].longname = "Labor Productivity Growth (No ME)"
+        end
+    end
+
+    if haskey(m.settings, :add_Epi_t_measurement)
+        if get_setting(m, :add_Epi_t_measurement)
+            pseudo[:Epi_t].name     = "Short-term Inflation Expectations"
+            pseudo[:Epi_t].longname = "Short-term Inflation Expectations"
         end
     end
 
