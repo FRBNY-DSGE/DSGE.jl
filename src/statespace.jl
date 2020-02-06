@@ -326,11 +326,11 @@ compute_system(m; apply_altpolicy = false,
                verbose = :high)
 ```
 """
-function compute_system(m::DSGEVAR{T}; apply_altpolicy::Bool = false,
+function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
                         regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
                         get_covariances::Bool = false, verbose::Symbol = :high) where T<:Real
-    dsge = m.dsge
+    dsge = get_dsge(m)
     if regime_switching
         regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
                                        regime_switching = regime_switching, n_regimes = n_regimes,
@@ -340,8 +340,8 @@ function compute_system(m::DSGEVAR{T}; apply_altpolicy::Bool = false,
         system = compute_system(dsge; verbose = verbose)
 
     end
-    system = compute_system(dsge, system; observables = get_observables(m),
-                            shocks = get_shocks(m), check_system = check_system)
+    system = compute_system(dsge, system; observables = collect(keys(get_observables(m))),
+                            shocks = collect(keys(get_shocks(m))), check_system = check_system)
 
     EE, MM = measurement_error(m)
 

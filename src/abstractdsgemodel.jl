@@ -196,6 +196,17 @@ end
 # Interface for accessing parameters
 get_parameters(m::AbstractDSGEModel) = m.parameters
 
+# Interface for accessing rng
+get_rng(m::AbstractDSGEModel) = m.rng
+
+# Interface for accessing settings dictionary
+get_settings(m::AbstractDSGEModel) = m.settings
+
+# Interface for accessing observables dictionary
+get_observables(m::AbstractDSGEModel) = m.observables
+get_pseudo_observables(m::AbstractDSGEModel) = m.pseudo_observables
+get_exogenous_shocks(m::AbstractDSGEModel) = m.exogenous_shocks
+
 # Interface for data
 cond_vintage(m::AbstractDSGEModel)    = get_setting(m, :cond_vintage)
 cond_id(m::AbstractDSGEModel)         = get_setting(m, :cond_id)

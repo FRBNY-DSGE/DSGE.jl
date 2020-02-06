@@ -24,7 +24,7 @@ module DSGE
                               n_shocks_expectational, n_observables, n_pseudo_observables,
                               n_equilibrium_conditions, n_parameters, n_parameters_steady_state,
                               n_parameters_free, SteadyStateParameterGrid, get_setting, prior,
-                              savepath, filestring_base
+                              savepath, filestring_base, data_vintage
     import SMC: get_vals, get_logpost
     import Calculus, Missings, Nullables
     import StateSpaceRoutines: KalmanFilter

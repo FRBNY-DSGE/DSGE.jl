@@ -39,8 +39,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               verbose::Symbol = :low,
               old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
               old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
-                               SMC.Cloud} = isa(m, DSGEVAR) ?
-              DSGE.ParticleCloud(m.dsge, 0) : DSGE.ParticleCloud(m, 0),
+                               SMC.Cloud} = DSGE.ParticleCloud(m, 0),
               run_test::Bool = false,
               filestring_addl::Vector{String} = Vector{String}(),
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
@@ -110,10 +109,10 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     # Calls SMC package's generic SMC
     println("Calling SMC.jl's SMC estimation routine...")
 
-    SMC.smc(my_likelihood, isa(m, DSGEVAR) ? m.dsge.parameters : m.parameters, data;
+    SMC.smc(my_likelihood, get_parameters(m), data;
             verbose = verbose,
             testing = m.testing,
-            data_vintage = isa(m, DSGEVAR) ? data_vintage(m.dsge) : data_vintage(m),
+            data_vintage = data_vintage(m),
 
             parallel = parallel,
             n_parts  = n_parts,
