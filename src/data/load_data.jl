@@ -415,7 +415,7 @@ function is suitable for direct use in `estimate`, `posterior`, etc.
 - `in_sample::Bool`: indicates whether or not to discard rows that are out of sample. Set this flag to false in
 the case that you are calling filter_shocks! in the scenarios codebase.
 """
-function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
+function df_to_matrix(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
     # Sort rows by date
     df1 = sort(df, :date)
 
@@ -434,36 +434,8 @@ function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     end
 
     # Discard columns not used
-    cols = collect(keys(m.observables))
-    sort!(cols, by = x -> m.observables[x])
-    df1 = df1[!,cols]
-
-    return permutedims(Float64.(collect(Missings.replace(convert(Matrix{Union{Missing, Float64}}, df1), NaN))))
-end
-
-function df_to_matrix(m::AbstractVARModel, df::DataFrame;
-                      cond_type::Symbol = :none, include_presample::Bool = true,
-                      in_sample::Bool = true)
-    # Sort rows by date
-    df1 = sort(df, :date)
-
-    if in_sample
-        start_date = if include_presample
-            isa(m, DSGEVAR) ? date_presample_start(m.dsge) : date_presample_start(m)
-        else
-            isa(m, DSGEVAR) ? date_presample_start(m.dsge) : date_mainsample_start(m)
-        end
-        end_date = if cond_type in [:semi, :full]
-            isa(m, DSGEVAR) ? date_conditional_end(m.dsge) : date_conditional_end(m)
-        else
-            isa(m, DSGEVAR) ? date_mainsample_end(m.dsge) : date_mainsample_end(m)
-        end
-        df1 = df1[start_date .<= df[!,:date] .<= end_date, :]
-    end
-
-    # Discard columns not used
-    cols = collect(keys(m.observables))
-    sort!(cols, by = x -> m.observables[x])
+    cols = collect(keys(get_observables(m)))
+    sort!(cols, by = x -> get_observables(m)[x])
     df1 = df1[!,cols]
 
     return permutedims(Float64.(collect(Missings.replace(convert(Matrix{Union{Missing, Float64}}, df1), NaN))))

@@ -231,7 +231,7 @@ end
 
 """
 ```
-metropolis_hastings(propdist::Distribution, m::AbstractDSGEModel,
+metropolis_hastings(propdist::Distribution, m::Union{AbstractDSGEModel,AbstractVARModel},
     data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
 ```
 
@@ -265,20 +265,17 @@ function metropolis_hastings(propdist::Distribution,
                              filestring_addl::Vector{String} = Vector{String}(undef, 0),
                              verbose::Symbol = :low) where {T<:AbstractFloat}
 
-    # To avoid writing isa(m, DSGEVAR)
-    _m = isa(m, DSGEVAR) ? m.dsge : m
+    n_blocks = n_mh_blocks(m)
+    n_sim    = n_mh_simulations(m)
+    n_burn   = n_mh_burn(m)
+    mhthin   = mh_thin(m)
 
-    n_blocks = n_mh_blocks(_m)
-    n_sim    = n_mh_simulations(_m)
-    n_burn   = n_mh_burn(_m)
-    mhthin   = mh_thin(_m)
-
-    n_param_blocks = n_mh_param_blocks(_m)
+    n_param_blocks = n_mh_param_blocks(m)
     adaptive_accpt = get_setting(m, :mh_adaptive_accpt)
     c              = get_setting(m, :mh_c)
     α              = get_setting(m, :mh_α)
 
-    rng      = _m.rng
+    rng      = get_rng(m)
     testing  = m.testing
     savepath = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
 
@@ -298,7 +295,7 @@ function metropolis_hastings(propdist::Distribution,
         end
     end
 
-    return metropolis_hastings(propdist, loglikelihood, _m.parameters, data, cc0, cc;
+    return metropolis_hastings(propdist, loglikelihood, get_parameters(m), data, cc0, cc;
                                n_blocks = n_blocks, n_param_blocks = n_param_blocks,
                                adaptive_accpt = adaptive_accpt, c = c, α = α, n_sim = n_sim,
                                n_burn = n_burn, mhthin = mhthin, verbose = verbose,

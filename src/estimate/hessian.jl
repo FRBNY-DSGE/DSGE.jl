@@ -11,17 +11,15 @@ function hessian!(m::Union{AbstractDSGEModel,AbstractVARModel},
                   data::AbstractArray;
                   verbose::Symbol = :none) where T<:AbstractFloat
 
-    _m = isa(m, DSGEVAR) ? m.dsge : m # to avoid writing isa(m, DSGEVAR)
-
     DSGE.update!(m, x)
 
     # Index of free parameters
-    para_free      = [!θ.fixed for θ in _m.parameters]
+    para_free      = [!θ.fixed for θ in get_parameters(m)]
     para_free_inds = findall(para_free)
 
     # Compute hessian only for freem parameters with indices less than max. Useful for
     # testing purposes.
-    max_free_ind = n_hessian_test_params(_m)
+    max_free_ind = n_hessian_test_params(m)
     if max_free_ind < maximum(para_free_inds)
         para_free_inds = para_free_inds[1:max_free_ind]
     end
@@ -39,7 +37,7 @@ function hessian!(m::Union{AbstractDSGEModel,AbstractVARModel},
         return -posterior!(m, x_model, data)
     end
 
-    distr = use_parallel_workers(_m)
+    distr = use_parallel_workers(m)
     hessian_free, has_errors = hessizero(f_hessian, x_hessian;
         check_neg_diag = true, verbose = verbose, distr = distr)
 

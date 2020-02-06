@@ -42,12 +42,13 @@ end
     # Check access and size functions
     m = DSGE.DSGEVAR(dsge, collect(keys(dsge.exogenous_shocks)), "ss0")
     DSGE.update!(m; observables = [:obs_spread], lags = 1)
-    @test DSGE.get_observables(m) == [:obs_spread]
+    @test collect(keys(DSGE.get_observables(m))) == [:obs_spread]
     @test n_observables(m) == 1
-    @test DSGE.get_shocks(m) == collect(keys(m.dsge.exogenous_shocks))
+    @test collect(keys(DSGE.get_shocks(m))) == collect(keys(m.dsge.exogenous_shocks))
     @test DSGE.get_λ(m) == 0. == m.λ
     @test DSGE.n_shocks(m) == length(m.dsge.exogenous_shocks)
     @test DSGE.n_lags(m) == 1
+    @test DSGE.get_lags(m) == 1
     @test typeof(DSGE.get_dsge(m)) == typeof(dsge)
 end
 

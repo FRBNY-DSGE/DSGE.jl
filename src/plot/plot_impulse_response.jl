@@ -75,7 +75,7 @@ function plot_impulse_response(m::AbstractDSGEModel, shock::Symbol, vars::Vector
         # Save plot
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                                Symbol("irf_", detexify(shock), "_", detexify(var) * addl_text),
+                                                Symbol("irf_", detexify(shock), "_", string(detexify(var)) * addl_text),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
             save_plot(plots[var], output_file, verbose = verbose)
