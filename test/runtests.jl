@@ -1,15 +1,9 @@
-using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2
+using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
-            "models/var/dsgevar/dsgevar",
-            "models/var/dsgevar/util",
-            "models/var/util",
-"estimate/var/dsgevar_likelihood",
-            "forecast/var/dsgevar/impulse_responses",
-            "forecast/var/impulse_responses",
             "core",
             "parameters",
             "models/representative/an_schorfheide/an_schorfheide",

@@ -534,8 +534,9 @@ F_ϵ: structural shock distribution
 F_u: likelihood function measurement error distribution
 F_λ: initial distribution of λ for state transition function
 """
-function compute_system(m::PoolModel{T};
-                        verbose::Symbol = :high) where T<:AbstractFloat
+function compute_system(m::PoolModel{T}; verbose::Symbol = :high,
+                        regime_switching::Bool = false,
+                        n_regimes::Int = 1) where T<:AbstractFloat
     Φ, F_ϵ, F_λ = transition(m)
     Ψ, F_u = measurement(m)
     return Φ, Ψ, F_ϵ, F_u, F_λ

@@ -1,16 +1,17 @@
 """
 ```
-DSGEVAR{T} <: AbstractVARModel{T}
+DSGEVAR{T} <: AbstractDSGEVARModel{T}
 ```
-
 """
-mutable struct DSGEVAR{T} <: AbstractVARModel{T}
+mutable struct DSGEVAR{T} <: AbstractDSGEVARModel{T}
     dsge::AbstractDSGEModel{T}
     observables::OrderedDict{Symbol,Int}
     shocks::OrderedDict{Symbol,Int}
     lags::Int
+    λ::T
     spec::String
     subspec::String
+    testing::Bool
 end
 
 function Base.show(io::IO, m::DSGEVAR)
@@ -33,10 +34,8 @@ function DSGEVAR(dsge::AbstractDSGEModel{T}, shocks::Vector{Symbol}, subspec::St
     if copy_dsge
         dsge = deepcopy(dsge)
     end
-    m = DSGEVAR{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), 0, spec, subspec)
-
-    # Set λ for DSGEVAR estimation, by default, to 0.5
-    m <= Setting(:λ, 0.5, true, "lambda", "weight on DSGE prior")
+    m = DSGEVAR{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), 0,
+                   0., spec, subspec, testing)
 
     # Initialize shocks from DSGE
     update!(m; shocks = shocks, check_valid = false)
@@ -54,17 +53,21 @@ end
 n_lags(m::DSGEVAR)          = m.lags
 get_observables(m::DSGEVAR) = collect(keys(m.observables))
 get_shocks(m::DSGEVAR)      = collect(keys(m.shocks))
+get_λ(m::DSGEVAR)           = m.λ
 get_dsge(m::DSGEVAR)        = m.dsge
 n_observables(m::DSGEVAR)   = length(m.observables)
 n_shocks(m::DSGEVAR)        = length(m.shocks)
 
 # Helper to check for valid VAR systems
-function check_valid_dsgevar(m::DSGEVAR;
+function check_valid_dsgevar(m::DSGEVAR{T};
                              observables::Vector{Symbol} = collect(keys(m.observables)),
                              shocks::Vector{Symbol} = collect(keys(m.shocks)),
-                             lags::Int = n_lags(m))
+                             lags::Int = n_lags(m), λ::T = m.λ) where {T<:Real}
     # Check lags
     @assert lags >= 0 "Number of lags must be non-negative."
+
+    # Check λ is non-negative
+    @assert λ >= 0 "The weight on the DSGE prior λ must be non-negative."
 
     # Check observables
     missing_obs = Vector{Symbol}(undef, 0)
@@ -94,14 +97,18 @@ function check_valid_dsgevar(m::DSGEVAR;
 end
 
 # Update VAR system, e.g. observables
-function update!(m::DSGEVAR; observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
+function update!(m::DSGEVAR{T}; observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  shocks::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                 lags::Int = 0, check_valid::Bool = true)
+                 lags::Int = 0, λ::T = m.λ, check_valid::Bool = true) where {T<:Real}
 
     if check_valid
-        check_valid_dsgevar(m; observables = observables, shocks = shocks, lags = lags)
+        check_valid_dsgevar(m; observables = observables, shocks = shocks,
+                            lags = lags, λ = λ)
     end
 
+    if m.λ != λ
+        m.λ = λ
+    end
     if !isempty(observables)
         for k in keys(m.observables)
             delete!(m.observables, k)
@@ -128,11 +135,11 @@ end
 function update!(m::DSGEVAR, dsge::AbstractDSGEModel;
                  observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  shocks::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                 lags::Int = 0, check_valid::Bool = true)
+                 lags::Int = 0, λ::Float64 = m.λ, check_valid::Bool = true)
 
     m.dsge = dsge
     update!(m; observables = observables, shocks = shocks, lags = lags,
-            check_valid = check_valid)
+            λ = λ, check_valid = check_valid)
 
     return m
 end
@@ -173,4 +180,55 @@ end
 # Prior
 function prior(m::DSGEVAR)
     return ModelConstructors.prior(m.dsge)
+end
+
+# Not exposed to user. Actually create path and insert model string to file name.
+function savepath(m::DSGEVAR,
+                  out_type::String,
+                  sub_type::String,
+                  file_name::String = "",
+                  filestring_addl::Vector{String} = Vector{String}())
+    # Containing directory
+    dir = String(joinpath(saveroot(m), "output_data", spec(m.dsge), subspec(m.dsge),
+                          spec(m), subspec(m), out_type, sub_type))
+
+    if !isempty(file_name)
+        base = filestring_base(m)
+        return savepath(dir, file_name, base, filestring_addl)
+    else
+        return dir
+    end
+end
+
+function savepath(dir::String,
+                  file_name::String = "",
+                  filestring_base::Vector{String} = Vector{String}(),
+                  filestring_addl::Vector{String} = Vector{String}())
+    if !isdir(dir)
+        mkpath(dir)
+    end
+
+    if !isempty(file_name)
+        (base, ext) = splitext(file_name)
+        myfilestring = filestring(filestring_base, filestring_addl)
+        file_name_detail = base * myfilestring * ext
+
+        return joinpath(dir, file_name_detail)
+    else
+        return dir
+    end
+end
+
+function filestring_base(m::DSGEVAR)
+    if !m.testing
+        base = Vector{String}()
+        for (skey, sval) in m.dsge.settings
+            if sval.print
+                push!(base, ModelConstructors.to_filestring(sval))
+            end
+        end
+        return base
+    else
+        return ["test"]
+    end
 end

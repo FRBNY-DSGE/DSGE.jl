@@ -136,15 +136,13 @@ function filter_likelihood(m::AbstractDSGEModel, df::DataFrame, system::System{S
                            P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                            cond_type::Symbol = :none, include_presample::Bool = true,
                            in_sample::Bool = true,
-                           tol::Float64 = 0.0,
-                           regime_switching::Bool = false) where {S<:AbstractFloat}
+                           tol::Float64 = 0.0) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
 
     filter_likelihood(m, data, system, s_0, P_0; start_date = start_date,
-                      include_presample = include_presample, tol = tol,
-                      regime_switching = regime_switching)
+                      include_presample = include_presample, tol = tol)
 end
 
 function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray, system::System{S},

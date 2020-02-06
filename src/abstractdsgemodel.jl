@@ -206,6 +206,9 @@ function inds_states_no_integ_series(m::AbstractDSGEModel)
     end
 end
 
+# Interface for accessing parameters
+get_parameters(m::AbstractDSGEModel) = m.parameters
+
 # Interface for data
 cond_vintage(m::AbstractDSGEModel)    = get_setting(m, :cond_vintage)
 cond_id(m::AbstractDSGEModel)         = get_setting(m, :cond_id)

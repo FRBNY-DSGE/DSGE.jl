@@ -23,7 +23,8 @@ module DSGE
                               n_states, n_states_augmented, n_shocks_exogenous,
                               n_shocks_expectational, n_observables, n_pseudo_observables,
                               n_equilibrium_conditions, n_parameters, n_parameters_steady_state,
-                              n_parameters_free, SteadyStateParameterGrid, get_setting, prior
+                              n_parameters_free, SteadyStateParameterGrid, get_setting, prior,
+                              savepath, filestring_base
     import SMC: get_vals, get_logpost
     import Calculus, Missings, Nullables
     import StateSpaceRoutines: KalmanFilter
@@ -64,6 +65,9 @@ module DSGE
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
         ShockGroup, alternative_policy,
+
+        # abstractvarmodel.jl
+        AbstractVARModel,
 
         # statespace.jl
         Transition, Measurement, PseudoMeasurement, System, compute_system,

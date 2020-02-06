@@ -108,10 +108,12 @@ Load and return parameter draws from Metropolis-Hastings or SMC.
   parameter draws for this block.
 """
 function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
-                    verbose::Symbol = :low,
-                    filestring_addl::Vector{String} = Vector{String}(undef, 0))
+                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    input_file_name::String = "")
 
-    input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    end
     println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
@@ -186,9 +188,12 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
 end
 
 function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::AbstractRange{Int64};
-                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0))
+                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    input_file_name::String = "")
 
-    input_file_name = get_forecast_input_file(m, input_type)
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    end
     println(verbose, :low, "Loading draws from $input_file_name")
 
     if input_type in [:full, :subset]
@@ -252,6 +257,21 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
     else
         error("This load_draws method can only be called with input_type in [:full, :subset]")
     end
+end
+
+function load_draws(m::DSGEVAR, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
+                    verbose::Symbol = :low,
+                    filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    input_file_name::String = "")
+
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type;
+                                                  filestring_addl = filestring_addl)
+    end
+
+    return load_draws(m.dsge, input_type; subset_inds = subset_inds, verbose = verbose,
+                      filestring_addl = filestring_addl,
+                      input_file_name = input_file_name)
 end
 
 """
