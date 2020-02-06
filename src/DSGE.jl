@@ -34,7 +34,7 @@ module DSGE
         default_settings!, default_test_settings!,
 
         # abstractdsgemodel.jl
-        AbstractDSGEModel, AbstractRepModel, description,
+        AbstractDSGEModel, AbstractRepModel, AbstractVARModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
         date_presample_start, date_mainsample_start, date_zlb_start,
         date_presample_end, date_prezlb_end, date_mainsample_end, date_conditional_end,
