@@ -33,4 +33,36 @@ end
     @test F_u.Σ.mat == system[:measurement][:EE]
 end
 
+
+@testset "VAR approximation of state space" begin
+    m = Model1002("ss10"; custom_settings =
+                  Dict{Symbol,Setting}(:add_laborshare_measurement =>
+                                       Setting(:add_laborshare_measurement, true)))
+    system = compute_system(m)
+    system = compute_system(m, system; observables = [:obs_hours, :obs_gdpdeflator,
+                                                      :laborshare_t, :NominalWageGrowth],
+                            shocks = collect(keys(m.exogenous_shocks)))
+    yyyyd, xxyyd, xxxxd = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                                 system[:DD], system[:ZZ], system[:EE],
+                                                 zeros(size(system[:ZZ], 1),
+                                                       DSGE.n_shocks_exogenous(m)),
+                                                 4; get_covariances = true)
+    β, Σ = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ], system[:DD],
+                                  system[:ZZ], system[:EE],
+                                  zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
+                                  4; get_covariances = false)
+
+    expmat = matread("reference/exp_var_approx_state_space.mat")
+    @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]
+    @test @test_matrix_approx_eq xxyyd expmat["xxyyd"]
+    @test @test_matrix_approx_eq xxxxd expmat["xxxxd"]
+
+    expβ = \(expmat["xxxxd"], expmat["xxyyd"])
+    expΣ = expmat["yyyyd"] - expmat["xxyyd"] * expβ
+    expΣ += expΣ'
+    expΣ ./= 2
+    @test @test_matrix_approx_eq β expβ
+    @test @test_matrix_approx_eq Σ expΣ
+end
+
 nothing

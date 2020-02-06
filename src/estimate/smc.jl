@@ -1,8 +1,8 @@
 """
 ```
-smc(m::AbstractDSGEModel, data::Matrix; verbose::Symbol, old_data::Matrix)
-smc(m::AbstractDSGEModel, data::DataFrame)
-smc(m::AbstractDSGEModel)
+smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix; verbose::Symbol, old_data::Matrix)
+smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame)
+smc(m::Union{AbstractDSGEModel,AbstractVARModel})
 ```
 
 ### Arguments:
@@ -35,10 +35,12 @@ smc(m::AbstractDSGEModel)
 These are wrapper functions to ensure simplicity of estimation of DSGE models while
 navigating the DSGE package.
 """
-function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
+function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64};
               verbose::Symbol = :low,
               old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-              old_cloud::Union{ParticleCloud,Cloud} = DSGE.ParticleCloud(m, 0),
+              old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
+                               SMC.Cloud} = isa(m, DSGEVAR) ?
+              DSGE.ParticleCloud(m.dsge, 0) : DSGE.ParticleCloud(m, 0),
               run_test::Bool = false,
               filestring_addl::Vector{String} = Vector{String}(),
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
@@ -73,10 +75,17 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
 
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
-    function my_likelihood(parameters::ParameterVector, data::Matrix{Float64})::Float64
-        update!(m, parameters)
-        likelihood(m, data; sampler = false, catch_errors = true,
-                   use_chand_recursion = use_chand_recursion, verbose = verbose)
+    my_likelihood = if isa(m, AbstractDSGEModel)
+        function _my_likelihood_dsge(parameters::ParameterVector, data::Matrix{Float64})::Float64
+            update!(m, parameters)
+            likelihood(m, data; sampler = false, catch_errors = true,
+                       use_chand_recursion = use_chand_recursion, verbose = verbose)
+        end
+    else isa(m, AbstractVARModel)
+        function _my_likelihood_var(parameters::ParameterVector, data::Matrix{Float64})::Float64
+            update!(m, parameters)
+            likelihood(m, data; sampler = false, catch_errors = true, verbose = verbose)
+        end
     end
 
     tempered_update = !isempty(old_data)
@@ -100,10 +109,11 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
 
     # Calls SMC package's generic SMC
     println("Calling SMC.jl's SMC estimation routine...")
-    SMC.smc(my_likelihood, m.parameters, data;
+
+    SMC.smc(my_likelihood, isa(m, DSGEVAR) ? m.dsge.parameters : m.parameters, data;
             verbose = verbose,
             testing = m.testing,
-            data_vintage = data_vintage(m),
+            data_vintage = isa(m, DSGEVAR) ? data_vintage(m.dsge) : data_vintage(m),
 
             parallel = parallel,
             n_parts  = n_parts,
@@ -147,7 +157,7 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     end
 end
 
-function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
+function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data_mat = df_to_matrix(m, data)
@@ -155,7 +165,7 @@ function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
                filestring_addl = filestring_addl)
 end
 
-function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
+function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              filestring_addl::Vector{String} = Vector{String}(undef, 0))
     data = load_data(m)

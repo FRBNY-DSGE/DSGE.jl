@@ -39,24 +39,28 @@ end
 
 @testset "Check DSGEVAR likelihood and posterior calculations" begin
     dsge = Model1002("ss10")
-    obs_i = [dsge.observables[:obs_nominalrate], dsge.observables[:obs_gdp], dsge.observables[:obs_gdpdeflator]]
+    obs_i = [dsge.observables[:obs_nominalrate], dsge.observables[:obs_gdp],
+             dsge.observables[:obs_gdpdeflator]]
     m = DSGE.DSGEVAR(dsge, collect(keys(dsge.exogenous_shocks)))
-    DSGE.update!(m; observables = [:obs_nominalrate, :obs_gdp, :π_t], lags = 4)
-    dsge_data = df_to_matrix(dsge, CSV.read("../reference/test_dsgevar_likelihood_dsge_data.csv"))[obs_i, :]
-    lh = likelihood(m, dsge_data; λ = .5)
-    @test lh ≈ DSGE.dsgevar_likelihood(m, dsge_data; λ = .5) ≈ load("../reference/test_dsgevar_likelihood_dsge.jld2", "llh")
+    DSGE.update!(m; observables = [:obs_nominalrate, :obs_gdp, :π_t], lags = 4, λ = 0.5)
+    dsge_data =
+        df_to_matrix(dsge,
+                     CSV.read(joinpath(path, "../reference/test_dsgevar_likelihood_dsge_data.csv")))[obs_i, :]
+    lh = likelihood(m, dsge_data)
+    @test lh ≈ DSGE.dsgevar_likelihood(m, dsge_data) ≈
+        load(joinpath(path, "../reference/test_dsgevar_likelihood_dsge.jld2"), "llh")
 
-    post = DSGE.posterior(m, dsge_data; λ = .5)
+    post = DSGE.posterior(m, dsge_data)
     @test post ≈ lh + prior(m)
 
     x = map(α -> α.value, m.dsge.parameters)
-    post_at_start = DSGE.posterior!(m, x, dsge_data; λ = .5)
+    post_at_start = DSGE.posterior!(m, x, dsge_data)
     @test post ≈ post_at_start
 
     # Ensure if we are not evaluating at start vector, then we do not get the reference
     # posterior
     global y = x .+ 0.01
-post_not_at_start = DSGE.posterior!(m, y, dsge_data; λ = .5)
+post_not_at_start = DSGE.posterior!(m, y, dsge_data)
     ϵ = 1.0
     @test abs(post_at_start - post_not_at_start) > ϵ
 end

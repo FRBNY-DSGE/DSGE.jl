@@ -258,36 +258,47 @@ sampling from the posterior distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-                             m::AbstractDSGEModel,
+                             m::Union{AbstractDSGEModel,AbstractVARModel},
                              data::Matrix{T},
                              cc0::T,
                              cc::T;
                              filestring_addl::Vector{String} = Vector{String}(undef, 0),
                              verbose::Symbol = :low) where {T<:AbstractFloat}
 
-    n_blocks = n_mh_blocks(m)
-    n_sim    = n_mh_simulations(m)
-    n_burn   = n_mh_burn(m)
-    mhthin   = mh_thin(m)
+    # To avoid writing isa(m, DSGEVAR)
+    _m = isa(m, DSGEVAR) ? m.dsge : m
 
-    n_param_blocks = n_mh_param_blocks(m)
+    n_blocks = n_mh_blocks(_m)
+    n_sim    = n_mh_simulations(_m)
+    n_burn   = n_mh_burn(_m)
+    mhthin   = mh_thin(_m)
+
+    n_param_blocks = n_mh_param_blocks(_m)
     adaptive_accpt = get_setting(m, :mh_adaptive_accpt)
     c              = get_setting(m, :mh_c)
     α              = get_setting(m, :mh_α)
 
-    rng      = m.rng
+    rng      = _m.rng
     testing  = m.testing
     savepath = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
 
     # To check: Defaulting to using Chandrasekhar recursions if no missing data
     use_chand_recursion = !any(isnan.(data))
 
-    function loglikelihood(p::ParameterVector, data::Matrix{Float64})::Float64
-        update!(m, p)
-        likelihood(m, data; sampler = true, catch_errors = false,
-                   use_chand_recursion = use_chand_recursion)
+    loglikelihood = if isa(m, AbstractDSGEModel)
+        function _loglikelihood_dsge(p::ParameterVector, data::Matrix{Float64})::Float64
+            update!(m, p)
+            likelihood(m, data; sampler = true, catch_errors = false,
+                       use_chand_recursion = use_chand_recursion)
+        end
+    elseif isa(m, AbstractVARModel)
+        function _loglikelihood_var(p::ParameterVector, data::Matrix{Float64})::Float64
+            update!(m, p)
+            likelihood(m, data; sampler = true, catch_errors = false)
+        end
     end
-    return metropolis_hastings(propdist, loglikelihood, m.parameters, data, cc0, cc;
+
+    return metropolis_hastings(propdist, loglikelihood, _m.parameters, data, cc0, cc;
                                n_blocks = n_blocks, n_param_blocks = n_param_blocks,
                                adaptive_accpt = adaptive_accpt, c = c, α = α, n_sim = n_sim,
                                n_burn = n_burn, mhthin = mhthin, verbose = verbose,

@@ -1,24 +1,41 @@
 # data is assumed an nobs x T+lags matrix,
 # where the lags indicate we cut off the data for presampling
-function dsgevar_likelihood(m::DSGEVAR, data::Matrix{S};
-                            λ::S = get_setting(m, :λ), apply_altpolicy::Bool = false,
-                            regime_switching::Bool = false,
-                            n_regimes::Int = 2, regime::Int = 1,
+function dsgevar_likelihood(m::DSGEVAR{S}, data::Matrix{S};
+                            apply_altpolicy::Bool = false,
                             check_system::Bool = true) where {S<:Real}
 
+    # Set up. Default to non-regime switching if these settings don't exist.
     lags = n_lags(m)
+    n_regimes        = haskey(m.dsge.settings, :n_regimes) ?
+        get_setting(m, :n_regimes) : 1
+    regime_switching = haskey(m.dsge.settings, :regime_switching) && n_regimes > 1 ?
+        get_setting(m, :regime_switching) : false # if n_regimes == 1, then no switching needed
 
     # Get covariances
     YYYY, XXYY, XXXX = compute_var_covariances(data, lags)
 
-    yyyyd, xxyyd, xxxxd = compute_system(m; apply_altpolicy = apply_altpolicy,
-                                         regime_switching = regime_switching,
-                                         regime = regime, n_regimes = n_regimes,
-                                         check_system = check_system,
-                                         get_covariances = true)
+    if regime_switching
+        error("Regime switching has not been implemented yet.")
+        yyyyd = OrderedDict{Int, Matrix{S}}()
+        xxyyd = OrderedDict{Int, Matrix{S}}()
+        xxxxd = OrderedDict{Int, Matrix{S}}()
+
+        for reg = 1:n_regimes
+            yyyyd[reg], xxyyd[reg], xxxxd[reg] =
+                compute_system(m; apply_altpolicy = apply_altpolicy,
+                               regime_switching = regime_switching,
+                               regime = reg, n_regimes = n_regimes,
+                               check_system = check_system,
+                               get_covariances = true)
+        end
+    else
+        yyyyd, xxyyd, xxxxd = compute_system(m; apply_altpolicy = apply_altpolicy,
+                                             check_system = check_system,
+                                             get_covariances = true)
+    end
 
     return dsgevar_likelihood(YYYY, XXYY, XXXX, yyyyd, xxyyd, xxxxd,
-                      size(data, 2) - lags, λ, lags, n_observables(m))
+                      size(data, 2) - lags, m.λ, lags, n_observables(m))
 end
 
 function dsgevar_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
