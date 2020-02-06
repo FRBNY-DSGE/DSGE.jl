@@ -42,23 +42,23 @@ end
     system = compute_system(m, system; observables = [:obs_hours, :obs_gdpdeflator,
                                                       :laborshare_t, :NominalWageGrowth],
                             shocks = collect(keys(m.exogenous_shocks)))
-    yyyyd, xxyyd, xxxxd = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+    yyyyd, xxyyd, xxxxd = DSGE.var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                                  system[:DD], system[:ZZ], system[:EE],
                                                  zeros(size(system[:ZZ], 1),
                                                        DSGE.n_shocks_exogenous(m)),
                                                  4; get_covariances = true)
-    β, Σ = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ], system[:DD],
+    β, Σ = DSGE.var_approx_state_space(system[:TTT], system[:RRR], system[:QQ], system[:DD],
                                   system[:ZZ], system[:EE],
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
                                   4; get_covariances = false)
 
     expmat = matread("reference/exp_var_approx_state_space.mat")
     @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]
-    @test @test_matrix_approx_eq xxyyd expmat["xxyyd"]
-    @test @test_matrix_approx_eq xxxxd expmat["xxxxd"]
+    @test @test_matrix_approx_eq xxyyd expmat["xxyyd"][2:end, :]
+    @test @test_matrix_approx_eq xxxxd expmat["xxxxd"][2:end, 2:end]
 
-    expβ = \(expmat["xxxxd"], expmat["xxyyd"])
-    expΣ = expmat["yyyyd"] - expmat["xxyyd"] * expβ
+    expβ = \(expmat["xxxxd"][2:end, 2:end], expmat["xxyyd"][2:end, :])
+    expΣ = expmat["yyyyd"] - expmat["xxyyd"][2:end, :]' * expβ
     expΣ += expΣ'
     expΣ ./= 2
     @test @test_matrix_approx_eq β expβ
