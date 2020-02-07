@@ -17,16 +17,16 @@ function lag(X::Matrix{S}, lags::Int; pad::Bool = false, T_by_n::Bool = true,
     return out
 end
 
-function lag_data(data::Matrix{S}, lags::Int; include_constant::Bool = true,
+function lag_data(data::Matrix{S}, lags::Int; use_intercept::Bool = true,
                   pad::Bool = false, padding::Matrix{S} = Matrix{S}(undef, 0, 0)) where {S<:Real}
     # Assumes data is nobs x T
     nobs, T = size(data)
     data = Matrix(data')
 
     # Construct XX matrix of covariates
-    add_constant = include_constant ? 1 : 0
+    add_constant = use_intercept ? 1 : 0
     XX = fill!(Matrix{S}(undef, pad ? T : T - lags, lags * nobs + add_constant), NaN)
-    if include_constant
+    if use_intercept
         XX[:, 1] .= one(S) # XX is T x n_regressors
     end
 
@@ -42,10 +42,11 @@ function lag_data(data::Matrix{S}, lags::Int; include_constant::Bool = true,
     return XX
 end
 
-function compute_var_covariances(data::Matrix{S}, lags::Int) where {S<:Real}
+function compute_var_covariances(data::Matrix{S}, lags::Int;
+                                 use_intercept::Bool = false) where {S<:Real}
     # Compute covariances of raw data
     YY = convert(Matrix{S}, data[:, 1 + lags:end]')
-    XX = lag_data(data, lags; include_constant = false) # Construct XX matrix of covariates
+    XX = lag_data(data, lags; use_intercept = use_intercept) # Construct XX matrix of covariates
     YYYY = YY' * YY
     XXYY = XX' * YY
     XXXX = XX' * XX
