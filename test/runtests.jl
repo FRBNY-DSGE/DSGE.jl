@@ -65,6 +65,8 @@ my_tests = [
             "models/representative/m990/m990",
             "models/representative/m1002/m1002",
             "models/representative/m1010/m1010",
+            "models/representative/m904/m904",
+            "models/representative/m805/m805",
             "models/poolmodel/poolmodel",
             "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
             #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
