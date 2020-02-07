@@ -1,3 +1,8 @@
+# DSGE.jl 1.1.1
+## New features and enhancements
++ Bug fixes and improvements
++ Add models m904 (SWFF) and m805 (SWpi)
+
 # DSGE.jl 1.1.0
 ## New features and enhancements
 + Functionality to specify heterogeneous agent models, in addition to representative agent models.
