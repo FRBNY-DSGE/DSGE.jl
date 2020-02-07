@@ -492,7 +492,8 @@ compute_system(m; apply_altpolicy = false,
 function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
                         regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
-                        get_covariances::Bool = false, verbose::Symbol = :high) where T<:Real
+                        get_covariances::Bool = false, include_constant::Bool = false,
+                        verbose::Symbol = :high) where T<:Real
     dsge = get_dsge(m)
     if regime_switching
         regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
@@ -513,7 +514,8 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
     else
         return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                       system[:DD], system[:ZZ], EE, MM, n_lags(m);
-                                      get_covariances = get_covariances)
+                                      get_covariances = get_covariances,
+                                      include_constant = include_constant)
     end
 end
 
@@ -635,17 +637,14 @@ Using these matrices, the VAR(p) representation is given by
 function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
                                 QQ::AbstractMatrix{S}, DD::AbstractVector{S},
                                 ZZ::AbstractMatrix{S}, EE::AbstractMatrix{S},
-                                MM::AbstractMatrix{S},
-                                p::Int; get_covariances::Bool = false) where {S<:Real}
+                                MM::AbstractMatrix{S}, p::Int;
+                                get_covariances::Bool = false,
+                                include_constant::Bool = false) where {S<:Real}
 
-    nobs = size(ZZ,1)
+    nobs = size(ZZ, 1)
 
-    yyyyd = zeros(S, nobs, nobs)
-    XXyyd = zeros(S, p * nobs, nobs)
-    XXXXd = zeros(S, p * nobs, p * nobs)
-
-    HH = EE + MM * QQ * MM';
-    VV = QQ * MM';
+    HH = EE + MM * QQ * MM'
+    VV = QQ * MM'
 
     ## Compute p autocovariances
 
@@ -664,22 +663,38 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
     end
 
     ## Create limit cross product matrices
+    yyyyd = zeros(S, nobs, nobs)
+    if include_constant
+        XXXXd = zeros(S, 1 + p * nobs, 1 + p * nobs)
+        yyXXd = zeros(S, nobs, 1 + p * nobs)
+
+        XXXXd[1, 1] = 1.
+        XXXXd[1, 2:1 + p * nobs] = kron(ones(1, p), DD')
+        XXXXd[2:1 + p * nobs, 1] = kron(ones(p), DD)
+        yyXXd[:, 1] = DD
+    else
+        XXXXd = zeros(S, p * nobs, p * nobs)
+        yyXXd = zeros(S, nobs, p * nobs)
+    end
+
     yyyyd = reshape(GAMM0[:, 1], nobs, nobs) + DD * DD'
 
     ## cointadd are treated as the first set of variables in XX
     ## coint    are treated as the second set of variables in XX
     ## composition: cointadd - coint - constant - lags
-    yyXXd = zeros(S, nobs, p * nobs)
-    XXXXd = zeros(S, p * nobs, p * nobs)
+    shift = include_constant ? 1 : 0 # for constructing XXXXd, to select the right indices
     for rr = 1:p
         ## E[yy,x(lag rr)]
-        yyXXd[:, nobs * (rr - 1) + 1:nobs * rr] =  reshape(GAMM0[:, rr + 1], nobs, nobs) + DD * DD'
+        yyXXd[:, nobs * (rr - 1) + 1 + shift:nobs * rr + shift] =
+            reshape(GAMM0[:, rr + 1], nobs, nobs) + DD * DD'
 
         ## E[x(lag rr),x(lag ll)]
         for ll = rr:p
             yyyydrrll = reshape(GAMM0[:, ll - rr + 1], nobs, nobs) + DD * DD';
-            XXXXd[nobs * (rr - 1) + 1:nobs * rr, nobs * (ll - 1) + 1:nobs * ll] =  yyyydrrll
-            XXXXd[nobs * (ll - 1) + 1:nobs * ll, nobs * (rr - 1) + 1:nobs * rr] =  yyyydrrll'
+            XXXXd[nobs * (rr - 1) + 1 + shift:nobs * rr + shift,
+                  nobs * (ll - 1) + 1 + shift:nobs * ll + shift] = yyyydrrll
+            XXXXd[nobs * (ll - 1) + 1 + shift:nobs * ll + shift,
+                  nobs * (rr - 1) + 1 + shift:nobs * rr + shift] = yyyydrrll'
         end
     end
 
