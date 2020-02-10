@@ -44,7 +44,8 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               filestring_addl::Vector{String} = Vector{String}(),
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
               save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
-              regime_switching::Bool = false, n_regimes::Int = 2)
+              regime_switching::Bool = false, n_regimes::Int = 2,
+              tempered_update_prior_weight::Float64 = 0.0)
 
     parallel    = get_setting(m, :use_parallel_workers)
     n_parts     = get_setting(m, :n_particles)
