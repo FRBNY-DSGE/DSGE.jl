@@ -42,7 +42,7 @@ fp = dirname(@__FILE__)
     tmp[isnan.(tmp)] .= 0.
     @test tmp ≈ matdata["x"]
     @test DSGE.lag_data(Matrix(matdata["y"]'), lags,
-                   include_constant = false) ≈ matdata["x"][lags + 1:end, 2:end]
+                   use_intercept = false) ≈ matdata["x"][lags + 1:end, 2:end]
     @test DSGE.lag_data(Matrix(matdata["y"]'), lags, pad = true,
                    padding = zeros(lags, size(matdata["x"], 2)))[lags + 1:end, :] ≈
                        matdata["x"][lags + 1:end, :]
@@ -57,4 +57,11 @@ end
     @test YYYY ≈ matdata["YY"][lags + 1:end, :]' * matdata["YY"][lags + 1:end, :]
     @test XXYY ≈ matdata["XX"][lags + 1:end, 2:end]' * matdata["YY"][lags + 1:end, :]
     @test XXXX ≈ matdata["XX"][lags + 1:end, 2:end]' * matdata["XX"][lags + 1:end, 2:end]
+
+    # Use intercept now
+    YYYY, XXYY, XXXX = DSGE.compute_var_covariances(Matrix(matdata["YY"]'), lags;
+                                                    use_intercept = true)
+    @test YYYY ≈ matdata["YY"][lags + 1:end, :]' * matdata["YY"][lags + 1:end, :]
+    @test XXYY ≈ matdata["XX"][lags + 1:end, 1:end]' * matdata["YY"][lags + 1:end, :]
+    @test XXXX ≈ matdata["XX"][lags + 1:end, 1:end]' * matdata["XX"][lags + 1:end, 1:end]
 end

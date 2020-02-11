@@ -78,15 +78,17 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     function f_opt(x_opt)
         try
             x_model[para_free_inds] = x_opt
-            transform_to_model_space!(m,x_model)
+            transform_to_model_space!(m, x_model)
         catch
             return Inf
         end
+
         if mle
             out = -likelihood(m, data; catch_errors = true)
         else
             out = -posterior(m, data; catch_errors = true)
         end
+
         out = !isnan(out) ? out : Inf
         return out
     end
@@ -163,14 +165,14 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
 
             return
         end
-    elseif isa(m, DSGEVAR)
+    elseif isa(m, AbstractDSGEVARModel)
         # For regime-switching cases
         n_regimes        = haskey(get_settings(m), :n_regimes) ?
             get_setting(m, :n_regimes) : 1
         regime_switching = haskey(get_settings(m), :regime_switching) && n_regimes > 1 ?
             get_setting(m, :regime_switching) : false
 
-        function _neighbor_var!(x, x_proposal)
+        function _neighbor_dsgevar!(x, x_proposal)
             T = eltype(x)
             npara = length(x)
             subset_inds = []
@@ -179,21 +181,21 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
             end
 
             # Convert x_proposal to model space and expand to full parameter vector
-            x_all = T[p.value for p in _m.parameters] # to get fixed values
+            x_all = T[p.value for p in get_parameters(m)] # to get fixed values
             x_all[para_free_inds] = x                     # this is from real line
 
-            x_all_m = transform_to_model_space(_m.parameters, x_all)
+            x_all_m = transform_to_model_space(get_parameters(m), x_all)
             x_proposal_all = copy(x_all_m)
 
             success = false
             while !success
                 # take a step in model space
                 for i in subset_inds
-                    prior_var = moments(_m.parameters[i])[2]#moments(get(m.parameters[i].prior))[2]
+                    prior_var = moments(get_parameters(m)[i])[2]#moments(get(m.parameters[i].prior))[2]
                     proposal_in_bounds = false
                     proposal = x_all_m[i]
-                    lower = _m.parameters[i].valuebounds[1]
-                    upper = _m.parameters[i].valuebounds[2]
+                    lower = get_parameters(m)[i].valuebounds[1]
+                    upper = get_parameters(m)[i].valuebounds[2]
                     # draw a new parameter value, and redraw if out of bounds
                     while !proposal_in_bounds
                         r = rand([-1 1]) * rand()
@@ -212,7 +214,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                         compute_system(m; regime_switching = regime_switching,
                                        n_regimes = n_regimes, regime = compute_system_i)
                     end
-                    x_proposal_all = transform_to_real_line(_m.parameters, x_proposal_all)
+                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
                     success = true
                 catch ex
                     if !(typeof(ex) in [DomainError, ParamBoundsError, GensysError])

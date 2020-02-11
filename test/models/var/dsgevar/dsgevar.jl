@@ -12,9 +12,19 @@ dsge = Model1002()
 
     # Empty construction but w/some shocks
     m = DSGE.DSGEVAR(dsge, collect(keys(dsge.exogenous_shocks)), "ss0")
+    @test typeof(m.dsge) == typeof(dsge)
+    @test spec(m) == "dsgevar_m1002"
+    @test subspec(m) == "ss0"
+    @test isempty(m.observables)
+    @test !isempty(m.shocks)
 
     # Full construction w/shocks and model
-
+    m = DSGE.DSGEVAR(dsge, collect(keys(dsge.exogenous_shocks)), "ss1")
+    @test typeof(m.dsge) == typeof(dsge)
+    @test spec(m) == "dsgevar_m1002"
+    @test subspec(m) == "ss1"
+    @test !isempty(m.observables)
+    @test !isempty(m.shocks)
 
     # Check errors
     @test_throws ErrorException DSGE.DSGEVAR(dsge, [:not_a_shock], "ss0")

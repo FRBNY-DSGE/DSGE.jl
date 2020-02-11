@@ -7,13 +7,15 @@ fp = dirname(@__FILE__)
                                                 matdata["XXYY"], matdata["XXXX"],
                                                 matdata["yyyyd"], matdata["xxyyd"],
                                                 matdata["xxxxd"], Int(matdata["nobs"]),
-                                                matdata["lambda"] / matdata["nobs"],
-                                                Int(matdata["nlags"]),
-                                                Int(matdata["nvar"]))
+                                                matdata["lambda"] / matdata["nobs"])
     @test matdata["lnpyinf"] ≈ DSGE.dsgevar_likelihood(matdata["YYYY"],
                                                   matdata["XXYY"], matdata["XXXX"],
                                                   matdata["yyyyd"], matdata["xxyyd"],
                                                   matdata["xxxxd"], Int(matdata["nobs"]),
-                                                  Inf, Int(matdata["nlags"]),
-                                                  Int(matdata["nvar"]))
+                                                  Inf)
+    @test_throws DomainError matdata["lnpyinf"] ≈ DSGE.dsgevar_likelihood(matdata["YYYY"],
+                                                  matdata["XXYY"], matdata["XXXX"],
+                                                  matdata["yyyyd"], matdata["xxyyd"],
+                                                  matdata["xxxxd"], Int(matdata["nobs"]),
+                                                  -1.)
 end

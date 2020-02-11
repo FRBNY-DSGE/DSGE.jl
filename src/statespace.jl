@@ -322,15 +322,36 @@ end
 ```
 compute_system(m; apply_altpolicy = false,
                regime_switching = false, n_regimes = 2,
-               check_system = false,
+               check_system = false, get_system = false,
+               get_covariances = false, use_intercept = false
                verbose = :high)
 ```
+Given the current model parameters, compute the DSGE-VAR system
+corresponding to model `m`.
+
+### Keyword Arguments
+* `check_system::Bool`: see `?compute_system` that takes an input `m::AbstractDSGEModel`
+    and `system::System`.
+* `get_system::Bool`: see Outputs
+* `get_covariances::Bool`: see Outputs
+* `use_intercept::Bool`: use an intercept term when computing the OLS estimate of the VAR system.
+
+### Outputs
+* If `get_system = true`:
+    Returns the updated `system` whose measurement matrices `ZZ`, `DD`, and `QQ` correspond
+    to the VAR specifieid by `m`.
+* If `get_covariances = true`:
+    Returns the limit cross product matrices that describe the DSGE implied covariances between
+    the observables and their lags.
+* Otherwise:
+    Returns `β` and `Σ`, the coefficients and observables covariance matrix corresponding to
+    the OLS estimates of the VAR system speicified by `m`.
 """
 function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
                         regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
-                        get_covariances::Bool = false, include_constant::Bool = false,
-                        verbose::Symbol = :high) where T<:Real
+                        get_covariances::Bool = false, use_intercept::Bool = false,
+                        verbose::Symbol = :high) where {T<:Real}
     dsge = get_dsge(m)
     if regime_switching
         regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
@@ -352,7 +373,7 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
         return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                       system[:DD], system[:ZZ], EE, MM, n_lags(m);
                                       get_covariances = get_covariances,
-                                      include_constant = include_constant)
+                                      use_intercept = use_intercept)
     end
 end
 
@@ -379,6 +400,118 @@ function compute_system(m::PoolModel{T}; verbose::Symbol = :high,
     Φ, F_ϵ, F_λ = transition(m)
     Ψ, F_u = measurement(m)
     return Φ, Ψ, F_ϵ, F_u, F_λ
+end
+
+"""
+```
+compute_system(m::AbstractDSGEModel, system::System;
+        observables::Vector{Symbol}, pseudo_observables::Vector{Symbol},
+        states::Vector{Symbol}, shocks::Vector{Symbol},
+        zero_DD = false, zero_DD_pseudo = false)
+```
+computes the corresponding transition and measurement
+equations specified by the keywords (e.g. `states`, `pseudo_observables`)
+using the existing `ZZ`, `ZZ_pseudo`, and `TTT` matrices in `system`.
+
+Note that this function does not update the EE matrix, which is
+set to all zeros. To incorporate measurement errors, the user
+must specify the EE matrix after applying compute_system.
+
+### Keywords
+* `observables`: variables that should be
+    entered into the new `ZZ` matrix.
+    The `observables` can be both Observables and PseudoObservables,
+    but they must be an element of system already
+"""
+function compute_system(m::AbstractDSGEModel{S}, system::System;
+                        observables::Vector{Symbol} = collect(keys(m.observables)),
+                        pseudo_observables::Vector{Symbol} =
+                        collect(keys(m.pseudo_observables)),
+                        states::Vector{Symbol} =
+                        vcat(collect(keys(m.endogenous_states)),
+                             collect(keys(m.endogenous_states_augmented))),
+                        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+                        zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
+                        check_system::Bool = true) where {S<:Real}
+
+    # Set up indices
+    oid  = m.observables # observables indices dictionary
+    pid  = m.pseudo_observables # pseudo observables indices dictionary
+    sid  = m.endogenous_states
+    said = m.endogenous_states_augmented # states augmented
+
+    # Find shocks to keep
+    shock_inds = map(k -> m.exogenous_shocks[k], shocks)
+    Qout = system[:QQ][shock_inds, shock_inds]
+
+    # Find states to keep
+    if !issubset(states, vcat(collect(keys(sid)), collect(keys(said))))
+        false_states = setdiff(states, vcat(collect(keys(sid)), collect(keys(said))))
+        error("The following states in keyword `states` do not exist in `system`: " *
+              join(string.(false_states), ", "))
+    elseif !isempty(setdiff(vcat(collect(keys(sid)), collect(keys(said))), states))
+        which_states = Vector{Int}(undef, length(states))
+        for i = 1:length(states)
+            which_states[i] = haskey(sid, states[i]) ? sid[states[i]] : said[states[i]]
+        end
+        Tout = system[:TTT][which_states, which_states]
+        Rout = system[:RRR][which_states, shock_inds]
+        Cout = system[:CCC][which_states]
+    else
+        which_states = 1:n_states_augmented(m)
+        Tout = copy(system[:TTT])
+        Rout = system[:RRR][:, shock_inds]
+        Cout = copy(system[:CCC])
+    end
+
+    # Compute new ZZ and DD matrices if different observables than current system
+    if !isempty(symdiff(observables, collect(keys(oid))))
+        Zout = zeros(S, length(observables), size(Tout, 1))
+        Dout = zeros(S, length(observables))
+        for (i,obs) in enumerate(observables)
+            Zout[i, :], Dout[i] = if haskey(oid, obs)
+                system[:ZZ][oid[obs], which_states], zero_DD ? zero(S) : system[:DD][oid[obs]]
+            elseif haskey(pid, obs)
+                system[:ZZ_pseudo][pid[obs], which_states], zero_DD ? zero(S) : system[:DD_pseudo][pid[obs]]
+            else
+                error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
+            end
+        end
+    else
+        Zout = copy(system[:ZZ])[:, which_states]
+        Dout = zero_DD ? zeros(S, size(Zout, 1)) : system[:DD]
+    end
+    Eout = zeros(S, length(observables), length(observables)) # measurement errors are set to zero
+
+    # Compute new ZZ_pseudo, DD_pseudo if different pseudo_observables than current system
+    if !isempty(symdiff(pseudo_observables, collect(keys(pid))))
+        Zpseudoout = zeros(S, length(pseudo_observables), size(Tout, 1))
+        Dpseudoout = zeros(S, length(pseudo_observables))
+        for (i, pseudoobs) in enumerate(pseudo_observables)
+            Zpseudoout[i, :], Dpseudoout[i] = if haskey(oid, pseudoobs)
+                system[:ZZ][oid[pseudoobs], which_states], zero_DD_pseudo ?
+                    zero(S) : system[:DD][oid[pseudoobs]]
+            elseif haskey(pid, pseudoobs)
+                system[:ZZ_pseudo][pid[pseudoobs], which_states], zero_DD_pseudo ?
+                    zero(S) : system[:DD_pseudo][pid[pseudoobs]]
+            else
+                error("Observable/PseudoObservable $pseudoobs cannot be found in the DSGE model $m")
+            end
+        end
+    else
+        Zpseudoout = copy(system[:ZZ_pseudo])[:, which_states]
+        Dpseudoout = zero_DD_pseudo ? zeros(S, size(Zpseudoout, 1)) : copy(system[:DD_pseudo])
+    end
+
+    if check_system
+        @assert size(Zout, 2) == size(Tout, 1) "Dimension 2 of new ZZ ($(size(Zout,2))) does not match dimension of states ($(size(Tout,1)))."
+        @assert size(Qout, 1) == size(Rout, 2) "Dimension 2 of new RRR ($(size(Zout,2))) does not match dimension of shocks ($(size(Qout,1)))."
+    end
+
+    # Construct new system
+    return System(Transition(Tout, Rout, Cout),
+                  Measurement(Zout, Dout, Qout, Eout),
+                  PseudoMeasurement(Zpseudoout, Dpseudoout))
 end
 
 """
@@ -476,7 +609,7 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
                                 ZZ::AbstractMatrix{S}, EE::AbstractMatrix{S},
                                 MM::AbstractMatrix{S}, p::Int;
                                 get_covariances::Bool = false,
-                                include_constant::Bool = false) where {S<:Real}
+                                use_intercept::Bool = false) where {S<:Real}
 
     nobs = size(ZZ, 1)
 
@@ -501,7 +634,7 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
     ## Create limit cross product matrices
     yyyyd = zeros(S, nobs, nobs)
-    if include_constant
+    if use_intercept
         XXXXd = zeros(S, 1 + p * nobs, 1 + p * nobs)
         yyXXd = zeros(S, nobs, 1 + p * nobs)
 
@@ -519,7 +652,7 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
     ## cointadd are treated as the first set of variables in XX
     ## coint    are treated as the second set of variables in XX
     ## composition: cointadd - coint - constant - lags
-    shift = include_constant ? 1 : 0 # for constructing XXXXd, to select the right indices
+    shift = use_intercept ? 1 : 0 # for constructing XXXXd, to select the right indices
     for rr = 1:p
         ## E[yy,x(lag rr)]
         yyXXd[:, nobs * (rr - 1) + 1 + shift:nobs * rr + shift] =

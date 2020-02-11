@@ -1,18 +1,27 @@
+"""
+```
+dsgevar_likelihood(m::AbstractDSGEVARModel{S}, data::Matrix{S};
+    apply_altpolicy::Bool = false) where {S<:Real}
+```
+evaluates the likelihood of a DSGE-VAR. It is assumed that
+`get_λ(m)` retrieves the prior weight `λ` on the DSGE.
+"""
+
 # data is assumed an nobs x T+lags matrix,
 # where the lags indicate we cut off the data for presampling
-function dsgevar_likelihood(m::DSGEVAR{S}, data::Matrix{S};
+function dsgevar_likelihood(m::AbstractDSGEVARModel{S}, data::Matrix{S};
                             apply_altpolicy::Bool = false,
-                            check_system::Bool = true) where {S<:Real}
+                            use_intercept::Bool = true) where {S<:Real}
 
     # Set up. Default to non-regime switching if these settings don't exist.
     lags = n_lags(m)
-    n_regimes        = haskey(m.dsge.settings, :n_regimes) ?
+    n_regimes        = haskey(get_settings(m), :n_regimes) ?
         get_setting(m, :n_regimes) : 1
-    regime_switching = haskey(m.dsge.settings, :regime_switching) && n_regimes > 1 ?
+    regime_switching = haskey(get_settings(m), :regime_switching) && n_regimes > 1 ?
         get_setting(m, :regime_switching) : false # if n_regimes == 1, then no switching needed
 
     # Get covariances
-    YYYY, XXYY, XXXX = compute_var_covariances(data, lags)
+    YYYY, XXYY, XXXX = compute_var_covariances(data, lags; use_intercept = use_intercept)
 
     if regime_switching
         error("Regime switching has not been implemented yet.")
@@ -25,40 +34,60 @@ function dsgevar_likelihood(m::DSGEVAR{S}, data::Matrix{S};
                 compute_system(m; apply_altpolicy = apply_altpolicy,
                                regime_switching = regime_switching,
                                regime = reg, n_regimes = n_regimes,
-                               check_system = check_system,
-                               get_covariances = true)
+                               get_covariances = true,
+                               use_intercept = use_intercept)
         end
     else
         yyyyd, xxyyd, xxxxd = compute_system(m; apply_altpolicy = apply_altpolicy,
-                                             check_system = check_system,
-                                             get_covariances = true)
+                                             get_covariances = true,
+                                             use_intercept = use_intercept)
     end
 
     return dsgevar_likelihood(YYYY, XXYY, XXXX, yyyyd, xxyyd, xxxxd,
-                      size(data, 2) - lags, m.λ, lags, n_observables(m))
+                      size(data, 2) - lags, get_λ(m))
 end
 
+"""
+```
+dsgevar_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
+    XXXX::Matrix{S}, YYYYD::Matrix{S}, XXYYD::Matrix{S},
+    XXXXD::Matrix{S}, T::Int, λ::S,
+    lags::Int, n_obs::Int) where {S<:Real}
+```
+evaluates the likelihood of a DSGE-VAR given the
+covariance matrices of the raw data (`YYYY`, `XXYY`, `XXXX`)
+and the covariance matrices implied by the DSGE prior (`YYYYD`, `XXYYD`, `XXXXD`).
+
+### Other Inputs
+* `T`: number of time periods in data
+* `λ`: weight placed on the DSGE prior
+* `lags`: number of lags in the VAR
+* `n_obs`: number of observables (e.g. number of time series).
+"""
 function dsgevar_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
                             XXXX::Matrix{S}, YYYYD::Matrix{S}, XXYYD::Matrix{S},
-                            XXXXD::Matrix{S}, T::Int, λ::S,
-                            lags::Int, n_obs::Int) where {S<:Real}
+                            XXXXD::Matrix{S}, T::Int, λ::S) where {S<:Real}
 
     if isinf(λ)
         β = XXXXD \ XXYYD
         Σ = YYYYD - XXYYD' * β
+        n_obs  = size(YYYY, 1)
         loglik = -(n_obs * T / 2) * log(2 * π) - (T / 2) * log(det(Σ)) -
             .5 * sum(diag(inv(Σ) * (YYYY - 2 * β' * XXYY + β' * XXXX * β)))
         loglik = real(loglik)
+    elseif λ < 0
+        throw(DomainError("λ", "λ cannot be negative."))
     else
+        # Dimensions
+        λT     = λ * T
+        n_obsc = T + λT
+        k      = size(XXXX, 1) # 1 + lags * n_obs
+        n_obs  = size(YYYY, 1)
+
         # Compute weighted covariances
-        λT    = λ * T
         YYYYC = YYYY + λT * YYYYD
         XXYYC = XXYY + λT * XXYYD
         XXXXC = XXXX + λT * XXXXD
-
-        # Dimensions
-        n_obsc = T + λT
-        k     = 1 + lags * n_obs
 
         # Compute OLS estimates of VAR
         Σ = (YYYYC - XXYYC' * (XXXXC \ XXYYC)) / n_obsc

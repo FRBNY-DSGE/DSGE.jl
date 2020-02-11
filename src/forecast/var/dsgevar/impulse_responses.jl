@@ -112,7 +112,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
     irf_output =
         mapfcn((β, Σ) ->
                impulse_responses(β, Σ, n_obs_var, h; method = method,
-                                 include_constant = false,
+                                 has_intercept = false,
                                  flip_shocks = flip_shocks),
                β_draws, Σ_draws)
 

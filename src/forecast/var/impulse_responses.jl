@@ -1,7 +1,7 @@
 """
 ```
 impulse_responses(β, Σ, n_obs_shock, horizon, shock_size = 1;
-    method = :cholesky, flip_shocks = false, include_constant = true,
+    method = :cholesky, flip_shocks = false, has_intercept = true,
     frequency_band = (2π/32, 2π/6)) where {S<:Real}
 ```
 computes the impulse responses of a VAR system represented in the form
@@ -28,8 +28,8 @@ where `Xₜ` stacks the lags of yₜ (with dimensions n_observables x n_regresso
     and `?cholesky_long_run_shock`.
 * `flip_shocks::Bool`: by default, we compute the impulse responses to a negative shock.
     Set `flip_shocks = true` to obtain a positive shock.
-* `include_constant::Bool`: `impulse_responses` assumes `β` has constant term(s). If there
-    are no such terms, then `include_constant` must be set to `false`.
+* `has_intercept::Bool`: `impulse_responses` assumes `β` has constant term(s). If there
+    are no such terms, then `has_intercept` must be set to `false`.
 * `frequency_band::Tuple{S,S}`: See `?maxBC_shock`.
 
 ### Outputs
@@ -39,13 +39,13 @@ function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S}, n_obs_s
                            horizon::Int, shock_size::S = one(S);
                            method::Symbol = :cholesky,
                            flip_shocks::Bool = false,
-                           include_constant::Bool = true,
+                           has_intercept::Bool = true,
                            frequency_band::Tuple{S,S} =
                            (2*π/32, 2*π/6)) where {S<:Real}
 
     # Compute dimensions
     n = size(β,2)
-    lags = convert(Int, include_constant ? (size(β,1) - 1) / n : size(β,1) / n)
+    lags = convert(Int, has_intercept ? (size(β,1) - 1) / n : size(β,1) / n)
 
     # Compute impact based on IRF type
     Y = zeros(lags + horizon, n)
@@ -63,7 +63,7 @@ function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S}, n_obs_s
     end
 
     # For efficiency
-    if include_constant
+    if has_intercept
         β = @views β[2:end, :]
     end
 

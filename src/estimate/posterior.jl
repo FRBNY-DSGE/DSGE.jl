@@ -45,7 +45,8 @@ end
 
 """
 ```
-posterior!(m::AbstractDSGEModel{T}, parameters::Vector{T}, data::Matrix{T};
+posterior!(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}},
+           parameters::Vector{T}, data::Matrix{T};
            sampler::Bool = false, catch_errors::Bool = false,
            φ_smc::Float64 = 1.) where {T<:AbstractFloat}
 ```
@@ -198,17 +199,12 @@ end
 ```
 likelihood(m::AbstractVARModel, data::Matrix{T};
            sampler::Bool = false, catch_errors::Bool = false,
-           λ::T = 0., verbose::Symbol = :high) where {T<:AbstractFloat}
+           verbose::Symbol = :high) where {T<:AbstractFloat}
 ```
 
-Evaluate the DSGE likelihood function. Can handle two-part estimation where the observed
-sample contains both a normal stretch of time (in which interest rates are positive) and
-a stretch of time in which interest rates reach the zero lower bound. If there is a
-zero-lower-bound period, then we filter over the 2 periods separately. Otherwise, we
-filter over the main sample all at once.
+Evaluate a VAR likelihood function.
 
 ### Arguments
-
 - `m`: The model object
 - `data`: matrix of data for observables
 
@@ -216,7 +212,6 @@ filter over the main sample all at once.
 - `sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the
     transition matrices for the zero-lower-bound period are returned in a dictionary.
 - `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
-- `λ`:: weight on DSGE prior of DSGEVAR
 """
 function likelihood(m::AbstractVARModel, data::AbstractMatrix;
                     sampler::Bool = false,
@@ -234,8 +229,8 @@ function likelihood(m::AbstractVARModel, data::AbstractMatrix;
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if sampler
-        if isa(m, DSGEVAR)
-            for θ in m.dsge.parameters
+        if isa(m, AbstractDSGEVARModel)
+            for θ in get_parameters(m)
                 (left, right) = θ.valuebounds
                 if !θ.fixed && !(left <= θ.value <= right)
                     return -Inf
@@ -268,7 +263,7 @@ function likelihood(m::AbstractVARModel, data::AbstractMatrix;
 
     # Return total log-likelihood (presample for VAR is excluded)
     try
-        if isa(m, DSGEVAR)
+        if isa(m, AbstractDSGEVARModel)
             return ψ_l * dsgevar_likelihood(m, data) + ψ_p * penalty
         end
     catch err
