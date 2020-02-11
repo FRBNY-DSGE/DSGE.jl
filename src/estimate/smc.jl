@@ -74,8 +74,8 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
 
-    # THIS IS TEMPORARY, THIS IS TO BE DELETED FROM SMC2
-    # AS WELL AS KEYWORD ARGS
+    # THESE TWO LINES ARE TEMPORARY, THEY ARE TO BE DELETED FROM SMC2
+    # AS WELL AS THEIR RESPECTIVE KEYWORD ARGS
     m <= Setting(:regime_switching, regime_switching)
     m <= Setting(:n_regimes, n_regimes)
 
@@ -175,8 +175,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
             continue_intermediate = continue_intermediate,
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
-            intermediate_stage_increment = intermediate_stage_increment,
-            tempered_update_prior_weight = tempered_update_prior_weight)
+            intermediate_stage_increment = intermediate_stage_increment)
 end
 
 function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verbose::Symbol = :low,

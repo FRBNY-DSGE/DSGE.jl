@@ -49,6 +49,6 @@ end
 function ss111!(m::DSGEVAR)
     observables = [:obs_hours, :π_t, :laborshare_t, :NominalWageGrowth]
     lags        = 4
-    λ           = 2
+    λ           = 2.
     update!(m; observables = observables, lags = lags, λ = λ)
 end

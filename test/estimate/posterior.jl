@@ -34,10 +34,15 @@ end
     post_not_at_start = DSGE.posterior!(m, y, data)
     ϵ = 1.0
     @test abs(post_at_start - post_not_at_start) > ϵ
+
+    # Check keywords
+    m.parameters[2].value = 3.
+    @test !isinf(likelihood(m, data; sampler = false))
+    @test isinf(likelihood(m, data; sampler = true))
 end
 
 
-@testset "Check DSGEVAR likelihood and posterior calculations" begin
+#@testset "Check DSGEVAR likelihood and posterior calculations" begin
     dsge = Model1002("ss10")
     obs_i = [dsge.observables[:obs_nominalrate], dsge.observables[:obs_gdp],
              dsge.observables[:obs_gdpdeflator]]
@@ -60,7 +65,12 @@ end
     # Ensure if we are not evaluating at start vector, then we do not get the reference
     # posterior
     global y = x .+ 0.01
-post_not_at_start = DSGE.posterior!(m, y, dsge_data)
+    post_not_at_start = DSGE.posterior!(m, y, dsge_data)
     ϵ = 1.0
     @test abs(post_at_start - post_not_at_start) > ϵ
-end
+
+    # Check keywords
+    m.dsge.parameters[1].value = 3.
+    @test !isinf(likelihood(m, dsge_data; sampler = false))
+    @test isinf(likelihood(m, dsge_data; sampler = true))
+#end

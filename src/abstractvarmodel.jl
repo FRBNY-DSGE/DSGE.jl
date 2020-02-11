@@ -42,7 +42,7 @@ n_anticipated_shocks_padding(m::AbstractDSGEVARModel) = get_setting(m, :n_antici
 date_presample_start(m::AbstractDSGEVARModel) = get_setting(m, :date_presample_start)
 date_mainsample_start(m::AbstractDSGEVARModel) = get_setting(m, :date_mainsample_start)
 date_zlb_start(m::AbstractDSGEVARModel) = get_setting(m, :date_zlb_start)
-date_zlb_end(m::AbstractDSGEVARModel) = get_setting(m, :date_zlb_end)
+# date_zlb_end(m::AbstractDSGEVARModel) = get_setting(m, :date_zlb_end)
 
 date_presample_end(m::AbstractDSGEVARModel) = Dates.lastdayofquarter(get_setting(m, :date_mainsample_start) - Dates.Month(3))
 date_prezlb_end(m::AbstractDSGEVARModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
@@ -85,6 +85,7 @@ cond_full_names(m::AbstractDSGEVARModel) = get_setting(m, :cond_full_names)
 cond_semi_names(m::AbstractDSGEVARModel) = get_setting(m, :cond_semi_names)
 use_population_forecast(m::AbstractDSGEVARModel) = get_setting(m, :use_population_forecast)
 hpfilter_population(m::AbstractDSGEVARModel)     = get_setting(m, :hpfilter_population)
+n_conditional_periods(m::AbstractDSGEVARModel)   = n_conditional_periods(get_dsge(m))
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractDSGEVARModel)    = get_setting(m, :use_parallel_workers)
@@ -115,7 +116,7 @@ forecast_tdist_shocks(m::AbstractDSGEVARModel) = get_setting(m, :forecast_tdist_
 forecast_zlb_value(m::AbstractDSGEVARModel)    = get_setting(m, :forecast_zlb_value)
 impulse_response_horizons(m::AbstractDSGEVARModel) = get_setting(m, :impulse_response_horizons)
 n_shockdec_periods(m::AbstractDSGEVARModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
-get_forecast_input_file(m::AbstractDSGEVARModel) = get_forecast_input_file(m.dsge)
+get_forecast_input_file(m::AbstractDSGEVARModel, input_type::Symbol) = get_forecast_input_file(get_dsge(m), input_type)
 
 # Interface for alternative policy settings
 alternative_policy(m::AbstractDSGEVARModel) = get_setting(m, :alternative_policy)
@@ -168,7 +169,7 @@ paramter values.
 function transform_to_model_space!(m::AbstractDSGEVARModel, values::Vector{T}) where {T<:AbstractFloat}
     new_values = transform_to_model_space(m.dsge.parameters, values)
     DSGE.update!(m, new_values)
-    steadystate!(m)
+    steadystate!(get_dsge(m))
 end
 
 # Updating parameters

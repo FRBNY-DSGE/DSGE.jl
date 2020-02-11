@@ -4,6 +4,15 @@ m = AnSchorfheide()
 m <= Setting(:date_zlb_end, get_setting(m, :date_zlb_start))
 m <= Setting(:hessian_path, "")
 # Dates, indices, number of periods for each regime
+@testset "Test field access functions for AbstractDSGEModel objects" begin
+    @test DSGE.get_parameters(m) == m.parameters
+    @test DSGE.get_rng(m) == m.rng
+    @test DSGE.get_settings(m) == m.settings
+    @test DSGE.get_observables(m) == m.observables
+    @test DSGE.get_pseudo_observables(m) == m.pseudo_observables
+    @test DSGE.get_exogenous_shocks(m) == m.exogenous_shocks
+end
+
 @testset "Test setting access functions for AbstractDSGEModel objects" begin
     n_anticipated_shocks(m) == get_setting(m, :n_anticipated_shocks)
     n_anticipated_shocks_padding(m) == get_setting(m, :n_anticipated_shocks_padding)
@@ -91,9 +100,9 @@ end
     @test @test_matrix_approx_eq inds_shocks_no_ant(m1) collect(1:18)
     @test @test_matrix_approx_eq inds_obs_no_ant(m) collect(1:3)
     @test @test_matrix_approx_eq inds_obs_no_ant(m1) collect(1:13)
-    @test @test_matrix_approx_eq inds_states_no_integ_series(m1) collect(1:84)
+    @test @test_matrix_approx_eq DSGE.inds_states_no_integ_series(m1) collect(1:84)
     m1 <= Setting(:integrated_series, [:e_gdp_t1])
-    @test @test_matrix_approx_eq inds_states_no_integ_series(m1) vcat(collect(1:82),84)
+    @test @test_matrix_approx_eq DSGE.inds_states_no_integ_series(m1) vcat(collect(1:82),84)
 
     m <= Setting(:date_forecast_start, DSGE.quartertodate("2019-Q3"))
     m <= Setting(:forecast_horizons, 10)

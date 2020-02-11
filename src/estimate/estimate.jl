@@ -124,7 +124,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
             println(verbose, :low, @sprintf "Optimization time elapsed: %5.2f\n" optimization_time += end_time)
 
             # Write params to file after every `n_iterations` iterations
-            params = map(θ->θ.value, get_parameters(m))
+            params = map(θ -> θ.value, get_parameters(m))
             h5open(rawpath(m, "estimate", "paramsmode.h5"),"w") do file
                 file["params"] = params
             end

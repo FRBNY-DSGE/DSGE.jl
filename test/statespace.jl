@@ -33,6 +33,63 @@ end
     @test F_u.Σ.mat == system[:measurement][:EE]
 end
 
+@testset "Using compute_system to update an existing system" begin
+
+    # Check updating
+    system1 = compute_system(m, system)
+    system2 = compute_system(m, system; observables = collect(keys(m.observables))[1:end - 1],
+                                  pseudo_observables = collect(keys(m.pseudo_observables))[1:end - 1],
+                                  shocks = collect(keys(m.exogenous_shocks))[1:end - 1],
+                                  states = collect(keys(m.endogenous_states))[1:end - 1])
+    system3 = compute_system(m, system; zero_DD = true)
+    system4 = compute_system(m, system; zero_DD_pseudo = true)
+
+    @test system1[:TTT] ≈ system[:TTT]
+    @test system1[:RRR] ≈ system[:RRR]
+    @test system1[:CCC] ≈ system[:CCC]
+    @test system1[:ZZ] ≈ system[:ZZ]
+    @test system1[:DD] ≈ system[:DD]
+    @test system1[:QQ] ≈ system[:QQ]
+    @test system1[:EE] ≈ zeros(size(system[:ZZ], 1), size(system[:ZZ], 1))
+    @test system1[:ZZ_pseudo] ≈ system[:ZZ_pseudo]
+    @test system1[:DD_pseudo] ≈ system[:DD_pseudo]
+
+    @test system2[:TTT] ≈ system[:TTT][1:end - 1, 1:end - 1]
+    @test system2[:RRR] ≈ system[:RRR][1:end - 1, 1:end - 1]
+    @test sum(abs.(system2[:CCC])) ≈ sum(abs.(system[:CCC][1:end - 1])) ≈ 0.
+    @test system2[:ZZ] ≈ system[:ZZ][1:end - 1, 1:end - 1]
+    @test system2[:DD] ≈ system[:DD][1:end - 1]
+    @test system2[:QQ] ≈ system[:QQ][1:end - 1, 1:end - 1]
+    @test system2[:EE] ≈ zeros(size(system[:ZZ], 1) - 1, size(system[:ZZ], 1) - 1)
+    @test system2[:ZZ_pseudo] ≈ system[:ZZ_pseudo][1:end - 1, 1:end - 1]
+    @test system2[:DD_pseudo] ≈ system[:DD_pseudo][1:end - 1]
+
+    @test system3[:TTT] ≈ system[:TTT]
+    @test system3[:RRR] ≈ system[:RRR]
+    @test system3[:CCC] ≈ system[:CCC]
+    @test system3[:ZZ] ≈ system[:ZZ]
+    @test system3[:DD] ≈ zeros(length(system[:DD]))
+    @test system3[:QQ] ≈ system[:QQ]
+    @test system3[:EE] ≈ zeros(size(system[:ZZ], 1), size(system[:ZZ], 1))
+    @test system3[:ZZ_pseudo] ≈ system[:ZZ_pseudo]
+    @test system3[:DD_pseudo] ≈ system[:DD_pseudo]
+
+    @test system4[:TTT] ≈ system[:TTT]
+    @test system4[:RRR] ≈ system[:RRR]
+    @test system4[:CCC] ≈ system[:CCC]
+    @test system4[:ZZ] ≈ system[:ZZ]
+    @test system4[:DD] ≈ system[:DD]
+    @test system4[:QQ] ≈ system[:QQ]
+    @test system4[:EE] ≈ zeros(size(system[:ZZ], 1), size(system[:ZZ], 1))
+    @test system4[:ZZ_pseudo] ≈ system[:ZZ_pseudo]
+    @test system4[:DD_pseudo] ≈ zeros(length(system[:DD_pseudo]))
+
+    # Check errors
+    @test_throws ErrorException compute_system(m, system; observables = [:blah])
+    @test_throws ErrorException compute_system(m, system; states = [:blah])
+    @test_throws KeyError compute_system(m, system; shocks = [:blah])
+    @test_throws ErrorException compute_system(m, system; pseudo_observables = [:blah])
+end
 
 @testset "VAR approximation of state space" begin
     m = Model1002("ss10"; custom_settings =
@@ -52,7 +109,7 @@ end
                                                          zeros(size(system[:ZZ], 1),
                                                                DSGE.n_shocks_exogenous(m)),
                                                          4; get_covariances = true,
-                                                         include_constant = true)
+                                                         use_intercept = true)
     β, Σ = DSGE.var_approx_state_space(system[:TTT], system[:RRR], system[:QQ], system[:DD],
                                   system[:ZZ], system[:EE],
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
@@ -60,7 +117,7 @@ end
     βc, Σc = DSGE.var_approx_state_space(system[:TTT], system[:RRR], system[:QQ], system[:DD],
                                   system[:ZZ], system[:EE],
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
-                                  4; get_covariances = false, include_constant = true)
+                                  4; get_covariances = false, use_intercept = true)
 
     expmat = matread("reference/exp_var_approx_state_space.mat")
     @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]
