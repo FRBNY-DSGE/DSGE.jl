@@ -119,7 +119,7 @@ end
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
                                   4; get_covariances = false, use_intercept = true)
 
-    expmat = matread("reference/exp_var_approx_state_space.mat")
+    expmat = load("reference/exp_var_approx_state_space.jld2")
     @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]
     @test @test_matrix_approx_eq xxyyd expmat["xxyyd"][2:end, :]
     @test @test_matrix_approx_eq xxxxd expmat["xxxxd"][2:end, 2:end]

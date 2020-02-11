@@ -42,7 +42,7 @@ end
 end
 
 
-#@testset "Check DSGEVAR likelihood and posterior calculations" begin
+@testset "Check DSGEVAR likelihood and posterior calculations" begin
     dsge = Model1002("ss10")
     obs_i = [dsge.observables[:obs_nominalrate], dsge.observables[:obs_gdp],
              dsge.observables[:obs_gdpdeflator]]
@@ -73,4 +73,4 @@ end
     m.dsge.parameters[1].value = 3.
     @test !isinf(likelihood(m, dsge_data; sampler = false))
     @test isinf(likelihood(m, dsge_data; sampler = true))
-#end
+end

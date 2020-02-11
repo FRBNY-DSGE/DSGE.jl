@@ -2,7 +2,7 @@
 # takes a DSGEVAR as an input.
 fp = dirname(@__FILE__)
 @testset "Likelihood function of DSGE-VAR p(Y | θ, λ)" begin
-    matdata = matread(joinpath(fp, "../../reference/test_dsgevar_likelihood.mat"))
+    matdata = load(joinpath(fp, "../../reference/test_dsgevar_likelihood.jld2"))
     @test matdata["lnpy0"] ≈ DSGE.dsgevar_likelihood(matdata["YYYY"],
                                                 matdata["XXYY"], matdata["XXXX"],
                                                 matdata["yyyyd"], matdata["xxyyd"],
