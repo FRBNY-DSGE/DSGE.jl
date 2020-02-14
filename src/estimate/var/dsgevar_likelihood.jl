@@ -20,8 +20,8 @@ function dsgevar_likelihood(m::AbstractDSGEVARModel{S}, data::Matrix{S};
     regime_switching = haskey(get_settings(m), :regime_switching) && n_regimes > 1 ?
         get_setting(m, :regime_switching) : false # if n_regimes == 1, then no switching needed
 
-    # Get covariances
-    YYYY, XXYY, XXXX = compute_var_covariances(data, lags; use_intercept = use_intercept)
+    # Get population moments
+    YYYY, XXYY, XXXX = compute_var_population_moments(data, lags; use_intercept = use_intercept)
 
     if regime_switching
         error("Regime switching has not been implemented yet.")
@@ -34,12 +34,12 @@ function dsgevar_likelihood(m::AbstractDSGEVARModel{S}, data::Matrix{S};
                 compute_system(m; apply_altpolicy = apply_altpolicy,
                                regime_switching = regime_switching,
                                regime = reg, n_regimes = n_regimes,
-                               get_covariances = true,
+                               get_population_moments = true,
                                use_intercept = use_intercept)
         end
     else
         yyyyd, xxyyd, xxxxd = compute_system(m; apply_altpolicy = apply_altpolicy,
-                                             get_covariances = true,
+                                             get_population_moments = true,
                                              use_intercept = use_intercept)
     end
 
@@ -55,8 +55,8 @@ dsgevar_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
     lags::Int, n_obs::Int) where {S<:Real}
 ```
 evaluates the likelihood of a DSGE-VAR given the
-covariance matrices of the raw data (`YYYY`, `XXYY`, `XXXX`)
-and the covariance matrices implied by the DSGE prior (`YYYYD`, `XXYYD`, `XXXXD`).
+population moments of the raw data (`YYYY`, `XXYY`, `XXXX`)
+and the population moments implied by the DSGE prior (`YYYYD`, `XXYYD`, `XXXXD`).
 
 ### Other Inputs
 * `T`: number of time periods in data
@@ -84,7 +84,7 @@ function dsgevar_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
         k      = size(XXXX, 1) # 1 + lags * n_obs
         n_obs  = size(YYYY, 1)
 
-        # Compute weighted covariances
+        # Compute weighted population moments
         YYYYC = YYYY + λT * YYYYD
         XXYYC = XXYY + λT * XXYYD
         XXXXC = XXXX + λT * XXXXD

@@ -97,7 +97,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
                 zeros(nobs, nobs), zeros(nobs, nshocks)
             return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                           system[:DD], system[:ZZ], EE, MM, lags;
-                                          get_covariances = false)
+                                          get_population_moments = false)
         end
     end
 
@@ -117,6 +117,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
                β_draws, Σ_draws)
 
     if compute_meansbands
+
         # Set up metadata and output from IRFs computation
         metadata = Dict{Symbol,Any}()
         metadata[:para] = input_type
@@ -302,18 +303,52 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            accumulate::Bool = false,
                            cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0) where {S<:Real}
 ```
+computes the impulse responses of the linear state space system to linear combinations
+of (orthogonal) structural shocks specified by `impact`.
+Measurement error that is correlated with
+the impact matrix is allowed. We also include the option to accumulate certain observables.
+
+This state space model takes the form
+
+```
+sₜ = TTT × sₜ₋₁ + RRR × impact[:, i],
+yₜ = ZZ × sₜ + DD + MM × impact[:, i],
+```
+where `impact[:, i]` is a linear combination of orthogonal structural shocks
+with mean zero and identity covariance, and `MM × impact[:, i]` are the
+correlated measurement errors.
+
+The `impact` matrix must be `nshock × nirf`, where `nshock` is
+ the number of structural shocks and `nirf` is the number
+of desired impulse responses. For each row of `impact`,
+we compute the corresponding impulse responses.
+
+A standard choice for `impact` is a square diagonal matrix. In this case,
+we compute the impulse response of observables to each structural shock,
+scaled by the desired size of the shock.
+
+### Keywords
+* `accumulate`: set to true if an observable should be accumulated.
+* `cum_inds`: specifies the indices of variables to accumulated.
+
+### Outputs
+* `irf_results::Matrix{S}`: a `horizon × N` matrix, where `N = nobs * nirf`
+    and `nobs` is the number of observables. The first `1:nobs` columns
+    are the first set of impulse responses of the observables,
+    the following `nobs + 1:nobs * 2` columns are the second set, etc.
 """
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S}, horizon::Int;
                            accumulate::Bool = false,
                            cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0) where {S<:Real}
     # Get dimensions
-    nobs   = size(impact, 1)
-    nstate = size(TTT, 1)
+    nshock, nirf = size(impact)
+    nstate       = size(TTT, 1)
+    nobs         = size(ZZ, 1)
 
     # Compute impulse response to identified impact matrix
-    irf_results = Matrix{S}(undef, horizon, nobs^2)
-    for i = 1:nobs
+    irf_results = Matrix{S}(undef, horizon, nobs * nirf)
+    for i = 1:nirf
         imp    = impact[:, i]
         states = zeros(S, nstate, horizon)
         obs    = zeros(S, nobs, horizon)
@@ -325,9 +360,9 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
             obs[:, t]    = ZZ * states[:, t] + DD
         end
         if accumulate
-            obs[cum_inds, :] = cumsum(obs[cum_inds, :], dims = 2)
+            obs[cum_inds, :] = cumsum(obs[cum_inds, :], dims = length(cum_inds) > 1 ? 2 : 1)
         end
-        irf_results[:, 1 + (i - 1) * nobs:i * nobs] = obs'
+        irf_results[:, 1 + (i - 1) * nobs:i * nobs] = obs
     end
 
     return irf_results
@@ -335,44 +370,69 @@ end
 
 """
 ```
-function impulse_responses_rotation(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
-                                    DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S},
-                                    k::Int, β::Matrix{S}, Σ::Matrix{S},
-                                    x̂::Matrix{S}, horizon::Int;
-                                    accumulate::Bool = false,
-                                    cum_inds::Union{Int,UnitRange{Int},Vector{Int}}
-                                    = 0, test_shocks::Matrix{S} =
-                                    Matrix{S}(undef, 0, 0)) where {S<:Real}
+function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
+                           DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S},
+                           k::Int, β::Matrix{S}, Σ::Matrix{S},
+                           x̂::Matrix{S}, horizon::Int;
+                           accumulate::Bool = false,
+                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
+                           test_shocks::Matrix{S} =
+                           Matrix{S}(undef, 0, 0)) where {S<:Real}
+```
+computes the VAR impulse responses identified by the state space system
+```
+sₜ = TTT × sₜ₋₁ + RRR × impact[:, i],
+yₜ = ZZ × sₜ + DD + MM × impact[:, i],
+```
+where `impact[:, i]` is a linear combination of
+(orthogonal) structural shocks `ϵₜ ∼ 𝒩 (0, I)`, and
+`MM × impact[:, i]` are the correlated measurement errors.
+
+The VAR impulse responses are computed according to
+```
+ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
+```
+where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`.
+The shock `uₜ₊₁` is identified via
+```
+Σᵤ = 𝔼[u × u'] = chol(Σᵤ) × Ω × ϵₜ,
+```
+where the rotation matrix `Ω` is the `Q` matrix from a QR decomposition
+of the impact response matrix corresponding to the state space system, i.e.
+```
+Ω, _ = qr(∂yₜ / ∂ϵₜ').
 ```
 """
-function impulse_responses_rotation(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
-                                    DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S},
-                                    k::Int, β::Matrix{S}, Σ::Matrix{S},
-                                    x̂::Matrix{S}, horizon::Int;
-                                    accumulate::Bool = false,
-                                    cum_inds::Union{Int,UnitRange{Int},Vector{Int}}
-                                    = 0, test_shocks::Matrix{S} =
-                                    Matrix{S}(undef, 0, 0)) where {S<:Real}
+
+function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
+                           DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S},
+                           k::Int, β::Matrix{S}, Σ::Matrix{S},
+                           X̂::Matrix{S}, horizon::Int;
+                           accumulate::Bool = false,
+                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
+                           test_shocks::Matrix{S} =
+                           Matrix{S}(undef, 0, 0)) where {S<:Real}
+
     aairf = impulse_responses(TTT, RRR, ZZ, DD, MM, impact, 1, # 1 b/c just want impact
                               accumulate = accumulate, cum_inds = cum_inds)
     nobs = size(ZZ, 1)
-    a0_m = Matrix{S}(undef, nobs, nobs)
+    nshock = size(RRR, 2)
+    a0_m = Matrix{S}(undef, nobs, nshock)
     for i = 1:nobs
         a0_m[i, :] = aairf[1, nobs * (i - 1) + 1:nobs * i]
     end
     β_rotation, _ = qr(a0_m)
-    β_rotation    = convert(Matrix{S}, β_rotation')
 
-    # Compute distribution of predicted values for each β, Σ, and rotation
-    Σ_chol = cholesky(Σ).L * β_rotation
+    # Compute impulse responses of predicted values for each β, Σ, and rotation
+    Σ_chol = cholesky(Σ).L * β_rotation'
     ŷ      = Matrix{S}(undef, horizon, nobs)
     shocks = isempty(test_shocks) ? randn(horizon, nobs) : test_shocks
 
     for t = 1:horizon
-        out     = (β * x̂' + Σ_chol * shocks[t,:])'
+        out     = (β * X̂' + Σ_chol * shocks[t,:])'
         ŷ[t, :] = out
-        xxl = x̂[1 + 1:k - nobs]
-        x̂ = hcat(1., out, reshape(xxl, 1, length(xxl)))
+        XXl = X̂[1 + 1:k - nobs]
+        X̂ = hcat(1., out, reshape(XXl, 1, length(XXl)))
     end
 
     return ŷ
