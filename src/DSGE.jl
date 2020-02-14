@@ -35,7 +35,7 @@ module DSGE
         default_settings!, default_test_settings!,
 
         # abstractdsgemodel.jl
-        AbstractDSGEModel, AbstractRepModel, AbstractVARModel, description,
+        AbstractDSGEModel, AbstractRepModel, AbstractVARModel, AbstractDSGEVARModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
         date_presample_start, date_mainsample_start, date_zlb_start,
         date_presample_end, date_prezlb_end, date_mainsample_end, date_conditional_end,
@@ -158,7 +158,7 @@ module DSGE
         init_parameters!, steadystate!, init_observable_mappings!,
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
-        PoolModel, eqcond, eqcond_regimes, measurement, pseudo_measurement,
+        ClaridaGaliGertler, PoolModel, eqcond, eqcond_regimes, measurement, pseudo_measurement,
         shock_groupings, transition, DSGEVAR,
 
         # models/heterogeneous/
@@ -360,6 +360,15 @@ module DSGE
     include("models/representative/an_schorfheide/pseudo_observables.jl")
     include("models/representative/an_schorfheide/pseudo_measurement.jl")
     include("models/representative/an_schorfheide/augment_states.jl")
+
+    include("models/representative/clarida_gali_gertler/clarida_gali_gertler.jl")
+    include("models/representative/clarida_gali_gertler/subspecs.jl")
+    include("models/representative/clarida_gali_gertler/eqcond.jl")
+    include("models/representative/clarida_gali_gertler/observables.jl")
+    include("models/representative/clarida_gali_gertler/measurement.jl")
+    include("models/representative/clarida_gali_gertler/pseudo_observables.jl")
+    include("models/representative/clarida_gali_gertler/pseudo_measurement.jl")
+    include("models/representative/clarida_gali_gertler/augment_states.jl")
 
     # PoolModel
     include("models/poolmodel/subspecs.jl")
