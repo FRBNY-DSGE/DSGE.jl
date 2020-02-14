@@ -1,11 +1,17 @@
-using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT
+using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, SparseArrays
+using StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
             "core",
+            "abstractdsgemodel",
+            "abstractvarmodel",
+            "defaults",
             "parameters",
+            "util",
+            "statespace",
             "models/representative/an_schorfheide/an_schorfheide",
             "models/representative/smets_wouters/smets_wouters",
             "models/representative/smets_wouters_orig/smets_wouters_orig",
@@ -34,15 +40,16 @@ my_tests = [
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
 
-            "data/fred_data",
-            "data/load_data",
-            "data/load_data_poolmodel",
-            "data/misc",
-            "data/reverse_transform",
-            "data/simulate_data",
-            "data/transformations",
-            "data/transform_data",
-            "data/util",
+            # "data/fred_data",
+            # "data/load_data",
+            # "data/load_data_poolmodel",
+            # "data/misc",
+            # "data/reverse_transform",
+            # "data/simulate_data",
+            # "data/transformations",
+            # "data/transform_data",
+            # "data/util",
+            "statespace",
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",
@@ -56,8 +63,8 @@ my_tests = [
             "estimate/posterior_poolmodel",
             "estimate/estimate_bma",
             "estimate/hessian",
-            "estimate/csminwel",
-            "estimate/optimize",
+            # "estimate/csminwel",
+            # "estimate/optimize",
             "estimate/var/dsgevar_likelihood",
 
             "estimate/metropolis_hastings",
