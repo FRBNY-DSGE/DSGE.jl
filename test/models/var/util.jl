@@ -48,18 +48,18 @@ fp = dirname(@__FILE__)
                        matdata["x"][lags + 1:end, :]
 end
 
-@testset "Check covariances in data" begin
-    matdata = load(joinpath(fp, "../../reference/test_covariance.jld2"))
+@testset "Check calculation of population moments" begin
+    matdata = load(joinpath(fp, "../../reference/test_var_population_moments.jld2"))
     lags = Int(matdata["lags"])
     @test DSGE.lag_data(Matrix(matdata["YY"]'), Int(matdata["lags"])) ≈
         matdata["XX"][lags + 1:end, :]
-    YYYY, XXYY, XXXX = DSGE.compute_var_covariances(Matrix(matdata["YY"]'), lags)
+    YYYY, XXYY, XXXX = DSGE.compute_var_population_moments(Matrix(matdata["YY"]'), lags)
     @test YYYY ≈ matdata["YY"][lags + 1:end, :]' * matdata["YY"][lags + 1:end, :]
     @test XXYY ≈ matdata["XX"][lags + 1:end, 2:end]' * matdata["YY"][lags + 1:end, :]
     @test XXXX ≈ matdata["XX"][lags + 1:end, 2:end]' * matdata["XX"][lags + 1:end, 2:end]
 
     # Use intercept now
-    YYYY, XXYY, XXXX = DSGE.compute_var_covariances(Matrix(matdata["YY"]'), lags;
+    YYYY, XXYY, XXXX = DSGE.compute_var_population_moments(Matrix(matdata["YY"]'), lags;
                                                     use_intercept = true)
     @test YYYY ≈ matdata["YY"][lags + 1:end, :]' * matdata["YY"][lags + 1:end, :]
     @test XXYY ≈ matdata["XX"][lags + 1:end, 1:end]' * matdata["YY"][lags + 1:end, :]

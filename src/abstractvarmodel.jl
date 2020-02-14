@@ -116,7 +116,6 @@ forecast_tdist_shocks(m::AbstractDSGEVARModel) = get_setting(m, :forecast_tdist_
 forecast_zlb_value(m::AbstractDSGEVARModel)    = get_setting(m, :forecast_zlb_value)
 impulse_response_horizons(m::AbstractDSGEVARModel) = get_setting(m, :impulse_response_horizons)
 n_shockdec_periods(m::AbstractDSGEVARModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
-get_forecast_input_file(m::AbstractDSGEVARModel, input_type::Symbol) = get_forecast_input_file(get_dsge(m), input_type)
 
 # Interface for alternative policy settings
 alternative_policy(m::AbstractDSGEVARModel) = get_setting(m, :alternative_policy)

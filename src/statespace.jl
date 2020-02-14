@@ -376,7 +376,7 @@ end
 compute_system(m; apply_altpolicy = false,
                regime_switching = false, n_regimes = 2,
                check_system = false, get_system = false,
-               get_covariances = false, use_intercept = false
+               get_population_moments = false, use_intercept = false
                verbose = :high)
 ```
 Given the current model parameters, compute the DSGE-VAR system
@@ -386,16 +386,16 @@ corresponding to model `m`.
 * `check_system::Bool`: see `?compute_system` that takes an input `m::AbstractDSGEModel`
     and `system::System`.
 * `get_system::Bool`: see Outputs
-* `get_covariances::Bool`: see Outputs
+* `get_population_moments::Bool`: see Outputs
 * `use_intercept::Bool`: use an intercept term when computing the OLS estimate of the VAR system.
 
 ### Outputs
 * If `get_system = true`:
     Returns the updated `system` whose measurement matrices `ZZ`, `DD`, and `QQ` correspond
     to the VAR specifieid by `m`.
-* If `get_covariances = true`:
-    Returns the limit cross product matrices that describe the DSGE implied covariances between
-    the observables and their lags.
+* If `get_population_moments = true`:
+     Returns the limit cross product matrices that describe the DSGE implied
+     population moments between the observables and their lags.
 * Otherwise:
     Returns `β` and `Σ`, the coefficients and observables covariance matrix corresponding to
     the OLS estimates of the VAR system speicified by `m`.
@@ -403,7 +403,7 @@ corresponding to model `m`.
 function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
                         regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
-                        get_covariances::Bool = false, use_intercept::Bool = false,
+                        get_population_moments::Bool = false, use_intercept::Bool = false,
                         verbose::Symbol = :high) where {T<:Real}
     dsge = get_dsge(m)
     if regime_switching
@@ -425,7 +425,7 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
     else
         return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                       system[:DD], system[:ZZ], EE, MM, n_lags(m);
-                                      get_covariances = get_covariances,
+                                      get_population_moments = get_population_moments,
                                       use_intercept = use_intercept)
     end
 end
@@ -618,7 +618,7 @@ end
 
 """
 ```
-var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_covariances = false) where {S<:Real}
+var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_population_moments = false) where {S<:Real}
 ```
 computes the VAR(p) approximation of the linear state space system
 
@@ -638,7 +638,7 @@ cov(ϵₜ, uₜ) = QQ * MM'.
 ```
 
 ### Outputs
-If `get_covariances = false`:
+If `get_population_moments = false`:
 * `β`: VAR(p) coefficients
 * `Σ`: innovations covariance matrix for the VAR(p) representation
 ```
@@ -646,7 +646,7 @@ yₜ = Xₜβ + μₜ
 ```
 where `Xₜ` appropriately stacks the `p` lags of `yₜ` and `μₜ ∼ 𝒩 (0, Σ)`.
 
-If `get_covariances = true`: we return the limit cross product matrices.
+If `get_population_moments = true`: we return the limit cross product matrices.
 * `yyyyd`: 𝔼[y,y]
 * `XXXXd`: 𝔼[y,X(lag rr)]
 * `XXyyd`: 𝔼[X(lag rr),X(lag ll)]
@@ -661,7 +661,7 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
                                 QQ::AbstractMatrix{S}, DD::AbstractVector{S},
                                 ZZ::AbstractMatrix{S}, EE::AbstractMatrix{S},
                                 MM::AbstractMatrix{S}, p::Int;
-                                get_covariances::Bool = false,
+                                get_population_moments::Bool = false,
                                 use_intercept::Bool = false) where {S<:Real}
 
     nobs = size(ZZ, 1)
@@ -723,7 +723,7 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
     XXyyd = convert(Matrix{S}, yyXXd')
 
-    if get_covariances
+    if get_population_moments
         return yyyyd, XXyyd, XXXXd
     else
         β = \(XXXXd, XXyyd)

@@ -103,21 +103,21 @@ end
                                                  system[:DD], system[:ZZ], system[:EE],
                                                  zeros(size(system[:ZZ], 1),
                                                        DSGE.n_shocks_exogenous(m)),
-                                                 4; get_covariances = true)
+                                                 4; get_population_moments = true)
     yyyydc, xxyydc, xxxxdc = DSGE.var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                                          system[:DD], system[:ZZ], system[:EE],
                                                          zeros(size(system[:ZZ], 1),
                                                                DSGE.n_shocks_exogenous(m)),
-                                                         4; get_covariances = true,
+                                                         4; get_population_moments = true,
                                                          use_intercept = true)
     β, Σ = DSGE.var_approx_state_space(system[:TTT], system[:RRR], system[:QQ], system[:DD],
                                   system[:ZZ], system[:EE],
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
-                                  4; get_covariances = false)
+                                  4; get_population_moments = false)
     βc, Σc = DSGE.var_approx_state_space(system[:TTT], system[:RRR], system[:QQ], system[:DD],
                                   system[:ZZ], system[:EE],
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
-                                  4; get_covariances = false, use_intercept = true)
+                                  4; get_population_moments = false, use_intercept = true)
 
     expmat = load("reference/exp_var_approx_state_space.jld2")
     @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]

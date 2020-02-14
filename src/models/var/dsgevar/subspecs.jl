@@ -15,6 +15,10 @@ function init_subspec!(m::DSGEVAR)
         ss10!(m)
     elseif subspec(m) == "ss11"
         ss11!(m)
+    elseif subspec(m) == "ss12"
+        ss12!(m)
+    elseif subspec(m) == "ss13"
+        ss13!(m)
     elseif subspec(m) == "ss111"
         ss111!(m)
     else
@@ -41,6 +45,20 @@ end
 
 function ss11!(m::DSGEVAR)
     observables = [:obs_hours, :π_t, :laborshare_t, :NominalWageGrowth]
+    lags        = 4
+    λ           = .5
+    update!(m; observables = observables, lags = lags, λ = λ)
+end
+
+function ss12!(m::DSGEVAR)
+    observables = [:obs_hours, :π_t, :laborshare_t, :NominalWageGrowth, :Epi_t]
+    lags        = 4
+    λ           = .5
+    update!(m; observables = observables, lags = lags, λ = λ)
+end
+
+function ss13!(m::DSGEVAR)
+    observables = [:obs_spread, :obs_hours, :π_t, :laborshare_t, :NominalWageGrowth, :Epi_t]
     lags        = 4
     λ           = .5
     update!(m; observables = observables, lags = lags, λ = λ)

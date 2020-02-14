@@ -42,9 +42,9 @@ function lag_data(data::Matrix{S}, lags::Int; use_intercept::Bool = true,
     return XX
 end
 
-function compute_var_covariances(data::Matrix{S}, lags::Int;
+function compute_var_population_moments(data::Matrix{S}, lags::Int;
                                  use_intercept::Bool = false) where {S<:Real}
-    # Compute covariances of raw data
+    # Compute population moments of sample data
     YY = convert(Matrix{S}, data[:, 1 + lags:end]')
     XX = lag_data(data, lags; use_intercept = use_intercept) # Construct XX matrix of covariates
     YYYY = YY' * YY
