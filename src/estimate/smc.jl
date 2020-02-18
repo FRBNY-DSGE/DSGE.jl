@@ -55,8 +55,10 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     λ    = get_setting(m, :λ)
     n_Φ  = get_setting(m, :n_Φ)
 
-    tempering_target   = get_setting(m, :adaptive_tempering_target_smc)
-    use_fixed_schedule = tempering_target == 0.0
+    # Define tempering settings
+    tempered_update_prior_weight = get_setting(m, :tempered_update_prior_weight)
+    tempering_target             = get_setting(m, :adaptive_tempering_target_smc)
+    use_fixed_schedule           = tempering_target == 0.0
 
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
@@ -132,7 +134,8 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
             continue_intermediate = continue_intermediate,
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
-            intermediate_stage_increment = intermediate_stage_increment)
+            intermediate_stage_increment = intermediate_stage_increment,
+            tempered_update_prior_weight = tempered_update_prior_weight)
 end
 
 function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
