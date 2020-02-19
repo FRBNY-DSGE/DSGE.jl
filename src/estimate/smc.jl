@@ -127,7 +127,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
         end
         if empty
             loadpath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
-            loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint=" * old_vintage)
+            loadpath = replace(loadpath, "vint=[0-9]{6}" => "vint=" * old_vintage)
         end
     elseif continue_intermediate
         loadpath = replace(rawpath(m, "estimate",
@@ -163,9 +163,9 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
             use_fixed_schedule = use_fixed_schedule,
             tempering_target = tempering_target,
 
-            old_data = old_data,
-            old_cloud = old_cloud_conv,
-            old_vintage = old_vintage,
+            old_data      = old_data,
+            old_cloud     = old_cloud_conv,
+            old_vintage   = old_vintage,
             smc_iteration = smc_iteration,
 
             run_test = run_test,
