@@ -164,8 +164,8 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
     system = try
         regime_switching = haskey(m.settings, :regime_switching) ?
             get_setting(m, :regime_switching) : false
-        n_regimes = haskey(m.settings, :regime_switching) ?
-            get_setting(m, :regime_switching) : 1
+        n_regimes = haskey(m.settings, :n_regimes) ?
+            get_setting(m, :n_regimes) : 1
         compute_system(m; verbose = verbose,
                        regime_switching = regime_switching, n_regimes = n_regimes)
     catch err
