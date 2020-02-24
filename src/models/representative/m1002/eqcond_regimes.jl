@@ -148,13 +148,23 @@ function eqcond_regimes(m::Model1002)
 
         # Sticky prices and wages
         Γ0[regime][eq[:eq_output], endo[:y_t]] =  1.
-        Γ0[regime][eq[:eq_output], endo[:k_t]] = -m[:Φ]*m[:α]
-        Γ0[regime][eq[:eq_output], endo[:L_t]] = -m[:Φ]*(1 - m[:α])
+        if subspec(m) in ["ss47", "ss48"] && regime == 2
+            Γ0[regime][eq[:eq_output], endo[:k_t]] = -m[:Φ_r2]*m[:α]
+            Γ0[regime][eq[:eq_output], endo[:L_t]] = -m[:Φ_r2]*(1 - m[:α])
+        else
+            Γ0[regime][eq[:eq_output], endo[:k_t]] = -m[:Φ]*m[:α]
+            Γ0[regime][eq[:eq_output], endo[:L_t]] = -m[:Φ]*(1 - m[:α])
+        end
 
         # Flexible prices and wages
         Γ0[regime][eq[:eq_output_f], endo[:y_f_t]] =  1.
-        Γ0[regime][eq[:eq_output_f], endo[:k_f_t]] = -m[:Φ]*m[:α]
-        Γ0[regime][eq[:eq_output_f], endo[:L_f_t]] = -m[:Φ]*(1 - m[:α])
+        if subspec(m) in ["ss47", "ss48"] && regime == 2
+            Γ0[regime][eq[:eq_output_f], endo[:k_f_t]] = -m[:Φ_r2]*m[:α]
+            Γ0[regime][eq[:eq_output_f], endo[:L_f_t]] = -m[:Φ_r2]*(1 - m[:α])
+        else
+            Γ0[regime][eq[:eq_output_f], endo[:k_f_t]] = -m[:Φ]*m[:α]
+            Γ0[regime][eq[:eq_output_f], endo[:L_f_t]] = -m[:Φ]*(1 - m[:α])
+        end
 
         ### 5. Capital Utilization
 
@@ -217,14 +227,26 @@ function eqcond_regimes(m::Model1002)
         if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"] && regime == 2
             Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
                                                         (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+        elseif subspec(m) in ["ss45", "ss46"] && regime == 2
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                                                        (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+        elseif subspec(m) in ["ss47", "ss48"] && regime == 2
+            Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                                                        (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ_r2]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         else
             Γ0[regime][eq[:eq_phlps], endo[:mc_t]] =  -((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
                                                         (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
         end
-        Γ1[regime][eq[:eq_phlps], endo[:π_t]]  = m[:ι_p]/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
-        Γ0[regime][eq[:eq_phlps], endo[:Eπ_t]] = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:ι_p]*m[:β]*
-                                                                       exp((1 - m[:σ_c])*m[:z_star]))
 
+        if subspec(m) in ["ss45", "ss46", "ss47", "ss48"] && regime == 2
+            Γ1[regime][eq[:eq_phlps], endo[:π_t]]  = m[:ι_p_r2]/(1 + m[:ι_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+            Γ0[regime][eq[:eq_phlps], endo[:Eπ_t]] = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:ι_p_r2]*m[:β]*
+                                                                                           exp((1 - m[:σ_c])*m[:z_star]))
+        else
+            Γ1[regime][eq[:eq_phlps], endo[:π_t]]  = m[:ι_p]/(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+            Γ0[regime][eq[:eq_phlps], endo[:Eπ_t]] = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:ι_p]*m[:β]*
+                                                                                           exp((1 - m[:σ_c])*m[:z_star]))
+        end
 
         # Comment out for counterfactual with no price mark up shock
         if subspec(m) == "ss20"

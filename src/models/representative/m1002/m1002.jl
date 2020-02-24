@@ -322,7 +322,8 @@ function init_parameters!(m::Model1002)
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
 
-    if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"]
+    if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42",
+                      "ss45", "ss46", "ss47", "ss48"]
         m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                        description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                        tex_label="\\zeta_p")
@@ -347,6 +348,17 @@ function init_parameters!(m::Model1002)
 
     end
 
+    if subspec(m) in ["ss45", "ss46", "ss47", "ss48"]
+        m <= parameter(:ι_p_r2, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+                       description="ι_p: The weight attributed to last period's inflation in price indexation (Regime 2). (1-ι_p) is the weight attributed to steady-state inflation.",
+                       tex_label="\\iota_p")
+    end
+
+    if subspec(m) in ["ss47", "ss48"]
+        m <= parameter(:Φ_r2, 1.1066, (1., 10.), (1.00, 10.00), ModelConstructors.Exponential(), Normal(1.25, 0.12), fixed=false,
+                       description="Φ: Fixed costs (Regime 2).",
+                       tex_label="\\Phi_p")
+    end
   #=  if subspec(m) in ["ss51"]
         m <= parameter(:α_r2, 0.1596, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), Normal(0.30, 0.05), fixed=false,
                        description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",

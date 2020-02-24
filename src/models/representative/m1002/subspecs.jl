@@ -72,6 +72,14 @@ function init_subspec!(m::Model1002)
         return ss43!(m)
     elseif subspec(m) == "ss44"
         return ss44!(m)
+    elseif subspec(m) == "ss45"
+        return ss45!(m)
+    elseif subspec(m) == "ss46"
+        return ss46!(m)
+    elseif subspec(m) == "ss47"
+        return ss47!(m)
+    elseif subspec(m) == "ss48"
+        return ss48!(m)
   #=  elseif subspec(m) == "ss51"
         return ss51!(m) =#
     else
@@ -1657,6 +1665,123 @@ function ss44!(m::Model1002)
     m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
+end
+
+"""
+```
+ss45!(m::Model1002)
+```
+
+Has two ζ_p and ι_p parameters for the regime-switching estimation of DSGE. Loose prior!
+"""
+function ss45!(m::Model1002)
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.45), fixed=false,
+                   description="ι_p: The weight attributed to last period's inflation in price indexation (Regime 1). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+
+    m <= parameter(:ι_p_r2, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.45), fixed=false,
+                   description="ι_p2: The weight attributed to last period's inflation in price indexation (Regime 2). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+
+end
+
+"""
+```
+ss46!(m::Model1002)
+```
+
+Has two ζ_p and ι_p parameters for the regime-switching estimation of DSGE. Standard prior!
+"""
+function ss46!(m::Model1002)
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+                   description="ι_p: The weight attributed to last period's inflation in price indexation (Regime 1). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+
+    m <= parameter(:ι_p_r2, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+                   description="ι_p2: The weight attributed to last period's inflation in price indexation (Regime 2). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+end
+
+"""
+```
+ss47!(m::Model1002)
+```
+
+Has two ζ_p, ι_p, and Φ parameters for the regime-switching estimation of DSGE. Loose prior!
+"""
+function ss47!(m::Model1002)
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.3), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.45), fixed=false,
+                   description="ι_p: The weight attributed to last period's inflation in price indexation (Regime 1). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+
+    m <= parameter(:ι_p_r2, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.45), fixed=false,
+                   description="ι_p2: The weight attributed to last period's inflation in price indexation (Regime 2). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+
+    m <= parameter(:Φ, 1.1066, (1., 10.), (1.00, 10.00), ModelConstructors.Exponential(), Normal(1.25, 0.12), fixed=false,
+                   description="Φ: Fixed costs (Regime 1).",
+                   tex_label="\\Phi_p")
+
+    m <= parameter(:Φ_r2, 1.1066, (1., 10.), (1.00, 10.00), ModelConstructors.Exponential(), Normal(1.25, 0.12), fixed=false,
+                   description="Φ2: Fixed costs (Regime 2).",
+                   tex_label="\\Phi_p")
+end
+
+"""
+```
+ss48!(m::Model1002)
+```
+
+Has two ζ_p, ι_p, and Φ parameters for the regime-switching estimation of DSGE. Standard prior!
+"""
+function ss48!(m::Model1002)
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p: The Calvo parameter (Regime 1). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                   description="ζ_p2: The Calvo parameter (Regime 2). In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                   tex_label="\\zeta_p")
+
+    m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+                   description="ι_p: The weight attributed to last period's inflation in price indexation (Regime 1). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+
+    m <= parameter(:ι_p_r2, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+                   description="ι_p2: The weight attributed to last period's inflation in price indexation (Regime 2). (1-ι_p) is the weight attributed to steady-state inflation.",
+                   tex_label="\\iota_p")
+
+    m <= parameter(:Φ, 1.1066, (1., 10.), (1.00, 10.00), ModelConstructors.Exponential(), Normal(1.25, 0.36), fixed=false,
+                   description="Φ: Fixed costs (Regime 1).",
+                   tex_label="\\Phi_p")
+
+    m <= parameter(:Φ_r2, 1.1066, (1., 10.), (1.00, 10.00), ModelConstructors.Exponential(), Normal(1.25, 0.36), fixed=false,
+                   description="Φ2: Fixed costs (Regime 2).",
+                   tex_label="\\Phi_p")
 end
 
 #="""
