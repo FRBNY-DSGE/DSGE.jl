@@ -5,7 +5,11 @@ fp = dirname(@__FILE__)
                                zeros(size(matdata["zz"], 1)), matdata["mmm"],
                                matdata["impact"], 1; accumulate = true,
                                cum_inds = 1)
-    @test matdata["aairf"] ≈ irfout
+    nobs = size(matdata["zz"], 1)
+    for i = 1:nobs
+        @test vec(matdata["aairf"][:, nobs * (i - 1) + 1:nobs * i]) ≈
+            vec(irfout[:, :, i])
+    end
 end
 
 @testset "Impulse responses to structural shocks identified by a DSGE-VAR" begin
@@ -13,10 +17,11 @@ end
     matdata2 = load(joinpath(fp, "../../../reference/test_rotations.jld2"))
     ŷ = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
                                zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
-                               matdata1["impact"], Int(matdata2["k"]), matdata2["cct_sim"],
+                               matdata1["impact"].^2, Int(matdata2["k"]), matdata2["cct_sim"],
                                matdata2["sig_sim"], matdata2["XXpred"],
                                Int(matdata2["qahead"]); accumulate = true,
-                               cum_inds = 1, test_shocks = matdata2["Shocks"])
+                               cum_inds = 1, test_shocks =
+                               convert(Matrix{Float64}, matdata2["Shocks"]'))
 
     @test ŷ ≈ matdata2["yypred"]
 end

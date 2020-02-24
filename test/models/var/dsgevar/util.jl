@@ -6,6 +6,6 @@ fp = dirname(@__FILE__)
                                          Int(matdata["nvar"]), Int(matdata["nlags"]);
                                          testing = true, test_Σ_draw = matdata["draw"],
                                          test_β_draw = vec(matdata["beta_draw"]))
-    @test matdata["cct_sim"] ≈ β_draw
+    @test matdata["cct_sim"] ≈ convert(Matrix{Float64}, β_draw')
     @test matdata["sig_sim"] ≈ Σ_draw
 end
