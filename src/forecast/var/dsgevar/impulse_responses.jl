@@ -63,6 +63,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
                            parallel::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            flip_shocks::Bool = false,
+                           use_intercept::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            compute_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -82,7 +83,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
     get_β_Σ! = if isa(m, AbstractDSGEVARModel)
         function _get_β_Σ_dsgevar_(para)
             DSGE.update!(m, para)
-            return compute_system(m; verbose = verbose)
+            return compute_system(m; verbose = verbose, use_intercept = use_intercept)
         end
     else
         use_measurement_error = hasmethod(measurement_error, (typeof(m),))
@@ -112,7 +113,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
     irf_output =
         mapfcn((β, Σ) ->
                impulse_responses(β, Σ, n_obs_var, h; method = method,
-                                 has_intercept = false,
+                                 use_intercept = false,
                                  flip_shocks = flip_shocks),
                β_draws, Σ_draws)
 
@@ -295,6 +296,223 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Matrix{S},
                              verbose = verbose)
 end
 
+"""
+```
+function impulse_responses(m, input_type, method,
+                           lags, observables, shocks,
+                           n_obs_var; parallel = false,
+                           frequency_band = (2*π/32, 2*π/6),
+                           flip_shocks = false,
+                           density_bands = [.5, .6, .7, .8, .9],
+                           compute_meansbands = false,
+                           minimize = true,
+                           forecast_string = "",
+                           verbose = :high) where {S<:Real}
+function impulse_responses(m, paras, input_type, method,
+                           lags, observables, shocks,
+                           n_obs_var; parallel = false,
+                           frequency_band = (2*π/32, 2*π/6),
+                           flip_shocks = false,
+                           density_bands = [.5, .6, .7, .8, .9],
+                           compute_meansbands = false,
+                           minimize = true,
+                           forecast_string = "",
+                           verbose = :high) where {S<:Real}
+```
+computes the VAR impulse responses identified by the state space system.
+```
+sₜ = TTT × sₜ₋₁ + RRR × impact[:, i],
+yₜ = ZZ × sₜ + DD + MM × impact[:, i],
+```
+where `impact[:, i]` is a linear combination of
+(orthogonal) structural shocks `ϵₜ ∼ 𝒩 (0, I)`, and
+`MM × impact[:, i]` are the correlated measurement errors.
+
+The VAR impulse responses are computed according to
+```
+ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
+```
+where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`.
+The shock `uₜ₊₁` is identified via
+```
+Σᵤ = 𝔼[u × u'] = chol(Σᵤ) × Ω × ϵₜ,
+```
+where the rotation matrix `Ω` is the `Q` matrix from a QR decomposition
+of the impact response matrix corresponding to the state space system, i.e.
+```
+Ω, _ = qr(∂yₜ / ∂ϵₜ').
+```
+
+### Inputs
+* `m::Union{AbstractDSGEModel,AbstractDSGEVARModel}`: DSGE/DSGEVAR model object
+* `paras::Matrix{S}` or `paras::Vector{S}`: parameters to calibrate the model
+* `input_type::Symbol`: `:mode` specifies a modal impulse response, and
+    `:full` specifies a full-distribution forecast if `paras` is not given.
+    This argument is also used to construct the file names of computed `MeansBands`.
+* `method::Symbol`: type of impulse response to compute. The options are
+    `:cholesky` and `:rotation`. For the first, see `?cholesky_shock`,
+    and for the latter, we use the DSGE model to identify the rotation matrix
+    which maps the DSGE's structural shocks to the innovations in the VAR's observables.
+* `lags::Int`: number of lags in the VAR(p) approximation, i.e. p = lags
+* `observables::Vector{Symbol}`: observables to be used in the VAR. These can be
+    any of the observables or pseudo-observables in `m`.
+* `shocks::Vector{Symbol}`: (structural) exogenous shocks to be used in the DSGE-VAR.
+    These shocks must be in `m`.
+* `n_obs_var::Int`: the index of the observable to be shocked by
+    the reduced-form impulse response to the VAR system.
+
+### Keywords
+* `parallel::Bool`: use parallel workers or not
+* `frequency_band::Tuple{S,S}`: See `?maxBC_shock`.
+* `n_obs_var::Int`: Index of observable to be shocked when using a Cholesky-based impulse response
+* `draw_shocks::Bool`: true if you want to draw shocks along the entire horizon
+* `flip_shocks::Bool`: impulse response shocks are negative by default. Set to `true` for
+    a positive signed shock.
+* `use_intercept::Bool`: use an intercept term in the VAR or not
+* `accumulate::Bool`: accumulate any impulse responses, must set `cum_inds` as well
+* `cum_inds::Union{Int,UnitRange{int},Vector{Int}}`: indices of impulse responses to accumulate
+* `density_bands::Vector{Float64}`: bands for full-distribution IRF computations
+* `compute_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
+* `minimize::Bool`: choose shortest interval if true, otherwise just chop off lowest and
+    highest (percent/2)
+* `forecast_string::String`: string tag for identifying this impulse response
+* `verbose::Symbol`: quantity of output desired
+
+"""
+function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
+                           data::Matrix{S}, input_type::Symbol, method::Symbol;
+                           parallel::Bool = false,
+                           frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
+                           n_obs_var::Int = 1,
+                           draw_shocks::Bool = false, flip_shocks::Bool = false,
+                           use_intercept::Bool = false, accumulate::Bool = false,
+                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
+                           density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
+                           compute_meansbands::Bool = false,
+                           minimize::Bool = true,
+                           forecast_string::String = "",
+                           verbose::Symbol = :high) where {S<:Real}
+    @assert !isempty(data) "A non-empty data matrix with dimensions (n_observables x n_periods) must be passed to use $(string(method))"
+
+    # Compute dimensions of needed objects
+    lags = get_lags(m)
+    T = size(data, 2) - lags
+    nobs = size(data, 1)
+    λ = get_λ(m)
+    T_λT = convert(Int, T + λ * T)
+    k = nobs * lags + (use_intercept ? 1 : 0)
+    h = impulse_response_horizons(m)
+
+    # Get population moments
+    YYYY, XXYY, XXXX =
+        compute_var_population_moments(data, lags; use_intercept = use_intercept)
+    if method == :rotation
+        XX = lag_data(data, lags; use_intercept = use_intercept)
+        X̂ = use_intercept ?
+            reshape(vcat(1, data[:, end], XX[end, 1+1:k - nobs]), 1, k) :
+            reshape(vcat(data[:, end], XX[end, 1:k - nobs]), 1, k)
+    end
+
+    # Get measurement error
+    if hasmethod(measurement_error, (typeof(m),))
+        _, MM = measurement_error(m)
+    else
+        MM = zeros(S, n_observables(m), n_shocks(m))
+    end
+
+    dsgevarrotationirf_method = if method == :rotation
+        function _dsgevar_λ_rotation_irf_(para)
+            DSGE.update!(m, para)
+            sys = compute_system(m, get_system = true, use_intercept = use_intercept)
+
+            β, Σ = compute_system(m, data; verbose = verbose, use_intercept = use_intercept)
+
+            Σ += Σ'
+            Σ ./= 2.
+
+            return DSGE.impulse_responses(sys[:TTT], sys[:RRR], sys[:ZZ], sys[:DD], MM,
+                                          sys[:QQ], k, β, Σ, X̂, h;
+                                          method = method,
+                                          accumulate = accumulate,
+                                          cum_inds = cum_inds, flip_shocks = flip_shocks,
+                                          draw_shocks = draw_shocks)
+        end
+    elseif method in [:cholesky, :cholesky_long_run, :choleskyLR, :maxBC,
+                      :maximum_business_cycle_variance]
+        function _dsgevar_λ_irf_(para)
+            DSGE.update!(m, para)
+
+            β, Σ = compute_system(m, data; verbose = verbose, use_intercept = use_intercept)
+            Σ += Σ'
+            Σ ./= 2.
+
+            return impulse_responses(β, Σ, n_obs_var, h; method = method,
+                              use_intercept = use_intercept,
+                              flip_shocks = flip_shocks)
+        end
+    else
+        error("A VAR IRF identified by a DSGE's rotation using method"
+              * " $(string(method)) has not been implemented.")
+    end
+
+    mapfcn = parallel ? pmap : map
+    paras = mapslices(x -> [vec(x)], paras, dims = 2)
+    irf_output =
+        mapfcn(para -> dsgevarrotationirf_method(para), paras)
+
+    if compute_meansbands
+        # Set up metadata and output from IRFs computation
+        metadata = Dict{Symbol,Any}()
+        metadata[:para] = input_type
+        metadata[:cond_type] = :none
+        metadata[:product] = :dsgevarlambdairf
+        metadata[:class] = :obs # We default everything to an observable
+        metadata[:date_inds] = OrderedDict()
+
+        # Set up for loop over variable names
+        means = DataFrame()
+        bands = Dict{Symbol,DataFrame}()
+        metadata[:indices] = get_observables(m)
+
+        # Means and Bands for each variable in a class
+        for (name, name_i) in get_observables(m)
+            # irf_output is Vector{nperiod x nobs} -> for each observable,
+            # we want to select its specific IRF, i.e. map(x -> x[:,obs_index]).
+            # This creates a nperiod x ndraws matrix, which we want to transpose
+            # to get a ndraws x nperiod matrix
+            single_var = Matrix(reduce(hcat, map(x -> x[:,name_i], irf_output))')
+            means[!,name] = vec(mean(single_var, dims = 1))
+            bands[name]   = find_density_bands(single_var, density_bands;
+                                               minimize = minimize)
+        end
+        mb = MeansBands(metadata, means, bands)
+
+        # Save MeansBands
+        tail = if method == :cholesky
+            :cholesky
+        elseif method == :maxBC || method == :maximum_business_cycle_variance
+            :maxBC
+        elseif method == :rotation
+            :rotation
+        else
+            :choleskyLR
+        end
+
+        fp = get_meansbands_output_file(m, input_type, :none,
+                                        Symbol(metadata[:product], :obs_, tail),
+                                        forecast_string = forecast_string)
+        dirpath = dirname(fp)
+        isdir(dirpath) || mkpath(dirpath)
+        JLD2.jldopen(fp, true, true, true, IOStream) do file
+            write(file, "mb", mb)
+        end
+        println(verbose, :high, "  " * "wrote " * basename(fp))
+        return mb
+    else
+        # Reshape irf_output to nobs x nperiod x ndraw
+        return cat(map(x -> x', irf_output)..., dims = 3)
+    end
+end
 
 """
 ```
@@ -332,10 +550,8 @@ scaled by the desired size of the shock.
 * `cum_inds`: specifies the indices of variables to accumulated.
 
 ### Outputs
-* `irf_results::Matrix{S}`: a `horizon × N` matrix, where `N = nobs * nirf`
-    and `nobs` is the number of observables. The first `1:nobs` columns
-    are the first set of impulse responses of the observables,
-    the following `nobs + 1:nobs * 2` columns are the second set, etc.
+* `irf_results::Matrix{S}`: a `nobs x horizon × nirf` matrix, where
+     `nobs` is the number of observables.
 """
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S}, horizon::Int;
@@ -347,7 +563,7 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
     nobs         = size(ZZ, 1)
 
     # Compute impulse response to identified impact matrix
-    irf_results = Matrix{S}(undef, horizon, nobs * nirf)
+    irf_results = Array{S, 3}(undef, nobs, horizon, nirf)
     for i = 1:nirf
         imp    = impact[:, i]
         states = zeros(S, nstate, horizon)
@@ -362,7 +578,7 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
         if accumulate
             obs[cum_inds, :] = cumsum(obs[cum_inds, :], dims = length(cum_inds) > 1 ? 2 : 1)
         end
-        irf_results[:, 1 + (i - 1) * nobs:i * nobs] = obs
+        irf_results[:, :, i] = obs
     end
 
     return irf_results
@@ -371,7 +587,7 @@ end
 """
 ```
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
-                           DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S},
+                           DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
                            x̂::Matrix{S}, horizon::Int;
                            accumulate::Bool = false,
@@ -381,12 +597,10 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
 ```
 computes the VAR impulse responses identified by the state space system
 ```
-sₜ = TTT × sₜ₋₁ + RRR × impact[:, i],
-yₜ = ZZ × sₜ + DD + MM × impact[:, i],
+sₜ = TTT × sₜ₋₁ + RRR × ϵₜ
+yₜ = ZZ × sₜ + DD + MM × ϵₜ
 ```
-where `impact[:, i]` is a linear combination of
-(orthogonal) structural shocks `ϵₜ ∼ 𝒩 (0, I)`, and
-`MM × impact[:, i]` are the correlated measurement errors.
+where `ϵₜ ∼ 𝒩 (0, QQ)` and `MM × ϵₜ` are the correlated measurement errors.
 
 The VAR impulse responses are computed according to
 ```
@@ -405,35 +619,68 @@ of the impact response matrix corresponding to the state space system, i.e.
 """
 
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
-                           DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S},
+                           DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Matrix{S}, horizon::Int;
+                           X̂::Matrix{S}, horizon::Int; method::Symbol = :cholesky,
                            accumulate::Bool = false,
                            cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
+                           flip_shocks::Bool = false, draw_shocks::Bool = false,
                            test_shocks::Matrix{S} =
                            Matrix{S}(undef, 0, 0)) where {S<:Real}
-
-    aairf = impulse_responses(TTT, RRR, ZZ, DD, MM, impact, 1, # 1 b/c just want impact
-                              accumulate = accumulate, cum_inds = cum_inds)
-    nobs = size(ZZ, 1)
-    nshock = size(RRR, 2)
-    a0_m = Matrix{S}(undef, nobs, nshock)
-    for i = 1:nobs
-        a0_m[i, :] = aairf[1, nobs * (i - 1) + 1:nobs * i]
+    if !(method in [:rotation])
+        error("Impulse responses for method $(string(method)) have not been implemented.")
     end
-    β_rotation, _ = qr(a0_m)
 
     # Compute impulse responses of predicted values for each β, Σ, and rotation
-    Σ_chol = cholesky(Σ).L * β_rotation'
-    ŷ      = Matrix{S}(undef, horizon, nobs)
-    shocks = isempty(test_shocks) ? randn(horizon, nobs) : test_shocks
+    nobs = size(ZZ, 1)
+    a0_m = convert(Matrix{S},
+                   dropdims(impulse_responses(TTT, RRR, ZZ, DD, MM,
+                                              sqrt.(QQ), 1, # 1 b/c just want impact and sqrt -> 1 sd shock
+                                              accumulate = accumulate,
+                                              cum_inds = cum_inds); dims = 2)')
+    rotation, _ = qr(a0_m)
+    Σ_chol = cholesky(Σ).L * rotation' # mapping from structural shocks to innovations in VAR
 
-    for t = 1:horizon
-        out     = (β * X̂' + Σ_chol * shocks[t,:])'
-        ŷ[t, :] = out
-        XXl = X̂[1 + 1:k - nobs]
-        X̂ = hcat(1., out, reshape(XXl, 1, length(XXl)))
+    if draw_shocks || !isempty(test_shocks)
+        ŷ = Matrix{S}(undef, horizon, nobs)
+
+        if isempty(test_shocks)
+            if method == :rotation
+                shocks = randn(size(RRR, 2), horizon) # shocks getting drawn are structural shocks
+            end
+        else
+            shocks = test_shocks
+        end
+
+        for t = 1:horizon
+            out     = X̂ * β + Σ_chol * shocks[:, t]
+            ŷ[t, :] = out
+
+            XXl = X̂[1 + 1:k - nobs]
+            X̂   = hcat(1., out, reshape(XXl, 1, length(XXl)))
+        end
+    else
+        if method == :rotation
+            nshocks = size(RRR, 2)
+            ŷ       = Array{S, 3}(nshocks, horizon, nobs)
+            shocks  = zeros(S, nshocks, horizon)
+
+            for i = 1:nshocks
+                shocks[1, i] = flip_shocks ? sqrt(QQ[i, i]) :
+                    -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
+                for t = 1:horizon
+                    out        = X̂ * β + Σ_chol * shocks[:, t]
+                    ŷ[i, t, :] = out
+
+                    XXl = X̂[1 + 1:k - nobs]
+                    X̂   = hcat(1., out, reshape(XXl, 1, length(XXl)))
+                end
+            end
+            ŷ = permutedims(ŷ, [3, 2, 1])
+        end
+
     end
+
 
     return ŷ
 end
