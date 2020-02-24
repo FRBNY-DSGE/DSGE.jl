@@ -41,7 +41,8 @@ until we obtain a pair of draws (β, Σ) that are stationary.
 * All keywords are used for testing purposes.
 """
 function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S},
-                             T̄::Int, n_obs::Int, lags::Int; testing::Bool = false,
+                             T̄::Int, n_obs::Int, lags::Int; standard_orientation::Bool = true,
+                             testing::Bool = false,
                              test_Σ_draw::Matrix{S} = Matrix{S}(undef, 0, 0),
                              test_β_draw::Vector{S} = Vector{S}(undef, 0)) where {S<:Real}
 
@@ -78,7 +79,7 @@ function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S
             vc       = kron(Σ_draw, inv_XXXXC)
             vc       += vc'
             vc       ./= 2.
-            β_draw   = convert(Matrix{S}, reshape(β + cholesky(vc).L * randn(n_obs * k), k, n_obs)')
+            β_draw   = convert(Matrix{S}, reshape(β + cholesky(vc).L * randn(n_obs * k), k, n_obs)') # change this to avoid transposition, don't need it if change rotation irfs
             β_to_TTT = vcat(β_draw[:, (1+1):k],
                             hcat(Matrix{S}(I, n_obs * (lags - 1), n_obs * (lags - 1)),
                                  zeros(S, n_obs * (lags - 1), n_obs)))
@@ -88,17 +89,22 @@ function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S
         end
     end
 
+    if standard_orientation
+        β_draw = convert(Matrix{S}, β_draw')
+    end
+
     return β_draw, Σ_draw
 end
 
 function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S},
-                             T̄::Int; testing::Bool = false,
+                             T̄::Int; standard_orientation::Bool = true, testing::Bool = false,
                              test_Σ_draw::Matrix{S} = Matrix{S}(undef, 0, 0),
                              test_β_draw::Vector{S} = Vector{S}(undef, 0)) where {S<:Real}
     # Infer n_obs and lags from population moments
     n_obs = size(YYYYC, 1)
     lags = (size(XXXXC, 1) - 1) / n_obs
 
-    return draw_stationary_VAR(YYYYC, XXYYC, XXXXC, T̄, n_obs, lags; testing = testing,
+    return draw_stationary_VAR(YYYYC, XXYYC, XXXXC, T̄, n_obs, lags;
+                               standard_orientation = standard_orientation, testing = testing,
                                test_Σ_draw = test_Σ_draw, test_β_draw = test_β_draw)
 end
