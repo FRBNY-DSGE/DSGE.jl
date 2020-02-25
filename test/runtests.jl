@@ -64,6 +64,7 @@ my_tests = [
             "estimate/posterior_poolmodel",
             "estimate/estimate_bma",
             "estimate/hessian",
+            "estimate/util",
             # "estimate/csminwel",
             # "estimate/optimize",
             "estimate/var/dsgevar_likelihood",
