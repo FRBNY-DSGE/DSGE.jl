@@ -633,8 +633,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            smooth_conditional::Symbol = :hist_cond,
                            cond_deviation_shocks::Vector{Symbol} =
                            collect(keys(m.exogenous_shocks)),
-                           cond_deviation_obs_shocks::DataFrame = DataFrame())
-
+                           cond_deviation_obs_shocks::DataFrame = DataFrame(),
+                           param_key::Symbol = :nothing,
+                           param_value::Float64 = 0.0)
 
     ### Setup
 
@@ -783,6 +784,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 # If we don't want to draw s_T, simply use the mean s_{T|T}
                 kal[:s_T]
             end
+        end
+
+        if param_key!=:nothing
+            m[param_key] = param_value
+            system = compute_system(m)
         end
 
         # Re-solve model with alternative policy rule, if applicable
