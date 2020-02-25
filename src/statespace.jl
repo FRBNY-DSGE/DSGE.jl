@@ -375,11 +375,11 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
     system = compute_system(dsge, system; observables = collect(keys(get_observables(m))),
                             shocks = collect(keys(get_shocks(m))), check_system = check_system)
 
-    EE, MM = measurement_error(m)
-
     if get_system
         return system
     else
+        EE, MM = measurement_error(m)
+
         return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                       system[:DD], system[:ZZ], EE, MM, n_lags(m);
                                       get_population_moments = get_population_moments,
@@ -400,11 +400,11 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                             get_system = true, use_intercept = use_intercept,
                             verbose = verbose)
 
-    EE, MM = measurement_error(m)
-
     if get_system
         return system
     else
+        EE, MM = measurement_error(m)
+
         lags = n_lags(m)
         YYYY, XXYY, XXXX =
             compute_var_population_moments(data, lags; use_intercept = use_intercept)
@@ -426,7 +426,7 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
             n_periods = size(data, 2) - lags
             β, Σ =  draw_stationary_VAR(YYYYC, XXYYC, XXXXC,
                                         convert(Int, n_periods + λ * n_periods),
-                                        size(YYYYC, 1), lags)
+                                        size(data, 1), lags)
 
             return β, Σ
         end
