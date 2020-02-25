@@ -126,6 +126,8 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
                 if :mode in collect(keys(forecast_input_file_overrides(m)))
                     params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                     # If not, load it from the cloud
+                elseif isfile("smc_" * input_file_name)
+                    params = convert(Vector{Float64}, h5read("smc_" * input_file_name, "params"))
                 else
                     cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
                     params = get_vals(cloud)[:,argmax(get_logpost(cloud))]
