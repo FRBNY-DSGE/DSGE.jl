@@ -45,7 +45,7 @@ function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S}, n_obs_s
 
     # Compute dimensions
     n = size(β, 2)
-    lags = convert(Int, use_intercept ? (size(β,1) - 1) / n : size(β,1) / n)
+    lags = convert(Int, use_intercept ? (size(β, 1) - 1) / n : size(β, 1) / n)
 
     # Compute impact based on IRF type
     Y = zeros(lags + horizon, n)

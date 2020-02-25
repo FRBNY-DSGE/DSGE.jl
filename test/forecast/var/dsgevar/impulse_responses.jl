@@ -18,7 +18,7 @@ end
     ŷ = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
                                zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
                                matdata1["impact"].^2, Int(matdata2["k"]), matdata2["cct_sim"],
-                               matdata2["sig_sim"], matdata2["XXpred"],
+                               matdata2["sig_sim"], vec(matdata2["XXpred"]),
                                Int(matdata2["qahead"]); accumulate = true,
                                cum_inds = 1, test_shocks =
                                convert(Matrix{Float64}, matdata2["Shocks"]'))

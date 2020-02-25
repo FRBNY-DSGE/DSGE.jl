@@ -409,8 +409,8 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
     if method == :rotation
         XX = lag_data(data, lags; use_intercept = use_intercept)
         X̂ = use_intercept ?
-            reshape(vcat(1, data[:, end], XX[end, 1+1:k - nobs]), 1, k) :
-            reshape(vcat(data[:, end], XX[end, 1:k - nobs]), 1, k)
+            vcat(1, data[:, end], XX[end, 1+1:k - nobs]) :
+            vcat(data[:, end], XX[end, 1:k - nobs])
     end
 
     # Get measurement error
@@ -424,9 +424,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
         function _dsgevar_λ_rotation_irf_(para)
             DSGE.update!(m, para)
             sys = compute_system(m, get_system = true, use_intercept = use_intercept)
-
             β, Σ = compute_system(m, data; verbose = verbose, use_intercept = use_intercept)
-
             Σ += Σ'
             Σ ./= 2.
 
@@ -621,7 +619,7 @@ of the impact response matrix corresponding to the state space system, i.e.
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Matrix{S}, horizon::Int; method::Symbol = :cholesky,
+                           X̂::Vector{S}, horizon::Int; method::Symbol = :cholesky,
                            accumulate::Bool = false,
                            cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
@@ -653,11 +651,10 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
         end
 
         for t = 1:horizon
-            out     = X̂ * β + Σ_chol * shocks[:, t]
+            out     = vec(X̂' * β) + Σ_chol * shocks[:, t] # X̂ normally would be [X̂ 0 0; 0 X̂ 0; 0 0 X̂] if nobs = 3, but this way of coding it results in less memory storage
             ŷ[t, :] = out
 
-            XXl = X̂[1 + 1:k - nobs]
-            X̂   = hcat(1., out, reshape(XXl, 1, length(XXl)))
+            X̂       = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
         end
     else
         if method == :rotation
@@ -669,11 +666,10 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                 shocks[1, i] = flip_shocks ? sqrt(QQ[i, i]) :
                     -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
                 for t = 1:horizon
-                    out        = X̂ * β + Σ_chol * shocks[:, t]
+                    out        = vec(X̂' * β) + Σ_chol * shocks[:, t]
                     ŷ[i, t, :] = out
 
-                    XXl = X̂[1 + 1:k - nobs]
-                    X̂   = hcat(1., out, reshape(XXl, 1, length(XXl)))
+                    X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
                 end
             end
             ŷ = permutedims(ŷ, [3, 2, 1])
