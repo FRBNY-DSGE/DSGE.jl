@@ -698,7 +698,7 @@ function init_parameters!(m::Model1002)
                    description="ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label="\\rho_{r^m}")
 
-    m <= parameter(:ρ_σ_w, 0.9898, (1e-5, 0.99999), (1e-5, 0.99), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
+    m <= parameter(:ρ_σ_w, 0.9898, (1e-5, 0.99999), (1e-5, 0.99999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
                    tex_label="\\rho_{\\sigma_\\omega}")
 
