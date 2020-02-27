@@ -129,8 +129,13 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
                 elseif occursin("smc_paramsmode", input_file_name) && !use_highest_posterior_value
                     params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                 else
+                    input_file_name = replace(replace(input_file_name,
+                                                      "smc_paramsmode" => "smc_cloud"),
+                                              ".h5" => ".jld2")
+                    println(verbose, :low, "Switching estimation file of draws to $input_file_name")
                     cloud = load(input_file_name, "cloud")
-                    params = get_vals(cloud)[:,argmax(get_logpost(cloud))]
+
+                    params = get_vals(cloud)[:, argmax(get_logpost(cloud))]
                 end
             else
                 error("SMC mean not implemented yet")

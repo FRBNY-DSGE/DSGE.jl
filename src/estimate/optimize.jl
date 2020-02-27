@@ -43,7 +43,6 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                    extended_trace::Bool = false,
                    mle::Bool            = false, # default from estimate.jl
                    step_size::Float64   = .01,
-                   n_regimes::Int       = 1,
                    verbose::Symbol      = :none)
 
     ########################################################################################
@@ -71,6 +70,12 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     para_free_inds = findall([!θ.fixed for θ in get_parameters(m)])
     x_model        = transform_to_real_line(get_parameters(m))
     x_opt          = x_model[para_free_inds]
+
+    # For regime-switching cases
+    regime_switching = haskey(get_settings(m), :regime_switching) ?
+        get_setting(m, :regime_switching) : false
+    n_regimes        = haskey(get_settings(m), :n_regimes) && regime_switching ?
+        get_setting(m, :n_regimes) : 1
 
     ########################################################################################
     ### Step 2: Initialize f_opt
