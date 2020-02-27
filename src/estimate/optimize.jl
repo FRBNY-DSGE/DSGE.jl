@@ -43,6 +43,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                    extended_trace::Bool = false,
                    mle::Bool            = false, # default from estimate.jl
                    step_size::Float64   = .01,
+                   n_regimes::Int       = 1,
                    verbose::Symbol      = :none)
 
     ########################################################################################
@@ -84,9 +85,9 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
         end
 
         if mle
-            out = -likelihood(m, data; catch_errors = true)
+            out = -likelihood(m, data; n_regimes = n_regimes, catch_errors = true)
         else
-            out = -posterior(m, data; catch_errors = true)
+            out = -posterior(m, data; n_regimes = n_regimes, catch_errors = true)
         end
 
         out = !isnan(out) ? out : Inf
@@ -105,6 +106,11 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     H_ = nothing
 
     neighbor! = if isa(m, AbstractDSGEModel)
+        # For regime-switching cases
+        n_regimes        = haskey(get_settings(m), :n_regimes) ?
+            get_setting(m, :n_regimes) : 1
+        regime_switching = haskey(get_settings(m), :regime_switching) && n_regimes > 1 ?
+            get_setting(m, :regime_switching) : false
         function _neighbor_dsge!(x, x_proposal)
             # This function computes a proposal "next step" during simulated annealing.
             # Inputs:
@@ -151,7 +157,10 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 # check that model can be solved
                 try
                     DSGE.update!(m, x_proposal_all)
-                    solve(m)
+                    for compute_system_i = 1:n_regimes
+                        compute_system(m; regime_switching = regime_switching,
+                                       n_regimes = n_regimes, regime = compute_system_i)
+                    end
                     x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
                     success = true
                 catch ex

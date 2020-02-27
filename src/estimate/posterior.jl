@@ -36,9 +36,10 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 """
 function posterior(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}}, data::AbstractArray;
                    sampler::Bool = false, ϕ_smc::Float64 = 1.,
+                   n_regimes::Int = 1,
                    catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
-    like = likelihood(m, data; sampler = sampler, catch_errors = catch_errors)
+    like = likelihood(m, data; sampler = sampler, n_regimes = n_regimes, catch_errors = catch_errors)
     post = ϕ_smc*like + prior(m)
     return post
 end
