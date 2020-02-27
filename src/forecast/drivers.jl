@@ -108,7 +108,7 @@ Load and return parameter draws from Metropolis-Hastings or SMC.
   parameter draws for this block.
 """
 function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
-                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0), use_highest_posterior_value::Bool = false,
                     input_file_name::String = "")
 
     if isempty(input_file_name)
@@ -126,8 +126,8 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
                 if :mode in collect(keys(forecast_input_file_overrides(m)))
                     params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                     # If not, load it from the cloud
-                elseif isfile("smc_" * input_file_name)
-                    params = convert(Vector{Float64}, h5read("smc_" * input_file_name, "params"))
+                elseif occursin("smc_paramsmode", input_file_name) && !use_highest_posterior_value
+                    params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                 else
                     cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
                     params = if typeof(cloud) <: Union{DSGE.Cloud,SMC.Cloud}
