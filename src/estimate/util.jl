@@ -35,7 +35,7 @@ the mode found to an HDF5 file.
 function calculate_mode(m::Union{AbstractDSGEModel, AbstractVARModel}, data::Matrix{S},
                         starting_params::Vector{S}, method::Symbol = :csminwel;
                         mle::Bool = false, get_all_results::Bool = false,
-                        save_results::Bool = true,
+                        save_results::Bool = true, check_neg_diag::Bool = true,
                         verbose::Symbol = :none) where {S <: Real}
     n_iterations = get_setting(m, :optimization_iterations)
     ftol         = get_setting(m, :optimization_ftol)
@@ -50,7 +50,7 @@ function calculate_mode(m::Union{AbstractDSGEModel, AbstractVARModel}, data::Mat
                                    ftol = ftol, xtol = xtol, gtol = gtol, step_size = step_size,
                                    max_attempts = max_attempts, get_all_results = get_all_results,
                                    save_results = save_results, verbose = verbose)
-    modal_hessian = hessian_step!(m, data; verbose = verbose)
+    modal_hessian = hessian_step!(m, data; check_neg_diag = check_neg_diag, verbose = verbose)
 
     if get_all_results
         return modal_params..., modal_hessian
@@ -84,7 +84,7 @@ function optimize_step!(m::Union{AbstractDSGEModel, AbstractVARModel}, data::Mat
     optimization_time = 0
     attempts = 1
 
-    params = map(θ -> θ.value, get_parameters(m)) # define in global scope
+    params = map(θ -> θ.value, get_parameters(m)) # define in global scope first
     out = nothing
     H   = nothing
 
@@ -133,16 +133,19 @@ end
 """
 ```
 function hessian_step!(m::Union{AbstractDSGEModel, AbstractVARModel},
-                      data::Matrix{S}; verbose::Symbol = :none) where {S <: Real}
+                       data::Matrix{S}; verbose::Symbol = :none,
+                       check_neg_diag::Bool = true) where {S <: Real}
 ```
 calculates the Hessian at the current calibration of the model object
 and checks that it is positive definite.
 """
 function hessian_step!(m::Union{AbstractDSGEModel, AbstractVARModel},
-                      data::Matrix{S}; verbose::Symbol = :none) where {S <: Real}
+                       data::Matrix{S}; verbose::Symbol = :none,
+                       check_neg_diag::Bool = true) where {S <: Real}
 
     params = map(θ -> θ.value, get_parameters(m))
-    hessian, _ = hessian!(m, params, data; verbose = verbose)
+    hessian, _ = hessian!(m, params, data; verbose = verbose, check_neg_diag = check_neg_diag)
+
 
     return hessian
 end

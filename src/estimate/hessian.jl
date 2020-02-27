@@ -8,7 +8,7 @@ Compute Hessian of DSGE/VAR posterior function evaluated at x.
 """
 function hessian!(m::Union{AbstractDSGEModel,AbstractVARModel},
                   x::Vector{T},
-                  data::AbstractArray;
+                  data::AbstractArray; check_neg_diag::Bool = true,
                   verbose::Symbol = :none) where T<:AbstractFloat
 
     DSGE.update!(m, x)
@@ -39,7 +39,7 @@ function hessian!(m::Union{AbstractDSGEModel,AbstractVARModel},
 
     distr = use_parallel_workers(m)
     hessian_free, has_errors = hessizero(f_hessian, x_hessian;
-        check_neg_diag = true, verbose = verbose, distr = distr)
+        check_neg_diag = check_neg_diag, verbose = verbose, distr = distr)
 
     # Fill in rows/cols of zeros corresponding to location of fixed parameters
     # For each row corresponding to a free parameter, fill in columns corresponding to free

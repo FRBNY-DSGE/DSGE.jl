@@ -34,7 +34,12 @@ function get_forecast_input_file(m, input_type;
         if get_setting(m, :sampling_method) == :MH
             return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
         else
-            return rawpath(m,"estimate","smc_cloud.jld2", filestring_addl)
+            smc_mode_file = rawpath(m,"estimate","smc_paramsmode.h5", filestring_addl)
+            if isfile(smc_mode_file)
+                return smc_mode_file
+            else
+                return rawpath(m,"estimate","smc_cloud.jld2", filestring_addl)
+            end
         end
     elseif input_type == :mean
         return workpath(m,"estimate","paramsmean.h5", filestring_addl)
