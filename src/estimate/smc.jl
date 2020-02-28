@@ -91,9 +91,8 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
             loadpath = replace(loadpath, "vint=[0-9]{6}" => "vint=" * old_vintage)
         end
     elseif continue_intermediate
-        loadpath = rawpath(m, "estimate",
-                           "smc_cloud_stage=$(intermediate_stage_start).jld2",
-                           filestring_addl)
+        loadpath = rawpath(m, "estimate", "smc_cloud", filestring_addl) *
+            "_stage=$(intermediate_stage_start).jld2"
     end
     savepath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
     particle_store_path = rawpath(m, "estimate", "smcsave.h5", filestring_addl)
