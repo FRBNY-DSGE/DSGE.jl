@@ -140,8 +140,8 @@ module DSGE
         count_scenario_draws,
 
         # packet/
-        usual_settings!, usual_forecast, write_forecast_centric_packet,
-        write_standard_packet, plot_standard_packet,
+        usual_model_settings!, usual_model_forecast, write_forecast_centric_model_packet,
+        write_standard_model_packet, plot_standard_model_packet,
 
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,

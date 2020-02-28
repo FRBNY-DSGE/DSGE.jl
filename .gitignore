@@ -8,6 +8,7 @@
 # src/*/\#*\#
 # src/*/.juliahistory
 
+Manifest.toml
 
 # Data
 *.mat
