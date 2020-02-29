@@ -38,7 +38,7 @@ navigating the DSGE package.
 function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
              verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-             old_cloud::ParticleCloud  = DSGE.ParticleCloud(m, 0),
+             old_cloud::Union{ParticleCloud,Cloud} = DSGE.ParticleCloud(m, 0),
              run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
