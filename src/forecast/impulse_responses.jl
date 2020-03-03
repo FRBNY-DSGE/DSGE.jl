@@ -286,61 +286,14 @@ end
 ### the measurement matrix ZZ, with the option
 ### to compute the impulse response to a Cholesky identified
 ### shock to observables
-function impulse_responses(m::AbstractRepModel, system::System{S},
-                           horizon::Int, permute_mat::Matrix,
-                           shocks::Vector{Float64} =
-                           Vector{Float64}(undef,0);
-                           cholesky_obs_shock::Bool = false,
-                           flip_shocks::Bool = false,
-                           get_shocks::Bool = false) where {S<:Real}
-    # Copy matrices so we can put them back at the end
-    ZZ_old = copy(system[:ZZ])
-    DD_old = copy(system[:DD])
+function impulse_responses(system::System{S}, horizon::Int, permute_mat::Matrix,
+                           shocks::Vector{S} = Vector{S}(undef, 0);
+                           flip_shocks::Bool = false, get_shocks::Bool = false) where {S <: Real}
 
     # Permute matrices
+    ZZold = copy(system[:ZZ])
     system.measurement.ZZ = permute_mat * system[:ZZ]
-    system.measurement.DD = permute_mat * system[:DD]
 
-    # Run IRF
-    out = impulse_responses(m, system, horizon, shocks;
-                            flip_shocks = flip_shocks,
-                            cholesky_obs_shock =
-                            cholesky_obs_shock,
-                            observables_order =
-                            convert(Vector{Int64},
-                                    permute_mat *
-                                    collect(values(m.observables))),
-                            get_shocks =
-                            get_shocks)
-    states, obs, pseudo = out[1:3]
-    if get_shocks
-        cholesky_shock   = permute_mat * out[4]
-        structural_shock = out[5]
-    end
-
-    # Permute obs back to original order
-    obs = permute_mat * obs
-
-    # Change system back
-    system.measurement.ZZ = ZZ_old
-    system.measurement.DD = DD_old
-
-    if get_shocks
-        return states, obs, pseudo, cholesky_shock, structural_shock
-    else
-        return states, obs, pseudo
-    end
-end
-
-function impulse_responses(m::AbstractRepModel,
-                           system::System{S}, horizon::Int64,
-                           shock_vector::Vector{S};
-                           flip_shocks::Bool = false,
-                           cholesky_obs_shock::Bool = false,
-                           observables_order::Vector{<:Int} =
-                           collect(values(m.observables)),
-                           get_shocks::Bool = false,
-                           use_pinv::Bool = true) where {S<:Real}
     # Set up IRFs
     nshocks = size(system[:RRR], 2)
     nstates = size(system[:TTT], 1)
@@ -348,62 +301,32 @@ function impulse_responses(m::AbstractRepModel,
     npseudo = size(system[:ZZ_pseudo], 1)
 
     system = DSGE.zero_system_constants(system) # Set constant system matrices to 0
+
     s₀ = zeros(S, nstates)
 
     # Back out structural shocks corresponding to Cholesky shock to observables
-    if cholesky_obs_shock
-        # Compute Cholesky shock
-        obs_cov_mat = (system[:ZZ] * system[:RRR]) * system[:QQ] *
-            (system[:ZZ] * system[:RRR])'
-        cholmat = cholesky((obs_cov_mat + obs_cov_mat') ./ 2).L
+    obs_cov_mat = (system[:ZZ] * system[:RRR]) * system[:QQ] *
+        (system[:ZZ] * system[:RRR])'
+    cholmat = cholesky((obs_cov_mat + obs_cov_mat') ./ 2).L
 
-        # Filter and smooth Cholesky shock
-        if use_pinv
-            struct_shock_vector = pinv(system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])) *
-                cholmat * shock_vector
-        else
-            df = DataFrame(date = date_forecast_start(m))
-            mobs = collect(keys(m.observables))
-            for (dev_i,obs_i) in enumerate(observables_order)
-                df[!,mobs[obs_i]] .= deviation[dev_i]
-            end
-
-            for (k,new_i) in zip(keys(m.observables), observables_order)
-                m.observables[k] = new_i
-            end
-            _, struct_shock_vector, _ = smooth(m, df, system,
-                                               zeros(S, nstates),
-                                               zeros(S, nstates, nstates),
-                                               draw_states = false,
-                                               include_presample = true,
-                                               in_sample = false)
-
-            for (old_i,k) in enumerate(keys(m.observables))
-                m.observables[k] = old_i
-            end
-        end
-    elseif length(shock_vector) == nshocks
-        struct_shock_vector = shock_vector
-    else
-        if length(shock_vector) == nobs
-            error("Length of shock_vector $(length(shock_vector)) does not match" *
-                  " the number of exogenous shocks $nshocks. The length matches the " *
-                  "number of observables, but cholesky_obs_shock was set to false." *
-                  " Did you mean otherwise?")
-        else
-            error("Length of shock_vector $(length(shock_vector)) does not match" *
-                  " the number of exogenous shocks $nshocks.")
-        end
+    if isempty(shocks)
+        shocks = vcat(1., zeros(nobs - 1)) # Shock to first variable
     end
+    cholesky_shock = cholmat * shocks
+    structural_shock = pinv(system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])) *
+        cholesky_shock
 
-    # Run IRF
+    # Run IRFs
     shocks_augmented = zeros(S, nshocks, horizon)
-    shocks_augmented[:,1] = flip_shocks ? struct_shock_vector : -struct_shock_vector # negative shock by default
+    shocks_augmented[:,1] = flip_shocks ? structural_shock : -structural_shock # negative shock by default
     states, obs, pseudo = forecast(system, s₀, shocks_augmented)
 
+    # Restore system
+    system.measurement.ZZ = ZZold
+
     if get_shocks
-        deviation = cholmat * shock_vector
-        return states, obs, pseudo, deviation, struct_shock_vector
+        # Need to multiply cholesky_shock so they apply to right variables
+        return states, obs, pseudo, permute_mat * cholesky_shock, structural_shock
     else
         return states, obs, pseudo
     end

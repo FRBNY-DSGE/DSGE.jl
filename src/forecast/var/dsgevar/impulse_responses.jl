@@ -6,7 +6,7 @@ function impulse_responses(m, input_type, method,
                            frequency_band = (2*π/32, 2*π/6),
                            flip_shocks = false,
                            density_bands = [.5, .6, .7, .8, .9],
-                           compute_meansbands = false,
+                           create_meansbands = false,
                            minimize = true,
                            forecast_string = "",
                            verbose = :high) where {S<:Real}
@@ -16,7 +16,7 @@ function impulse_responses(m, paras, input_type, method,
                            frequency_band = (2*π/32, 2*π/6),
                            flip_shocks = false,
                            density_bands = [.5, .6, .7, .8, .9],
-                           compute_meansbands = false,
+                           create_meansbands = false,
                            minimize = true,
                            forecast_string = "",
                            verbose = :high) where {S<:Real}
@@ -47,7 +47,7 @@ computes the impulse responses of a VAR(p) approximation to a DSGE.
 * `flip_shocks::Bool`: impulse response shocks are negative by default. Set to `true` for
     a positive signed shock.
 * `density_bands::Vector{Float64}`: bands for full-distribution IRF computations
-* `compute_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
+* `create_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
 * `minimize::Bool`: choose shortest interval if true, otherwise just chop off lowest and
     highest (percent/2)
 * `forecast_string::String`: string tag for identifying this impulse response
@@ -65,7 +65,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
                            flip_shocks::Bool = false,
                            use_intercept::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           compute_meansbands::Bool = false,
+                           create_meansbands::Bool = false,
                            minimize::Bool = true,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
@@ -117,7 +117,7 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
                                  flip_shocks = flip_shocks),
                β_draws, Σ_draws)
 
-    if compute_meansbands
+    if create_meansbands
 
         # Set up metadata and output from IRFs computation
         metadata = Dict{Symbol,Any}()
@@ -175,61 +175,13 @@ function impulse_responses(m::Union{AbstractDSGEModel,AbstractDSGEVARModel}, par
     end
 end
 
-function impulse_responses(m::AbstractDSGEVARModel, input_type::Symbol, method::Symbol,
+function impulse_responses(m::AbstractDSGEVARModel, paras::Vector{S},
+                           input_type::Symbol, method::Symbol,
                            n_obs_var::Int; parallel::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            flip_shocks::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           compute_meansbands::Bool = false,
-                           minimize::Bool = true,
-                           forecast_string::String = "",
-                           verbose::Symbol = :high) where {S<:Real}
-    return impulse_responses(m, load_draws(m, input_type),
-                             input_type, method, get_lags(m), collect(keys(get_observables(m))),
-                             collect(keys(get_shocks(m))), n_obs_var;
-                             parallel = parallel,
-                             frequency_band = frequency_band,
-                             flip_shocks = flip_shocks,
-                             density_bands = density_bands,
-                             compute_meansbands = compute_meansbands,
-                             minimize = minimize,
-                             forecast_string = forecast_string,
-                             verbose = verbose)
-end
-
-function impulse_responses(m::AbstractDSGEModel, input_type::Symbol, method::Symbol,
-                           lags::Int, observables::Vector{Symbol},
-                           shocks::Vector{Symbol},
-                           n_obs_var::Int;
-                           parallel::Bool = false,
-                           frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
-                           flip_shocks::Bool = false,
-                           density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           compute_meansbands::Bool = false,
-                           minimize::Bool = true,
-                           forecast_string::String = "",
-                           verbose::Symbol = :high) where {S<:Real}
-    return impulse_responses(m, load_draws(m, input_type),
-                             input_type, method, lags, observables,
-                             shocks, n_obs_var;
-                             parallel = parallel,
-                             frequency_band = frequency_band,
-                             flip_shocks = flip_shocks,
-                             density_bands = density_bands,
-                             compute_meansbands = compute_meansbands,
-                             minimize = minimize,
-                             forecast_string = forecast_string,
-                             verbose = verbose)
-end
-
-function impulse_responses(m::AbstractDSGEVARModel, paras::Vector{S},
-                           input_type::Symbol, method::Symbol,
-                           n_obs_var::Int;
-                           parallel::Bool = false,
-                           frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
-                           flip_shocks::Bool = false,
-                           density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           compute_meansbands::Bool = false,
+                           create_meansbands::Bool = false,
                            minimize::Bool = true,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
@@ -240,7 +192,7 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Vector{S},
                              frequency_band = frequency_band,
                              flip_shocks = flip_shocks,
                              density_bands = density_bands,
-                             compute_meansbands = compute_meansbands,
+                             create_meansbands = create_meansbands,
                              minimize = minimize,
                              forecast_string = forecast_string,
                              verbose = verbose)
@@ -250,12 +202,11 @@ function impulse_responses(m::AbstractDSGEModel, paras::Vector{S},
                            input_type::Symbol, method::Symbol,
                            lags::Int, observables::Vector{Symbol},
                            shocks::Vector{Symbol},
-                           n_obs_var::Int;
-                           parallel::Bool = false,
+                           n_obs_var::Int; parallel::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            flip_shocks::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           compute_meansbands::Bool = false,
+                           create_meansbands::Bool = false,
                            minimize::Bool = true,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
@@ -266,7 +217,7 @@ function impulse_responses(m::AbstractDSGEModel, paras::Vector{S},
                              frequency_band = frequency_band,
                              flip_shocks = flip_shocks,
                              density_bands = density_bands,
-                             compute_meansbands = compute_meansbands,
+                             create_meansbands = create_meansbands,
                              minimize = minimize,
                              forecast_string = forecast_string,
                              verbose = verbose)
@@ -274,12 +225,11 @@ end
 
 function impulse_responses(m::AbstractDSGEVARModel, paras::Matrix{S},
                            input_type::Symbol, method::Symbol,
-                           n_obs_var::Int;
-                           parallel::Bool = false,
+                           n_obs_var::Int; parallel::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            flip_shocks::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           compute_meansbands::Bool = false,
+                           create_meansbands::Bool = false,
                            minimize::Bool = true,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
@@ -290,7 +240,7 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Matrix{S},
                              frequency_band = frequency_band,
                              flip_shocks = flip_shocks,
                              density_bands = density_bands,
-                             compute_meansbands = compute_meansbands,
+                             create_meansbands = create_meansbands,
                              minimize = minimize,
                              forecast_string = forecast_string,
                              verbose = verbose)
@@ -304,7 +254,7 @@ function impulse_responses(m, input_type, method,
                            frequency_band = (2*π/32, 2*π/6),
                            flip_shocks = false,
                            density_bands = [.5, .6, .7, .8, .9],
-                           compute_meansbands = false,
+                           create_meansbands = false,
                            minimize = true,
                            forecast_string = "",
                            verbose = :high) where {S<:Real}
@@ -314,7 +264,7 @@ function impulse_responses(m, paras, input_type, method,
                            frequency_band = (2*π/32, 2*π/6),
                            flip_shocks = false,
                            density_bands = [.5, .6, .7, .8, .9],
-                           compute_meansbands = false,
+                           create_meansbands = false,
                            minimize = true,
                            forecast_string = "",
                            verbose = :high) where {S<:Real}
@@ -372,7 +322,7 @@ of the impact response matrix corresponding to the state space system, i.e.
 * `accumulate::Bool`: accumulate any impulse responses, must set `cum_inds` as well
 * `cum_inds::Union{Int,UnitRange{int},Vector{Int}}`: indices of impulse responses to accumulate
 * `density_bands::Vector{Float64}`: bands for full-distribution IRF computations
-* `compute_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
+* `create_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
 * `minimize::Bool`: choose shortest interval if true, otherwise just chop off lowest and
     highest (percent/2)
 * `forecast_string::String`: string tag for identifying this impulse response
@@ -388,7 +338,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            use_intercept::Bool = false, accumulate::Bool = false,
                            cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           compute_meansbands::Bool = false,
+                           create_meansbands::Bool = false,
                            minimize::Bool = true,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
@@ -458,7 +408,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
     irf_output =
         mapfcn(para -> dsgevarrotationirf_method(para), paras)
 
-    if compute_meansbands
+    if create_meansbands
         # Set up metadata and output from IRFs computation
         metadata = Dict{Symbol,Any}()
         metadata[:para] = input_type
@@ -510,6 +460,29 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
         # Reshape irf_output to nobs x nperiod x ndraw
         return cat(map(x -> x', irf_output)..., dims = 3)
     end
+end
+
+function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Vector{S},
+                           data::Matrix{S}, input_type::Symbol, method::Symbol;
+                           parallel::Bool = false,
+                           frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
+                           n_obs_var::Int = 1,
+                           draw_shocks::Bool = false, flip_shocks::Bool = false,
+                           use_intercept::Bool = false, accumulate::Bool = false,
+                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
+                           density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
+                           create_meansbands::Bool = false,
+                           minimize::Bool = true,
+                           forecast_string::String = "",
+                           verbose::Symbol = :high) where {S<:Real}
+    return impulse_responses(m, reshape(paras, 1, length(paras)),
+                             data, input_type, method; parallel = parallel,
+                             frequency_band = frequency_band, n_obs_var = n_obs_var,
+                             draw_shocks = draw_shocks, flip_shocks = flip_shocks,
+                             use_intercept = use_intercept, accumulate = accumulate,
+                             cum_inds = cum_inds, density_bands = density_bands,
+                             create_meansbands = create_meansbands, minimize = minimize,
+                             forecast_string = forecast_string, verbose = verbose)
 end
 
 """
@@ -676,7 +649,6 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
         end
 
     end
-
 
     return ŷ
 end

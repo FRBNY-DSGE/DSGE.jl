@@ -186,6 +186,48 @@ exp_states_shockobs, exp_obs_shockobs, exp_pseudo_shockobs =
     @test pseudo ≈ exp_pseudo_shockobs
 end
 
+# Test impulse response method for computing
+# a Cholesky-identified shock
+obs_shock = zeros(n_observables(m))
+obs_shock[1] = 1.
+states_chol, obs_chol, pseudo_chol, chol_shock, struct_shock =
+    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                      obs_shock, flip_shocks = false, get_shocks = true)
+states_chol1, obs_chol1, pseudo_chol1 =
+    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                      obs_shock, flip_shocks = false, get_shocks = false)
+states_chol2, obs_chol2, pseudo_chol2 =
+    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                      flip_shocks = false, get_shocks = false)
+states_chol3, obs_chol3, pseudo_chol3 =
+    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                      flip_shocks = true, get_shocks = false)
+
+exp_states_chol, exp_obs_chol, exp_pseudo_chol, exp_chol_shock, exp_struct_shock =
+    JLD2.jldopen("$path/../reference/impulse_responses_out.jld2", "r") do file
+        read(file, "exp_states_chol"), read(file, "exp_obs_chol"), read(file, "exp_pseudo_chol"),
+        read(file, "exp_chol_shock"), read(file, "exp_struct_shock")
+    end
+
+@testset "Compare irfs to expected output for a Cholesky-identified shock" begin
+    @test @test_matrix_approx_eq states_chol1 states_chol
+    @test @test_matrix_approx_eq obs_chol1 obs_chol
+    @test @test_matrix_approx_eq pseudo_chol1  pseudo_chol
+    @test @test_matrix_approx_eq states_chol2 states_chol
+    @test @test_matrix_approx_eq obs_chol2 obs_chol
+    @test @test_matrix_approx_eq pseudo_chol2  pseudo_chol
+    @test @test_matrix_approx_eq states_chol3 -states_chol
+    @test @test_matrix_approx_eq obs_chol3 -obs_chol
+    @test @test_matrix_approx_eq pseudo_chol3  -pseudo_chol
+    @test @test_matrix_approx_eq states_chol  exp_states_chol
+    @test @test_matrix_approx_eq obs_chol  exp_obs_chol
+    @test @test_matrix_approx_eq pseudo_chol  exp_pseudo_chol
+    @test @test_matrix_approx_eq chol_shock  exp_chol_shock
+    @test @test_matrix_approx_eq struct_shock exp_struct_shock
+    @test @test_matrix_approx_eq chol_shock system[:ZZ]*system[:RRR]*sqrt.(system[:QQ])*struct_shock
+    @test @test_matrix_approx_eq -system[:RRR]*struct_shock states_chol[:, 1]
+    @test @test_matrix_approx_eq -system[:ZZ]*system[:RRR]*struct_shock obs_chol[:, 1]
+end
 
 # Test impulse response method for computing
 # a shock to maximizes business-cycle variance
