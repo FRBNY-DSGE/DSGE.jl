@@ -17,7 +17,7 @@ loading
 - `df`: A dataframe containing the aforementioned moments/bands
 """
 function load_posterior_moments(m::AbstractDSGEModel;
-                                cloud::ParticleCloud = ParticleCloud(m, 0),
+                                cloud::Union{SMC.Cloud,DSGE.Cloud,ParticleCloud} = ParticleCloud(m, 0),
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
                                 excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
@@ -25,7 +25,7 @@ function load_posterior_moments(m::AbstractDSGEModel;
     parameters = m.parameters
 
     # Read in Posterior Draws
-    if isempty(cloud)
+    if cloud_isempty(cloud)
         if get_setting(m, :sampling_method) == :MH
             params = load_draws(m, :full)
             params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params # TODO
@@ -65,7 +65,7 @@ end
 # Aggregating many ParticleClouds to calculate moments across
 # multiple SMC estimations
 function load_posterior_moments(m::AbstractDSGEModel,
-                                clouds::Vector{ParticleCloud};
+                                clouds::Union{Vector{ParticleCloud},Vector{SMC.Cloud}};
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
                                 excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
