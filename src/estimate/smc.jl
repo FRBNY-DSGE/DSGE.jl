@@ -168,6 +168,12 @@ function isempty(c::ParticleCloud)
     length(c.particles) == 0
 end
 
+function cloud_isempty(c::ParticleCloud)
+    length(c.particles) == 0
+end
+
+
+
 function get_cloud(m::AbstractDSGEModel; filepath::String = rawpath(m, "estimate", "smc_cloud.jld2"))
     return load(filepath, "cloud")
 end
