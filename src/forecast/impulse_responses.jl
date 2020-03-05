@@ -282,17 +282,98 @@ function impulse_responses(m::AbstractDSGEModel, system::System{S},
     return states, obs, pseudo
 end
 
-### Method for computing impulse responses after permuting
-### the measurement matrix ZZ, with the option
-### to compute the impulse response to a Cholesky identified
-### shock to observables
-function impulse_responses(system::System{S}, horizon::Int, permute_mat::Matrix,
-                           shocks::Vector{S} = Vector{S}(undef, 0);
-                           flip_shocks::Bool = false, get_shocks::Bool = false) where {S <: Real}
+"""
+```
+impulse_responses(system, horizon, permute_mat, shocks = [1, 0, 0, ...];
+    restriction = :short_run, flip_shocks = false, get_shocks = false)
+```
+computes impulse responses using a Cholesky-identified shock
+to observables, with the ability to apply a permutation matrix.
+
+### Inputs
+- `system::System{S}`: state-space system matrices
+- `horizon::Int`: number of periods ahead to forecast
+- `permute_mat::AbstractMatrix{T}`: permutation matrix
+- `shocks::AbstractVector{S}`: vector of orthogonal shocks to observables.
+    See the section Restriction Types below for a mathematical explanation.
+    If no vector is provided, then we assume the user wants a shock vector
+    whose first entry is one and all other entries are zero (a 1 standard deviation
+    shock to the innovation affecting the first variable).
+- `restriction::Symbol`: type of restriction for the Cholesky identification.
+    Can be either `:short_run` or `:long_run`.
+- `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock
+    (by default the shock magnitude is a negative 1 std. shock)
+- `get_shocks::Bool`: Whether to return the Cholesky-identified shocks and the
+    underlying structural shocks
+
+where `S <: Real, T <: Number`
+
+### Outputs
+
+- `states::Matrix{S}`: matrix of size `nstates` x `horizon` x `nshocks` of
+  state impulse response functions
+- `obs::Matrix{S}`: matrix of size `nobs` x `horizon` x `nshocks` of
+  observable impulse response functions
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` x `nshocks` of
+  pseudo-observable impulse response functions
+- `cholesky_shock::Vector{S}`: Cholesky-identified shock on impact (only if `get_shocks = true`)
+- `structural_shock::Vector{S}`: structural shocks causing the
+    Cholesky-identified shock (only if `get_shocks = true`)
+
+### Restriction Types
+Consider a state space system
+```
+sₜ = TTT * sₜ₋₁ + RRR * sqrt(QQ) * ϵₜ
+yₜ = ZZ * sₜ
+```
+where `ϵₜ ∼ 𝒩 (0, I)` and `QQ` is a diagonal matrix specifying the
+variances of the structural shocks `ϵₜ`. Under this specification,
+the units of `ϵₜ` are standard deviations.
+
+A Cholesky identification searches for a lower triangular matrix `M` such that `M * M'` equals the
+covariance of observables. The restriction is short-run if we take the short-run covariance and is long
+run if we take the long-run covariance (i.e. the covariance of observables when shocks occur to the
+stationary level of sₜ). Explicitly, the short- and long-run restrictions are, respectively,
+```
+Covₛᵣ = (ZZ * RRR) * QQ * (ZZ * RRR)',
+Covₗᵣ = (ZZ * (I - TTT)⁻¹ * RRR) * QQ * (ZZ * (I - TTT)⁻¹ * RRR)'.
+```
+Taking the Cholesky decomposition of the appropriate covariance matrix yields the
+lower triangular matrix `M`.
+
+Using `M`, we may re-write the measurement equation of the state space as
+```
+yₜ = ZZ * TTT * sₜ₋₁ + M * uₜ,
+```
+where `uₜ ∼ 𝒩 (0, I)` are orthogonal shocks identified from the covariance of `yₜ`
+using `M`. The orthogonal shocks `uₜ` are precisely the input argument `shocks`.
+We can map `uₜ` to `ϵₜ` by solving the linear system
+```
+(ZZ * RRR * sqrt(QQ)) * ϵₜ = M * uₜ
+```
+when using the short-run restriction and
+```
+(ZZ * (I - TTT)⁻¹ * RRR * sqrt(QQ)) * ϵₜ = M * uₜ
+```
+when using the long-run restriction.
+"""
+function impulse_responses(system::System{S}, horizon::Int, permute_mat::AbstractMatrix{T},
+                           shocks::AbstractVector{S} = Vector{S}(undef, 0);
+                           restriction::Symbol = :short_run, flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S <: Real, T <: Number}
+    if !(restriction in [:short_run, :long_run])
+        error("The restriction $restriction has not been implemented. "
+              * "Choose either `:short_run` or `:long_run")
+    end
 
     # Permute matrices
-    ZZold = copy(system[:ZZ])
-    system.measurement.ZZ = permute_mat * system[:ZZ]
+    if !(permute_mat ≈ Matrix{eltype(permute_mat)}(I, size(permute_mat)...))
+        do_permute = true
+        ZZold = copy(system[:ZZ])
+        system.measurement.ZZ = permute_mat * system[:ZZ]
+    else
+        do_permute = false
+    end
 
     # Set up IRFs
     nshocks = size(system[:RRR], 2)
@@ -301,40 +382,80 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Matrix,
     npseudo = size(system[:ZZ_pseudo], 1)
 
     system = DSGE.zero_system_constants(system) # Set constant system matrices to 0
-
     s₀ = zeros(S, nstates)
 
     # Back out structural shocks corresponding to Cholesky shock to observables
-    obs_cov_mat = (system[:ZZ] * system[:RRR]) * system[:QQ] *
-        (system[:ZZ] * system[:RRR])'
-    cholmat = cholesky((obs_cov_mat + obs_cov_mat') ./ 2).L
-
+    # inverse_fcn = (nobs != nshocks || use_pinv) ? pinv : inv # Determine which inverse to use
     if isempty(shocks)
-        shocks = vcat(1., zeros(nobs - 1)) # Shock to first variable
+        shocks = vcat(1., zeros(nobs - 1)) # First orthogonal shock to observables
     end
-    cholesky_shock = cholmat * shocks
-    structural_shock = pinv(system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])) *
-        cholesky_shock
+    if restriction == :short_run
+        obs_std = system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])
+        obs_cov = obs_std * obs_std'
+        cholmat = cholesky((obs_cov + obs_cov') ./ 2).L
+
+        structural_shock = obs_std \ (cholmat * shocks)
+        # structural_shock = inverse_fcn(system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])) * cholmat * shocks
+    elseif restriction == :long_run
+        lr_obs_std = system[:ZZ] * inv(Matrix{S}(I, nstates, nstates) - system[:TTT]) *
+            system[:RRR] * sqrt.(system[:QQ])
+        lr_obs_cov = lr_obs_std * lr_obs_std'
+        cholmat    =  cholesky((lr_obs_cov + lr_obs_cov') ./ 2).L
+
+        structural_shock = lr_obs_std \ (cholmat * shocks)
+        # structural_shock = inverse_fcn(lr_obs_std * sqrt.(system[:QQ])) * cholmat * shocks
+    end
 
     # Run IRFs
     shocks_augmented = zeros(S, nshocks, horizon)
-    shocks_augmented[:,1] = flip_shocks ? structural_shock : -structural_shock # negative shock by default
+    shocks_augmented[:, 1] = flip_shocks ? structural_shock : -structural_shock # negative shock by default
     states, obs, pseudo = forecast(system, s₀, shocks_augmented)
 
-    # Restore system
-    system.measurement.ZZ = ZZold
+    # Restore system if permutation matrix is not the identity
+    if do_permute
+        system.measurement.ZZ = ZZold
+    end
 
     if get_shocks
-        # Need to multiply cholesky_shock so they apply to right variables
-        return states, obs, pseudo, permute_mat * cholesky_shock, structural_shock
+        return states, obs, pseudo, structural_shock
     else
         return states, obs, pseudo
     end
 end
 
-# Method for specifying impulse response to a shock that maximizes the business-cycle
-# variance of a shock to a given observable, whose location is
-# specified by n_obs_var.
+"""
+```
+impulse_responses(system, horizon, frequency_band, n_obs_var;
+    flip_shocks = false, get_shocks = false)
+```
+computes impulse responses by identifying the shocks which
+maximize the variance of a chosen observable within
+a certain frequency band.
+
+For typical business-cycle frequences, we recommend setting
+`frequency_band = (2 * π / 6, 2 * π / 32)`.
+
+### Inputs
+- `system::System{S}`: state-space system matrices
+- `horizon::Int`: number of periods ahead to forecast
+- `frequency_band::Tuple{S, S}`: the frequencies at which we want to maximize the variance explained.
+- `n_obs_var::Int`: the index of the observable whose variance we want to maximally explain
+    in the state space model implied by `system`.
+- `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock (by default the shock magnitude is a negative 1 std. shock)
+- `get_shocks::Bool`: Whether to return the structural shocks.
+
+where `S <: Real`
+
+### Outputs
+- `states::Matrix{S}`: matrix of size `nstates` x `horizon` x `nshocks` of
+  state impulse response functions
+- `obs::Matrix{S}`: matrix of size `nobs` x `horizon` x `nshocks` of
+  observable impulse response functions
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` x `nshocks` of
+  pseudo-observable impulse response functions
+- `structural_shock::Vector{S}`: structural shocks causing the
+    Cholesky-identified shock (only if `get_shocks = true`)
+"""
 function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tuple{S,S},
                            n_obs_var::Int; flip_shocks::Bool = false,
                            get_shocks::Bool = false) where {S<:Real}
