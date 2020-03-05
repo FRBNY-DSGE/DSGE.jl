@@ -45,7 +45,8 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
               save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
               regime_switching::Bool = false, n_regimes::Int = 2,
-              tempered_update_prior_weight::Float64 = 0.0)
+              tempered_update_prior_weight::Float64 = 0.0,
+              run_csminwel::Bool = true)
 
     parallel    = get_setting(m, :use_parallel_workers)
     n_parts     = get_setting(m, :n_particles)
@@ -178,6 +179,15 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
             intermediate_stage_increment = intermediate_stage_increment)
+    if run_csminwel
+        m <= Setting(:sampling_method, :SMC)
+        update!(m, load_draws(m, :mode))
+        out, H = optimize!(m, data)
+        @show savepath
+        jldopen(replace(savepath, "smc_cloud" => "paramsmode"), true, true, true, IOStream) do file
+            write(file, "mode", out.minimizer)
+        end
+    end
 end
 
 function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verbose::Symbol = :low,
