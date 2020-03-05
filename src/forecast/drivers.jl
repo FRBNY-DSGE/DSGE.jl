@@ -126,7 +126,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
                     # If not, load it from the cloud
                 else
                     cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
-                    params = cloud.particles[argmax(get_logpost(cloud))].value
+                    params = SMC.get_vals(cloud)[:, argmax(SMC.get_logpost(cloud))] #.value
                 end
             else
                 error("SMC mean not implemented yet")
