@@ -134,8 +134,8 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
             continue_intermediate = continue_intermediate,
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
-            intermediate_stage_increment = intermediate_stage_increment)
-	    tempered_update_prior_weight = tempered_update_prior_weight)    
+            intermediate_stage_increment = intermediate_stage_increment,
+	        tempered_update_prior_weight = tempered_update_prior_weight)
     if run_csminwel
         m <= Setting(:sampling_method, :SMC)
         update!(m, load_draws(m, :mode))
