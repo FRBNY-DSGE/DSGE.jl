@@ -89,7 +89,7 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
     if tempered_update
         if isempty(old_cloud)
             loadpath = rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
-            loadpath = replace(loadpath, "vint=[0-9]{6}" => "vint=" * old_vintage)
+            loadpath = replace(loadpath, r"vint=[0-9]{6}" => "vint=" * old_vintage)
         end
     elseif continue_intermediate
         loadpath = rawpath(m, "estimate", "smc_cloud", filestring_addl) *
@@ -137,13 +137,13 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
             intermediate_stage_increment = intermediate_stage_increment,
 	        tempered_update_prior_weight = tempered_update_prior_weight)
     if run_csminwel
-        m <= Setting(:sampling_method, :SMC)
+       #= m <= Setting(:sampling_method, :SMC)
         update!(m, load_draws(m, :mode))
         out, H = optimize!(m, data)
         @show savepath
         jldopen(replace(savepath, "smc_cloud" => "paramsmode"), true, true, true, IOStream) do file
             write(file, "mode", out.minimizer)
-        end
+        end=#
     end
 end
 
