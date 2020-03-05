@@ -637,7 +637,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            collect(keys(m.exogenous_shocks)),
                            cond_deviation_obs_shocks::DataFrame = DataFrame(),
                            param_key::Symbol = :nothing,
-                           param_value::Float64 = 0.0)
+                           param_value::Float64 = 0.0,
+                           param_key2::Symbol = :nothing,
+                           param_value2::Float64 = 0.0)
 
     ### Setup
 
@@ -787,11 +789,17 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 kal[:s_T]
             end
         end
-
         if param_key!=:nothing
             m[param_key] = param_value
+            steadystate!(m)
             system = compute_system(m)
         end
+        if param_key2!=:nothing
+            m[param_key2] = param_value2
+            steadystate!(m)
+            system = compute_system(m)
+        end
+
 
         # Re-solve model with alternative policy rule, if applicable
         if alternative_policy(m).solve != identity
