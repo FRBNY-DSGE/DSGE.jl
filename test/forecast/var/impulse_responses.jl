@@ -31,14 +31,14 @@ out8 = impulse_responses(β, Σ, 1, 20;
                         flip_shocks = false)
 
 @testset "VAR impulse responses" begin
-    @test @test_matrix_approx_eq irfs1 out1
-    @test @test_matrix_approx_eq irfs2 out2
-    @test @test_matrix_approx_eq irfs3 out3
-    @test @test_matrix_approx_eq irfs1 out4
-    @test @test_matrix_approx_eq irfs2 out5
-    @test @test_matrix_approx_eq irfs1[1, :] -out6[1, :]
-    @test @test_matrix_approx_eq irfs2[1, :] -out7[1, :]
-    @test @test_matrix_approx_eq irfs3[1, :] -out8[1, :]
+    @test @test_matrix_approx_eq irfs1' out1
+    @test @test_matrix_approx_eq irfs2' out2
+    @test @test_matrix_approx_eq irfs3' out3
+    @test @test_matrix_approx_eq irfs1' out4
+    @test @test_matrix_approx_eq irfs2' out5
+    @test @test_matrix_approx_eq irfs1[1, :] -out6[:, 1]
+    @test @test_matrix_approx_eq irfs2[1, :] -out7[:, 1]
+    @test @test_matrix_approx_eq irfs3[1, :] -out8[:, 1]
 end
 
 nothing

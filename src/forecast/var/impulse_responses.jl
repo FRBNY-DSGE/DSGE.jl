@@ -48,8 +48,8 @@ function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S}, n_obs_s
     lags = convert(Int, use_intercept ? (size(β, 1) - 1) / n : size(β, 1) / n)
 
     # Compute impact based on IRF type
-    Y = zeros(lags + horizon, n)
-    Y[lags + 1, :] = if method == :cholesky
+    Y = zeros(S, n, lags + horizon)
+    Y[:, lags + 1] = if method == :cholesky
         cholesky_shock(Σ, n, n_obs_shock, shock_size;
                        flip_shocks = flip_shocks)
     elseif method == :maximum_business_cycle_variance || method == :maxBC
@@ -69,11 +69,11 @@ function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S}, n_obs_s
 
     # Compute impulse response
     for t = 2:horizon
-        xT = reshape(Y[lags + t - 1:-1:lags + t - lags, :]', lags * n, 1)'
-        Y[lags + t, :] = xT * β
+        xT = vec(Y[:, lags + t - 1:-1:lags + t - lags])
+        Y[:, lags + t] = vec(xT' * β)
     end
 
-    return Y[lags + 1:end, :]
+    return Y[:, lags + 1:end]
 end
 
 """
@@ -81,6 +81,16 @@ end
 cholesky_shock(Σ, n, n_obs_shock, shock_size, flip_shocks = false) where {S<:Real}
 ```
 computes a Cholesky-identified shock to the specified observable.
+
+Consider a VAR
+```
+yₜ = Xₜ β + uₜ,
+```
+where `Xₜ` stacks the `p` lags of `yₜ` and `uₜ ∼ 𝒩 (0, Ω)`.
+We identify orthogonal shocks `ϵₜ` by computing
+```
+uₜ = cholesky(Ω).L * uₜ.
+```
 
 ### Inputs
 * `Σ::AbstractMatrix{S}`: innovations covariance matrix
