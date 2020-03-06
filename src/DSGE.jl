@@ -488,6 +488,7 @@ module DSGE
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
     include("forecast/impulse_responses.jl")
+    include("forecast/wrappers_impulse_responses/var_approx_dsge_impulse_responses.jl")
     include("forecast/var/impulse_responses.jl")
     include("forecast/var/dsgevar/impulse_responses.jl")
     include("forecast/drivers.jl")
