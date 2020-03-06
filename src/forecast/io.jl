@@ -38,7 +38,7 @@ function get_forecast_input_file(m, input_type;
             if isfile(smc_mode_file)
                 return smc_mode_file
             else
-                return rawpath(m,"estimate","smc_cloud.jld2", filestring_addl)
+                return rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
             end
         end
     elseif input_type == :mean
