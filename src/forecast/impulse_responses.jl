@@ -347,7 +347,7 @@ yₜ = ZZ * TTT * sₜ₋₁ + M * uₜ,
 ```
 where `uₜ ∼ 𝒩 (0, I)` are orthogonal shocks identified from the covariance of `yₜ`
 using `M`. The orthogonal shocks `uₜ` are precisely the input argument `shocks`.
-We can map `uₜ` to `ϵₜ` by solving the linear system
+We can map `uₜ` to `ϵₜ`, i.e. identify structural shocks, by solving the linear system
 ```
 (ZZ * RRR * sqrt(QQ)) * ϵₜ = M * uₜ
 ```

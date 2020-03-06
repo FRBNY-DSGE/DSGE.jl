@@ -14,11 +14,31 @@ out2 = impulse_responses(β, Σ, 1, 20;
 out3 = impulse_responses(β, Σ, 1, 20;
                         method = :cholesky,
                         flip_shocks = true)
+out4 = impulse_responses(β, Σ, 1, 20;
+                        method = :cholesky_long_run,
+                        flip_shocks = true)
+out5 = impulse_responses(β, Σ, 1, 20;
+                        method = :maximum_business_cycle_variance,
+                        flip_shocks = true)
+out6 = impulse_responses(β, Σ, 1, 20;
+                        method = :choleskyLR,
+                        flip_shocks = false)
+out7 = impulse_responses(β, Σ, 1, 20;
+                        method = :maxBC,
+                        flip_shocks = false)
+out8 = impulse_responses(β, Σ, 1, 20;
+                        method = :cholesky,
+                        flip_shocks = false)
 
 @testset "VAR impulse responses" begin
     @test @test_matrix_approx_eq irfs1 out1
     @test @test_matrix_approx_eq irfs2 out2
     @test @test_matrix_approx_eq irfs3 out3
+    @test @test_matrix_approx_eq irfs1 out4
+    @test @test_matrix_approx_eq irfs2 out5
+    @test @test_matrix_approx_eq irfs1[1, :] -out6[1, :]
+    @test @test_matrix_approx_eq irfs2[1, :] -out7[1, :]
+    @test @test_matrix_approx_eq irfs3[1, :] -out8[1, :]
 end
 
 nothing

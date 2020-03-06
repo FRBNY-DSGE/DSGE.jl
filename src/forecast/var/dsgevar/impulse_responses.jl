@@ -330,8 +330,6 @@ coefficients and error covariance matrix.
 * `draw_shocks::Bool`: true if you want to draw shocks along the entire horizon
 * `flip_shocks::Bool`: impulse response shocks are negative by default. Set to `true` for
     a positive signed shock.
-* `accumulate::Bool`: accumulate any impulse responses, must set `cum_inds` as well
-* `cum_inds::Union{Int,UnitRange{int},Vector{Int}}`: indices of impulse responses to accumulate
 * `density_bands::Vector{Float64}`: bands for full-distribution IRF computations
 * `create_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
 * `minimize::Bool`: choose shortest interval if true, otherwise just chop off lowest and
@@ -345,8 +343,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            parallel::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            n_obs_var::Int = 1, draw_shocks::Bool = false,
-                           flip_shocks::Bool = false, accumulate::Bool = false,
-                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
+                           flip_shocks::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -394,9 +391,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
 
             return DSGE.impulse_responses(sys[:TTT], sys[:RRR], sys[:ZZ], sys[:DD], MM,
                                           sys[:QQ], k, β, Σ, X̂, h;
-                                          method = method,
-                                          accumulate = accumulate,
-                                          cum_inds = cum_inds, flip_shocks = flip_shocks,
+                                          method = method, flip_shocks = flip_shocks,
                                           draw_shocks = draw_shocks)
         end
     elseif method in [:cholesky, :cholesky_long_run, :choleskyLR, :maxBC,
@@ -468,8 +463,13 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
         println(verbose, :high, "  " * "wrote " * basename(fp))
         return mb
     else
-        # Reshape irf_output to nobs x nperiod x ndraw
-        return cat(map(x -> x', irf_output)..., dims = 3)
+        if method in [:rotation]
+            # Reshape irf_output to nobs x nperiod x nshock x ndraw
+            return cat(irf_output..., dims = ndims(irf_output[1]) + 1)
+        else
+            # Reshape irf_output to nobs x nperiod x ndraw
+            return cat(map(x -> x', irf_output)..., dims = 3)
+        end
     end
 end
 
@@ -478,8 +478,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Vector{S},
                            parallel::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            n_obs_var::Int = 1, draw_shocks::Bool = false,
-                           flip_shocks::Bool = false, accumulate::Bool = false,
-                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
+                           flip_shocks::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -489,7 +488,6 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Vector{S},
                              data, input_type, method; parallel = parallel,
                              frequency_band = frequency_band, n_obs_var = n_obs_var,
                              draw_shocks = draw_shocks, flip_shocks = flip_shocks,
-                             accumulate = accumulate, cum_inds = cum_inds,
                              density_bands = density_bands,
                              create_meansbands = create_meansbands, minimize = minimize,
                              forecast_string = forecast_string, verbose = verbose)
@@ -603,11 +601,9 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
                            X̂::Vector{S}, horizon::Int; method::Symbol = :rotation,
-                           accumulate::Bool = false,
-                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0,
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            test_shocks::Matrix{S} =
-                           Matrix{S}(undef, 0, 0)) where {S<:Real}
+                           Matrix{S}(undef, 0, 0)) where {S <: Real}
     if !(method in [:rotation])
         error("Impulse responses for method $(string(method)) have not been implemented.")
     end
@@ -617,13 +613,12 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
     a0_m = convert(Matrix{S},
                    dropdims(impulse_responses(TTT, RRR, ZZ, DD, MM,
                                               sqrt.(QQ), 1, # 1 b/c just want impact and sqrt -> 1 sd shock
-                                              accumulate = accumulate,
-                                              cum_inds = cum_inds); dims = 2)')
+                                              accumulate = false); dims = 2)')
     rotation, _ = qr(a0_m)
     Σ_chol = cholesky(Σ).L * rotation' # mapping from structural shocks to innovations in VAR
 
     if draw_shocks || !isempty(test_shocks)
-        ŷ = Matrix{S}(undef, horizon, nobs)
+        ŷ = Matrix{S}(undef, nobs, horizon)
 
         if isempty(test_shocks)
             if method == :rotation
@@ -635,27 +630,29 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
 
         for t = 1:horizon
             out     = vec(X̂' * β) + Σ_chol * shocks[:, t] # X̂ normally would be [X̂ 0 0; 0 X̂ 0; 0 0 X̂] if nobs = 3, but this way of coding it results in less memory storage
-            ŷ[t, :] = out
+            ŷ[:, t] = out
 
             X̂       = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
         end
     else
         if method == :rotation
             nshocks = size(RRR, 2)
-            ŷ       = Array{S, 3}(nshocks, horizon, nobs)
-            shocks  = zeros(S, nshocks, horizon)
+            ŷ       = Array{S, 3}(undef, nobs, horizon, nshocks)
+            shocks  = zeros(S, nshocks)
 
             for i = 1:nshocks
-                shocks[1, i] = flip_shocks ? sqrt(QQ[i, i]) :
+                shocks[i] = flip_shocks ? sqrt(QQ[i, i]) :
                     -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
-                for t = 1:horizon
-                    out        = vec(X̂' * β) + Σ_chol * shocks[:, t]
-                    ŷ[i, t, :] = out
-
+                out        = vec(X̂' * β) + Σ_chol * shocks # do imapct separately
+                shocks[i]  = 0. # set back to zero
+                ŷ[:, 1, i] = out
+                X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+                for t = 2:horizon
+                    out        = vec(X̂' * β)
+                    ŷ[:, t, i] = out
                     X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
                 end
             end
-            ŷ = permutedims(ŷ, [3, 2, 1])
         end
 
     end
