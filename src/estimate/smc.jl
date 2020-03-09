@@ -36,14 +36,14 @@ These are wrapper functions to ensure simplicity of estimation of DSGE models wh
 navigating the DSGE package.
 """
 function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
-             verbose::Symbol = :low,
-             old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
-             old_cloud::Union{ParticleCloud,Cloud} = DSGE.ParticleCloud(m, 0),
-             run_test::Bool = false,
-             filestring_addl::Vector{String} = Vector{String}(),
-             continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
-             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
-	     run_csminwel::Bool = true)
+              verbose::Symbol = :low,
+              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
+              old_cloud::Union{ParticleCloud,Cloud} = DSGE.ParticleCloud(m, 0),
+              run_test::Bool = false,
+              filestring_addl::Vector{String} = Vector{String}(),
+              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
+              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
+	          run_csminwel::Bool = true)
 
     parallel    = get_setting(m, :use_parallel_workers)
     n_parts     = get_setting(m, :n_particles)
@@ -137,13 +137,13 @@ function smc2(m::AbstractDSGEModel, data::Matrix{Float64};
             intermediate_stage_increment = intermediate_stage_increment,
 	        tempered_update_prior_weight = tempered_update_prior_weight)
     if run_csminwel
-       #= m <= Setting(:sampling_method, :SMC)
+        m <= Setting(:sampling_method, :SMC)
         update!(m, load_draws(m, :mode))
         out, H = optimize!(m, data)
         @show savepath
         jldopen(replace(savepath, "smc_cloud" => "paramsmode"), true, true, true, IOStream) do file
             write(file, "mode", out.minimizer)
-        end=#
+        end
     end
 end
 
