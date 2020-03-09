@@ -165,7 +165,8 @@ function init_observable_mappings!(m::Model904)
 
     spread_rev_transform = quartertoannual
 
-    observables[:obs_spread] = Observable(:obs_spread, [:BAA__FRED, :GS10__FRED],
+    observables[:obs_spread] = Observable(:obs_spread, [:BAA__FRED, :GS10__FRED,
+                                                        :BAMLC8A0C15PYEY__FRED],
                                           spread_fwd_transform, spread_rev_transform,
                                           "BAA - 10yr Treasury Spread",
                                           "BAA - 10yr Treasury Spread")
