@@ -2,7 +2,7 @@
 ```
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0 ,use_intercept::Bool = false,
-                           flip_shocks::Bool = false, verbose::Symbol = :none)
+                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
 ```
 computes the VAR impulse responses identified by the DSGE
 ```
@@ -15,7 +15,7 @@ where `impact[:, i]` is a linear combination of
 
 We draw a β and Σᵤ from the posterior implied by the DSGE
 and data, and we then compute normal VAR impulse responses given those
-coefficients and error covariance matrix. The weight placed
+coefficients and innovations variance-covariance matrix. The weight placed
 on the DSGE is encoded by the field `λ` of the DSGEVAR object `m`.
 
 Given β, Σᵤ, we compute impulse responses to the VAR system

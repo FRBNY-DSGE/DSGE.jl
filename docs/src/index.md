@@ -22,6 +22,7 @@ in the future at the discretion of the New York Fed.
 ```@contents
 Pages = [
   "model_design.md",
+  "special_model_types.md",
   "running_existing_model.md",
   "advanced_usage.md",
   "input_data.md",

@@ -13,12 +13,23 @@ You can run these models using the description provided here. If you
 were to implement another model using DSGE.jl, these procedures can also be used to
 estimate those models.
 
+Please see
+[examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples) on the GitHub
+or the equivalent folder inside your Julia packages directory for example scripts we have created.
+
+- `run_default.jl`: a simple example of the standard workflow with *DSGE.jl*
+- `make_packet.jl`: basic auto-generation of a packet of plots and figures which
+  help the user analyze estimation, forecast, and impulse response results. This script
+  also provides an example of how we recommend structuring "master" files that launch
+  a forecast and generate results with one "click."
+- `test_smc.jl`: using SMC to estimate DSGE models.
+
 ## Running with Default Settings
 
 To estimate and forecast in Julia, simply create an instance of the model object
 and call `estimate` and `forecast_all`. A minimal
-[example](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/run_default.jl)
-is reproduced below:
+[example](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples/run_default.jl)
+is reproduced below.
 
 ```julia
 # estimate as of 2015-Q3 using the default data vintage from 2015 Nov 27
@@ -109,28 +120,4 @@ DSGE.logpath
 DSGE.workpath
 DSGE.tablespath
 DSGE.figurespath
-```
-
-## The `PoolModel` Type
-Unlike the other models contained in DSGE, the `PoolModel` type is not a proper DSGE model.
-It is a wrapper object for different methods to average two different models,
-which do not have to be
-DSGE models. For example, a user could average two different vector auto-regressions.
-Generally, a user only needs to provide the predictive density scores
-of the two models that the user wants to average. The reason is that we
-treat the predictive density scores as non-FRED observables. This approach
-makes interfacing with the rest of the machinery provided by DSGE.jl very simple.
-
-```@docs
-PoolModel
-```
-
-See [Del Negro et al. (2016)](https://www.sciencedirect.com/science/article/pii/S0304407616300094#f000005) for theoretical details on the model averaging methods listed in the documentation.
-
-To facilitate analysis with the `PoolModel` type, we also provide the following functions.
-```@docs
-estimate_bma
-sample_λ
-propagate_λ
-compute_Eλ
 ```

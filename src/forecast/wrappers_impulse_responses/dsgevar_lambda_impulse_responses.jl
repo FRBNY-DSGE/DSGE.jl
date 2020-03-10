@@ -1,15 +1,16 @@
 """
 ```
-function impulse_responses(m, paras, input_type, method,
-                           lags, observables, shocks,
-                           n_obs_shock; parallel = false,
-                           frequency_band = (2*π/32, 2*π/6),
-                           flip_shocks = false,
-                           density_bands = [.5, .6, .7, .8, .9],
-                           create_meansbands = false,
-                           minimize = true,
-                           forecast_string = "",
-                           verbose = :high) where {S<:Real}
+function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
+                           data::Matrix{S}, input_type::Symbol, method::Symbol;
+                           parallel::Bool = false,
+                           frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
+                           n_obs_shock::Int = 1, draw_shocks::Bool = false,
+                           flip_shocks::Bool = false,
+                           density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
+                           create_meansbands::Bool = false, test_meansbands::Bool = false,
+                           minimize::Bool = true,
+                           forecast_string::String = "",
+                           verbose::Symbol = :high) where {S<:Real}
 ```
 computes the VAR impulse responses identified by the state space system
 ```
@@ -38,7 +39,7 @@ of the impact response matrix corresponding to the state space system, i.e.
 
 Otherwise, we draw a β and Σᵤ from the posterior implied by the DSGE
 and data, and we then compute normal VAR impulse responses given those
-coefficients and error covariance matrix.
+coefficients and innovations variance-covariance matrix.
 
 ****
 NOTE: this function generally involves taking random draws from

@@ -17,7 +17,7 @@ where `Xₜ` stacks the lags of yₜ (with dimensions n_observables x n_regresso
 
 ### Inputs
 * `β::AbstractMatrix{S}`: coefficient matrix
-* `Σ::AbstractMatrix{S}`: innovations covariance matrix
+* `Σ::AbstractMatrix{S}`: innovations variance-covariance matrix
 * `n_obs_shock::Int`: index of the observable corresponding to the orthogonalized shock
     causing the impulse response.
 * `shock_size::S`: number of standard deviations of the shock
@@ -94,7 +94,7 @@ uₜ = cholesky(Ω).L * ϵₜ.
 ```
 
 ### Inputs
-* `Σ::AbstractMatrix{S}`: innovations covariance matrix
+* `Σ::AbstractMatrix{S}`: innovations variance-covariance matrix
 * `n::Int`: number of observables
 * `n_obs_shock::Int`: index of the observable corresponding to the orthogonalized shock
     causing the impulse response.
@@ -126,7 +126,7 @@ A typical business cycle's frequencies are given by (2π / 32, 2π / 6).
 
 ### Inputs
 * `β::AbstractMatrix{S}`: coefficient matrix
-* `Σ::AbstractMatrix{S}`: innovations covariance matrix
+* `Σ::AbstractMatrix{S}`: innovations variance-covariance matrix
 * `n::Int`: number of observables
 * `n_obs_shock::Int`: index of the observable for which we compute
     the shock that maximizes the observable's explained variance
@@ -191,7 +191,7 @@ and the Cholesky identification is given by
 
 ### Inputs
 * `β::AbstractMatrix{S}`: coefficient matrix
-* `Σ::AbstractMatrix{S}`: innovations covariance matrix
+* `Σ::AbstractMatrix{S}`: innovations variance-covariance matrix
 * `n::Int`: number of observables
 * `n_obs_shock::Int`: index of the observable corresponding to the orthogonalized shock
     causing the impulse response.

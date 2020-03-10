@@ -1,25 +1,18 @@
 """
 ```
-function impulse_responses(m, input_type, method,
-                           lags, observables, shocks,
-                           n_obs_shock; parallel = false,
-                           frequency_band = (2*π/32, 2*π/6),
-                           flip_shocks = false,
-                           density_bands = [.5, .6, .7, .8, .9],
-                           create_meansbands = false,
-                           minimize = true,
-                           forecast_string = "",
-                           verbose = :high) where {S<:Real}
-function impulse_responses(m, paras, input_type, method,
-                           lags, observables, shocks,
-                           n_obs_shock; parallel = false,
-                           frequency_band = (2*π/32, 2*π/6),
-                           flip_shocks = false,
-                           density_bands = [.5, .6, .7, .8, .9],
-                           create_meansbands = false,
-                           minimize = true,
-                           forecast_string = "",
-                           verbose = :high) where {S<:Real}
+function impulse_responses(m::AbstractDSGEModel, paras::Union{Vector{S}, Matrix{S}},
+                           input_type::Symbol, method::Symbol,
+                           lags::Int, observables::Vector{Symbol},
+                           shocks::Vector{Symbol},
+                           n_obs_shock::Int; parallel::Bool = false,
+                           frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
+                           flip_shocks::Bool = false,
+                           use_intercept::Bool = false,
+                           density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
+                           create_meansbands::Bool = false,
+                           minimize::Bool = true,
+                           forecast_string::String = "",
+                           verbose::Symbol = :high) where {S<:Real}
 ```
 computes the impulse responses of a VAR(p) approximation to a DSGE.
 

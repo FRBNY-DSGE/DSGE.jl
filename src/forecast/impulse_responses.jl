@@ -284,8 +284,10 @@ end
 
 """
 ```
-impulse_responses(system, horizon, permute_mat, shocks = [1, 0, 0, ...];
-    restriction = :short_run, flip_shocks = false, get_shocks = false)
+function impulse_responses(system::System{S}, horizon::Int, permute_mat::AbstractMatrix{T},
+                           shocks::AbstractVector{S} = Vector{S}(undef, 0);
+                           restriction::Symbol = :short_run, flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S <: Real, T <: Number}
 ```
 computes impulse responses using a Cholesky-identified shock
 to observables, with the ability to apply a permutation matrix.
@@ -307,8 +309,6 @@ to observables, with the ability to apply a permutation matrix.
     (by default the shock magnitude is a negative 1 std. shock)
 - `get_shocks::Bool`: Whether to return the Cholesky-identified shocks and the
     underlying structural shocks
-
-where `S <: Real, T <: Number`
 
 ### Outputs
 
@@ -429,8 +429,9 @@ end
 
 """
 ```
-impulse_responses(system, horizon, frequency_band, n_obs_shock;
-    flip_shocks = false, get_shocks = false)
+function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tuple{S,S},
+                           n_obs_shock::Int; flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S<:Real}
 ```
 computes impulse responses by identifying the shock which
 maximizes the variance explained of a chosen observable within

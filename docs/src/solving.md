@@ -1,4 +1,4 @@
-# Solving the Model
+# [Solving the Model](@id solving-dsge-doc)
 
 ## The `gensys` routine
 
