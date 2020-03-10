@@ -85,7 +85,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
-                           create_meansbands::Bool = false,
+                           create_meansbands::Bool = false, test_meansbands::Bool = false,
                            minimize::Bool = true,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
@@ -152,38 +152,55 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
         metadata[:indices] = get_observables(m)
 
         # Means and Bands for each variable in a class
-        for (name, name_i) in get_observables(m)
-            # irf_output is Vector{nperiod x nobs} -> for each observable,
-            # we want to select its specific IRF, i.e. map(x -> x[:,obs_index]).
-            # This creates a nperiod x ndraws matrix, which we want to transpose
-            # to get a ndraws x nperiod matrix
-            single_var = Matrix(reduce(hcat, map(x -> x[:,name_i], irf_output))')
-            means[!,name] = vec(mean(single_var, dims = 1))
-            bands[name]   = find_density_bands(single_var, density_bands;
-                                               minimize = minimize)
+        if method == :rotation && !draw_shocks
+            for (shock, shock_i) in get_shocks(m)
+                for (name, name_i) in get_observables(m)
+                    # irf_output is Vector{nperiod x nobs x nshocks} -> for each observable,
+                    # we want to select its specific IRF, i.e. map(x -> x[:,obs_index, shock_index]).
+                    # This creates a nperiod x ndraws matrix, which we want to transpose
+                    # to get a ndraws x nperiod matrix
+                    single_var = Matrix(reduce(hcat, map(x -> x[:, name_i, shock_i], irf_output))')
+                    means[!, Symbol(name, :__, shock)] = vec(mean(single_var, dims = 1))
+                    bands[Symbol(name, :__, shock)]    = find_density_bands(single_var, density_bands;
+                                                                            minimize = minimize)
+                end
+            end
+        else
+            for (name, name_i) in get_observables(m)
+                # irf_output is Vector{nperiod x nobs} -> for each observable,
+                # we want to select its specific IRF, i.e. map(x -> x[:,obs_index]).
+                # This creates a nperiod x ndraws matrix, which we want to transpose
+                # to get a ndraws x nperiod matrix
+                single_var = Matrix(reduce(hcat, map(x -> x[:, name_i], irf_output))')
+                means[!, name] = vec(mean(single_var, dims = 1))
+                bands[name]    = find_density_bands(single_var, density_bands;
+                                                    minimize = minimize)
+            end
         end
         mb = MeansBands(metadata, means, bands)
 
         # Save MeansBands
-        tail = if method == :cholesky
-            :cholesky
-        elseif method == :maxBC || method == :maximum_business_cycle_variance
-            :maxBC
-        elseif method == :rotation
-            :rotation
-        else
-            :choleskyLR
-        end
+        if !test_meansbands
+            tail = if method == :cholesky
+                :cholesky
+            elseif method == :maxBC || method == :maximum_business_cycle_variance
+                :maxBC
+            elseif method == :rotation
+                :rotation
+            else
+                :choleskyLR
+            end
 
-        fp = get_meansbands_output_file(m, input_type, :none,
-                                        Symbol(metadata[:product], :obs_, tail),
-                                        forecast_string = forecast_string)
-        dirpath = dirname(fp)
-        isdir(dirpath) || mkpath(dirpath)
-        JLD2.jldopen(fp, true, true, true, IOStream) do file
-            write(file, "mb", mb)
+            fp = get_meansbands_output_file(m, input_type, :none,
+                                            Symbol(metadata[:product], :obs_, tail),
+                                            forecast_string = forecast_string)
+            dirpath = dirname(fp)
+            isdir(dirpath) || mkpath(dirpath)
+            JLD2.jldopen(fp, true, true, true, IOStream) do file
+                write(file, "mb", mb)
+            end
+            println(verbose, :high, "  " * "wrote " * basename(fp))
         end
-        println(verbose, :high, "  " * "wrote " * basename(fp))
         return mb
     else
         if method in [:rotation]

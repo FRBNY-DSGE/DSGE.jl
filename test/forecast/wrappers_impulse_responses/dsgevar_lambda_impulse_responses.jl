@@ -1,5 +1,5 @@
 fp = dirname(@__FILE__)
-# @testset "Impulse responses of a VAR using a DSGE as a prior (wrapper function)" begin
+@testset "Impulse responses of a VAR using a DSGE as a prior (wrapper function)" begin
     jlddata = load(joinpath(fp, "../../reference/test_dsgevar_lambda_irfs.jld2"))
     m = Model1002("ss10", custom_settings =
                   Dict{Symbol,Setting}(:add_laborshare_measurement =>
@@ -54,6 +54,26 @@ fp = dirname(@__FILE__)
                                        create_meansbands = false, flip_shocks = true,
                                        n_obs_shock = 1)
 
+    # Not testing but checking no errors are caused when creating a MeansBands
+    mb = impulse_responses(dsgevar, reshape(jlddata["modal_param"], 1,
+                                            length(jlddata["modal_param"])),
+                            jlddata["data"],
+                            :mode, :cholesky; parallel = false,
+                            create_meansbands = true, test_meansbands = true,
+                            flip_shocks = false, n_obs_shock = 1)
+    mb = impulse_responses(dsgevar, reshape(jlddata["modal_param"], 1,
+                                            length(jlddata["modal_param"])),
+                            jlddata["data"],
+                            :mode, :choleskyLR; parallel = false,
+                            create_meansbands = true, test_meansbands = true,
+                            flip_shocks = false, n_obs_shock = 1)
+    mb = impulse_responses(dsgevar, reshape(jlddata["modal_param"], 1,
+                                            length(jlddata["modal_param"])),
+                            jlddata["data"],
+                            :mode, :maxBC; parallel = false,
+                            create_meansbands = true, test_meansbands = true,
+                            flip_shocks = false, n_obs_shock = 1)
+
     @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] dropdims(out, dims = 3)
     @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] dropdims(out_lr, dims = 3)
     @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] dropdims(out_maxbc, dims = 3)
@@ -62,8 +82,7 @@ fp = dirname(@__FILE__)
     @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] -dropdims(out_flip, dims = 3)
     @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] -dropdims(out_lr_flip, dims = 3)
     @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] -dropdims(out_maxbc_flip, dims = 3)
-
-#end
+end
 
 @testset "Impulse responses of a VAR using parallel (1 worker) and using a DSGE as a prior (wrapper function)" begin
     jlddata = load(joinpath(fp, "../../reference/test_dsgevar_lambda_irfs.jld2"))
@@ -112,7 +131,6 @@ fp = dirname(@__FILE__)
     @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] -dropdims(out_maxbc_flip, dims = 3)
 end
 
-# NEED TO ADD ROTATION IRFS TESTS FROM DSGEVAR_LAMBDA_IRFS.JLD2
 @testset "Impulse responses of a VAR using a DSGE as a prior (wrapper function)" begin
     jlddata = load(joinpath(fp, "../../reference/test_dsgevar_lambda_irfs.jld2"))
     m = Model1002("ss10", custom_settings =
@@ -136,6 +154,10 @@ end
     Random.seed!(1793)
     out_draw_parallel = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation,
                                           draw_shocks = true, parallel = true)
+
+    # Not testing but just checking no error when creating MeansBands
+    mb = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation,
+                            create_meansbands = true, test_meansbands = true)
 
     @test @test_matrix_approx_eq out out_parallel
     @test @test_matrix_approx_eq out[:, :, :, 1] jlddata["rotation_irf_by_shock"]

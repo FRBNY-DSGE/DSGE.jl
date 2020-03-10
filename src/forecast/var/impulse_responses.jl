@@ -117,12 +117,12 @@ end
 maxBC_shock(β, Σ, n, n_obs_shock, shock_size, lags, frequency_band,
     flip_shocks = false) where {S<:Real}
 ```
-computes the shock which maximizes the amount of cyclical variance
-of a chosen observable explained by the shock.
+computes the shock which maximizes the cyclical variance
+explained for a chosen observable.
 The observable's index is specified by `n_obs_shock`, and the
 frequencies of the cycle are specified by `frequency_band`.
 
-A typical business cycle's frequencies are given by (2π / 6, 2π / 32).
+A typical business cycle's frequencies are given by (2π / 32, 2π / 6).
 
 ### Inputs
 * `β::AbstractMatrix{S}`: coefficient matrix

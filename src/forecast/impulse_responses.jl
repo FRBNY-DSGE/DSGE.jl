@@ -300,7 +300,9 @@ to observables, with the ability to apply a permutation matrix.
     whose first entry is one and all other entries are zero (a 1 standard deviation
     shock to the innovation affecting the first variable).
 - `restriction::Symbol`: type of restriction for the Cholesky identification.
-    Can be either `:short_run` or `:long_run`.
+    Can be either `:short_run` or `:long_run`. We also let `:cholesky` refer
+    specifically to the `:short_run` restriction and
+    `:choleskyLR` or `:cholesky_long_run` refer to the `:long_run` restriction.
 - `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock
     (by default the shock magnitude is a negative 1 std. shock)
 - `get_shocks::Bool`: Whether to return the Cholesky-identified shocks and the
@@ -361,9 +363,14 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Abstrac
                            shocks::AbstractVector{S} = Vector{S}(undef, 0);
                            restriction::Symbol = :short_run, flip_shocks::Bool = false,
                            get_shocks::Bool = false) where {S <: Real, T <: Number}
-    if !(restriction in [:short_run, :long_run])
+    if !(restriction in [:short_run, :long_run, :cholesky, :choleskyLR, :cholesky_long_run])
         error("The restriction $restriction has not been implemented. "
               * "Choose either `:short_run` or `:long_run")
+    end
+    if restriction == :cholesky
+        restriction = :short_run
+    elseif restriction in [:choleskyLR, :cholesky_long_run]
+        restriction = :long_run
     end
 
     # Permute matrices
@@ -385,7 +392,6 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Abstrac
     s₀ = zeros(S, nstates)
 
     # Back out structural shocks corresponding to Cholesky shock to observables
-    # inverse_fcn = (nobs != nshocks || use_pinv) ? pinv : inv # Determine which inverse to use
     if isempty(shocks)
         shocks = vcat(1., zeros(nobs - 1)) # First orthogonal shock to observables
     end
@@ -395,7 +401,6 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Abstrac
         cholmat = cholesky((obs_cov + obs_cov') ./ 2).L
 
         structural_shock = obs_std \ (cholmat * shocks)
-        # structural_shock = inverse_fcn(system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])) * cholmat * shocks
     elseif restriction == :long_run
         lr_obs_std = system[:ZZ] * inv(Matrix{S}(I, nstates, nstates) - system[:TTT]) *
             system[:RRR] * sqrt.(system[:QQ])
@@ -403,7 +408,6 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Abstrac
         cholmat    =  cholesky((lr_obs_cov + lr_obs_cov') ./ 2).L
 
         structural_shock = lr_obs_std \ (cholmat * shocks)
-        # structural_shock = inverse_fcn(lr_obs_std * sqrt.(system[:QQ])) * cholmat * shocks
     end
 
     # Run IRFs
@@ -425,21 +429,22 @@ end
 
 """
 ```
-impulse_responses(system, horizon, frequency_band, n_obs_var;
+impulse_responses(system, horizon, frequency_band, n_obs_shock;
     flip_shocks = false, get_shocks = false)
 ```
-computes impulse responses by identifying the shocks which
-maximize the variance of a chosen observable within
+computes impulse responses by identifying the shock which
+maximizes the variance explained of a chosen observable within
 a certain frequency band.
 
 For typical business-cycle frequences, we recommend setting
-`frequency_band = (2 * π / 6, 2 * π / 32)`.
+`frequency_band = (2 * π / 32, 2 * π / 6)`.
 
 ### Inputs
 - `system::System{S}`: state-space system matrices
 - `horizon::Int`: number of periods ahead to forecast
 - `frequency_band::Tuple{S, S}`: the frequencies at which we want to maximize the variance explained.
-- `n_obs_var::Int`: the index of the observable whose variance we want to maximally explain
+    The first frequency must be less than the second one.
+- `n_obs_shock::Int`: the index of the observable whose variance we want to maximally explain
     in the state space model implied by `system`.
 - `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock (by default the shock magnitude is a negative 1 std. shock)
 - `get_shocks::Bool`: Whether to return the structural shocks.
@@ -457,8 +462,13 @@ where `S <: Real`
     Cholesky-identified shock (only if `get_shocks = true`)
 """
 function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tuple{S,S},
-                           n_obs_var::Int; flip_shocks::Bool = false,
+                           n_obs_shock::Int; flip_shocks::Bool = false,
                            get_shocks::Bool = false) where {S<:Real}
+    if frequency_band[1] > frequency_band[2]
+        @warn "First frequency in `frequency_band` is larger than second one. Switching the order of the frequencies."
+        frequency_band = (frequency_band[2], frequency_band1[1])
+    end
+
     # Setup
     nshocks = size(system[:RRR], 2)
     nstates = size(system[:TTT], 1)
@@ -474,12 +484,12 @@ function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tupl
     for f = frequency_band[1]:increment:round(frequency_band[2], digits=10) # not rounding sometimes leads to one fewer loop than desired
         sumG = system[:TTT] .* exp(-im * f)
         invA = system[:ZZ] * ((I_state - sumG) \ sd_shock)
-        variance += real.(invA[n_obs_var,:] * invA[n_obs_var,:]') .* increment ./
+        variance += real.(invA[n_obs_shock,:] * invA[n_obs_shock,:]') .* increment ./
             abs(frequency_band[1] - frequency_band[2])
     end
     eigout = eigen(variance)
     q = eigout.vectors[:, argmax(eigout.values)]
-    q .*= sign(q[n_obs_var])
+    q .*= sign(q[n_obs_shock])
 
     # Compute IRFs
     states = zeros(S, nstates, horizon)

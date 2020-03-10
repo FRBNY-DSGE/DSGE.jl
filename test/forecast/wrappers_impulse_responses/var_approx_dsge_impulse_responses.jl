@@ -132,6 +132,13 @@ DSGE.update!(dsgevar, lags = 4, observables = observables, λ = 1.)
     out26 = impulse_responses(dsgevar, paras[1, :], :mode, :maxBC, 4,
                               observables, shocks, 1)
 
+    # Not testing but just checking for no errors when creating a MeansBands
+    mb = impulse_responses(dsgevar, paras, :full, :cholesky, 1,
+                           create_meansbands = true, test_meansbands = true)
+    mb = impulse_responses(dsgevar, paras, :full, :choleskyLR, 1,
+                           create_meansbands = true, test_meansbands = true)
+    mb = impulse_responses(dsgevar, paras, :full, :maxBC, 1,
+                           create_meansbands = true, test_meansbands = true)
 
     @test @test_matrix_approx_eq jlddata["exp_cholesky"] out1
     @test @test_matrix_approx_eq jlddata["exp_choleskyLR"] out2
