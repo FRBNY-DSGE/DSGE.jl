@@ -41,7 +41,6 @@ end
     @test isinf(likelihood(m, data; sampler = true))
 end
 
-
 @testset "Check DSGEVAR likelihood and posterior calculations" begin
     dsge = Model1002("ss10")
     obs_i = [dsge.observables[:obs_nominalrate], dsge.observables[:obs_gdp],

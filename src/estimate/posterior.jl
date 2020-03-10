@@ -38,7 +38,8 @@ function posterior(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}}, data::Abs
                    sampler::Bool = false, ϕ_smc::Float64 = 1.,
                    catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
-    like = likelihood(m, data; sampler = sampler, catch_errors = catch_errors)
+    like = likelihood(m, data; sampler = sampler,
+                      catch_errors = catch_errors)
     post = ϕ_smc*like + prior(m)
     return post
 end

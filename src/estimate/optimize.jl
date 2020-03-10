@@ -72,10 +72,10 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     x_opt          = x_model[para_free_inds]
 
     # For regime-switching cases
-    regime_switching = haskey(get_settings(m), :regime_switching) ?
-        get_setting(m, :regime_switching) : false
-    n_regimes        = haskey(get_settings(m), :n_regimes) && regime_switching ?
+    n_regimes        = haskey(get_settings(m), :n_regimes) ?
         get_setting(m, :n_regimes) : 1
+    regime_switching = haskey(get_settings(m), :regime_switching) && n_regimes > 1 ?
+        get_setting(m, :regime_switching) : false
 
     ########################################################################################
     ### Step 2: Initialize f_opt
@@ -172,12 +172,6 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
             return
         end
     elseif isa(m, AbstractDSGEVARModel)
-        # For regime-switching cases
-        n_regimes        = haskey(get_settings(m), :n_regimes) ?
-            get_setting(m, :n_regimes) : 1
-        regime_switching = haskey(get_settings(m), :regime_switching) && n_regimes > 1 ?
-            get_setting(m, :regime_switching) : false
-
         function _neighbor_dsgevar!(x, x_proposal)
             T = eltype(x)
             npara = length(x)
