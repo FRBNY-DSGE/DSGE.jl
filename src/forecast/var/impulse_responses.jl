@@ -18,7 +18,8 @@ where `Xₜ` stacks the lags of yₜ (with dimensions n_observables x n_regresso
 ### Inputs
 * `β::AbstractMatrix{S}`: coefficient matrix
 * `Σ::AbstractMatrix{S}`: innovations covariance matrix
-* `n_obs_shock::Int`: index of the observable to be shocked
+* `n_obs_shock::Int`: index of the observable corresponding to the orthogonalized shock
+    causing the impulse response.
 * `shock_size::S`: number of standard deviations of the shock
 
 ### Keywords
@@ -87,15 +88,16 @@ Consider a VAR
 yₜ = Xₜ β + uₜ,
 ```
 where `Xₜ` stacks the `p` lags of `yₜ` and `uₜ ∼ 𝒩 (0, Ω)`.
-We identify orthogonal shocks `ϵₜ` by computing
+We identify orthogonal shocks `ϵₜ` with identity covariance by computing
 ```
-uₜ = cholesky(Ω).L * uₜ.
+uₜ = cholesky(Ω).L * ϵₜ.
 ```
 
 ### Inputs
 * `Σ::AbstractMatrix{S}`: innovations covariance matrix
 * `n::Int`: number of observables
-* `n_obs_shock::Int`: index of the observable to be shocked
+* `n_obs_shock::Int`: index of the observable corresponding to the orthogonalized shock
+    causing the impulse response.
 * `shock_size::S`: number of standard deviations of the shock
 
 ### Keywords
@@ -115,15 +117,19 @@ end
 maxBC_shock(β, Σ, n, n_obs_shock, shock_size, lags, frequency_band,
     flip_shocks = false) where {S<:Real}
 ```
-maximizes the business cycle variance explained by the observable
-whose index is specified by `n_obs_shock` and between the
-frequencies specified by `frequency_band`.
+computes the shock which maximizes the amount of cyclical variance
+of a chosen observable explained by the shock.
+The observable's index is specified by `n_obs_shock`, and the
+frequencies of the cycle are specified by `frequency_band`.
+
+A typical business cycle's frequencies are given by (2π / 6, 2π / 32).
 
 ### Inputs
 * `β::AbstractMatrix{S}`: coefficient matrix
 * `Σ::AbstractMatrix{S}`: innovations covariance matrix
 * `n::Int`: number of observables
-* `n_obs_shock::Int`: index of the observable to be shocked
+* `n_obs_shock::Int`: index of the observable for which we compute
+    the shock that maximizes the observable's explained variance
 * `shock_size::S`: number of standard deviations of the shock
 * `lags::Int`: number of lags in VAR system
 * `frequency_band::Tuple{S,S}`: the frequencies between which the variance of
@@ -187,7 +193,8 @@ and the Cholesky identification is given by
 * `β::AbstractMatrix{S}`: coefficient matrix
 * `Σ::AbstractMatrix{S}`: innovations covariance matrix
 * `n::Int`: number of observables
-* `n_obs_shock::Int`: index of the observable to be shocked
+* `n_obs_shock::Int`: index of the observable corresponding to the orthogonalized shock
+    causing the impulse response.
 * `shock_size::S`: number of standard deviations of the shock
 * `lags::Int`: number of lags in VAR system
 * `frequency_band::Tuple{S,S}`: the frequencies between which the variance of

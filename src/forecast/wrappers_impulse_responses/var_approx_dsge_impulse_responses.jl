@@ -2,7 +2,7 @@
 ```
 function impulse_responses(m, input_type, method,
                            lags, observables, shocks,
-                           n_obs_var; parallel = false,
+                           n_obs_shock; parallel = false,
                            frequency_band = (2*π/32, 2*π/6),
                            flip_shocks = false,
                            density_bands = [.5, .6, .7, .8, .9],
@@ -12,7 +12,7 @@ function impulse_responses(m, input_type, method,
                            verbose = :high) where {S<:Real}
 function impulse_responses(m, paras, input_type, method,
                            lags, observables, shocks,
-                           n_obs_var; parallel = false,
+                           n_obs_shock; parallel = false,
                            frequency_band = (2*π/32, 2*π/6),
                            flip_shocks = false,
                            density_bands = [.5, .6, .7, .8, .9],
@@ -38,8 +38,7 @@ computes the impulse responses of a VAR(p) approximation to a DSGE.
     any of the observables or pseudo-observables in `m`.
 * `shocks::Vector{Symbol}`: (structural) exogenous shocks to be used in the DSGE-VAR.
     These shocks must be in `m`.
-* `n_obs_var::Int`: the index of the observable to be shocked by
-    the reduced-form impulse response to the VAR system.
+* `n_obs_shock::Int`: the index of the observable corresponding to the orthogonalized shock causing the impulse response.
 
 ### Keywords
 * `parallel::Bool`: use parallel workers or not
@@ -58,7 +57,7 @@ function impulse_responses(m::AbstractDSGEModel, paras::Union{Vector{S}, Matrix{
                            input_type::Symbol, method::Symbol,
                            lags::Int, observables::Vector{Symbol},
                            shocks::Vector{Symbol},
-                           n_obs_var::Int; parallel::Bool = false,
+                           n_obs_shock::Int; parallel::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            flip_shocks::Bool = false,
                            use_intercept::Bool = false,
@@ -67,9 +66,9 @@ function impulse_responses(m::AbstractDSGEModel, paras::Union{Vector{S}, Matrix{
                            minimize::Bool = true,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
-    # if n_obs_var <= 0
+    # if n_obs_shock <= 0
     #     error("To use method $method, user must specify the index of" *
-    #           " the target observable with keyword `n_obs_var`.")
+    #           " the target observable with keyword `n_obs_shock`.")
     # end
 
 
@@ -87,7 +86,7 @@ function impulse_responses(m::AbstractDSGEModel, paras::Union{Vector{S}, Matrix{
 
     end
 
-    return impulse_responses(_dsgevar, paras, input_type, method, n_obs_var;
+    return impulse_responses(_dsgevar, paras, input_type, method, n_obs_shock;
                              parallel = parallel, frequency_band = frequency_band,
                              flip_shocks = flip_shocks, use_intercept = use_intercept,
                              density_bands = density_bands, save_as_DSGE = isa(m, AbstractDSGEModel),
@@ -131,7 +130,7 @@ function impulse_responses(m::AbstractDSGEModel, paras::Union{Vector{S}, Matrix{
     # # Compute IRFs
     # irf_output =
     #     mapfcn((β, Σ) ->
-    #            impulse_responses(β, Σ, n_obs_var, h; method = method,
+    #            impulse_responses(β, Σ, n_obs_shock, h; method = method,
     #                              use_intercept = use_intercept,
     #                              flip_shocks = flip_shocks),
     #            β_draws, Σ_draws)
@@ -198,7 +197,7 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
                            input_type::Symbol, method::Symbol,
                            lags::Int, observables::Vector{Symbol},
                            shocks::Vector{Symbol},
-                           n_obs_var::Int; parallel::Bool = false,
+                           n_obs_shock::Int; parallel::Bool = false,
                            use_intercept::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            flip_shocks::Bool = false,
@@ -209,7 +208,7 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
                            save_as_DSGE::Bool = false,
                            verbose::Symbol = :high) where {S<:Real}
     DSGE.update!(m, lags = lags, observables = observables, shocks = shocks)
-    return impulse_responses(m, paras, input_type, method, n_obs_var;
+    return impulse_responses(m, paras, input_type, method, n_obs_shock;
                              parallel = parallel,
                              use_intercept = use_intercept,
                              frequency_band = frequency_band,
@@ -224,7 +223,7 @@ end
 
 function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matrix{S}},
                            input_type::Symbol, method::Symbol,
-                           n_obs_var::Int; parallel::Bool = false,
+                           n_obs_shock::Int; parallel::Bool = false,
                            use_intercept::Bool = false,
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            flip_shocks::Bool = false,
@@ -233,9 +232,9 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
                            minimize::Bool = true, save_as_DSGE::Bool = false,
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
-    if n_obs_var <= 0
+    if n_obs_shock <= 0
         error("To use method $method, user must specify the index of" *
-              " the target observable with keyword `n_obs_var`.")
+              " the target observable with keyword `n_obs_shock`.")
     end
     if isa(paras, Vector{S})
         paras = reshape(paras, 1, length(paras))
@@ -263,7 +262,7 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
     # Compute IRFs
     irf_output =
         mapfcn((β, Σ) ->
-               impulse_responses(β, Σ, n_obs_var, h; method = method,
+               impulse_responses(β, Σ, n_obs_shock, h; method = method,
                                  use_intercept = use_intercept,
                                  flip_shocks = flip_shocks),
                β_draws, Σ_draws)
