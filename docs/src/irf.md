@@ -175,7 +175,13 @@ For the first type of impulse response, see
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0 ,use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+
+function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
+                           n_obs_shock::Int; horizon::Int = 0 ,use_intercept::Bool = false,
+                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
 ```
+
+The second function is for the specific case when ``\lambda = \infty``, where the data does not matter for the impulse response.
 
 For the second type of impulse responses, see
 

@@ -53,3 +53,53 @@ holds information about the VAR with which we want to combine a given DSGE model
 ```@docs
 DSGEVAR
 ```
+
+### Tips for Using DSGEVARs
+
+* When extensively using DSGE-VARs, we recommend defining your own subspecs in
+  `subspecs.jl` because it simplifies the process of saving, reading, and analyzing
+  output from estimating and calculating impulse responses for DSGE-VARs.
+  See [Advanced Usage](@id advanced-usage) for a more detailed explanation on changing subspecs.
+
+* The names of the observables must exist as either observables
+  or pseudo-observables in the DSGE because for most
+  DSGEVAR methods, we need to construct the state space
+  representation of the DSGEVAR using information from
+  the underlying DSGE.
+
+* It is important to be careful about the order of the
+  observables when constructing a DSGEVAR. Whether you define
+  the names of the observables by calling `update!` or
+  by creating a subspec, we assume that the order of the observables
+  corresponds to the observable's index in the data and
+  in the state space representation of the DSGEVAR. In the example
+  provided above, if we estimate the DSGEVAR on data
+  or construct the state space representation of the DSGEVAR,
+  we assume that the order of observables in the data array,
+  which has dimensions `nobs x nperiods`, is `:obs_gdp`
+  in the first row, `:obs_cpi` in the second row, and
+  `:obs_nominalrate` in the third row.
+
+* When using functions that use the DSGE as a prior for a VAR (as opposed to
+  a VAR approximation of the DSGE), then an intercept term is assumed and cannot
+  be turned off. For example, the following two functions computes the VAR coefficients
+  and innovations variance-covariance matrix for a `DSGEVAR` object `m`.
+  The first one is for a VAR approximation of the DSGE in `m`,
+  and it allows the user to specify whether or not they want an intercept term
+  using the keyword `use_intercept`. The second function is for using the DSGE
+  as a prior for a VAR estimated on `data`. This function does not have the
+  `use_intercept` keyword because we require an intercept term when using
+  the DSGE as a prior for a VAR.
+
+```
+compute_system(m; apply_altpolicy = false,
+               regime_switching = false, n_regimes = 2,
+               check_system = false, get_system = false,
+               get_population_moments = false, use_intercept = false,
+               verbose = :high)
+compute_system(m, data; apply_altpolicy = false,
+               regime_switching = false, n_regimes = 2,
+               check_system = false, get_system = false,
+               get_population_moments = false,
+               verbose = :high)
+```

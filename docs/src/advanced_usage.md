@@ -1,4 +1,4 @@
-# Advanced Usage
+# [Advanced Usage](@id advanced-usage)
 
 ```@meta
 CurrentModule = DSGE
