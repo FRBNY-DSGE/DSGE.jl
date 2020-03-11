@@ -1,3 +1,8 @@
+# DSGE.jl 1.1.2
+## New features and enhancements
++ Support for bridging from another estimation (in SMC.jl)--this update ensures compatibility
++ Automatically run cs_minwel after an SMC estimation to ensure you've found the mode with kwarg run_csminwel in smc2
+
 # DSGE.jl 1.1.1
 ## New features and enhancements
 + Bug fixes and improvements
