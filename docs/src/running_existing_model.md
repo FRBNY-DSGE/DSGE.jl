@@ -18,6 +18,7 @@ Please see
 or the equivalent folder inside your Julia packages directory for example scripts we have created.
 
 - `run_default.jl`: a simple example of the standard workflow with *DSGE.jl*
+- `run_dsgevar.jl`: a example showing how to use a `DSGEVAR`.
 - `make_packet.jl`: basic auto-generation of a packet of plots and figures which
   help the user analyze estimation, forecast, and impulse response results. This script
   also provides an example of how we recommend structuring "master" files that launch
