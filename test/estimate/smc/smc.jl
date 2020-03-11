@@ -28,7 +28,7 @@ m <= Setting(:use_chand_recursion, true)
 @everywhere Random.seed!(42)
 
 println("Estimating AnSchorfheide Model... (approx. 2 minutes)")
-DSGE.smc2(m, data, run_csminwel = false, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
+DSGE.smc2(m, data, run_csminwel = false, verbose = :none, run_csminwel = false) # us.txt gives equiv to periods 95:174 in our current dataset
 println("Estimation done!")
 
 test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
