@@ -53,9 +53,9 @@ Random.seed!(1793)
     if estimate_dsgevar
         if do_parallel
             my_procs = addprocs(n_workers)
+            @everywhere using DSGE, OrderedCollections
         end
 
-        @everywhere using DSGE, OrderedCollections
         smc2(dsgevar, data, run_csminwel = false, verbose = :none) # run `?smc2` for a description of `run_csminwel`
 
         if do_parallel
@@ -133,6 +133,7 @@ Random.seed!(1793)
     if do_full_band_irf
         if do_parallel
             my_procs = addprocs(n_workers)
+            @everywhere using DSGE, OrderedCollections
         end
 
         full_band_irfs = Dict()
