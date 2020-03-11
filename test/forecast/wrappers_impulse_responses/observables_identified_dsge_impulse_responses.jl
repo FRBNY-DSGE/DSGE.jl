@@ -45,7 +45,13 @@ obs_shock[1] = 1.
     end
 
     # No tests but check that there is no error if we create a MeansBands
-    mb = impulse_responses(m, θmat, :full, method, 1,
+    mb = impulse_responses(m, θmat, :full, :cholesky, 1,
+                           create_meansbands = true,
+                           test_meansbands = true)
+    mb = impulse_responses(m, θmat, :full, :choleskyLR, 1,
+                           create_meansbands = true,
+                           test_meansbands = true)
+    mb = impulse_responses(m, θmat, :full, :maxBC, 1,
                            create_meansbands = true,
                            test_meansbands = true)
 end
@@ -53,7 +59,7 @@ end
 @testset "Wrapper for `maxBC`-identified DSGE impulse responses" begin
     for do_parallel in [false, true]
         for do_flip in [false, true]
-            for method in [:maxBC, :max_business_cycle_variance]
+            for method in [:maxBC, :maximum_business_cycle_variance]
                 states_maxBC, obs_maxBC, pseudo_maxBC =
                     impulse_responses(system, impulse_response_horizons(m),
                                       (2 * π / 32, 2 * π / 6), 1;
@@ -79,7 +85,13 @@ end
     end
 
     # No tests but check that there is no error if we create a MeansBands
-    mb = impulse_responses(m, θmat, :full, method, 1,
+    mb = impulse_responses(m, θmat, :full, :cholesky, 1,
+                           create_meansbands = true,
+                           test_meansbands = true)
+    mb = impulse_responses(m, θmat, :full, :choleskyLR, 1,
+                           create_meansbands = true,
+                           test_meansbands = true)
+    mb = impulse_responses(m, θmat, :full, :maxBC, 1,
                            create_meansbands = true,
                            test_meansbands = true)
 end

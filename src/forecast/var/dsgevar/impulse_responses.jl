@@ -1,8 +1,13 @@
 """
 ```
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
+                           n_obs_shock::Int; horizon::Int = 0,
+                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+
+function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0 ,use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+
 ```
 computes the VAR impulse responses identified by the DSGE
 ```
@@ -25,16 +30,40 @@ ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
 where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`
 using one of the available identification methods for VARs
 
+If the second function is used (where `data` is not an input), then we assume
+the user wants to compute the VAR approximation of the DSGE,
+regardless of the `λ` value in `m`. Note that this function will not
+update the value of `λ` in `m`.
+
 ### Inputs
 * `method::Symbol`: The available methods are `:cholesky`, `:maxBC`, and `:choleskyLR`.
     See the docstrings `impulse_responses` for VARs specifically.
 * `n_obs_shock::Int`: The index of the observable corresponding to the orthogonalized shock
     causing the impulse response.
+
+### Keyword Arguments
+* `horizon::Int`: the desired horizon of the impulse responses.
+* `use_intercept::Bool`: use an intercept term for the VAR approximation
+* `flip_shocks::Bool`: default is a "negative" impulse response on impact.
+    Set to `true` for the positive impulse response.
 """
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
+                           n_obs_shock::Int; horizon::Int = impulse_response_horizons(m),
+                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+    β, Σ = compute_system(m, data; verbose = verbose)
+    Σ += Σ'
+    Σ ./= 2
+
+    return impulse_responses(β, Σ, n_obs_shock, horizon;
+                             method = method, flip_shocks = flip_shocks,
+                             use_intercept = true)
+end
+
+
+function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
-    β, Σ = compute_system(m, data; verbose = verbose, use_intercept = use_intercept)
+    β, Σ = compute_system(m; verbose = verbose, use_intercept = use_intercept)
     Σ += Σ'
     Σ ./= 2
 
@@ -125,7 +154,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
     system = compute_system(m; get_system = true, use_intercept = true)
 
     # Compute VAR coefficients
-    β, Σ = compute_system(m, data; verbose = verbose, use_intercept = true)
+    β, Σ = compute_system(m, data; verbose = verbose)
     Σ += Σ'
     Σ ./= 2.
 

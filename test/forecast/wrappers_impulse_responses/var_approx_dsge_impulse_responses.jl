@@ -82,10 +82,8 @@ DSGE.update!(dsgevar, lags = 4, observables = observables, λ = 1.)
 @testset "Impulse responses identified from shocks to observables for a DSGE when using a DSGEVAR" begin
     out1 = impulse_responses(dsgevar, paras, :full, :cholesky, 1)
     out2 = impulse_responses(dsgevar, paras, :full, :choleskyLR, 1)
-    out3 = impulse_responses(dsgevar, paras, :full, :maximum_business_cycle_variance, 4,
-                             observables, shocks, 1)
-    out4 = impulse_responses(dsgevar, paras, :full, :cholesky_long_run, 4,
-                             observables, shocks, 1)
+    out3 = impulse_responses(dsgevar, paras, :full, :maximum_business_cycle_variance, 1)
+    out4 = impulse_responses(dsgevar, paras, :full, :cholesky_long_run, 1)
     out5 = impulse_responses(dsgevar, paras, :full, :maxBC, 1)
     out6 = impulse_responses(dsgevar, paras, :full, :cholesky, 1,
                              flip_shocks = true)

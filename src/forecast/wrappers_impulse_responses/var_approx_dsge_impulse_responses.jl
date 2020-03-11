@@ -129,27 +129,16 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
     mapfcn = parallel ? pmap : map
     h = impulse_response_horizons(m)
 
-    # Compute VAR coefficients implied by DSGE
+    # Compute IRFs
     paras = mapslices(x -> [vec(x)], paras, dims = 2)
-    function get_β_Σ!(para)
+    function get_irf!(para)
         DSGE.update!(m, para)
-        return compute_system(m; verbose = verbose, use_intercept = use_intercept)
+        return impulse_responses(m, method, n_obs_shock;
+                                 horizon = h, use_intercept = use_intercept,
+                                 flip_shocks = flip_shocks)
     end
 
-    var_output =
-        mapfcn(para -> get_β_Σ!(para), paras)
-
-    # Reformat output
-    β_draws = map(x -> x[1], var_output)
-    Σ_draws = map(x -> x[2], var_output)
-
-    # Compute IRFs
-    irf_output =
-        mapfcn((β, Σ) ->
-               impulse_responses(β, Σ, n_obs_shock, h; method = method,
-                                 use_intercept = use_intercept,
-                                 flip_shocks = flip_shocks),
-               β_draws, Σ_draws)
+    irf_output = mapfcn(para -> get_irf!(para), paras)
 
     if create_meansbands
         # Set up metadata and output from IRFs computation

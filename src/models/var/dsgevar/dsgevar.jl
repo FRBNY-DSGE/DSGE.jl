@@ -7,10 +7,26 @@ with a VAR to create a DSGE-VAR. Confer with Del Negro and Schorfheide (2004),
 Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009) for
 details about DSGE-VARs.
 
-We can easily construct an "empty" DSGE-VAR with `AnSchorfheide` as
-the underlying DSGE and then call `update!` on the empty DSGE-VAR
-to add information about the desired DSGE-VAR spec.
+The recommended constructor requires the user to provide
+(1) an `AbstractDSGEModel` object, (2) which structural shocks from
+the DSGE to use, and (3) the subspec (optional, defaults to "ss0").
+If the subspec "ss0" is used, then the result is a `DSGEVAR`
+whose VAR component is "empty" in that the
+observables, lags, and λ weight are not specified. The reason why
+this constructor requires the user to specify which
+structural shocks of DSGE to use is that this information is
+DSGE-specific rather than information about the VAR.
 
+However, we can also construct a `DSGEVAR` without having to
+specify the structural shocks when calling the constructor,
+although we still need to give an instance of an `AbstractDSGEModel`.
+
+
+### Example
+The code below instantiates an empty `DSGEVAR`
+with `AnSchorfheide` as the underlying DSGE and then
+calls `update!` on the empty DSGE-VAR
+to add information about the desired DSGE-VAR spec.
 
 ```jldoctest; output = false
 dsgevar = DSGEVAR(AnSchorfheide())
@@ -26,10 +42,6 @@ data_vintage:     200310
 DSGE model:       an_schorfheide
 DSGE description: Julia implementation of model defined in 'Bayesian Estimation of DSGE Models' by Sungbae An and Frank Schorfheide: AnSchorfheide, ss0
 ```
-
-When extensively using DSGE-VARs, we recommend defining your own subspecs in
-`subspecs.jl` because it simplifies the process of saving, reading, and analyzing
-output from estimating and calculating impulse responses for DSGE-VARs.
 
 ### Fields
 

@@ -11,6 +11,10 @@ function init_subspec!(m::DSGEVAR)
         return # initializes an empty DSGEVAR
     elseif subspec(m) == "ss1"
         ss1!(m)
+    elseif subspec(m) == "ss2"
+        ss2!(m)
+    elseif subspec(m) == "ss3"
+        ss3!(m)
     elseif subspec(m) == "ss10"
         ss10!(m)
     elseif subspec(m) == "ss11"
@@ -30,6 +34,20 @@ function ss1!(m::DSGEVAR)
     observables = [:obs_hours, :obs_gdpdeflator]
     lags        = 4
     λ           = .5
+    update!(m; observables = observables, lags = lags, λ = λ)
+end
+
+function ss2!(m::DSGEVAR)
+    observables = [:obs_gdp, :obs_cpi]
+    lags        = 4
+    λ           = 0.5
+    update!(m; observables = observables, lags = lags, λ = λ)
+end
+
+function ss3!(m::DSGEVAR)
+    observables = [:obs_gdp, :obs_cpi, :obs_nominalrate]
+    lags        = 4
+    λ           = 0.5
     update!(m; observables = observables, lags = lags, λ = λ)
 end
 

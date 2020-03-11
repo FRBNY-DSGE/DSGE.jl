@@ -323,12 +323,12 @@ end
 compute_system(m; apply_altpolicy = false,
                regime_switching = false, n_regimes = 2,
                check_system = false, get_system = false,
-               get_population_moments = false, use_intercept = false
+               get_population_moments = false, use_intercept = false,
                verbose = :high)
 compute_system(m, data; apply_altpolicy = false,
                regime_switching = false, n_regimes = 2,
                check_system = false, get_system = false,
-               get_population_moments = false, use_intercept = false
+               get_population_moments = false,
                verbose = :high)
 ```
 Given the current model parameters, compute the DSGE-VAR system
@@ -391,44 +391,53 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                         apply_altpolicy::Bool = false,
                         regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
-                        get_population_moments::Bool = false, use_intercept::Bool = false,
+                        get_population_moments::Bool = false,
                         verbose::Symbol = :high) where {T<:Real}
 
-    system = compute_system(m; apply_altpolicy = apply_altpolicy,
-                            regime_switching = regime_switching, regime = regime,
-                            n_regimes = n_regimes, check_system = check_system,
-                            get_system = true, use_intercept = use_intercept,
-                            verbose = verbose)
-
-    if get_system
-        return system
+    if get_λ(m) == Inf
+        # Then we just want the VAR approximation of the DSGE
+        return compute_system(m; apply_altpolicy = apply_altpolicy,
+                              regime_switching = regime_switching, regime = regime, n_regimes = n_regimes,
+                              check_system = check_system, get_system = get_system,
+                              get_population_moments = get_population_moments, use_intercept = true,
+                              verbose = verbose)
     else
-        EE, MM = measurement_error(m)
+        system = compute_system(m; apply_altpolicy = apply_altpolicy,
+                                regime_switching = regime_switching, regime = regime,
+                                n_regimes = n_regimes, check_system = check_system,
+                                get_system = true, use_intercept = true,
+                                verbose = verbose)
 
-        lags = n_lags(m)
-        YYYY, XXYY, XXXX =
-            compute_var_population_moments(data, lags; use_intercept = use_intercept)
-        out = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
-                                     system[:DD], system[:ZZ], EE, MM, n_lags(m);
-                                     get_population_moments = true,
-                                     use_intercept = use_intercept)
-
-        if get_population_moments
-            return out..., YYYY, XXYY, XXXX
+        if get_system
+            return system
         else
-            # Compute prior-weighted population moments
-            λ = get_λ(m)
-            YYYYC = YYYY + λ .* out[1]
-            XXYYC = XXYY + λ .* out[2]
-            XXXXC = XXXX + λ .* out[3]
+            EE, MM = measurement_error(m)
 
-            # Draw stationary VAR system
-            n_periods = size(data, 2) - lags
-            β, Σ =  draw_stationary_VAR(YYYYC, XXYYC, XXXXC,
-                                        convert(Int, n_periods + λ * n_periods),
-                                        size(data, 1), lags)
+            lags = n_lags(m)
+            YYYY, XXYY, XXXX =
+                compute_var_population_moments(data, lags; use_intercept = true)
+            out = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                         system[:DD], system[:ZZ], EE, MM, n_lags(m);
+                                         get_population_moments = true,
+                                         use_intercept = true)
 
-            return β, Σ
+            if get_population_moments
+                return out..., YYYY, XXYY, XXXX
+            else
+                # Compute prior-weighted population moments
+                λ = get_λ(m)
+                YYYYC = YYYY + λ .* out[1]
+                XXYYC = XXYY + λ .* out[2]
+                XXXXC = XXXX + λ .* out[3]
+
+                # Draw stationary VAR system
+                n_periods = size(data, 2) - lags
+                β, Σ =  draw_stationary_VAR(YYYYC, XXYYC, XXXXC,
+                                            convert(Int, n_periods + λ * n_periods),
+                                            size(data, 1), lags)
+
+                return β, Σ
+            end
         end
     end
 end

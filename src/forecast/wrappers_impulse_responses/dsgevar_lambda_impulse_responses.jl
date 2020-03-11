@@ -129,7 +129,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
         function _dsgevar_λ_irf_(para)
             DSGE.update!(m, para)
             return impulse_responses(m, data, method, n_obs_shock; horizon = h,
-                                     use_intercept = true, flip_shocks = flip_shocks)
+                                     flip_shocks = flip_shocks)
         end
     end
 

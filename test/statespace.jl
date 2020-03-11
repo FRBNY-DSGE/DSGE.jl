@@ -95,6 +95,7 @@ end
     m = Model1002("ss10"; custom_settings =
                   Dict{Symbol,Setting}(:add_laborshare_measurement =>
                                        Setting(:add_laborshare_measurement, true)))
+
     system = compute_system(m)
     system = compute_system(m, system; observables = [:obs_hours, :obs_gdpdeflator,
                                                       :laborshare_t, :NominalWageGrowth],
@@ -140,6 +141,70 @@ end
     expΣc ./= 2
     @test @test_matrix_approx_eq βc expβc
     @test @test_matrix_approx_eq Σc expΣc
+
+    # Check DSGEVAR automates this properly
+    dsgevar = DSGEVAR(m)
+    DSGE.update!(dsgevar, shocks = collect(keys(m.exogenous_shocks)),
+                 observables = [:obs_hours, :obs_gdpdeflator, :laborshare_t, :NominalWageGrowth],
+                 lags = 4, λ = Inf)
+    yyyyd, xxyyd, xxxxd = compute_system(dsgevar; get_population_moments = true)
+    yyyydc, xxyydc, xxxxdc = compute_system(dsgevar; get_population_moments = true, use_intercept = true)
+    β, Σ = compute_system(dsgevar)
+    βc, Σc = compute_system(dsgevar; use_intercept = true)
+
+    @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]
+    @test @test_matrix_approx_eq xxyyd expmat["xxyyd"][2:end, :]
+    @test @test_matrix_approx_eq xxxxd expmat["xxxxd"][2:end, 2:end]
+    @test @test_matrix_approx_eq yyyydc expmat["yyyyd"]
+    @test @test_matrix_approx_eq xxyydc expmat["xxyyd"]
+    @test @test_matrix_approx_eq xxxxdc expmat["xxxxd"]
+
+    expβ = \(expmat["xxxxd"][2:end, 2:end], expmat["xxyyd"][2:end, :])
+    expΣ = expmat["yyyyd"] - expmat["xxyyd"][2:end, :]' * expβ
+    expΣ += expΣ'
+    expΣ ./= 2
+    @test @test_matrix_approx_eq β expβ
+    @test @test_matrix_approx_eq Σ expΣ
+
+    expβc = \(expmat["xxxxd"], expmat["xxyyd"])
+    expΣc = expmat["yyyyd"] - expmat["xxyyd"]' * expβc
+    expΣc += expΣc'
+    expΣc ./= 2
+    @test @test_matrix_approx_eq βc expβc
+    @test @test_matrix_approx_eq Σc expΣc
+end
+
+@testset "VAR using DSGE as a prior" begin
+    m = Model1002("ss10"; custom_settings =
+                  Dict{Symbol,Setting}(:add_laborshare_measurement =>
+                                       Setting(:add_laborshare_measurement, true)))
+    dsgevar = DSGEVAR(m)
+    jlddata = load(joinpath(dirname(@__FILE__), "reference/test_dsgevar_lambda_irfs.jld2"))
+    DSGE.update!(dsgevar, shocks = collect(keys(m.exogenous_shocks)),
+                 observables = [:obs_hours, :obs_gdpdeflator, :laborshare_t, :NominalWageGrowth],
+                 lags = 4, λ = Inf)
+    data = jlddata["data"]
+    yyyydc1, xxyydc1, xxxxdc1 = compute_system(dsgevar; get_population_moments = true, use_intercept = true)
+    βc1, Σc1 = compute_system(dsgevar; use_intercept = true)
+
+    yyyyd2, xxyyd2, xxxxd2 = compute_system(dsgevar, data; get_population_moments = true)
+    β2, Σ2 = compute_system(dsgevar, data)
+
+    # Check when λ = Inf
+    @test @test_matrix_approx_eq yyyydc1 yyyyd2
+    @test @test_matrix_approx_eq xxyydc1 xxyyd2
+    @test @test_matrix_approx_eq xxxxdc1 xxxxd2
+    @test @test_matrix_approx_eq βc1 β2
+    @test @test_matrix_approx_eq Σc1 Σ2
+
+    # Check when λ is finite
+    DSGE.update!(dsgevar, λ = 1.)
+Random.seed!(1793) # need to seed for this
+    yyyyd, xxyyd, xxxxd = compute_system(dsgevar, data; get_population_moments = true)
+    β, Σ = compute_system(dsgevar, data)
+
+    @test @test_matrix_approx_eq jlddata["exp_data_beta"] β
+    @test @test_matrix_approx_eq jlddata["exp_data_sigma"] Σ
 end
 
 nothing

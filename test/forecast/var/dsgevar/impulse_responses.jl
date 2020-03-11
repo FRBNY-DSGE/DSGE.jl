@@ -84,31 +84,30 @@ end
     DSGE.update!(dsgevar, jlddata["modal_param"])
 
     Random.seed!(1793)
-    out = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1; use_intercept = true)
-    out_lr = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1; use_intercept = true)
-    out_maxbc = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1; use_intercept = true)
+    out = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1)
+    out_lr = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1)
+    out_maxbc = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1)
 
     Random.seed!(1793)
-    _ = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1; use_intercept = true)
-    out_lr2 = impulse_responses(dsgevar, jlddata["data"], :cholesky_long_run, 1;
-                                use_intercept = true)
+    _ = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1)
+    out_lr2 = impulse_responses(dsgevar, jlddata["data"], :cholesky_long_run, 1)
     out_maxbc2 = impulse_responses(dsgevar, jlddata["data"], :maximum_business_cycle_variance,
-                                   1; use_intercept = true)
+                                   1)
 
     Random.seed!(1793)
-    out_flip = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1; use_intercept = true,
+    out_flip = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1,
                                  flip_shocks = true,)
-    out_lr_flip = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1; use_intercept = true,
+    out_lr_flip = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1,
                                     flip_shocks = true)
-    out_maxbc_flip = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1; use_intercept = true,
+    out_maxbc_flip = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1,
                                        flip_shocks = true)
 
     Random.seed!(1793)
-    out_h = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1; use_intercept = true,
+    out_h = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1,
                               horizon = impulse_response_horizons(dsgevar))
-    out_lr_h = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1; use_intercept = true,
+    out_lr_h = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1,
                               horizon = impulse_response_horizons(dsgevar))
-    out_maxbc_h = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1; use_intercept = true,
+    out_maxbc_h = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1,
                               horizon = impulse_response_horizons(dsgevar))
 
     @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out
@@ -161,6 +160,62 @@ end
     @test !(out ≈ out_MM2)
     @test @test_matrix_approx_eq out out_X̂
     @test @test_matrix_approx_eq jlddata["rotation_irf_draw_shock"] out_draw
+end
+
+@testset "Impulse responses of a VAR approximation to a DSGE (or λ = ∞)" begin
+    m = AnSchorfheide()
+    m <= Setting(:impulse_response_horizons, 10)
+    Random.seed!(1793)
+    observables = [:obs_gdp, :obs_nominalrate, :z_t]
+
+    shocks = collect(keys(m.exogenous_shocks))
+    fp = dirname(@__FILE__)
+    jlddata = load(joinpath(fp, "../../../reference/var_approx_dsge_irfs.jld2"))
+    dsgevar = DSGEVAR(m, shocks, "ss0")
+    DSGE.update!(dsgevar, lags = 4, observables = observables, λ = 1.)
+
+
+    out1 = impulse_responses(dsgevar, :cholesky, 1)
+    out2 = impulse_responses(dsgevar, :choleskyLR, 1)
+    out3 = impulse_responses(dsgevar, :maximum_business_cycle_variance, 1)
+    out4 = impulse_responses(dsgevar, :cholesky_long_run, 1)
+    out5 = impulse_responses(dsgevar, :maxBC, 1)
+    out6 = impulse_responses(dsgevar, :cholesky, 1,
+                             flip_shocks = true)
+    out7 = impulse_responses(dsgevar, :choleskyLR, 1,
+                             flip_shocks = true)
+    out8 = impulse_responses(dsgevar, :maxBC, 1,
+                             flip_shocks = true)
+
+    out9 = impulse_responses(dsgevar, :cholesky, 1,
+                             use_intercept = true)
+    out10 = impulse_responses(dsgevar, :choleskyLR, 1,
+                              use_intercept = true)
+    out11 = impulse_responses(dsgevar, :maxBC, 1,
+                              use_intercept = true)
+    out12 = impulse_responses(dsgevar, :cholesky, 1,
+                              use_intercept = true, flip_shocks = true)
+    out13 = impulse_responses(dsgevar, :choleskyLR, 1,
+                              use_intercept = true, flip_shocks = true)
+    out14 = impulse_responses(dsgevar, :maxBC, 1,
+                              use_intercept = true, flip_shocks = true)
+
+
+    @test @test_matrix_approx_eq jlddata["exp_cholesky"][:, :, 1] out1
+    @test @test_matrix_approx_eq jlddata["exp_choleskyLR"][:, :, 1] out2
+    @test @test_matrix_approx_eq jlddata["exp_maxBC"][:, :, 1] out3
+    @test @test_matrix_approx_eq jlddata["exp_choleskyLR"][:, :, 1] out4
+    @test @test_matrix_approx_eq jlddata["exp_maxBC"][:, :, 1] out5
+    @test @test_matrix_approx_eq jlddata["exp_cholesky"][:, :, 1] -out6
+    @test @test_matrix_approx_eq jlddata["exp_choleskyLR"][:, :, 1] -out7
+    @test @test_matrix_approx_eq jlddata["exp_maxBC"][:, :, 1] -out8
+
+    @test @test_matrix_approx_eq jlddata["exp_cholesky_int"][:, :, 1] out9
+    @test @test_matrix_approx_eq jlddata["exp_choleskyLR_int"][:, :, 1] out10
+    @test @test_matrix_approx_eq jlddata["exp_maxBC_int"][:, :, 1] out11
+    @test @test_matrix_approx_eq jlddata["exp_cholesky_int"][:, :, 1] -out12
+    @test @test_matrix_approx_eq jlddata["exp_choleskyLR_int"][:, :, 1] -out13
+    @test @test_matrix_approx_eq jlddata["exp_maxBC_int"][:, :, 1] -out14
 end
 
 nothing
