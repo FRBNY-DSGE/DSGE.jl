@@ -490,7 +490,7 @@ module DSGE
     include("forecast/impulse_responses.jl")
     include("forecast/wrappers_impulse_responses/var_approx_dsge_impulse_responses.jl")
     include("forecast/wrappers_impulse_responses/dsgevar_lambda_impulse_responses.jl")
-    include("forecast/wrappers_impulse_responses/observable_identified_dsge_impulse_responses.jl")
+    include("forecast/wrappers_impulse_responses/observables_identified_dsge_impulse_responses.jl")
     include("forecast/var/impulse_responses.jl")
     include("forecast/var/dsgevar/impulse_responses.jl")
     include("forecast/drivers.jl")

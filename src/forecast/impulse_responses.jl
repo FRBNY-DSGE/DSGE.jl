@@ -395,20 +395,17 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Abstrac
     if isempty(shocks)
         shocks = vcat(1., zeros(nobs - 1)) # First orthogonal shock to observables
     end
-    if restriction == :short_run
-        obs_std = system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])
-        obs_cov = obs_std * obs_std'
-        cholmat = cholesky((obs_cov + obs_cov') ./ 2).L
 
-        structural_shock = obs_std \ (cholmat * shocks)
+    obs_std = if restriction == :short_run
+        system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])
     elseif restriction == :long_run
-        lr_obs_std = system[:ZZ] * inv(Matrix{S}(I, nstates, nstates) - system[:TTT]) *
+        system[:ZZ] * inv(Matrix{S}(I, nstates, nstates) - system[:TTT]) *
             system[:RRR] * sqrt.(system[:QQ])
-        lr_obs_cov = lr_obs_std * lr_obs_std'
-        cholmat    =  cholesky((lr_obs_cov + lr_obs_cov') ./ 2).L
-
-        structural_shock = lr_obs_std \ (cholmat * shocks)
     end
+
+    obs_cov = obs_std * obs_std'
+    cholmat = cholesky((obs_cov + obs_cov') ./ 2).L
+    structural_shock = obs_std \ (cholmat * shocks)
 
     # Run IRFs
     shocks_augmented = zeros(S, nshocks, horizon)
