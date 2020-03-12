@@ -22,24 +22,25 @@ end
 @testset "Ensure writing forecast centric packet runs without deprecation" begin
     write_forecast_centric_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf])
     write_standard_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf])
-    @test_broken plot_standard_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf])
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastobs)
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo)
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecaststates)
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs)
-    m <= Setting(:date_forecast_end, DSGE.quartertodate("2020-Q1"))
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastobs)
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo)
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecaststates)
-    @test_broken DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs)
-    @test_throws ErrorException DSGE.make_forecast_plots(m, :mode, :none, :y_t)
+    if haskey(ENV, "FRED_API_KEY")
+        @test_broken plot_standard_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf])
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastobs)
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo)
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecaststates)
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs)
+        m <= Setting(:date_forecast_end, DSGE.quartertodate("2020-Q1"))
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastobs)
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo)
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecaststates)
+        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs)
+        @test_throws ErrorException DSGE.make_forecast_plots(m, :mode, :none, :y_t)
+
+        DSGE.plot_irf_section(m, :mode, :none, [:hist_obs])
+    end
 
     @test DSGE.print_variable_means(m, :none, :histobs, :obs_gdp, ["a", "b"], [quartertodate("2007-Q1")], true) == "a                                 & 0.9 \\\\\nb                                 &     \\\\\n\\end{tabular}"
 
-    DSGE.plot_irf_section(m, :mode, :none, [:hist_obs])
-
     DSGE.packet_help()
-
 
     m <= Setting(:date_forecast_start, quartertodate("2019-Q1"))
     @test DSGE.month_label(m) == "Oct"
