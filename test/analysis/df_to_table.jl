@@ -116,7 +116,7 @@ end
     m <= Setting(:n_parts, 20)
     m <= Setting(:n_Φ, 10)
     m <= Setting(:adaptive_tempering_target_smc, false)
-    DSGE.estimate(m, verbose = :none)
+    DSGE.estimate(m, verbose = :none, run_csminwel = false)
     load_posterior_moments(m)
 
 end
