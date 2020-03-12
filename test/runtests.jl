@@ -125,8 +125,8 @@ my_tests = [
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
             "plot/plot",
-  	        "plot/util"
-            #"packet/packet"
+  	        "plot/util",
+            "packet/packet"
             ]
 
 for test in my_tests
