@@ -521,7 +521,8 @@ end
 
 """
 ```
-var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_population_moments = false) where {S<:Real}
+var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_population_moments = false,
+    use_intercept = false) where {S<:Real}
 ```
 computes the VAR(p) approximation of the linear state space system
 
@@ -559,6 +560,9 @@ Using these matrices, the VAR(p) representation is given by
 β = XXXXd \\ XXyyd
 Σ = yyyyd - XXyyd' * β
 ```
+
+The keyword `use_intercept` specifies whether or not to use an
+intercept term in the VAR approximation.
 """
 function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
                                 QQ::AbstractMatrix{S}, DD::AbstractVector{S},

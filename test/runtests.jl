@@ -1,5 +1,5 @@
 using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, SparseArrays
-using StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT
+using StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT, Plots
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
@@ -125,8 +125,8 @@ my_tests = [
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
             "plot/plot",
-  	        "plot/util",
-            "packet/packet"
+  	        "plot/util"
+            #"packet/packet"
             ]
 
 for test in my_tests

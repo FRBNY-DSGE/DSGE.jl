@@ -28,6 +28,22 @@ Estimate the DSGE parameter posterior distribution.
 - `mle`: Set to true if parameters should be estimated by maximum likelihood directly.
     If this is set to true, this function will return after estimating parameters.
 - `sampling`: Set to false to disable sampling from the posterior.
+- `filestring_addl::Vector{String}`: Additional strings to add to the file name
+    of estimation output as a way to distinguish output from each other.
+- `continue_intermediate::Bool`: set to true if the estimation is starting
+    from an intermediate stage that has been previously saved.
+- `intermediate_stage_start::Int`: number of the stage from which the user wants
+    to continue the estimation (see `continue_intermediate`)
+- `save_intermediate::Bool`: set to true to save intermediate stages when using SMC
+- `intermediate_stage_increment::Int`: number of stages that must pass before saving
+    another intermediate stage.
+- `tempered_update_prior_weight::Float64`: when using a tempered update, the user
+    can create a bridge distribution as a convex combination of the prior and a
+    previously ran estimation. This keyword is the relative weight on the prior
+    in the convex combination.
+-  `run_csminwel::Bool`: by default, csminwel is run after a SMC estimation finishes
+    to recover the true mode of the posterior. Set to false to avoid this step
+    (csminwel can take hours for medium-scale DSGE models).
 """
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   verbose::Symbol = :low,
@@ -39,12 +55,14 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
                   save_intermediate::Bool = false,
+                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              intermediate_stage_increment = intermediate_stage_increment,
              save_intermediate = save_intermediate,
+             tempered_update_prior_weight = tempered_update_prior_weight,
              run_csminwel = run_csminwel)
 end
 
@@ -58,6 +76,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
+                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true)
     # Load data
     df = load_data(m; verbose = verbose)
@@ -65,6 +84,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
              mle = mle, sampling = sampling,
              intermediate_stage_increment = intermediate_stage_increment,
 	         save_intermediate = save_intermediate,
+             tempered_update_prior_weight = tempered_update_prior_weight,
              run_csminwel = run_csminwel)
 end
 
@@ -78,6 +98,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
+                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true)
 
     if !(get_setting(m, :sampling_method) in [:SMC, :MH])
@@ -235,11 +256,12 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
         ### parallel.
         ########################################################################################
         smc2(m, data; verbose = verbose, filestring_addl = filestring_addl,
-            continue_intermediate = continue_intermediate,
-            intermediate_stage_start = intermediate_stage_start,
-            save_intermediate = save_intermediate,
-            intermediate_stage_increment = intermediate_stage_increment,
-             run_csminwel = run_csminwel)
+             continue_intermediate = continue_intermediate,
+             intermediate_stage_start = intermediate_stage_start,
+             save_intermediate = save_intermediate,
+             intermediate_stage_increment = intermediate_stage_increment,
+             run_csminwel = run_csminwel,
+             tempered_update_prior_weight = tempered_update_prior_weight)
     end
 
     ########################################################################################

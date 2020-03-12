@@ -56,7 +56,7 @@ Random.seed!(1793)
             @everywhere using DSGE, OrderedCollections
         end
 
-        smc2(dsgevar, data, run_csminwel = false, verbose = :none) # run `?smc2` for a description of `run_csminwel`
+        estimate(dsgevar, data; run_csminwel = false, verbose = :none)
 
         if do_parallel
             rmprocs(my_procs)

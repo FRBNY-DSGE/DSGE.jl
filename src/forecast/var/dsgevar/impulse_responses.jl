@@ -5,7 +5,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, m
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
 
 function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
-                           n_obs_shock::Int; horizon::Int = 0 ,use_intercept::Bool = false,
+                           n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
 
 ```
