@@ -1,3 +1,17 @@
+# DSGE.jl 1.1.3
+## New features and enhancements
++ Implement DSGE-VARs and provide functionality to estimate them and compute impulse responses.
++ Example for running a forecast decomposition.
++ Example for running a DSGE-VAR.
+
+## Bug fixes and cleanup
++ Allow user to avoid running csminwel when using SMC and calling estimate.
+
+# DSGE.jl 1.1.2
+## New features and enhancements
++ Support for bridging from another estimation (in SMC.jl)--this update ensures compatibility
++ Automatically run csminwel after an SMC estimation to ensure you've found the mode with kwarg run_csminwel in smc2
+
 # DSGE.jl 1.1.1
 ## New features and enhancements
 + Bug fixes and improvements
