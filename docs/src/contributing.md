@@ -8,6 +8,8 @@ As these steps are under development, we would welcome improvements to
 the existing code from the community. Some examples could be:
 - Performance improvements
 - Alternatives to algorithms used here (optimization, hessian, etc.)
+- Extension of the DSGE-VAR and VAR code
+- Extension of model averaging techniques beyond `PoolModel`
 - Other general improvements
   - Adding documentation/test coverage
   - Adding existing notable DSGE models into the models/ directory

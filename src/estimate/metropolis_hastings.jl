@@ -231,7 +231,7 @@ end
 
 """
 ```
-metropolis_hastings(propdist::Distribution, m::AbstractDSGEModel,
+metropolis_hastings(propdist::Distribution, m::Union{AbstractDSGEModel,AbstractVARModel},
     data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
 ```
 
@@ -258,7 +258,7 @@ sampling from the posterior distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-                             m::AbstractDSGEModel,
+                             m::Union{AbstractDSGEModel,AbstractVARModel},
                              data::Matrix{T},
                              cc0::T,
                              cc::T;
@@ -275,19 +275,27 @@ function metropolis_hastings(propdist::Distribution,
     c              = get_setting(m, :mh_c)
     α              = get_setting(m, :mh_α)
 
-    rng      = m.rng
+    rng      = get_rng(m)
     testing  = m.testing
     savepath = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
 
     # To check: Defaulting to using Chandrasekhar recursions if no missing data
     use_chand_recursion = !any(isnan.(data))
 
-    function loglikelihood(p::ParameterVector, data::Matrix{Float64})::Float64
-        update!(m, p)
-        likelihood(m, data; sampler = true, catch_errors = false,
-                   use_chand_recursion = use_chand_recursion)
+    loglikelihood = if isa(m, AbstractDSGEModel)
+        function _loglikelihood_dsge(p::ParameterVector, data::Matrix{Float64})::Float64
+            update!(m, p)
+            likelihood(m, data; sampler = true, catch_errors = false,
+                       use_chand_recursion = use_chand_recursion)
+        end
+    elseif isa(m, AbstractVARModel)
+        function _loglikelihood_var(p::ParameterVector, data::Matrix{Float64})::Float64
+            update!(m, p)
+            likelihood(m, data; sampler = true, catch_errors = false)
+        end
     end
-    return metropolis_hastings(propdist, loglikelihood, m.parameters, data, cc0, cc;
+
+    return metropolis_hastings(propdist, loglikelihood, get_parameters(m), data, cc0, cc;
                                n_blocks = n_blocks, n_param_blocks = n_param_blocks,
                                adaptive_accpt = adaptive_accpt, c = c, α = α, n_sim = n_sim,
                                n_burn = n_burn, mhthin = mhthin, verbose = verbose,

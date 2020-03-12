@@ -3,6 +3,7 @@ path = dirname(@__FILE__)
 
 # Initialize the plotting backend
 gr()
+GR.inline("pdf")
 
 # Initialize model object
 m = AnSchorfheide(testing = true)

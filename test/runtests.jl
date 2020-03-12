@@ -1,11 +1,45 @@
-using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2
+using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, SparseArrays
+using StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT, Plots
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
             "core",
+            "abstractdsgemodel",
+            "abstractvarmodel",
+            "defaults",
             "parameters",
+            "util",
+            "statespace",
+            "models/representative/an_schorfheide/an_schorfheide",
+            "models/representative/smets_wouters/smets_wouters",
+            "models/representative/smets_wouters_orig/smets_wouters_orig",
+            "models/representative/m990/m990",
+            "models/representative/m1002/m1002",
+            "models/representative/m1010/m1010",
+
+            "models/poolmodel/poolmodel",
+            "models/var/dsgevar/dsgevar",
+            "models/var/dsgevar/util",
+            "models/var/util",
+
+            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
+            #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
+            #"models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
+            # "models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
+            # "models/heterogeneous/het_dsge/het_dsge",
+            # "models/heterogeneous/het_dsge_lag/het_dsge_lag",
+            # "models/heterogeneous/het_dsge/het_dsge",
+
+            #"models/heterogeneous/krusell_smith/krusell_smith",
+            #"models/heterogeneous/bond_labor/bond_labor",
+            #"models/heterogeneous/real_bond/real_bond",
+            #"models/heterogeneous/real_bond_mkup/real_bond_mkup",
+            #"models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
+            #"models/heterogeneous/one_asset_hank/one_asset_hank",
+            #"models/heterogeneous/one_asset_hank/interns",
+
             "data/fred_data",
             "data/load_data",
             "data/load_data_poolmodel",
@@ -14,7 +48,9 @@ my_tests = [
             "data/simulate_data",
             "data/transformations",
             "data/transform_data",
-            #"data/util",
+            "data/util",
+
+            "statespace",
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",
@@ -28,8 +64,11 @@ my_tests = [
             "estimate/posterior_poolmodel",
             "estimate/estimate_bma",
             "estimate/hessian",
+            "estimate/util",
             "estimate/csminwel",
             "estimate/optimize",
+            "estimate/var/dsgevar_likelihood",
+
             "estimate/metropolis_hastings",
             #"estimate/smc/smc",
             #"estimate/smc/helpers",
@@ -45,6 +84,8 @@ my_tests = [
             "forecast/io",
             "forecast/forecast_one",
             "forecast/util",
+            "forecast/var/impulse_responses",
+            "forecast/var/dsgevar/impulse_responses",
             "analysis/compute_meansbands",
             "analysis/df_to_table",
             "analysis/io",
@@ -84,8 +125,8 @@ my_tests = [
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
             "plot/plot",
-  	        "plot/util"
-            #"packet/packet"
+  	        "plot/util",
+            "packet/packet"
             ]
 
 for test in my_tests

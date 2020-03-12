@@ -1,5 +1,5 @@
-using ClusterManagers, DSGE, ModelConstructors, FileIO
-
+using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots
+GR.inline("pdf")
 fn = dirname(@__FILE__)
 
 # This script auto-generates a packet of
@@ -44,8 +44,8 @@ if get_setting(m, :sampling_method) == :SMC
 end
 
 # Load data to create data set. There will be empty columns
-# since not all the data used is available. This requires
-# setting the check_empty_columns flag to false.
+# since not all the data used for Model1002 is available from FRED.
+# This requires setting the check_empty_columns keyword to false.
 df = load_data(m; check_empty_columns = false)
 
 # Use overrides to give the correct file path for saved estimation output
