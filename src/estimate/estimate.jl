@@ -85,6 +85,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
              intermediate_stage_increment = intermediate_stage_increment,
 	         save_intermediate = save_intermediate,
              tempered_update_prior_weight = tempered_update_prior_weight,
+
              run_csminwel = run_csminwel)
 end
 
@@ -262,6 +263,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
              intermediate_stage_increment = intermediate_stage_increment,
              run_csminwel = run_csminwel,
              tempered_update_prior_weight = tempered_update_prior_weight)
+ble test
     end
 
     ########################################################################################
