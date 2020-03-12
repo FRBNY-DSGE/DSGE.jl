@@ -404,7 +404,15 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Abstrac
     end
 
     obs_cov = obs_std * obs_std'
-    cholmat = cholesky((obs_cov + obs_cov') ./ 2).L
+    cholmat = try
+        cholesky(obs_cov).L
+    catch e
+        if isa(e, PosDefException)
+            cholesky((obs_cov + obs_cov') ./ 2).L
+        else
+            rethrow(e)
+        end
+    end
     structural_shock = obs_std \ (cholmat * shocks)
 
     # Run IRFs
