@@ -233,55 +233,65 @@ end
 
 # Test impulse response method for computing
 # a long-run Cholesky-identified shock
-obs_shock = zeros(n_observables(m))
-obs_shock[1] = 1.
-states_chol, obs_chol, pseudo_chol, struct_shock =
-    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
-                      obs_shock, flip_shocks = false, get_shocks = true,
-                      restriction = :long_run)
-states_chol1, obs_chol1, pseudo_chol1 =
-    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
-                      obs_shock, flip_shocks = false, get_shocks = false,
-                      restriction = :long_run)
-states_chol2, obs_chol2, pseudo_chol2 =
-    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
-                      flip_shocks = true, get_shocks = false, restriction = :long_run)
-states_chol3, obs_chol3, pseudo_chol3, struct_shock3 =
-    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
-                      obs_shock, flip_shocks = false, get_shocks = true,
-                      restriction = :cholesky_long_run)
-states_chol4, obs_chol4, pseudo_chol4, struct_shock4 =
-    impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
-                      obs_shock, flip_shocks = false, get_shocks = true,
-                      restriction = :choleskyLR)
+if VERSION >= v"1.1"
+    # A PosDefException is triggered in Julia 1.0
+    # but it is not triggered in Julia 1.1. The matrix
+    # that is problematic is constructed from the following code
+    # nstates = size(system[:TTT], 1)
+    # obs_std = system[:ZZ] * inv(Matrix{Float64}(I, nstates, nstates) - system[:TTT]) * system[:RRR] * sqrt.(system[:QQ])
+    # obs_cov = obs_std * obs_std'
+    # cholesky(obs_cov) # this triggers the exception in 1.0
+    # cholesky((obs_cov + obs_cov') ./ 2) # this also does too
+    obs_shock = zeros(n_observables(m))
+    obs_shock[1] = 1.
+    states_chol, obs_chol, pseudo_chol, struct_shock =
+        impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                          obs_shock, flip_shocks = false, get_shocks = true,
+                          restriction = :long_run)
+    states_chol1, obs_chol1, pseudo_chol1 =
+        impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                          obs_shock, flip_shocks = false, get_shocks = false,
+                          restriction = :long_run)
+    states_chol2, obs_chol2, pseudo_chol2 =
+        impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                          flip_shocks = true, get_shocks = false, restriction = :long_run)
+    states_chol3, obs_chol3, pseudo_chol3, struct_shock3 =
+        impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                          obs_shock, flip_shocks = false, get_shocks = true,
+                          restriction = :cholesky_long_run)
+    states_chol4, obs_chol4, pseudo_chol4, struct_shock4 =
+        impulse_responses(system, horizon, Matrix{Float64}(I, n_observables(m), n_observables(m)),
+                          obs_shock, flip_shocks = false, get_shocks = true,
+                          restriction = :choleskyLR)
 
-exp_states_chol, exp_obs_chol, exp_pseudo_chol, exp_struct_shock =
-    JLD2.jldopen("$path/../reference/impulse_responses_out.jld2", "r") do file
-        read(file, "exp_states_chollr"), read(file, "exp_obs_chollr"), read(file, "exp_pseudo_chollr"),
-        read(file, "exp_struct_shocklr")
+    exp_states_chol, exp_obs_chol, exp_pseudo_chol, exp_struct_shock =
+        JLD2.jldopen("$path/../reference/impulse_responses_out.jld2", "r") do file
+            read(file, "exp_states_chollr"), read(file, "exp_obs_chollr"), read(file, "exp_pseudo_chollr"),
+            read(file, "exp_struct_shocklr")
+        end
+
+    @testset "Compare irfs to expected output for a long-run Cholesky-identified shock" begin
+        @test @test_matrix_approx_eq states_chol1 states_chol
+        @test @test_matrix_approx_eq obs_chol1 obs_chol
+        @test @test_matrix_approx_eq pseudo_chol1  pseudo_chol
+        @test @test_matrix_approx_eq states_chol2 -states_chol
+        @test @test_matrix_approx_eq obs_chol2 -obs_chol
+        @test @test_matrix_approx_eq pseudo_chol2  -pseudo_chol
+        @test @test_matrix_approx_eq states_chol  exp_states_chol
+        @test @test_matrix_approx_eq obs_chol  exp_obs_chol
+        @test @test_matrix_approx_eq pseudo_chol  exp_pseudo_chol
+        @test @test_matrix_approx_eq struct_shock exp_struct_shock
+        @test @test_matrix_approx_eq states_chol3  exp_states_chol
+        @test @test_matrix_approx_eq obs_chol3  exp_obs_chol
+        @test @test_matrix_approx_eq pseudo_chol3  exp_pseudo_chol
+        @test @test_matrix_approx_eq struct_shock3 exp_struct_shock
+        @test @test_matrix_approx_eq states_chol4  exp_states_chol
+        @test @test_matrix_approx_eq obs_chol4  exp_obs_chol
+        @test @test_matrix_approx_eq pseudo_chol4  exp_pseudo_chol
+        @test @test_matrix_approx_eq struct_shock4 exp_struct_shock
+        @test @test_matrix_approx_eq -system[:RRR]*struct_shock states_chol[:, 1]
+        @test @test_matrix_approx_eq -system[:ZZ]*system[:RRR]*struct_shock obs_chol[:, 1]
     end
-
-@testset "Compare irfs to expected output for a long-run Cholesky-identified shock" begin
-    @test @test_matrix_approx_eq states_chol1 states_chol
-    @test @test_matrix_approx_eq obs_chol1 obs_chol
-    @test @test_matrix_approx_eq pseudo_chol1  pseudo_chol
-    @test @test_matrix_approx_eq states_chol2 -states_chol
-    @test @test_matrix_approx_eq obs_chol2 -obs_chol
-    @test @test_matrix_approx_eq pseudo_chol2  -pseudo_chol
-    @test @test_matrix_approx_eq states_chol  exp_states_chol
-    @test @test_matrix_approx_eq obs_chol  exp_obs_chol
-    @test @test_matrix_approx_eq pseudo_chol  exp_pseudo_chol
-    @test @test_matrix_approx_eq struct_shock exp_struct_shock
-    @test @test_matrix_approx_eq states_chol3  exp_states_chol
-    @test @test_matrix_approx_eq obs_chol3  exp_obs_chol
-    @test @test_matrix_approx_eq pseudo_chol3  exp_pseudo_chol
-    @test @test_matrix_approx_eq struct_shock3 exp_struct_shock
-    @test @test_matrix_approx_eq states_chol4  exp_states_chol
-    @test @test_matrix_approx_eq obs_chol4  exp_obs_chol
-    @test @test_matrix_approx_eq pseudo_chol4  exp_pseudo_chol
-    @test @test_matrix_approx_eq struct_shock4 exp_struct_shock
-    @test @test_matrix_approx_eq -system[:RRR]*struct_shock states_chol[:, 1]
-    @test @test_matrix_approx_eq -system[:ZZ]*system[:RRR]*struct_shock obs_chol[:, 1]
 end
 
 # Test impulse response method for computing
