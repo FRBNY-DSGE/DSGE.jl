@@ -38,12 +38,14 @@ function estimate(m::AbstractDSGEModel, df::DataFrame;
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
-                  save_intermediate::Bool = false)
+                  save_intermediate::Bool = false,
+                  run_csminwel::Bool = true)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              intermediate_stage_increment = intermediate_stage_increment,
-             save_intermediate = save_intermediate)
+             save_intermediate = save_intermediate,
+             run_csminwel = run_csminwel)
 end
 
 function estimate(m::AbstractDSGEModel;
@@ -55,13 +57,15 @@ function estimate(m::AbstractDSGEModel;
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
-		          save_intermediate::Bool = false)
+		          save_intermediate::Bool = false,
+                  run_csminwel::Bool = true)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              intermediate_stage_increment = intermediate_stage_increment,
-	         save_intermediate = save_intermediate)
+	         save_intermediate = save_intermediate,
+             run_csminwel = run_csminwel)
 end
 
 function estimate(m::AbstractDSGEModel, data::AbstractArray;
@@ -73,7 +77,8 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
-		          save_intermediate::Bool = false)
+		          save_intermediate::Bool = false,
+                  run_csminwel::Bool = true)
 
     if !(get_setting(m, :sampling_method) in [:SMC, :MH])
         error("method must be :SMC or :MH")
@@ -233,7 +238,8 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
             continue_intermediate = continue_intermediate,
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
-            intermediate_stage_increment = intermediate_stage_increment)
+            intermediate_stage_increment = intermediate_stage_increment,
+             run_csminwel = run_csminwel)
     end
 
     ########################################################################################
