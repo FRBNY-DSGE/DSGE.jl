@@ -112,15 +112,28 @@ end
 
     @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out
     @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr
-    @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc
+
     @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr2
-    @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc2
+
     @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] -out_flip
     @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] -out_lr_flip
-    @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] -out_maxbc_flip
+
     @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out_h
     @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr_h
-    @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc_h
+
+    # Test maxBC separately b/c these have a slightly different error bound that leads to errors on Julia 1.0 but not Julia 1.1
+
+    if VERSION >= v"1.1"
+        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc
+        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc2
+        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc_h
+        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] -out_maxbc_flip
+    else
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc)) < 5e-6
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc2)) < 5e-6
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc_h)) < 5e-6
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] + out_maxbc_flip)) < 5e-6
+    end
 end
 
 @testset "Impulse responses of VAR by using a DSGE as prior and to identify the rotation matrix" begin
