@@ -4,7 +4,7 @@
 CurrentModule = DSGE
 ```
 
-In addition to the `AbstractDSGEModel` type, *DSGE.jl* has several special types that implement
+In addition to the `AbstractDSGEModel` type, DSGE.jl* has several special types that implement
 models which are designed to interface with DSGEs.
 
 ## The `PoolModel` Type
@@ -15,7 +15,7 @@ For example, a user could average two different vector auto-regressions.
 Generally, a user only needs to provide the predictive density scores
 of the two models that the user wants to average. The reason is that we
 treat the predictive density scores as non-FRED observables. This approach
-makes interfacing with the rest of the machinery provided by *DSGE.jl* very simple.
+makes interfacing with the rest of the machinery provided by DSGE.jl* very simple.
 
 ```@docs
 PoolModel
@@ -59,7 +59,7 @@ DSGEVAR
 * When extensively using DSGE-VARs, we recommend defining your own subspecs in
   `subspecs.jl` because it simplifies the process of saving, reading, and analyzing
   output from estimating and calculating impulse responses for DSGE-VARs.
-  See [Advanced Usage](@id advanced-usage) for a more detailed explanation on changing subspecs.
+  See [Advanced Usage](@ref advanced-usage) for a more detailed explanation on changing subspecs.
 
 * The names of the observables must exist as either observables
   or pseudo-observables in the DSGE because for most

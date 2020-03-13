@@ -47,7 +47,7 @@ Benchmark times relative to MATLAB (smaller is better)
 We ultimately achieve an increase of speed that reduces running time to 1/10th
 to 3/4th that of the MATLAB code. The Metropolis-Hastings sampling step is the
 most time consuming, and hence the relevant one in terms of assessing speed
-improvement. On the basis of this step, we conclude that *DSGE.jl* is
+improvement. On the basis of this step, we conclude that DSGE.jl* is
 approximately ten times faster than the MATLAB code.
 
 How much of this increase is due to native performance adventures of Julia, and
@@ -71,7 +71,7 @@ Julia's advantage in this single arena of computation.
 Julia provides versatile language features that allow us to improve our code's
 performance and clarity in several fundamental ways. First and foremost of these
 is the highly integrated, robust, and flexible type system that lends itself
-naturally to our DSGE model. At the center of the *DSGE.jl* package is the
+naturally to our DSGE model. At the center of the DSGE.jl* package is the
 *model object*. Here, one can store all information associated with the model –
 including the numerous parameters, priors, states, equilibrium conditions,
 computational settings, and flags – in one place.  By simply passing the model
@@ -102,7 +102,7 @@ other data structure.  However, MATLAB classes are both relatively complicated
 and slower than non-object implementations. And using `struct`s in this way
 results in copies of all model variables made on every function call.
 
-Indeed, changes like this reduce the number of lines of code in *DSGE.jl*, a
+Indeed, changes like this reduce the number of lines of code in DSGE.jl*, a
 rough proxy for ease of maintenance. We find that the fixed cost of setting up
 the type system is offset by savings in core programs.
 
@@ -133,7 +133,7 @@ the hundreds of models we have worked with in a development capacity, this led
 to bloat in our model solution code. In Julia, we encapsulate this behavior
 within the model definition itself.
 
-It is easy to see that all model types constructed for use with *DSGE.jl* are
+It is easy to see that all model types constructed for use with DSGE.jl* are
 closely related: they will have the same fields, and are passed to the same
 methods.  If it sounds to you like we have an implicit interface here, you’re
 right. Rather than implementing each object as a standalone type, we define an
@@ -164,7 +164,7 @@ as of this writing, on an appropriate manner to explicitly introduce
 interfaces.)
 
 With a clear interface in place, running new model specifications
-using *DSGE.jl* is relatively straightforward. (See
+using DSGE.jl* is relatively straightforward. (See
 [here](@ref editing-extending-model)
 for detailed instructions).
 
@@ -193,7 +193,7 @@ Granted, there may be better solutions to our problem in both languages,
 but similar situations involving code generation are easily addressed in Julia.
 
 We have found that a number of Julia features make working with
-*DSGE.jl* simply more pleasant and user-friendly than working with our old
+DSGE.jl* simply more pleasant and user-friendly than working with our old
 codebase. Julia's clearly integrated testing infrastructure has made our
 development workflow significantly more robust. Unicode support means that code
 can correspond more closely to actual model equations, reducing the headache
@@ -221,7 +221,7 @@ functionality, increasing developer *and* code performance. (Or the need to
 fight for the toolbox licenses available to their department.)
 
 We acknowledge that our package is far from perfect. Possible improvements to
-*DSGE.jl* are many and varied. We may experiment with alternative, modern,
+DSGE.jl* are many and varied. We may experiment with alternative, modern,
 numerical routines to improve speed. Ultimately, powerful metaprogramming
 support would allow user to specify model equations more literally, in
 mathematical notation. We
@@ -232,14 +232,14 @@ mathematical notation. We
 Converting the FRBNY DSGE model from MATLAB, a mature and well-supported
 language, to an extremely young language like Julia involved no shortage of
 challenges. Significant changes to the Julia language itself are introduced in
-rapid succession, and using *DSGE.jl* with a new Julia version inevitably floods
+rapid succession, and using DSGE.jl* with a new Julia version inevitably floods
 the user’s screen with deprecation warnings. There is significant difficulty in
 finding written resources on the language beyond the Julia Manual itself.
 Google searches frequently return discussions in GitHub *Issues*, which are
 unhelpful to elementary users and can be actively misleading at times.
 
 Differences between the behavior of MATLAB and Julia’s core linear algebra
-libraries led to many roadblocks in the development of *DSGE.jl*. Julia uses
+libraries led to many roadblocks in the development of DSGE.jl*. Julia uses
 multithreaded BLAS functions for some linear algebra functions.  Using a
 different number of threads can change the results of matrix decomposition when
 the matrix is singular. This indeterminacy caused significant problems for our

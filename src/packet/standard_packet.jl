@@ -81,14 +81,14 @@ function plot_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, co
 end
 
 """
-```
-write_spec_section(fid, m; purpose = "")
+    ```
+    write_spec_section(fid, m; purpose = "")
 
-write_spec_section(fid, m1, m2; purpose = "")
-```
+    write_spec_section(fid, m1, m2; purpose = "")
+    ```
 
-Write user, model, and data specification section.
-"""
+    Write user, model, and data specification section.
+    """
 function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String = "")
     @printf fid "\n\n"
     @printf fid "\\section{Specification}\n"
@@ -159,13 +159,13 @@ function write_estimation_section(fid::IOStream, m::AbstractDSGEModel;
 end
 
 """
-    ```
-    write_estimation_plots(fid, m; plotroot = "")
-    ```
+```
+write_estimation_plots(fid, m; plotroot = "")
+```
 
-    Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
-    `plotroot` is not specified, plots from `figurespath(m, \"estimate\")` are used.
-    """
+ Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
+`plotroot` is not specified, plots from `figurespath(m, \"estimate\")` are used.
+"""
 function write_estimation_plots(fid::IOStream, m::AbstractDSGEModel;
                                 plotroot::String = "")
     if isempty(plotroot)

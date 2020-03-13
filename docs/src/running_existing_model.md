@@ -17,7 +17,7 @@ Please see
 [examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples) on the GitHub
 or the equivalent folder inside your Julia packages directory for example scripts we have created.
 
-- `run_default.jl`: a simple example of the standard workflow with *DSGE.jl*
+- `run_default.jl`: a simple example of the standard workflow with DSGE.jl*
 - `run_dsgevar.jl`: a example showing how to use a `DSGEVAR`.
 - `make_packet.jl`: basic auto-generation of a packet of plots and figures which
   help the user analyze estimation, forecast, and impulse response results. This script
@@ -58,7 +58,7 @@ rmprocs(my_procs)
 ```
 
 For more details on changing the model's default settings, parameters, equilibrium
-conditions, etc., see [Advanced Usage](@ref).
+conditions, etc., see [Advanced Usage](@ref advanced-usage).
 
 By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
 vector, computes the Hessian at the mode, and conducts full posterior parameter sampling
@@ -78,7 +78,7 @@ existing or user-defined model, see [Forecasting](@ref forecast-step).
 
 ## Input/Output Directory Structure
 
-The *DSGE.jl* estimation uses data files as input and produces large data files
+The DSGE.jl* estimation uses data files as input and produces large data files
 as outputs. One estimation saves several GB of parameter draws and
 related outputs. It is useful to understand how these files are loaded/saved
 and how to control this behavior.
@@ -97,13 +97,13 @@ Depth = 5
 
 ### Directory Paths
 
-By default, input/output directories are located in the *DSGE.jl* package, along
+By default, input/output directories are located in the DSGE.jl* package, along
 with the source code. Default values of the input/output directory roots:
 
 - `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`
 - `dataroot(m)`: `"$(Pkg.dir())/DSGE/save/input_data"`
 
-Note these locations can be overridden as desired. See [Model Settings](@ref) for more
+Note these locations can be overridden as desired. See [Advanced Usage](@ref advanced-usage) for more
 details.
 
 ```julia
