@@ -158,7 +158,7 @@ module DSGE
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, Model805, Model904, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
         PoolModel, eqcond, measurement, pseudo_measurement,
-        shock_groupings, transition,, DSGEVAR,
+        shock_groupings, transition, DSGEVAR,
 
         # models/heterogeneous/
         KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
