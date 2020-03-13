@@ -1,7 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Impulse Response Functions · DSGE.jl</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><a href="../index.html"><img class="logo" src="../assets/logo.png" alt="DSGE.jl logo"/></a><h1>DSGE.jl</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="../search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="../">Home</a></li><li><a class="toctext" href="../model_design/">Model Design</a></li><li><a class="toctext" href="../running_existing_model/">Running An Existing Model</a></li><li><a class="toctext" href="../advanced_usage/">Advanced Usage</a></li><li><a class="toctext" href="../input_data/">Input Data</a></li><li><a class="toctext" href="../frbny_data/">FRBNY Model Input Data</a></li><li><a class="toctext" href="../implementation_details/">Implementation Details</a></li><li><a class="toctext" href="../solving/">Solving the Model</a></li><li><a class="toctext" href="../estimation/">Estimation</a></li><li><a class="toctext" href="../forecast/">Forecasting</a></li><li class="current"><a class="toctext" href>Impulse Response Functions</a><ul class="internal"></ul></li><li><a class="toctext" href="../means_bands/">Computing Means and Bands</a></li><li><a class="toctext" href="../altpolicy/">Alternative Policies</a></li><li><a class="toctext" href="../scenarios/">Alternative Scenarios</a></li><li><a class="toctext" href="../plotting/">Plotting</a></li><li><a class="toctext" href="../algorithms/">Algorithms</a></li><li><a class="toctext" href="../contributing/">Contributing to DSGE.jl</a></li><li><a class="toctext" href="../MatlabToJuliaTransition/">MATLAB to Julia Transition: Estimation</a></li><li><a class="toctext" href="../julia_forecasting/">MATLAB to Julia Transition: Forecast</a></li><li><a class="toctext" href="../license/">License</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Impulse Response Functions</a></li></ul><a class="edit-page" href="https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/src/irf.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Impulse Response Functions</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Impulse-Responses-1" href="#Impulse-Responses-1">Impulse Responses</a></h1><p>The forecast step allows the user to automatically compute impulse responses, but for some purposes, a user may just want impulse responses without having to compute any other quantities. We provide this functionality with the <code>impulse_responses</code> function:</p><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="DSGE.impulse_responses" href="#DSGE.impulse_responses"><code>DSGE.impulse_responses</code></a> — <span class="docstring-category">Function</span>.</div><div><div><pre><code class="language-julia">impulse_responses(m, system)
-
-impulse_responses(system, horizon)</code></pre><p>Compute impulse responses for a single draw.</p><p><strong>Inputs</strong></p><ul><li><code>m::AbstractDSGEModel</code>: model object</li><li><code>system::System{S}</code>: state-space system matrices</li><li><code>horizon::Int</code>: number of periods ahead to forecast</li><li><code>flip_shocks::Bool</code>: Whether to compute IRFs in response to a positive shock (by default the shock magnitude is a negative 1 std. shock)</li></ul><p>where <code>S&lt;:AbstractFloat</code></p><p><strong>Outputs</strong></p><ul><li><code>states::Array{S, 3}</code>: matrix of size <code>nstates</code> x <code>horizon</code> x <code>nshocks</code> of state impulse response functions</li><li><code>obs::Array{S, 3}</code>: matrix of size <code>nobs</code> x <code>horizon</code> x <code>nshocks</code> of observable impulse response functions</li><li><code>pseudo::Array{S, 3}</code>: matrix of size <code>npseudo</code> x <code>horizon</code> x <code>nshocks</code> of pseudo-observable impulse response functions</li></ul></div></div><a class="source-link" target="_blank" href="https://github.com/FRBNY-DSGE/DSGE.jl/blob/f3ea7a41ec39d204b4e39b0f6291fb09cb365484/src/forecast/impulse_responses.jl#L1-L27">source</a></section><p>We overload impulse_responses to cover specific use cases. For any <code>AbstractDSGEModel</code>, we can compute the impulse responses over a specified horizon for all endogenous state variables, observables, and pseudo-observables by running</p><pre><code class="language-julia">m = AnSchorfheide()
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Impulse Response Functions · DSGE.jl</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><a href="../index.html"><img class="logo" src="../assets/logo.png" alt="DSGE.jl logo"/></a><h1>DSGE.jl</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="../search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="../">Home</a></li><li><a class="toctext" href="../model_design/">Model Design</a></li><li><a class="toctext" href="../running_existing_model/">Running An Existing Model</a></li><li><a class="toctext" href="../advanced_usage/">Advanced Usage</a></li><li><a class="toctext" href="../input_data/">Input Data</a></li><li><a class="toctext" href="../frbny_data/">FRBNY Model Input Data</a></li><li><a class="toctext" href="../implementation_details/">Implementation Details</a></li><li><a class="toctext" href="../solving/">Solving the Model</a></li><li><a class="toctext" href="../estimation/">Estimation</a></li><li><a class="toctext" href="../forecast/">Forecasting</a></li><li class="current"><a class="toctext" href>Impulse Response Functions</a><ul class="internal"></ul></li><li><a class="toctext" href="../means_bands/">Computing Means and Bands</a></li><li><a class="toctext" href="../altpolicy/">Alternative Policies</a></li><li><a class="toctext" href="../scenarios/">Alternative Scenarios</a></li><li><a class="toctext" href="../plotting/">Plotting</a></li><li><a class="toctext" href="../algorithms/">Algorithms</a></li><li><a class="toctext" href="../contributing/">Contributing to DSGE.jl</a></li><li><a class="toctext" href="../MatlabToJuliaTransition/">MATLAB to Julia Transition: Estimation</a></li><li><a class="toctext" href="../julia_forecasting/">MATLAB to Julia Transition: Forecast</a></li><li><a class="toctext" href="../license/">License</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Impulse Response Functions</a></li></ul><a class="edit-page" href="https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/src/irf.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Impulse Response Functions</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Impulse-Responses-1" href="#Impulse-Responses-1">Impulse Responses</a></h1><p>We provide many different types of impulse responses for DSGEs, VARs, and DSGE-VARs. The forecast step allows the user to automatically compute &quot;structural&quot; impulse responses specifically for DSGEs, but for some purposes, a user may just want impulse responses without having to compute any other quantities. We provide this functionality with the <code>impulse_responses</code> function. See the end of this page for the docstrings of all available impulse response functions.</p><p>We overload impulse_responses to cover specific use cases. For any <code>AbstractDSGEModel</code>, we can compute the impulse responses over a specified horizon for all endogenous state variables, observables, and pseudo-observables by running</p><pre><code class="language-julia">m = AnSchorfheide()
 system = compute_system(m)
 horizon = 40
 states_irf, obs_irf, pseudo_irf = impulse_response(system, horizon)
@@ -20,4 +18,119 @@ If a user wants to specify a subset of the exogenous shocks
 and the size of those shocks, the user can run
 </code></pre><p>julia shock<em>names = [:g</em>sh, :b<em>sh] shock</em>values = [1.0, 1.0] impulse<em>responses(m, system, horizon, shock</em>names, shock_values)</p><pre><code class="language-none">
 For the response of an endogenous state or observable to a specific shock,
-</code></pre><p>julia shock<em>name  =  :g</em>sh var<em>name = :obs</em>gdp var<em>value = 0. impulse</em>responses(m, system, horizon, shock<em>name , var</em>name, var_value) ```</p><footer><hr/><a class="previous" href="../forecast/"><span class="direction">Previous</span><span class="title">Forecasting</span></a><a class="next" href="../means_bands/"><span class="direction">Next</span><span class="title">Computing Means and Bands</span></a></footer></article></body></html>
+</code></pre><p>julia shock<em>name  =  :g</em>sh var<em>name = :obs</em>gdp var<em>value = 0. impulse</em>responses(m, system, horizon, shock<em>name , var</em>name, var_value)</p><pre><code class="language-none">
+## DSGE Impulse Responses
+There are two categories of impulse responses for DSGEs provided by *DSGE.jl*.
+It is easy to distinguish them by examining the state space form of a DSGE model (see [Solving](@ref solving-dsge-doc)):</code></pre><p>math \begin{align<em>} s<em>t &amp;= T s</em>{t-1} + R \epsilon<em>t + C &amp; \epsilon</em>t &amp;\sim N(0, Q) &amp; \mathrm{(transition)} \
+y<em>t &amp;= Z s</em>t + D + u<em>t &amp; u</em>t &amp;\sim N(0, E) &amp; \mathrm{(measurement)} \end{align</em>}</p><pre><code class="language-none">Impulse responses in the first category are &quot;structural&quot; impulse responses, which are
+the response of states and observables to the exogenous structural shocks ``\epsilon_t``.
+
+
+Impulse responses in the second category are &quot;observables-identified&quot; impulse responses.
+First, we may suppose that the measurement equation generically follows
+</code></pre><p>math \begin{align<em>} y<em>t &amp;= F(s</em>t) + \eta_t, \end{align</em>}</p><pre><code class="language-none">
+where ``F(\cdot)`` is some function of the unknown states ``s_t``,
+and ``\eta_t`` are random innovation to the observables ``y_t``.
+By innovations, we mean that these random variables are potentially
+endogenous shocks, i.e. shocks which do not have a causal interpretation.
+An &quot;observables-identified&quot; impulse response specifies
+a certain response of ``y_t`` to the innovations ``\eta_t``,
+and uses this response to identify the underlying structural shocks which are
+consistent with these innovations. A DSGE identifies these innovations
+using the state space form of a DSGE.
+
+We provide three types of &quot;observables-identified&quot; impulse responses for DSGEs.
+
+- Short-Run Cholesky
+- Long-Run Cholesky
+- Maximizing Explained Cyclical Variance
+
+We document the details of the identification in the docstrings of these impulse
+response functions. For the first two types of impulse responses,
+search the docstrings at the end of the page for
+</code></pre><p>function impulse<em>responses(system::System{S}, horizon::Int, permute</em>mat::AbstractMatrix{T},                            shocks::AbstractVector{S} = Vector{S}(undef, 0);                            restriction::Symbol = :short<em>run, flip</em>shocks::Bool = false,                            get_shocks::Bool = false) where {S &lt;: Real, T &lt;: Number}</p><pre><code class="language-none">
+For the third type of impulse response, search for
+</code></pre><p>function impulse<em>responses(system::System{S}, horizon::Int, frequency</em>band::Tuple{S,S},                            n<em>obs</em>shock::Int; flip<em>shocks::Bool = false,                            get</em>shocks::Bool = false) where {S &lt;: Real}</p><pre><code class="language-none">
+
+## VAR Impulse Responses
+While we have not yet implemented a VAR model, we do have impulse
+responses often used on VARs because of DSGE-VARs. Consider the VAR
+</code></pre><p>math y<em>t = X</em>t \beta + \eta_t,</p><pre><code class="language-none">
+where ``X_t`` is a matrix of the lags of ``y_t``, ``\beta`` are the
+VAR coefficients, and ``\eta_t \sim N(0, \Omega)`` are the innovations
+to observables.
+
+We provide three types of impulse responses, each of which
+provide a different way of identifying orthogonalized shocks
+from the innovations.
+
+- Short-Run Cholesky
+- Long-Run Cholesky
+- Maximizing Explained Cyclical Variance
+
+These impulse responses are named the same as the observables-identified
+impulse responses for DSGEs because they are considering the same
+response of observables to the innovations.
+However, the treatment of identification is different when using a VAR
+because the mathematical structure of a VAR is not the same as a DSGE&#39;s.
+As a result, there are slight differences between these impulse responses
+and the observables-identified DSGE impulse responses.
+
+</code></pre><p>impulse<em>responses(β, Σ, n</em>obs<em>shock, horizon, shock</em>size = 1;     method = :cholesky, flip<em>shocks = false, use</em>intercept = true,     frequency_band = (2π/32, 2π/6)) where {S&lt;:Real}</p><pre><code class="language-none">
+
+
+## DSGE-VAR Impulse Responses
+
+There are two types of impulse responses we can compute for a DSGE-VAR.
+For both types, we first draw from the posterior distributions of the ``VAR(p)`` coefficients
+and innovations variance-covariance matrix, where ``p`` is
+the number of lags. With these draws, we can do one of two things:
+
+1. Compute the VAR impulse response implied by the draws.
+2. Use the DSGE&#39;s structural impact response (i.e. the first period of an impulse response)
+   to identify a mapping from the (endogenous) innovations in the VAR
+   to the structural shocks of the DSGE.
+
+The first type of impulse response uses the same code as the VAR impulse responses
+once we compute the coefficients and innovations variance-covariance matrix.
+We call the second type of impulse responses
+&quot;DSGE-VAR rotation impulse responses&quot; because we effectively use the DSGE
+to identify a rotation matrix.
+
+For the first type of impulse response, see
+</code></pre><p>function impulse<em>responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,                            n</em>obs<em>shock::Int; horizon::Int = 0 ,use</em>intercept::Bool = false,                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S &lt;: Real}</p><p>function impulse<em>responses(m::AbstractDSGEVARModel{S}, method::Symbol,                            n</em>obs<em>shock::Int; horizon::Int = 0 ,use</em>intercept::Bool = false,                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S &lt;: Real}</p><pre><code class="language-none">
+The second function is for the specific case when ``\lambda = \infty``, where the data does not matter for the impulse response.
+
+For the second type of impulse responses, see
+</code></pre><p>function impulse<em>responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},     X̂::Matrix{S} = Matrix{S}(undef, 0, 0);     horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),     flip</em>shocks::Bool = false, draw_shocks::Bool = false,     verbose::Symbol = :none) where {S &lt;: Real}</p><pre><code class="language-none">
+## Wrappers for Impulse Response Functions
+
+The `forecast_one` function provides a wrapper for computing
+structural DSGE impulse responses when drawing from a distribution of parameters
+and for saving these impulse responses as `MeansBands` objects
+(see [Computing Means and Bands](@ref means-bands)).
+
+However, `forecast_one` currently cannot
+compute observables-identified DSGE impulse responses, VAR impulse responses,
+or DSGE-VAR impulse responses, and we do not plan on modifying `forecast_one`
+to make it possible to do so. Instead, we provide three wrapper functions
+specifically for computing means and bands for these impulse responses.
+Please see their docstrings for details. The first wrapper is for
+observables-identified DSGE impulse responses, and the second two
+are for DSGE-VAR impulse responses. The first one applies generically to
+a DSGE-VAR with any prior weight ``\lambda``, but the second one
+is a convenience wrapper for the case of ``\lambda = \infty``,
+which is equivalent to computing the impulse responses of the
+VAR approximation to a DSGE.
+
+For observables-identified DSGE impulse responses, find
+</code></pre><p>function impulse<em>responses(m::AbstractDSGEModel, paras::Matrix{S},                            input</em>type::Symbol, method::Symbol, n<em>obs</em>shock::Int,                            output<em>vars::Vector{Symbol} =                            [:irfstates, :irfobs, :irfpseudo]; parallel::Bool = false,                            permute</em>mat::Matrix{S} = Matrix{Float64}(undef,0,0),                            frequency<em>band::Tuple{S,S} = (2<em>π/32, 2</em>π/6),                            flip</em>shocks::Bool = false,                            density<em>bands::Vector{Float64} = [.5, .6, .7, .8, .9],                            create</em>meansbands::Bool = false, test<em>meansbands::Bool = false,                            minimize::Bool = true,                            forecast</em>string::String = &quot;&quot;,                            do<em>rev</em>transform::Bool = false,                            verbose::Symbol = :high) where {S&lt;:Real}</p><pre><code class="language-none">
+For DSGE-VAR impulse responses, find
+</code></pre><p>function impulse<em>responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},                            data::Matrix{S}, input</em>type::Symbol, method::Symbol;                            parallel::Bool = false,                            frequency<em>band::Tuple{S,S} = (2<em>π/32, 2</em>π/6),                            n</em>obs<em>shock::Int = 1, draw</em>shocks::Bool = false,                            flip<em>shocks::Bool = false,                            density</em>bands::Vector{Float64} = [.5, .6, .7, .8, .9],                            create<em>meansbands::Bool = false, test</em>meansbands::Bool = false,                            minimize::Bool = true,                            forecast_string::String = &quot;&quot;,                            verbose::Symbol = :high) where {S&lt;:Real}</p><pre><code class="language-none">
+
+For the impulse response of a VAR approximation to a DSGE, find
+</code></pre><p>function impulse<em>responses(m::AbstractDSGEModel, paras::Union{Vector{S}, Matrix{S}},                            input</em>type::Symbol, method::Symbol,                            lags::Int, observables::Vector{Symbol},                            shocks::Vector{Symbol},                            n<em>obs</em>shock::Int; parallel::Bool = false,                            frequency<em>band::Tuple{S,S} = (2<em>π/32, 2</em>π/6),                            flip</em>shocks::Bool = false,                            use<em>intercept::Bool = false,                            density</em>bands::Vector{Float64} = [.5, .6, .7, .8, .9],                            create<em>meansbands::Bool = false,                            minimize::Bool = true,                            forecast</em>string::String = &quot;&quot;,                            verbose::Symbol = :high) where {S&lt;:Real}</p><pre><code class="language-none">
+
+
+## Docstrings
+</code></pre><p>@docs DSGE.impulse_responses ```</p><footer><hr/><a class="previous" href="../forecast/"><span class="direction">Previous</span><span class="title">Forecasting</span></a><a class="next" href="../means_bands/"><span class="direction">Next</span><span class="title">Computing Means and Bands</span></a></footer></article></body></html>
