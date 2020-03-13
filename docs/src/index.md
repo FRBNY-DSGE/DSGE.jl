@@ -4,7 +4,7 @@
 CurrentModule = DSGE
 ```
 
-The *DSGE.jl* package implements the New York Fed DSGE model and provides
+The DSGE.jl* package implements the New York Fed DSGE model and provides
 general code to estimate many user-specified DSGE models. The package is
 introduced in the Liberty Street Economics blog post
 [The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).

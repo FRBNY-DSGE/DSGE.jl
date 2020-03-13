@@ -14,8 +14,8 @@ This section focuses on what the code does and why. Docstrings and the code itse
 procedures are implemented.
 
 As of DSGE.jl v0.7.3, many types housed in the DSGE.jl package have been moved to
-[*ModelConstructors.jl*](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
-The following types now belong in *ModelConstructors.jl*:
+[ModelConstructors.jl*](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
+The following types now belong in ModelConstructors.jl*:
 
 - `AbstractModel`
 - `AbstractParameter`
@@ -32,7 +32,7 @@ The following types now belong in *ModelConstructors.jl*:
 - `PseudoObservable`
 - Types and functions used to define and work with priors
 
-We refer users to the documentation provided for *ModelConstructors.jl*
+We refer users to the documentation provided for ModelConstructors.jl*
 for information about the implementation of these types. Below, we
 document the implementation of DSGE.jl specific types.
 
@@ -135,7 +135,7 @@ fields have been removed because they are not necessary for a `PoolModel`, such 
 We chose to define `PoolModel` as a concrete subtype of `AbstractDSGEModel` because, for the foreseeable
 future, we have no plans to implement a more complex type hierarchy for types that perform
 model averaging. By defining `PoolModel` as a subtype of a `AbstractDSGEModel` and taking advantage
-of multiple dispatch, less refactoring was required to make `PoolModel` compatible with *DSGE.jl*
+of multiple dispatch, less refactoring was required to make `PoolModel` compatible with DSGE.jl*
 functions like `estimate`.
 
 ## The `DSGEVAR` Type
@@ -152,8 +152,8 @@ enough specialized functions that simply using multiple dispatch did not seem an
 way to implement `DSGEVAR`. Moreover, several functions, like the `impulse_responses` code,
 apply to generic VARs. Restricting these functions to `DSGEVAR` did not seem like the best idea.
 
-In the near term, there are no plans to further flesh out the VAR capabilities of *DSGE.jl*, but
-in the longer term, we may add VAR routines to *DSGE.jl* or implement them in a separate package.
+In the near term, there are no plans to further flesh out the VAR capabilities of DSGE.jl*, but
+in the longer term, we may add VAR routines to DSGE.jl* or implement them in a separate package.
 If we do create a separate package, then `DSGEVAR` will be refactored to be compatible
 with this new package.
 

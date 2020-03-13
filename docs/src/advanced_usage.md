@@ -26,7 +26,7 @@ will generally want to check that these three settings are properly chosen:
   `data_vintage` is set to today's date. It is (currently) the only setting
   printed to output filenames by default.
 
-Many functions in *DSGE.jl* will either require input data or create output data,
+Many functions in DSGE.jl* will either require input data or create output data,
 so it is important to check that the saveroot and dataroot are set as the user intends.
 Setting the data vintage is also useful for reproducibility. Economic data like GDP
 are frequently revised, which can pose issues for reproducing results. Setting
@@ -36,7 +36,7 @@ so a user will need to manually set the data vintage to the desired date.
 
 Below, we describe several important settings for package usage.
 
-For more details on implementation and usage of settings, see [*ModelConstructors.jl*](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
+For more details on implementation and usage of settings, see [ModelConstructors.jl*](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
 See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults.jl) for the complete description of default settings.
 
