@@ -35,6 +35,7 @@ Pages = [
   "means_bands.md",
   "altpolicy.md",
   "scenarios.md",
+  "forecast_decomposition.md",
   "plotting.md",
   "algorithms.md",
   "contributing.md",

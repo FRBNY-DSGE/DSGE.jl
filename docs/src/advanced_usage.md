@@ -36,7 +36,7 @@ so a user will need to manually set the data vintage to the desired date.
 
 Below, we describe several important settings for package usage.
 
-For more details on implementation and usage of settings, see [Model Settings](@ref).
+For more details on implementation and usage of settings, see [*ModelConstructors.jl*](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
 See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults.jl) for the complete description of default settings.
 
@@ -211,8 +211,6 @@ model-level (as opposed to code-level) version control. Second, it avoids potent
 filename collisions, preventing the user from overwriting output from previous estimations
 with the original parameters. The protocol for defining new sub-specifications is described
 in [Model sub-specifications](@ref model-sub-specifications-msubspec).
-
-Overriding default settings is described in the [Model Settings](@ref) section.
 
 ### [Model specification (`m.spec`)](@id model-specification-mspec)
 

@@ -58,7 +58,7 @@ rmprocs(my_procs)
 ```
 
 For more details on changing the model's default settings, parameters, equilibrium
-conditions, etc., see [Advanced Usage](@ref).
+conditions, etc., see [Advanced Usage](@ref advanced-usage).
 
 By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
 vector, computes the Hessian at the mode, and conducts full posterior parameter sampling
@@ -103,7 +103,7 @@ with the source code. Default values of the input/output directory roots:
 - `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`
 - `dataroot(m)`: `"$(Pkg.dir())/DSGE/save/input_data"`
 
-Note these locations can be overridden as desired. See [Model Settings](@ref) for more
+Note these locations can be overridden as desired. See [Advanced Usage](@ref advanced-usage) for more
 details.
 
 ```julia

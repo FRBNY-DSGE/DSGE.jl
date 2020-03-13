@@ -59,7 +59,7 @@ DSGEVAR
 * When extensively using DSGE-VARs, we recommend defining your own subspecs in
   `subspecs.jl` because it simplifies the process of saving, reading, and analyzing
   output from estimating and calculating impulse responses for DSGE-VARs.
-  See [Advanced Usage](@id advanced-usage) for a more detailed explanation on changing subspecs.
+  See [Advanced Usage](@ref advanced-usage) for a more detailed explanation on changing subspecs.
 
 * The names of the observables must exist as either observables
   or pseudo-observables in the DSGE because for most
