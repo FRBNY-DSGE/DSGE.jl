@@ -63,23 +63,9 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
-        if :obs_nominalrate1 in cond_semi_names(m) || :obs_nominalrate1 in cond_full_names(m)
-            try
-                global q2 = "_"*get_setting(m, :ois_q2_only)
-            catch err
-                if isa(err, KeyError)
-                    global q2 = ""
-                else
-                    rethrow(err)
-                end
-            end
-
-            ois_data = CSV.read(inpath(m, "raw", "ois_$(data_vintage(m))$(q2).csv"), copycols = true)
-            dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
-            n_cond = length(dates)
-            # date_space = findall(x->x==true, df[!, :date] .> date_mainsample_end(m))
-            ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[:date] .<= date_conditional_end(m), [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]
-            df[date_mainsample_end(m) .< df[:date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Matrix{Float64}(ois_data_want)
+        if :obs_nominalrate1 in cond_semi_names(m)
+            ois_data = CSV.read(inpath(m, "raw", "ois_$(data_vintage(m)).csv"), copycols = true)
+            df[end, [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Vector{Float64}((ois_data[end, [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]))
         end
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
