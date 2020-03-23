@@ -742,6 +742,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     forecast(m, system, s_T;
                              cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
             end
+
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
                 forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
