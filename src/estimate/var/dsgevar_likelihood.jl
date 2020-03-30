@@ -25,17 +25,14 @@ function dsgevar_likelihood(m::AbstractDSGEVARModel{S}, data::Matrix{S};
 
     if regime_switching
         error("Regime switching has not been implemented yet.")
-        yyyyd = OrderedDict{Int, Matrix{S}}()
-        xxyyd = OrderedDict{Int, Matrix{S}}()
-        xxxxd = OrderedDict{Int, Matrix{S}}()
+        yyyyd = Vector{Matrix{S}}(undef, n_regimes)
+        xxyyd = Vector{Matrix{S}}(undef, n_regimes)
+        xxxxd = Vector{Matrix{S}}(undef, n_regimes)
 
+        out = compute_system(m; applya_altpolicy = apply_altpolicy,
+                             get_population_moments = true, use_intercept = use_intercept)
         for reg = 1:n_regimes
-            yyyyd[reg], xxyyd[reg], xxxxd[reg] =
-                compute_system(m; apply_altpolicy = apply_altpolicy,
-                               regime_switching = regime_switching,
-                               regime = reg, n_regimes = n_regimes,
-                               get_population_moments = true,
-                               use_intercept = use_intercept)
+            yyyyd[reg], xxyyd[reg], xxxxd[reg] = out[reg]
         end
     else
         yyyyd, xxyyd, xxxxd = compute_system(m; apply_altpolicy = apply_altpolicy,

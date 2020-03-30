@@ -71,12 +71,6 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     x_model        = transform_to_real_line(get_parameters(m))
     x_opt          = x_model[para_free_inds]
 
-    # For regime-switching cases
-    n_regimes        = haskey(get_settings(m), :n_regimes) ?
-        get_setting(m, :n_regimes) : 1
-    regime_switching = haskey(get_settings(m), :regime_switching) && n_regimes > 1 ?
-        get_setting(m, :regime_switching) : false
-
     ########################################################################################
     ### Step 2: Initialize f_opt
     ########################################################################################
@@ -138,11 +132,12 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
             while !success
                 # take a step in model space
                 for i in subset_inds
-                    prior_var = moments(get_parameters(m)[i])[2]#moments(get(get_parameters(m)[i].prior))[2]
+                    prior_var = moments(get_parameters(m)[i])[2] # moments(get(get_parameters(m)[i].prior))[2]
                     proposal_in_bounds = false
                     proposal = x_all_model[i]
                     lower = get_parameters(m)[i].valuebounds[1]
                     upper = get_parameters(m)[i].valuebounds[2]
+
                     # draw a new parameter value, and redraw if out of bounds
                     while !proposal_in_bounds
                         r = rand([-1 1]) * rand()
@@ -157,7 +152,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 # check that model can be solved
                 try
                     DSGE.update!(m, x_proposal_all)
-                    solve(m)
+                    compute_system(m)
                     x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
                     success = true
                 catch ex
@@ -210,10 +205,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 # check that model can be solved
                 try
                     DSGE.update!(m, x_proposal_all)
-                    for compute_system_i = 1:n_regimes
-                        compute_system(m; regime_switching = regime_switching,
-                                       n_regimes = n_regimes, regime = compute_system_i)
-                    end
+                    compute_system(m)
                     x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
                     success = true
                 catch ex

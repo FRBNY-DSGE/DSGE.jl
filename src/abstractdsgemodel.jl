@@ -15,6 +15,9 @@ function Base.show(io::IO, m::AbstractDSGEModel)
     @printf io "description:\n %s\n"          description(m)
 end
 
+# Retrieve model type
+model_type(m::AbstractDSGEModel{T}) where T = T
+
 # Number of anticipated policy shocks
 n_mon_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks)
 n_mon_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks_padding)
