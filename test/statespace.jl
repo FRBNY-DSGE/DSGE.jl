@@ -314,7 +314,92 @@ end
     @test @test_matrix_approx_eq sys_dsgevecm[:EE] zeros(size(sys_dsgevecm[:EE]))
 end
 
+@testset "RegimeSwitchingSystem" begin
+    transitions         = Vector{Transition{Float64}}(undef, 3)
+    measurements        = Vector{Measurement{Float64}}(undef, 3)
+    pseudo_measurements = Vector{PseudoMeasurement{Float64}}(undef, 3)
+    for i in 1:3
+        transitions[i]         = system.transition
+        measurements[i]        = system.measurement
+        pseudo_measurements[i] = system.pseudo_measurement
+    end
 
+    regswitch_sys1 = RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
+    regswitch_sys2 = RegimeSwitchingSystem(transitions, measurements)
+    regswitch_sys3 = RegimeSwitchingSystem([system, system, system])
+    regswitch_sys4 = copy(regswitch_sys1)
+    regswitch_sys5 = deepcopy(regswitch_sys1)
 
+    # Test access/utility functions first
+    @test regswitch_sys1[:regimes]             == 1:3
+    @test regswitch_sys1[:transitions]         == transitions
+    @test regswitch_sys1[:measurements]        == measurements
+    @test regswitch_sys1[:pseudo_measurements] == pseudo_measurements
+    @test n_regimes(regswitch_sys1)            == 3
+    for i in 1:3
+        # Creating a System for a specific regime
+        for tmpsys in [System(regswitch_sys1, i), System(regswitch_sys3, i),
+                       System(regswitch_sys4, i), System(regswitch_sys5, i)]
+            @test isa(tmpsys, System)
+            @test @test_matrix_approx_eq tmpsys[:TTT] system[:TTT]
+            @test @test_matrix_approx_eq tmpsys[:RRR] system[:RRR]
+            @test @test_matrix_approx_eq tmpsys[:CCC] system[:CCC]
+            @test @test_matrix_approx_eq tmpsys[:ZZ]  system[:ZZ]
+            @test @test_matrix_approx_eq tmpsys[:DD]  system[:DD]
+            @test @test_matrix_approx_eq tmpsys[:QQ]  system[:QQ]
+            @test @test_matrix_approx_eq tmpsys[:EE]  system[:EE]
+            @test @test_matrix_approx_eq tmpsys[:ZZ_pseudo]  system[:ZZ_pseudo]
+            @test @test_matrix_approx_eq tmpsys[:DD_pseudo]  system[:DD_pseudo]
+        end
+
+        tmpsys2 = regswitch_sys2[i] # this creates a System underneath the hood
+        @test isa(tmpsys2, System)
+        @test @test_matrix_approx_eq tmpsys2[:TTT] system[:TTT]
+        @test @test_matrix_approx_eq tmpsys2[:RRR] system[:RRR]
+        @test @test_matrix_approx_eq tmpsys2[:CCC] system[:CCC]
+        @test @test_matrix_approx_eq tmpsys2[:ZZ]  system[:ZZ]
+        @test @test_matrix_approx_eq tmpsys2[:DD]  system[:DD]
+        @test @test_matrix_approx_eq tmpsys2[:QQ]  system[:QQ]
+        @test @test_matrix_approx_eq tmpsys2[:EE]  system[:EE]
+        @test all(tmpsys2[:ZZ_pseudo] .== 0.)
+        @test all(tmpsys2[:DD_pseudo] .== 0.)
+
+        # Accessing specific data types or regime matrices
+        @test @test_matrix_approx_eq regswitch_sys1[i, :transition][:TTT] transitions[i][:TTT]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :transition][:RRR] transitions[i][:RRR]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :transition][:CCC] transitions[i][:CCC]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :TTT]              transitions[i][:TTT]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :RRR]              transitions[i][:RRR]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :CCC]              transitions[i][:CCC]
+
+        @test @test_matrix_approx_eq regswitch_sys1[i, :measurement][:ZZ] measurements[i][:ZZ]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :measurement][:DD] measurements[i][:DD]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :measurement][:QQ] measurements[i][:QQ]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :measurement][:EE] measurements[i][:EE]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :ZZ]               measurements[i][:ZZ]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :DD]               measurements[i][:DD]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :QQ]               measurements[i][:QQ]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :EE]               measurements[i][:EE]
+
+        @test @test_matrix_approx_eq regswitch_sys1[i, :pseudo_measurement][:ZZ_pseudo] pseudo_measurements[i][:ZZ_pseudo]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :pseudo_measurement][:DD_pseudo] pseudo_measurements[i][:DD_pseudo]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :ZZ_pseudo]                      pseudo_measurements[i][:ZZ_pseudo]
+        @test @test_matrix_approx_eq regswitch_sys1[i, :DD_pseudo]                      pseudo_measurements[i][:DD_pseudo]
+
+        # Check errors when trying to access values
+        @test_throws KeyError regswitch_sys1[1, :a]
+        @test_throws KeyError regswitch_sys1[:a]
+        @test_throws BoundsError regswitch_sys1[4, :transition]
+        @test_throws BoundsError regswitch_sys1[4]
+        @test_throws BoundsError System(regswitch_sys1, 4)
+
+        # Check copying and deepcopying
+        oldval = copy(regswitch_sys1[i, :TTT][1, 1])
+        regswitch_sys1[i, :TTT][1, 1] = oldval + 1.
+        @test @test_matrix_approx_eq regswitch_sys1[i, :TTT] regswitch_sys4[i, :TTT]
+        @test !(regswitch_sys1[i, :TTT] ≈ regswitch_sys5[i, :TTT])
+        regswitch_sys1[i, :TTT][1, 1] = oldval
+    end
+end
 
 nothing

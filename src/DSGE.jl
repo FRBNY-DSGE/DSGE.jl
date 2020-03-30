@@ -70,7 +70,8 @@ module DSGE
         AbstractVARModel, AbstractDSGEVARModel, AbstractDSGEVECMModel,
 
         # statespace.jl
-        Transition, Measurement, PseudoMeasurement, System, compute_system, var_approx_state_space,
+        Transition, Measurement, PseudoMeasurement, System, RegimeSwitchingSystem, compute_system, var_approx_state_space,
+        n_regimes,
 
         # benchmark/
         print_all_benchmarks, construct_trial_group, write_ref_trial, write_ref_trial_group,

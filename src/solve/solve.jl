@@ -16,7 +16,7 @@ Driver to compute the model solution and augment transition matrices.
   forecast, but `false` when computing smoothed historical states (since
   the past was estimated under the baseline rule).
 - `regime_switching::Bool`: true if the state space system features regime switching
-- `regime::Int`: specifies the specific regime to solve for.
+- `regimes::Union{Int, Vector{Int}, UnitRange{Int}}`: specifies the specific regime to solve for.
 
 ### Outputs
  - TTT, RRR, and CCC matrices of the state transition equation:
