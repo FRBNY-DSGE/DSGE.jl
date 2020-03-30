@@ -152,18 +152,23 @@ state-space model with regime-switching.
 The matrices may be directly indexed: `sys[1][:TTT]`
 returns `sys.regime[1].transition.TTT`, etc.
 """
-mutable struct RegimeSwitchingSystem{T<:AbstractFloat}
+mutable struct RegimeSwitchingSystem{T <: Real}
     transitions::Vector{Transition{T}}
     measurements::Vector{Measurement{T}}
     pseudo_measurements::Vector{PseudoMeasurement{T}}
+
+    RegimeSwitchingSystem{T}(transitions, measurements, pseudo_measurements) where {T <: Real} = length(transitions) == length(measurements) ?
+        new(transitions, measurements, pseudo_measurements) :
+        error("The number of Transition (n = $(length(transitions)))" *
+              " and Measurement (n = $(length(measurements))) objects must match.")
 end
+
+RegimeSwitchingSystem(transitions::Vector{Transition{T}}, measurements::Vector{Measurement{T}},
+                      pseudo_measurements::Vector{PseudoMeasurement{T}}) where {T <: Real} =
+                          RegimeSwitchingSystem{T}(transitions, measurements, pseudo_measurements)
 
 function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
                                measurements::Vector{Measurement{T}}) where {T<:AbstractFloat}
-    if length(transitions) != length(measurements)
-        error("The number of Transition (n = $(length(transitions)))" *
-              " and Measurement (n = $(length(measurements))) objects must match.")
-    end
 
     # Initialize empty pseudo-measurement equation
     _n_states = size(transitions[1].TTT, 1)
@@ -176,17 +181,6 @@ function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
     return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
 end
 
-function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
-                               measurement::Measurement{T},
-                               pseudo_measurements::Vector{PseudoMeasurement{T}}) where {T<:AbstractFloat}
-
-   if length(transitions) != length(measurements)
-        error("The number of Transition (n = $(length(transitions)))" *
-              " and Measurement (n = $(length(measurements))) objects must match.")
-    end
-    return RegimeSwitchingSystem(transitions, [measurement; measurement], pseudo_measurements)
-end
-
 function RegimeSwitchingSystem(systems::Vector{System{T}}) where {T <: Real}
     n_regimes           = length(systems)
     transitions         = Vector{Transition{T}}(undef, n_regimes)
@@ -197,7 +191,7 @@ function RegimeSwitchingSystem(systems::Vector{System{T}}) where {T <: Real}
         measurements[i]        = systems[i].measurement
         pseudo_measurements[i] = systems[i].pseudo_measurement
     end
-    return RegimeSwitchingSystem(transitions, measurement, pseudo_measurements)
+    return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
 end
 
 # Retrieve System correspond to a regime
@@ -207,7 +201,7 @@ function System(system::RegimeSwitchingSystem, regime::Int)
                   system.pseudo_measurements[regime])
 end
 
-# Get dictionary of different regime matrices
+# Get fields of the RegimeSwitchingSystem
 function Base.getindex(system::RegimeSwitchingSystem{T},
                        d::Symbol) where {T<:AbstractFloat}
     if d in (:transitions, :measurements, :pseudo_measurements)
@@ -231,19 +225,19 @@ end
 
 # Get specific matrix or type from specific regime
 function Base.getindex(system::RegimeSwitchingSystem{T},
-                       d::Tuple{N,Symbol}) where {N<:Int,T<:AbstractFloat}
-    if d[2] == :transition
-        system.transitions[d[1]]
-    elseif d[2] == :measurement
-        system.measurements[d[1]]
-    elseif d[2] == :pseudo_measurement
-        system.pseudo_measurements[d[1]]
+                       regime::Int, d::Symbol) where {T <: Real}
+    if d == :transition
+        system.transitions[regime]
+    elseif d == :measurement
+        system.measurements[regime]
+    elseif d == :pseudo_measurement
+        system.pseudo_measurements[regime]
     elseif d in (:TTT, :RRR, :CCC)
-        system.transitions[d[1]][d[2]]
+        system.transitions[regime][d]
     elseif d in (:ZZ, :DD, :QQ, :EE)
-        system.measurements[d[1]][d[2]]
+        system.measurements[regime][d]
     elseif d in (:ZZ_pseudo, :DD_pseudo)
-        system.pseudo_measurements[d[1]][d[2]]
+        system.pseudo_measurements[regime][d]
     else
         throw(KeyError(d))
     end
@@ -254,15 +248,35 @@ function n_regimes(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
 end
 
 function Base.copy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
-    transitions         = OrderedDict{N,T}()
-    measurements        = OrderedDict{N,T}()
-    pseudo_measurements = OrderedDict{N,T}()
+    n_reg = n_regimes(system)
+    transitions         = Vector{Transition{T}}(undef, n_reg)
+    measurements        = Vector{Measurement{T}}(undef, n_reg)
+    pseudo_measurements = Vector{PseudoMeasurement{T}}(undef, n_reg)
 
     for i in 1:length(system[:transitions])
-        trans = Transition(system[(i,:TTT)], system[(i,:RRR)], system[(i,:CCC)])
-        meas  = Measurement(system[(i,:ZZ)], system[(i,:DD)],
-                            system[(i,:QQ)], system[(i,:EE)])
-        pseudo_meas = PseudoMeasurement(system[(i,:ZZ_pseudo)], system[(i,:DD_pseudo)])
+        trans = Transition(system[i,:TTT], system[i,:RRR], system[i,:CCC])
+        meas  = Measurement(system[i,:ZZ], system[i,:DD],
+                            system[i,:QQ], system[i,:EE])
+        pseudo_meas = PseudoMeasurement(system[i,:ZZ_pseudo], system[i,:DD_pseudo])
+
+        transitions[i]         = trans
+        measurements[i]        = meas
+        pseudo_measurements[i] = pseudo_meas
+    end
+    return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
+end
+
+function Base.deepcopy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
+    n_reg = n_regimes(system)
+    transitions         = Vector{Transition{T}}(undef, n_reg)
+    measurements        = Vector{Measurement{T}}(undef, n_reg)
+    pseudo_measurements = Vector{PseudoMeasurement{T}}(undef, n_reg)
+
+    for i in 1:length(system[:transitions])
+        trans = Transition(deepcopy(system[i,:TTT]), deepcopy(system[i,:RRR]), deepcopy(system[i,:CCC]))
+        meas  = Measurement(deepcopy(system[i,:ZZ]), deepcopy(system[i,:DD]),
+                            deepcopy(system[i,:QQ]), deepcopy(system[i,:EE]))
+        pseudo_meas = PseudoMeasurement(deepcopy(system[i,:ZZ_pseudo]), deepcopy(system[i,:DD_pseudo]))
 
         transitions[i]         = trans
         measurements[i]        = meas
@@ -421,7 +435,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             if hasmethod(measurement, type_tuple)
                 measurement_equations = measurement(m, TTTs, RRRs, CCCs)
             else
-                measurement_equation = measurement(m, TTTs[1], RRRs[1], CCCs[1])
+                measurement_equation  = measurement(m, TTTs[1], RRRs[1], CCCs[1])
+                measurement_equations = [measurement_equation for i in 1:n_regimes]
             end
 
             if hasmethod(pseudo_measurement, type_tuple)
@@ -442,23 +457,41 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
         CCC = zeros(n_model_states(m))
 
-        if m.spec == "real_bond_mkup"
-            GDPeqn = construct_GDPeqn(m, TTT_jump)
-            TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-            # Measurement (needs the additional TTT_jump argument)
-            measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-        elseif m.spec == "het_dsge" || m.spec == "rep_dsge"
-            TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
+            # Solve measurement equation
             measurement_equation = measurement(m, TTT, RRR, CCC)
+
+        elseif solution_method == :klein
+            # Unpacking the method from solve to hang on to TTT_jump
+            if m.spec == "het_dsge"
+                TTT_jump, TTT_state, eu = klein(m)
+            else
+                TTT_jump, TTT_state, eu = klein(m)
+            end
+            if eu==-1
+                throw(KleinError())
+            end
+
+            TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+            CCC = zeros(n_model_states(m))
+
+            if m.spec == "real_bond_mkup"
+                GDPeqn = construct_GDPeqn(m, TTT_jump)
+                TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
+                # Measurement (needs the additional TTT_jump argument)
+                measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
+            elseif m.spec == "het_dsge"
+                TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC)
+                measurement_equation = measurement(m, TTT, RRR, CCC)
+            else
+                TTT, RRR, CCC        = augment_states(m, TTT, RRR, CCC)
+                measurement_equation = measurement(m, TTT, RRR, CCC)
+            end
+
+            transition_equation = Transition(TTT, RRR, CCC)
         else
             TTT, RRR, CCC        = augment_states(m, TTT, RRR, CCC)
             measurement_equation = measurement(m, TTT, RRR, CCC)
         end
-
-        transition_equation = Transition(TTT, RRR, CCC)
-
-    else
-        throw("solution_method provided does not exist.")
     end
 
     type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
@@ -524,7 +557,6 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
     if regime_switching
         error("Regime switching has not been implemented for a DSGEVAR yet.")
         system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
-                                regime_switching = regime_switching, n_regimes = n_regimes,
                                 verbose = verbose) # This `system` is really a RegimeSwitchingSystem
 
         systems = Vector{System{T}}(undef, n_regimes)
@@ -566,7 +598,6 @@ end
 
 function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                         apply_altpolicy::Bool = false,
-                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false,
                         verbose::Symbol = :high) where {T<:Real}
