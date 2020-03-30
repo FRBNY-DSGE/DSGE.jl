@@ -180,13 +180,25 @@ function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
                                measurement::Measurement{T},
                                pseudo_measurements::Vector{PseudoMeasurement{T}}) where {T<:AbstractFloat}
 
-   #= if length(transitions) != length(measurements)
+   if length(transitions) != length(measurements)
         error("The number of Transition (n = $(length(transitions)))" *
               " and Measurement (n = $(length(measurements))) objects must match.")
-    end=#
+    end
     return RegimeSwitchingSystem(transitions, [measurement; measurement], pseudo_measurements)
 end
 
+function RegimeSwitchingSystem(systems::Vector{System{T}}) where {T <: Real}
+    n_regimes           = length(systems)
+    transitions         = Vector{Transition{T}}(undef, n_regimes)
+    measurements        = Vector{Measurement{T}}(undef, n_regimes)
+    pseudo_measurements = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+    for i in 1:n_regimes
+        transitions[i]         = systems[i].transition
+        measurements[i]        = systems[i].measurement
+        pseudo_measurements[i] = systems[i].pseudo_measurement
+    end
+    return RegimeSwitchingSystem(transitions, measurement, pseudo_measurements)
+end
 
 # Retrieve System correspond to a regime
 function System(system::RegimeSwitchingSystem, regime::Int)
@@ -380,25 +392,27 @@ compute_system(m; apply_altpolicy = false)
 ```
 
 Given the current model parameters, compute the state-space system
-corresponding to model `m`. Returns a `System` object.
+corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                        regime_switching::Bool = false, n_regimes::Int = 1,
-                        verbose::Symbol = :high) where T<:AbstractFloat
+                        verbose::Symbol = :high) where {T <: Real}
 
     solution_method = get_setting(m, :solution_method)
+
+    regime_switching = haskey(get_settings(m), :regime_switching) ?
+        get_setting(m, :regime_switching) : false
+    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+        get_setting(m, :n_regimes) : 1
 
     # Solve model
     if regime_switching
         if solution_method == :gensys
-            TTTs = Vector{Matrix{T}}(undef, n_regimes)
-            RRRs = Vector{Matrix{T}}(undef, n_regimes)
-            CCCs = Vector{Vector{T}}(undef, n_regimes)
-            transition_equations = Vector{Transition{T}}(undef, n_regimes)
+            TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
+                                     regime_switching = regime_switching,
+                                     regimes = 1:n_regimes, verbose = verbose)
 
+            transition_equations = Vector{Transition{T}}(undef, n_regimes)
             for i = 1:n_regimes
-                TTTs[i], RRRs[i], CCCs[i] = solve(m; apply_altpolicy = apply_altpolicy,
-                                                  regime_switching = true, regime = i, verbose = verbose)
                 transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])
             end
 
@@ -460,12 +474,10 @@ end
 """
 ```
 compute_system(m; apply_altpolicy = false,
-               regime_switching = false, n_regimes = 2,
                check_system = false, get_system = false,
                get_population_moments = false, use_intercept = false,
                verbose = :high)
 compute_system(m, data; apply_altpolicy = false,
-               regime_switching = false, n_regimes = 2,
                check_system = false, get_system = false,
                get_population_moments = false,
                verbose = :high)
@@ -499,27 +511,49 @@ with weight λ.
     of the DSGE `m`.
 """
 function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
-                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false, use_intercept::Bool = false,
-                        verbose::Symbol = :high) where {T<:Real}
+                        verbose::Symbol = :high) where {T <: Real}
+
+    regime_switching = haskey(get_settings(m), :regime_switching) ?
+        get_setting(m, :regime_switching) : false
+    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+        get_setting(m, :n_regimes) : 1
+
     dsge = get_dsge(m)
     if regime_switching
-        regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
-                                       regime_switching = regime_switching, n_regimes = n_regimes,
-                                       verbose = verbose)
-        system = System(regime_system, regime)
+        error("Regime switching has not been implemented for a DSGEVAR yet.")
+        system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
+                                regime_switching = regime_switching, n_regimes = n_regimes,
+                                verbose = verbose) # This `system` is really a RegimeSwitchingSystem
+
+        systems = Vector{System{T}}(undef, n_regimes)
+        for i in 1:n_regimes
+            systems[i] = compute_system(dsge, System(system, i); observables = collect(keys(get_observables(m))),
+                                        shocks = collect(keys(get_shocks(m))), check_system = check_system)
+        end
+        system = RegimeSwitchingSystem(systems) # construct a RegimeSwitchingSystem from underlying systems
     else
         system = compute_system(dsge; verbose = verbose)
-
+        system = compute_system(dsge, system; observables = collect(keys(get_observables(m))),
+                                shocks = collect(keys(get_shocks(m))), check_system = check_system)
     end
-    # Update the system to reflect the desired observables using information
-    # from the underlying DSGE object
-    system = compute_system(dsge, system; observables = collect(keys(get_observables(m))),
-                            shocks = collect(keys(get_shocks(m))), check_system = check_system)
 
     if get_system
         return system
+    elseif regime_switching
+        EEs, MMs = measurement_error(m; regime_switching = regime_switching, n_regimes = n_regimes)
+        out = get_population_moments ? Vector{Tuple{3, Matrix{T}}}(undef, n_regimes) :
+            Vector{Tuple{2, Matrix{T}}}(undef, n_regimes)
+
+        for i in 1:n_regimes
+            out[i] = var_approx_state_space(system[i, :TTT], system[i, :RRR], system[i, :QQ],
+                                          system[i, :DD], system[i, :ZZ], EEs[i], MMs[i], n_lags(m);
+                                          get_population_moments = get_population_moments,
+                                          use_intercept = use_intercept)
+        end
+
+        return out
     else
         EE, MM = measurement_error(m)
 
@@ -700,9 +734,7 @@ F_ϵ: structural shock distribution
 F_u: likelihood function measurement error distribution
 F_λ: initial distribution of λ for state transition function
 """
-function compute_system(m::PoolModel{T}; verbose::Symbol = :high,
-                        regime_switching::Bool = false,
-                        n_regimes::Int = 1) where T<:AbstractFloat
+function compute_system(m::PoolModel{T}; verbose::Symbol = :high) where T<:AbstractFloat
     Φ, F_ϵ, F_λ = transition(m)
     Ψ, F_u = measurement(m)
     return Φ, Ψ, F_ϵ, F_u, F_λ
