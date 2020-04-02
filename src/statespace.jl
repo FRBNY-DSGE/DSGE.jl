@@ -599,8 +599,8 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
         yyXXd = zeros(S, nobs, 1 + p * nobs)
 
         XXXXd[1, 1] = 1.
-        XXXXd[1, 2:1 + p * nobs] = kron(ones(1, p), DD')
-        XXXXd[2:1 + p * nobs, 1] = kron(ones(p), DD)
+        XXXXd[1, 2:1 + p * nobs] = repeat(DD', 1, p) # same as kron(ones(1, p), DD')
+        XXXXd[2:1 + p * nobs, 1] = repeat(DD, p)     # same as kron(ones(p), DD)
         yyXXd[:, 1] = DD
     else
         XXXXd = zeros(S, p * nobs, p * nobs)
@@ -609,16 +609,16 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
     yyyyd = reshape(GAMM0[:, 1], nobs, nobs) + DD * DD'
 
-    ## cointadd are treated as the first set of variables in XX
-    ## coint    are treated as the second set of variables in XX
-    ## composition: cointadd - coint - constant - lags
+    # cointadd are treated as the first set of variables in XX
+    # coint    are treated as the second set of variables in XX
+    # composition: cointadd - coint - constant - lags
     shift = use_intercept ? 1 : 0 # for constructing XXXXd, to select the right indices
     for rr = 1:p
-        ## E[yy,x(lag rr)]
+        # 𝔼[yy,x(lag rr)]
         yyXXd[:, nobs * (rr - 1) + 1 + shift:nobs * rr + shift] =
             reshape(GAMM0[:, rr + 1], nobs, nobs) + DD * DD'
 
-        ## E[x(lag rr),x(lag ll)]
+        # 𝔼[x(lag rr),x(lag ll)]
         for ll = rr:p
             yyyydrrll = reshape(GAMM0[:, ll - rr + 1], nobs, nobs) + DD * DD';
             XXXXd[nobs * (rr - 1) + 1 + shift:nobs * rr + shift,
@@ -635,8 +635,203 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
     else
         β = \(XXXXd, XXyyd)
         Σ = yyyyd - XXyyd' * β
-        Σ += Σ'  # to correct for machine error
-        Σ ./= 2. # and guarantee Σ is symmetric
+        return β, Σ
+    end
+end
+
+"""
+```
+vecm_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_population_moments = false,
+    use_intercept = false) where {S<:Real}
+```
+computes the VECM(p) approximation of the linear state space system
+
+```
+sₜ = TTT * sₜ₋₁ + RRR * ϵₜ,
+yₜ = ZZ * sₜ + DD + uₜ,
+```
+where the disturbances are assumed to follow
+```
+ϵₜ ∼ 𝒩 (0, QQ),
+uₜ = ηₜ + MM * ϵₜ,
+ηₜ ∼ 𝒩 (0, EE).
+```
+The `MM` matrix implies
+```
+cov(ϵₜ, uₜ) = QQ * MM'.
+```
+
+### Outputs
+If `get_population_moments = false`:
+* `β`: VECM(p) coefficients
+* `Σ`: innovations covariance matrix for the VECM(p) representation
+```
+yₜ = Xₜβ + μₜ
+```
+where `Xₜ` appropriately stacks the `p` lags of `yₜ` and `μₜ ∼ 𝒩 (0, Σ)`.
+
+If `get_population_moments = true`: we return the limit cross product matrices.
+* `yyyyd`: 𝔼[y,y]
+* `XXXXd`: 𝔼[y,X(lag rr)]
+* `XXyyd`: 𝔼[X(lag rr),X(lag ll)]
+
+Using these matrices, the VAR(p) representation is given by
+```
+β = XXXXd \\ XXyyd
+Σ = yyyyd - XXyyd' * β
+```
+
+The keyword `use_intercept` specifies whether or not to use an
+intercept term in the VECM approximation.
+"""
+function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
+                                 QQ::AbstractMatrix{S}, DD::AbstractVector{S},
+                                 ZZ::AbstractMatrix{S}, EE::AbstractMatrix{S},
+                                 MM::AbstractMatrix{S}, nobs::Int, p::Int,
+                                 n_coint::Int, n_coint_add::Int = 0,
+                                 DD_coint_add::AbstractVector{S} = Vector{S}(undef, 0);
+                                 get_population_moments::Bool = false,
+                                 use_intercept::Bool = false,
+                                 test_GA0::AbstractMatrix{S} = Matrix{S}(undef, 0)) where {S <: Real}
+    # nobs is number of observables, n_coint is number of cointegrating relationships
+    n_coint_all = n_coint + n_coint_add
+
+    HH = EE + MM * QQ * MM'
+    VV = QQ * MM'
+
+    ## Compute p autocovariances
+
+    ## Initialize Autocovariances
+    GAMM0 = zeros(S, (nobs + n_coint) ^ 2, p + 1)
+    GA0 = isempty(test_GA0) : solve_discrete_lyapunov(TTT, RRR * QQ * RRR') ? test_GA0 # Matlab code uses a different numerical procedure -> some difference in this matrix
+    Gl   = ZZ * GA0 * ZZ' + ZZ * RRR * VV + (ZZ * RRR * VV)' + HH
+    GAMM0[:, 1] = vec(Gl)
+    TTl = copy(TTT)
+    GA0ZZ = GA0 * ZZ'
+    RRRVV = RRR * VV
+    for l = 1:p
+        Gl = ZZ * TTl * (GA0ZZ + RRRVV) # ZZ * (TTl * GA0) * ZZ' + ZZ * (TTl * RRR * VV)
+        GAMM0[:, l+1] = vec(Gl)
+        TTl = TTl * TTT
+    end
+
+    ## Create limit cross product matrices
+    DDDD = DD * DD'
+    yyyyd_coint0 = reshape(GAMM0[:, 1], nobs + n_coint, nobs + n_coint) + DDDD
+    yyyyd_coint1 = reshape(GAMM0[:, 2], nobs + n_coint, nobs + n_coint) + DDDD
+    yyyyd = yyyyd_coint0[1:nobs, 1:nobs]
+
+    # n_coint_add are treated as the first set of variables in XX
+    # n_coint    are treated as the second set of variables in XX
+    # composition: n_coint_add - n_coint - constant - lags
+    if use_intercept
+        XXXXd = zeros(S, 1 + p * nobs + n_coint_all, 1 + p * nobs + n_coint_all)
+        yyXXd = zeros(S, nobs, 1 + p * nobs + n_coint_all)
+
+        # 𝔼[x(n_coint), x(n_coint)]
+        XXXXd[n_coint_add + 1:n_coint_all, n_coint_add + 1:n_coint_all] = yyyyd_coint0[nobs + 1:nobs + n_coint, nobs + 1:nobs + n_coint]
+
+        # 𝔼[x(const), x(const)]
+        XXXXd[n_coint_all + 1, n_coint_all + 1] = 1.
+
+        # 𝔼[x(n_coint), x(const)]
+        XXXXd[n_coint_add + 1:n_coint_all, n_coint_all + 1] = DD[nobs + 1:nobs + n_coint]
+        XXXXd[n_coint_all + 1, n_coint_add + 1:n_coint_all] = DD[nobs + 1:nobs + n_coint]
+
+        # 𝔼[x(const), x(lags)]
+        XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * nobs] = repeat(DD[1:nobs]', 1, p)
+        XXXXd[n_coint_all + 2:n_coint_all + 1 + p * nobs, n_coint_all + 1] =
+            XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * nobs]' # same as kron(ones(p), DD[1:nobs]) but avoids calculation
+
+        # 𝔼[yy, x(n_coint)]
+        yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:nobs, nobs + 1:nobs + n_coint]
+
+        # 𝔼[yy, x(const)]
+        yyXXd[:, n_coint_all + 1] = DD[1:nobs]
+    else
+        XXXXd = zeros(S, p * nobs + n_coint_all, p * nobs + n_coint_all)
+        yyXXd = zeros(S, nobs, p * nobs + n_coint_all)
+
+        # 𝔼[x(n_coint), x(n_coint)]
+        XXXXd[n_coint_add + 1:n_coint_all, n_coint_add + 1:n_coint_all] =
+            yyyyd_coint0[nobs + 1:nobs + n_coint, nobs + 1:nobs + n_coint]
+
+        # 𝔼[yy, x(n_coint)]
+        yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:nobs, nobs + 1:nobs + n_coint]
+    end
+
+    if n_coint_add > 0
+        DD_coint_add_div2 = DD_coint_add ./ 2
+        if use_intercept
+            # 𝔼[yy, x(n_coint_add)]
+            yyXXd[:, 1:n_coint_add] = DD[1:nobs] * DD_coint_add_div2
+
+            # 𝔼[x(n_coint_add), x(n_coint_add)]
+            XXXXd[1:n_coint_add, 1:n_coint_add] = DD_coint_add * DD_coint_add' ./ 3
+
+            # 𝔼[x(n_coint_add), x(n_coint)]
+            XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all] =
+                DD_coint_add_div2 * DD[nobs + 1: nobs + n_coint]'
+            XXXXd[1 + n_coint_add:n_coint_all, 1:n_coint_add] =
+                XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
+
+            # 𝔼[x(n_coint_add), x(const)]
+            XXXXd[1:n_coint_add, n_coint_all + 1] = DD_coint_add_div2
+            XXXXd[n_coint_all + 1, 1:n_coint_add] = DD_coint_add_div2'
+        else
+            # 𝔼[yy, x(n_coint_add)]
+            yyXXd[:, 1:n_coint_add] = DD[1:nobs] * DD_coint_add_div2
+
+            # 𝔼[x(n_coint_add), x(n_coint_add)]
+            XXXXd[1:n_coint_add, 1:n_coint_add] = DD_coint_add * DD_coint_add' ./ 3
+
+            # 𝔼[x(n_coint_add), x(n_coint)]
+            XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all] =
+                DD_coint_add_div2 * DD[nobs + 1: nobs + n_coint]'
+            XXXXd[1 + n_coint_add:n_coint_all, 1:n_coint_add] =
+                XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
+        end
+    end
+
+    shift = use_intercept ? 1 : 0 # for constructing XXXXd, to select the right indices
+    for rr = 1:p
+        # 𝔼[yy, x(lag rr)]
+        yyyyd_cointrr = reshape(GAMM0[:, rr + 1], nobs + n_coint, nobs + n_coint) + DDDD
+        yyXXd[:, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] =
+            yyyyd_cointrr[1:nobs, 1:nobs]
+
+        if n_coint_add > 0
+            # 𝔼[x(n_coint_add), x(lag rr)]
+            XXXXd[1:n_coint_add, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] =
+                DD_coint_add_div2 * DD[1:nobs]'
+            XXXXd[n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift, 1:n_coint_add] =
+                XXXXd[1:n_coint_add, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift]'
+        end
+
+        # 𝔼[x(n_coint), x(lag rr)]
+        yyyyd_cointrr1 = reshape(GAMM0[:, rr], nobs + n_coint, nobs + n_coint) + DDDD
+        XXXXd[n_coint_add + 1:n_coint_all, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] =
+            yyyyd_cointrr1[nobs + 1:nobs + n_coint, 1:nobs]
+        XXXXd[n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift, n_coint_add + 1:n_coint_all] =
+            yyyyd_cointrr1[nobs + 1:nobs + n_coint, 1:nobs]'
+
+        # 𝔼[x(lag rr), x(lag ll)]
+        for ll = rr:p
+            yyyyd_cointrrll = reshape(GAMM0[:, ll - rr + 1], nobs + n_coint, nobs + n_coint) + DDDD
+            XXXXd[n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift,
+                  n_coint_all + 1 + nobs * (ll - 1) + shift:n_coint_all + nobs * ll + shift] = yyyyd_cointrrll[1:nobs, 1:nobs]
+            XXXXd[n_coint_all + 1 + nobs * (ll - 1) + shift:n_coint_all + nobs * ll + shift,
+                  n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] = yyyyd_cointrrll[1:nobs, 1:nobs]'
+        end
+    end
+
+    XXyyd = convert(Matrix{S}, yyXXd')
+
+    if get_population_moments
+        return yyyyd, XXyyd, XXXXd
+    else
+        β = XXXXd \ XXyyd
+        Σ = yyyyd - XXyyd' * β
         return β, Σ
     end
 end
