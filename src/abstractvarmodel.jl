@@ -34,6 +34,15 @@ function Base.show(io::IO, m::AbstractDSGEVARModel)
     @printf io "DSGE description: %s\n" description(get_dsge(m))
 end
 
+"""
+```
+AbstractDSGEVECMModel{T} <: AbstractDSGEVARModel{T}
+```
+The AbstractDSGEVECMModel is defined as a subtype of AbstractDSGEVARModel to implement
+DSGE-VECM methods.
+"""
+abstract type AbstractDSGEVECMModel{T} <: AbstractDSGEVARModel{T} end
+
 # Number of anticipated policy shocks
 n_anticipated_shocks(m::AbstractDSGEVARModel) = get_setting(m, :n_anticipated_shocks)
 n_anticipated_shocks_padding(m::AbstractDSGEVARModel) = get_setting(m, :n_anticipated_shocks_padding)
@@ -55,13 +64,14 @@ index_zlb_start(m::AbstractDSGEVARModel) = subtract_quarters(date_zlb_start(m), 
 index_forecast_start(m::AbstractDSGEVARModel) = subtract_quarters(date_forecast_start(m), date_presample_start(m)) + 1
 
 # Interface for fields and size
-n_lags(m::AbstractDSGEVARModel)        = m.lags
-get_lags(m::AbstractDSGEVARModel)      = m.lags
-get_shocks(m::AbstractDSGEVARModel)    = m.shocks
-get_λ(m::AbstractDSGEVARModel)         = m.λ
-get_dsge(m::AbstractDSGEVARModel)      = m.dsge
-n_observables(m::AbstractDSGEVARModel) = length(m.observables)
-n_shocks(m::AbstractDSGEVARModel)      = length(m.shocks)
+n_lags(m::AbstractDSGEVARModel)          = m.lags
+get_lags(m::AbstractDSGEVARModel)        = m.lags
+get_shocks(m::AbstractDSGEVARModel)      = m.shocks
+get_λ(m::AbstractDSGEVARModel)           = m.λ
+get_dsge(m::AbstractDSGEVARModel)        = m.dsge
+n_observables(m::AbstractDSGEVARModel)   = length(m.observables)
+n_cointegrated(m::AbstractDSGEVECMModel) = length(m.cointegrated)
+n_shocks(m::AbstractDSGEVARModel)        = length(m.shocks)
 
 # Interface for accessing parameters
 get_parameters(m::AbstractDSGEVARModel) = m.dsge.parameters
@@ -77,6 +87,9 @@ get_settings(m::AbstractDSGEVARModel) = m.dsge.settings
 
 # Interface for accessing observables dictionary
 get_observables(m::AbstractDSGEVARModel) = m.observables
+
+# Interface for accessing cointegrated dictionary
+get_cointegrated(m::AbstractDSGEVECMModel) = m.cointegrated
 
 # Interface for data
 cond_vintage(m::AbstractDSGEVARModel)    = get_setting(m, :cond_vintage)
@@ -304,13 +317,68 @@ function check_valid_dsgevar(m::AbstractDSGEVARModel;
     end
 end
 
+# Helper to check for valid VECM systems
+function check_valid_dsgevecm(m::AbstractDSGEVECMModel;
+                              observables::Vector{Symbol} = collect(keys(m.observables)),
+                              cointegrated::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                              shocks::Vector{Symbol} = collect(keys(m.shocks)),
+                              lags::Int = n_lags(m), λ::T = m.λ) where {T<:Real}
+    # Check lags
+    @assert lags >= 0 "Number of lags must be non-negative."
+
+    # Check λ is non-negative
+    @assert λ >= 0 "The weight on the DSGE prior λ must be non-negative."
+
+    # Check observables
+    missing_obs = Vector{Symbol}(undef, 0)
+    for k in observables
+        if !(k in keys(get_observables(get_dsge(m)))) &&
+            !(k in keys(get_pseudo_observables(get_dsge(m))))
+            push!(missing_obs, k)
+        end
+    end
+
+    if !isempty(missing_obs)
+        error("The following observables are not found in the underlying DSGE: \n" *
+              join(string.(missing_obs), ", "))
+    end
+
+    # Check cointegrated observables
+    missing_coint = Vector{Symbol}(undef, 0)
+    for k in cointegrated
+        if !(k in observables)
+            push!(missing_coint, k)
+        end
+    end
+
+    if !isempty(missing_coint)
+        error("The following cointegrated observables are not found in the DSGE-VECM's observables: \n" *
+              join(string.(missing_coint), ", "))
+    end
+
+    # Check shocks
+    missing_shocks = Vector{Symbol}(undef, 0)
+    for k in shocks
+        if !(k in keys(get_exogenous_shocks(get_dsge(m))))
+            push!(missing_shocks, k)
+        end
+    end
+
+    if !isempty(missing_shocks)
+        error("The following shocks are not found in the underlying DSGE: \n" *
+              join(string.(missing_shocks), ", "))
+    end
+end
+
 # Update VAR system, e.g. observables
 function update!(m::AbstractDSGEVARModel; observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  shocks::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  lags::Int = 0, λ::T = m.λ, check_valid::Bool = true) where {T<:Real}
 
     if check_valid
-        check_valid_dsgevar(m; observables = observables, shocks = shocks,
+        check_obs = isempty(observables) ? collect(keys(get_observables(m))) : observables
+        check_sh  = isempty(shocks) ? collect(keys(get_shocks(m))) : shocks
+        check_valid_dsgevar(m; observables = check_obs, shocks = check_sh,
                             lags = lags, λ = λ)
     end
 
@@ -347,6 +415,70 @@ function update!(m::AbstractDSGEVARModel, dsge::AbstractDSGEModel;
 
     m.dsge = dsge
     update!(m; observables = observables, shocks = shocks, lags = lags,
+            λ = λ, check_valid = check_valid)
+
+    return m
+end
+
+# Update VECM system, e.g. observables
+function update!(m::AbstractDSGEVECMModel; observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 cointegrated::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 shocks::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 lags::Int = 0, λ::T = m.λ, check_valid::Bool = true) where {T<:Real}
+
+    if check_valid
+        check_obs = isempty(observables) ? collect(keys(get_observables(m))) : observables
+        check_sh  = isempty(shocks) ? collect(keys(get_shocks(m))) : shocks
+        check_co  = isempty(cointegrated) ? collect(keys(get_cointegrated(m))) : cointegrated
+
+        check_valid_dsgevecm(m; observables = check_obs,
+                            cointegrated = check_co, shocks = check_sh,
+                            lags = lags, λ = λ)
+    end
+
+    if m.λ != λ
+        m.λ = λ
+    end
+    if !isempty(observables)
+        for k in keys(get_observables(m))
+            delete!(get_observables(m), k)
+        end
+        for (i,k) in enumerate(observables)
+            m.observables[k] = i
+        end
+    end
+    if !isempty(cointegrated)
+        for k in keys(get_cointegrated(m))
+            delete!(get_cointegrated(m), k)
+        end
+        for (i,k) in enumerate(cointegrated)
+            m.cointegrated[k] = i
+        end
+    end
+    if !isempty(shocks)
+        for k in keys(m.shocks)
+            delete!(m.shocks, k)
+        end
+        for (i,k) in enumerate(shocks)
+            m.shocks[k] = i
+        end
+    end
+    if lags > 0
+        m.lags = lags
+    end
+
+    return m
+end
+
+function update!(m::AbstractDSGEVECMModel, dsge::AbstractDSGEModel;
+                 observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 cointegrated::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 shocks::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 lags::Int = 0, λ::T = m.λ, check_valid::Bool = true) where {T<:Real}
+
+    m.dsge = dsge
+    update!(m; observables = observables, cointegrated = cointegrated,
+            shocks = shocks, lags = lags,
             λ = λ, check_valid = check_valid)
 
     return m

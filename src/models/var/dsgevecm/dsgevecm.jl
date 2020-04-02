@@ -1,42 +1,42 @@
 """
 ```
-DSGEVAR{T} <: AbstractDSGEVARModel{T}
+DSGEVECM{T} <: AbstractDSGEVECMModel{T}
 ```
 implements a simple interface for combining a given DSGE model
-with a VAR to create a DSGE-VAR. Confer with Del Negro and Schorfheide (2004),
-Del Negro and Schorfheide (2006), Del Negro, Schorfheide, Smets, and Wouters (2007),
-and/or Del Negro and Schorfheide (2009) for details about DSGE-VARs.
-We recommend the first two papers as initial introductions to DSGE-VARs.
+with a VECM (a VAR with cointegrated terms) to create a DSGE-VECM.
+Confer with Del Negro and Schorfheide (2006)
+and/or Del Negro, Schorfheide, Smets, and Wouters (2007) for details about DSGE-VECMs.
+We recommend the first paper as an initial introduction to DSGE-VECMs.
 
 The recommended constructor requires the user to provide
 (1) an `AbstractDSGEModel` object, (2) which structural shocks from
 the DSGE to use, and (3) the subspec (optional, defaults to "ss0").
-If the subspec "ss0" is used, then the result is a `DSGEVAR`
-whose VAR component is "empty" in that the
-observables, lags, and λ weight are not specified. The reason why
-this constructor requires the user to specify which
+If the subspec "ss0" is used, then the result is a `DSGEVECM`
+whose VECM component is "empty" in that the
+observables, cointegrated observables, lags, and λ weight are not specified.
+The reason why this constructor requires the user to specify which
 structural shocks of DSGE to use is that this information is
-DSGE-specific rather than information about the VAR.
+DSGE-specific rather than information about the VECM.
 
-However, we can also construct a `DSGEVAR` without having to
+However, we can also construct a `DSGEVECM` without having to
 specify the structural shocks when calling the constructor,
 although we still need to give an instance of an `AbstractDSGEModel`.
 
 ### Example
-The code below instantiates an empty `DSGEVAR`
+The code below instantiates an empty `DSGEVECM`
 with `AnSchorfheide` as the underlying DSGE and then
-calls `update!` on the empty DSGE-VAR
-to add information about the desired DSGE-VAR spec.
+calls `update!` on the empty DSGE-VECM
+to add information about the desired DSGE-VECM spec.
 
 ```jldoctest; output = false
-dsgevar = DSGEVAR(AnSchorfheide())
-DSGE.update!(dsgevar, shocks = [:rm_sh, :z_sh, :g_sh],
+dsgevecm = DSGEVECM(AnSchorfheide())
+DSGE.update!(dsgevecm, shocks = [:rm_sh, :z_sh, :g_sh],
     observables = [:obs_gdp, :obs_cpi, :obs_nominalrate],
     λ = 1., lags = 4)
 
 # output
 
-DSGE-VAR Model
+DSGE-VECM Model
 observables:      3
 data_vintage:     200310
 DSGE model:       an_schorfheide
@@ -48,12 +48,15 @@ DSGE description: Julia implementation of model defined in 'Bayesian Estimation 
 #### DSGE object
 * `dsge::AbstractDSGEModel{T}`: underlying DSGE model object
 
-#### DSGE-VAR Information
+#### DSGE-VECM Information
 * `observables::OrderedDict{Symbol,Int}`: dictionary mapping observables
-    of the VAR to their index in the matrices representing the DSGE-VAR
+    of the VECM to their index in the matrices representing the DSGE-VECM
+* `cointegrated::OrderedDict{Symbol,Int}`: dictionary mapping cointegrated observables
+    of the VECM to their index in the matrices representing the DSGE-VECM.
+    Any cointegrated variables must also belong to `observables`.
 * `shocks::OrderedDict{Symbol,Int}`: dictionary mapping structural
-    shocks in the DSGE to their index in the matrices representing the DSGE-VAR
-* `lags::Int`: number of lags in the VAR
+    shocks in the DSGE to their index in the matrices representing the DSGE-VECM
+* `lags::Int`: number of lags in the VECM
 * `λ::T`: weight on the DSGE prior
 
 #### Auxiliary Information
@@ -64,9 +67,10 @@ DSGE description: Julia implementation of model defined in 'Bayesian Estimation 
 * `testing::Bool`: indicates whether the model is in testing mode.
     Currently, this setting has no uses in practice
 """
-mutable struct DSGEVAR{T} <: AbstractDSGEVARModel{T}
+mutable struct DSGEVECM{T} <: AbstractDSGEVECMModel{T}
     dsge::AbstractDSGEModel{T}
     observables::OrderedDict{Symbol,Int}
+    cointegrated::OrderedDict{Symbol,Int}
     shocks::OrderedDict{Symbol,Int}
     lags::Int
     λ::T
@@ -75,28 +79,29 @@ mutable struct DSGEVAR{T} <: AbstractDSGEVARModel{T}
     testing::Bool
 end
 
-function Base.show(io::IO, m::DSGEVAR)
-    @printf io "DSGE-VAR Model\n"
+function Base.show(io::IO, m::DSGEVECM)
+    @printf io "DSGE-VECM Model\n"
     @printf io "observables:      %i\n" n_observables(m)
     @printf io "data_vintage:     %s\n" data_vintage(m.dsge)
     @printf io "DSGE model:       %s\n" spec(get_dsge(m))
     @printf io "DSGE description: %s\n" description(get_dsge(m))
 end
 
-function DSGEVAR(dsge::AbstractDSGEModel{T}, shocks::Vector{Symbol}, subspec::String = "ss0";
+function DSGEVECM(dsge::AbstractDSGEModel{T}, shocks::Vector{Symbol}, subspec::String = "ss0";
                  custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                  copy_dsge::Bool = false, testing = false) where {T<:Real}
 
     # Initialize specs
-    spec     = "dsgevar_" * ModelConstructors.spec(dsge)
+    spec     = "dsgevecm_" * ModelConstructors.spec(dsge)
     subspec  = subspec
 
-    # Initialize empty DSGEVAR
+    # Initialize empty DSGEVECM
     if copy_dsge
         dsge = deepcopy(dsge)
     end
-    m = DSGEVAR{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), 0,
-                   0., spec, subspec, testing)
+    m = DSGEVECM{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
+                    OrderedDict{Symbol,Int}(), 0,
+                    0., spec, subspec, testing)
 
     # Initialize shocks from DSGE
     update!(m; shocks = shocks, check_valid = false)
@@ -105,13 +110,13 @@ function DSGEVAR(dsge::AbstractDSGEModel{T}, shocks::Vector{Symbol}, subspec::St
     init_subspec!(m)
 
     # Do checks of observables, shocks, and lags
-    check_valid_dsgevar(m)
+    check_valid_dsgevecm(m)
 
     return m
 end
 
 # Empty constructor
-function DSGEVAR(dsge::AbstractDSGEModel{T}, subspec::String = "ss0";
+function DSGEVECM(dsge::AbstractDSGEModel{T}, subspec::String = "ss0";
                  custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                  copy_dsge::Bool = false, testing = false) where {T<:Real}
 
@@ -119,12 +124,13 @@ function DSGEVAR(dsge::AbstractDSGEModel{T}, subspec::String = "ss0";
     spec     = "dsgevar_" * ModelConstructors.spec(dsge)
     subspec  = subspec
 
-    # Initialize empty DSGEVAR
+    # Initialize empty DSGEVECM
     if copy_dsge
         dsge = deepcopy(dsge)
     end
-    m = DSGEVAR{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), 0,
-                   0., spec, subspec, testing)
+    m = DSGEVECM{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
+                    OrderedDict{Symbol,Int}(), 0,
+                    0., spec, subspec, testing)
 
     # Initialize shocks from DSGE
     update!(m; check_valid = false)
@@ -133,7 +139,7 @@ function DSGEVAR(dsge::AbstractDSGEModel{T}, subspec::String = "ss0";
     init_subspec!(m)
 
     # Do checks of observables, shocks, and lags
-    check_valid_dsgevar(m)
+    check_valid_dsgevecm(m)
 
     return m
 end

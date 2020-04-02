@@ -33,7 +33,7 @@ using one of the available identification methods for VARs
 If the second function is used (where `data` is not an input), then we assume
 the user wants to compute the VAR approximation of the DSGE,
 regardless of the `λ` value in `m`. Note that this function will not
-update the value of `λ` in `m`.
+update the value of `λ` in `m` (even though we are computing the DSGE-VAR(∞) approximation).
 
 ### Inputs
 * `method::Symbol`: The available methods are `:cholesky`, `:maxBC`, and `:choleskyLR`.

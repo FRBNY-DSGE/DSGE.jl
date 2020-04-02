@@ -35,7 +35,7 @@ module DSGE
         default_settings!, default_test_settings!,
 
         # abstractdsgemodel.jl
-        AbstractDSGEModel, AbstractRepModel, AbstractVARModel, description,
+        AbstractDSGEModel, AbstractRepModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
         date_presample_start, date_mainsample_start, date_zlb_start,
         date_presample_end, date_prezlb_end, date_mainsample_end, date_conditional_end,
@@ -67,7 +67,7 @@ module DSGE
         ShockGroup, alternative_policy,
 
         # abstractvarmodel.jl
-        AbstractVARModel,
+        AbstractVARModel, AbstractDSGEVARModel, AbstractDSGEVECMModel,
 
         # statespace.jl
         Transition, Measurement, PseudoMeasurement, System, compute_system, var_approx_state_space,
@@ -158,7 +158,7 @@ module DSGE
         init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, Model805, Model904, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
         PoolModel, eqcond, measurement, pseudo_measurement,
-        shock_groupings, transition, DSGEVAR,
+        shock_groupings, transition, DSGEVAR, DSGEVECM,
 
         # models/heterogeneous/
         KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
@@ -194,7 +194,6 @@ module DSGE
     include("abstractvarmodel.jl")
     include("defaults.jl")
     include("models/poolmodel/poolmodel.jl")
-    include("models/var/dsgevar/dsgevar.jl")
     include("statespace.jl")
     include("util.jl")
     include("grids.jl")
@@ -256,6 +255,7 @@ module DSGE
 
     # VAR code
     include("estimate/var/dsgevar_likelihood.jl")
+    include("estimate/var/dsgevecm_likelihood.jl")
 
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
@@ -475,12 +475,18 @@ module DSGE
     include("models/heterogeneous/two_asset_hank/helpers.jl")
     include("models/heterogeneous/two_asset_hank/interp.jl")
 
-    # DSGEVAR
+    # VAR models
     include("models/var/util.jl")
-    # include("models/var/dsgevar/dsgevar.jl") # defined aboved
+
+    # DSGEVAR
+    include("models/var/dsgevar/dsgevar.jl") # defined aboved
     include("models/var/dsgevar/measurement_error.jl")
     include("models/var/dsgevar/subspecs.jl")
-    include("models/var/dsgevar/util.jl")
+
+    # DSGEVECM
+    include("models/var/dsgevecm/dsgevecm.jl") # defined aboved
+    include("models/var/dsgevecm/measurement_error.jl")
+    include("models/var/dsgevecm/subspecs.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
