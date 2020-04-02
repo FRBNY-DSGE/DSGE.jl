@@ -609,7 +609,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
     run_smoother = !isempty(hists_to_compute) ||
         (cond_type in [:semi, :full] && !irfs_only)
-
     if run_smoother
         # Call smoother
         histstates, histshocks, histpseudo, initial_states =
@@ -685,8 +684,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         end
 
         # Re-solve model with alternative policy rule, if applicable
-        if alternative_policy(m).solve != identity
-            system = compute_system(m; apply_altpolicy = true)
+        if alternative_policy(m).solve != solve
+            system = compute_system(m; apply_altpolicy = true, regime_switching = regime_switching,
+                                    n_regimes = n_regimes)
         end
 
         # 2A. Unbounded forecasts

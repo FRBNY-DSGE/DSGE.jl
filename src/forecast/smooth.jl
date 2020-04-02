@@ -123,10 +123,9 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
     start_date = max(date_presample_start(m), df[1, :date])
     regime_inds = regime_indices(m, data, start_date)
-    @show regime_inds
+
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date)
-    @show length(TTTs)
 
     # Select how many regimes needed from the matrices. Note this should be added
     # to zlb_plus_regime_matrices as an argument, e.g. add regime_inds as an argument there explicitly.
@@ -138,7 +137,6 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     DDs  = DDs[1:length(regime_inds)]
     QQs  = QQs[1:length(regime_inds)]
     EEs  = EEs[1:length(regime_inds)]
-    @show length(TTTs)
 
     # Initialize s_0 and P_0
     if isempty(s_0) || isempty(P_0)
@@ -178,13 +176,17 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     end
 
     # Map smoothed states to pseudo-observables
-    pseudo = similar(states)
-    for reg in 1:length(regime_inds)
-        for t in 1:size(states, 2)
-            ZZ_pseudo_reg = system[reg][:ZZ_pseudo]
-            DD_pseudo_reg = system[reg][:DD_pseudo]
-            pseudo[:, t] = ZZ_pseudo_reg * states .+ DD_pseudo_reg
+    # DOES NOT COVER THE CASE WHERE ZZ_PSEUDO VARIES BETWEEN REGIMES, can require users to use the same matrices
+    pseudo = Matrix{eltype(states)}(undef, length(system[1][:DD_pseudo]), size(states, 2))
+    ZP = system[1][:ZZ_pseudo]
+    DP = system[1][:DD_pseudo]
+    for inds in regime_inds
+        if inds[end] > size(states, 2) && inds[1] < size(states, 2)
+            inds = inds[1]:size(states, 2)
+        else
+            break
         end
+        pseudo[:, inds] = ZP * states[:, inds] .+ DP
     end
     return states, shocks, pseudo, initial_states
 end
