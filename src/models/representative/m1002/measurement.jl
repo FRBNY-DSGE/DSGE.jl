@@ -125,24 +125,45 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end
 
-    QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
-    QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
-    QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
-    QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil]^2
-    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
-    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
-    QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2
-    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω]^2
-    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e]^2
-    QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ]^2
-    QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star]^2
-    QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr]^2
-    QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p]^2
-    QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp]^2
-    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef]^2
-    QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce]^2
-    QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
-    QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
+    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52"] && regime == 2
+        QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g_r2]^2
+        QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b_r2]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ_r2]^2
+        QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil_r2]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f_r2]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w_r2]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m_r2]^2
+        QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω_r2]^2
+        QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e_r2]^2
+        QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ_r2]^2
+        QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star_r2]^2
+        QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr_r2]^2
+        QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p_r2]^2
+        QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp_r2]^2
+        QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef_r2]^2
+        QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce_r2]^2
+        QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp_r2]^2
+        QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi_r2]^2
+    else
+        QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
+        QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
+        QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2
+        QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω]^2
+        QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e]^2
+        QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ]^2
+        QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star]^2
+        QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr]^2
+        QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p]^2
+        QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp]^2
+        QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef]^2
+        QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce]^2
+        QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
+        QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
+    end
 
     # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_anticipated_shocks(m)
@@ -158,6 +179,11 @@ function measurement(m::Model1002{T},
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0)
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+    end
+
+    if subspec(m) == "ss52"
+        # Add in wage markup shocks as an additional observable
+        ZZ[obs[:obs_wagemarkupshock], endo[:ϵ_λ_w_t]] = 1.
     end
 
     return Measurement(ZZ, DD, QQ, EE)

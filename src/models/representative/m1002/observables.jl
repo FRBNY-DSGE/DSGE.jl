@@ -392,5 +392,35 @@ function init_observable_mappings!(m::Model1002)
                                                       "$i-period ahead anticipated monetary policy shock")
     end
 
+    # Create a fake observable if observing wage markup shock
+    wagemarkupshock_fwd_transform = identity
+    wagemarkupshock_rev_transform = identity
+    observables[:obs_wagemarkupshock] = Observable(:obs_wagemarkupshock, [:WAGEMKUP__DLX],
+                                                   wagemarkupshock_fwd_transform, wagemarkupshock_rev_transform,
+                                                   "Wage mark up shock", "Wage mark up shock")
+
+    if haskey(m.settings, :first_observable)
+        new_observables = OrderedDict{Symbol,Observable}()
+        first_obs = get_setting(m, :first_observable)
+        new_observables[first_obs] = observables[first_obs]
+        for (k,v) in observables
+            if k != first_obs
+                new_observables[k] = v
+            end
+        end
+        observables = new_observables
+    end
+    if haskey(m.settings, :last_observable)
+        new_observables = OrderedDict{Symbol,Observable}()
+        last_obs = get_setting(m, :last_observable)
+        for (k,v) in observables
+            if k != last_obs
+                new_observables[k] = v
+            end
+        end
+        new_observables[last_obs] = observables[last_obs]
+        observables = new_observables
+    end
+
     m.observable_mappings = observables
 end

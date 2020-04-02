@@ -161,6 +161,15 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states_augmented, :e_tfp_t1)
     end
 
+    if get_setting(m, :add_laborproductivity_measurement)
+        push!(endogenous_states_augmented, :cum_z_t)
+        m <= Setting(:integrated_series, [:cum_z_t])
+    end
+    if subspec(m) == "ss52"
+        push!(endogenous_states, :ϵ_λ_w_t)
+        push!(equilibrium_conditions, :eq_ϵ_λ_w)
+    end
+
     # Observables
     observables = keys(m.observable_mappings)
 
@@ -500,6 +509,73 @@ function init_parameters!(m::Model1002)
 
     m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
+
+    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52"]
+        m <= parameter(:σ_g_r2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_g: The standard deviation of the government spending process.",
+                       tex_label="\\sigma_{g}")
+
+        m <= parameter(:σ_b_r2, 0.0292, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                       tex_label="\\sigma_{b}")
+
+        m <= parameter(:σ_μ_r2, 0.4559, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                       tex_label="\\sigma_{\\mu}")
+
+        m <= parameter(:σ_ztil_r2, 0.6742, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_ztil: The standard deviation of the process describing the stationary component of productivity.",
+                       tex_label="\\sigma_{\\tilde{z}}")
+
+        m <= parameter(:σ_λ_f_r2, 0.1314, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                       tex_label="\\sigma_{\\lambda_f}")
+
+        m <= parameter(:σ_λ_w_r2, 0.3864, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{\\lambda_w}")
+
+        m <= parameter(:σ_r_m_r2, 0.2380, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_r_m: The standard deviation of the monetary policy shock.",
+                       tex_label="\\sigma_{r^m}")
+
+        m <= parameter(:σ_σ_ω_r2, 0.0428, (1e-7,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+                       description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
+                       tex_label="\\sigma_{\\sigma_\\omega}")
+
+        m <= parameter(:σ_μ_e_r2, 0.0000, (1e-7,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=true,
+                       description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",
+                       tex_label="\\sigma_{\\mu_e}")
+
+        m <= parameter(:σ_γ_r2, 0.0000, (1e-7,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.01), fixed=true,
+                       description="σ_γ: The fraction of entrepreneurs surviving period t follows an exogenous process with standard deviation σ_γ.",
+                       tex_label="\\sigma_{\\gamma}")
+
+        m <= parameter(:σ_π_star_r2, 0.0269, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(6, 0.03), fixed=false,
+                       description="σ_π_star: The standard deviation of the inflation target.",
+                       tex_label="\\sigma_{\\pi_*}")
+
+        m <= parameter(:σ_lr_r2, 0.1766, (1e-8,10.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.75), fixed=false,
+                       tex_label="\\sigma_{10y}")
+
+        m <= parameter(:σ_z_p_r2, 0.1662, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                       tex_label="\\sigma_{z^p}")
+
+        m <= parameter(:σ_tfp_r2, 0.9391, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{tfp}")
+
+        m <= parameter(:σ_gdpdef_r2, 0.1575, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{gdpdef}")
+
+        m <= parameter(:σ_corepce_r2, 0.0999, (1e-8, 5.),(1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{pce}")
+
+        m <= parameter(:σ_gdp_r2, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{gdp}")
+
+        m <= parameter(:σ_gdi_r2, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{gdi}")
+    end
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_anticipated_shocks_padding(m)
