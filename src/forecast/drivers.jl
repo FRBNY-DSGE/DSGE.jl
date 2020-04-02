@@ -822,8 +822,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     forecast(system, s_T, etpeg; cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
                 println("The forecasted interest rate path is $(forecastobs[m.observables[:obs_nominalrate], :])")
             else
+                fcast_sys = regime_switching ? system[n_regimes] : system # system to be used for forecast
+
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, system, s_T;
+                    forecast(m, fcast_sys, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
             end
 
@@ -895,7 +897,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                              set_zlb_regime_vals = set_regime_vals_altpolicy)
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, system, s_T;
+                    forecast(m, fcast_sys, s_T;
                              cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
             end
 
