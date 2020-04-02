@@ -111,3 +111,80 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
 
     return states, shocks, pseudo, initial_states
 end
+
+function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSystem{S},
+    s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
+    cond_type::Symbol = :none, draw_states::Bool = false,
+    include_presample::Bool = false, in_sample::Bool = true) where {S<:AbstractFloat}
+
+    data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
+
+    # Partition sample into pre- and post-ZLB regimes, and forecast regime
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    start_date = max(date_presample_start(m), df[1, :date])
+    regime_inds = regime_indices(m, data, start_date)
+    @show regime_inds
+    # Get system matrices for each regime
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date)
+    @show length(TTTs)
+
+    # Select how many regimes needed from the matrices. Note this should be added
+    # to zlb_plus_regime_matrices as an argument, e.g. add regime_inds as an argument there explicitly.
+    # That way, we can rename zlb_plus_regime_matrices -> zlb_regime_matrices
+    TTTs = TTTs[1:length(regime_inds)]
+    RRRs = RRRs[1:length(regime_inds)]
+    CCCs = CCCs[1:length(regime_inds)]
+    ZZs  = ZZs[1:length(regime_inds)]
+    DDs  = DDs[1:length(regime_inds)]
+    QQs  = QQs[1:length(regime_inds)]
+    EEs  = EEs[1:length(regime_inds)]
+    @show length(TTTs)
+
+    # Initialize s_0 and P_0
+    if isempty(s_0) || isempty(P_0)
+        s_0, P_0 = init_stationary_states(TTTs[1], RRRs[1], CCCs[1], QQs[1])
+    end
+
+    # Call smoother
+    smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
+
+    if draw_states && smoother in [hamilton_smoother, koopman_smoother]
+        @warn "$smoother called with draw_states = true"
+    end
+
+    states, shocks = if smoother == hamilton_smoother
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+            s_0, P_0)
+    elseif smoother == koopman_smoother
+        kal = filter(m, data, system)
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+            s_0, P_0, kal[:s_pred], kal[:P_pred])
+    elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+            s_0, P_0; draw_states = draw_states)
+    else
+        error("Invalid smoother: $(forecast_smoother(m))")
+    end
+
+    # Index out last presample period, used to compute the deterministic trend
+    t0 = n_presample_periods(m)
+    t1 = index_mainsample_start(m)
+    if include_presample
+        initial_states = s_0
+    else
+        initial_states = states[:, t0]
+        states = states[:, t1:end]
+        shocks = shocks[:, t1:end]
+    end
+
+    # Map smoothed states to pseudo-observables
+    pseudo = similar(states)
+    for reg in 1:length(regime_inds)
+        for t in 1:size(states, 2)
+            ZZ_pseudo_reg = system[reg][:ZZ_pseudo]
+            DD_pseudo_reg = system[reg][:DD_pseudo]
+            pseudo[:, t] = ZZ_pseudo_reg * states .+ DD_pseudo_reg
+        end
+    end
+    return states, shocks, pseudo, initial_states
+end
