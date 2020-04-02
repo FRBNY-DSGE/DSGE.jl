@@ -127,8 +127,12 @@ function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
             if n_regime1_periods > n_nozlb_periods
-                regime_inds = [1:n_nozlb_periods, n_nozlb_periods+1:n_regime1_periods,
-                               n_regime1_periods+1:T]
+                if n_regime1_periods < T
+                    regime_inds = [1:n_nozlb_periods, n_nozlb_periods+1:n_regime1_periods,
+                                   n_regime1_periods+1:T]
+                else
+                    regime_inds = [1:n_nozlb_periods, n_nozlb_periods+1:T]
+                end
             else
                 regime_inds = [1:n_regime1_periods,
                                (n_regime1_periods+1):n_nozlb_periods,

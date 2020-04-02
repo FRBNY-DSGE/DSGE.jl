@@ -138,6 +138,76 @@ function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray, system::Sy
                       ZZs, DDs, EEs, s_0, P_0; Nt0 = Nt0, tol = tol)
 end
 
+function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray,
+                           system::RegimeSwitchingSystem{S},
+                           s_0::Vector{S} = Vector{S}(undef, 0),
+                           P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
+                           start_date::Date = date_presample_start(m),
+                           include_presample::Bool = true,
+                           tol::Float64 = 0.0) where {S<:AbstractFloat}
+#    @show "regime switching filter like"
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = regime_indices(m, data, start_date)
+    #zlb_regime_inds = zlb_regime_indices(m, data, start_date)
+
+    if regime_inds[1][end] > T
+        regime_inds = [1:T]
+        TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = [TTTs[1]], [RRRs[1]], [CCCs[1]], [QQs[1]], [ZZs[1]], [DDs[1]], [EEs[1]]
+    elseif regime_inds[2][end] > T
+        regime_inds = [regime_inds[1], regime_inds[2]]
+        TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = [TTTs[1:2]], [RRRs[1:2]], [CCCs[1:2]], [QQs[1:2]], [ZZs[1:2]], [DDs[1:2]], [EEs[1:2]]
+    end
+
+    # Get system matrices for each regime
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date)
+
+ #=   @show regime_inds
+  #  @show all(TTTs[1] .== TTTs[2])
+  #  @show all(RRRs[1] .== RRRs[2])
+  #  @show all(CCCs[1] .== CCCs[2])
+    @show all(QQs[1] .== QQs[2])
+    @show all(QQs[2] .== QQs[3])
+    @show QQs[1][QQs[1] .!= QQs[2]]
+    @show QQs[2][QQs[1] .!= QQs[2]]
+    @show QQs[2][QQs[2] .!= QQs[3]]
+    @show QQs[3][QQs[2] .!= QQs[3]]=#
+  #  @show all(ZZs[1] .== ZZs[2])
+  #  @show all(DDs[1] .== DDs[2])
+  #  @show all(EEs[1] .== EEs[2])
+
+    # If s_0 and P_0 provided, check that rows and columns corresponding to
+    # anticipated shocks are zero in P_0
+    if !isempty(s_0) && !isempty(P_0)
+        ant_state_inds = setdiff(1:n_states_augmented(m), inds_states_no_ant(m))
+        @assert all(x -> x == 0, P_0[:, ant_state_inds])
+        @assert all(x -> x == 0, P_0[ant_state_inds, :])
+    end
+
+    # Specify number of presample periods if we don't want to include them in
+    # the final results
+    Nt0 = include_presample ? 0 : n_presample_periods(m)
+
+    # Run Kalman filter, construct Kalman object, and return
+    kalman_likelihood(regime_inds, data, TTTs, RRRs, CCCs, QQs,
+                      ZZs, DDs, EEs, s_0, P_0; Nt0 = Nt0, tol = tol)
+end
+
+
+function filter_likelihood(m::AbstractDSGEModel, df::DataFrame, system::System{S},
+                           s_0::Vector{S} = Vector{S}(undef, 0),
+                           P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
+                           cond_type::Symbol = :none, include_presample::Bool = true,
+                           in_sample::Bool = true,
+                           tol::Float64 = 0.0) where {S<:AbstractFloat}
+
+    data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
+    start_date = max(date_presample_start(m), df[1, :date])
+
+    filter_likelihood(m, data, system, s_0, P_0; start_date = start_date,
+                      include_presample = include_presample, tol = tol)
+end
+
 function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                        s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0); cond_type::Symbol = :none,
                        start_date::Date = date_presample_start(m),
