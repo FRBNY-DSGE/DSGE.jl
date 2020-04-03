@@ -65,8 +65,11 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
 
         if :obs_nominalrate1 in cond_semi_names(m) || :obs_nominalrate1 in cond_full_names(m)
             ois_data = CSV.read(inpath(m, "raw", "ois_$(data_vintage(m)).csv"), copycols = true)
-            date_space = findfirst(x->x==true, df[!, :date] .== Date(2020, 3, 31))
-            df[date_space, [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Vector{Float64}((ois_data[end, [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]))
+            dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
+            n_cond = length(dates)
+           # date_space = findall(x->x==true, df[!, :date] .> date_mainsample_end(m))
+            ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[:date] .<= date_conditional_end(m), [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]
+            df[date_mainsample_end(m) .< df[:date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Matrix{Float64}(ois_data_want)
         end
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
