@@ -401,6 +401,14 @@ function init_observable_mappings!(m::Model1002)
         observables[:obs_wagemarkupshock] = Observable(:obs_wagemarkupshock, [:WAGEMKP__DLX],
                                                        wagemarkupshock_fwd_transform, wagemarkupshock_rev_transform,
                                                        "Wage mark up shock", "Wage mark up shock")
+    elseif subspec(m) == "ss53"
+        wagemarkup_fwd_transform = function (levels)
+            levels[:, Symbol("WAGEMKP")]
+        end
+        wagemarkup_rev_transform = DSGE.identity
+        observables[:obs_wagemarkup] = Observable(:obs_wagemarkup, [:WAGEMKP__DLX],
+                                                       wagemarkup_fwd_transform, wagemarkup_rev_transform,
+                                                       "Wage mark up", "Wage mark up")
     end
 
     if haskey(m.settings, :first_observable)
