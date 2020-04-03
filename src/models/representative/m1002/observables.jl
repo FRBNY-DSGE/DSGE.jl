@@ -394,7 +394,7 @@ function init_observable_mappings!(m::Model1002)
 
     # Create a fake observable if observing wage markup shock
     wagemarkupshock_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
+            levels[!, Symbol("WAGEMKP")]
         end
     wagemarkupshock_rev_transform = DSGE.identity
     observables[:obs_wagemarkupshock] = Observable(:obs_wagemarkupshock, [:WAGEMKP__DLX],
