@@ -56,10 +56,8 @@ end
 
 """
 ```
-draw_stationary_VAR(YYYYC, XXYYC, XXXXC, T̄, n_obs, lags; testing = false,
-                    test_Σ_draw = [], test_β_draw = [])
-draw_stationary_VAR(YYYYC, XXYYC, XXXXC, T̄; testing = false,
-                    test_Σ_draw = [], test_β_draw = [])
+draw_stationary_VAR(YYYYC, XXYYC, XXXXC, T̄, n_obs, lags; standard_orientation = true)
+draw_stationary_VAR(YYYYC, XXYYC, XXXXC, T̄; standard_orientation = true)
 ```
 draws β and Σ from the distribution p(β, Σ | Y, θ) implied by the
 population moments (or covariances) YYYYC, XXYYC, and XXXXC for a
@@ -90,17 +88,19 @@ until we obtain a pair of draws (β, Σ) that are stationary.
 * `XXXXC::Matrix{<:Real}`: covariance of the lags of the observables
 * `T̄::Int`: total number of time periods of observations, including sample observables
     from actual data and any dummy observables generated to implement priors.
-* `n_obs::Int`: number of distint observables
+* `n_obs::Int`: number of distinct observables
 * `lags::Int`: number of lags in the VAR
 
 ### Keywords
-* All keywords are used for testing purposes.
+* `standard_orientation::Bool`: if true, the draw of `β` has
+    dimensions `(n_obs * lags) x n_obs`. Otherwise, it has the transposed dimensions.
+* All other keywords are used for testing purposes.
 """
 function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S},
                              T̄::Int, n_obs::Int, lags::Int; standard_orientation::Bool = true,
                              testing::Bool = false,
-                             test_Σ_draw::Matrix{S} = Matrix{S}(undef, 0, 0),
-                             test_β_draw::Vector{S} = Vector{S}(undef, 0)) where {S<:Real}
+                             test_Σ_draw_shock::Matrix{S} = Matrix{S}(undef, 0, 0),
+                             test_β_draw_shock::Vector{S} = Vector{S}(undef, 0)) where {S<:Real}
 
     # Set up
     k = 1 + lags * n_obs
@@ -110,20 +110,18 @@ function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S
     inv_Σ_mul_T̄ += inv_Σ_mul_T̄' # force to be positive definite
     inv_Σ_mul_T̄ ./= 2.
     cholmat = cholesky(inv_Σ_mul_T̄).L
-
     β = vec(β)
-    β_draw = similar(β)
-    Σ_draw = similar(inv_Σ_mul_T̄)
+
     if testing # just do one draw each
         # Draw from marginal posterior of Σ (based on DSGE-VAR)
-        z = cholmat * test_Σ_draw
+        z = cholmat * test_Σ_draw_shock
         Σ_draw = inv(z * z')
 
         # Draw from the conditional posterior of β (based on DSGE-VAR)
-        vc       = kron(Σ_draw, inv_XXXXC)
-        vc       += vc'
-        vc       ./= 2.
-        β_draw   = convert(Matrix{S}, reshape(β + cholesky(vc).L * test_β_draw, k, n_obs)')
+        vc      = kron(Σ_draw, inv_XXXXC)
+        vc      += vc'
+        vc      ./= 2.
+        β_draw  = convert(Matrix{S}, reshape(β + cholesky(vc).L * test_β_draw_shock, k, n_obs)')
     else
         stationary = false
         while !stationary
@@ -135,7 +133,7 @@ function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S
             vc       = kron(Σ_draw, inv_XXXXC)
             vc       += vc'
             vc       ./= 2.
-            β_draw   = convert(Matrix{S}, reshape(β + cholesky(vc).L * randn(n_obs * k), k, n_obs)') # change this to avoid transposition, don't need it if change rotation irfs
+            β_draw   = convert(Matrix{S}, reshape(β + cholesky(vc).L * randn(n_obs * k), k, n_obs)')
             β_to_TTT = vcat(β_draw[:, (1+1):k],
                             hcat(Matrix{S}(I, n_obs * (lags - 1), n_obs * (lags - 1)),
                                  zeros(S, n_obs * (lags - 1), n_obs)))
@@ -154,13 +152,97 @@ end
 
 function draw_stationary_VAR(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S},
                              T̄::Int; standard_orientation::Bool = true, testing::Bool = false,
-                             test_Σ_draw::Matrix{S} = Matrix{S}(undef, 0, 0),
-                             test_β_draw::Vector{S} = Vector{S}(undef, 0)) where {S<:Real}
+                             test_Σ_draw_shock::Matrix{S} = Matrix{S}(undef, 0, 0),
+                             test_β_draw_shock::Vector{S} = Vector{S}(undef, 0)) where {S<:Real}
     # Infer n_obs and lags from population moments
     n_obs = size(YYYYC, 1)
     lags = (size(XXXXC, 1) - 1) / n_obs
 
     return draw_stationary_VAR(YYYYC, XXYYC, XXXXC, T̄, n_obs, lags;
                                standard_orientation = standard_orientation, testing = testing,
-                               test_Σ_draw = test_Σ_draw, test_β_draw = test_β_draw)
+                               test_Σ_draw_shock = test_Σ_draw_shock, test_β_draw_shock = test_β_draw_shock)
+end
+
+"""
+```
+draw_VECM(YYYYC, XXYYC, XXXXC, T̄, n_obs, lags, n_coint; standard_orientation = true)
+```
+draws β and Σ from the distribution p(β, Σ | Y, θ) implied by the
+population moments (or covariances) YYYYC, XXYYC, and XXXXC for a
+VECM with parameters θ.
+
+For example, if these population moments are generated by
+a DSGE-VECM, then θ are the structural parameters of the DSGE
+and the weight λ placed on the cross-restrictions implied
+by the DSGE. The population moments would represent the
+moments of the sample data and dummy observables generated
+to implement the DSGE prior.
+
+Given these moments, we compute the maximum-likelihood
+estimates of β and Σ using OLS. Denote these estimates
+by Β and S. Then we generate draws from p(β, Σ | Y, θ)
+using the fact that
+```
+Σ | Y, θ ∼ ℐ𝒲 (T̄ × S, T̄ - (1 + lags * n_obs), n_obs),
+β | Y, Σ,θ ∼ 𝒩 (B, Σ ⊗ XXXXC⁻¹).
+```
+
+### Inputs
+* `YYYYC::Matrix{<:Real}`: covariance of observables
+* `XXYYC::Matrix{<:Real}`: covariance of observables with their lags
+* `XXXXC::Matrix{<:Real}`: covariance of the lags of the observables
+* `T̄::Int`: total number of time periods of observations, including sample observables
+    from actual data and any dummy observables generated to implement priors.
+* `n_obs::Int`: number of distinct observables
+* `lags::Int`: number of lags in the VECM
+* `n_coint::Int`: number of distinct cointegrating relationships
+
+### Keywords
+* `standard_orientation::Bool`: if true, the draw of `β` has
+    dimensions `(n_obs * lags) x n_obs`. Otherwise, it has the transposed dimensions.
+* All other keywords are used for testing purposes.
+"""
+function draw_VECM(YYYYC::Matrix{S}, XXYYC::Matrix{S}, XXXXC::Matrix{S},
+                   T̄::Int, n_obs::Int, lags::Int, n_coint::Int; standard_orientation::Bool = true,
+                   testing::Bool = false,
+                   test_Σ_draw_shock::Matrix{S} = Matrix{S}(undef, 0, 0),
+                   test_β_draw_shock::Vector{S} = Vector{S}(undef, 0)) where {S<:Real}
+
+    # Set up
+    k = 1 + lags * n_obs + n_coint
+    inv_XXXXC = inv(XXXXC)
+    β = inv_XXXXC * XXYYC
+    inv_Σ_mul_T̄ = inv(YYYYC - XXYYC' * β)
+    inv_Σ_mul_T̄ += inv_Σ_mul_T̄' # force to be positive definite
+    inv_Σ_mul_T̄ ./= 2.
+    cholmat = cholesky(inv_Σ_mul_T̄).L
+    β = vec(β)
+
+    if testing # just do one draw each
+        # Draw from marginal posterior of Σ (based on DSGE-VECM)
+        z = cholmat * test_Σ_draw_shock
+        Σ_draw = inv(z * z')
+
+        # Draw from the conditional posterior of β (based on DSGE-VECM)
+        vc     = kron(Σ_draw, inv_XXXXC)
+        vc    += vc'
+        vc   ./= 2.
+        β_draw = reshape(β + cholesky(vc).L * test_β_draw_shock, k, n_obs)
+    else
+        # Draw from marginal posterior of Σ (based on DSGE-VECM)
+        z = cholmat * randn(n_obs, T̄ - k)
+        Σ_draw = inv(z * z')
+
+        # Draw from the conditional posterior of β (based on DSGE-VECM)
+        vc     = kron(Σ_draw, inv_XXXXC)
+        vc    += vc'
+        vc    /= 2.
+        β_draw = reshape(β + cholesky(vc).L * randn(n_obs * k), k, n_obs)
+    end
+
+    if !standard_orientation
+        β_draw = convert(Matrix{S}, β_draw')
+    end
+
+    return β_draw, Σ_draw
 end
