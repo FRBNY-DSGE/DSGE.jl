@@ -20,6 +20,10 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if subspec(m) == "ss52"
+        push!(pseudo_names, :λ_w_t)
+    end
+
     if haskey(m.settings, :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
             push!(pseudo_names, :laborshare_t)
@@ -135,6 +139,11 @@ function init_pseudo_observable_mappings!(m::Model1002)
             pseudo[i].name = string(DSGE.detexify(i))
             pseudo[i].longname = string(DSGE.detexify(i))
         end
+    end
+
+    if subspec(m) == "ss52"
+        pseudo[:λ_w_t].name = "Wage Markup"
+        pseudo[:λ_w_t].longname = "Wage Markup"
     end
 
     if haskey(m.settings, :add_laborshare_measurement)
