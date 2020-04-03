@@ -71,6 +71,7 @@ get_λ(m::AbstractDSGEVARModel)           = m.λ
 get_dsge(m::AbstractDSGEVARModel)        = m.dsge
 n_observables(m::AbstractDSGEVARModel)   = length(m.observables)
 n_cointegrating(m::AbstractDSGEVECMModel) = length(m.cointegrating)
+n_cointegrating_add(m::AbstractDSGEVECMModel) = length(m.cointegrating_add)
 n_shocks(m::AbstractDSGEVARModel)        = length(m.shocks)
 
 # Interface for accessing parameters
@@ -88,8 +89,9 @@ get_settings(m::AbstractDSGEVARModel) = m.dsge.settings
 # Interface for accessing observables dictionary
 get_observables(m::AbstractDSGEVARModel) = m.observables
 
-# Interface for accessing cointegrating dictionary
+# Interface for accessing cointegrating dictionaries
 get_cointegrating(m::AbstractDSGEVECMModel) = m.cointegrating
+get_cointegrating_add(m::AbstractDSGEVECMModel) = m.cointegrating_add
 
 # Interface for data
 cond_vintage(m::AbstractDSGEVARModel)    = get_setting(m, :cond_vintage)
@@ -321,6 +323,7 @@ end
 function check_valid_dsgevecm(m::AbstractDSGEVECMModel;
                               observables::Vector{Symbol} = collect(keys(m.observables)),
                               cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                              cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
                               shocks::Vector{Symbol} = collect(keys(m.shocks)),
                               lags::Int = n_lags(m), λ::T = m.λ) where {T<:Real}
 
@@ -330,6 +333,20 @@ function check_valid_dsgevecm(m::AbstractDSGEVECMModel;
 
 
     # Check cointegrated observables
+    missing_coint = Vector{Symbol}(undef, 0)
+    for k in cointegrating
+        if !(k in keys(get_observables(get_dsge(m)))) &&
+            !(k in keys(get_pseudo_observables(get_dsge(m))))
+            push!(missing_coint, k)
+        end
+    end
+
+    if !isempty(missing_coint)
+        error("The following cointegrating relationships are not found in the underlying DSGE: \n" *
+              join(string.(missing_coint), ", "))
+    end
+
+    # Check additional cointegrated observables
     missing_coint = Vector{Symbol}(undef, 0)
     for k in cointegrating
         if !(k in keys(get_observables(get_dsge(m)))) &&
@@ -397,6 +414,7 @@ end
 # Update VECM system, e.g. observables
 function update!(m::AbstractDSGEVECMModel; observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  shocks::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  lags::Int = 0, λ::T = m.λ, check_valid::Bool = true) where {T<:Real}
 
@@ -404,10 +422,12 @@ function update!(m::AbstractDSGEVECMModel; observables::Vector{Symbol} = Vector{
         check_obs = isempty(observables) ? collect(keys(get_observables(m))) : observables
         check_sh  = isempty(shocks) ? collect(keys(get_shocks(m))) : shocks
         check_co  = isempty(cointegrating) ? collect(keys(get_cointegrating(m))) : cointegrating
+        check_coa = isempty(cointegrating_add) ? collect(keys(get_cointegrating_add(m))) : cointegrating_add
 
         check_valid_dsgevecm(m; observables = check_obs,
-                            cointegrating = check_co, shocks = check_sh,
-                            lags = lags, λ = λ)
+                             cointegrating = check_co,
+                             cointegrating_add = check_coa,
+                             shocks = check_sh, lags = lags, λ = λ)
     end
 
     if m.λ != λ
@@ -430,6 +450,14 @@ function update!(m::AbstractDSGEVECMModel; observables::Vector{Symbol} = Vector{
             m.cointegrating[k] = i + n_obs
         end
     end
+    if !isempty(cointegrating_add)
+        for k in keys(get_cointegrating_add(m))
+            delete!(get_cointegrating_add(m), k)
+        end
+        for (i,k) in enumerate(cointegrating_add)
+            m.cointegrating_add[k] = i
+        end
+    end
     if !isempty(shocks)
         for k in keys(m.shocks)
             delete!(m.shocks, k)
@@ -448,11 +476,13 @@ end
 function update!(m::AbstractDSGEVECMModel, dsge::AbstractDSGEModel;
                  observables::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                 cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  shocks::Vector{Symbol} = Vector{Symbol}(undef, 0),
                  lags::Int = 0, λ::T = m.λ, check_valid::Bool = true) where {T<:Real}
 
     m.dsge = dsge
     update!(m; observables = observables, cointegrating = cointegrating,
+            cointegrating_add = cointegrating_add,
             shocks = shocks, lags = lags,
             λ = λ, check_valid = check_valid)
 

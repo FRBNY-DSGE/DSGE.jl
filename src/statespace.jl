@@ -449,7 +449,7 @@ function compute_system(m::AbstractDSGEModel{S}, system::System;
     if !isempty(symdiff(observables, collect(keys(oid))))
         Zout = zeros(S, length(observables), size(Tout, 1))
         Dout = zeros(S, length(observables))
-        for (i,obs) in enumerate(observables)
+        for (i, obs) in enumerate(observables)
             Zout[i, :], Dout[i] = if haskey(oid, obs)
                 system[:ZZ][oid[obs], which_states], zero_DD ? zero(S) : system[:DD][oid[obs]]
             elseif haskey(pid, obs)
@@ -497,22 +497,80 @@ function compute_system(m::AbstractDSGEModel{S}, system::System;
 end
 
 function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
-                        observables::Vector{Symbol} = collect(keys(m.observables)),
-                        cointegrating::Vector{Symbol} = collect(keys(m.cointegrating)),
+                        observables::Vector{Symbol} = collect(keys(get_observables(get_dsge(m)))),
+                        cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                        cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
                         pseudo_observables::Vector{Symbol} =
-                        collect(keys(m.pseudo_observables)),
+                        collect(keys(get_dsge(m).pseudo_observables)),
                         states::Vector{Symbol} =
-                        vcat(collect(keys(m.endogenous_states)),
-                             collect(keys(m.endogenous_states_augmented))),
-                        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+                        vcat(collect(keys(get_dsge(m).endogenous_states)),
+                             collect(keys(get_dsge(m).endogenous_states_augmented))),
+                        shocks::Vector{Symbol} = collect(keys(get_dsge(m).exogenous_shocks)),
                         zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
+                        get_DD_coint_add::Bool = false,
                         check_system::Bool = true) where {S<:Real}
     # Cointegrating relationships should exist as observables/pseudo_observables already
     # in the underlying DSGE. We assume cointegrating relationships come after normal observables.
-    compute_system(m, system; observables = vcat(observables, cointegrating),
-                   pseudo_observables = pseudo_observables,
-                   states = states, shocks = shocks, zero_DD = zero_DD,
-                   zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
+    # Default behavior is to recreate the underlying DSGE's state space representation, however.
+    if get_DD_coint_add
+        sys = compute_system(get_dsge(m), system; observables = vcat(observables, cointegrating),
+                              pseudo_observables = pseudo_observables,
+                              states = states, shocks = shocks, zero_DD = zero_DD,
+                              zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
+        mtype = typeof(m)
+        DD_coint_add = if hasmethod(compute_DD_coint_add, (mtype, Vector{Symbol}))
+            compute_DD_coint_add(m, cointegrating_add)
+        elseif hasmethod(compute_DD_coint_add, (mtype, ))
+            compute_DD_coint_add(m)
+        else
+            compute_DD_coint_add(m, sys, cointegrating_add)
+        end
+        return sys, DD_coint_add
+    else
+        return compute_system(m, system; observables = vcat(observables, cointegrating),
+                              pseudo_observables = pseudo_observables,
+                              states = states, shocks = shocks, zero_DD = zero_DD,
+                              zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
+    end
+end
+
+"""
+```
+function compute_DD_coint_add(m::AbstractDSGEVECMModel{S}, system::System,
+                              cointegrating_add::Vector{Symbol}) where {S <: Real}
+```
+computes `DD_coint_add` for a `DSGEVECM` model. This vector
+holds additional cointegrating relationships that do not require
+changes to the `ZZ` matrix.
+
+### Note
+We recommend overloading this function if there are
+cointegrating relationships which a user does not want
+to add to the underlying DSGE. The function `compute_system`
+first checks for a method `compute_DD_coint_add` that takes
+a Type tuple of `(model_type, Vector{Symbol})` and then `(model_type, )`
+before calling this method.
+"""
+function compute_DD_coint_add(m::AbstractDSGEVECMModel{S}, system::System,
+                              cointegrating_add::Vector{Symbol}) where {S <: Real}
+    if !isempty(cointegrating_add)
+        oid = get_observables(get_dsge(m))
+        pid = get_pseudo_observables(get_dsge(m))
+        Dout = zeros(S, length(cointegrating_add))
+        for (i, obs) in enumerate(cointegrating_add)
+            Dout[i] = if haskey(oid, obs)
+                system[:DD][oid[obs]]
+            elseif haskey(pid, obs)
+                system[:DD_pseudo][pid[obs]]
+            else
+                error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
+            end
+        end
+        return Dout
+    else
+        @warn "No additional cointegrating relationships specified. Returning an empty vector."
+        return Vector{S}(undef, 0)
+    end
 end
 
 """
@@ -763,7 +821,7 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
     ## Initialize Autocovariances
     GAMM0 = zeros(S, (n_obs + n_coint) ^ 2, p + 1)
-    GA0 = isempty(test_GA0) : solve_discrete_lyapunov(TTT, RRR * QQ * RRR') ? test_GA0 # Matlab code uses a different numerical procedure -> some difference in this matrix
+    GA0 = isempty(test_GA0) ? solve_discrete_lyapunov(TTT, RRR * QQ * RRR') : test_GA0 # Matlab code uses a different numerical procedure -> some difference in this matrix
     Gl   = ZZ * GA0 * ZZ' + ZZ * RRR * VV + (ZZ * RRR * VV)' + HH
     GAMM0[:, 1] = vec(Gl)
     TTl = copy(TTT)

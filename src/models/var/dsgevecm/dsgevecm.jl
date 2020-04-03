@@ -56,6 +56,13 @@ DSGE description: Julia implementation of model defined in 'Bayesian Estimation 
     When creating the state space representation of a DSGE-VECM, the
     cointegrating relationships will come after the observables. Accordingly,
     the first `cointegrating` index will be after the last observable.
+* `cointegrating_add::OrderedDict{Symbol,Int}`: dictionary mapping
+    additional cointegrating relationships of the VECM to their index
+    in the matrices representing the DSGE-VECM. These relationships are
+    intended to be ones that only add to the `DD` matrix in DSGE.jl's
+    representation of a state space model. Importantly, these relationships
+    do not require changing the `ZZ` matrix. As a result, the indices for
+    these relationships start at 1.
 * `shocks::OrderedDict{Symbol,Int}`: dictionary mapping structural
     shocks in the DSGE to their index in the matrices representing the DSGE-VECM
 * `lags::Int`: number of lags in the VECM
@@ -73,6 +80,7 @@ mutable struct DSGEVECM{T} <: AbstractDSGEVECMModel{T}
     dsge::AbstractDSGEModel{T}
     observables::OrderedDict{Symbol,Int}
     cointegrating::OrderedDict{Symbol,Int}
+    cointegrating_add::OrderedDict{Symbol,Int}
     shocks::OrderedDict{Symbol,Int}
     lags::Int
     λ::T
@@ -102,7 +110,7 @@ function DSGEVECM(dsge::AbstractDSGEModel{T}, shocks::Vector{Symbol}, subspec::S
         dsge = deepcopy(dsge)
     end
     m = DSGEVECM{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
-                    OrderedDict{Symbol,Int}(), 0,
+                    OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), 0,
                     0., spec, subspec, testing)
 
     # Initialize shocks from DSGE
@@ -131,7 +139,7 @@ function DSGEVECM(dsge::AbstractDSGEModel{T}, subspec::String = "ss0";
         dsge = deepcopy(dsge)
     end
     m = DSGEVECM{T}(dsge, OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
-                    OrderedDict{Symbol,Int}(), 0,
+                    OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), 0,
                     0., spec, subspec, testing)
 
     # Initialize shocks from DSGE

@@ -9,6 +9,7 @@ dsge = Model1002()
     @test subspec(m) == "ss0"
     @test isempty(m.observables)
     @test isempty(m.cointegrating)
+    @test isempty(m.cointegrating_add)
     @test isempty(m.shocks)
 
     # Empty construction but w/some shocks
@@ -18,6 +19,7 @@ dsge = Model1002()
     @test subspec(m) == "ss0"
     @test isempty(m.observables)
     @test isempty(m.cointegrating)
+    @test isempty(m.cointegrating_add)
     @test !isempty(m.shocks)
 
     # Full construction w/shocks and model
@@ -27,6 +29,7 @@ dsge = Model1002()
     @test subspec(m) == "ss1"
     @test !isempty(m.observables)
     @test isempty(m.cointegrating) # but cointegrating relationships still empty
+    @test isempty(m.cointegrating_add)
     @test !isempty(m.shocks)
 
     # Check errors
@@ -48,6 +51,8 @@ end
     @test collect(keys(m.shocks)) == [:rm_sh] && collect(keys(m.observables)) == [:obs_gdp] && m.lags == 1 && m.λ == 0.5 && isempty(m.cointegrating)
     DSGE.update!(m; cointegrating = [:obs_gdp])
     @test collect(keys(m.shocks)) == [:rm_sh] && collect(keys(m.observables)) == [:obs_gdp] && m.lags == 1 && m.λ == 0.5 && collect(keys(m.cointegrating)) == [:obs_gdp]
+    DSGE.update!(m; cointegrating_add = [:obs_gdp])
+    @test collect(keys(m.shocks)) == [:rm_sh] && collect(keys(m.observables)) == [:obs_gdp] && m.lags == 1 && m.λ == 0.5 && collect(keys(m.cointegrating)) == [:obs_gdp] && collect(keys(m.cointegrating_add)) == [:obs_gdp]
 
     # Check errors
     @test_throws ErrorException DSGE.update!(m, dsge; shocks = [:not_a_shock])
@@ -57,11 +62,17 @@ end
 
     # Check access and size functions
     m = DSGE.DSGEVECM(dsge, collect(keys(dsge.exogenous_shocks)), "ss0")
-    DSGE.update!(m; observables = [:obs_spread], lags = 1, cointegrating = [:obs_spread])
+    DSGE.update!(m; observables = [:obs_spread], lags = 1, cointegrating = [:obs_spread],
+                 cointegrating_add = [:obs_spread])
     @test collect(keys(DSGE.get_observables(m))) == [:obs_spread]
+    @test collect(keys(DSGE.get_cointegrating(m))) == [:obs_spread]
     @test collect(keys(DSGE.get_cointegrating(m))) == [:obs_spread]
     @test n_observables(m) == 1
     @test DSGE.n_cointegrating(m) == 1
+    @test DSGE.n_cointegrating_add(m) == 1
+    @test DSGE.get_observables(m)[:obs_spread] == 1
+    @test DSGE.get_cointegrating(m)[:obs_spread] == 2
+    @test DSGE.get_cointegrating_add(m)[:obs_spread] == 1
     @test collect(keys(DSGE.get_shocks(m))) == collect(keys(m.dsge.exogenous_shocks))
     @test DSGE.get_λ(m) == 0. == m.λ
     @test DSGE.n_shocks(m) == length(m.dsge.exogenous_shocks)

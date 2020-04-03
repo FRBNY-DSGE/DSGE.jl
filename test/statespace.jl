@@ -287,4 +287,34 @@ end
     # @test @test_matrix_approx_eq Σc expΣc
 end
 
+@testset "Updating a system for a DSGEVECM" begin
+    dsge = AnSchorfheide()
+    m = DSGEVECM(dsge)
+    sys = compute_system(dsge)
+    Dout1 = DSGE.compute_DD_coint_add(m, sys, [:obs_gdp, :obs_cpi])
+    @info "The following 2 warnings about an empty vector are expected"
+    sys_dsgevecm, Dout2 = compute_system(m, sys; get_DD_coint_add = true,
+                                         cointegrating_add = [:obs_gdp, :obs_cpi])
+    Dout3 = DSGE.compute_DD_coint_add(m, sys, Vector{Symbol}(undef, 0))
+    _, Dout4 = compute_system(m, sys; get_DD_coint_add = true)
+
+    # Check computing DD_coint_add
+    @test Dout1 == sys[:DD][1:2]
+    @test Dout2 == sys[:DD][1:2]
+    @test isempty(Dout3)
+    @test isempty(Dout4)
+
+    # Check the system looks right
+    @test @test_matrix_approx_eq sys[:TTT] sys_dsgevecm[:TTT]
+    @test @test_matrix_approx_eq sys[:RRR] sys_dsgevecm[:RRR]
+    @test @test_matrix_approx_eq sys[:CCC] sys_dsgevecm[:CCC]
+    @test @test_matrix_approx_eq sys[:ZZ] sys_dsgevecm[:ZZ]
+    @test @test_matrix_approx_eq sys[:DD] sys_dsgevecm[:DD]
+    @test @test_matrix_approx_eq sys[:QQ] sys_dsgevecm[:QQ]
+    @test @test_matrix_approx_eq sys_dsgevecm[:EE] zeros(size(sys_dsgevecm[:EE]))
+end
+
+
+
+
 nothing
