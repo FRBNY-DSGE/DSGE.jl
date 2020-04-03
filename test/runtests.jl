@@ -25,7 +25,6 @@ my_tests = [
             "models/poolmodel/poolmodel",
             "models/var/dsgevar/dsgevar",
             "models/var/dsgevecm/dsgevecm",
-            # "models/var/dsgevar/util",
             "models/var/util",
 
             "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
@@ -54,7 +53,6 @@ my_tests = [
             "data/transform_data",
             "data/util",
 
-            "statespace",
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",

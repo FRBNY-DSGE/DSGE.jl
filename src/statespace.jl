@@ -361,8 +361,19 @@ end
 """
 ```
 compute_system(m::AbstractDSGEModel, system::System;
-        observables::Vector{Symbol}, pseudo_observables::Vector{Symbol},
-        states::Vector{Symbol}, shocks::Vector{Symbol},
+        observables::Vector{Symbol} = collect(keys(m.observables)),
+        pseudo_observables::Vector{Symbol} = collect(keys(m.pseudo_observables)),
+        states::Vector{Symbol} = vcat(collect(keys(m.endogenou_states)),
+                                      collect(keys(m.endogenous_states_augmented)))
+        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+        zero_DD = false, zero_DD_pseudo = false)
+compute_system(m::AbstractDSGEVECMModel, system::System;
+        observables::Vector{Symbol} = collect(keys(m.observables)),
+        pseudo_observables::Vector{Symbol} = collect(keys(m.pseudo_observables)),
+        cointegrating::Vector{Symbol} = collect(keys(m.cointegrating)),
+        states::Vector{Symbol} = vcat(collect(keys(m.endogenou_states)),
+                                      collect(keys(m.endogenous_states_augmented)))
+        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
         zero_DD = false, zero_DD_pseudo = false)
 ```
 computes the corresponding transition and measurement
@@ -375,9 +386,23 @@ must specify the EE matrix after applying compute_system.
 
 ### Keywords
 * `observables`: variables that should be
-    entered into the new `ZZ` matrix.
+    entered into the new `ZZ` and `DD` matrices.
     The `observables` can be both Observables and PseudoObservables,
-    but they must be an element of system already
+    but they must be an element of the system already.
+* `pseudo_observables`: variables that should be
+    entered into the new `ZZ_pseudo` and `DD_pseudo` matrices.
+    The `observables` can be both Observables and PseudoObservables,
+    but they must be an element of the system already.
+* `cointegrating`: variables that should be
+    entered into the new `ZZ` and `DD` matrices as cointegrating relationships.
+    The `observables` can be both Observables and PseudoObservables,
+    but they must be an element of the system already.
+* `states`: variables that should be
+    entered into the new `TTT` and `RRR` matrices as states.
+    They must be existing states.
+* `shocks`: variables that should be
+    entered into the new `RRR` and `QQ` matrices as shocks.
+    They must be existing exogenous shocks.
 """
 function compute_system(m::AbstractDSGEModel{S}, system::System;
                         observables::Vector{Symbol} = collect(keys(m.observables)),
@@ -435,8 +460,9 @@ function compute_system(m::AbstractDSGEModel{S}, system::System;
         end
     else
         Zout = copy(system[:ZZ])[:, which_states]
-        Dout = zero_DD ? zeros(S, size(Zout, 1)) : system[:DD]
+        Dout = zero_DD ? zeros(S, size(Zout, 1)) : copy(system[:DD])
     end
+
     Eout = zeros(S, length(observables), length(observables)) # measurement errors are set to zero
 
     # Compute new ZZ_pseudo, DD_pseudo if different pseudo_observables than current system
@@ -468,6 +494,25 @@ function compute_system(m::AbstractDSGEModel{S}, system::System;
     return System(Transition(Tout, Rout, Cout),
                   Measurement(Zout, Dout, Qout, Eout),
                   PseudoMeasurement(Zpseudoout, Dpseudoout))
+end
+
+function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
+                        observables::Vector{Symbol} = collect(keys(m.observables)),
+                        cointegrating::Vector{Symbol} = collect(keys(m.cointegrating)),
+                        pseudo_observables::Vector{Symbol} =
+                        collect(keys(m.pseudo_observables)),
+                        states::Vector{Symbol} =
+                        vcat(collect(keys(m.endogenous_states)),
+                             collect(keys(m.endogenous_states_augmented))),
+                        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+                        zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
+                        check_system::Bool = true) where {S<:Real}
+    # Cointegrating relationships should exist as observables/pseudo_observables already
+    # in the underlying DSGE. We assume cointegrating relationships come after normal observables.
+    compute_system(m, system; observables = vcat(observables, cointegrating),
+                   pseudo_observables = pseudo_observables,
+                   states = states, shocks = shocks, zero_DD = zero_DD,
+                   zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
 end
 
 """
@@ -544,11 +589,11 @@ cov(ϵₜ, uₜ) = QQ * MM'.
 ### Outputs
 If `get_population_moments = false`:
 * `β`: VAR(p) coefficients
-* `Σ`: innovations covariance matrix for the VAR(p) representation
+* `Σ`: innovations variance-covariance matrix for the VAR(p) representation
 ```
 yₜ = Xₜβ + μₜ
 ```
-where `Xₜ` appropriately stacks the `p` lags of `yₜ` and `μₜ ∼ 𝒩 (0, Σ)`.
+where `Xₜ` appropriately stacks the constants and `p` lags of `yₜ`, and `μₜ ∼ 𝒩 (0, Σ)`.
 
 If `get_population_moments = true`: we return the limit cross product matrices.
 * `yyyyd`: 𝔼[y,y]
@@ -571,7 +616,7 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
                                 get_population_moments::Bool = false,
                                 use_intercept::Bool = false) where {S<:Real}
 
-    nobs = size(ZZ, 1)
+    n_obs = size(ZZ, 1)
 
     HH = EE + MM * QQ * MM'
     VV = QQ * MM'
@@ -579,7 +624,7 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
     ## Compute p autocovariances
 
     ## Initialize Autocovariances
-    GAMM0 = zeros(S, nobs ^ 2, p + 1)
+    GAMM0 = zeros(S, n_obs ^ 2, p + 1)
     GA0 =  solve_discrete_lyapunov(TTT, RRR * QQ * RRR')
     Gl   = ZZ * GA0 * ZZ' + ZZ * RRR * VV + (ZZ * RRR * VV)' + HH
     GAMM0[:, 1] = vec(Gl)
@@ -587,44 +632,41 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
     GA0ZZ = GA0 * ZZ'
     RRRVV = RRR * VV
     for l = 1:p
-        Gl = ZZ * TTl * GA0ZZ + ZZ * TTl * RRRVV # ZZ * (TTl * GA0Z) * ZZ' + ZZ * (TTl * RRR * VV)
+        Gl = ZZ * TTl * (GA0ZZ + RRRVV) # ZZ * (TTl * GA0Z) * ZZ' + ZZ * (TTl * RRR * VV)
         GAMM0[:, l+1] = vec(Gl)
         TTl = TTl * TTT
     end
 
     ## Create limit cross product matrices
-    yyyyd = zeros(S, nobs, nobs)
+    yyyyd = zeros(S, n_obs, n_obs)
     if use_intercept
-        XXXXd = zeros(S, 1 + p * nobs, 1 + p * nobs)
-        yyXXd = zeros(S, nobs, 1 + p * nobs)
+        XXXXd = zeros(S, 1 + p * n_obs, 1 + p * n_obs)
+        yyXXd = zeros(S, n_obs, 1 + p * n_obs)
 
         XXXXd[1, 1] = 1.
-        XXXXd[1, 2:1 + p * nobs] = repeat(DD', 1, p) # same as kron(ones(1, p), DD')
-        XXXXd[2:1 + p * nobs, 1] = repeat(DD, p)     # same as kron(ones(p), DD)
+        XXXXd[1, 2:1 + p * n_obs] = repeat(DD', 1, p) # same as kron(ones(1, p), DD')
+        XXXXd[2:1 + p * n_obs, 1] = repeat(DD, p)     # same as kron(ones(p), DD)
         yyXXd[:, 1] = DD
     else
-        XXXXd = zeros(S, p * nobs, p * nobs)
-        yyXXd = zeros(S, nobs, p * nobs)
+        XXXXd = zeros(S, p * n_obs, p * n_obs)
+        yyXXd = zeros(S, n_obs, p * n_obs)
     end
 
-    yyyyd = reshape(GAMM0[:, 1], nobs, nobs) + DD * DD'
+    yyyyd = reshape(GAMM0[:, 1], n_obs, n_obs) + DD * DD'
 
-    # cointadd are treated as the first set of variables in XX
-    # coint    are treated as the second set of variables in XX
-    # composition: cointadd - coint - constant - lags
     shift = use_intercept ? 1 : 0 # for constructing XXXXd, to select the right indices
     for rr = 1:p
         # 𝔼[yy,x(lag rr)]
-        yyXXd[:, nobs * (rr - 1) + 1 + shift:nobs * rr + shift] =
-            reshape(GAMM0[:, rr + 1], nobs, nobs) + DD * DD'
+        yyXXd[:, n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift] =
+            reshape(GAMM0[:, rr + 1], n_obs, n_obs) + DD * DD'
 
         # 𝔼[x(lag rr),x(lag ll)]
         for ll = rr:p
-            yyyydrrll = reshape(GAMM0[:, ll - rr + 1], nobs, nobs) + DD * DD';
-            XXXXd[nobs * (rr - 1) + 1 + shift:nobs * rr + shift,
-                  nobs * (ll - 1) + 1 + shift:nobs * ll + shift] = yyyydrrll
-            XXXXd[nobs * (ll - 1) + 1 + shift:nobs * ll + shift,
-                  nobs * (rr - 1) + 1 + shift:nobs * rr + shift] = yyyydrrll'
+            yyyydrrll = reshape(GAMM0[:, ll - rr + 1], n_obs, n_obs) + DD * DD';
+            XXXXd[n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift,
+                  n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift] = yyyydrrll
+            XXXXd[n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift,
+                  n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift] = yyyydrrll'
         end
     end
 
@@ -641,7 +683,8 @@ end
 
 """
 ```
-vecm_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_population_moments = false,
+vecm_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, n_obs, p, n_coint,
+    n_coint, n_coint_add, DD_coint_add; get_population_moments = false,
     use_intercept = false) where {S<:Real}
 ```
 computes the VECM(p) approximation of the linear state space system
@@ -663,23 +706,37 @@ cov(ϵₜ, uₜ) = QQ * MM'.
 
 ### Outputs
 If `get_population_moments = false`:
-* `β`: VECM(p) coefficients
-* `Σ`: innovations covariance matrix for the VECM(p) representation
+* `β`: VECM(p) coefficients. The first `n_coint + n_coint_add`
+    coefficients for each observable comprise the error correction terms,
+    while the following `1 + p * n_obs` terms are the VAR terms.
+* `Σ`: innovations variance-covariance matrix for the VECM(p) representation
 ```
-yₜ = Xₜβ + μₜ
+Δyₜ = eₜβₑ + Xₜβᵥ + μₜ
 ```
-where `Xₜ` appropriately stacks the `p` lags of `yₜ` and `μₜ ∼ 𝒩 (0, Σ)`.
+where `βₑ` are the coefficients for the error correction terms;
+`eₜ` are the error correction terms specifying the cointegrating relationships;
+`βᵥ` are the coefficients for the VAR terms; `Xₜ` appropriately stacks
+the constants and `p` lags of `Δyₜ`; and `μₜ ∼ 𝒩 (0, Σ)`.
+
+Note that the error correction terms satisfy the mapping
+`eₜ' = C * yₜ₋₁`, where `C` is a matrix.
 
 If `get_population_moments = true`: we return the limit cross product matrices.
 * `yyyyd`: 𝔼[y,y]
 * `XXXXd`: 𝔼[y,X(lag rr)]
 * `XXyyd`: 𝔼[X(lag rr),X(lag ll)]
 
+Note that in the rows of `XXyyd` and the rows and columns of `XXXXd`,
+the cointegrating relationships are stacked above the constants and
+lagged `Δyₜ`.
+
 Using these matrices, the VAR(p) representation is given by
 ```
 β = XXXXd \\ XXyyd
-Σ = yyyyd - XXyyd' * β
+Σ = yyyyd - XXyyd' * β,
 ```
+where `β` has dimensions `n_obs × (n_coint + n_coint_add + 1 + p * n_obs)`,
+and `Σ` has dimensions `n_obs × n_obs`.
 
 The keyword `use_intercept` specifies whether or not to use an
 intercept term in the VECM approximation.
@@ -687,22 +744,25 @@ intercept term in the VECM approximation.
 function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
                                  QQ::AbstractMatrix{S}, DD::AbstractVector{S},
                                  ZZ::AbstractMatrix{S}, EE::AbstractMatrix{S},
-                                 MM::AbstractMatrix{S}, nobs::Int, p::Int,
+                                 MM::AbstractMatrix{S}, n_obs::Int, p::Int,
                                  n_coint::Int, n_coint_add::Int = 0,
                                  DD_coint_add::AbstractVector{S} = Vector{S}(undef, 0);
                                  get_population_moments::Bool = false,
                                  use_intercept::Bool = false,
-                                 test_GA0::AbstractMatrix{S} = Matrix{S}(undef, 0)) where {S <: Real}
-    # nobs is number of observables, n_coint is number of cointegrating relationships
+                                 test_GA0::AbstractMatrix{S} =
+                                 Matrix{S}(undef, 0)) where {S <: Real}
+
+    # n_obs is number of observables, n_coint is number of cointegrating relationships
     n_coint_all = n_coint + n_coint_add
 
+    # Create variance-covariance matrices w/measurement error included
     HH = EE + MM * QQ * MM'
     VV = QQ * MM'
 
     ## Compute p autocovariances
 
     ## Initialize Autocovariances
-    GAMM0 = zeros(S, (nobs + n_coint) ^ 2, p + 1)
+    GAMM0 = zeros(S, (n_obs + n_coint) ^ 2, p + 1)
     GA0 = isempty(test_GA0) : solve_discrete_lyapunov(TTT, RRR * QQ * RRR') ? test_GA0 # Matlab code uses a different numerical procedure -> some difference in this matrix
     Gl   = ZZ * GA0 * ZZ' + ZZ * RRR * VV + (ZZ * RRR * VV)' + HH
     GAMM0[:, 1] = vec(Gl)
@@ -717,61 +777,61 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
     ## Create limit cross product matrices
     DDDD = DD * DD'
-    yyyyd_coint0 = reshape(GAMM0[:, 1], nobs + n_coint, nobs + n_coint) + DDDD
-    yyyyd_coint1 = reshape(GAMM0[:, 2], nobs + n_coint, nobs + n_coint) + DDDD
-    yyyyd = yyyyd_coint0[1:nobs, 1:nobs]
+    yyyyd_coint0 = reshape(GAMM0[:, 1], n_obs + n_coint, n_obs + n_coint) + DDDD
+    yyyyd_coint1 = reshape(GAMM0[:, 2], n_obs + n_coint, n_obs + n_coint) + DDDD
+    yyyyd = yyyyd_coint0[1:n_obs, 1:n_obs]
 
     # n_coint_add are treated as the first set of variables in XX
     # n_coint    are treated as the second set of variables in XX
     # composition: n_coint_add - n_coint - constant - lags
     if use_intercept
-        XXXXd = zeros(S, 1 + p * nobs + n_coint_all, 1 + p * nobs + n_coint_all)
-        yyXXd = zeros(S, nobs, 1 + p * nobs + n_coint_all)
+        XXXXd = zeros(S, 1 + p * n_obs + n_coint_all, 1 + p * n_obs + n_coint_all)
+        yyXXd = zeros(S, n_obs, 1 + p * n_obs + n_coint_all)
 
         # 𝔼[x(n_coint), x(n_coint)]
-        XXXXd[n_coint_add + 1:n_coint_all, n_coint_add + 1:n_coint_all] = yyyyd_coint0[nobs + 1:nobs + n_coint, nobs + 1:nobs + n_coint]
+        XXXXd[n_coint_add + 1:n_coint_all, n_coint_add + 1:n_coint_all] = yyyyd_coint0[n_obs + 1:n_obs + n_coint, n_obs + 1:n_obs + n_coint]
 
         # 𝔼[x(const), x(const)]
         XXXXd[n_coint_all + 1, n_coint_all + 1] = 1.
 
         # 𝔼[x(n_coint), x(const)]
-        XXXXd[n_coint_add + 1:n_coint_all, n_coint_all + 1] = DD[nobs + 1:nobs + n_coint]
-        XXXXd[n_coint_all + 1, n_coint_add + 1:n_coint_all] = DD[nobs + 1:nobs + n_coint]
+        XXXXd[n_coint_add + 1:n_coint_all, n_coint_all + 1] = DD[n_obs + 1:n_obs + n_coint]
+        XXXXd[n_coint_all + 1, n_coint_add + 1:n_coint_all] = DD[n_obs + 1:n_obs + n_coint]
 
         # 𝔼[x(const), x(lags)]
-        XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * nobs] = repeat(DD[1:nobs]', 1, p)
-        XXXXd[n_coint_all + 2:n_coint_all + 1 + p * nobs, n_coint_all + 1] =
-            XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * nobs]' # same as kron(ones(p), DD[1:nobs]) but avoids calculation
+        XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * n_obs] = repeat(DD[1:n_obs]', 1, p)
+        XXXXd[n_coint_all + 2:n_coint_all + 1 + p * n_obs, n_coint_all + 1] =
+            XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * n_obs]' # same as kron(ones(p), DD[1:n_obs]) but avoids calculation
 
         # 𝔼[yy, x(n_coint)]
-        yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:nobs, nobs + 1:nobs + n_coint]
+        yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:n_obs, n_obs + 1:n_obs + n_coint]
 
         # 𝔼[yy, x(const)]
-        yyXXd[:, n_coint_all + 1] = DD[1:nobs]
+        yyXXd[:, n_coint_all + 1] = DD[1:n_obs]
     else
-        XXXXd = zeros(S, p * nobs + n_coint_all, p * nobs + n_coint_all)
-        yyXXd = zeros(S, nobs, p * nobs + n_coint_all)
+        XXXXd = zeros(S, p * n_obs + n_coint_all, p * n_obs + n_coint_all)
+        yyXXd = zeros(S, n_obs, p * n_obs + n_coint_all)
 
         # 𝔼[x(n_coint), x(n_coint)]
         XXXXd[n_coint_add + 1:n_coint_all, n_coint_add + 1:n_coint_all] =
-            yyyyd_coint0[nobs + 1:nobs + n_coint, nobs + 1:nobs + n_coint]
+            yyyyd_coint0[n_obs + 1:n_obs + n_coint, n_obs + 1:n_obs + n_coint]
 
         # 𝔼[yy, x(n_coint)]
-        yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:nobs, nobs + 1:nobs + n_coint]
+        yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:n_obs, n_obs + 1:n_obs + n_coint]
     end
 
     if n_coint_add > 0
         DD_coint_add_div2 = DD_coint_add ./ 2
         if use_intercept
             # 𝔼[yy, x(n_coint_add)]
-            yyXXd[:, 1:n_coint_add] = DD[1:nobs] * DD_coint_add_div2
+            yyXXd[:, 1:n_coint_add] = DD[1:n_obs] * DD_coint_add_div2
 
             # 𝔼[x(n_coint_add), x(n_coint_add)]
             XXXXd[1:n_coint_add, 1:n_coint_add] = DD_coint_add * DD_coint_add' ./ 3
 
             # 𝔼[x(n_coint_add), x(n_coint)]
             XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all] =
-                DD_coint_add_div2 * DD[nobs + 1: nobs + n_coint]'
+                DD_coint_add_div2 * DD[n_obs + 1: n_obs + n_coint]'
             XXXXd[1 + n_coint_add:n_coint_all, 1:n_coint_add] =
                 XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
 
@@ -780,14 +840,14 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
             XXXXd[n_coint_all + 1, 1:n_coint_add] = DD_coint_add_div2'
         else
             # 𝔼[yy, x(n_coint_add)]
-            yyXXd[:, 1:n_coint_add] = DD[1:nobs] * DD_coint_add_div2
+            yyXXd[:, 1:n_coint_add] = DD[1:n_obs] * DD_coint_add_div2
 
             # 𝔼[x(n_coint_add), x(n_coint_add)]
             XXXXd[1:n_coint_add, 1:n_coint_add] = DD_coint_add * DD_coint_add' ./ 3
 
             # 𝔼[x(n_coint_add), x(n_coint)]
             XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all] =
-                DD_coint_add_div2 * DD[nobs + 1: nobs + n_coint]'
+                DD_coint_add_div2 * DD[n_obs + 1: n_obs + n_coint]'
             XXXXd[1 + n_coint_add:n_coint_all, 1:n_coint_add] =
                 XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
         end
@@ -796,32 +856,32 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
     shift = use_intercept ? 1 : 0 # for constructing XXXXd, to select the right indices
     for rr = 1:p
         # 𝔼[yy, x(lag rr)]
-        yyyyd_cointrr = reshape(GAMM0[:, rr + 1], nobs + n_coint, nobs + n_coint) + DDDD
-        yyXXd[:, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] =
-            yyyyd_cointrr[1:nobs, 1:nobs]
+        yyyyd_cointrr = reshape(GAMM0[:, rr + 1], n_obs + n_coint, n_obs + n_coint) + DDDD
+        yyXXd[:, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift] =
+            yyyyd_cointrr[1:n_obs, 1:n_obs]
 
         if n_coint_add > 0
             # 𝔼[x(n_coint_add), x(lag rr)]
-            XXXXd[1:n_coint_add, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] =
-                DD_coint_add_div2 * DD[1:nobs]'
-            XXXXd[n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift, 1:n_coint_add] =
-                XXXXd[1:n_coint_add, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift]'
+            XXXXd[1:n_coint_add, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift] =
+                DD_coint_add_div2 * DD[1:n_obs]'
+            XXXXd[n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift, 1:n_coint_add] =
+                XXXXd[1:n_coint_add, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift]'
         end
 
         # 𝔼[x(n_coint), x(lag rr)]
-        yyyyd_cointrr1 = reshape(GAMM0[:, rr], nobs + n_coint, nobs + n_coint) + DDDD
-        XXXXd[n_coint_add + 1:n_coint_all, n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] =
-            yyyyd_cointrr1[nobs + 1:nobs + n_coint, 1:nobs]
-        XXXXd[n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift, n_coint_add + 1:n_coint_all] =
-            yyyyd_cointrr1[nobs + 1:nobs + n_coint, 1:nobs]'
+        yyyyd_cointrr1 = reshape(GAMM0[:, rr], n_obs + n_coint, n_obs + n_coint) + DDDD
+        XXXXd[n_coint_add + 1:n_coint_all, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift] =
+            yyyyd_cointrr1[n_obs + 1:n_obs + n_coint, 1:n_obs]
+        XXXXd[n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift, n_coint_add + 1:n_coint_all] =
+            yyyyd_cointrr1[n_obs + 1:n_obs + n_coint, 1:n_obs]'
 
         # 𝔼[x(lag rr), x(lag ll)]
         for ll = rr:p
-            yyyyd_cointrrll = reshape(GAMM0[:, ll - rr + 1], nobs + n_coint, nobs + n_coint) + DDDD
-            XXXXd[n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift,
-                  n_coint_all + 1 + nobs * (ll - 1) + shift:n_coint_all + nobs * ll + shift] = yyyyd_cointrrll[1:nobs, 1:nobs]
-            XXXXd[n_coint_all + 1 + nobs * (ll - 1) + shift:n_coint_all + nobs * ll + shift,
-                  n_coint_all + 1 + nobs * (rr - 1) + shift:n_coint_all + nobs * rr + shift] = yyyyd_cointrrll[1:nobs, 1:nobs]'
+            yyyyd_cointrrll = reshape(GAMM0[:, ll - rr + 1], n_obs + n_coint, n_obs + n_coint) + DDDD
+            XXXXd[n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift,
+                  n_coint_all + 1 + n_obs * (ll - 1) + shift:n_coint_all + n_obs * ll + shift] = yyyyd_cointrrll[1:n_obs, 1:n_obs]
+            XXXXd[n_coint_all + 1 + n_obs * (ll - 1) + shift:n_coint_all + n_obs * ll + shift,
+                  n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift] = yyyyd_cointrrll[1:n_obs, 1:n_obs]'
         end
     end
 

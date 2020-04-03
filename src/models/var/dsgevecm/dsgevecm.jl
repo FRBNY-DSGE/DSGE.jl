@@ -3,7 +3,7 @@
 DSGEVECM{T} <: AbstractDSGEVECMModel{T}
 ```
 implements a simple interface for combining a given DSGE model
-with a VECM (a VAR with cointegrated terms) to create a DSGE-VECM.
+with a VECM (a VAR with cointegrating terms) to create a DSGE-VECM.
 Confer with Del Negro and Schorfheide (2006)
 and/or Del Negro, Schorfheide, Smets, and Wouters (2007) for details about DSGE-VECMs.
 We recommend the first paper as an initial introduction to DSGE-VECMs.
@@ -13,7 +13,7 @@ The recommended constructor requires the user to provide
 the DSGE to use, and (3) the subspec (optional, defaults to "ss0").
 If the subspec "ss0" is used, then the result is a `DSGEVECM`
 whose VECM component is "empty" in that the
-observables, cointegrated observables, lags, and λ weight are not specified.
+observables, cointegrating relationships, lags, and λ weight are not specified.
 The reason why this constructor requires the user to specify which
 structural shocks of DSGE to use is that this information is
 DSGE-specific rather than information about the VECM.
@@ -50,10 +50,12 @@ DSGE description: Julia implementation of model defined in 'Bayesian Estimation 
 
 #### DSGE-VECM Information
 * `observables::OrderedDict{Symbol,Int}`: dictionary mapping observables
-    of the VECM to their index in the matrices representing the DSGE-VECM
-* `cointegrated::OrderedDict{Symbol,Int}`: dictionary mapping cointegrated observables
     of the VECM to their index in the matrices representing the DSGE-VECM.
-    Any cointegrated variables must also belong to `observables`.
+* `cointegrating::OrderedDict{Symbol,Int}`: dictionary mapping cointegrating relationships
+    of the VECM to their index in the matrices representing the DSGE-VECM.
+    When creating the state space representation of a DSGE-VECM, the
+    cointegrating relationships will come after the observables. Accordingly,
+    the first `cointegrating` index will be after the last observable.
 * `shocks::OrderedDict{Symbol,Int}`: dictionary mapping structural
     shocks in the DSGE to their index in the matrices representing the DSGE-VECM
 * `lags::Int`: number of lags in the VECM
@@ -70,7 +72,7 @@ DSGE description: Julia implementation of model defined in 'Bayesian Estimation 
 mutable struct DSGEVECM{T} <: AbstractDSGEVECMModel{T}
     dsge::AbstractDSGEModel{T}
     observables::OrderedDict{Symbol,Int}
-    cointegrated::OrderedDict{Symbol,Int}
+    cointegrating::OrderedDict{Symbol,Int}
     shocks::OrderedDict{Symbol,Int}
     lags::Int
     λ::T

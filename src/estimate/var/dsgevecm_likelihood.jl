@@ -57,7 +57,7 @@ function dsgevecm_likelihood(m::AbstractDSGEVECMModel{S}, data::Matrix{S};
     end
 
     return dsgevecm_likelihood(YYYY, XXYY, XXXX, yyyyd, xxyyd, xxxxd,
-                      size(data, 2) - lags, get_λ(m), values(get_cointegrated(m)))
+                      size(data, 2) - lags, get_λ(m); n_cointadd = n_cointadd(m))
 end
 
 """
@@ -81,70 +81,32 @@ and the population moments implied by the DSGE prior (`YYYYD`, `XXYYD`, `XXXXD`)
 """
 function dsgevecm_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
                              XXXX::Matrix{S}, YYYYD::Matrix{S}, XXYYD::Matrix{S},
-                             XXXXD::Matrix{S}, T::Int, λ::S,
-                             cointadd_inds::Union{Int, Vector{Int}, UnitRange{Int}}) where {S <: Real}
+                             XXXXD::Matrix{S}, T::Int, λ::S;
+                             n_cointadd::Int) where {S <: Real}
 
     if isinf(λ)
-        inds = Base.filter(x -> !(x in cointadd_inds), 1:size(XXXX, 1))
-        XXYYD = XXYYD[inds, :]
-        XXYY  = XXYY[inds, :]
-        β = XXXXD[inds, inds] \ XXYYD
+        if n_cointadd > 0
+            inds = 1 + n_cointadd:size(XXXX, 1)
+            XXXXD = XXXXD[inds, inds]
+            XXYYD = XXYYD[inds, :]
+            XXXX  = XXXXD[inds, inds]
+            XXYY  = XXYY[inds, :]
+        end
+        β = XXXXD \ XXYYD
         Σ = YYYYD - XXYYD' * β
         n_obs  = size(YYYY, 1)
         loglik = -(n_obs * T / 2) * log(2 * π) - (T / 2) * log(det(Σ)) -
-            .5 * sum(diag(Σ \ (YYYY - β' * XXYY - XXYY' * β + β' * XXXX[inds, inds] * β)))
-        loglik = real(loglik)
-    elseif λ < 0
-        throw(DomainError("λ", "λ cannot be negative."))
+            .5 * sum(diag(Σ \ (YYYY - β' * XXYY - XXYY' * β + β' * XXXX * β)))
+        return real(loglik)
     else
-        # Dimensions
-        λT     = λ * T
-        n_obsc = T + λT
-        k      = size(XXXX, 1) # 1 + lags * n_obs
-        n_obs  = size(YYYY, 1)
-
         # Compute DSGEVECM components for weighted population moments
-        Λ⁻¹ = Diagonal{S}(I, k)
-        if cointadd_inds !== 0                      # these two lines are the only ones which distinguish
-            Λ⁻¹[cointadd_inds, cointadd_inds] ./= λT # this likelihood from dsgevar_likelihood
+        if n_cointadd > 0
+            Λ⁻¹ = Diagonal{S}(I, size(XXXX, 1))    # these lines are the only ones which distinguish
+            Λ⁻¹[1:n_cointadd, 1:n_cointadd] ./= λT # this likelihood from dsgevar_likelihood
+            XXYY = Λ⁻¹ * XXYY
+            XXXX = Λ⁻¹ * XXXX * Λ⁻¹
         end
 
-        # Compute weighted population moments
-        YYYYC = YYYY + λT * YYYYD
-        XXYYC = Λ⁻¹ * XXYY + λT * XXYYD
-        XXXXC = Λ⁻¹ * XXXX * Λ⁻¹ + λT * XXXXD
-
-        # Compute OLS estimates of VECM
-        Σ = (YYYYC - XXYYC' * (XXXXC \ XXYYC)) / n_obsc
-        Σd = YYYYD - XXYYD' * (XXXXD \ XXYYD)
-
-        # Add terms in normalization constant independent of θ
-        loglik = (-n_obs * T / 2) * log(2 * π) + (T * n_obs / 2) * log(2)
-        for i = 1:n_obs
-            loglik += loggamma((n_obsc - k + 1 - i) / 2) - loggamma((λT - k + 1 - i) / 2)
-        end
-
-        # Calculate remainder of likelihood
-        # p(Y | θ, λT) = ∫ p(Y | β, Σ) p(β, Σ | θ, λT) d(β, Σ), where
-        # - p(Y | β, Σ) is the standard Gaussian likelihood of a VECM unconditional on θ,
-        #               i.e. the likelihood ignoring the restrictions a DSGE places on a VECM,
-        #                    or the likelihood when doing OLS on just the data.
-        # - p(β, Σ | θ, λT) is the prior on (β, Σ) implied by a DSGE-VECM
-        #                  with weighting λT.
-        loglik += -((n_obsc - k) / 2) * log(det(n_obsc * Σ)) + ((λT - k) / 2) * log(det(λT * Σd)) -
-            (n_obs / 2) * log(det(XXXXC) / det(λT * XXXXD))
-        loglik = real(loglik)
-
-        # Note that the posterior for DSGE parameters and weight λ is
-        # p(θ | Y, λ) ∝ p(Y | θ, λ) p(θ | λ)
-        # and joint posterior for VECM parameters is
-        # p(β, Σ, θ | Y, λ) = p(β, Σ | θ, Y, λ) p(θ | Y, λ), where
-        # p(β, Σ | θ, Y, λ) = p(Y, β, Σ | θ, λ) p(β, Σ | θ, λ).
-        # Observe that p(β, Σ | θ, λ) is the prior on (β, Σ) implied by  DSGE-VECM
-        #                             with weighting λ, and
-        #              p(Y, β, Σ | θ, λ) = p(Y | β, Σ) * (p(β, Σ | θ, λ) * Jeffrey's prior),
-        #                                and the right two terms form the Minnesota prior.
+        return dsgevar_likelihood(YYYY, XXYY, XXXX, YYYYD, XXYYD, XXXXD, T, λ)
     end
-
-    return loglik
 end
