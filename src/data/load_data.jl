@@ -406,8 +406,13 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
         end
     else
         for col in setdiff(names(df), [:date])
-            if all(ismissing.(df[!,col])) || all(isnan.(df[!,col]))
+            if all(ismissing.(df[!,col]))
                 @warn "df[$col] is all missing."
+            else
+                not_missing_inds = .!(ismissing.(df[!, col]))
+                if all(isnan.(df[not_missing_inds, col]))
+                    @warn "df[$col] is entirely NaNs and/or missings."
+                end
             end
         end
     end
