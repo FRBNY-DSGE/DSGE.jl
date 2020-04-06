@@ -189,5 +189,10 @@ function measurement(m::Model1002{T},
         # Add in wage markup as an additional observable
         ZZ[obs[:obs_wagemarkup], endo[:λ_w_t]] = 1.
     end
+    if subspec(m) == "ss56"
+        # Add in wage markup as an additional observable
+        ZZ[obs[:obs_ztil], endo[:ztil_t]] = 1.
+    end
+
     return Measurement(ZZ, DD, QQ, EE)
 end
