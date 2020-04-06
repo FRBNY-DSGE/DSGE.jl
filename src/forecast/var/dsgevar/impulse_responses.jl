@@ -310,23 +310,23 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
             X̂       = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
         end
     else
-            nshocks = size(RRR, 2)
-            ŷ       = Array{S, 3}(undef, nobs, horizon, nshocks)
-            shocks  = zeros(S, nshocks)
+        nshocks = size(RRR, 2)
+        ŷ       = Array{S, 3}(undef, nobs, horizon, nshocks)
+        shocks  = zeros(S, nshocks)
 
-            for i = 1:nshocks
-                shocks[i] = flip_shocks ? sqrt(QQ[i, i]) :
-                    -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
-                out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
-                shocks[i]  = 0. # set back to zero
-                ŷ[:, 1, i] = out
+        for i = 1:nshocks
+            shocks[i] = flip_shocks ? sqrt(QQ[i, i]) :
+                -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
+            out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
+            shocks[i]  = 0. # set back to zero
+            ŷ[:, 1, i] = out
+            X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+            for t = 2:horizon
+                out        = vec(X̂' * β)
+                ŷ[:, t, i] = out
                 X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
-                for t = 2:horizon
-                    out        = vec(X̂' * β)
-                    ŷ[:, t, i] = out
-                    X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
-                end
             end
+        end
     end
 
     return ŷ
