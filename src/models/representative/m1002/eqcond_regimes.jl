@@ -602,6 +602,18 @@ function eqcond_regimes(m::Model1002)
                 Γ1[regime][eq[:eq_ϵ_λ_w], endo[:λ_w_t]] = -m[:ρ_λ_w] / m[:σ_λ_w]
             end
         end
+
+        ### ztil shock
+        if subspec(m) in ["ss57"]
+            Γ0[regime][eq[:eq_ϵ_ztil], endo[:ϵ_ztil_t]] = 1.
+            if regime == 2
+                Γ1[regime][eq[:eq_ϵ_ztil], endo[:ztil_t]] = -m[:ρ_ztil] / m[:σ_ztil_r2]
+                Γ0[regime][eq[:eq_ϵ_ztil], endo[:z_t]]    = -1 / m[:σ_ztil_r2]
+            else
+                Γ1[regime][eq[:eq_ϵ_ztil], endo[:ztil_t]] = -m[:ρ_ztil] / m[:σ_ztil]
+                Γ0[regime][eq[:eq_ϵ_ztil], endo[:z_t]]    = -1 / m[:σ_ztil]
+            end
+        end
     end
     return (Γ0[1], Γ1[1], C[1], Ψ[1], Π[1]), (Γ0[2], Γ1[2], C[2], Ψ[2], Π[2])
 end
