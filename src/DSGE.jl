@@ -499,6 +499,7 @@ module DSGE
     include("forecast/wrappers_impulse_responses/observables_identified_dsge_impulse_responses.jl")
     include("forecast/var/impulse_responses.jl")
     include("forecast/var/dsgevar/impulse_responses.jl")
+    include("forecast/var/dsgevecm/impulse_responses.jl")
     include("forecast/drivers.jl")
 
     # include("dsgevar/dsgevar.jl")

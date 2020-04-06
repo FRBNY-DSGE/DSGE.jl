@@ -62,15 +62,25 @@ end
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
                                 matdata2["sig_sim"], vec(matdata2["XXpred"]),
                                 Int(matdata2["qahead"]), draw_shocks = true)
-    Random.seed!(1793) # Flipping shocks here
+    Random.seed!(1793) # re-seeding should work
     ŷ2 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
                                 zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
                                 matdata1["impact"].^2, Int(matdata2["k"]),
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
                                 matdata2["sig_sim"], vec(matdata2["XXpred"]),
                                 Int(matdata2["qahead"]), draw_shocks = true)
+    Random.seed!(1793) # flipping shocks shouldn't yield anything different
+    @info "The following warning is expected."
+    ŷ3 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
+                                zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
+                                matdata1["impact"].^2, Int(matdata2["k"]),
+                                convert(Matrix{Float64}, matdata2["cct_sim"]'),
+                                matdata2["sig_sim"], vec(matdata2["XXpred"]),
+                                Int(matdata2["qahead"]), draw_shocks = true,
+                                flip_shocks = true)
     @test !(ŷ1 ≈ matdata2["yypred"]')
     @test ŷ1 ≈ ŷ2
+    @test ŷ1 ≈ ŷ3
 end
 
 @testset "Impulse responses of a VAR using a DSGE as a prior" begin

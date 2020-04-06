@@ -1,15 +1,14 @@
 """
 ```
-function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
 
-function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
-
 ```
-computes the VAR impulse responses identified by the DSGE
+computes the VECM impulse responses identified by the DSGE
 ```
 sₜ = TTT × sₜ₋₁ + RRR × impact[:, i],
 yₜ = ZZ × sₜ + DD + MM × impact[:, i],
@@ -19,35 +18,35 @@ where `impact[:, i]` is a linear combination of
 `MM × impact[:, i]` are the correlated measurement errors.
 
 We draw a β and Σᵤ from the posterior implied by the DSGE
-and data, and we then compute normal VAR impulse responses given those
+and data, and we then compute normal VECM impulse responses given those
 coefficients and innovations variance-covariance matrix. The weight placed
-on the DSGE is encoded by the field `λ` of the DSGEVAR object `m`.
+on the DSGE is encoded by the field `λ` of the DSGEVECM object `m`.
 
-Given β, Σᵤ, we compute impulse responses to the VAR system
+Given β, Σᵤ, we compute impulse responses to the VECM system
 ```
 ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
 ```
 where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`
-using one of the available identification methods for VARs
+using one of the available identification methods for VECMs
 
 If the second function is used (where `data` is not an input), then we assume
-the user wants to compute the VAR approximation of the DSGE,
+the user wants to compute the VECM approximation of the DSGE,
 regardless of the `λ` value in `m`. Note that this function will not
-update the value of `λ` in `m` (even though we are computing the DSGE-VAR(∞) approximation).
+update the value of `λ` in `m` (even though we are computing the DSGE-VECM(∞) approximation).
 
 ### Inputs
 * `method::Symbol`: The available methods are `:cholesky`, `:maxBC`, and `:choleskyLR`.
-    See the docstrings `impulse_responses` for VARs specifically.
+    See the docstrings `impulse_responses` for VECMs specifically.
 * `n_obs_shock::Int`: The index of the observable corresponding to the orthogonalized shock
     causing the impulse response.
 
 ### Keyword Arguments
 * `horizon::Int`: the desired horizon of the impulse responses.
-* `use_intercept::Bool`: use an intercept term for the VAR approximation
+* `use_intercept::Bool`: use an intercept term for the VECM approximation
 * `flip_shocks::Bool`: default is a "negative" impulse response on impact.
     Set to `true` for the positive impulse response.
 """
-function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = impulse_response_horizons(m),
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m, data; verbose = verbose)
@@ -60,7 +59,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, m
 end
 
 
-function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m; verbose = verbose, use_intercept = use_intercept)
@@ -75,13 +74,13 @@ end
 
 """
 ```
-function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S},
     X̂::Matrix{S} = Matrix{S}(undef, 0, 0);
     horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
     flip_shocks::Bool = false, draw_shocks::Bool = false,
     verbose::Symbol = :none) where {S <: Real}
 ```
-computes the VAR impulse responses identified by the DSGE
+computes the VECM impulse responses identified by the DSGE
 ```
 sₜ = TTT × sₜ₋₁ + RRR × impact[:, i],
 yₜ = ZZ × sₜ + DD + MM × impact[:, i],
@@ -90,11 +89,15 @@ where `impact[:, i]` is a linear combination of
 (orthogonal) structural shocks `ϵₜ ∼ 𝒩 (0, I)`, and
 `MM × impact[:, i]` are the correlated measurement errors.
 
-The VAR impulse responses are computed according to
+The VECM impulse responses are computed according to
 ```
-ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
+Δŷₜ₊₁ = eₜ₊₁βₑ + X̂ₜ₊₁βᵥ + uₜ₊₁,
 ```
-where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`.
+where `βₑ` are the coefficients for the error correction terms;
+`eₜ₊₁` are the error correction terms specifying the cointegrating relationships;
+`βᵥ` are the coefficients for the VAR terms;
+`X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`,
+and `uₜ₊₁ ∼ 𝒩 (0, Σ)`.
 
 The shock `uₜ₊₁` is identified by assuming
 ```
@@ -105,17 +108,22 @@ of the impact response matrix corresponding to the state space system, i.e.
 ```
 Ω, _ = qr(∂yₜ / ∂ϵₜ').
 ```
+The impact response matrix is constructed using only the stationary component of the
+state space system and ignores the cointegration components of `ZZ` and `DD`.
 
 For reference, see Del Negro and Schorfheide (2004),
 Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009).
 
 ### Inputs
+* `coint_mat::Matrix{S}`: matrix specifying the cointegrating relationships
+    in the actual `data` matrix. Evaluating `coint_mat * data` should yield
+    a time series of the cointegrating relationships.
 * `X̂::Matrix{S}`: covariates for the first "forecast" period
-    of the impulse response, i.e. if we have a VAR with `p` lags, then
+    of the impulse response, i.e. if we have a VECM with `p` lags, then
 ```
 X̂ = [1, ŷₜ, ŷₜ₋₁, ..., ŷₜ₋ₚ₊₁]
 ```
-so that, when β is the vector of VAR coefficients, then
+so that, when β is the vector of VECM coefficients, then
 ```
 𝔼[ŷₜ₊₁] = kron(I, X̂') * β.
 ```
@@ -135,25 +143,27 @@ to achieve reproducibility.
 * `draw_shocks::Bool`: true if you want to draw shocks along the entire horizon
 * `verbose::Symbol`: quantity of output desired
 """
-function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
-                           X̂::Vector{S} = Vector{S}(undef, 0);
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S},
+                           coint_mat::Matrix{S}, X̂::Vector{S} = Vector{S}(undef, 0);
                            horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            verbose::Symbol = :none) where {S <: Real}
 
     # Prepare X̂
-    nobs = size(data, 1)
-    k = nobs * get_lags(m) + 1
+    n_obs = size(data, 1)
+    n_coint = size(coint_mat, 1)
+    k = n_coint + n_obs * get_lags(m) + 1
     if isempty(X̂)
         XX = lag_data(data, get_lags(m); use_intercept = true)
-        X̂ = vcat(1, data[:, end], XX[end, 1+1:k - nobs])
+        addcoint = coint_mat * data[:, end]
+        X̂ = vcat(addcoint, 1, data[:, end], XX[end, 1+1:k - n_obs])
     end
     h = (horizon > 0) ? horizon : impulse_response_horizons(m) # grab horizons
 
     # Compute underlying state space system
     system = compute_system(m; get_system = true, use_intercept = true)
 
-    # Compute VAR coefficients
+    # Compute VECM coefficients
     β, Σ = compute_system(m, data; verbose = verbose)
     Σ += Σ'
     Σ ./= 2.
@@ -167,103 +177,38 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
         end
     end
     return impulse_responses(system[:TTT], system[:RRR], system[:ZZ], system[:DD], MM,
-                             system[:QQ], k, β, Σ, X̂, h; flip_shocks = flip_shocks,
+                             system[:QQ], k, n_obs, n_coint, β, Σ,
+                             coint_mat, X̂, h; flip_shocks = flip_shocks,
                              draw_shocks = draw_shocks)
-end
-
-
-"""
-```
-function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
-                           DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S}, horizon::Int;
-                           accumulate::Bool = false,
-                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0) where {S<:Real}
-```
-computes the impulse responses of the linear state space system to linear combinations
-of (orthogonal) structural shocks specified by `impact`.
-Measurement error that is correlated with
-the impact matrix is allowed. We also include the option to accumulate certain observables.
-
-This state space model takes the form
-
-```
-sₜ = TTT × sₜ₋₁ + RRR × impact[:, i],
-yₜ = ZZ × sₜ + DD + MM × impact[:, i],
-```
-where `impact[:, i]` is a linear combination of orthogonal structural shocks
-with mean zero and identity covariance, and `MM × impact[:, i]` are the
-correlated measurement errors.
-
-The `impact` matrix must be `nshock × nirf`, where `nshock` is
- the number of structural shocks and `nirf` is the number
-of desired impulse responses. For each row of `impact`,
-we compute the corresponding impulse responses.
-
-A standard choice for `impact` is a square diagonal matrix. In this case,
-we compute the impulse response of observables to each structural shock,
-scaled by the desired size of the shock.
-
-### Keywords
-* `accumulate`: set to true if an observable should be accumulated.
-* `cum_inds`: specifies the indices of variables to accumulated.
-
-### Outputs
-* `irf_results::Matrix{S}`: a `nobs x horizon × nirf` matrix, where
-     `nobs` is the number of observables.
-"""
-function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
-                           DD::Vector{S}, MM::Matrix{S}, impact::Matrix{S}, horizon::Int;
-                           accumulate::Bool = false,
-                           cum_inds::Union{Int,UnitRange{Int},Vector{Int}} = 0) where {S<:Real}
-    # Get dimensions
-    nshock, nirf = size(impact)
-    nstate       = size(TTT, 1)
-    nobs         = size(ZZ, 1)
-
-    # Compute impulse response to identified impact matrix
-    irf_results = Array{S, 3}(undef, nobs, horizon, nirf)
-    for i = 1:nirf
-        imp    = impact[:, i]
-        states = zeros(S, nstate, horizon)
-        obs    = zeros(S, nobs, horizon)
-
-        states[:, 1] = RRR * imp
-        obs[:, 1]    = ZZ * states[:, 1] + MM * imp
-        for t = 2:horizon
-            states[:, t] = TTT * states[:, t - 1]
-            obs[:, t]    = ZZ * states[:, t] + DD
-        end
-        if accumulate
-            obs[cum_inds, :] = cumsum(obs[cum_inds, :], dims = length(cum_inds) > 1 ? 2 : 1)
-        end
-        irf_results[:, :, i] = obs
-    end
-
-    return irf_results
 end
 
 """
 ```
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
-                           k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Matrix{S}, horizon::Int;
+                           k::Int, n_obs::Int, n_coint::Int, β::Matrix{S}, Σ::Matrix{S},
+                           coint_mat::Matrix{S}, X̂::Matrix{S}, horizon::Int;
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            test_shocks::Matrix{S} =
                            Matrix{S}(undef, 0, 0)) where {S<:Real}
 ```
-computes the VAR impulse responses identified by the state space system
+computes the VECM impulse responses identified by the state space system
 ```
 sₜ = TTT × sₜ₋₁ + RRR × ϵₜ
 yₜ = ZZ × sₜ + DD + MM × ϵₜ
 ```
 where `ϵₜ ∼ 𝒩 (0, QQ)` and `MM × ϵₜ` are the correlated measurement errors.
 
-The VAR impulse responses are computed according to
+Consider the VECM
 ```
-ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
+Δŷₜ₊₁ = eₜ₊₁βₑ + X̂ₜ₊₁βᵥ + uₜ₊₁,
 ```
-where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`.
+where `βₑ` are the coefficients for the error correction terms;
+`eₜ₊₁` are the error correction terms specifying the cointegrating relationships;
+`βᵥ` are the coefficients for the VAR terms;
+`X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`,
+and `uₜ₊₁ ∼ 𝒩 (0, Σ)`.
+
 The shock `uₜ₊₁` is identified via
 ```
 Σᵤ = 𝔼[u × u'] = chol(Σᵤ) × Ω × ϵₜ,
@@ -273,29 +218,41 @@ of the impact response matrix corresponding to the state space system, i.e.
 ```
 Ω, _ = qr(∂yₜ / ∂ϵₜ').
 ```
+The impact response matrix is constructed using only the stationary component of the
+state space system and ignores the cointegration components of `ZZ` and `DD`.
 
-For reference, see Del Negro and Schorfheide (2004),
-Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009).
+The data are assumed to have dimensions `n_obs × T`, and
+the cointegration relationships in the data are given by `coint_mat * data`, where
+`coint_mat` has dimensions `n_coint × n_obs`. The variable `k` is the
+number of total regressors in the VECM, including cointegration terms.
+
+For reference, see Del Negro and Schorfheide (2004), Del Negro and Schorfheide (2006),
+and Del Negro, Schorfheide, Smets, and Wouters (2007).
 """
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
-                           k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Vector{S}, horizon::Int;
+                           k::Int, n_obs::Int, n_coint::Int, β::Matrix{S}, Σ::Matrix{S},
+                           coint_mat::Matrix{S}, X̂::Vector{S}, horizon::Int;
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            test_shocks::Matrix{S} =
                            Matrix{S}(undef, 0, 0)) where {S <: Real}
 
+    # Grab stationary components
+    ZZ = ZZ[1:n_obs, :]
+    DD = DD[1:n_obs]
+    MM = MM[1:n_obs, :]
+
     # Compute impulse responses of predicted values for each β, Σ, and rotation
-    nobs = size(ZZ, 1)
     a0_m = convert(Matrix{S},
                    dropdims(impulse_responses(TTT, RRR, ZZ, DD, MM,
                                               sqrt.(QQ), 1, # 1 b/c just want impact and sqrt -> 1 sd shock
                                               accumulate = false); dims = 2)')
-    rotation, _ = qr(a0_m)
-    Σ_chol = cholesky(Σ).L * rotation' # mapping from structural shocks to innovations in VAR
+    rotation, r_a = qr(a0_m)
+    rotation = sign.(diag(r_a)) .* rotation' # normalizes each row (change signs) so that lower diagonal (r_a') has positive diagonal elements
+    Σ_chol = cholesky(Σ).L * rotation # mapping from structural shocks to innovations in VECM
 
     if draw_shocks || !isempty(test_shocks)
-        ŷ = Matrix{S}(undef, nobs, horizon)
+        ŷ = Matrix{S}(undef, n_obs, horizon)
 
         if isempty(test_shocks)
             shocks = randn(size(RRR, 2), horizon) # shocks getting drawn are structural shocks
@@ -305,16 +262,18 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
         else
             shocks = test_shocks
         end
-
         for t = 1:horizon
-            out     = vec(X̂' * β) + Σ_chol * shocks[:, t] # X̂ normally would be [X̂ 0 0; 0 X̂ 0; 0 0 X̂] if nobs = 3, but this way of coding it results in less memory storage
-            ŷ[:, t] = out
+            out      = vec(X̂' * β) + Σ_chol * shocks[:, t] # X̂ normally would be [X̂ 0 0; 0 X̂ 0; 0 0 X̂] if n_obs = 3,
+            @show out
+            ŷ[:, t]  = out                                 # but this way of coding it results in less memory storage
+            addcoint = X̂[1:n_coint] + coint_mat * out        # Predicted cointegration terms
 
-            X̂       = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+            X̂ = vcat(addcoint, 1.,  out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
+            @show X̂
         end
     else
         nshocks = size(RRR, 2)
-        ŷ       = Array{S, 3}(undef, nobs, horizon, nshocks)
+        ŷ       = Array{S, 3}(undef, n_obs, horizon, nshocks)
         shocks  = zeros(S, nshocks)
 
         for i = 1:nshocks
@@ -323,11 +282,11 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
             out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
             shocks[i]  = 0. # set back to zero
             ŷ[:, 1, i] = out
-            X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+            X̂          = vcat(1., out, X̂[1 + 1:k - n_obs]) # XXl = X̂[1 + 1:k - n_obs]
             for t = 2:horizon
                 out        = vec(X̂' * β)
                 ŷ[:, t, i] = out
-                X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+                X̂          = vcat(1., out, X̂[1 + 1:k - n_obs]) # XXl = X̂[1 + 1:k - n_obs]
             end
         end
     end
