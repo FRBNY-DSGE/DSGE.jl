@@ -1853,7 +1853,7 @@ end
 ss56!(m::Model1002)
 ```
 
-Second regime where ztil, mp, and anticipated shocks are active. Adds ztil_t as an observable.
+Second regime where ztil, mp, and anticipated shocks are active. Adds ztil as an observable.
 """
 function ss56!(m::Model1002)
     m <= parameter(:σ_g_r2, 0., (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
@@ -1935,7 +1935,7 @@ end
 ss57!(m::Model1002)
 ```
 
-Second regime where ztil, mp, and anticipated shocks are active. Adds ztil_t as an observable.
+Second regime where ztil, mp, and anticipated shocks are active. Adds temporary shock to ztil as observable.
 """
 function ss57!(m::Model1002)
     m <= parameter(:σ_g_r2, 0., (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,

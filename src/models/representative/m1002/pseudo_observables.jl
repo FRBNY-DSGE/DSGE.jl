@@ -24,6 +24,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         push!(pseudo_names, :λ_w_t)
     end
 
+    if haskey(m.settings, :add_ztil)
+        if get_setting(m, :add_ztil)
+            push!(pseudo_names, :ztil)
+        end
+    end
+
     if haskey(m.settings, :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
             push!(pseudo_names, :laborshare_t)
@@ -150,6 +156,34 @@ function init_pseudo_observable_mappings!(m::Model1002)
         if get_setting(m, :add_laborshare_measurement)
             pseudo[:laborshare_t].name     = "Log Labor Share"
             pseudo[:laborshare_t].longname = "Log Labor Share"
+        end
+    end
+
+    if haskey(m.settings, :add_ztil)
+        if get_setting(m, :add_ztil)
+            pseudo[:ztil].name     = "ztil"
+            pseudo[:ztil].longname = "ztil"
+        end
+    end
+
+    if haskey(m.settings, :add_laborproductivity_measurement)
+        if get_setting(m, :add_laborproductivity_measurement)
+            pseudo[:laborproductivity].name     = "Log Labor Productivity"
+            pseudo[:laborproductivity].longname = "Log Labor Productivity"
+        end
+    end
+
+    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+        if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
+            pseudo[:LaborProductivityGrowthNoME].name     = "Labor Productivity Growth (No ME)"
+            pseudo[:LaborProductivityGrowthNoME].longname = "Labor Productivity Growth (No ME)"
+        end
+    end
+
+    if haskey(m.settings, :add_Epi_t_measurement)
+        if get_setting(m, :add_Epi_t_measurement)
+            pseudo[:Epi_t].name     = "Short-term Inflation Expectations"
+            pseudo[:Epi_t].longname = "Short-term Inflation Expectations"
         end
     end
 
