@@ -425,6 +425,28 @@ function init_observable_mappings!(m::Model1002)
         observables[:obs_ztilshock] = Observable(:obs_ztilshock, [:WAGEMKP__DLX],
                                                        ztil_fwd_transform, ztil_rev_transform,
                                                        "ztil shock", "ztil shock")
+    elseif subspec(m) == "ss58"
+       ztil_fwd_transform = function (levels)
+            levels[:, Symbol("WAGEMKP")]
+        end
+        ztil_rev_transform = DSGE.identity
+        observables[:obs_ztil] = Observable(:obs_ztil, [:WAGEMKP__DLX],
+                                                       ztil_fwd_transform, ztil_rev_transform,
+                                                       "ztil", "ztil")
+       z_fwd_transform = function (levels)
+            levels[:, Symbol("WAGEMKP")]
+        end
+        z_rev_transform = DSGE.identity
+        observables[:obs_z] = Observable(:obs_z, [:WAGEMKP__DLX],
+                                                       z_fwd_transform, z_rev_transform,
+                                                       "z", "z")
+       zp_fwd_transform = function (levels)
+            levels[:, Symbol("WAGEMKP")]
+        end
+        zp_rev_transform = DSGE.identity
+        observables[:obs_zp] = Observable(:obs_zp, [:WAGEMKP__DLX],
+                                                       zp_fwd_transform, zp_rev_transform,
+                                                       "zp", "zp")
     end
 
     if haskey(m.settings, :first_observable)
