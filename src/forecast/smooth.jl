@@ -164,6 +164,15 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         error("Invalid smoother: $(forecast_smoother(m))")
     end
 
+    # Map smoothed states to pseudo-observables
+    # DOES NOT COVER THE CASE WHERE ZZ_PSEUDO VARIES BETWEEN REGIMES, can require users to use the same matrices
+    pseudo = Matrix{eltype(states)}(undef, length(system[1][:DD_pseudo]), size(states, 2))
+    ZP = system[1][:ZZ_pseudo]
+    DP = system[1][:DD_pseudo]
+    for inds in regime_inds
+        pseudo[:, inds] = ZP * states[:, inds] .+ DP
+    end
+
     # Index out last presample period, used to compute the deterministic trend
     t0 = n_presample_periods(m)
     t1 = index_mainsample_start(m)
@@ -173,20 +182,8 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         initial_states = states[:, t0]
         states = states[:, t1:end]
         shocks = shocks[:, t1:end]
+        pseudo = pseudo[:, t1:end]
     end
 
-    # Map smoothed states to pseudo-observables
-    # DOES NOT COVER THE CASE WHERE ZZ_PSEUDO VARIES BETWEEN REGIMES, can require users to use the same matrices
-    pseudo = Matrix{eltype(states)}(undef, length(system[1][:DD_pseudo]), size(states, 2))
-    ZP = system[1][:ZZ_pseudo]
-    DP = system[1][:DD_pseudo]
-    for inds in regime_inds
-        if inds[end] > size(states, 2) && inds[1] < size(states, 2)
-            inds = inds[1]:size(states, 2)
-        else
-            break
-        end
-        pseudo[:, inds] = ZP * states[:, inds] .+ DP
-    end
     return states, shocks, pseudo, initial_states
 end
