@@ -27,7 +27,7 @@ Given β, Σᵤ, we compute impulse responses to the VAR system
 ```
 ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
 ```
-where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`
+where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ₊₁`
 using one of the available identification methods for VARs
 
 If the second function is used (where `data` is not an input), then we assume
@@ -49,20 +49,22 @@ update the value of `λ` in `m` (even though we are computing the DSGE-VAR(∞) 
 """
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = impulse_response_horizons(m),
-                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+                           flip_shocks::Bool = false, frequency_band::Tuple{S, S} = (2*π/32, 2*π/6),
+                           verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m, data; verbose = verbose)
     Σ += Σ'
     Σ ./= 2
 
     return impulse_responses(β, Σ, n_obs_shock, horizon;
                              method = method, flip_shocks = flip_shocks,
-                             use_intercept = true)
+                             use_intercept = true, frequency_band = frequency_band)
 end
 
 
 function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
-                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+                           flip_shocks::Bool = false, frequency_band::Tuple{S, S} = (2*π/32, 2*π/6),
+                           verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m; verbose = verbose, use_intercept = use_intercept)
     Σ += Σ'
     Σ ./= 2
@@ -70,6 +72,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
     return impulse_responses(β, Σ, n_obs_shock,
                              horizon > 0 ? horizon : impulse_response_horizons(m);
                              method = method, use_intercept = use_intercept,
+                             frequency_band = frequency_band,
                              flip_shocks = flip_shocks)
 end
 
@@ -121,6 +124,10 @@ so that, when β is the vector of VAR coefficients, then
 ```
 Internally, we do equivalent matrix operations to avoid allocating
 the Kronecker product.
+
+To compute an impulse response in deviations from a baseline
+forecast, pass in `X̂` as a vector of zeros with length
+`1 + n_obs * p`, where `n_obs` is the number of observables.
 
 ****
 NOTE: this function generally involves taking random draws from
