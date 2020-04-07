@@ -109,7 +109,9 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             for (colnum, name) in enumerate(names(df[:,2:end]))
                 is_missing_in_col = ismissing.(df[!,name])
                 is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
-                freq_nan_empty[colnum] = mean(vcat(is_missing_in_col, is_nan_in_col))
+                n_miss = count(is_missing_in_col)
+                n_nan  = count(is_nan_in_col)
+                freq_nan_empty[colnum] = (n_nan + n_miss) / length(is_missing_in_col)
                 println("$(name), Frequency of missing/NaNs: $(freq_nan_empty[colnum])")
                 if summary_statistics == :high
                     colmean = mean(df[!,name][.!is_missing_in_col][.!is_nan_in_col])
