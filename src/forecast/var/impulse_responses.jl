@@ -231,7 +231,7 @@ impulse_responses(β, Σ, coint_mat, n_obs_shock, horizon, shock_size = 1;
 computes the impulse responses of a VECM system represented in the form
 
 ```
-Δyₜ = eₜ βₑ + Xₜ βᵥ + ϵₜ,
+Δyₜ = eₜ₋₁ βₑ + Xₜ βᵥ + ϵₜ,
 ```
 where `βₑ` are the coefficients for the error correction terms;
 `eₜ` are the error correction terms specifying the cointegrating relationships;
@@ -298,8 +298,9 @@ function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S},
     end
 
     # Compute impulse response
+    addcoint = zeros(S, n_coint) # assume deviations in cointegrating relationships also start at zero
     for t = 2:horizon
-        addcoint = coint_mat * Y[:, lags + t - 1] # assume difference in cointegrating relationships also starts at zero
+        addcoint += coint_mat * Y[:, lags + t - 1]
         xT = vcat(addcoint, vec(Y[:, lags + t - 1:-1:t])) # stacks addcoint w/ lag yₜ₋₁, ..., yₜ₋ₚ
         Y[:, lags + t] = vec(xT' * β)
     end

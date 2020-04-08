@@ -204,7 +204,7 @@ end
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, n_obs::Int, n_coint::Int, β::Matrix{S}, Σ::Matrix{S},
-                           coint_mat::Matrix{S}, X̂::Matrix{S}, horizon::Int;
+                           coint_mat::Matrix{S}, horizon::Int, X̂::Matrix{S};
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            deviations::Bool = false,
                            test_shocks::Matrix{S} =
@@ -252,7 +252,7 @@ and Del Negro, Schorfheide, Smets, and Wouters (2007).
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, n_obs::Int, n_coint::Int, β::Matrix{S}, Σ::Matrix{S},
-                           coint_mat::Matrix{S}, X̂::Vector{S}, horizon::Int;
+                           coint_mat::Matrix{S}, horizon::Int, X̂::Vector{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            deviations::Bool = false,
                            test_shocks::Matrix{S} =
@@ -276,6 +276,7 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
     if deviations
         β = β[vcat(1:n_coint, n_coint + 2:size(β, 1)), :]
         X̂ = zeros(S, size(β, 1))
+        k -= 1
     end
 
     if draw_shocks || !isempty(test_shocks)
@@ -294,27 +295,30 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
             ŷ[:, t]  = out                                 # but this way of coding it results in less memory storage
             addcoint = X̂[1:n_coint] + coint_mat * out      # Predicted cointegration terms
 
-            X̂ = deviations ? vcat(addcoint,  out, X̂[n_coint + 1 + 1:k - n_obs]) :
+            X̂ = deviations ? vcat(addcoint,  out, X̂[n_coint + 1:k - n_obs]) :
                 vcat(addcoint, 1.,  out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
         end
     else
         nshocks = size(RRR, 2)
         ŷ       = Array{S, 3}(undef, n_obs, horizon, nshocks)
+        old_X̂   = X̂
         shocks  = zeros(S, nshocks)
 
         for i = 1:nshocks
+            X̂ = copy(old_X̂)
             shocks[i] = flip_shocks ? sqrt(QQ[i, i]) :
                 -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
             out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
             shocks[i]  = 0. # set back to zero
             ŷ[:, 1, i] = out
             addcoint   = X̂[1:n_coint] + coint_mat * out
-            X̂          = vcat(addcoint, 1., out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
+            X̂          = deviations ? vcat(addcoint,  out, X̂[n_coint + 1:k - n_obs]) :
+                vcat(addcoint, 1.,  out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
             for t = 2:horizon
                 out        = vec(X̂' * β)
                 ŷ[:, t, i] = out
                 addcoint   = X̂[1:n_coint] + coint_mat * out
-                X̂          = deviations ? vcat(addcoint,  out, X̂[n_coint + 1 + 1:k - n_obs]) :
+                X̂          = deviations ? vcat(addcoint,  out, X̂[n_coint + 1:k - n_obs]) :
                     vcat(addcoint, 1.,  out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
             end
         end
