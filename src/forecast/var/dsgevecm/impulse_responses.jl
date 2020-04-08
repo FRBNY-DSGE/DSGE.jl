@@ -204,7 +204,7 @@ end
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, n_obs::Int, n_coint::Int, β::Matrix{S}, Σ::Matrix{S},
-                           coint_mat::Matrix{S}, horizon::Int, X̂::Matrix{S};
+                           coint_mat::Matrix{S}, horizon::Int, X̂::Matrix{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            deviations::Bool = false,
                            test_shocks::Matrix{S} =

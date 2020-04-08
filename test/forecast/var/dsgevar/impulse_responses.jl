@@ -49,8 +49,9 @@ end
                                zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
                                matdata1["impact"].^2, Int(matdata2["k"]),
                                convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                               matdata2["sig_sim"], vec(matdata2["XXpred"]),
-                               Int(matdata2["qahead"]); test_shocks =
+                               matdata2["sig_sim"], Int(matdata2["qahead"]),
+                               vec(matdata2["XXpred"]);
+                               test_shocks =
                                convert(Matrix{Float64}, matdata2["Shocks"]'))
 
     @test ŷ ≈ matdata2["yypred"]'
@@ -60,23 +61,23 @@ end
                                 zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
                                 matdata1["impact"].^2, Int(matdata2["k"]),
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                                matdata2["sig_sim"], vec(matdata2["XXpred"]),
-                                Int(matdata2["qahead"]), draw_shocks = true)
+                                matdata2["sig_sim"], Int(matdata2["qahead"]),
+                                vec(matdata2["XXpred"]), draw_shocks = true)
     Random.seed!(1793) # re-seeding should work
     ŷ2 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
                                 zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
                                 matdata1["impact"].^2, Int(matdata2["k"]),
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                                matdata2["sig_sim"], vec(matdata2["XXpred"]),
-                                Int(matdata2["qahead"]), draw_shocks = true)
+                                matdata2["sig_sim"], Int(matdata2["qahead"]),
+                                vec(matdata2["XXpred"]), draw_shocks = true)
     Random.seed!(1793) # flipping shocks shouldn't yield anything different
     @info "The following warning is expected."
     ŷ3 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
                                 zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
                                 matdata1["impact"].^2, Int(matdata2["k"]),
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                                matdata2["sig_sim"], vec(matdata2["XXpred"]),
-                                Int(matdata2["qahead"]), draw_shocks = true,
+                                matdata2["sig_sim"], Int(matdata2["qahead"]),
+                                vec(matdata2["XXpred"]), draw_shocks = true,
                                 flip_shocks = true)
     @test !(ŷ1 ≈ matdata2["yypred"]')
     @test ŷ1 ≈ ŷ2
@@ -176,6 +177,16 @@ end
     Random.seed!(1793)
     out_draw = impulse_responses(dsgevar, jlddata["data"]; draw_shocks = true)
 
+    Random.seed!(1793) # now use deviations
+    out_dev = impulse_responses(dsgevar, jlddata["data"], deviations = true)
+
+    Random.seed!(1793) # flip shock
+    out_dev_flip = impulse_responses(dsgevar, jlddata["data"], deviations = true,
+                                     flip_shocks = true)
+
+    Random.seed!(1793) # draw shock
+    out_dev_draw = impulse_responses(dsgevar, jlddata["data"], deviations = true,
+                                     draw_shocks = true)
 
     @test @test_matrix_approx_eq jlddata["rotation_irf_by_shock"] out
     @test @test_matrix_approx_eq jlddata["flip_rotation_irf_by_shock"] out_flip
@@ -183,6 +194,9 @@ end
     @test !(out ≈ out_MM2)
     @test @test_matrix_approx_eq out out_X̂
     @test @test_matrix_approx_eq jlddata["rotation_irf_draw_shock"] out_draw
+    @test @test_matrix_approx_eq out_dev jlddata["deviations_rotation_irf_by_shock"]
+    @test @test_matrix_approx_eq out_dev_draw jlddata["deviations_rotation_irf_draw_shock"]
+    @test @test_matrix_approx_eq out_dev -out_dev_flip
 end
 
 @testset "Impulse responses of a VAR approximation to a DSGE (or λ = ∞)" begin

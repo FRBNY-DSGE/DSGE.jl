@@ -155,7 +155,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
     # Prepare X̂
     nobs = size(data, 1)
     k = nobs * get_lags(m) + 1
-    if isempty(X̂)
+    if isempty(X̂) && !deviations
         XX = lag_data(data, get_lags(m); use_intercept = true)
         X̂ = vcat(1, data[:, end], XX[end, 1+1:k - nobs])
     end
@@ -178,7 +178,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
         end
     end
     return impulse_responses(system[:TTT], system[:RRR], system[:ZZ], system[:DD], MM,
-                             system[:QQ], k, β, Σ, X̂, h; flip_shocks = flip_shocks,
+                             system[:QQ], k, β, Σ, h, X̂; flip_shocks = flip_shocks,
                              draw_shocks = draw_shocks, deviations = deviations)
 end
 
@@ -258,7 +258,7 @@ end
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Matrix{S}, horizon::Int;
+                           horizon::Int, X̂::Matrix{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            deviations::Bool = false,
                            test_shocks::Matrix{S} =
@@ -296,7 +296,7 @@ Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009).
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Vector{S}, horizon::Int;
+                           horizon::Int, X̂::Vector{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
                            deviations::Bool = false,
                            test_shocks::Matrix{S} =
@@ -315,6 +315,7 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
     if deviations
         β = β[2:end, :]
         X̂ = zeros(S, size(β, 1))
+        k -= 1
     end
 
     if draw_shocks || !isempty(test_shocks)
@@ -333,25 +334,28 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
             out     = vec(X̂' * β) + Σ_chol * shocks[:, t] # X̂ normally would be [X̂ 0 0; 0 X̂ 0; 0 0 X̂] if nobs = 3, but this way of coding it results in less memory storage
             ŷ[:, t] = out
 
-            X̂       = deviations ? vcat(out, X̂[1 + 1:k - nobs]) :
+            X̂       = deviations ? vcat(out, X̂[1:k - nobs]) :
                 vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
         end
     else
         nshocks = size(RRR, 2)
         ŷ       = Array{S, 3}(undef, nobs, horizon, nshocks)
+        old_X̂   = X̂
         shocks  = zeros(S, nshocks)
 
         for i = 1:nshocks
+            X̂ = copy(old_X̂)
             shocks[i] = flip_shocks ? sqrt(QQ[i, i]) :
                 -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
             out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
             shocks[i]  = 0. # set back to zero
             ŷ[:, 1, i] = out
-            X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+            X̂          = deviations ? vcat(out, X̂[1:k - nobs]) :
+                vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
             for t = 2:horizon
                 out        = vec(X̂' * β)
                 ŷ[:, t, i] = out
-                X̂          = deviations ? vcat(out, X̂[1 + 1:k - nobs]) :
+                X̂          = deviations ? vcat(out, X̂[1:k - nobs]) :
                     vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
             end
         end
