@@ -7,6 +7,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
                            X̂::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
+                           deviations::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false, test_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -75,6 +76,9 @@ to achieve reproducibility.
 * `X̂::AbstractMatrix{S}`: matrix stacking the intercept and lags of the data for
     rotation IRFs. Set to a vector of zeros with length `1 + n_observables * p`
     to compute the rotation IRFs in deviations from the baseline forecast.
+* `deviations::Bool`: set true to compute the impulse response in deviations
+    rather than as a forecast. Mechnically, we ignore `X̂` (treated as zeros)
+    and the intercept term.
 * `density_bands::Vector{Float64}`: bands for full-distribution IRF computations
 * `create_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
 * `minimize::Bool`: choose shortest interval if true, otherwise just chop off lowest and
@@ -90,6 +94,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
                            X̂::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
+                           deviations::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false, test_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -129,6 +134,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
             DSGE.update!(m, para)
             return impulse_responses(m, data, X̂; horizon = h, MM = MM,
                                      flip_shocks = flip_shocks, draw_shocks = draw_shocks,
+                                     deviations = deviations,
                                      verbose = verbose)
         end
     elseif method in [:cholesky, :cholesky_long_run, :choleskyLR, :maxBC,
