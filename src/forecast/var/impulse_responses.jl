@@ -294,7 +294,7 @@ function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S},
 
     # For efficiency
     if use_intercept
-        β = β[vcat(1:n_coint, n_coint + 2:n_coint + n_obs * p), :]
+        β = β[vcat(1:n_coint, n_coint + 2:n_coint + 1 + n * lags), :]
     end
 
     # Compute impulse response
