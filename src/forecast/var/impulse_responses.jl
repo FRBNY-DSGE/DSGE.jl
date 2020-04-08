@@ -221,3 +221,88 @@ function cholesky_long_run_shock(β::Matrix{S}, Σ::Matrix{S}, n_obs_shock::Int,
     vec_shock[n_obs_shock] = flip_shocks ? shock_size : -shock_size # negative by DSGE convention
     return (Γ * vec_shock)'
 end
+
+"""
+```
+impulse_responses(β, Σ, coint_mat, n_obs_shock, horizon, shock_size = 1;
+    method = :cholesky, flip_shocks = false, use_intercept = true,
+    frequency_band = (2π/32, 2π/6)) where {S<:Real}
+```
+computes the impulse responses of a VECM system represented in the form
+
+```
+Δyₜ = eₜ βₑ + Xₜ βᵥ + ϵₜ,
+```
+where `βₑ` are the coefficients for the error correction terms;
+`eₜ` are the error correction terms specifying the cointegrating relationships;
+`βᵥ` are the coefficients for the VAR terms (including the intercept);
+`Xₜ` are the lags of observables in period `t`, i.e. `yₜ₋₁, yₜ₋2, ..., yₜ₋ₚ`;
+and `ϵₜ ∼ 𝒩 (0, Σ)`. We assume that `β = [βₑ; βᵥ]`.
+
+### Inputs
+* `β::AbstractMatrix{S}`: coefficient matrix
+* `Σ::AbstractMatrix{S}`: innovations variance-covariance matrix
+* `coint_mat::AbstractMatrix{S}`: matrix specifying the cointegrating relationships.
+    Multiplying `coint_mat * data`, where `data` is an `n_observables × T` matrix, should yield
+    an `n_coint × T` matrix, where `n_coint` are the number of cointegrating
+    relationships and `T` are the number of periods of data.
+* `n_obs_shock::Int`: index of the observable corresponding to the orthogonalized shock
+    causing the impulse response.
+* `shock_size::S`: number of standard deviations of the shock
+
+### Keywords
+* `method::Symbol`: type of impulse response to compute. The available option is
+    `:cholesky` (default).
+* `flip_shocks::Bool`: by default, we compute the impulse responses to a negative shock.
+    Set `flip_shocks = true` to obtain a positive shock.
+* `use_intercept::Bool`: `impulse_responses` assumes `β` has constant term(s). If there
+    are no such terms, then `use_intercept` must be set to `false`.
+* `frequency_band::Tuple{S,S}`: See `?maxBC_shock`.
+
+### Outputs
+* `Y::AbstractMatrix`: Impulse response matrix with dimensions horizons x n_observables
+"""
+function impulse_responses(β::AbstractMatrix{S}, Σ::AbstractMatrix{S},
+                           coint_mat::AbstractMatrix{S}, n_obs_shock::Int,
+                           horizon::Int, shock_size::S = one(S);
+                           method::Symbol = :cholesky,
+                           flip_shocks::Bool = false,
+                           use_intercept::Bool = true,
+                           frequency_band::Tuple{S,S} =
+                           (2*π/32, 2*π/6)) where {S<:Real}
+
+    # Compute dimensions
+    n = size(Σ, 1)
+    n_coint = size(coint_mat, 1)
+    lags = convert(Int, use_intercept ? (size(β, 1) - 1 - n_coint) / n : (size(β, 1) - n_coint) / n)
+
+    # Compute impact based on IRF type
+    Y = zeros(S, n, lags + horizon)
+    Y[:, lags + 1] = if method == :cholesky
+        cholesky_shock(Σ, n, n_obs_shock, shock_size;
+                       flip_shocks = flip_shocks)
+    # TODO
+    # elseif method == :maximum_business_cycle_variance || method == :maxBC
+    #     maxBC_shock(β, Σ, n, n_obs_shock, shock_size, lags, frequency_band;
+    #                 flip_shocks = flip_shocks)
+    # elseif method == :choleskyLR || method == :cholesky_long_run
+    #     cholesky_long_run_shock(β, Σ, n_obs_shock, n, lags, shock_size;
+    #                             flip_shocks = flip_shocks)
+    else
+        error("IRF method $(string(method)) has not been implemented.")
+    end
+
+    # For efficiency
+    if use_intercept
+        β = β[vcat(1:n_coint, n_coint + 2:n_coint + n_obs * p), :]
+    end
+
+    # Compute impulse response
+    for t = 2:horizon
+        addcoint = coint_mat * Y[:, lags + t - 1] # assume difference in cointegrating relationships also starts at zero
+        xT = vcat(addcoint, vec(Y[:, lags + t - 1:-1:t])) # stacks addcoint w/ lag yₜ₋₁, ..., yₜ₋ₚ
+        Y[:, lags + t] = vec(xT' * β)
+    end
+
+    return Y[:, lags + 1:end]
+end

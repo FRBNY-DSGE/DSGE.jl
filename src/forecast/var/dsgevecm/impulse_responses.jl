@@ -1,10 +1,11 @@
 """
 ```
-function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S},
+                           coint_mat::AbstractMatrix{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
 
-function impulse_responses(m::AbstractDSGEVECMModel{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, coint_mat::AbstractMatrix{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
 ```
@@ -19,15 +20,20 @@ where `impact[:, i]` is a linear combination of
 
 We draw a β and Σᵤ from the posterior implied by the DSGE
 and data, and we then compute normal VECM impulse responses given those
-coefficients and innovations variance-covariance matrix. The weight placed
+coefficients, innovations variance-covariance matrix, and
+the matrix specifying cointegrating relationships in observables. The weight placed
 on the DSGE is encoded by the field `λ` of the DSGEVECM object `m`.
 
-Given β, Σᵤ, we compute impulse responses to the VECM system
+Given β, Σᵤ, we compute impulse responses using one of the
+available identifiction strategies to the VECM system
 ```
-ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
+Δŷₜ₊₁ = eₜ₊₁βₑ + X̂ₜ₊₁βᵥ + uₜ₊₁,
 ```
-where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`
-using one of the available identification methods for VECMs
+where `βₑ` are the coefficients for the error correction terms;
+`eₜ₊₁` are the error correction terms specifying the cointegrating relationships;
+`βᵥ` are the coefficients for the VAR terms;
+`X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`,
+and `uₜ₊₁ ∼ 𝒩 (0, Σ)`.
 
 If the second function is used (where `data` is not an input), then we assume
 the user wants to compute the VECM approximation of the DSGE,
@@ -35,6 +41,11 @@ regardless of the `λ` value in `m`. Note that this function will not
 update the value of `λ` in `m` (even though we are computing the DSGE-VECM(∞) approximation).
 
 ### Inputs
+* `coint_mat::AbstractMatrix{S}`: matrix specifying the cointegrating relationships
+    in observables. Given a matrix `data` with dimensions `n_observables × T`,
+    multiplying `coint_mat * data` should yield a `n_coint × T` matrix, where
+    `n_coint` is the number of cointegrating relationships and `T` is
+    the number of periods of data.
 * `method::Symbol`: The available methods are `:cholesky`, `:maxBC`, and `:choleskyLR`.
     See the docstrings `impulse_responses` for VECMs specifically.
 * `n_obs_shock::Int`: The index of the observable corresponding to the orthogonalized shock
@@ -46,27 +57,28 @@ update the value of `λ` in `m` (even though we are computing the DSGE-VECM(∞)
 * `flip_shocks::Bool`: default is a "negative" impulse response on impact.
     Set to `true` for the positive impulse response.
 """
-function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S},
+                           coint_mat::AbstractMatrix{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = impulse_response_horizons(m),
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m, data; verbose = verbose)
     Σ += Σ'
     Σ ./= 2
 
-    return impulse_responses(β, Σ, n_obs_shock, horizon;
+    return impulse_responses(β, Σ, coint_mat, n_obs_shock, horizon;
                              method = method, flip_shocks = flip_shocks,
                              use_intercept = true)
 end
 
 
-function impulse_responses(m::AbstractDSGEVECMModel{S}, method::Symbol,
+function impulse_responses(m::AbstractDSGEVECMModel{S}, coint_mat::AbstractMatrix{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
                            flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m; verbose = verbose, use_intercept = use_intercept)
     Σ += Σ'
     Σ ./= 2
 
-    return impulse_responses(β, Σ, n_obs_shock,
+    return impulse_responses(β, Σ, coint_mat, n_obs_shock,
                              horizon > 0 ? horizon : impulse_response_horizons(m);
                              method = method, use_intercept = use_intercept,
                              flip_shocks = flip_shocks)
@@ -121,7 +133,7 @@ Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009).
 * `X̂::Matrix{S}`: covariates for the first "forecast" period
     of the impulse response, i.e. if we have a VECM with `p` lags, then
 ```
-X̂ = [1, ŷₜ, ŷₜ₋₁, ..., ŷₜ₋ₚ₊₁]
+X̂ = [eₜ, 1, ŷₜ, ŷₜ₋₁, ..., ŷₜ₋ₚ₊₁]
 ```
 so that, when β is the vector of VECM coefficients, then
 ```
@@ -129,6 +141,12 @@ so that, when β is the vector of VECM coefficients, then
 ```
 Internally, we do equivalent matrix operations to avoid allocating
 the Kronecker product.
+
+To compute an impulse response in deviations
+from the baseline forecast, pass in `X̂` as a vector of zeros
+with length `n_coint + 1 + n_obs * p`, where `n_coint` is
+the number of cointegrating relationships and `n_obs` is the number
+of observables.
 
 ****
 NOTE: this function generally involves taking random draws from
@@ -205,8 +223,8 @@ Consider the VECM
 ```
 where `βₑ` are the coefficients for the error correction terms;
 `eₜ₊₁` are the error correction terms specifying the cointegrating relationships;
-`βᵥ` are the coefficients for the VAR terms;
-`X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`,
+`βᵥ` are the coefficients for the VAR terms (including the intecept)o;
+`X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ₊₁`;
 and `uₜ₊₁ ∼ 𝒩 (0, Σ)`.
 
 The shock `uₜ₊₁` is identified via
@@ -264,9 +282,8 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
         end
         for t = 1:horizon
             out      = vec(X̂' * β) + Σ_chol * shocks[:, t] # X̂ normally would be [X̂ 0 0; 0 X̂ 0; 0 0 X̂] if n_obs = 3,
-            @show out
             ŷ[:, t]  = out                                 # but this way of coding it results in less memory storage
-            addcoint = X̂[1:n_coint] + coint_mat * out        # Predicted cointegration terms
+            addcoint = X̂[1:n_coint] + coint_mat * out      # Predicted cointegration terms
 
             X̂ = vcat(addcoint, 1.,  out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
             @show X̂
@@ -282,11 +299,13 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
             out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
             shocks[i]  = 0. # set back to zero
             ŷ[:, 1, i] = out
-            X̂          = vcat(1., out, X̂[1 + 1:k - n_obs]) # XXl = X̂[1 + 1:k - n_obs]
+            addcoint   = X̂[1:n_coint] + coint_mat * out
+            X̂          = vcat(addcoint, 1., out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
             for t = 2:horizon
                 out        = vec(X̂' * β)
                 ŷ[:, t, i] = out
-                X̂          = vcat(1., out, X̂[1 + 1:k - n_obs]) # XXl = X̂[1 + 1:k - n_obs]
+                addcoint   = X̂[1:n_coint] + coint_mat * out
+                X̂          = vcat(addcoint, 1., out, X̂[n_coint + 1 + 1:k - n_obs]) # XXl = X̂[n_coint + 1 + 1:k - n_obs]
             end
         end
     end
