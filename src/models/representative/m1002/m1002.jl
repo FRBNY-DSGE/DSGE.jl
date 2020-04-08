@@ -514,7 +514,7 @@ function init_parameters!(m::Model1002)
     m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
 
-    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57"]
+    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"]
         m <= parameter(:σ_g_r2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_g: The standard deviation of the government spending process.",
                        tex_label="\\sigma_{g}")
@@ -587,7 +587,7 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57"]
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"]
                 m <= parameter(Symbol("σ_r_m$(i)_r2"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                                description="σ_r_m$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
                                tex_label=@sprintf("\\sigma_{ant%d}",i))

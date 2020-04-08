@@ -176,6 +176,11 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudo[pseudo[:ztil], endo[:ztil_t]] = 1.
         end
     end
+    if haskey(m.settings, :add_zp)
+        if get_setting(m, :add_zp)
+            ZZ_pseudo[pseudo[:zp], endo[:zp_t]] = 1.
+        end
+    end
 
     return PseudoMeasurement(ZZ_pseudo, DD_pseudo)
 end
