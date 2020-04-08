@@ -124,6 +124,9 @@ function pseudo_measurement(m::Model1002{T},
     DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) +
         100 * (exp(m[:z_star]) - 1)
 
+    ## i_f_t
+    ZZ_pseudo[pseudo[:i_f_t], endo[:i_f_t]] = 1.
+
     ## labor share
     if haskey(m.settings, :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
@@ -315,6 +318,9 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
         ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
         DD_pseudos[reg][pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1);
+
+        ## i_f_t
+        ZZ_pseudos[reg][pseudo[:i_f_t], endo[:i_f_t]] = 1.
 
         ## labor share
         if haskey(m.settings, :add_laborshare_measurement)
