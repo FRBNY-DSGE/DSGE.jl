@@ -42,19 +42,20 @@ imposed by a DSGE on the parameters of a VAR. A DSGE-VAR combines a DSGE with a 
 to, among other reasons, evaluate the mis-specification of the DSGE and improve
 the DSGE's forecasting performance.
 
-For more details on the theory, see
+For more details on the theory and performance, see
 [Del Negro and Schorfheide (2004)](https://onlinelibrary.wiley.com/doi/full/10.1111/j.1468-2354.2004.00139.x),
-[Del Negro and Schorfheide (2006)](https://www.newyorkfed.org/medialibrary/media/research/economists/delnegro/erq206_delnegro.pdf), and
+[Del Negro and Schorfheide (2006)](https://www.newyorkfed.org/medialibrary/media/research/economists/delnegro/erq206_delnegro.pdf),
+[Del Negro, Schorfheide, Smets, and Wouters (2007)][https://www.jstor.org/stable/27638915#metadata_info_tab_contents], and
 [Del Negro and Schorfheide (2009)](https://www.aeaweb.org/articles?id=10.1257/aer.99.4.1415).
 
 We implement DSGE-VARs with the `DSGEVAR` concrete type so that it is easy to interface them with DSGE models. A `DSGEVAR` type
-holds information about the VAR with which we want to combine a given DSGE model and can be easily constructed, given a DSGE object. Once we have constructed a `DSGEVAR` object, then it is straightoforward to estimate the object and compute impulse responses.
+holds information about the VAR with which we want to combine a given DSGE model and can be easily constructed, given a DSGE object. Once we have constructed a `DSGEVAR` object, then it is straightforward to estimate the object and compute impulse responses.
 
 ```@docs
 DSGEVAR
 ```
 
-### Tips for Using DSGEVARs
+### [Tips for Using `DSGEVAR`](@id tips-dsgevar)
 
 * When extensively using DSGE-VARs, we recommend defining your own subspecs in
   `subspecs.jl` because it simplifies the process of saving, reading, and analyzing
@@ -63,18 +64,18 @@ DSGEVAR
 
 * The names of the observables must exist as either observables
   or pseudo-observables in the DSGE because for most
-  DSGEVAR methods, we need to construct the state space
-  representation of the DSGEVAR using information from
+  `DSGEVAR` methods, we need to construct the state space
+  representation of the `DSGEVAR` using information from
   the underlying DSGE.
 
 * It is important to be careful about the order of the
-  observables when constructing a DSGEVAR. Whether you define
+  observables when constructing a `DSGEVAR`. Whether you define
   the names of the observables by calling `update!` or
   by creating a subspec, we assume that the order of the observables
   corresponds to the observable's index in the data and
-  in the state space representation of the DSGEVAR. In the example
-  provided above, if we estimate the DSGEVAR on data
-  or construct the state space representation of the DSGEVAR,
+  in the state space representation of the `DSGEVAR`. In the example
+  provided above, if we estimate the `DSGEVAR` on data
+  or construct the state space representation of the `DSGEVAR`,
   we assume that the order of observables in the data array,
   which has dimensions `nobs x nperiods`, is `:obs_gdp`
   in the first row, `:obs_cpi` in the second row, and
@@ -91,15 +92,47 @@ DSGEVAR
   `use_intercept` keyword because we require an intercept term when using
   the DSGE as a prior for a VAR.
 
+## DSGE-VECMs and the `DSGEVECM` Type
+
+We can extend DSGE-VARs to permit cointegrating relationships between observables
+using DSGE-VECMs. A VECM is a [vector error-correction model](https://en.wikipedia.org/wiki/Error_correction_model),
+which extend VARs to account for long-run stochastic trends, i.e. cointegration..
+
+For more details on the theory and performance, see
+[Del Negro and Schorfheide (2004)](https://onlinelibrary.wiley.com/doi/full/10.1111/j.1468-2354.2004.00139.x),
+[Del Negro and Schorfheide (2006)](https://www.newyorkfed.org/medialibrary/media/research/economists/delnegro/erq206_delnegro.pdf), and
+[Del Negro, Schorfheide, Smets, and Wouters (2007)][https://www.jstor.org/stable/27638915#metadata_info_tab_contents].
+
+We implement DSGE-VECMs with the `DSGEVECM` concrete type so that it is easy to interface them with DSGE models. The `DSGEVECM`
+has very similar behavior to the `DSGEVAR` type, with extensions as needed. For example, the `DSGEVECM` type includes additional fields
+to hold information about cointegrating relationships.
+
+```@docs
+DSGEVECM
 ```
-compute_system(m; apply_altpolicy = false,
-               regime_switching = false, n_regimes = 2,
-               check_system = false, get_system = false,
-               get_population_moments = false, use_intercept = false,
-               verbose = :high)
-compute_system(m, data; apply_altpolicy = false,
-               regime_switching = false, n_regimes = 2,
-               check_system = false, get_system = false,
-               get_population_moments = false,
-               verbose = :high)
-```
+
+### Tips for Using `DSGEVECM`
+
+* The same [tips for `DSGEVAR` models](@ref tips-dsgevar) generally apply for `DSGEVECM` models.
+
+* The names of cointegrating relationships in the field `cointegrating`
+  must exist as either observables or pseudo-observables in the DSGE. The reason is
+  the same as the reason for why observables must be held.
+
+* In the state space representation of the underlying DSGE corresponding to
+  a `DSGE-VECM`, cointegrating relationships are ordered after observables. For example,
+  consider the measurement matrix `ZZ`. The first `n_observables` rows correspond to
+  the `observables` in `DSGE-VECM`, and the next
+  `n_observables + 1:n_cointegrating + n_observables` rows correspond to
+  `cointegrating` in `DSGE-VECM`.
+
+* When calculating the `VECM` coefficients of a DSGE-VECM,
+  the coefficients are ordered with cointegrating relationships first, followed by
+  the intercept term, and concluding with lags of past differences. See the
+  docstring of `vecm_approx_state_space`.
+
+* Some cointegrating relationships do not need to be added to the measurement matrix
+  in the state space representation of a DSGE model. These relationships are considered
+  "additional" ones and are added to the field `cointegrating_add`. To compute the constant
+  vector which specify these additional relationships, we use `compute_DD_coint_add`.
+  See its docstring for notes on usage.
