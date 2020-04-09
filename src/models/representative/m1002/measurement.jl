@@ -183,7 +183,8 @@ function measurement(m::Model1002{T},
         if subspec(m) == "ss11"
             QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_z]^2 / n_z_anticipated_shocks(m)
         else
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44"] && regime == 2
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54",
+                "ss55", "ss56", "ss57", "ss58"] && regime == 2
                 QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$(i)_r2")]^2
             else
                 QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$i")]^2
