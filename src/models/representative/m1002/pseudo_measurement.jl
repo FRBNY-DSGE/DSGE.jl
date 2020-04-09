@@ -127,6 +127,10 @@ function pseudo_measurement(m::Model1002{T},
     ## i_f_t
     ZZ_pseudo[pseudo[:i_f_t], endo[:i_f_t]] = 1.
 
+    ## R_t
+    ZZ_pseudo[pseudo[:R_t], endo[:R_t]] = 1.
+    DD_pseudo[pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
+
     ## labor share
     if haskey(m.settings, :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
@@ -321,6 +325,11 @@ function pseudo_measurement(m::Model1002{T},
 
         ## i_f_t
         ZZ_pseudos[reg][pseudo[:i_f_t], endo[:i_f_t]] = 1.
+
+        ## R_t
+        ZZ_pseudos[reg][pseudo[:R_t], endo[:R_t]] = 1.
+        DD_pseudos[reg][pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
+
 
         ## labor share
         if haskey(m.settings, :add_laborshare_measurement)
