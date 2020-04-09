@@ -142,7 +142,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
         function _dsgevar_λ_irf_(para)
             DSGE.update!(m, para)
             return impulse_responses(m, data, method, n_obs_shock; horizon = h,
-                                     flip_shocks = flip_shocks, use_intercept = true,
+                                     flip_shocks = flip_shocks,
                                      frequency_band = frequency_band)
         end
     end
@@ -235,6 +235,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Vector{S},
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
                            X̂::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
+                           deviations::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -244,6 +245,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Vector{S},
                              data, input_type, method; parallel = parallel,
                              frequency_band = frequency_band, n_obs_shock = n_obs_shock,
                              draw_shocks = draw_shocks, flip_shocks = flip_shocks,
+                             X̂ = X̂, deviations = deviations,
                              density_bands = density_bands,
                              create_meansbands = create_meansbands, minimize = minimize,
                              forecast_string = forecast_string, verbose = verbose)
