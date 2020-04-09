@@ -604,11 +604,11 @@ function init_parameters!(m::Model1002)
 
     for i = 1:n_z_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(Symbol("σ_z$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+            m <= parameter(Symbol("σ_z$i"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_z$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
             if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"]
-                m <= parameter(Symbol("σ_z$(i)_r2"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+                m <= parameter(Symbol("σ_z$(i)_r2"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                                description="σ_z$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
                                tex_label=@sprintf("\\sigma_{ant%d}",i))
             end
@@ -814,10 +814,17 @@ function model_settings!(m::Model1002)
     m <= Setting(:n_mon_anticipated_shocks_padding, 20,
                  "Padding for anticipated policy shocks")
 
-    m <= Setting(:n_z_anticipated_shocks, 1,
-                 "Number of anticipated policy shocks")
-    m <= Setting(:n_z_anticipated_shocks_padding, 1,
-                 "Padding for anticipated policy shocks")
+    if subspec(m) == "ss58"
+        m <= Setting(:n_z_anticipated_shocks, 2,
+                     "Number of anticipated policy shocks")
+        m <= Setting(:n_z_anticipated_shocks_padding, 2,
+                     "Padding for anticipated policy shocks")
+    else
+        m <= Setting(:n_z_anticipated_shocks, 0,
+                     "Number of anticipated policy shocks")
+        m <= Setting(:n_z_anticipated_shocks_padding, 0,
+                     "Padding for anticipated policy shocks")
+    end
 
     # Data
     m <= Setting(:data_id, 3, "Dataset identifier")
