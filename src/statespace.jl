@@ -550,6 +550,10 @@ to add to the underlying DSGE. The function `compute_system`
 first checks for a method `compute_DD_coint_add` that takes
 a Type tuple of `(model_type, Vector{Symbol})` and then `(model_type, )`
 before calling this method.
+
+This function is generally intended to be internal. As an example of
+other such functions, `eqcond` must be user-defined but
+is primarily used internally and not directly called by the user in a script.
 """
 function compute_DD_coint_add(m::AbstractDSGEVECMModel{S}, system::System,
                               cointegrating_add::Vector{Symbol}) where {S <: Real}
@@ -808,7 +812,7 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
                                  get_population_moments::Bool = false,
                                  use_intercept::Bool = false,
                                  test_GA0::AbstractMatrix{S} =
-                                 Matrix{S}(undef, 0)) where {S <: Real}
+                                 Matrix{S}(undef, 0, 0)) where {S <: Real}
 
     # n_obs is number of observables, n_coint is number of cointegrating relationships
     n_coint_all = n_coint + n_coint_add
