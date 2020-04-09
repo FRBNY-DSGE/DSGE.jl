@@ -10,14 +10,17 @@ abstract type AbstractDSGEModel{T} <: ModelConstructors.AbstractModel{T} end
 function Base.show(io::IO, m::AbstractDSGEModel)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "no. states:             %i\n" n_states(m)
-    @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
+    @printf io "no. anticipated policy shocks: %i\n" n_mon_anticipated_shocks(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
     @printf io "description:\n %s\n"          description(m)
 end
 
 # Number of anticipated policy shocks
-n_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_anticipated_shocks)
-n_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_anticipated_shocks_padding)
+n_mon_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks)
+n_mon_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks_padding)
+n_z_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_z_anticipated_shocks)
+n_z_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_z_anticipated_shocks_padding)
+
 
 # Dates, indices, number of periods for each regime
 date_presample_start(m::AbstractDSGEModel) = get_setting(m, :date_presample_start)
@@ -164,9 +167,9 @@ end
 # From an augmented state space with anticipated policy shocks, get indices
 # corresponding to pre-ZLB states, shocks, and observables
 function inds_states_no_ant(m::AbstractDSGEModel)
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         ind_ant1 = m.endogenous_states[:rm_tl1]
-        ind_antn = m.endogenous_states[Symbol("rm_tl$(n_anticipated_shocks(m))")]
+        ind_antn = m.endogenous_states[Symbol("rm_tl$(n_mon_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_states_augmented(m)]
     else
         return collect(1:n_states_augmented(m))
@@ -174,9 +177,9 @@ function inds_states_no_ant(m::AbstractDSGEModel)
 end
 
 function inds_shocks_no_ant(m::AbstractDSGEModel)
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         ind_ant1 = m.exogenous_shocks[:rm_shl1]
-        ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_anticipated_shocks(m))")]
+        ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_mon_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_shocks_exogenous(m)]
     else
         return collect(1:n_shocks_exogenous(m))
@@ -184,9 +187,9 @@ function inds_shocks_no_ant(m::AbstractDSGEModel)
 end
 
 function inds_obs_no_ant(m::AbstractDSGEModel)
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         ind_ant1 = m.observables[:obs_nominalrate1]
-        ind_antn = m.observables[Symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
+        ind_antn = m.observables[Symbol("obs_nominalrate$(n_mon_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_observables(m)]
     else
         return collect(1:n_observables(m))

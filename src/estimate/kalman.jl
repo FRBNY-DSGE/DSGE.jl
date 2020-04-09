@@ -92,7 +92,7 @@ regimes. The optional argument `start_date` indicates the first quarter of
 function zlb_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
                             start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
     T = size(data, 2)
-    if n_anticipated_shocks(m) > 0 && !isempty(data)
+    if n_mon_anticipated_shocks(m) > 0 && !isempty(data)
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
@@ -119,9 +119,9 @@ function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
     # THIS HANDLES ONLY 2 CASES OF REGIME-SWITCHING
     # It can happen only once (aside from ZLB)
     # and it can either occur before or after the ZLB (but not both b/c it can happen once only)
-    if !(n_anticipated_shocks(m) > 0 && !isempty(data))
+    if !(n_mon_anticipated_shocks(m) > 0 && !isempty(data))
         regime_inds = [1:n_regime1_periods, (n_regime1_periods+1):T]
-    elseif n_anticipated_shocks(m) > 0 && !isempty(data)
+    elseif n_mon_anticipated_shocks(m) > 0 && !isempty(data)
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
@@ -158,7 +158,7 @@ entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
 function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::System{S},
                              start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
@@ -195,7 +195,7 @@ end
 function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
                                   start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
     ### THIS IS WORK IN PROGRES, DOES NOT COVER ALL CASES FOR REGIME SWITCHING, ALSO ONLY FOR SWITCHING JUST ONCE.
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
@@ -243,7 +243,7 @@ function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchi
 
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
 end
-    #=  if n_anticipated_shocks(m) > 0
+    #=  if n_mon_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
