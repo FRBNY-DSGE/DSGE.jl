@@ -5,9 +5,9 @@ estimate_dsgevar  = true   # Estimate a DSGEVAR using SMC
 use_estim_output  = true   # Use posterior from SMC estimation for following code
 get_VAR_system    = true   # Compute VAR coefficients and innovations-covariance matrices
 do_modal_irf      = true   # Compute IRFs using modal parameters
+compare_modal_irf = true  # Plot the modal DSGEVAR λ = ∞ rotation IRF and the actual DSGE IRF for observables
 do_full_band_irf  = true   # Compute IRFs using parameters drawn from a distribution
 create_meansbands = false  # Save full_band_irfs to MeansBands
-compare_modal_irf = false  # Plot the modal DSGEVAR λ = ∞ rotation IRF and the actual DSGE IRF for observables
 do_parallel       = false  # Use parallel workers
 n_workers         = 10
 dsgevar_λ         = 0.5    # What λ do you want to use?
@@ -20,6 +20,7 @@ Random.seed!(1793)
     forecast_string = "test_dsgevar" # Change this to an empty string if you don't want an identifier for saved output
     m <= Setting(:sampling_method, :SMC)
     m <= Setting(:impulse_response_horizons, 20)
+    m <= Setting(:date_forecast_start, DSGE.quartertodate("2019Q3"))
     m <= Setting(:n_particles, 50) # a small number just to make the estimation and IRFs faster.
     data = df_to_matrix(m, load_data(m)) # the rows of the data MUST correspond to the exact order of the observables specified by the DSGEVAR.
     data = data[1:2, :] # selecting the data for gdp and cpi.
@@ -34,7 +35,7 @@ Random.seed!(1793)
     ```
     dsgevar = DSGEVAR(m)
     DSGE.update!(dsgevar, observables =
-    collect(keys(m.observables_mappings)),
+    [:obs_gdp, :obs_cpi],
     shocks = collect(keys(m.exogenous_shocks)),
     lags = 4, λ = dsgevar_λ)
     ```
@@ -43,11 +44,8 @@ Random.seed!(1793)
 
     ```
     dsgevar = DSGEVAR(m, "ss2")
-    DSGE.update!(dsgevar, shocks = collect(keys(m.exogenous_shocks)))
+    DSGE.update!(dsgevar, shocks = collect(keys(m.exogenous_shocks)), observables = [:obs_gdp, :obs_cpi])
     ```
-
-    Note that this is effectively a VAR(p) approximation of our current implementation
-    of AnSchorfheide's measurement equation.
     =#
 
     # Estimate the DSGEVAR
@@ -129,9 +127,11 @@ Random.seed!(1793)
                 impulse_responses(dsgevar, data, method, 1; horizon = impulse_response_horizons(dsgevar),
                                   flip_shocks = false)
         end
-        modal_irfs[:dsgevar_λ][:rotation] =
+        DSGE.update!(dsgevar; λ = ∞)
+        modal_irfs[:var_approx][:rotation] =
             impulse_responses(dsgevar, data; horizon = impulse_response_horizons(dsgevar),
                               deviations = true, flip_shocks = false)
+        DSGE.update!(dsgevar; λ = λ)
 
         if compare_modal_irf
             dsge_system = compute_system(m)
@@ -142,7 +142,7 @@ Random.seed!(1793)
                 for (obs, i) in DSGE.get_observables(dsgevar)
                     plots_dict[obs][shock] = plot(1:impulse_response_horizons(m), dsge_obs[i, :, j],
                                                   label = "DSGE", color = :black, linestyle = :dash)
-                    plot!(1:impulse_response_horizons(m), modal_irfs[:dsgevar_λ][:rotation][i, :, j],
+                    plot!(1:impulse_response_horizons(m), modal_irfs[:var_approx][:rotation][i, :, j],
                           label = "DSGE-VAR", color = :black, left_margin = 20px)
                 end
             end
@@ -221,17 +221,21 @@ Random.seed!(1793)
                                   flip_shocks = false, create_meansbands = create_meansbands,
                                   forecast_string = forecast_string)
         end
-        full_band_irfs[:dsgevar_λ][:rotation] =
+        DSGE.update!(dsgevar; λ = ∞)
+        full_band_irfs[:var_approx][:rotation] =
             impulse_responses(dsgevar, paras, data, :full, :rotation; parallel = do_parallel,
                               flip_shocks = false, create_meansbands = create_meansbands,
                               deviations = true,
                               forecast_string = forecast_string)
+        DSGE.update!(dsgevar; λ = λ)
 
-        modal_irfs_wrapper[:dsgevar_λ][:rotation] =
+        DSGE.update!(dsgevar; λ = ∞)
+        modal_irfs_wrapper[:var_approx][:rotation] =
             impulse_responses(dsgevar, paras[1, :], data, :mode, :rotation; parallel = do_parallel,
                               flip_shocks = false, create_meansbands = create_meansbands,
                               deviations = true,
                               forecast_string = forecast_string)
+        DSGE.update!(dsgevar; λ = λ)
 
         if do_parallel
             rmprocs(my_procs)
