@@ -166,37 +166,6 @@ function measurement(m::Model1002{T},
         QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
     end
 
-    # These lines set the standard deviations for the anticipated shocks
-    for i = 1:n_mon_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
-        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
-        if subspec(m) == "ss11"
-            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
-        else
-            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
-        end
-    end
-
-    for i = 1:n_z_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_z$i")], no_integ_inds] = ZZ[obs[:obs_z], no_integ_inds]' * (TTT^i)
-#        DD[obs[Symbol("obs_z$i")]]    = m[:Rstarn]
-        if subspec(m) == "ss11"
-            QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_z]^2 / n_z_anticipated_shocks(m)
-        else
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54",
-                "ss55", "ss56", "ss57", "ss58"] && regime == 2
-                QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$(i)_r2")]^2
-            else
-                QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$i")]^2
-            end
-        end
-    end
-
-    # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(CCC .!= 0)
-        DD += ZZ*((UniformScaling(1) - TTT)\CCC)
-    end
-
     if subspec(m) == "ss52"
         # Add in wage markup shocks as an additional observable
         ZZ[obs[:obs_wagemarkupshock], endo[:ϵ_λ_w_t]] = 1.
@@ -219,6 +188,41 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_z], endo[:z_t]] = 1.
         ZZ[obs[:obs_zp], endo[:zp_t]] = 1.
     end
+
+   # These lines set the standard deviations for the anticipated shocks
+    for i = 1:n_mon_anticipated_shocks(m)
+        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
+        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
+        if subspec(m) == "ss11"
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
+        else
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"] && regime == 2
+                QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$(i)_r2")]^2
+            else
+                QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+            end
+        end
+    end
+
+    for i = 1:n_z_anticipated_shocks(m)
+        ZZ[obs[Symbol("obs_z$i")], no_integ_inds] = ZZ[obs[:obs_z], no_integ_inds]' * (TTT^i)
+#        DD[obs[Symbol("obs_z$i")]]    = m[:Rstarn]
+        if subspec(m) == "ss11"
+            QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_z]^2 / n_z_anticipated_shocks(m)
+        else
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"] && regime == 2
+                QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$(i)_r2")]^2
+            else
+                QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$i")]^2
+            end
+        end
+    end
+
+    # Adjustment to DD because measurement equation assumes CCC is the zero vector
+    if any(CCC .!= 0)
+        DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+    end
+
 
     return Measurement(ZZ, DD, QQ, EE)
 end
