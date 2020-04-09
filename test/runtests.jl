@@ -5,9 +5,10 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
-            # "plot/plot", # ideally these 3 tests go elsewhere
-  	        # "plot/util", # but they are prone to segmentation
-            # "packet/packet", # fault errors. This way, they error early
+            "packet/packet", # ideally these 3 tests go elsewhere
+            "plot/plot", # fault errors. This way, they error early
+  	        "plot/util", # but they are prone to segmentation
+
             "core",
             "abstractdsgemodel",
             "abstractvarmodel",
@@ -89,6 +90,7 @@ my_tests = [
             "forecast/util",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",
+            "forecast/var/dsgevecm/impulse_responses",
             "analysis/compute_meansbands",
             "analysis/df_to_table",
             "analysis/io",
