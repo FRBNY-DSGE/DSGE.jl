@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, Random
+using DSGE, ModelConstructors, Random, Plots
 
 # What do you want to do?
 estimate_dsgevar  = true   # Estimate a DSGEVAR using SMC
@@ -7,6 +7,7 @@ get_VAR_system    = true   # Compute VAR coefficients and innovations-covariance
 do_modal_irf      = true   # Compute IRFs using modal parameters
 do_full_band_irf  = true   # Compute IRFs using parameters drawn from a distribution
 create_meansbands = false  # Save full_band_irfs to MeansBands
+compare_modal_irf = false  # Plot the modal DSGEVAR λ = ∞ rotation IRF and the actual DSGE IRF for observables
 do_parallel       = false  # Use parallel workers
 n_workers         = 10
 dsgevar_λ         = 0.5    # What λ do you want to use?
@@ -128,6 +129,24 @@ Random.seed!(1793)
                 impulse_responses(dsgevar, data, method, 1; horizon = impulse_response_horizons(dsgevar),
                                   flip_shocks = false)
         end
+        modal_irfs[:dsgevar_λ][:rotation] =
+            impulse_responses(dsgevar, data; horizon = impulse_response_horizons(dsgevar),
+                              deviations = true, flip_shocks = false)
+
+        if compare_modal_irf
+            dsge_system = compute_system(m)
+            dsge_states, dsge_obs, dsge_pseudo = impulse_responses(m, dsge_system)
+            plots_dict = Dict{Symbol, Dict{Symbol,Plots.Plot}}()
+            for (shock, j) in m.exogenous_shocks
+                plots_dict[shock] = Dict{Symbol, Plots.Plot}()
+                for (obs, i) in DSGE.get_observables(dsgevar)
+                    plots_dict[obs][shock] = plot(1:impulse_response_horizons(m), dsge_obs[i, :, j],
+                                                  label = "DSGE", color = :black, linestyle = :dash)
+                    plot!(1:impulse_response_horizons(m), modal_irfs[:dsgevar_λ][:rotation][i, :, j],
+                          label = "DSGE-VAR", color = :black, left_margin = 20px)
+                end
+            end
+        end
     end
 
     if do_full_band_irf
@@ -188,7 +207,7 @@ Random.seed!(1793)
             #                       forecast_string = forecast_string)
 
             modal_irfs_wrapper[:var_approx][method] =
-                impulse_responses(dsgevar, paras[1, :], :full, method, n_obs_shock; parallel = do_parallel,
+                impulse_responses(dsgevar, paras[1, :], :mode, method, n_obs_shock; parallel = do_parallel,
                                   use_intercept = true, flip_shocks = false, create_meansbands = create_meansbands,
                                   forecast_string = forecast_string)
 
@@ -198,10 +217,21 @@ Random.seed!(1793)
                                   forecast_string = forecast_string)
 
             modal_irfs_wrapper[:dsgevar_λ][method] =
-                impulse_responses(dsgevar, paras[1, :], data, :full, method; parallel = do_parallel,
+                impulse_responses(dsgevar, paras[1, :], data, :mode, method; parallel = do_parallel,
                                   flip_shocks = false, create_meansbands = create_meansbands,
                                   forecast_string = forecast_string)
         end
+        full_band_irfs[:dsgevar_λ][:rotation] =
+            impulse_responses(dsgevar, paras, data, :full, :rotation; parallel = do_parallel,
+                              flip_shocks = false, create_meansbands = create_meansbands,
+                              deviations = true,
+                              forecast_string = forecast_string)
+
+        modal_irfs_wrapper[:dsgevar_λ][:rotation] =
+            impulse_responses(dsgevar, paras[1, :], data, :mode, :rotation; parallel = do_parallel,
+                              flip_shocks = false, create_meansbands = create_meansbands,
+                              deviations = true,
+                              forecast_string = forecast_string)
 
         if do_parallel
             rmprocs(my_procs)
