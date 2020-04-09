@@ -815,9 +815,9 @@ function model_settings!(m::Model1002)
                  "Padding for anticipated policy shocks")
 
     if subspec(m) == "ss58"
-        m <= Setting(:n_z_anticipated_shocks, 2,
+        m <= Setting(:n_z_anticipated_shocks, 1,
                      "Number of anticipated policy shocks")
-        m <= Setting(:n_z_anticipated_shocks_padding, 2,
+        m <= Setting(:n_z_anticipated_shocks_padding, 1,
                      "Padding for anticipated policy shocks")
     else
         m <= Setting(:n_z_anticipated_shocks, 0,
