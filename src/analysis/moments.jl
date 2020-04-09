@@ -329,7 +329,7 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
         params = groupings[group_desc]
 
         # Take out anticipated shock SDs 2 to k - these priors are all the same
-        antshock_params = [m[k] for k in [Symbol("σ_r_m$i") for i = 2:n_anticipated_shocks(m)]]
+        antshock_params = [m[k] for k in [Symbol("σ_r_m$i") for i = 2:n_mon_anticipated_shocks(m)]]
         params = setdiff(params, antshock_params)
 
         n_params = length(params)
@@ -342,8 +342,8 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
 
         # Write footnote about standard deviations of anticipated policy shocks
         function anticipated_shock_footnote(θ::Parameter)
-            if n_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
-                nantpad          = n_anticipated_shocks_padding(m)
+            if n_mon_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
+                nantpad          = n_mon_anticipated_shocks_padding(m)
                 all_sigmas       = [m[Symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
                 nonzero_sigmas   = Base.filter(θ -> !(θ.fixed && θ.value == 0), all_sigmas)
                 n_nonzero_sigmas = length(nonzero_sigmas)

@@ -57,9 +57,9 @@ function default_settings!(m::AbstractDSGEModel)
         "End date of conditional data period")
 
     # Anticipated shocks
-    settings[:n_anticipated_shocks] = Setting(:n_anticipated_shocks, 0,
+    settings[:n_mon_anticipated_shocks] = Setting(:n_mon_anticipated_shocks, 0,
         "Number of anticipated policy shocks")
-    settings[:n_anticipated_shocks_padding] = Setting(:n_anticipated_shocks_padding, 20,
+    settings[:n_mon_anticipated_shocks_padding] = Setting(:n_mon_anticipated_shocks_padding, 20,
         "Padding for anticipated policy shocks")
 
     # General computation

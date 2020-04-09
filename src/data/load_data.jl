@@ -72,6 +72,15 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             df[date_mainsample_end(m) .< df[:date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Matrix{Float64}(ois_data_want)
         end
 
+        if :obs_z1 in cond_semi_names(m) || :obs_z1 in cond_full_names(m)
+            z_data = CSV.read(inpath(m, "raw", "z_$(data_vintage(m)).csv"), copycols = true)
+            dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
+            n_cond = length(dates)
+            z_data_want = z_data[date_mainsample_end(m) .< z_data[:date] .<= date_conditional_end(m), [:z1]]
+
+            df[date_mainsample_end(m) .< df[:date] .<= date_conditional_end(m), [:obs_z1]] .= Matrix{Float64}(z_data_want)
+        end
+
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
         end_date   = if cond_type in [:semi, :full]
@@ -153,13 +162,17 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
 
     # Set ois series to load
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         if get_setting(m, :rate_expectations_source) == :ois
-            data_series[:OIS] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+            data_series[:OIS] = [Symbol("ant$i") for i in 1:n_mon_anticipated_shocks(m)]
         elseif get_setting(m, :rate_expectations_source) == :bluechip
-            data_series[:bluechip] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+            data_series[:bluechip] = [Symbol("ant$i") for i in 1:n_mon_anticipated_shocks(m)]
         end
     end
+    if n_z_anticipated_shocks(m) > 0
+        data_series[:Z] = [Symbol("z$i") for i in 1:n_z_anticipated_shocks(m)]
+    end
+
 
     # For each additional source, search for the file with the proper name. Open
     # it, read it in, and merge it with fred_series
@@ -234,7 +247,6 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             CSV.write(filename, df[!,[:date, get(mnemonic)]])
         end
     end
-
     return df
 end
 
@@ -331,7 +343,7 @@ Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none, check_empty_columns::Bool = true)
     filename = get_data_filename(m, cond_type)
     df       = CSV.read(filename, copycols=true)
-
+    @show names(df)
     # Convert date column from string to Date
     df[!,:date] = map(Date, df[!,:date])
 
@@ -348,7 +360,7 @@ isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none,
 
 Return if dataset is valid for this model, ensuring that all observables are contained and
 that all quarters between the beginning of the presample and the end of the mainsample are
-contained. Also checks to make sure that expected interest rate data is available if `n_anticipated_shocks(m) > 0`.
+contained. Also checks to make sure that expected interest rate data is available if `n_mon_anticipated_shocks(m) > 0`.
 """
 function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none,
                       check_empty_columns::Bool = true)

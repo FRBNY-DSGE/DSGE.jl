@@ -125,13 +125,15 @@ function init_model_indices!(m::Model1002)
         :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERtil_k_t, :ERktil_f_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
         :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
         :EL_f_t,  :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t, :rktil_f_t, :n_f_t];
-        [Symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_tl$i") for i = 1:n_mon_anticipated_shocks(m)];
+        [Symbol("z_tl$i") for i = 1:n_z_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
         :g_sh, :b_sh, :μ_sh, :ztil_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
         :γ_sh, :π_star_sh, :zp_sh, :lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh];
-        [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_shl$i") for i = 1:n_mon_anticipated_shocks(m)];
+        [Symbol("z_shl$i") for i = 1:n_z_anticipated_shocks(m)]]
 
     # Expectations shocks
     expected_shocks = [
@@ -147,7 +149,8 @@ function init_model_indices!(m::Model1002)
         :eq_capval_f, :eq_output_f, :eq_caputl_f, :eq_capsrv_f, :eq_capev_f, :eq_mkupp_f,
         :eq_caprnt_f, :eq_msub_f, :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f,
         :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez, :eq_spread_f,:eq_nevol_f,  :eq_Erktil_f];
-        [Symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
+        [Symbol("eq_rml$i") for i=1:n_mon_anticipated_shocks(m)];
+        [Symbol("eq_zl$i") for i=1:n_z_anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -582,7 +585,7 @@ function init_parameters!(m::Model1002)
     end
 
     # standard deviations of the anticipated policy shocks
-    for i = 1:n_anticipated_shocks_padding(m)
+    for i = 1:n_mon_anticipated_shocks_padding(m)
         if i < 13
             m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
@@ -595,6 +598,23 @@ function init_parameters!(m::Model1002)
         else
             m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=true,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
+                           tex_label=@sprintf("\\sigma_{ant%d}",i))
+        end
+    end
+
+    for i = 1:n_z_anticipated_shocks_padding(m)
+        if i < 13
+            m <= parameter(Symbol("σ_z$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+                           description="σ_z$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
+                           tex_label=@sprintf("\\sigma_{ant%d}",i))
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"]
+                m <= parameter(Symbol("σ_z$(i)_r2"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+                               description="σ_z$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
+                               tex_label=@sprintf("\\sigma_{ant%d}",i))
+            end
+        else
+            m <= parameter(Symbol("σ_z$i"), .0, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=true,
+                           description="σ_z$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
     end
@@ -789,9 +809,14 @@ function model_settings!(m::Model1002)
     default_settings!(m)
 
     # Anticipated shocks
-    m <= Setting(:n_anticipated_shocks, 6,
+    m <= Setting(:n_mon_anticipated_shocks, 6,
                  "Number of anticipated policy shocks")
-    m <= Setting(:n_anticipated_shocks_padding, 20,
+    m <= Setting(:n_mon_anticipated_shocks_padding, 20,
+                 "Padding for anticipated policy shocks")
+
+    m <= Setting(:n_z_anticipated_shocks, 1,
+                 "Number of anticipated policy shocks")
+    m <= Setting(:n_z_anticipated_shocks_padding, 1,
                  "Padding for anticipated policy shocks")
 
     # Data
@@ -832,7 +857,7 @@ parameter groupings (e.g. \"Policy Parameters\") to vectors of
 """
 function parameter_groupings(m::Model1002)
     policy     = [[:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm, :σ_r_m];
-                  [Symbol("σ_r_m$i") for i = 1:n_anticipated_shocks(m)]]
+                  [Symbol("σ_r_m$i") for i = 1:n_mon_anticipated_shocks(m)]]
     sticky     = [:ζ_p, :ι_p, :ϵ_p, :ζ_w, :ι_w, :ϵ_w]
     other_endo = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Φ, :S′′, :ppsi, :π_star,
                   :Γ_gdpdef, :δ_gdpdef, :Lmean, :λ_w, :g_star]
@@ -854,7 +879,7 @@ function parameter_groupings(m::Model1002)
     # Ensure no parameters missing
     incl_params = vcat(collect(values(groupings))...)
     excl_params = [m[θ] for θ in vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
-                                      [Symbol("σ_r_m$i") for i=n_anticipated_shocks(m)+1:n_anticipated_shocks_padding(m)])]
+                                      [Symbol("σ_r_m$i") for i=n_mon_anticipated_shocks(m)+1:n_mon_anticipated_shocks_padding(m)])]
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings
@@ -876,7 +901,7 @@ function shock_groupings(m::Model1002)
         tfp = ShockGroup("z", [:ztil_sh], RGB(1.0, 0.55, 0.0)) # darkorange
         pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
         wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
-        pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+        pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_mon_anticipated_shocks(m)]),
                          RGB(1.0, 0.84, 0.0)) # gold
         pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
         mei = ShockGroup("mu", [:μ_sh], :cyan)
@@ -893,7 +918,7 @@ function shock_groupings(m::Model1002)
                                          :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
         other = ShockGroup("Other", [:g_sh, :b_sh, :λ_f_sh, :λ_w_sh,
                                      vcat([:rm_sh],
-                                     [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)])...,
+                                     [Symbol("rm_shl$i") for i = 1:n_mon_anticipated_shocks(m)])...,
                                      :π_star_sh, :μ_sh,
                                      :dettrend], RGB(0.70, 0.13, 0.13)) # firebrick
         return [fin, prod, mea, other]

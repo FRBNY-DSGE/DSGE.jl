@@ -373,10 +373,10 @@ function init_observable_mappings!(m::Model1002)
                                        "Real GDI Growth Per Capita")
 
     ############################################################################
-    # Columns 14 - 14 + n_anticipated_shocks
+    # Columns 14 - 14 + n_mon_anticipated_shocks
     ############################################################################
 
-    for i = 1:n_anticipated_shocks(m)
+    for i = 1:n_mon_anticipated_shocks(m)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
 
@@ -390,6 +390,26 @@ function init_observable_mappings!(m::Model1002)
                                                       ant_fwd_transform, ant_rev_transform,
                                                       "Anticipated Shock $i",
                                                       "$i-period ahead anticipated monetary policy shock")
+    end
+
+    ############################################################################
+    # Columns ??
+    ############################################################################
+
+    for i = 1:n_z_anticipated_shocks(m)
+        # FROM: fake data of z expectations
+        # TO:   Same
+
+        ant_fwd_transform = function (levels)
+            levels[:, Symbol("z$i")]
+        end
+
+        ant_rev_transform = quartertoannual
+
+        observables[Symbol("obs_z$i")] = Observable(Symbol("obs_z$i"), [Symbol("z$(i)__Z")],
+                                                      ant_fwd_transform, ant_rev_transform,
+                                                      "Anticipated Shock $i",
+                                                      "$i-period ahead anticipated z shock")
     end
 
     # Create a fake observable if observing wage markup shock
