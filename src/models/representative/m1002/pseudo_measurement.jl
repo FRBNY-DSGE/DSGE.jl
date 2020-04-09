@@ -131,6 +131,36 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:R_t], endo[:R_t]] = 1.
     DD_pseudo[pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
 
+    ## c_f_t
+    ZZ_pseudo[pseudo[:c_f_t], endo[:c_f_t]] = 1.
+
+    ## qk_f_t
+    ZZ_pseudo[pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
+
+    ## k_f_t
+    ZZ_pseudo[pseudo[:k_f_t], endo[:k_f_t]] = 1.
+
+    ## kbar_f_t
+    ZZ_pseudo[pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
+
+    ## u_f_t
+    ZZ_pseudo[pseudo[:u_f_t], endo[:u_f_t]] = 1.
+
+    ## rk_f_t
+    ZZ_pseudo[pseudo[:rk_f_t], endo[:rk_f_t]] = 1.
+
+    ## w_f_t
+    ZZ_pseudo[pseudo[:w_f_t], endo[:w_f_t]] = 1.
+
+    ## L_f_t
+    ZZ_pseudo[pseudo[:L_f_t], endo[:L_f_t]] = 1.
+
+    ## rktil_f_t
+    ZZ_pseudo[pseudo[:rktil_f_t], endo[:rktil_f_t]] = 1.
+
+    ## n_f_t
+    ZZ_pseudo[pseudo[:n_f_t], endo[:n_f_t]] = 1.
+
     ## labor share
     if haskey(m.settings, :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)

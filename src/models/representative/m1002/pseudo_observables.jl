@@ -5,7 +5,8 @@ function init_pseudo_observable_mappings!(m::Model1002)
                     :Expected10YearRateGap, :NominalFFR, :Expected10YearRate,
                     :Expected10YearNaturalRate,
                     :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth,
-                    :u_t, :NominalWageGrowth, :i_f_t, :R_t]
+                    :u_t, :NominalWageGrowth,
+                    :i_f_t, :R_t, :c_f_t, :qk_f_t, :k_f_t, :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :rktil_f_t, :n_f_t]
 
     if subspec(m) == "ss12"
         to_add = [:g_t, :b_t, :μ_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
@@ -130,6 +131,37 @@ function init_pseudo_observable_mappings!(m::Model1002)
 
     pseudo[:R_t].name     = "R_t"
     pseudo[:R_t].longname = "R_t"
+
+    pseudo[:c_f_t].name     = "c_f_t"
+    pseudo[:c_f_t].longname = "c_f_t"
+
+    pseudo[:qk_f_t].name     = "qk_f_t"
+    pseudo[:qk_f_t].longname = "qk_f_t"
+
+    pseudo[:k_f_t].name     = "k_f_t"
+    pseudo[:k_f_t].longname = "k_f_t"
+
+    pseudo[:kbar_f_t].name     = "kbar_f_t"
+    pseudo[:kbar_f_t].longname = "kbar_f_t"
+
+    pseudo[:u_f_t].name     = "u_f_t"
+    pseudo[:u_f_t].longname = "u_f_t"
+
+    pseudo[:rk_f_t].name     = "rk_f_t"
+    pseudo[:rk_f_t].longname = "rk_f_t"
+
+    pseudo[:w_f_t].name     = "w_f_t"
+    pseudo[:w_f_t].longname = "w_f_t"
+
+    pseudo[:L_f_t].name     = "L_f_t"
+    pseudo[:L_f_t].longname = "L_f_t"
+
+
+    pseudo[:rktil_f_t].name     = "rktil_f_t"
+    pseudo[:rktil_f_t].longname = "rktil_f_t"
+
+    pseudo[:n_f_t].name     = "n_f_t"
+    pseudo[:n_f_t].longname = "n_f_t"
 
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         pseudo[:Sinf_t].name     = "Sinf_t"
