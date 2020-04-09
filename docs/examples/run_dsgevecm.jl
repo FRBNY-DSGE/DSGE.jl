@@ -1,4 +1,5 @@
 using DSGE, Plots, FileIO
+using Plots.PlotMeasures
 
 # This script loads in matrices from the DSGE in Del Negro, Schorfheide, Smets, and Wouters (2007)
 # and computes the DSGE impulse responses to exogenous structural shocks and the
@@ -70,12 +71,12 @@ for (shock, j) in  shocks_dict
     plots_dict[shock] = Dict{Symbol, Plots.Plot}()
     for (obs, i) in obs_dict
         plots_dict[shock][obs] = plot(1:horizon, ŷ_dsgevecm_∞[i, :, j],
-                                      label = "DSGE-VECM \\lambda = Infinity", color = :black,
+                                      label = "DSGE-VECM \\lambda = Inf", color = :black,
                                       linewidth = 3)
         plot!(1:horizon, ŷ_dsge[i, :, j], label = "DSGE",
               color = :red, linewidth = 3, linestyle = :dash)
         plot!(1:horizon, ŷ_dsgevecm_λ[i, :, j], label = "DSGE-VECM \\lambda = 0.33", color = :black,
               linestyle = :dash,
-              legend = :bottomright)
+              legend = :bottomright, left_margin = 20px)
     end
 end
