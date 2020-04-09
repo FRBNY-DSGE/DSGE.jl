@@ -57,7 +57,7 @@ function dsgevecm_likelihood(m::AbstractDSGEVECMModel{S}, data::Matrix{S};
     end
 
     return dsgevecm_likelihood(YYYY, XXYY, XXXX, yyyyd, xxyyd, xxxxd,
-                      size(data, 2) - lags, get_λ(m); n_cointadd = n_cointadd(m))
+                      size(data, 2) - lags, get_λ(m); n_cointadd = n_cointegrating_add(m))
 end
 
 """
@@ -82,7 +82,7 @@ and the population moments implied by the DSGE prior (`YYYYD`, `XXYYD`, `XXXXD`)
 function dsgevecm_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
                              XXXX::Matrix{S}, YYYYD::Matrix{S}, XXYYD::Matrix{S},
                              XXXXD::Matrix{S}, T::Int, λ::S;
-                             n_cointadd::Int) where {S <: Real}
+                             n_cointadd::Int = 0) where {S <: Real}
 
     if isinf(λ)
         if n_cointadd > 0
