@@ -207,4 +207,114 @@ Random.seed!(1793) # need to seed for this
     @test @test_matrix_approx_eq jlddata["exp_data_sigma"] Σ
 end
 
+@testset "VECM approximation of state space" begin
+    matdata = load("reference/vecm_approx_state_space.jld2")
+    nobs = Int(matdata["nvar"])
+    p = Int(matdata["nlags"])
+    coint = Int(matdata["coint"])
+    TTT = matdata["TTT"]
+    RRR = matdata["RRR"]
+    ZZ = matdata["ZZ"]
+    DD = vec(matdata["DD"])
+    QQ = matdata["QQ"]
+    EE = matdata["EE"]
+    MM = matdata["MM"]
+    yyyyd, xxyyd, xxxxd = DSGE.vecm_approx_state_space(TTT, RRR, QQ,
+                                                       DD, ZZ, EE, MM, nobs,
+                                                       p, coint; get_population_moments = true,
+                                                       test_GA0 = matdata["GA0"])
+    yyyydc, xxyydc, xxxxdc = DSGE.vecm_approx_state_space(TTT, RRR, QQ,
+                                                          DD, ZZ, EE, MM, nobs,
+                                                          p, coint; get_population_moments = true,
+                                                          use_intercept = true, test_GA0 = matdata["GA0"])
+    β, Σ = DSGE.vecm_approx_state_space(TTT, RRR, QQ, DD,
+                                        ZZ, EE, MM, nobs, p, coint;
+                                        get_population_moments = false,
+                                        test_GA0 = matdata["GA0"])
+    βc, Σc = DSGE.vecm_approx_state_space(TTT, RRR, QQ, DD,
+                                          ZZ, EE, MM, nobs, p, coint;
+                                          get_population_moments = false, use_intercept = true,
+                                          test_GA0 = matdata["GA0"])
+
+    no_int_inds = vcat(1:coint, coint + 2:size(matdata["xxyyd"], 1))
+    @test @test_matrix_approx_eq yyyyd matdata["yyyyd"]
+    @test @test_matrix_approx_eq xxyyd matdata["xxyyd"][no_int_inds, :]
+    @test @test_matrix_approx_eq xxxxd matdata["xxxxd"][no_int_inds, no_int_inds]
+    @test @test_matrix_approx_eq yyyydc matdata["yyyyd"]
+    @test @test_matrix_approx_eq xxyydc matdata["xxyyd"]
+    @test @test_matrix_approx_eq xxxxdc matdata["xxxxd"]
+
+    expβ = \(matdata["xxxxd"][no_int_inds, no_int_inds], matdata["xxyyd"][no_int_inds, :])
+    expΣ = matdata["yyyyd"] - matdata["xxyyd"][no_int_inds, :]' * expβ
+    @test @test_matrix_approx_eq β expβ
+    @test @test_matrix_approx_eq Σ expΣ
+
+    expβc = matdata["xxxxd"] \ matdata["xxyyd"]
+    expΣc = matdata["yyyyd"] - matdata["xxyyd"]' * expβc
+    @test @test_matrix_approx_eq βc expβc
+    @test @test_matrix_approx_eq Σc expΣc
+
+    # Check DSGEVECM automates this properly
+    # m = Model1002()
+    # dsgevecm = DSGEVECM(m)
+    # DSGE.update!(dsgevecm, shocks = collect(keys(m.exogenous_shocks)),
+    #              observables = [:obs_hours, :obs_gdpdeflator, :laborshare_t, :NominalWageGrowth],
+    #              lags = 4, λ = Inf)
+    # yyyyd, xxyyd, xxxxd = compute_system(dsgevecm; get_population_moments = true)
+    # yyyydc, xxyydc, xxxxdc = compute_system(dsgevecm; get_population_moments = true, use_intercept = true)
+    # β, Σ = compute_system(dsgevecm)
+    # βc, Σc = compute_system(dsgevecm; use_intercept = true)
+
+    # @test @test_matrix_approx_eq yyyyd matdata["yyyyd"]
+    # @test @test_matrix_approx_eq xxyyd matdata["xxyyd"][2:end, :]
+    # @test @test_matrix_approx_eq xxxxd matdata["xxxxd"][2:end, 2:end]
+    # @test @test_matrix_approx_eq yyyydc matdata["yyyyd"]
+    # @test @test_matrix_approx_eq xxyydc matdata["xxyyd"]
+    # @test @test_matrix_approx_eq xxxxdc matdata["xxxxd"]
+
+    # expβ = \(matdata["xxxxd"][2:end, 2:end], matdata["xxyyd"][2:end, :])
+    # expΣ = matdata["yyyyd"] - matdata["xxyyd"][2:end, :]' * expβ
+    # expΣ += expΣ'
+    # expΣ ./= 2
+    # @test @test_matrix_approx_eq β expβ
+    # @test @test_matrix_approx_eq Σ expΣ
+
+    # expβc = \(matdata["xxxxd"], matdata["xxyyd"])
+    # expΣc = matdata["yyyyd"] - matdata["xxyyd"]' * expβc
+    # expΣc += expΣc'
+    # expΣc ./= 2
+    # @test @test_matrix_approx_eq βc expβc
+    # @test @test_matrix_approx_eq Σc expΣc
+end
+
+@testset "Updating a system for a DSGEVECM" begin
+    dsge = AnSchorfheide()
+    m = DSGEVECM(dsge)
+    sys = compute_system(dsge)
+    Dout1 = DSGE.compute_DD_coint_add(m, sys, [:obs_gdp, :obs_cpi])
+    @info "The following 2 warnings about an empty vector are expected"
+    sys_dsgevecm, Dout2 = compute_system(m, sys; get_DD_coint_add = true,
+                                         cointegrating_add = [:obs_gdp, :obs_cpi])
+    Dout3 = DSGE.compute_DD_coint_add(m, sys, Vector{Symbol}(undef, 0))
+    _, Dout4 = compute_system(m, sys; get_DD_coint_add = true)
+
+    # Check computing DD_coint_add
+    @test Dout1 == sys[:DD][1:2]
+    @test Dout2 == sys[:DD][1:2]
+    @test isempty(Dout3)
+    @test isempty(Dout4)
+
+    # Check the system looks right
+    @test @test_matrix_approx_eq sys[:TTT] sys_dsgevecm[:TTT]
+    @test @test_matrix_approx_eq sys[:RRR] sys_dsgevecm[:RRR]
+    @test @test_matrix_approx_eq sys[:CCC] sys_dsgevecm[:CCC]
+    @test @test_matrix_approx_eq sys[:ZZ] sys_dsgevecm[:ZZ]
+    @test @test_matrix_approx_eq sys[:DD] sys_dsgevecm[:DD]
+    @test @test_matrix_approx_eq sys[:QQ] sys_dsgevecm[:QQ]
+    @test @test_matrix_approx_eq sys_dsgevecm[:EE] zeros(size(sys_dsgevecm[:EE]))
+end
+
+
+
+
 nothing

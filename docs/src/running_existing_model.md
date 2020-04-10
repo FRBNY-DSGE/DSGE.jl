@@ -17,8 +17,9 @@ Please see
 [examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples) on the GitHub
 or the equivalent folder inside your Julia packages directory for example scripts we have created.
 
-- `run_default.jl`: a simple example of the standard workflow with DSGE.jl*
+- `run_default.jl`: a simple example of the standard workflow with DSGE.jl
 - `run_dsgevar.jl`: a example showing how to use a `DSGEVAR`.
+- `run_dsgevecm.jl`: a example showing how to use impulse responses for DSGE-VECMs.
 - `make_packet.jl`: basic auto-generation of a packet of plots and figures which
   help the user analyze estimation, forecast, and impulse response results. This script
   also provides an example of how we recommend structuring "master" files that launch
@@ -78,7 +79,7 @@ existing or user-defined model, see [Forecasting](@ref forecast-step).
 
 ## Input/Output Directory Structure
 
-The DSGE.jl* estimation uses data files as input and produces large data files
+The DSGE.jl estimation uses data files as input and produces large data files
 as outputs. One estimation saves several GB of parameter draws and
 related outputs. It is useful to understand how these files are loaded/saved
 and how to control this behavior.
@@ -97,7 +98,7 @@ Depth = 5
 
 ### Directory Paths
 
-By default, input/output directories are located in the DSGE.jl* package, along
+By default, input/output directories are located in the DSGE.jl package, along
 with the source code. Default values of the input/output directory roots:
 
 - `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`

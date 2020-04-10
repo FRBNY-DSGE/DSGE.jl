@@ -27,13 +27,13 @@ Given β, Σᵤ, we compute impulse responses to the VAR system
 ```
 ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
 ```
-where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`
+where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ₊₁`
 using one of the available identification methods for VARs
 
 If the second function is used (where `data` is not an input), then we assume
 the user wants to compute the VAR approximation of the DSGE,
 regardless of the `λ` value in `m`. Note that this function will not
-update the value of `λ` in `m`.
+update the value of `λ` in `m` (even though we are computing the DSGE-VAR(∞) approximation).
 
 ### Inputs
 * `method::Symbol`: The available methods are `:cholesky`, `:maxBC`, and `:choleskyLR`.
@@ -49,20 +49,22 @@ update the value of `λ` in `m`.
 """
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = impulse_response_horizons(m),
-                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+                           flip_shocks::Bool = false, frequency_band::Tuple{S, S} = (2*π/32, 2*π/6),
+                           verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m, data; verbose = verbose)
     Σ += Σ'
     Σ ./= 2
 
     return impulse_responses(β, Σ, n_obs_shock, horizon;
                              method = method, flip_shocks = flip_shocks,
-                             use_intercept = true)
+                             use_intercept = true, frequency_band = frequency_band)
 end
 
 
 function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
                            n_obs_shock::Int; horizon::Int = 0, use_intercept::Bool = false,
-                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+                           flip_shocks::Bool = false, frequency_band::Tuple{S, S} = (2*π/32, 2*π/6),
+                           verbose::Symbol = :none) where {S <: Real}
     β, Σ = compute_system(m; verbose = verbose, use_intercept = use_intercept)
     Σ += Σ'
     Σ ./= 2
@@ -70,16 +72,18 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, method::Symbol,
     return impulse_responses(β, Σ, n_obs_shock,
                              horizon > 0 ? horizon : impulse_response_horizons(m);
                              method = method, use_intercept = use_intercept,
+                             frequency_band = frequency_band,
                              flip_shocks = flip_shocks)
 end
 
 """
 ```
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
-    X̂::Matrix{S} = Matrix{S}(undef, 0, 0);
-    horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
-    flip_shocks::Bool = false, draw_shocks::Bool = false,
-    verbose::Symbol = :none) where {S <: Real}
+                           X̂::Matrix{S} = Matrix{S}(undef, 0, 0);
+                           horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
+                           flip_shocks::Bool = false, draw_shocks::Bool = false,
+                           deviations::Bool = false,
+                           verbose::Symbol = :none) where {S <: Real}
 ```
 computes the VAR impulse responses identified by the DSGE
 ```
@@ -95,6 +99,9 @@ The VAR impulse responses are computed according to
 ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
 ```
 where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`.
+Note these impulse responses are *not* computed in deviations
+from the baseline forecast `ŷₜ₊₁ = X̂ₜ₊₁β`. To compute these
+impulse responses, use the keyword `deviations`.
 
 The shock `uₜ₊₁` is identified by assuming
 ```
@@ -133,18 +140,22 @@ to achieve reproducibility.
 * `flip_shocks::Bool`: impulse response shocks are negative by default. Set to `true` for
     a positive signed shock.
 * `draw_shocks::Bool`: true if you want to draw shocks along the entire horizon
+* `deviations::Bool`: set true to compute the impulse response in deviations
+    rather than as a forecast. Mechnically, we ignore `X̂` (treated as zeros)
+    and the intercept term.
 * `verbose::Symbol`: quantity of output desired
 """
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
                            X̂::Vector{S} = Vector{S}(undef, 0);
                            horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
+                           deviations::Bool = false,
                            verbose::Symbol = :none) where {S <: Real}
 
     # Prepare X̂
     nobs = size(data, 1)
     k = nobs * get_lags(m) + 1
-    if isempty(X̂)
+    if isempty(X̂) && !deviations
         XX = lag_data(data, get_lags(m); use_intercept = true)
         X̂ = vcat(1, data[:, end], XX[end, 1+1:k - nobs])
     end
@@ -167,8 +178,8 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
         end
     end
     return impulse_responses(system[:TTT], system[:RRR], system[:ZZ], system[:DD], MM,
-                             system[:QQ], k, β, Σ, X̂, h; flip_shocks = flip_shocks,
-                             draw_shocks = draw_shocks)
+                             system[:QQ], k, β, Σ, h, X̂; flip_shocks = flip_shocks,
+                             draw_shocks = draw_shocks, deviations = deviations)
 end
 
 
@@ -247,8 +258,9 @@ end
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Matrix{S}, horizon::Int;
+                           horizon::Int, X̂::Matrix{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
+                           deviations::Bool = false,
                            test_shocks::Matrix{S} =
                            Matrix{S}(undef, 0, 0)) where {S<:Real}
 ```
@@ -264,6 +276,10 @@ The VAR impulse responses are computed according to
 ŷₜ₊₁ = X̂ₜ₊₁β + uₜ₊₁,
 ```
 where `X̂ₜ₊₁` are the lags of observables in period `t + 1`, i.e. `yₜ, yₜ₋₁, ..., yₜ₋ₚ`.
+Note these impulse responses are *not* computed in deviations
+from the baseline forecast `ŷₜ₊₁ = X̂ₜ₊₁β`. To compute these
+impulse responses, set the keyword `deviations = true`.
+
 The shock `uₜ₊₁` is identified via
 ```
 Σᵤ = 𝔼[u × u'] = chol(Σᵤ) × Ω × ϵₜ,
@@ -280,8 +296,9 @@ Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009).
 function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            DD::Vector{S}, MM::Matrix{S}, QQ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
-                           X̂::Vector{S}, horizon::Int;
+                           horizon::Int, X̂::Vector{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
+                           deviations::Bool = false,
                            test_shocks::Matrix{S} =
                            Matrix{S}(undef, 0, 0)) where {S <: Real}
 
@@ -294,11 +311,21 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
     rotation, _ = qr(a0_m)
     Σ_chol = cholesky(Σ).L * rotation' # mapping from structural shocks to innovations in VAR
 
+    # Ignore intercept if in deviations
+    if deviations
+        β = β[2:end, :]
+        X̂ = zeros(S, size(β, 1))
+        k -= 1
+    end
+
     if draw_shocks || !isempty(test_shocks)
         ŷ = Matrix{S}(undef, nobs, horizon)
 
         if isempty(test_shocks)
             shocks = randn(size(RRR, 2), horizon) # shocks getting drawn are structural shocks
+            if flip_shocks
+                @warn "Shocks are being drawn, so flipping shocks does not make sense in this context. Ignoring `flip_shocks` . . ."
+            end
         else
             shocks = test_shocks
         end
@@ -307,26 +334,31 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
             out     = vec(X̂' * β) + Σ_chol * shocks[:, t] # X̂ normally would be [X̂ 0 0; 0 X̂ 0; 0 0 X̂] if nobs = 3, but this way of coding it results in less memory storage
             ŷ[:, t] = out
 
-            X̂       = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+            X̂       = deviations ? vcat(out, X̂[1:k - nobs]) :
+                vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
         end
     else
-            nshocks = size(RRR, 2)
-            ŷ       = Array{S, 3}(undef, nobs, horizon, nshocks)
-            shocks  = zeros(S, nshocks)
+        nshocks = size(RRR, 2)
+        ŷ       = Array{S, 3}(undef, nobs, horizon, nshocks)
+        old_X̂   = X̂
+        shocks  = zeros(S, nshocks)
 
-            for i = 1:nshocks
-                shocks[i] = flip_shocks ? sqrt(QQ[i, i]) :
-                    -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
-                out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
-                shocks[i]  = 0. # set back to zero
-                ŷ[:, 1, i] = out
-                X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
-                for t = 2:horizon
-                    out        = vec(X̂' * β)
-                    ŷ[:, t, i] = out
-                    X̂          = vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
-                end
+        for i = 1:nshocks
+            X̂ = copy(old_X̂)
+            shocks[i] = flip_shocks ? sqrt(QQ[i, i]) :
+                -sqrt(QQ[i, i]) # a negative 1 s.d. shock by default
+            out        = vec(X̂' * β) + Σ_chol * shocks # do impact separately
+            shocks[i]  = 0. # set back to zero
+            ŷ[:, 1, i] = out
+            X̂          = deviations ? vcat(out, X̂[1:k - nobs]) :
+                vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
+            for t = 2:horizon
+                out        = vec(X̂' * β)
+                ŷ[:, t, i] = out
+                X̂          = deviations ? vcat(out, X̂[1:k - nobs]) :
+                    vcat(1., out, X̂[1 + 1:k - nobs]) # XXl = X̂[1 + 1:k - nobs]
             end
+        end
     end
 
     return ŷ

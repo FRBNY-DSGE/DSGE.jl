@@ -5,9 +5,10 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
-            "plot/plot", # ideally these 3 tests go elsewhere
+            "packet/packet", # ideally these 3 tests go elsewhere
+            "plot/plot", # fault errors. This way, they error early
   	        "plot/util", # but they are prone to segmentation
-            "packet/packet", # fault errors. This way, they error early
+
             "core",
             "abstractdsgemodel",
             "abstractvarmodel",
@@ -24,7 +25,7 @@ my_tests = [
 
             "models/poolmodel/poolmodel",
             "models/var/dsgevar/dsgevar",
-            "models/var/dsgevar/util",
+            "models/var/dsgevecm/dsgevecm",
             "models/var/util",
 
             "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
@@ -53,7 +54,6 @@ my_tests = [
             "data/transform_data",
             "data/util",
 
-            "statespace",
             "solve/gensys",
             "solve/solve",
             "solve/solve_poolmodel",
@@ -71,6 +71,7 @@ my_tests = [
             "estimate/csminwel",
             "estimate/optimize",
             "estimate/var/dsgevar_likelihood",
+            "estimate/var/dsgevecm_likelihood",
 
             "estimate/metropolis_hastings",
             #"estimate/smc/smc",
@@ -89,6 +90,7 @@ my_tests = [
             "forecast/util",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",
+            "forecast/var/dsgevecm/impulse_responses",
             "analysis/compute_meansbands",
             "analysis/df_to_table",
             "analysis/io",
