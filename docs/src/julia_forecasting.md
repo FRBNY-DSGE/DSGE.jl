@@ -6,7 +6,7 @@
 
 In December 2015, we announced [DSGE.jl](https://github.com/FRBNY-DSGE/DSGE.jl),
 our open-source, Julia-language package for working with dynamic stochastic
-general equilibrium (DSGE) models. At that time, DSGE.jl* contained only the code
+general equilibrium (DSGE) models. At that time, DSGE.jl contained only the code
 required to specify, solve, and estimate such models using Bayesian
 methods. Now, we present the additional code needed to produce economic
 forecasts using estimated DSGE models. This new code replicates our MATLAB
@@ -58,7 +58,7 @@ include smoothing, forecasting (both enforcing the zero lower bound and not),
 and computing shock decompositions (exercises that allow us to account for the
 evolution of observed variables in terms of their driving forces).
 
-With our most recent model, which is available in DSGE.jl*, we can compute all
+With our most recent model, which is available in DSGE.jl, we can compute all
 the full-distribution forecast outputs in approximately fifteen minutes. In
 comparison, the same computations in MATLAB typically take about seventy
 minutes. As a result, we can experiment with different options and correct
@@ -168,7 +168,7 @@ object—helping us keep our function calls manageable and our data organized.
 
 We have found Julia's type system to be a helpful way to abstract the details
 associated with transforming data to and from various units. `Observable`s are
-clearly a DSGE.jl*-specific example of a user-defined type, but we hope this
+clearly a DSGE.jl-specific example of a user-defined type, but we hope this
 discussion illustrates how Julia types and effective abstraction can help
 economists structure and clarify their code.
 
@@ -288,26 +288,26 @@ A big benefit of using Julia is the large and growing package ecosystem, which
 allows all users to access high-quality open-source code. Thanks to this system,
 Julia developers can focus their development time on the issues and projects
 they really care about, without having to repeatedly reinvent the wheel. For
-example, DSGE.jl* depends on the
+example, DSGE.jl depends on the
 [DataFrames.jl](https://github.com/JuliaStats/DataFrames.jl) package to help us
-manage data and dates. Similarly, DSGE.jl* is available for members of the
+manage data and dates. Similarly, DSGE.jl is available for members of the
 community to modify, extend, and make use of as they see fit. In this spirit, we
-have decided to break out some DSGE-independent components of DSGE.jl* into
+have decided to break out some DSGE-independent components of DSGE.jl into
 their own package.
 
 DSGE models define a linear system that links observed variables to unobserved
 states. In order to actually perform inference on these latent states, we apply
 the Kalman filter and smoothing algorithms. State space models are commonly used
-across many disciplines, and indeed the routines we use in DSGE.jl* can be
+across many disciplines, and indeed the routines we use in DSGE.jl can be
 applied to any sort of linear state space model. As such, we have decided to
 move the filtering and smoothing routines that we have historically used with
 the DSGE model into
 [StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl), a
-new package that will provide DSGE.jl*-independent filtering and smoothing
+new package that will provide DSGE.jl-independent filtering and smoothing
 routines.
 
 *StateSpaceRoutines.jl* currently features the one filter and four smoothers we
-most commonly use in DSGE.jl*. On the filtering front, we implement the
+most commonly use in DSGE.jl. On the filtering front, we implement the
 standard Kalman filter found in James Hamilton's *Time Series Analysis*
 *StateSpaceRoutines.jl* also contains two Kalman smoothers and two simulation
 smoothers. In addition to the Kalman smoother presented in *Time Series

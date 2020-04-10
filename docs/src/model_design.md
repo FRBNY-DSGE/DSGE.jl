@@ -1,6 +1,6 @@
 # Model Design
 
-DSGE.jl* is an object-oriented approach to solving the New York Fed DSGE model
+DSGE.jl is an object-oriented approach to solving the New York Fed DSGE model
 that takes advantage of Julia's type system, multiple dispatch, package-handling
 mechanism, and other features. A single model object[^1] centralizes
  all information about the model's parameters, states, equilibrium conditions, and

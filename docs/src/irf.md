@@ -57,7 +57,7 @@ impulse_responses(m, system, horizon, shock_name , var_name, var_value)
 ```
 
 ## DSGE Impulse Responses
-There are two categories of impulse responses for DSGEs provided by DSGE.jl*.
+There are two categories of impulse responses for DSGEs provided by DSGE.jl.
 It is easy to distinguish them by examining the state space form of a DSGE model (see [Solving](@ref solving-dsge-doc)):
 ```math
 \begin{align*}
