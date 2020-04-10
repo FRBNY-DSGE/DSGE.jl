@@ -222,13 +222,13 @@ compute_system(m, data; apply_altpolicy = false,
                get_population_moments = false,
                verbose = :high)
 ```
-Given the current model parameters, compute the DSGE-VAR system
+Given the current model parameters, compute the DSGE-VAR or DSGE-VECM system
 corresponding to model `m`. If a matrix `data` is also passed, then
 the VAR is estimated on `data` using the DSGE `m` as a prior
 with weight λ.
 
 ### Keyword Arguments
-* `check_system::Bool`: see `?compute_system` that takes an input `m::AbstractDSGEModel`
+* `check_system::Bool`: see `?compute_system` that takes the input `m::AbstractDSGEModel`
     and `system::System`.
 * `get_system::Bool`: see Outputs
 * `get_population_moments::Bool`: see Outputs
@@ -237,15 +237,17 @@ with weight λ.
 ### Outputs
 * If `get_system = true`:
     Returns the updated `system` whose measurement matrices `ZZ`, `DD`, and `QQ` correspond
-    to the VAR specifieid by `m`.
+    to the VAR or VECM specified by `m`. If `m` is an `AbstractDSGEVECMModel`,
+    then the `system` and the vector implied by additional cointegrating relationships
+    are returned as a 2-element tuple.
 * If `get_population_moments = true`:
     Returns the limit cross product matrices that describe the DSGE implied
     population moments between the observables and their lags. If `data` is
     also passed as an input, then the sample population moments are also returned.
 * Otherwise:
-    Returns `β` and `Σ`, the coefficients and observables covariance matrix of the VAR.
+    Returns `β` and `Σ`, the coefficients and observables covariance matrix of the VAR or VECM.
     If `data` is passed in, then `β` and `Σ` are estimated from the data using `m`
-    as a prior with weight λ. Otherwise, `β` and `Σ` comprise the VAR approximation
+    as a prior with weight λ. Otherwise, `β` and `Σ` comprise the VECM approximation
     of the DSGE `m`.
 """
 function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
@@ -263,6 +265,8 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
         system = compute_system(dsge; verbose = verbose)
 
     end
+    # Update the system to reflect the desired observables using information
+    # from the underlying DSGE object
     system = compute_system(dsge, system; observables = collect(keys(get_observables(m))),
                             shocks = collect(keys(get_shocks(m))), check_system = check_system)
 
@@ -293,6 +297,7 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                               get_population_moments = get_population_moments, use_intercept = true,
                               verbose = verbose)
     else
+        # Create a system using the method for DSGE-VARs and λ = ∞
         system = compute_system(m; apply_altpolicy = apply_altpolicy,
                                 regime_switching = regime_switching, regime = regime,
                                 n_regimes = n_regimes, check_system = check_system,
@@ -326,6 +331,103 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                 β, Σ =  draw_stationary_VAR(YYYYC, XXYYC, XXXXC,
                                             convert(Int, n_periods + λ * n_periods),
                                             size(data, 1), lags)
+
+                return β, Σ
+            end
+        end
+    end
+end
+
+# Same functions as above but for AbstractDSGEVECMModel types
+function compute_system(m::AbstractDSGEVECMModel{T}; apply_altpolicy::Bool = false,
+                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_population_moments::Bool = false, use_intercept::Bool = false,
+                        verbose::Symbol = :high) where {T<:Real}
+    dsge = get_dsge(m)
+    if regime_switching
+        regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
+                                       regime_switching = regime_switching, n_regimes = n_regimes,
+                                       verbose = verbose)
+        system = System(regime_system, regime)
+    else
+        system = compute_system(dsge; verbose = verbose)
+
+    end
+    # Use wrapper compute_system for AbstractDSGEVECMModel types
+    # (as opposed to compute_system(m::AbstractDSGEModel, system::System; ...))
+    system, DD_coint_add = compute_system(m, system; observables = collect(keys(get_observables(m))),
+                                          cointegrating = collect(keys(get_cointegrating(m))),
+                                          cointegrating_add = collect(keys(get_cointegrating_add(m))),
+                                          shocks = collect(keys(get_shocks(m))), check_system = check_system,
+                                          get_DD_coint_add = true)
+
+    if get_system
+        return system, DD_coint_add
+    else
+        EE, MM = measurement_error(m)
+
+        return vecm_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                       system[:DD], system[:ZZ], EE, MM, n_observables(m),
+                                       n_lags(m), n_cointegrating(m), n_cointegrating_add(m),
+                                       DD_coint_add;
+                                       get_population_moments = get_population_moments,
+                                       use_intercept = use_intercept)
+    end
+end
+
+function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
+                        apply_altpolicy::Bool = false,
+                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_population_moments::Bool = false,
+                        verbose::Symbol = :high) where {T<:Real}
+
+    if get_λ(m) == Inf
+        # Then we just want the VECM approximation of the DSGE
+        # with no additional cointegration
+        return compute_system(m; apply_altpolicy = apply_altpolicy,
+                              regime_switching = regime_switching, regime = regime, n_regimes = n_regimes,
+                              check_system = check_system, get_system = get_system,
+                              get_population_moments = get_population_moments, use_intercept = true,
+                              verbose = verbose)
+    else
+        # Create a system using the method for DSGE-VECMs and λ = ∞
+        system, DD_coint_add = compute_system(m; apply_altpolicy = apply_altpolicy,
+                                regime_switching = regime_switching, regime = regime,
+                                n_regimes = n_regimes, check_system = check_system,
+                                get_system = true, use_intercept = true,
+                                verbose = verbose)
+
+        if get_system
+            return system
+        else
+            EE, MM = measurement_error(m)
+
+            lags = n_lags(m)
+            YYYY, XXYY, XXXX =
+                compute_var_population_moments(data, lags; use_intercept = true)
+            out = vecm_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                         system[:DD], system[:ZZ], EE, MM, size(data, 1),
+                                          n_lags(m), n_cointegrating(m),
+                                          n_cointegrating_add(m), DD_coint_add;
+                                          get_population_moments = true,
+                                          use_intercept = true)
+
+            if get_population_moments
+                return out..., YYYY, XXYY, XXXX
+            else
+                # Compute prior-weighted population moments
+                λ = get_λ(m)
+                YYYYC = YYYY + λ .* out[1]
+                XXYYC = XXYY + λ .* out[2]
+                XXXXC = XXXX + λ .* out[3]
+
+                # Draw VECM system
+                n_periods = size(data, 2) - lags
+                β, Σ =  draw_VECM(YYYYC, XXYYC, XXXXC,
+                                  convert(Int, n_periods + λ * n_periods),
+                                  size(data, 1), lags, n_cointegrating(m))
 
                 return β, Σ
             end
@@ -512,11 +614,11 @@ function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
     # Cointegrating relationships should exist as observables/pseudo_observables already
     # in the underlying DSGE. We assume cointegrating relationships come after normal observables.
     # Default behavior is to recreate the underlying DSGE's state space representation, however.
+    sys = compute_system(get_dsge(m), system; observables = vcat(observables, cointegrating),
+                         pseudo_observables = pseudo_observables,
+                         states = states, shocks = shocks, zero_DD = zero_DD,
+                         zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
     if get_DD_coint_add
-        sys = compute_system(get_dsge(m), system; observables = vcat(observables, cointegrating),
-                              pseudo_observables = pseudo_observables,
-                              states = states, shocks = shocks, zero_DD = zero_DD,
-                              zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
         mtype = typeof(m)
         DD_coint_add = if hasmethod(compute_DD_coint_add, (mtype, Vector{Symbol}))
             compute_DD_coint_add(m, cointegrating_add)
@@ -527,10 +629,7 @@ function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
         end
         return sys, DD_coint_add
     else
-        return compute_system(m, system; observables = vcat(observables, cointegrating),
-                              pseudo_observables = pseudo_observables,
-                              states = states, shocks = shocks, zero_DD = zero_DD,
-                              zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
+        return sys
     end
 end
 
