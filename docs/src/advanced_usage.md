@@ -36,7 +36,7 @@ so a user will need to manually set the data vintage to the desired date.
 
 Below, we describe several important settings for package usage.
 
-For more details on implementation and usage of settings, see [ModelConstructors.jl*](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
+For more details on implementation and usage of settings, see [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
 See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults.jl) for the complete description of default settings.
 

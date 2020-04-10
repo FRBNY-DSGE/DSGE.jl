@@ -14,8 +14,8 @@ This section focuses on what the code does and why. Docstrings and the code itse
 procedures are implemented.
 
 As of DSGE.jl v0.7.3, many types housed in the DSGE.jl package have been moved to
-[ModelConstructors.jl*](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
-The following types now belong in ModelConstructors.jl*:
+[ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
+The following types now belong in ModelConstructors.jl:
 
 - `AbstractModel`
 - `AbstractParameter`
@@ -32,7 +32,7 @@ The following types now belong in ModelConstructors.jl*:
 - `PseudoObservable`
 - Types and functions used to define and work with priors
 
-We refer users to the documentation provided for ModelConstructors.jl*
+We refer users to the documentation provided for ModelConstructors.jl
 for information about the implementation of these types. Below, we
 document the implementation of DSGE.jl specific types.
 
@@ -108,25 +108,11 @@ DSGE.update!
 DSGE.transform_to_model_space!
 DSGE.load_parameters_from_file
 DSGE.specify_mode!
-DSGE.specify_hessian
+DSGE.specify_hessian!
 ```
 
-### `Parameter` Interface
-
-```@autodocs
-Modules = [DSGE]
-Pages = ["parameters.jl"]
-Order = [:function]
-```
-
-### `Setting` Interface
-
-```@autodocs
-Modules = [DSGE]
-Pages = ["settings.jl"]
-Order = [:function]
-```
-
+### `Parameter` and `Setting` Interface
+See [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
 ## The `PoolModel` Type
 

@@ -23,7 +23,7 @@ m = AnSchorfheide()
 system = compute_system(m)
 horizon = 40
 states_irf, obs_irf, pseudo_irf = impulse_response(system, horizon)
-``
+```
 
 For an `AbstractRepModel` (a subtype of `AbstractDSGEModel` for representative
 agent models), we can also grab the impulse responses by running

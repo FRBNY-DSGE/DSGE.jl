@@ -306,10 +306,10 @@ the DSGE model into
 new package that will provide DSGE.jl-independent filtering and smoothing
 routines.
 
-*StateSpaceRoutines.jl* currently features the one filter and four smoothers we
+StateSpaceRoutines.jl currently features the one filter and four smoothers we
 most commonly use in DSGE.jl. On the filtering front, we implement the
 standard Kalman filter found in James Hamilton's *Time Series Analysis*
-*StateSpaceRoutines.jl* also contains two Kalman smoothers and two simulation
+StateSpaceRoutines.jl also contains two Kalman smoothers and two simulation
 smoothers. In addition to the Kalman smoother presented in *Time Series
 Analysis*, we also have Jan Koopman's disturbance smoother from his paper
 *Disturbance Smoother for State Space Models*. The two simulation smoothers are

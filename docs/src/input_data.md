@@ -15,7 +15,7 @@ sample dataset for use with model `m990`, see [Update sample input data](@ref).
 ## Setup
 
 To take advantage of the ability to automatically download data series from FRED via the
-*FredData.jl* package, set up your FRED API access by following the directions
+FredData.jl package, set up your FRED API access by following the directions
 [here](https://github.com/micahjsmith/FredData.jl/blob/master/README.md).
 
 ## Loading data
@@ -208,8 +208,8 @@ Given the complexity of the data download, you may find that the dataset generat
     model requires data. This is perfectly okay if your data series starts after
     `date_presample_start`.
 
-If you experience any problems using *FredData.jl*, ensure your API key is provided correctly
-and that there are no issues with your firewall, etc. Any issues with *FredData.jl* proper
+If you experience any problems using FredData.jl, ensure your API key is provided correctly
+and that there are no issues with your firewall, etc. Any issues with FredData.jl proper
 should be reported on that project's page.
 
 
@@ -217,7 +217,7 @@ should be reported on that project's page.
 
 A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset:
 
-**Step 1**. See [Setup](@ref) to setup automatic data pulls using *FredData.jl*.
+**Step 1**. See [Setup](@ref) to setup automatic data pulls using FredData.jl.
 
 **Step 2**. Specify the exact data vintage desired:
 
