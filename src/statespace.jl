@@ -104,7 +104,7 @@ end
 
 A mutable struct containing the transition and measurement equations for a
 state-space model. The matrices may be directly indexed: `sys[:TTT]`
-returns `sys.transition.TTT`, etc.
+returns `sys.transition.TTT`, `sys[:ZZ]` returns `sys.measurement.ZZ`, etc.
 """
 mutable struct System{T<:AbstractFloat}
     transition::Transition{T}

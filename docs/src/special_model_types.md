@@ -136,3 +136,23 @@ DSGEVECM
   "additional" ones and are added to the field `cointegrating_add`. To compute the constant
   vector which specify these additional relationships, we use `compute_DD_coint_add`.
   See its docstring for notes on usage.
+
+## Auxiliary Methods for DSGE-VARs and DSGE-VECMs
+Listed below are some methods used internally in but not exported by DSGE.jl
+that users may also find useful. We also recommend looking at the various utility
+functions in `abstractvarmodel.jl`. Many of these functions are wrappers for similarly
+named functions defined on `AbstractDSGEModel` objects.
+
+```@autodocs
+Modules = [DSGE]
+Pages = ["models/var/util.jl"]
+Order = [:function]
+```
+```@docs
+var_approx_state_space
+vecm_approx_state_space
+compute_DD_coint_add
+measurement_error
+dsgevar_likelihood
+dsgevecm_likelihood
+```
