@@ -2,12 +2,12 @@ using DSGE, ModelConstructors, Random, Plots
 using Plots.PlotMeasures
 
 # What do you want to do?
-estimate_dsgevar  = false   # Estimate a DSGEVAR using SMC
-use_estim_output  = false   # Use posterior from SMC estimation for following code. Otherwise, use default parameters.
+estimate_dsgevar  = true   # Estimate a DSGEVAR using SMC
+use_estim_output  = true   # Use posterior from SMC estimation for following code. Otherwise, use default parameters.
 get_VAR_system    = true   # Compute VAR coefficients and innovations-covariance matrix
 do_modal_irf      = true   # Compute IRFs using modal parameters
 compare_modal_irf = true   # Plot the modal DSGEVAR λ = ∞ rotation IRF and the actual DSGE IRF for observables
-do_full_band_irf  = false   # Compute IRFs using parameters drawn from a distribution
+do_full_band_irf  = true   # Compute IRFs using parameters drawn from a distribution
 create_meansbands = false  # Save full_band_irfs to MeansBands
 do_parallel       = false  # Use parallel workers
 n_workers         = 10
