@@ -414,11 +414,10 @@ function eqcond_regimes(m::Model1002)
         Γ0[regime][eq[:eq_z], endo[:ztil_t]]  = -1 / (1 - m[:α])
         Γ1[regime][eq[:eq_z], endo[:ztil_t]]  = -1 / (1 - m[:α])
         Γ0[regime][eq[:eq_z], endo[:zp_t]]   = -1.
-Ψ[regime][eq[:eq_z], exo[:ztil_sh]]     = 1/(1 - m[:α])
 
         Γ0[regime][eq[:eq_ztil], endo[:ztil_t]] = 1.
         Γ1[regime][eq[:eq_ztil], endo[:ztil_t]] = m[:ρ_ztil]
-Ψ[regime][eq[:eq_ztil], exo[:ztil_sh]]     = 1.
+        Ψ[regime][eq[:eq_ztil], exo[:ztil_sh]]     = 1.
 
         # Long-run changes to productivity
         Γ0[regime][eq[:eq_zp], endo[:zp_t]] = 1.
