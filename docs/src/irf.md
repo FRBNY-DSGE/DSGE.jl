@@ -5,7 +5,7 @@ CurrentModule = DSGE
 ```
 
 We provide many different types of impulse responses for DSGEs,
-VARs, and DSGE-VARs. The forecast step allows the user to automatically compute
+VARs, VECMs, DSGE-VARs, and DSGE-VECMs. The forecast step allows the user to automatically compute
 "structural" impulse responses specifically for DSGEs,
 but for some purposes, a user may just want impulse responses
 without having to compute any other quantities. We provide this functionality
@@ -23,7 +23,7 @@ m = AnSchorfheide()
 system = compute_system(m)
 horizon = 40
 states_irf, obs_irf, pseudo_irf = impulse_response(system, horizon)
-``
+```
 
 For an `AbstractRepModel` (a subtype of `AbstractDSGEModel` for representative
 agent models), we can also grab the impulse responses by running
@@ -57,7 +57,7 @@ impulse_responses(m, system, horizon, shock_name , var_name, var_value)
 ```
 
 ## DSGE Impulse Responses
-There are two categories of impulse responses for DSGEs provided by DSGE.jl*.
+There are two categories of impulse responses for DSGEs provided by DSGE.jl.
 It is easy to distinguish them by examining the state space form of a DSGE model (see [Solving](@ref solving-dsge-doc)):
 ```math
 \begin{align*}
@@ -119,11 +119,11 @@ While we have not yet implemented a VAR model, we do have impulse
 responses often used on VARs because of DSGE-VARs. Consider the VAR
 
 ```math
-y_t = X_t \beta + \eta_t,
+y_t = X_t \beta + \epsilon_t,
 ```
 
 where ``X_t`` is a matrix of the lags of ``y_t``, ``\beta`` are the
-VAR coefficients, and ``\eta_t \sim N(0, \Omega)`` are the innovations
+VAR coefficients, and ``\epsilon_t \sim N(0, \Omega)`` are the innovations
 to observables.
 
 We provide three types of impulse responses, each of which
@@ -190,7 +190,66 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
     X̂::Matrix{S} = Matrix{S}(undef, 0, 0);
     horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
     flip_shocks::Bool = false, draw_shocks::Bool = false,
+    deviations::Bool = false,
     verbose::Symbol = :none) where {S <: Real}
+```
+
+
+## VECM Impulse Responses
+While we have not yet implemented a VECM model, we do have impulse
+responses often used on VECMs because of DSGE-VECMs. Consider the VECM
+
+```math
+\Delta y_t = e_{t - 1} \beta_e +  X_t \beta_v + \epsilon_t,
+```
+
+where ``e_{t - 1}`` are cointegrating relationships (the error correction terms);
+``X_t`` is a matrix of the lags of ``\Delta y_t``; ``\beta_e`` and ``\beta_v`` are the
+VECM coefficients; and ``\epsilon_t \sim N(0, \Omega)`` are the innovations
+to observables. We identify orthogonalized shocks for VECMs
+from the innovations using the short-run Cholesky method. Other methods
+have yet to be implemented, hence passing keywords specific to these methods
+will not do anything (namely `frequency_band`).
+Find the docstring of the following function for details.
+
+```
+impulse_responses(β, Σ, coint_mat, n_obs_shock, horizon, shock_size = 1;
+    method = :cholesky, flip_shocks = false, use_intercept = true,
+    frequency_band = (2π/32, 2π/6)) where {S<:Real}
+```
+
+
+## DSGE-VECM Impulse Responses
+
+Most of the impulse responses for DSGE-VARs have been implemented for DSGE-VECMs.
+The two impulse responses that have not been implemented, due to the differences in
+VECMs and VARs, are the `maxBC` and `cholesky_long_run` impulse responses.
+For the first type of impulse responses, which use the VECM impulse response code,
+see the functions
+
+```
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S},
+                           coint_mat::AbstractMatrix{S}, method::Symbol,
+                           n_obs_shock::Int; horizon::Int = 0 ,use_intercept::Bool = false,
+                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+
+function impulse_responses(m::AbstractDSGEVECMModel{S}, coint_mat::AbstractMatrix{S}, method::Symbol,
+                           n_obs_shock::Int; horizon::Int = 0 ,use_intercept::Bool = false,
+                           flip_shocks::Bool = false, verbose::Symbol = :none) where {S <: Real}
+```
+
+The second function is for the specific case when ``\lambda = \infty``, where the data does not matter for the impulse response.
+
+For the second type of impulse responses, which we call rotation impulse responses, see
+
+```
+function impulse_responses(m::AbstractDSGEVECMModel{S}, data::AbstractArray{S},
+                           coint_mat::AbstractMatrix{S},
+                           X̂::Matrix{S} = Matrix{S}(undef, 0, 0);
+                           horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
+                           flip_shocks::Bool = false, draw_shocks::Bool = false,
+                           deviations::Bool = false,
+                           verbose::Symbol = :none) where {S <: Real}
 ```
 
 ## Wrappers for Impulse Response Functions
@@ -212,6 +271,13 @@ a DSGE-VAR with any prior weight ``\lambda``, but the second one
 is a convenience wrapper for the case of ``\lambda = \infty``,
 which is equivalent to computing the impulse responses of the
 VAR approximation to a DSGE.
+
+No wrappers for DSGE-VECM impulse responses have been implemented
+because we have not constructed a DSGE model that can be
+interfaced with the `DSGEVECM` type yet. As a result, there are
+no explicit test cases for these wrappers. We have decided
+against implementing wrappers for DSGE-VECM impulse responses until
+we have test cases to guarantee the wrappers do not have bugs.
 
 For observables-identified DSGE impulse responses, find
 
@@ -240,6 +306,8 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            frequency_band::Tuple{S,S} = (2*π/32, 2*π/6),
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
+                           X̂::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
+                           deviations::Bool = false
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false, test_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -265,8 +333,6 @@ function impulse_responses(m::AbstractDSGEModel, paras::Union{Vector{S}, Matrix{
                            forecast_string::String = "",
                            verbose::Symbol = :high) where {S<:Real}
 ```
-
-
 
 ## Docstrings
 

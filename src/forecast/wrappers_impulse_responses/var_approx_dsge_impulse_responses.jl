@@ -135,7 +135,8 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
         DSGE.update!(m, para)
         return impulse_responses(m, method, n_obs_shock;
                                  horizon = h, use_intercept = use_intercept,
-                                 flip_shocks = flip_shocks)
+                                 flip_shocks = flip_shocks,
+                                 frequency_band = frequency_band)
     end
 
     irf_output = mapfcn(para -> get_irf!(para), paras)
