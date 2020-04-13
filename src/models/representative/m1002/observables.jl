@@ -7,8 +7,7 @@ function init_observable_mappings!(m::Model1002)
     ## 1. GDP
     ############################################################################
     gdp_fwd_transform =  function (levels)
-        # FROM: Level of nominal GDP (FRED :GDP series)
-        # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
+        # FROM: Level of nominal GDP (FRED :GDP series)        # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
         levels[!,:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)

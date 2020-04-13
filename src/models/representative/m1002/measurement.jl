@@ -205,7 +205,7 @@ function measurement(m::Model1002{T},
         end
     end
 
-    for i = 1:n_z_anticipated_shocks(m)
+    for i = 1:get_setting(m, :antshocks)[:z]
         ZZ[obs[Symbol("obs_z$i")], no_integ_inds] = ZZ[obs[:obs_z], no_integ_inds]' * (TTT^i)
         # DD[obs[Symbol("obs_z$i")]]    = 100. * (exp(m[:z_star]) - 1.)
         if subspec(m) == "ss11"
