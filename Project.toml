@@ -1,7 +1,7 @@
 name = "DSGE"
 uuid = "6cf23378-2c47-544c-b0c3-6efefe57ca11"
-authors = ["Michael Cai <michael.cai@ny.frb.org>", "Ethan Matlin <ethan.matlin@ny.frb.org>", "Reca Sarfati <rebecca.sarfati@ny.frb.org>"]
-version = "1.1.4"
+authors = ["William Chen <william.chen@ny.frb.org>", "Ethan Matlin <ethan.matlin@ny.frb.org>", "Reca Sarfati <rebecca.sarfati@ny.frb.org>"]
+version = "1.1.5"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -60,7 +60,6 @@ DataFrames = "0.17, 0.18, 0.19"
 DataStructures = "0.16, 0.17"
 DifferentialEquations = "5, 6"
 Distributions = "0.18, 0.19, 0.20, 0.21, 0.22"
-Documenter = "0.22, 0.24"
 FFTW = "0.2, 0.3, 1.0, 1.1"
 FileIO = "^1.0.7"
 ForwardDiff = "0.10"
