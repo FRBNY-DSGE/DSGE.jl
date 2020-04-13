@@ -411,7 +411,8 @@ function eqcond_regimes(m::Model1002)
 
         # Neutral technology
         Γ0[regime][eq[:eq_z], endo[:z_t]]    = 1.
-        Γ1[regime][eq[:eq_z], endo[:ztil_t]] = (m[:ρ_ztil] - 1)/(1 - m[:α])
+        Γ0[regime][eq[:eq_z], endo[:ztil_t]]  = -1 / (1 - m[:α])
+        Γ1[regime][eq[:eq_z], endo[:ztil_t]]  = -1 / (1 - m[:α])
         Γ0[regime][eq[:eq_z], endo[:zp_t]]   = -1.
 Ψ[regime][eq[:eq_z], exo[:ztil_sh]]     = 1/(1 - m[:α])
 
@@ -515,7 +516,7 @@ function eqcond_regimes(m::Model1002)
             # will feed into rm_tl1 this period (and so on for other numbers), and last period's
             # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
 
-            Γ1[regime][eq[:eq_z], endo[:z_tl1]]   = 1.
+            Γ1[regime][eq[:eq_ztil], endo[:z_tl1]]   = 1.
             Γ0[regime][eq[:eq_zl1], endo[:z_tl1]] = 1.
             Ψ[regime][eq[:eq_zl1], exo[:z_shl1]]  = 1.
 
