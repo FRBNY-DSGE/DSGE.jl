@@ -3,6 +3,9 @@
 fp = dirname(@__FILE__)
 @testset "Likelihood function of DSGE-VAR p(Y | θ, λ)" begin
     matdata = load(joinpath(fp, "../../reference/test_dsgevar_likelihood.jld2"))
+
+    # note that nobs in the Matlab code is T in the Julia code (n_observations)
+    # and lambda is actually λ * T in the Julia code
     @test matdata["lnpy0"] ≈ DSGE.dsgevar_likelihood(matdata["YYYY"],
                                                 matdata["XXYY"], matdata["XXXX"],
                                                 matdata["yyyyd"], matdata["xxyyd"],

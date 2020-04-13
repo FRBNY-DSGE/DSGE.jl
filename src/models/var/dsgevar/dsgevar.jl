@@ -4,8 +4,9 @@ DSGEVAR{T} <: AbstractDSGEVARModel{T}
 ```
 implements a simple interface for combining a given DSGE model
 with a VAR to create a DSGE-VAR. Confer with Del Negro and Schorfheide (2004),
-Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009) for
-details about DSGE-VARs.
+Del Negro and Schorfheide (2006), Del Negro, Schorfheide, Smets, and Wouters (2007),
+and/or Del Negro and Schorfheide (2009) for details about DSGE-VARs.
+We recommend the first two papers as initial introductions to DSGE-VARs.
 
 The recommended constructor requires the user to provide
 (1) an `AbstractDSGEModel` object, (2) which structural shocks from
@@ -20,7 +21,6 @@ DSGE-specific rather than information about the VAR.
 However, we can also construct a `DSGEVAR` without having to
 specify the structural shocks when calling the constructor,
 although we still need to give an instance of an `AbstractDSGEModel`.
-
 
 ### Example
 The code below instantiates an empty `DSGEVAR`

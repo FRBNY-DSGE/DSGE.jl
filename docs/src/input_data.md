@@ -5,7 +5,7 @@ CurrentModule = DSGE
 ```
 
 Given all of the hard work put into specifying the model, one should be able to maintain
-the input data painlessly. To that extent, DSGE.jl* provides facilities to download
+the input data painlessly. To that extent, DSGE.jl provides facilities to download
 appropriate vintages of data series from FRED (Federal Reserve Economic Data).
 
 Note that a sample input dataset for use with model `m990` is provided; see
@@ -15,7 +15,7 @@ sample dataset for use with model `m990`, see [Update sample input data](@ref).
 ## Setup
 
 To take advantage of the ability to automatically download data series from FRED via the
-*FredData.jl* package, set up your FRED API access by following the directions
+FredData.jl package, set up your FRED API access by following the directions
 [here](https://github.com/micahjsmith/FredData.jl/blob/master/README.md).
 
 ## Loading data
@@ -138,7 +138,7 @@ date,POPULATION
 
 ## Dataset creation implementation details
 
-Let's quickly walk through the steps DSGE.jl* takes to create a suitable dataset.
+Let's quickly walk through the steps DSGE.jl takes to create a suitable dataset.
 
 First, a user provides a detailed specification of the data series and transformations used
 for their model.
@@ -170,7 +170,7 @@ for their model.
     `dataroot`, `date_presample_start`, `date_zlb_start`, `date_forecast_start`,
     and `use_population_forecast`.
 
-Second, DSGE.jl* attempts to construct the dataset given this setup through a call to
+Second, DSGE.jl attempts to construct the dataset given this setup through a call to
 `load_data`. See [`load_data`](@ref) for more details.
 
 - Intermediate data in levels are loaded. See [`load_data_levels`](@ref) for more details.
@@ -208,8 +208,8 @@ Given the complexity of the data download, you may find that the dataset generat
     model requires data. This is perfectly okay if your data series starts after
     `date_presample_start`.
 
-If you experience any problems using *FredData.jl*, ensure your API key is provided correctly
-and that there are no issues with your firewall, etc. Any issues with *FredData.jl* proper
+If you experience any problems using FredData.jl, ensure your API key is provided correctly
+and that there are no issues with your firewall, etc. Any issues with FredData.jl proper
 should be reported on that project's page.
 
 
@@ -217,7 +217,7 @@ should be reported on that project's page.
 
 A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset:
 
-**Step 1**. See [Setup](@ref) to setup automatic data pulls using *FredData.jl*.
+**Step 1**. See [Setup](@ref) to setup automatic data pulls using FredData.jl.
 
 **Step 2**. Specify the exact data vintage desired:
 

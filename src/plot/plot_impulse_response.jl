@@ -182,8 +182,8 @@ irf
                    bands_color = :blue,
                    bands_alpha = 0.1,
                    bands_pcts = which_density_bands(irf.args[3], uniquify = true),
-                   input_type::Symbol = Symbol(),
-                   input_type2::Symbol = Symbol())
+                   input_type = Symbol(),
+                   input_type2 = Symbol())
     # Error checking
   #=  if length(irf.args) != 3 || typeof(irf.args[1]) != Symbol || typeof(irf.args[2]) != Symbol ||
         typeof(irf.args[3]) != MeansBands

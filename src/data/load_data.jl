@@ -90,7 +90,9 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             for (colnum, name) in enumerate(names(df[:,2:end]))
                 is_missing_in_col = ismissing.(df[!,name])
                 is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
-                freq_nan_empty[colnum] = mean(vcat(is_missing_in_col, is_nan_in_col))
+                n_miss = count(is_missing_in_col)
+                n_nan  = count(is_nan_in_col)
+                freq_nan_empty[colnum] = (n_nan + n_miss) / length(is_missing_in_col)
                 println("$(name), Frequency of missing/NaNs: $(freq_nan_empty[colnum])")
                 if summary_statistics == :high
                     colmean = mean(df[!,name][.!is_missing_in_col][.!is_nan_in_col])
@@ -387,8 +389,13 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
         end
     else
         for col in setdiff(names(df), [:date])
-            if all(ismissing.(df[!,col])) || all(isnan.(df[!,col]))
+            if all(ismissing.(df[!,col]))
                 @warn "df[$col] is all missing."
+            else
+                not_missing_inds = .!(ismissing.(df[!, col]))
+                if all(isnan.(df[not_missing_inds, col]))
+                    @warn "df[$col] is entirely NaNs and/or missings."
+                end
             end
         end
     end
