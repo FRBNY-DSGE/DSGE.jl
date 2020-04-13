@@ -1,5 +1,6 @@
 using Pkg
 Pkg.add("Documenter")
+Pkg.add("DSGE")
 using Documenter, DSGE
 
 makedocs(modules = [DSGE],
