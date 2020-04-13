@@ -86,6 +86,6 @@ end
                                     Int(matdata["coint"]);
                                     testing = true, test_Σ_draw_shock = matdata["sigma_draw"],
                                     test_β_draw_shock = vec(matdata["beta_draw"]))
-    @test maximum(abs.(matdata["beta_ans"] - β_draw)) < 1e-3
+    @test maximum(abs.(matdata["beta_ans"] - β_draw)) < 1e-2
     @test @test_matrix_approx_eq matdata["sigma_ans"] Σ_draw
 end
