@@ -145,33 +145,33 @@ end
                      hcat(jlddata["modal_param"],
                           jlddata["modal_param"] + vcat(randn(3) ./ 50, zeros(92)))')
     Random.seed!(1793)
-    out = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation)
+    out = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation, normalize_rotation = false)
     Random.seed!(1793)
-    out_draw = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation, draw_shocks = true)
+    out_draw = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation, draw_shocks = true, normalize_rotation = false)
     Random.seed!(1793)
     out_dev = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation,
-                                deviations = true)
+                                deviations = true, normalize_rotation = false)
     Random.seed!(1793)
     out_dev_draw = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation, draw_shocks = true,
-                                     deviations = true)
+                                     deviations = true, normalize_rotation = false)
 
 
     Random.seed!(1793)
-    out_parallel = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation, parallel = true)
+    out_parallel = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation, parallel = true, normalize_rotation = false)
     Random.seed!(1793)
     out_draw_parallel = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation,
-                                          draw_shocks = true, parallel = true)
+                                          draw_shocks = true, parallel = true, normalize_rotation = false)
     Random.seed!(1793)
     out_dev_parallel = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation,
-                                         deviations = true, parallel = true)
+                                         deviations = true, parallel = true, normalize_rotation = false)
     Random.seed!(1793)
     out_dev_draw_parallel = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation, draw_shocks = true,
-                                              deviations = true, parallel = true)
+                                              deviations = true, parallel = true, normalize_rotation = false)
 
 
     # Not testing but just checking no error when creating MeansBands
     mb = impulse_responses(dsgevar, params, jlddata["data"], :full, :rotation,
-                           create_meansbands = true, test_meansbands = true)
+                           create_meansbands = true, test_meansbands = true, normalize_rotation = false)
 
     @test @test_matrix_approx_eq out out_parallel
     @test @test_matrix_approx_eq out_dev out_dev_parallel

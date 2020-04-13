@@ -50,7 +50,7 @@ end
                                matdata1["impact"].^2, Int(matdata2["k"]),
                                convert(Matrix{Float64}, matdata2["cct_sim"]'),
                                matdata2["sig_sim"], Int(matdata2["qahead"]),
-                               vec(matdata2["XXpred"]);
+                               vec(matdata2["XXpred"]);normalize_rotation = false,
                                test_shocks =
                                convert(Matrix{Float64}, matdata2["Shocks"]'))
 
@@ -62,14 +62,16 @@ end
                                 matdata1["impact"].^2, Int(matdata2["k"]),
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
                                 matdata2["sig_sim"], Int(matdata2["qahead"]),
-                                vec(matdata2["XXpred"]), draw_shocks = true)
+                                vec(matdata2["XXpred"]), draw_shocks = true,
+                                normalize_rotation = false)
     Random.seed!(1793) # re-seeding should work
     ŷ2 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
                                 zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
                                 matdata1["impact"].^2, Int(matdata2["k"]),
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
                                 matdata2["sig_sim"], Int(matdata2["qahead"]),
-                                vec(matdata2["XXpred"]), draw_shocks = true)
+                                vec(matdata2["XXpred"]), draw_shocks = true,
+                                normalize_rotation = false)
     Random.seed!(1793) # flipping shocks shouldn't yield anything different
     @info "The following warning is expected."
     ŷ3 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
@@ -78,7 +80,7 @@ end
                                 convert(Matrix{Float64}, matdata2["cct_sim"]'),
                                 matdata2["sig_sim"], Int(matdata2["qahead"]),
                                 vec(matdata2["XXpred"]), draw_shocks = true,
-                                flip_shocks = true)
+                                flip_shocks = true, normalize_rotation = false)
     @test !(ŷ1 ≈ matdata2["yypred"]')
     @test ŷ1 ≈ ŷ2
     @test ŷ1 ≈ ŷ3
@@ -158,35 +160,35 @@ end
     DSGE.update!(dsgevar, jlddata["modal_param"])
 
     Random.seed!(1793)
-    out = impulse_responses(dsgevar, jlddata["data"])
+    out = impulse_responses(dsgevar, jlddata["data"], normalize_rotation = false)
     Random.seed!(1793)
-    out_flip = impulse_responses(dsgevar, jlddata["data"]; flip_shocks = true)
+    out_flip = impulse_responses(dsgevar, jlddata["data"]; flip_shocks = true, normalize_rotation = false)
     nobs = size(jlddata["data"], 1)
     lags = DSGE.get_lags(dsgevar)
     k = nobs * lags + 1
     XX = DSGE.lag_data(jlddata["data"], lags; use_intercept = true)
     X̂ = vcat(1, jlddata["data"][:, end], XX[end, 1+1:k - nobs])
     Random.seed!(1793)
-    out_X̂ = impulse_responses(dsgevar, jlddata["data"], X̂)
+    out_X̂ = impulse_responses(dsgevar, jlddata["data"], X̂, normalize_rotation = false)
     Random.seed!(1793)
     out_MM1 = impulse_responses(dsgevar, jlddata["data"]; MM = zeros(DSGE.n_observables(dsgevar),
-                                                                     DSGE.n_shocks(dsgevar)))
+                                                                     DSGE.n_shocks(dsgevar)), normalize_rotation = false)
     Random.seed!(1793)
     out_MM2 = impulse_responses(dsgevar, jlddata["data"]; MM = rand(DSGE.n_observables(dsgevar),
-                                                                    DSGE.n_shocks(dsgevar)))
+                                                                    DSGE.n_shocks(dsgevar)), normalize_rotation = false)
     Random.seed!(1793)
-    out_draw = impulse_responses(dsgevar, jlddata["data"]; draw_shocks = true)
+    out_draw = impulse_responses(dsgevar, jlddata["data"]; draw_shocks = true, normalize_rotation = false)
 
     Random.seed!(1793) # now use deviations
-    out_dev = impulse_responses(dsgevar, jlddata["data"], deviations = true)
+    out_dev = impulse_responses(dsgevar, jlddata["data"], deviations = true, normalize_rotation = false)
 
     Random.seed!(1793) # flip shock
     out_dev_flip = impulse_responses(dsgevar, jlddata["data"], deviations = true,
-                                     flip_shocks = true)
+                                     flip_shocks = true, normalize_rotation = false)
 
     Random.seed!(1793) # draw shock
     out_dev_draw = impulse_responses(dsgevar, jlddata["data"], deviations = true,
-                                     draw_shocks = true)
+                                     draw_shocks = true, normalize_rotation = false)
 
     @test @test_matrix_approx_eq jlddata["rotation_irf_by_shock"] out
     @test @test_matrix_approx_eq jlddata["flip_rotation_irf_by_shock"] out_flip
