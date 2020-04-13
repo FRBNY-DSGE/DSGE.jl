@@ -1,4 +1,4 @@
-# DSGE.jl 1.1.4
+# DSGE.jl 1.1.5
 ## New features and enhancements
 + Implement DSGE-VECMs and provide functionality to compute impulse responses.
 + Extend DSGE-VAR rotation impulse responses to compute in deviations from baseline.
