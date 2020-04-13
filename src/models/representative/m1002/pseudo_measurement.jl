@@ -383,6 +383,17 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
 
+        if haskey(m.settings, :add_ztil)
+            if get_setting(m, :add_ztil)
+                ZZ_pseudos[reg][pseudo[:ztil], endo[:ztil_t]] = 1.
+            end
+        end
+        if haskey(m.settings, :add_zp)
+            if get_setting(m, :add_zp)
+                ZZ_pseudos[reg][pseudo[:zp], endo[:zp_t]] = 1.
+            end
+        end
+
         ## Labor Productivity Growth, no measurement error
         if haskey(m.settings, :add_Epi_t_measurement)
             if get_setting(m, :add_Epi_t_measurement)
