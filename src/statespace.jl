@@ -812,18 +812,18 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
         XXXXd = zeros(S, p * n_obs, p * n_obs)
         yyXXd = zeros(S, n_obs, p * n_obs)
     end
-
-    yyyyd = reshape(GAMM0[:, 1], n_obs, n_obs) + DD * DD'
+    DDDD = DD * DD'
+    yyyyd = reshape(GAMM0[:, 1], n_obs, n_obs) + DDDD
 
     shift = use_intercept ? 1 : 0 # for constructing XXXXd, to select the right indices
     for rr = 1:p
         # 𝔼[yy,x(lag rr)]
         yyXXd[:, n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift] =
-            reshape(GAMM0[:, rr + 1], n_obs, n_obs) + DD * DD'
+            reshape(GAMM0[:, rr + 1], n_obs, n_obs) + DDDD
 
         # 𝔼[x(lag rr),x(lag ll)]
         for ll = rr:p
-            yyyydrrll = reshape(GAMM0[:, ll - rr + 1], n_obs, n_obs) + DD * DD';
+            yyyydrrll = reshape(GAMM0[:, ll - rr + 1], n_obs, n_obs) + DDDD
             XXXXd[n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift,
                   n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift] = yyyydrrll
             XXXXd[n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift,

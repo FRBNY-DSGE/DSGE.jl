@@ -7,7 +7,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
                            X̂::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
-                           deviations::Bool = false,
+                           deviations::Bool = false, normalize_rotation::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false, test_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -79,6 +79,9 @@ to achieve reproducibility.
 * `deviations::Bool`: set true to compute the impulse response in deviations
     rather than as a forecast. Mechnically, we ignore `X̂` (treated as zeros)
     and the intercept term.
+* `normalize_rotation::Bool`: set to true to normalize the rotation
+    so that rows have the correct sign. This requires as many structural shocks
+    as there are observables in the DSGE-VAR.
 * `density_bands::Vector{Float64}`: bands for full-distribution IRF computations
 * `create_meansbands::Bool`: set to `true` to save output as a `MeansBands` object.
 * `minimize::Bool`: choose shortest interval if true, otherwise just chop off lowest and
@@ -94,7 +97,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
                            X̂::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
-                           deviations::Bool = false,
+                           deviations::Bool = false, normalize_rotation::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false, test_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -134,7 +137,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
             DSGE.update!(m, para)
             return impulse_responses(m, data, X̂; horizon = h, MM = MM,
                                      flip_shocks = flip_shocks, draw_shocks = draw_shocks,
-                                     deviations = deviations,
+                                     deviations = deviations, normalize_rotation = normalize_rotation,
                                      verbose = verbose)
         end
     elseif method in [:cholesky, :cholesky_long_run, :choleskyLR, :maxBC,
@@ -235,7 +238,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Vector{S},
                            n_obs_shock::Int = 1, draw_shocks::Bool = false,
                            flip_shocks::Bool = false,
                            X̂::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
-                           deviations::Bool = false,
+                           deviations::Bool = false, normalize_rotation::Bool = false,
                            density_bands::Vector{Float64} = [.5, .6, .7, .8, .9],
                            create_meansbands::Bool = false,
                            minimize::Bool = true,
@@ -245,7 +248,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Vector{S},
                              data, input_type, method; parallel = parallel,
                              frequency_band = frequency_band, n_obs_shock = n_obs_shock,
                              draw_shocks = draw_shocks, flip_shocks = flip_shocks,
-                             X̂ = X̂, deviations = deviations,
+                             X̂ = X̂, deviations = deviations, normalize_rotation = normalize_rotation,
                              density_bands = density_bands,
                              create_meansbands = create_meansbands, minimize = minimize,
                              forecast_string = forecast_string, verbose = verbose)

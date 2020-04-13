@@ -82,7 +82,7 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
                            X̂::Matrix{S} = Matrix{S}(undef, 0, 0);
                            horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
-                           deviations::Bool = false,
+                           deviations::Bool = false, normalize_rotation::Bool = false,
                            verbose::Symbol = :none) where {S <: Real}
 ```
 computes the VAR impulse responses identified by the DSGE
@@ -143,19 +143,24 @@ to achieve reproducibility.
 * `deviations::Bool`: set true to compute the impulse response in deviations
     rather than as a forecast. Mechnically, we ignore `X̂` (treated as zeros)
     and the intercept term.
+* `normalize_rotation::Bool`: set to true to normalize the rotation
+    so that rows have the correct sign. Requires same number of structural shocks
+    as observables.
 * `verbose::Symbol`: quantity of output desired
 """
 function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
                            X̂::Vector{S} = Vector{S}(undef, 0);
                            horizon::Int = 0, MM::Matrix{S} = Matrix{S}(undef, 0, 0),
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
-                           deviations::Bool = false,
+                           deviations::Bool = false, normalize_rotation::Bool = false,
                            verbose::Symbol = :none) where {S <: Real}
 
     # Prepare X̂
     nobs = size(data, 1)
     k = nobs * get_lags(m) + 1
-    if isempty(X̂) && !deviations
+    if deviations
+        X̂ = zeros(S, k)
+    elseif isempty(X̂)
         XX = lag_data(data, get_lags(m); use_intercept = true)
         X̂ = vcat(1, data[:, end], XX[end, 1+1:k - nobs])
     end
@@ -179,7 +184,8 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, data::AbstractArray{S},
     end
     return impulse_responses(system[:TTT], system[:RRR], system[:ZZ], system[:DD], MM,
                              system[:QQ], k, β, Σ, h, X̂; flip_shocks = flip_shocks,
-                             draw_shocks = draw_shocks, deviations = deviations)
+                             draw_shocks = draw_shocks, deviations = deviations,
+                             normalize_rotation = normalize_rotation)
 end
 
 
@@ -260,7 +266,7 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
                            horizon::Int, X̂::Matrix{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
-                           deviations::Bool = false,
+                           deviations::Bool = false, normalize_rotation::Bool = false,
                            test_shocks::Matrix{S} =
                            Matrix{S}(undef, 0, 0)) where {S<:Real}
 ```
@@ -289,6 +295,9 @@ of the impact response matrix corresponding to the state space system, i.e.
 ```
 Ω, _ = qr(∂yₜ / ∂ϵₜ').
 ```
+To normalize the rotation so that rows have the correct sign,
+set `normalize_rotation = true`. This requires that there are
+as many structural shocks as observables.
 
 For reference, see Del Negro and Schorfheide (2004),
 Del Negro and Schorfheide (2006), and Del Negro and Schorfheide (2009).
@@ -298,7 +307,7 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                            k::Int, β::Matrix{S}, Σ::Matrix{S},
                            horizon::Int, X̂::Vector{S} = zeros(S, k);
                            flip_shocks::Bool = false, draw_shocks::Bool = false,
-                           deviations::Bool = false,
+                           deviations::Bool = false, normalize_rotation::Bool = false,
                            test_shocks::Matrix{S} =
                            Matrix{S}(undef, 0, 0)) where {S <: Real}
 
@@ -308,8 +317,13 @@ function impulse_responses(TTT::Matrix{S}, RRR::Matrix{S}, ZZ::Matrix{S},
                    dropdims(impulse_responses(TTT, RRR, ZZ, DD, MM,
                                               sqrt.(QQ), 1, # 1 b/c just want impact and sqrt -> 1 sd shock
                                               accumulate = false); dims = 2)')
-    rotation, _ = qr(a0_m)
-    Σ_chol = cholesky(Σ).L * rotation' # mapping from structural shocks to innovations in VAR
+    rotation, r_a = qr(a0_m)
+    if normalize_rotation
+        rotation = sign.(diag(r_a)) .* rotation' # normalizes each row (change signs) so that lower diagonal (r_a') has positive diagonal elements
+        Σ_chol = cholesky(Σ).L * rotation # mapping from structural shocks to innovations in VAR
+    else
+        Σ_chol = cholesky(Σ).L * rotation'
+    end
 
     # Ignore intercept if in deviations
     if deviations
