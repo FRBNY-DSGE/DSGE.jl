@@ -58,7 +58,12 @@ ColorTypes = "0.7, 0.8, 0.9"
 DataFrames = "0.17, 0.18, 0.19, 0.20, 0.21"
 DataStructures = "0.16, 0.17"
 DifferentialEquations = "5, 6"
+<<<<<<< HEAD
 Distributions = "0.18, 0.19, 0.20, 0.21, 0.22, 0.23"
+=======
+Distributions = "0.18, 0.19, 0.20, 0.21, 0.22"
+Documenter = "0.22, 0.24"
+>>>>>>> Fix lower compat bound on CSV to be v4.3 to avoid Parsers not found error.
 FFTW = "0.2, 0.3, 1.0, 1.1"
 FileIO = "^1.0.7"
 ForwardDiff = "0.10"
