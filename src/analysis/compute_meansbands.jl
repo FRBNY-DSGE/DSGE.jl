@@ -199,10 +199,12 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
+    yt_index = get_yt_index(m, product)
     data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
-                                              y0_index = y0_index, data = data,
+                                              y0_index = y0_index, yt_index = yt_index,
+                                              data = data,
                                               pop_growth = pop_growth)
 
     # Compute means and bands
@@ -217,7 +219,7 @@ end
 
 function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                               product::Symbol, class::Symbol;
-                              y0_index::Int = -1,
+                              y0_index::Int = -1, yt_index::Int = -1,
                               data::AbstractVector{Float64} = Float64[],
                               pop_growth::AbstractVector{Float64} = Float64[])
     # No transformation
@@ -231,10 +233,10 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
 
         y0s = if use_data && transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
-            data[y0_index+1:end]
+            data[y0_index+1:yt_index] #end]
         elseif use_data && transform4q in [logleveltopct_4q_percapita, logleveltopct_4q]
             # Divide log levels y_t by y_{t-4}
-            data[y0_index:end]
+            data[y0_index:yt_index] #end]
         else
             Float64[]
         end
