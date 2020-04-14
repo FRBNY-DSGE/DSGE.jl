@@ -69,6 +69,9 @@ function pseudo_measurement(m::Model1002{T},
     ## Flexible Wages
     ZZ_pseudo[pseudo[:FlexibleWages],endo[:w_f_t]] = 1.
 
+    ## b Wages
+    ZZ_pseudo[pseudo[:b_t],endo[:b_t]] = 1.
+
     ## Hours
     ZZ_pseudo[pseudo[:Hours],endo[:L_t]] = 1.
 
@@ -371,6 +374,9 @@ function pseudo_measurement(m::Model1002{T},
 
         ## w_f_t
         ZZ_pseudos[reg][pseudo[:w_f_t], endo[:w_f_t]] = 1.
+
+        ## b_t
+        ZZ_pseudos[reg][pseudo[:b_t], endo[:b_t]] = 1.
 
 
         ## labor share

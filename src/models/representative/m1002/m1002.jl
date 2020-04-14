@@ -342,6 +342,48 @@ function init_parameters!(m::Model1002)
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
 
+    if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42",
+                      "ss45", "ss46", "ss47", "ss48"]
+        m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+                       description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
+                       tex_label="\\zeta_p")
+    end
+
+    if subspec(m) in ["ss23", "ss24", "ss25", "ss26", "ss28", "ss29", "ss43", "ss44"]
+        m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
+        m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
+                       description="ψ₁: Weight on inflation gap in monetary policy rule.",
+                       tex_label="\\psi_1")
+
+        m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                   description="ψ₂: Weight on output gap in monetary policy rule.",
+                   tex_label="\\psi_2")
+
+        m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
+                       description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
+                       tex_label="\\psi_3")
+
+    end
+
+    if subspec(m) in ["ss45", "ss46", "ss47", "ss48"]
+        m <= parameter(:ι_p_r2, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+                       description="ι_p: The weight attributed to last period's inflation in price indexation (Regime 2). (1-ι_p) is the weight attributed to steady-state inflation.",
+                       tex_label="\\iota_p")
+    end
+
+    if subspec(m) in ["ss47", "ss48"]
+        m <= parameter(:Φ_r2, 1.1066, (1., 10.), (1.00, 10.00), ModelConstructors.Exponential(), Normal(1.25, 0.12), fixed=false,
+                       description="Φ: Fixed costs (Regime 2).",
+                       tex_label="\\Phi_p")
+    end
+
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+                   description="ρ: The degree of inertia in the monetary policy rule.",
+                   tex_label="\\rho_R")
+
     m <= parameter(:ϵ_p, 10.000, fixed=true,
                    description="ϵ_p: Curvature parameter in the Kimball aggregator for prices.",
                    tex_label="\\epsilon_{p}")
@@ -397,7 +439,7 @@ function init_parameters!(m::Model1002)
                    description="ρ_μ: AR(1) coefficient in capital adjustment cost process.",
                    tex_label="\\rho_{\\mu}")
 
-    m <= parameter(:ρ_ztil, 0.9446, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_ztil, 0.9446, (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_ztil: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_{\\tilde{z}}")
 
@@ -525,7 +567,7 @@ function init_parameters!(m::Model1002)
     m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
 
-    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"]
+    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"]
         m <= parameter(:σ_g_r2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_g: The standard deviation of the government spending process.",
                        tex_label="\\sigma_{g}")
@@ -598,8 +640,8 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"]
-                m <= parameter(Symbol("σ_r_m$(i)_r2"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"]
+                m <= parameter(Symbol("σ_r_m$(i)_r2"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                                description="σ_r_m$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
                                tex_label=@sprintf("\\sigma_{ant%d}",i))
             end
@@ -615,7 +657,7 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_$(sh)$i"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_$(sh)$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58"]
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"]
                 m <= parameter(Symbol("σ_$(sh)$(i)_r2"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                                description="σ_$(sh)$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
                                tex_label=@sprintf("\\sigma_{ant%d}",i))
