@@ -395,20 +395,22 @@ function init_observable_mappings!(m::Model1002)
     # Columns ??
     ############################################################################
 
-    for i = 1:n_z_anticipated_shocks(m)
-        # FROM: fake data of z expectations
-        # TO:   Same
+    if haskey(get_setting(m, :antshocks), :z)
+        for i = 1:get_setting(m, :antshocks)[:z]
+            # FROM: fake data of z expectations
+            # TO:   Same
 
-        ant_fwd_transform = function (levels)
-            levels[:, Symbol("z$i")]
+            ant_fwd_transform = function (levels)
+                levels[:, Symbol("z$i")]
+            end
+
+            ant_rev_transform = quartertoannual
+
+            observables[Symbol("obs_z$i")] = Observable(Symbol("obs_z$i"), [Symbol("z$(i)__Z")],
+                                                        ant_fwd_transform, ant_rev_transform,
+                                                        "Anticipated Shock $i",
+                                                        "$i-period ahead anticipated z shock")
         end
-
-        ant_rev_transform = quartertoannual
-
-        observables[Symbol("obs_z$i")] = Observable(Symbol("obs_z$i"), [Symbol("z$(i)__Z")],
-                                                      ant_fwd_transform, ant_rev_transform,
-                                                      "Anticipated Shock $i",
-                                                      "$i-period ahead anticipated z shock")
     end
 
     # Create a fake observable if observing wage markup shock

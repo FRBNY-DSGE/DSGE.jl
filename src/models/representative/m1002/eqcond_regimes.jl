@@ -507,27 +507,28 @@ function eqcond_regimes(m::Model1002)
             end
         end
 
-        if n_z_anticipated_shocks(m) > 0
-
+        for (key, val) in get_setting(m, :antshocks)
+            an_eq_mapping = get_setting(m, :ant_eq_mapping)
+            if val > 0
             # This section adds the anticipated shocks. There is one state for all the
-            # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
-            # will hit in two periods), and the equations are set up so that rm_tl2 last period
-            # will feed into rm_tl1 this period (and so on for other numbers), and last period's
-            # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
+                # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
+                # will hit in two periods), and the equations are set up so that rm_tl2 last period
+                # will feed into rm_tl1 this period (and so on for other numbers), and last period's
+                # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
 
-            Γ1[regime][eq[:eq_ztil], endo[:z_tl1]]   = 1.
-            Γ0[regime][eq[:eq_zl1], endo[:z_tl1]] = 1.
-            Ψ[regime][eq[:eq_zl1], exo[:z_shl1]]  = 1.
+                Γ1[regime][eq[:eq_ztil], endo[:z_tl1]]   = 1.
+                Γ0[regime][eq[:eq_zl1], endo[:z_tl1]] = 1.
+                Ψ[regime][eq[:eq_zl1], exo[:z_shl1]]  = 1.
 
-            if n_z_anticipated_shocks(m) > 1
-                for i = 2:n_z_anticipated_shocks(m)
+                if val > 1
+                for i = 2:val
                     Γ1[regime][eq[Symbol("eq_zl$(i-1)")], endo[Symbol("z_tl$i")]] = 1.
                     Γ0[regime][eq[Symbol("eq_zl$i")], endo[Symbol("z_tl$i")]]     = 1.
                     Ψ[regime][eq[Symbol("eq_zl$i")], exo[Symbol("z_shl$i")]]      = 1.
                 end
+                end
             end
         end
-
 
         ### EXPECTATION ERRORS ###
 
