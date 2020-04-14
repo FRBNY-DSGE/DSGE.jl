@@ -184,6 +184,11 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states, :ϵ_ztil_t)
         push!(equilibrium_conditions, :eq_ϵ_ztil)
     end
+    if subspec(m) == "ss60"
+        push!(endogenous_states, :ziid_t)
+        push!(equilibrium_conditions, :eq_ziid)
+        push!(exogenous_shocks, :ziid_sh)
+    end
 
     # Observables
     observables = keys(m.observable_mappings)
@@ -567,7 +572,22 @@ function init_parameters!(m::Model1002)
     m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
 
-    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"]
+    if subspec(m) == "ss60"
+        m <= parameter(:ρ_ziid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       description="ρ_ziid: AR(1) coefficient in the iid component of the technology process.",
+                       tex_label="\\rho_{z, iid}")
+        m <= parameter(:σ_ziid, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
+                       tex_label="\\sigma_{z, iid}")
+        m <= parameter(:σ_ziid_r2, 0.6742, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
+                       tex_label="\\sigma_{z, iid}")
+    end
+
+
+    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"]
         m <= parameter(:σ_g_r2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_g: The standard deviation of the government spending process.",
                        tex_label="\\sigma_{g}")
@@ -640,7 +660,7 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"]
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"]
                 m <= parameter(Symbol("σ_r_m$(i)_r2"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                                description="σ_r_m$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
                                tex_label=@sprintf("\\sigma_{ant%d}",i))
@@ -657,7 +677,7 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_$(sh)$i"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_$(sh)$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"]
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"]
                 m <= parameter(Symbol("σ_$(sh)$(i)_r2"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                                description="σ_$(sh)$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
                                tex_label=@sprintf("\\sigma_{ant%d}",i))

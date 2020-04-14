@@ -419,10 +419,18 @@ function eqcond_regimes(m::Model1002)
         Γ1[regime][eq[:eq_ztil], endo[:ztil_t]] = m[:ρ_ztil]
         Ψ[regime][eq[:eq_ztil], exo[:ztil_sh]]     = 1.
 
+        if subspec(m) == "ss60"
+            Γ0[regime][eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
+            Γ1[regime][eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
+            Γ0[regime][eq[:eq_ziid], endo[:ziid_t]] = 1.
+            Γ1[regime][eq[:eq_ziid], endo[:ziid_t]] = m[:ρ_ziid]
+            Ψ[regime][eq[:eq_ziid], exo[:ziid_sh]]     = 1.
+        end
+
         # Long-run changes to productivity
         Γ0[regime][eq[:eq_zp], endo[:zp_t]] = 1.
         Γ1[regime][eq[:eq_zp], endo[:zp_t]] = m[:ρ_z_p]
-Ψ[regime][eq[:eq_zp], exo[:zp_sh]]  = 1.
+        Ψ[regime][eq[:eq_zp], exo[:zp_sh]]  = 1.
 
         # Government spending
         Γ0[regime][eq[:eq_g], endo[:g_t]] = 1.

@@ -125,8 +125,15 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end
 
+    if subspec(m) in ["ss60"]
+        if regime == 2
+            QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid_r2]^2
+        else
+            QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
+        end
+    end
     if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53",
-        "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"] && regime == 2
+        "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"] && regime == 2
         QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g_r2]^2
         QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b_r2]^2
         QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ_r2]^2
@@ -182,7 +189,7 @@ function measurement(m::Model1002{T},
         # Add in wage markup as an additional observable
         ZZ[obs[:obs_ztilshock], endo[:ϵ_ztil_t]] = 1.
     end
-    if subspec(m) in ["ss58", "ss59"]
+    if subspec(m) in ["ss58", "ss59", "ss60"]
         # Add in wage markup as an additional observable
         ZZ[obs[:obs_ztil], endo[:ztil_t]] = 1.
         ZZ[obs[:obs_z], endo[:z_t]] = 1.
@@ -193,6 +200,11 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_b], endo[:b_t]] = 1.
     end
 
+    if subspec(m) in ["ss60"]
+        ZZ[obs[:obs_ziid], endo[:ziid_t]] = 1.
+    end
+
+
    # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_mon_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
@@ -200,7 +212,7 @@ function measurement(m::Model1002{T},
         if subspec(m) == "ss11"
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
         else
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"] && regime == 2
+            if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"] && regime == 2
                 QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$(i)_r2")]^2
             else
                 QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
@@ -215,7 +227,7 @@ function measurement(m::Model1002{T},
             if subspec(m) == "ss11"
                 QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_ztil]^2 / n_z_anticipated_shocks(m)
             else
-                if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59"] && regime == 2
+                if subspec(m) in ["ss27", "ss28", "ss29", "ss41","ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"] && regime == 2
                     QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$(i)_r2")]^2
                 else
                     QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$i")]^2
