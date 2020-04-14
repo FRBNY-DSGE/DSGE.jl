@@ -134,6 +134,9 @@ function pseudo_measurement(m::Model1002{T},
     ## c_f_t
     ZZ_pseudo[pseudo[:c_f_t], endo[:c_f_t]] = 1.
 
+    ## c_t
+    ZZ_pseudo[pseudo[:c_t], endo[:c_t]] = 1.
+
     ## qk_f_t
     ZZ_pseudo[pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
 
@@ -359,6 +362,15 @@ function pseudo_measurement(m::Model1002{T},
         ## R_t
         ZZ_pseudos[reg][pseudo[:R_t], endo[:R_t]] = 1.
         DD_pseudos[reg][pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
+
+        ## c_f_t
+        ZZ_pseudos[reg][pseudo[:c_f_t], endo[:c_f_t]] = 1.
+
+        ## c_t
+        ZZ_pseudos[reg][pseudo[:c_t], endo[:c_t]] = 1.
+
+        ## w_f_t
+        ZZ_pseudos[reg][pseudo[:w_f_t], endo[:w_f_t]] = 1.
 
 
         ## labor share
