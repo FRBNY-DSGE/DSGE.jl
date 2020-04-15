@@ -423,6 +423,7 @@ function eqcond_regimes(m::Model1002)
         if subspec(m) == "ss60"
             Γ0[regime][eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
             Γ1[regime][eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
+
             Γ0[regime][eq[:eq_ziid], endo[:ziid_t]] = 1.
             Γ1[regime][eq[:eq_ziid], endo[:ziid_t]] = m[:ρ_ziid]
             Ψ[regime][eq[:eq_ziid], exo[:ziid_sh]]     = 1.
