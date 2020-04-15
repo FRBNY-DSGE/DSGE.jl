@@ -534,6 +534,12 @@ function eqcond_regimes(m::Model1002)
                 Γ0[regime][eq[:eq_zl1], endo[:z_tl1]] = 1.
                 Ψ[regime][eq[:eq_zl1], exo[:z_shl1]]  = 1.
 
+                # Ez_t
+                Γ0[regime][eq[:eq_Ez], endo[:z_tl1]]  = -1 / (1 - m[:α]) # note z_tl1 is a sum of all shocks that will hit next period.
+                                                                         # so this is the only required line
+
+                # Same thing as above for z_p is required, and more generally for any Ez equations w/anticipated shocks
+                # Γ0[regime][eq[:eq_Ez], endo[:zp_tl1]]   = -1
                 if val > 1
                 for i = 2:val
                     Γ1[regime][eq[Symbol("eq_zl$(i-1)")], endo[Symbol("z_tl$i")]] = 1.
