@@ -449,6 +449,17 @@ function eqcond_regimes(m::Model1002)
         Γ1[regime][eq[:eq_b], endo[:b_t]] = m[:ρ_b]
         Ψ[regime][eq[:eq_b], exo[:b_sh]]  = 1.
 
+        if subspec(m) == "ss60"
+            # iid shock
+            Γ0[regime][eq[:eq_biid], endo[:biid_t]] = 1.
+            Γ1[regime][eq[:eq_biid], endo[:biid_t]] = m[:ρ_biid]
+            Ψ[regime][eq[:eq_biid], exo[:biid_sh]]  = 1.
+
+            # Add to AR(1) shock
+            Γ0[regime][eq[:eq_b], endo[:biid_t]] = -1.
+            Γ1[regime][eq[:eq_b], endo[:biid_t]] = -1.
+        end
+
         # Investment-specific technology
         Γ0[regime][eq[:eq_μ], endo[:μ_t]] = 1.
         Γ1[regime][eq[:eq_μ], endo[:μ_t]] = m[:ρ_μ]
@@ -483,6 +494,17 @@ function eqcond_regimes(m::Model1002)
         Γ0[regime][eq[:eq_σ_ω], endo[:σ_ω_t]] = 1.
         Γ1[regime][eq[:eq_σ_ω], endo[:σ_ω_t]] = m[:ρ_σ_w]
         Ψ[regime][eq[:eq_σ_ω], exo[:σ_ω_sh]]  = 1.
+
+        if subspec(m) == "ss60"
+            # iid shock
+            Γ0[regime][eq[:eq_σ_ωiid], endo[:σ_ωiid_t]] = 1.
+            Γ1[regime][eq[:eq_σ_ωiid], endo[:σ_ωiid_t]] = m[:ρ_σ_ωiid]
+            Ψ[regime][eq[:eq_σ_ωiid], exo[:σ_ωiid_sh]]  = 1.
+
+            # Add to AR(1) shock
+            Γ0[regime][eq[:eq_σ_ω], endo[:σ_ωiid_t]] = -1.
+            Γ1[regime][eq[:eq_σ_ω], endo[:σ_ωiid_t]] = -1.
+        end
 
         # Exogenous bankruptcy costs
         Γ0[regime][eq[:eq_μ_e], endo[:μ_e_t]] = 1.
