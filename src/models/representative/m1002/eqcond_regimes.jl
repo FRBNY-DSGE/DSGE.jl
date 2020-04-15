@@ -404,7 +404,8 @@ function eqcond_regimes(m::Model1002)
 
         # Ez_t
         Γ0[regime][eq[:eq_Ez], endo[:Ez_t]]   = 1.
-        Γ0[regime][eq[:eq_Ez], endo[:ztil_t]] = -(m[:ρ_ztil]-1)/(1-m[:α])
+        Γ0[regime][eq[:eq_Ez], endo[:ztil_t]]   = -(m[:ρ_ztil]-1)/(1-m[:α])
+        Γ0[regime][eq[:eq_Ez], endo[:ziid_t]]   = -(m[:ρ_ziid]-1)/(1-m[:α])
         Γ0[regime][eq[:eq_Ez], endo[:zp_t]]   = -m[:ρ_z_p]
 
         ### EXOGENOUS SHOCKS ###
