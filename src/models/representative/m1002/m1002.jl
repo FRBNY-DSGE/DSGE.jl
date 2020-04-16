@@ -191,6 +191,9 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states, :biid_t)
         push!(equilibrium_conditions, :eq_biid)
         push!(exogenous_shocks, :biid_sh)
+        push!(endogenous_states, :biidc_t)
+        push!(equilibrium_conditions, :eq_biidc)
+        push!(exogenous_shocks, :biidc_sh)
         push!(endogenous_states, :btil_t)
         push!(equilibrium_conditions, :eq_btil)
         push!(exogenous_shocks, :btil_sh)
@@ -616,6 +619,17 @@ function init_parameters!(m::Model1002)
                        description="σ_biid: The standard deviation of the process describing the iid component of preferences.",
                        tex_label="\\sigma_{z, iid}")
         m <= parameter(:σ_biid_r2,  0.029, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_ziid: The standard deviation of the process describing the iid component of preferences.",
+                       tex_label="\\sigma_{z, iid}")
+        m <= parameter(:ρ_biidc, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       description="ρ_biidc: AR(1) coefficient in the iid component of the preference process.",
+                       tex_label="\\rho_{z, iid}")
+        m <= parameter(:σ_biidc, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_biidc: The standard deviation of the process describing the iid component of preferences.",
+                       tex_label="\\sigma_{z, iid}")
+        m <= parameter(:σ_biidc_r2,  0.029, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_ziid: The standard deviation of the process describing the iid component of preferences.",
                        tex_label="\\sigma_{z, iid}")

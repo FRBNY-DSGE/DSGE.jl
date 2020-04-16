@@ -492,6 +492,13 @@ function init_observable_mappings!(m::Model1002)
             observables[:obs_biid] = Observable(:obs_biid, [:WAGEMKP__DLX],
                                               biid_fwd_transform, biid_rev_transform,
                                               "biid", "biid")
+            biidc_fwd_transform = function (levels)
+                levels[:, Symbol("WAGEMKP")]
+            end
+            biidc_rev_transform = DSGE.identity
+            observables[:obs_biidc] = Observable(:obs_biidc, [:WAGEMKP__DLX],
+                                              biidc_fwd_transform, biidc_rev_transform,
+                                              "biidc", "biidc")
             sigma_omegaiid_fwd_transform = function (levels)
                 levels[:, Symbol("WAGEMKP")]
             end

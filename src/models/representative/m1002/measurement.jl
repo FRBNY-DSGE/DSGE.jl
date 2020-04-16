@@ -129,11 +129,13 @@ function measurement(m::Model1002{T},
         if regime == 2
             QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid_r2]^2
             QQ[exo[:biid_sh], exo[:biid_sh]] = m[:σ_biid_r2]^2
+            QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc_r2]^2
             QQ[exo[:σ_ωiid_sh], exo[:σ_ωiid_sh]] = m[:σ_σ_ωiid_r2]^2
             QQ[exo[:λ_wiid_sh], exo[:λ_wiid_sh]] = m[:σ_λ_wiid_r2]^2
         else
             QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
             QQ[exo[:biid_sh], exo[:biid_sh]] = m[:σ_biid]^2
+            QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
             QQ[exo[:σ_ωiid_sh], exo[:σ_ωiid_sh]] = m[:σ_σ_ωiid]^2
             QQ[exo[:λ_wiid_sh], exo[:λ_wiid_sh]] = m[:σ_λ_wiid]^2
         end
@@ -209,6 +211,7 @@ function measurement(m::Model1002{T},
     if subspec(m) in ["ss60"]
         ZZ[obs[:obs_ziid], endo[:ziid_t]] = 1.
         ZZ[obs[:obs_biid], endo[:biid_t]] = 1.
+        ZZ[obs[:obs_biidc], endo[:biidc_t]] = 1.
         ZZ[obs[:obs_sigma_omegaiid], endo[:σ_ωiid_t]] = 1.
         ZZ[obs[:obs_sigma_omega], endo[:σ_ω_t]] = 1.
         ZZ[obs[:obs_b], endo[:b_t]] = 1.

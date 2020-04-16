@@ -455,6 +455,13 @@ function eqcond_regimes(m::Model1002)
             Γ1[regime][eq[:eq_biid], endo[:biid_t]] = m[:ρ_biid]
             Ψ[regime][eq[:eq_biid], exo[:biid_sh]]  = 1.
 
+            Γ0[regime][eq[:eq_biidc], endo[:biidc_t]] = 1.
+            Γ1[regime][eq[:eq_biidc], endo[:biidc_t]] = m[:ρ_biidc] # c b/c will only affect consumption
+            Ψ[regime][eq[:eq_biidc], exo[:biidc_sh]]  = 1.
+
+            Γ0[regime][eq[:eq_euler], endo[:biidc_t]]   = -1.
+            Γ0[regime][eq[:eq_euler_f], endo[:biidc_t]] = -1.
+
             # Transient AR(1) shock to b_t
             Γ1[regime][eq[:eq_b], endo[:b_t]] = 0. # zero these out
             Ψ[regime][eq[:eq_b], exo[:b_sh]]  = 0.
