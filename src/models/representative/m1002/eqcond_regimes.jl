@@ -455,9 +455,17 @@ function eqcond_regimes(m::Model1002)
             Γ1[regime][eq[:eq_biid], endo[:biid_t]] = m[:ρ_biid]
             Ψ[regime][eq[:eq_biid], exo[:biid_sh]]  = 1.
 
-            # Add to AR(1) shock
+            # Transient AR(1) shock to b_t
+            Γ1[regime][eq[:eq_b], endo[:b_t]] = 0. # zero these out
+            Ψ[regime][eq[:eq_b], exo[:b_sh]]  = 0.
+
+            Γ0[regime][eq[:eq_btil], endo[:btil_t]] = 1.
+            Γ1[regime][eq[:eq_btil], endo[:btil_t]] = m[:ρ_b]
+            Ψ[regime][eq[:eq_btil], exo[:b_sh]]  = 1.
+
+            # Add to b_t
             Γ0[regime][eq[:eq_b], endo[:biid_t]] = -1.
-            Γ1[regime][eq[:eq_b], endo[:biid_t]] = -1.
+            Γ0[regime][eq[:eq_b], endo[:btil_t]] = -1.
         end
 
         # Investment-specific technology
@@ -475,13 +483,34 @@ function eqcond_regimes(m::Model1002)
         Ψ[regime][eq[:eq_λ_f1], exo[:λ_f_sh]]   = 1.
 
         # Wage mark-up shock
-        Γ0[regime][eq[:eq_λ_w], endo[:λ_w_t]]  = 1.
-        Γ1[regime][eq[:eq_λ_w], endo[:λ_w_t]]  = m[:ρ_λ_w]
-        Γ1[regime][eq[:eq_λ_w], endo[:λ_w_t1]] = -m[:η_λ_w]
-        Ψ[regime][eq[:eq_λ_w], exo[:λ_w_sh]]   = 1.
+        if subspec(m) == "ss60"
+            # Recreate process
+            Γ0[regime][eq[:eq_λ_wtil], endo[:λ_wtil_t]]  = 1.
+            Γ1[regime][eq[:eq_λ_wtil], endo[:λ_wtil_t]]  = m[:ρ_λ_w]
+            Γ1[regime][eq[:eq_λ_wtil], endo[:λ_wtil_t1]] = -m[:η_λ_w]
+            Ψ[regime][eq[:eq_λ_wtil], exo[:λ_w_sh]]   = 1.
 
-        Γ0[regime][eq[:eq_λ_w1], endo[:λ_w_t1]] = 1.
-        Ψ[regime][eq[:eq_λ_w1], exo[:λ_w_sh]]   = 1.
+            Γ0[regime][eq[:eq_λ_wtil1], endo[:λ_wtil_t1]] = 1.
+            Ψ[regime][eq[:eq_λ_wtil1], exo[:λ_w_sh]]   = 1.
+
+            # iid shock
+            Γ0[regime][eq[:eq_λ_wiid], endo[:λ_wiid_t]] = 1.
+            Γ1[regime][eq[:eq_λ_wiid], endo[:λ_wiid_t]] = m[:ρ_λ_wiid]
+            Ψ[regime][eq[:eq_λ_wiid], exo[:λ_wiid_sh]]  = 1.
+
+            # Add to λ_w
+            Γ0[regime][eq[:eq_λ_w], endo[:λ_wtil_t]] = -1.
+            Γ0[regime][eq[:eq_λ_w], endo[:λ_wiid_t]] = -1.
+            Γ0[regime][eq[:eq_λ_w], endo[:λ_w_t]]    = 1.
+        else
+            Γ0[regime][eq[:eq_λ_w], endo[:λ_w_t]]  = 1.
+            Γ1[regime][eq[:eq_λ_w], endo[:λ_w_t]]  = m[:ρ_λ_w]
+            Γ1[regime][eq[:eq_λ_w], endo[:λ_w_t1]] = -m[:η_λ_w]
+            Ψ[regime][eq[:eq_λ_w], exo[:λ_w_sh]]   = 1.
+
+            Γ0[regime][eq[:eq_λ_w1], endo[:λ_w_t1]] = 1.
+            Ψ[regime][eq[:eq_λ_w1], exo[:λ_w_sh]]   = 1.
+        end
 
         # Monetary policy shock
         Γ0[regime][eq[:eq_rm], endo[:rm_t]] = 1.
@@ -501,9 +530,17 @@ function eqcond_regimes(m::Model1002)
             Γ1[regime][eq[:eq_σ_ωiid], endo[:σ_ωiid_t]] = m[:ρ_σ_ωiid]
             Ψ[regime][eq[:eq_σ_ωiid], exo[:σ_ωiid_sh]]  = 1.
 
-            # Add to AR(1) shock
+            # Transient AR(1) shock to σ_ω_t
+            Γ1[regime][eq[:eq_σ_ω], endo[:σ_ω_t]] = 0. # zero these out
+            Ψ[regime][eq[:eq_σ_ω], exo[:σ_ω_sh]]  = 0.
+
+            Γ0[regime][eq[:eq_σ_ωtil], endo[:σ_ωtil_t]] = 1.
+            Γ1[regime][eq[:eq_σ_ωtil], endo[:σ_ωtil_t]] = m[:ρ_σ_w]
+            Ψ[regime][eq[:eq_σ_ωtil], exo[:σ_ω_sh]]  = 1.
+
+            # Add to σ_ω_t
             Γ0[regime][eq[:eq_σ_ω], endo[:σ_ωiid_t]] = -1.
-            Γ1[regime][eq[:eq_σ_ω], endo[:σ_ωiid_t]] = -1.
+            Γ0[regime][eq[:eq_σ_ω], endo[:σ_ωtil_t]] = -1.
         end
 
         # Exogenous bankruptcy costs

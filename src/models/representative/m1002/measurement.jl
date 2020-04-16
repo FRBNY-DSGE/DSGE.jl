@@ -128,8 +128,14 @@ function measurement(m::Model1002{T},
     if subspec(m) in ["ss60"]
         if regime == 2
             QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid_r2]^2
+            QQ[exo[:biid_sh], exo[:biid_sh]] = m[:σ_biid_r2]^2
+            QQ[exo[:σ_ωiid_sh], exo[:σ_ωiid_sh]] = m[:σ_σ_ωiid_r2]^2
+            QQ[exo[:λ_wiid_sh], exo[:λ_wiid_sh]] = m[:σ_λ_wiid_r2]^2
         else
             QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
+            QQ[exo[:biid_sh], exo[:biid_sh]] = m[:σ_biid]^2
+            QQ[exo[:σ_ωiid_sh], exo[:σ_ωiid_sh]] = m[:σ_σ_ωiid]^2
+            QQ[exo[:λ_wiid_sh], exo[:λ_wiid_sh]] = m[:σ_λ_wiid]^2
         end
     end
     if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53",
@@ -202,6 +208,12 @@ function measurement(m::Model1002{T},
 
     if subspec(m) in ["ss60"]
         ZZ[obs[:obs_ziid], endo[:ziid_t]] = 1.
+        ZZ[obs[:obs_biid], endo[:biid_t]] = 1.
+        ZZ[obs[:obs_sigma_omegaiid], endo[:σ_ωiid_t]] = 1.
+        ZZ[obs[:obs_sigma_omega], endo[:σ_ω_t]] = 1.
+        ZZ[obs[:obs_b], endo[:b_t]] = 1.
+        ZZ[obs[:obs_lambda_wiid], endo[:λ_wiid_t]] = 1.
+        ZZ[obs[:obs_lambda_w], endo[:λ_w_t]] = 1.
     end
 
 
