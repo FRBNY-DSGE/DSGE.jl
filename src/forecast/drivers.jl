@@ -579,8 +579,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
     # Compute state space
     update!(m, params)
-    system = compute_system(m; regime_switching = regime_switching,
-                            n_regimes = n_regimes)
+    system = compute_system(m)
 
     # Initialize output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -675,18 +674,17 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         if param_key!=:nothing
             m[param_key] = param_value
             steadystate!(m)
-            system = compute_system(m; regime_switching = regime_switching, n_regimes = n_regimes)
+            system = compute_system(m)
         end
         if param_key2!=:nothing
             m[param_key2] = param_value2
             steadystate!(m)
-            system = compute_system(m; regime_switching = regime_switching, n_regimes = n_regimes)
+            system = compute_system(m)
         end
 
         # Re-solve model with alternative policy rule, if applicable
         if alternative_policy(m).solve != solve
-            system = compute_system(m; apply_altpolicy = true, regime_switching = regime_switching,
-                                    n_regimes = n_regimes)
+            system = compute_system(m; apply_altpolicy = true)
         end
 
         # 2A. Unbounded forecasts
