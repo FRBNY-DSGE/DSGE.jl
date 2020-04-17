@@ -48,7 +48,7 @@ function default_settings!(m::AbstractDSGEModel)
     settings[:date_mainsample_start] = Setting(:date_mainsample_start, quartertodate("1960-Q1"),
         "Start date of main sample")
     settings[:date_zlb_start] = Setting(:date_zlb_start, quartertodate("2008-Q4"),
-        "Start date of zero lower bound regime")
+        "Start date of first zero lower bound regime")
     settings[:date_forecast_start] = Setting(:date_forecast_start,
                                              Dates.lastdayofquarter(Dates.today()),
         "Start date of forecast period")
