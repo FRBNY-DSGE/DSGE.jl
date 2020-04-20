@@ -3,8 +3,10 @@ path = dirname(@__FILE__)
     custom_settings = Dict{Symbol, Setting}(
         :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
     m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+    priordensity = exp(DSGE.prior(m))
     dsgevar = DSGE.DSGEVAR(m, collect(keys(m.exogenous_shocks)))
     @test prior(m) == prior(m.parameters)
+    @test 0 <= priordensity <= 1 # ensure prior density is a density
     @test prior(dsgevar) == prior(dsgevar.dsge) == prior(m.parameters)
 end
 
