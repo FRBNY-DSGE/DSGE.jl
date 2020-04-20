@@ -90,6 +90,8 @@ function get_forecast_filename(m::AbstractDSGEModel, input_type::Symbol,
     directory = pathfcn(m, "forecast")
     base      = filestring_base(m)
 
+    # FOR IRFS AND OTHER OUTPUT VAR, MAY NEED TO UPDATE SO THAT OUTPUT HAS A REGIME TAG
+
     # Now we can find the filestring we are looking for
     get_forecast_filename(directory, base, input_type, cond_type, output_var;
                           forecast_string = forecast_string, fileformat = fileformat)
@@ -302,6 +304,13 @@ function write_forecast_metadata(m::AbstractDSGEModel, file::JLD2.JLDFile, var::
         write(file, "date_indices", date_indices)
     end
 
+    # Write regimes, if applicable
+    if haskey(m.settings, :regime_switching)
+        if get_setting(m, :regime_switching)
+            write(file, "regime_dates", get_setting(m, :regime_dates)) # Can retrieve regime_indices using date_indices
+        end
+    end
+
     # Write state names
     if class == :states
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
@@ -454,6 +463,11 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
         # `nvars` x `nperiods`
         if product == :trend
             nperiods = length(read(file, "date_indices"))
+            if haskey(m.settings, :regime_switching)
+                if get_setting(m, :regime_switching)
+
+                end
+            end
             fcast_series = repeat(fcast_series, outer = (1, nperiods))
         end
 
