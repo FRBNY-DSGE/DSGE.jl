@@ -1040,6 +1040,18 @@ function zero_system_constants(system::System{S}) where S<:AbstractFloat
     return system
 end
 
+function zero_system_constants(system::RegimeSwitchingSystem{S}) where S<:AbstractFloat
+    system = copy(system)
+
+    for i in 1:n_regimes(system)
+        system.transitions[i].CCC = zeros(size(system[i, :CCC]))
+        system.measurements[i].DD = zeros(size(system[i, :DD]))
+        system.pseudo_measurements[i].DD_pseudo = zeros(size(system[i, :DD_pseudo]))
+    end
+
+    return system
+end
+
 """
 ```
 var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_population_moments = false,
