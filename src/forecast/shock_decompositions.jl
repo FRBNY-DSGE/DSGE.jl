@@ -317,11 +317,17 @@ end
 
 function trends(system::RegimeSwitchingSystem{S}) where {S<:AbstractFloat}
 
-    input = 1:n_regimes(system)
-    state_trends  = map(x -> system[x, :CCC], input)
-    obs_trends    = map(x -> system[x, :ZZ] * system[x, :CCC] + system[x, :DD], input)
-    pseudo_trends = map(x -> system[x, :ZZ_pseudo] * system[x, :CCC] + system[x, :DD_pseudo], input)
+    nreg  = n_regimes(system)
+    input = 1:nreg
+
+    state_trends  = Matrix{S}(undef, length(system[1, :CCC]), nreg)
+    obs_trends    = Matrix{S}(undef, length(system[1, :DD]), nreg)
+    pseudo_trends = Matrix{S}(undef, length(system[1, :DD_pseudo]), nreg)
+    for i in input
+        state_trends[:, i]  = system[i, :CCC]
+        obs_trends[:, i]    = system[i, :ZZ] * system[i, :CCC] + system[i, :DD]
+        pseudo_trends[:, i] = system[i, :ZZ_pseudo] * system[i, :CCC] + system[i, :DD_pseudo]
+    end
 
     return state_trends, obs_trends, pseudo_trends
-
 end
