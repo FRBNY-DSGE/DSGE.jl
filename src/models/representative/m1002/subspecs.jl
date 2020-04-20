@@ -1912,6 +1912,11 @@ function ss51v!(m::Model1002)
     for i = 1:n_mon_anticipated_shocks(m)
         ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(i)")], 2, 0.)
     end
+
+    # Add regime switching settings
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:n_regimes, 1)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_mainsample_start(m))) # By default, 1 regime starting at the mainsample start date.
 end
 
 

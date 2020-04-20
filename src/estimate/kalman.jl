@@ -97,10 +97,8 @@ function zlb_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
             error("Start date $start_date must be >= date_presample_start(m)")
 
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
-
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
             regime_inds::Vector{UnitRange{Int64}} = [1:n_nozlb_periods, (n_nozlb_periods+1):T]
-
         else
             regime_inds = UnitRange{Int64}[1:T]
         end
@@ -110,22 +108,67 @@ function zlb_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
     return regime_inds
 end
 
-function regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
-                        start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
+"""
+```
+function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
+                                 start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
+```
+returns a Vector{UnitRange{Int64}} of index ranges for regime switches with the pre- and post-ZLB
+regimes spliced into the regime switches. The optional argument `start_date` indicates the first quarter of
+`data`. Use the `Setting` with key `:regime_dates` to set the start dates of different regimes (excluding
+the ZLB regime), and use the `Setting` key `:date_zlb_start` to set the start of the post-ZLB regime.
+"""
+function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
+                                 start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
 
     T = size(data, 2)
     if !isempty(data)
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
-            # THIS IS NOT ROBUST TO MULTIPLE REGIMES
-            n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            n_regime1_periods = subtract_quarters(get_setting(m, :date_regime_switch), start_date)
-            regime_inds::Vector{UnitRange{Int64}} = [1:n_regime1_periods, (n_regime1_periods+1):n_nozlb_periods, (n_nozlb_periods+1):T]
-        else
+            n_nozlb_periods  = subtract_quarters(date_zlb_start(m), start_date)
+            n_regime_periods = Vector{Int}(undef, length(get_setting(m, :regime_dates))) # number of periods since start date for each regime
+            for (k, v) in get_setting(m, :regime_dates)
+                n_regime_periods[k] = subtract_quarters(v, start_date)
+            end
+            # Get index of next regime after ZLB starts.
+            # Note that it cannot be 1 b/c the first regime starts at the start date
+            i_splice_zlb = findfirst(n_nozlb_periods .< n_regime_periods)
+
+            # Populate vector of regime indices
+            regime_inds = Vector{UnitRange{Int64}}(undef, length(n_regime_periods) + 1)
+            if isnothing(i_splice_zlb) # post-ZLB is the last regime
+                for reg in 1:(length(n_regime_periods) - 1)
+                    regime_inds[reg] = (n_regime_periods[reg] + 1):n_regime_periods[reg + 1]
+                end
+                regime_inds[end] = (n_regime_periods[end] + 1):T
+            elseif i_splice_zlb > 2 # at least one full regime before ZLB starts
+                regime_inds[1] = 1:n_regime_periods[2]
+                for reg in 2:i_splice_zlb - 2 # if i_splice_zlb == 3, then this loop does not run
+                    regime_inds[reg] = (n_regime_periods[reg] + 1):n_regime_periods[reg + 1]
+                end
+                regime_inds[i_splice_zlb - 1] = (n_regime_periods[i_splice_zlb - 2] + 1):n_nozlb_periods
+                regime_inds[i_splice_zlb]     = (n_nozlb_periods + 1):(n_regime_periods[i_splice_zlb - 1])
+
+                # Index reg + 1 b/c we have spliced pre- and post- ZLB regime in
+                for reg in i_splice_zlb:(length(n_regime_periods) - 1)
+                    regime_inds[reg + 1] = (n_regime_periods[reg] + 1):n_regime_periods[reg + 1]
+                end
+                regime_inds[end] = (n_regime_periods[end] + 1):T
+            else # first regime is pre-ZLB regime
+                regime_inds[1] = 1:n_nozlb_periods
+                regime_inds[2] = (n_nozlb_periods + 1):n_regime_periods[1]
+
+                # Index reg + 1 b/c spliced pre- and post-ZLB regime in
+                for reg in 2:length(n_regime_periods)
+                    regime_inds[reg + 1] = (n_regime_periods[reg - 1] + 1):n_regime_periods[reg]
+                end
+            end
+        else # DOES NOT COVER REGIME SWITCHING YET
+            # This is the case that date_zlb_start <= start_date so the first regime is the post-ZLB regime (no pre-ZLB)
             regime_inds = UnitRange{Int64}[1:T]
         end
-    else
+    else # Empty, so we ignore regime switching
         regime_inds = UnitRange{Int64}[1:T]
     end
     return regime_inds
@@ -176,23 +219,22 @@ function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::System{S},
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
 end
 
-function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
-                             start_date::Dates.Date=date_presample_start(m)) where S<:AbstractFloat
+function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
+                                  start_date::Dates.Date = date_presample_start(m);
+                                  n_regimes::Int = 0) where S<:AbstractFloat
     ### THIS IS WORK IN PROGRES, DOES NOT COVER ALL CASES FOR REGIME SWITCHING, ALSO ONLY FOR SWITCHING JUST ONCE.
-    if n_mon_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0 # Need to turn off anticipated MP shocks for pre-ZLB regime
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
             # TODO: This technically doesn't handle the case where the end_date of the sample
             # is before the start of the ZLB
         elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
-            n_regimes = 3
-
             shock_inds = inds_shocks_no_ant(m)
             QQ_preZLB_R1 = zeros(size(system[1][:QQ]))
             QQ_preZLB_R1[shock_inds, shock_inds] = system[1][:QQ][shock_inds, shock_inds]
 
-            # Figure out the appropriate regime switching mechanism
+            # Figure out the appropriate regime switching scheme
             n_regime1_periods = subtract_quarters(get_setting(m, :date_regime2_start), start_date)
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
             if n_regime1_periods > n_nozlb_periods
@@ -208,12 +250,19 @@ function zlb_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSys
                 QQ_preZLB_R2[shock_inds, shock_inds] = system[2][:QQ][shock_inds, shock_inds]
                 QQs = Matrix{S}[QQ_preZLB_R1, QQ_preZLB_R2, QQ_ZLB]
             end
+
+            if n_regimes == 0
+                n_regimes = length(QQs)
+            elseif n_regimes < length(QQs)
+                QQs = QQs[1:n_regimes]
+            end
         elseif date_zlb_start(m) < start_date
+            # NEED TO ADD REGIME SWITCHING
             n_regimes = 1
             QQs = Matrix{S}[system[:QQ]]
         end
     else
-#        @show "no ant"
+        # NEED TO ADD REGIME SWITCHING HERE TOO
         n_regimes = 2
         QQs = Matrix{S}[system[1][:QQ], system[2][:QQ]]
     end
