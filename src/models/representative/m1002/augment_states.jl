@@ -41,7 +41,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
+function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}; regime_switching::Bool = false, reg::Int = 1) where {T<:AbstractFloat}
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
@@ -58,6 +58,12 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(n_states_add, n_exo)]
     CCC_aug = [CCC; zeros(n_states_add)]
+
+    for p in m.parameters
+        if !isempty(p.regimes)
+            p = ModelConstructors.toggle_regime!(p, reg)
+        end
+    end
 
     ### TTT modifications
 

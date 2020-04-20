@@ -35,7 +35,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
             if altpolicy_solve == solve || !apply_altpolicy
                 if isa(regimes, Int)
                     # Get equilibrium condition matrices
-                    Γ0, Γ1, C, Ψ, Π  = eqcond_regimes(m)[regimes]
+                    Γ0, Γ1, C, Ψ, Π  = eqcond(m, regimes)
 
                     # Solve model
                     TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
@@ -55,7 +55,14 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
                     return TTT, RRR, CCC
                 else
-                    Γ0s, Γ1s, Cs, Ψs, Πs  = eqcond_regimes(m)[regimes]
+                    Γ0s = Vector{Matrix{T}}(undef, length(regimes))
+                    Γ1s = Vector{Matrix{T}}(undef, length(regimes))
+                    Cs = Vector{Vector{T}}(undef, length(regimes))
+                    Ψs = Vector{Matrix{T}}(undef, length(regimes))
+                    Πs = Vector{Matrix{T}}(undef, length(regimes))
+                    for reg in regimes
+                        Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg]  = eqcond(m, reg)
+                    end
 
                     n_regimes = length(regimes)
                     TTTs = Vector{Matrix{T}}(undef, n_regimes)
@@ -79,7 +86,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                         # Augment states
                         TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
                                                                          regime_switching = regime_switching,
-                                                                         regime = regime)
+                        reg = reg)
                     end
 
                     return TTTs, RRRs, CCCs
