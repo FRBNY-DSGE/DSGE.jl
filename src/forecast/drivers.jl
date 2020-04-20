@@ -817,7 +817,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histshocks
         end
 
-        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, histshocks_shockdec)
+        shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
+            shock_decompositions(m, system, histshocks_shockdec, df) :
+            shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
@@ -844,11 +846,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
 
     if !isempty(dettrends_to_compute)
-        dettrendstates, dettrendobs, dettrendpseudo = if isa(system, RegimeSwitchingSystem)
-            deterministic_trends(m, system, initial_states, df)
-        else
+        dettrendstates, dettrendobs, dettrendpseudo = isa(system, RegimeSwitchingSystem) ?
+            deterministic_trends(m, system, initial_states, df) :
             deterministic_trends(m, system, initial_states)
-        end
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs
