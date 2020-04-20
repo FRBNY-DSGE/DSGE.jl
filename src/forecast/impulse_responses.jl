@@ -25,10 +25,17 @@ where `S<:AbstractFloat`
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
   pseudo-observable impulse response functions
 """
-function impulse_responses(m::AbstractRepModel, system::System{S};
+function impulse_responses(m::AbstractRepModel,
+                           system::Union{System{S}, RegimeSwitchingSystem{S}};
                            flip_shocks::Bool = false) where {S<:AbstractFloat}
     horizon = impulse_response_horizons(m)
-    states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+    if typeof(system) == RegimeSwitchingSystem{S}
+        last_reg = get_setting(m, :n_regimes)
+        states, obs, pseudo = impulse_responses(system[last_reg], horizon, flip_shocks = flip_shocks)
+    else
+        states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
+    end
+
     return states, obs, pseudo
 end
 
