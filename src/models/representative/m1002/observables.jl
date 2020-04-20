@@ -395,21 +395,39 @@ function init_observable_mappings!(m::Model1002)
     # Columns ??
     ############################################################################
 
-    if haskey(get_setting(m, :antshocks), :z)
-        for i = 1:get_setting(m, :antshocks)[:z]
-            # FROM: fake data of z expectations
-            # TO:   Same
+    for (k, v) in get_setting(m, :antshocks)
+        if k == :z
+            for i = 1:v
+                # FROM: fake data of z expectations
+                # TO:   Same
 
-            ant_fwd_transform = function (levels)
-                levels[:, Symbol("z$i")]
+                ant_fwd_transform = function (levels)
+                    levels[:, Symbol("z$i")]
+                end
+
+                ant_rev_transform = quartertoannual
+
+                observables[Symbol("obs_z$i")] = Observable(Symbol("obs_z$i"), [Symbol("z$(i)__Z")],
+                                                            ant_fwd_transform, ant_rev_transform,
+                                                            "Anticipated Shock $i",
+                                                            "$i-period ahead anticipated z shock")
             end
+        else
+            for i = 1:v
+                # FROM: fake data of expectations of exogenous shocks
+                # TO:   Same
 
-            ant_rev_transform = quartertoannual
+                ant_fwd_transform = function (levels)
+                    levels[:, Symbol(k, "$i")]
+                end
 
-            observables[Symbol("obs_z$i")] = Observable(Symbol("obs_z$i"), [Symbol("z$(i)__Z")],
-                                                        ant_fwd_transform, ant_rev_transform,
-                                                        "Anticipated Shock $i",
-                                                        "$i-period ahead anticipated z shock")
+                ant_rev_transform = quartertoannual
+
+                observables[Symbol("obs_", k, "$i")] = Observable(Symbol("obs_", k, "$i"), [Symbol(k, "$(i)__", uppercase(string(k)))],
+                                                            ant_fwd_transform, ant_rev_transform,
+                                                            "Anticipated Shock $i",
+                                                            "$i-period ahead anticipated $(string(k)) shock")
+            end
         end
     end
 
