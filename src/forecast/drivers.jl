@@ -844,7 +844,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
 
     if !isempty(dettrends_to_compute)
-        dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
+        dettrendstates, dettrendobs, dettrendpseudo = if isa(system, RegimeSwitchingSystem)
+            deterministic_trends(m, system, initial_states, df)
+        else
+            deterministic_trends(m, system, initial_states)
+        end
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs

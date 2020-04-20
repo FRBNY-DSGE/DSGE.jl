@@ -54,7 +54,7 @@ where `S<:AbstractFloat`.
 """
 function forecast(m::AbstractDSGEModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
+    shocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
