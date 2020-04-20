@@ -5,7 +5,7 @@ shock_decompositions(m, system, histshocks)
 shock_decompositions(system, forecast_horizons, histshocks, start_index,
     end_index)
 
-shock_decompositions(m, system, histshocks, df)
+shock_decompositions(m, system, histshocks, start_date, end_date)
 
 shock_decompositions(system, forecast_horizons, histshocks, start_index,
     end_index, regime_inds)
@@ -20,7 +20,8 @@ shock_decompositions(system, forecast_horizons, histshocks, start_index,
 - `start_index::Int`: first index from which to return computed shock
   decompositions
 - `end_index::Int`: last index for which to return computed shock decompositions
-- `df::DataFrame`: historical data, used to compute the indices of regimes
+- `start_date::Date`: initial date for deterministic trends
+- `end_date::Date`: final date for deterministic trends
 - `regime_inds::Vector{UnitRange}`: indices of the data corresponding to each regime.
 
 where `S<:AbstractFloat`.
@@ -92,16 +93,17 @@ end
 
 function shock_decompositions(m::AbstractDSGEModel{S},
                               system::RegimeSwitchingSystem{S}, histshocks::Matrix{S},
-                              df::DataFrame) where {S<:AbstractFloat}
+                              start_date::Dates.Date = date_presample_start(m),
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m))) where {S<:AbstractFloat}
     # Set up dates
     horizon     = forecast_horizons(m)
     start_index = index_shockdec_start(m)
     end_index   = index_shockdec_end(m)
 
-    # Set up regimes and regimes indices
-    start_date   = max(date_presample_start(m), df[1, :date])
-    data         = df_to_matrix(m, df; cond_type = cond_type, in_sample = true)
-    regime_inds  = zlb_plus_regime_indices(m, data, start_date)
+    # Set up regime indices. Note that we do not need to account
+    # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
+    # in the pre-ZLB periods.
+    regime_inds = regime_indices(m, data, start_date, end_date)
 
     shock_decompositions(system, horizon, histshocks, start_index, end_index, regime_inds)
 end
@@ -171,7 +173,7 @@ deterministic_trends(m, system, z0)
 
 deterministic_trends(system, z0, nperiods, start_index, end_index)
 
-deterministic_trends(m, system, z0, df)
+deterministic_trends(m, system, z0, start_date, end_date)
 
 deterministic_trends(system, z0, nperiods, regime_inds, regimes)
 ```
@@ -187,7 +189,8 @@ presample period.
 - `m::AbstractDSGEModel`: model object
 - `system::System{S}` or `RegimeSwitchingSystem`: state-space system matrices
 - `z0`::Vector{S}: initial state vector
-- `df::DataFrame`: historical data, used to compute the indices of regimes
+- `start_date::Date`: initial date for deterministic trends
+- `end_date::Date`: final date for deterministic trends
 - `regime_inds::Vector{UnitRange}`: indices of the data corresponding to each regime.
 - `regimes::UnitRange`: which regimes are involved in the date range for which
     we want to compute the deterministic trends
@@ -244,7 +247,8 @@ end
 
 function deterministic_trends(m::AbstractDSGEModel{S},
                               system::RegimeSwitchingSystem{S}, z0::Vector{S},
-                              df::DataFrame) where {S<:AbstractFloat}
+                              start_date::Dates.Date = date_presample_start(m),
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m))) where {S<:AbstractFloat}
 
     # Dates: We compute the deterministic trend starting from the
     # first historical period.  However, since it is only used to
@@ -255,9 +259,9 @@ function deterministic_trends(m::AbstractDSGEModel{S},
     end_index   = index_shockdec_end(m)
 
     # Now intersect these periods with regime indices
-    start_date   = max(date_presample_start(m), df[1, :date])
-    data         = df_to_matrix(m, df; cond_type = cond_type, in_sample = true)
-    regime_inds  = zlb_plus_regime_indices(m, data, start_date)
+    start_date  = max(date_presample_start(m), df[1, :date])
+    regime_inds = zlb_plus_regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
+
     first_regime = findfirst(map(x -> start_index in x, regime_inds))
     last_regime  = findfirst(map(x -> end_index in x,   regime_inds))
     regimes      = first_regime:last_regime                  # need to specify which regimes we need for shockdec.
