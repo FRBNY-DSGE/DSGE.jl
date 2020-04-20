@@ -445,15 +445,25 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
     var_ind = indices[var_name]
 
     # Read forecast output
-    fcast_series = if isnull(shock_name)
-        read_forecast_series(filename, product, var_ind)
+    reg_switch = if haskey(m.settings)
+        get_setting(m, :regime_switching)
     else
-        # Get indices corresponding to shock_name
-        shock_name = get(shock_name)
-        shock_indices = FileIO.load(filename, "shock_indices")
-        shock_ind = shock_indices[shock_name]
+        false
+    end
 
-        read_forecast_series(filename, var_ind, shock_ind)
+    if reg_switch && product == :trend
+        fcast_series = read_regime_switching_trend(filename, var_ind)
+    else
+        fcast_series = if isnull(shock_name)
+            read_forecast_series(filename, product, var_ind)
+        else
+            # Get indices corresponding to shock_name
+            shock_name = get(shock_name)
+            shock_indices = FileIO.load(filename, "shock_indices")
+            shock_ind = shock_indices[shock_name]
+
+            read_forecast_series(filename, var_ind, shock_ind)
+        end
     end
 
     JLD2.jldopen(filename, "r") do file
@@ -461,14 +471,28 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
         # need to use `repeat` below because population adjustments will be
         # different in each period. Now we have something of size `ndraws` x
         # `nvars` x `nperiods`
+        #
+        # If regime switching was used, then `fcast_output` is
+        # `ndraws` x `nvars` x `n_regimes`, so we still need to use `repeat`.
         if product == :trend
-            nperiods = length(read(file, "date_indices"))
-            if haskey(m.settings, :regime_switching)
-                if get_setting(m, :regime_switching)
-
+            if reg_switch
+                regime_dates = read(file, "regime_dates")
+                date_indices = read(file, "date_indices")
+                n_regs       = length(regime_dates)
+                nperiods     = length(date_indices)
+                fcast_series_out = Array{eltype(fcast_series)}(size(fcast_series, 1), size(fcast_series, 2), nperiods)
+                for reg in 1:(n_regs - 1)
+                    nreg_per = date_indices[regime_dates[reg + 1]] - date_indices[regime_dates[reg]]
+                    fcast_series_out[:, :, date_indices[regime_dates[reg]]:(date_indices[regime_dates[reg + 1]] - 1)] =
+                        repeat(fcast_series[:, :, reg], outer = (1, nreg_per))
                 end
+                fcast_series_out[:, :, date_indices[regime_dates[end]]:end] =
+                    repeat(fcast_series[:, :, end], outer = (1, nperiods - date_indices[regime_dates[end]] + 1))
+                fcast_series = fcast_series_out
+            else
+                nperiods = length(read(file, "date_indices"))
+                fcast_series = repeat(fcast_series, outer = (1, nperiods))
             end
-            fcast_series = repeat(fcast_series, outer = (1, nperiods))
         end
 
         # Parse transform
@@ -483,6 +507,7 @@ end
 """
 ```
 read_forecast_series(filepath, product, var_ind)
+read_forecast_series(filepath, var_ind, shock_ind)
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
@@ -502,7 +527,7 @@ function read_forecast_series(filepath::String, product::Symbol, var_ind::Int)
             arr = reshape(arr, (1, 1))
         elseif ndims == 2 # many draws
             arr = whole[Colon(), var_ind]
-            arr = reshape(arr, (length(arr),1))
+            arr = reshape(arr, (length(arr), 1))
         end
 
     # Other products are ndraws x nvars x nperiods
@@ -539,4 +564,22 @@ function read_forecast_series(filepath::String, var_ind::Int, shock_ind::Int)
     end
 
     return arr
+end
+
+"""
+```
+read_regime_switching_trend(filepath, var_ind)
+```
+
+Read only the trend output for a particular variable (e.g. for a particular
+observable). Result should be a matrix of size `ndraws` × `nvars` × `n_regimes`.
+"""
+function read_regime_switcing_trend(filepath::String, var_ind::Int)
+    whole = FileIO.load(filepath, "arr")
+    if ndims == 2 # one draw
+        arr = whole[var_ind, Colon()]
+        arr = reshape(arr, (1, length(arr)))
+    elseif ndims == 3 # many draws
+        arr = whole[Colon(), var_ind, Colon()]
+    end
 end

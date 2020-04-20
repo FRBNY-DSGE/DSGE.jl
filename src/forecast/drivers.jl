@@ -81,7 +81,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
                 " does not match the length of Setting :regime_dates ($(string(length(get_setting(m, :regime_dates)))))."
             @assert get_setting(m, :regime_dates)[1] == date_mainsample_start(m) "The first regime" *
                 " date ($(string(get_setting(m, :regime_dates)[1]))) must match the mainsample start date " *
-                "($(string(date_mainsampl_start(m))))."
+                "($(string(date_mainsample_start(m))))."
         end
     end
 
