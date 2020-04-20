@@ -588,17 +588,14 @@ function eqcond_regimes(m::Model1002)
         end
 
         for (key, val) in get_setting(m, :antshocks)
-            an_eq_mapping = get_setting(m, :ant_eq_mapping)
-            if val > 0
-            # This section adds the anticipated shocks. There is one state for all the
-                # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
-                # will hit in two periods), and the equations are set up so that rm_tl2 last period
-                # will feed into rm_tl1 this period (and so on for other numbers), and last period's
-                # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
-
-                Γ1[regime][eq[:eq_ztil], endo[:z_tl1]]   = 1.
-                Γ0[regime][eq[:eq_zl1], endo[:z_tl1]] = 1.
-                Ψ[regime][eq[:eq_zl1], exo[:z_shl1]]  = 1.
+            ant_eq_mapping = get_setting(m, :ant_eq_mapping)
+            if val == 0
+                continue
+            end
+            if key == :z
+                Γ1[regime][eq[:eq_ztil], endo[:z_tl1]] = 1.
+                Γ0[regime][eq[:eq_zl1], endo[:z_tl1]]  = 1.
+                Ψ[regime][eq[:eq_zl1], exo[:z_shl1]]   = 1.
 
                 # Ez_t
                 Γ0[regime][eq[:eq_Ez], endo[:z_tl1]]  = -1 / (1 - m[:α]) # note z_tl1 is a sum of all shocks that will hit next period.
@@ -607,11 +604,23 @@ function eqcond_regimes(m::Model1002)
                 # Same thing as above for z_p is required, and more generally for any Ez equations w/anticipated shocks
                 # Γ0[regime][eq[:eq_Ez], endo[:zp_tl1]]   = -1
                 if val > 1
-                for i = 2:val
-                    Γ1[regime][eq[Symbol("eq_zl$(i-1)")], endo[Symbol("z_tl$i")]] = 1.
-                    Γ0[regime][eq[Symbol("eq_zl$i")], endo[Symbol("z_tl$i")]]     = 1.
-                    Ψ[regime][eq[Symbol("eq_zl$i")], exo[Symbol("z_shl$i")]]      = 1.
+                    for i = 2:val
+                        Γ1[regime][eq[Symbol("eq_zl$(i-1)")], endo[Symbol("z_tl$i")]] = 1.
+                        Γ0[regime][eq[Symbol("eq_zl$i")], endo[Symbol("z_tl$i")]]     = 1.
+                        Ψ[regime][eq[Symbol("eq_zl$i")], exo[Symbol("z_shl$i")]]      = 1.
+                    end
                 end
+            else
+                Γ1[regime][eq[ant_eq_mapping[key]], endo[Symbol(key, :_tl1)]] = 1.
+                Γ0[regime][eq[Symbol(:eq_, key, "l1")], endo[Symbol(key, :_tl1)]] = 1.
+                Ψ[regime][eq[Symbol( :eq_, key, "l1")], exo[Symbol(key, :_shl1)]] = 1.
+
+                if val > 1
+                    for i = 2:val
+                        Γ1[regime][eq[Symbol(:eq_, key, "l$(i-1)")], endo[Symbol(key, :_tl, "$i")]] = 1.
+                        Γ0[regime][eq[Symbol(:eq_, key, "l$i")], endo[Symbol(key, :_tl, "$i")]] = 1.
+                        Ψ[regime][eq[Symbol( :eq_, key, "l$i")], exo[Symbol(key, :_shl, "$i")]] = 1.
+                    end
                 end
             end
         end
