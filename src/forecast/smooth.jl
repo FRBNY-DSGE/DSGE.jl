@@ -119,24 +119,14 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
 
-    # Partition sample into pre- and post-ZLB regimes, and forecast regime
+    # Partition sample into regimes (including pre- and post-ZLB regimes).
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
     start_date = max(date_presample_start(m), df[1, :date])
-    regime_inds = regime_indices(m, data, start_date)
+    regime_inds = zlb_plus_regime_indices(m, data, start_date)
 
-    # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date)
-
-    # Select how many regimes needed from the matrices. Note this should be added
-    # to zlb_plus_regime_matrices as an argument, e.g. add regime_inds as an argument there explicitly.
-    # That way, we can rename zlb_plus_regime_matrices -> zlb_regime_matrices
-    TTTs = TTTs[1:length(regime_inds)]
-    RRRs = RRRs[1:length(regime_inds)]
-    CCCs = CCCs[1:length(regime_inds)]
-    ZZs  = ZZs[1:length(regime_inds)]
-    DDs  = DDs[1:length(regime_inds)]
-    QQs  = QQs[1:length(regime_inds)]
-    EEs  = EEs[1:length(regime_inds)]
+    # Get system matrices for each regime. Use n_regimes to omit unneeded regimes
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date;
+                                                                    n_regimes = length(regime_inds))
 
     # Initialize s_0 and P_0
     if isempty(s_0) || isempty(P_0)
