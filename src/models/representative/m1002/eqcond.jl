@@ -15,7 +15,7 @@ specified in their proper positions.
 * `Ψ`  (`n_states` x `n_shocks_exogenous`) holds coefficients of iid shocks.
 * `Π`  (`n_states` x `n_states_expectational`) holds coefficients of expectational states.
 """
-function eqcond(m::Model1002)
+function eqcond(m::Model1002, reg::Int)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -26,6 +26,13 @@ function eqcond(m::Model1002)
     C  = zeros(n_states(m))
     Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
     Π  = zeros(n_states(m), n_shocks_expectational(m))
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, reg)
+        end
+        #@eval (($(para.key)) = ModelConstructors.regime_val($(para), $(reg)))
+    end
 
     ### ENDOGENOUS STATES ###
 
