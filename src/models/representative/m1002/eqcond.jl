@@ -541,5 +541,10 @@ function eqcond(m::Model1002, reg::Int)
     Γ1[eq[:eq_ERktil], endo[:ERtil_k_t]] = 1.
     Π[eq[:eq_ERktil], ex[:ERktil_sh]]    = 1.
 
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
+    end
     return Γ0, Γ1, C, Ψ, Π
 end
