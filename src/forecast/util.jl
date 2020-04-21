@@ -38,7 +38,7 @@ function n_forecast_draws(m::AbstractDSGEModel, input_type::Symbol)
             size(dataset)[1]
         end
         return draws
-    elseif input_type == :prior
+    elseif input_type == :prior || input_type == :mode_draw_shocks
         return 5000
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
@@ -55,20 +55,27 @@ each of length equal to the number of forecast blocks. `block_inds[i]` is the
 range of indices for block `i` before thinning by `jstep` and
 `block_inds_thin[i]` is the range after thinning.
 """
-function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
+function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0, params::Vector{Float64} = Vector{Float64}(undef, 0))
 
-    if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
-        ndraws    = n_forecast_draws(m, :full)
+    if !isempty(params)
+        ndraws    = 1000
         jstep     = get_jstep(m, ndraws)
         start_ind = 1
         end_ind   = ndraws
-    elseif input_type == :subset
-        ndraws    = length(subset_inds)
-        jstep     = get_jstep(m, ndraws)
-        start_ind = first(subset_inds)
-        end_ind   = last(subset_inds)
     else
-        throw(ArgumentError("Cannot call forecast_block_inds with input_type = $input_type."))
+        if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
+            ndraws    = n_forecast_draws(m, input_type)
+            jstep     = get_jstep(m, ndraws)
+            start_ind = 1
+            end_ind   = ndraws
+        elseif input_type == :subset
+            ndraws    = length(subset_inds)
+            jstep     = get_jstep(m, ndraws)
+            start_ind = first(subset_inds)
+            end_ind   = last(subset_inds)
+        else
+            throw(ArgumentError("Cannot call forecast_block_inds with input_type = $input_type."))
+        end
     end
     all_inds = start_ind:jstep:end_ind
     end_ind_thin = convert(Int64, floor(end_ind / jstep))
