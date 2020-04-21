@@ -375,6 +375,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       FFRpeg::Float64 = -0.25/4,
                       H::Int = 4, bdd_fcast::Bool = true,
                       params::AbstractArray{Float64} = Vector{Float64}(undef, 0))
+                      bdd_fcast::Bool = true, params::AbstractArray{Float64} = Vector{Float64}(undef, 0))
 
     ### Common Setup
 
@@ -401,15 +402,17 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     if input_type in [:mode, :mean, :init]
 
         elapsed_time = @elapsed let
-            params = load_draws(m, input_type; verbose = verbose)
+            if isempty(params)
+                params = load_draws(m, input_type; verbose = verbose)
+            end
             forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
                                                 params, df, verbose = verbose,
                                                 shock_name = shock_name,
                                                 shock_var_name = shock_var_name,
                                                 shock_var_value = shock_var_value,
-                                                pegFFR = pegFFR,
-                                                FFRpeg = FFRpeg,
-                                                H = H)
+                                                regime_switching = regime_switching,
+                                                n_regimes = n_regimes, pegFFR = pegFFR,
+                                                FFRpeg = FFRpeg, H = H)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -465,7 +468,13 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             begin_time = time_ns()
 
             # Get to work!
-            params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+            if isempty(params)
+                params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+            elseif input_type == :mode_draw_shocks
+                ndraws = length(block_inds[block])
+                params = repeat(params, ndraws)
+            end
+
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                  param, df, verbose = verbose,
@@ -473,7 +482,9 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  use_filtered_shocks_in_shockdec,
                                                                  shock_name = shock_name,
                                                                  shock_var_name = shock_var_name,
-                                                                 shock_var_value = shock_var_value),
+                                                                 shock_var_value = shock_var_value,
+                                                                 regime_switching = regime_switching,
+                                                                 n_regimes = n_regimes),
                                       params)
 
             # Assemble outputs from this block and write to file

@@ -55,7 +55,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
             population_data, population_forecast = DataFrame(), DataFrame()
         else
             population_data, population_forecast = load_population_growth(m, verbose = verbose)
-            isempty(df) && (df = load_data(m, check_empty_columns = check_empty_columns, verbose = :none))
+            isempty(df) && (df = load_data(m, cond_type = cond_type,
+                                           check_empty_columns = check_empty_columns, verbose = :none))
         end
         for output_var in output_vars
             prod = get_product(output_var)
