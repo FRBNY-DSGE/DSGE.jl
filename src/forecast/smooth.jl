@@ -122,12 +122,13 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     # Partition sample into regimes (including pre- and post-ZLB regimes).
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
     start_date = max(date_presample_start(m), df[1, :date])
-    regime_inds, i_zlb_start = zlb_plus_regime_indices(m, data, start_date)
+    regime_inds, i_zlb_start, splice_zlb_regime = zlb_plus_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime. Use n_regimes to omit unneeded regimes
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date;
-                                                                    n_regimes = length(regime_inds),
-                                                                    ind_zlb_start = i_zlb_start)
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, length(regime_inds),
+                                                                    start_date;
+                                                                    ind_zlb_start = i_zlb_start,
+                                                                    splice_zlb_regime = splice_zlb_regime)
 
     # Initialize s_0 and P_0
     if isempty(s_0) || isempty(P_0)

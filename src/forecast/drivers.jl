@@ -817,8 +817,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histshocks
         end
 
+        start_date = max(date_presample_start(m), df[1, :date])
+        end_date   = prev_quarter(date_forecast_start(m))
         shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
-            shock_decompositions(m, system, histshocks_shockdec, df) :
+            shock_decompositions(m, system, histshocks_shockdec, start_date, end_date) :
             shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
@@ -846,8 +848,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
 
     if !isempty(dettrends_to_compute)
+        start_date = max(date_presample_start(m), df[1, :date])
+        end_date   = prev_quarter(date_forecast_start(m))
         dettrendstates, dettrendobs, dettrendpseudo = isa(system, RegimeSwitchingSystem) ?
-            deterministic_trends(m, system, initial_states, df) :
+            deterministic_trends(m, system, initial_states, start_date, end_date) :
             deterministic_trends(m, system, initial_states)
 
         forecast_output[:dettrendstates] = dettrendstates
