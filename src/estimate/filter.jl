@@ -97,12 +97,13 @@ function filter(m::AbstractDSGEModel, data::AbstractArray, system::RegimeSwitchi
     T = size(data, 2)
 
     # Partition sample into regimes, including the pre- and post-ZLB regimes.
-    regime_inds, i_zlb_start = zlb_plus_regime_indices(m, data, start_date)
+    regime_inds, i_zlb_start, splice_zlb_regime = zlb_plus_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date;
-                                                                    n_regimes = length(regime_inds),
-                                                                    ind_zlb_start = i_zlb_start)
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, length(regime_inds),
+                                                                    start_date;
+                                                                    ind_zlb_start = i_zlb_start,
+                                                                    splice_zlb_regime = splice_zlb_regime)
 
     # If s_0 and P_0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P_0
@@ -216,12 +217,13 @@ function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray,
 
     # Partition sample into regimes (including pre- and post-ZLB regimes).
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds, i_zlb_start = zlb_plus_regime_indices(m, data, start_date)
+    regime_inds, i_zlb_start, splice_zlb_regime = zlb_plus_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, start_date,
-                                                                    n_regimes = length(regime_inds),
-                                                                    ind_zlb_start = i_zlb_start)
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_plus_regime_matrices(m, system, length(regime_inds),
+                                                                    start_date;
+                                                                    ind_zlb_start = i_zlb_start,
+                                                                    splice_zlb_regime = splice_zlb_regime)
 
     # If s_0 and P_0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P_0
@@ -307,12 +309,13 @@ function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitch
 
     # Partition sample into regimes (including pre- and post-ZLB regimes).
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds, i_zlb_start = zlb_plus_regime_indices(m, data, start_date)
+    regime_inds, i_zlb_start, splice_zlb_regime = zlb_plus_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
-    Ts, Rs, Cs, Qs, Zs, Ds, Es = zlb_plus_regime_matrices(m, system, start_date;
-                                                          n_regimes = length(regime_inds),
-                                                          ind_zlb_start = i_zlb_start)
+    Ts, Rs, Cs, Qs, Zs, Ds, Es = zlb_plus_regime_matrices(m, system, length(regime_inds),
+                                                          start_date;
+                                                          ind_zlb_start = i_zlb_start,
+                                                          splice_zlb_regime = splice_zlb_regime)
 
     # Initialize s_0 and P_0
     if isempty(s_0) || isempty(P_0)

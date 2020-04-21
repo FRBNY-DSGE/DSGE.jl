@@ -260,7 +260,7 @@ function deterministic_trends(m::AbstractDSGEModel{S},
 
     # Now intersect these periods with regime indices
     start_date  = max(date_presample_start(m), df[1, :date])
-    regime_inds = zlb_plus_regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
+    regime_inds = regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
 
     first_regime = findfirst(map(x -> start_index in x, regime_inds))
     last_regime  = findfirst(map(x -> end_index in x,   regime_inds))
