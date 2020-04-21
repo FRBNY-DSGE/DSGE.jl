@@ -40,17 +40,19 @@ for i in 1:length(regime_dates_dicts)
     push!(regime_dates_ans, [ind1:(ind2 - 1), ind2:(ind3 - 1), ind3:T])
 end
 zlb_plus_regime_dates_ans = []
-push!(zlb_plus_regime_dates_ans, ([1:(izlb - 1), izlb:regime_dates_ans[1][1][end], regime_dates_ans[1][2], regime_dates_ans[1][3]], false))
+push!(zlb_plus_regime_dates_ans, ([1:(izlb - 1), izlb:regime_dates_ans[1][1][end], regime_dates_ans[1][2], regime_dates_ans[1][3]], 2, false))
 push!(zlb_plus_regime_dates_ans, ([regime_dates_ans[2][1], regime_dates_ans[2][2][1]:(izlb - 1),
-                                izlb:regime_dates_ans[2][2][end], regime_dates_ans[2][3]], false))
-push!(zlb_plus_regime_dates_ans, ([regime_dates_ans[3][1], regime_dates_ans[3][2], regime_dates_ans[2][3][1]:(izlb - 1),
-                                izlb:T], false))
-push!(zlb_plus_regime_dates_ans, ([regime_dates_ans[4][1], izlb:regime_dates_ans[4][2][end], regime_dates_ans[4][3]], true))
-push!(zlb_plus_regime_dates_ans, ([regime_dates_ans[5][1], regime_dates_ans[5][2], izlb:T], true))
-push!(zlb_plus_regime_dates_ans, (regime_dates_ans[6], true))
+                                izlb:regime_dates_ans[2][2][end], regime_dates_ans[2][3]], 3, false))
+push!(zlb_plus_regime_dates_ans, ([regime_dates_ans[3][1], regime_dates_ans[3][2], regime_dates_ans[3][3][1]:(izlb - 1),
+                                izlb:T], 4, false))
+push!(zlb_plus_regime_dates_ans, ([regime_dates_ans[4][1], izlb:regime_dates_ans[4][2][end], regime_dates_ans[4][3]], 2, true))
+push!(zlb_plus_regime_dates_ans, ([regime_dates_ans[5][1], regime_dates_ans[5][2], izlb:T], 3, true))
+push!(zlb_plus_regime_dates_ans, ([1:(length(regime_dates_ans[6][1])),
+                                   (length(regime_dates_ans[6][1]) + 1):(length(regime_dates_ans[6][2]) + length(regime_dates_ans[6][1])),
+                                   (length(regime_dates_ans[6][2]) + length(regime_dates_ans[6][1]) + 1):regime_dates_ans[6][end][end]], 1, true))
 push!(zlb_plus_regime_dates_ans, ([1:(length(regime_dates_ans[7][1])),
                                    (length(regime_dates_ans[7][1]) + 1):(length(regime_dates_ans[7][2]) + length(regime_dates_ans[7][1])),
-                                   (length(regime_dates_ans[7][2]) + length(regime_dates_ans[7][1]) + 1):regime_dates_ans[7][end][end]], true))
+                                   (length(regime_dates_ans[7][2]) + length(regime_dates_ans[7][1]) + 1):regime_dates_ans[7][end][end]], 1, true))
 
 out_regime_dates = []
 out_zlb_plus_regime_dates = []
@@ -58,10 +60,18 @@ data = df_to_matrix(m, df)
 for i in 1:length(regime_dates_dicts)
     m <= Setting(:regime_dates, regime_dates_dicts[i])
     push!(out_regime_dates, DSGE.regime_indices(m))
-    if i != 7
+    if i == 7
+        m <= Setting(:date_zlb_start, DSGE.next_quarter(date_zlb_start(m)))
+        m <= Setting(:date_presample_start, date_zlb_start(m))
         push!(out_zlb_plus_regime_dates, DSGE.zlb_plus_regime_indices(m, data))
+        m <= Setting(:date_zlb_start, DSGE.prev_quarter(date_zlb_start(m)))
+        m <= Setting(:date_presample_start, df[1, :date])
+    elseif i == 6
+        m <= Setting(:date_presample_start, date_zlb_start(m))
+        push!(out_zlb_plus_regime_dates, DSGE.zlb_plus_regime_indices(m, data))
+        m <= Setting(:date_presample_start, df[1, :date])
     else
-        push!(out_zlb_plus_regime_dates, DSGE.zlb_plus_regime_indices(m, data, regime_dates_dicts[7][1]))
+        push!(out_zlb_plus_regime_dates, DSGE.zlb_plus_regime_indices(m, data))
     end
 end
 
@@ -70,8 +80,7 @@ end
         @test a == b
     end
     for (a, b) in zip(zlb_plus_regime_dates_ans, out_zlb_plus_regime_dates)
-        @test a[1] == b[1]
-        @test a[2] == b[2]
+        @test a == b
     end
 end
 

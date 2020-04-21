@@ -343,7 +343,7 @@ Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none, check_empty_columns::Bool = true)
     filename = get_data_filename(m, cond_type)
     df       = CSV.read(filename, copycols=true)
-    @show names(df)
+
     # Convert date column from string to Date
     df[!,:date] = map(Date, df[!,:date])
 

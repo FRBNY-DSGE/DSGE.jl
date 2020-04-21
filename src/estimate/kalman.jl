@@ -137,7 +137,7 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
         elseif 0 < subtract_quarters(date_zlb_start(m), start_date) < T
             regime_inds = Vector{UnitRange{Int64}}(undef, length(n_regime_periods) + 1)
 
-            n_nozlb_periods  = subtract_quarters(date_zlb_start(m), start_date) # number of periods since start date for start of ZLB
+            n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date) # number of periods since start date for start of ZLB
 
             # Get index of next regime after ZLB starts.
             # Note that it cannot be 1 b/c the first regime starts at the start date
@@ -172,8 +172,8 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
                     for reg in 2:i_splice_zlb - 2 # if i_splice_zlb == 3, then this loop does not run
                         regime_inds[reg] = (n_regime_periods[reg] + 1):n_regime_periods[reg + 1]
                     end
-                    regime_inds[i_splice_zlb - 1] = (n_regime_periods[i_splice_zlb - 2] + 1):n_nozlb_periods
-                    regime_inds[i_splice_zlb]     = (n_nozlb_periods + 1):(n_regime_periods[i_splice_zlb - 1])
+                    regime_inds[i_splice_zlb - 1] = (n_regime_periods[i_splice_zlb - 1] + 1):n_nozlb_periods
+                    regime_inds[i_splice_zlb]     = (n_nozlb_periods + 1):(n_regime_periods[i_splice_zlb])
 
                     i_zlb_start = i_splice_zlb
 
@@ -184,15 +184,17 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
                     regime_inds[end] = (n_regime_periods[end] + 1):T
                 else # post- ZLB regimes start in the very first regime specified by user
                     regime_inds[1] = 1:n_nozlb_periods
-                    regime_inds[2] = (n_nozlb_periods + 1):n_regime_periods[1]
+                    regime_inds[2] = (n_nozlb_periods + 1):n_regime_periods[2]
 
                     i_zlb_start = 2
 
                     # Index reg + 1 b/c spliced pre- and post-ZLB regime in
-                    for reg in 2:length(n_regime_periods)
-                        regime_inds[reg + 1] = (n_regime_periods[reg - 1] + 1):n_regime_periods[reg]
+                    for reg in 2:(length(n_regime_periods) - 1)
+                        regime_inds[reg + 1] = (n_regime_periods[reg] + 1):n_regime_periods[reg + 1]
                     end
+                    regime_inds[end] = (n_regime_periods[end] + 1):T
                 end
+                splice_zlb_regime = false
             end
         else
             # This is the case that date_zlb_start <= start_date so the first regime is the post-ZLB regime (no pre-ZLB)
@@ -204,11 +206,15 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
             regime_inds[end] = (n_regime_periods[end] + 1):T
 
             i_zlb_start = 1 # start immediately in post-ZLB
+
+            splice_zlb_regime = date_zlb_start(m) == start_date ? true : false
         end
     else # Empty, so we ignore regime switching
         regime_inds = UnitRange{Int64}[1:T]
+        i_zlb_start = 0
+        splice_zlb_regime = false
     end
-    return regime_inds, i_zlb_start, false
+    return regime_inds, i_zlb_start, splice_zlb_regime
 end
 
 """
