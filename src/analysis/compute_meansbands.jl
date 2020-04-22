@@ -666,28 +666,26 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     yt_index = get_yt_index(m1, product)
     data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
-    transformed_series1 = mb_reverse_transform(fcast_series1, transform1, product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
-                                              pop_growth = pop_growth)
-    transformed_series2 = mb_reverse_transform(fcast_series2, transform2, product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
-                                              pop_growth = pop_growth)
-    @show size(transformed_series1)
-    @show size(transformed_series2)
-    if size(transformed_series1, 1) < size(transformed_series2, 1)
-        mult = Int(size(transformed_series2, 1) / size(transformed_series1, 1))
-        transformed_series1 = repeat(transformed_series1, mult, 1)
+
+    @show size(fcast_series1)
+    @show size(fcast_series2)
+    if size(fcast_series1, 1) < size(fcast_series2, 1)
+        mult = Int(size(fcast_series2, 1) / size(fcast_series1, 1))
+        fcast_series1 = repeat(fcast_series1, mult, 1)
     else
-        mult = Int(size(transformed_series1, 1) / size(transformed_series2, 1))
-        transformed_series2 = repeat(transformed_series2, mult, 1)
+        mult = Int(size(fcast_series1, 1) / size(fcast_series2, 1))
+        fcast_series2 = repeat(fcast_series2, mult, 1)
     end
-    @show size(transformed_series1)
-    @show size(transformed_series2)
+    @show size(fcast_series1)
+    @show size(fcast_series2)
 
-    transformed_series = 0.25*transformed_series1 + 0.75*transformed_series2
+    fcast_series= 0.25*fcast_series1 + 0.75*fcast_series2
 
+
+    transformed_series = mb_reverse_transform(fcast_series, transform1, product, class,
+                                              y0_index = y0_index, yt_index = yt_index,
+                                              data = data,
+                                              pop_growth = pop_growth)
 
     # Compute means and bands
     means = vec(mean(transformed_series, dims= 1))
