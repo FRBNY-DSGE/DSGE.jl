@@ -686,7 +686,7 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     @show size(transformed_series1)
     @show size(transformed_series2)
 
-    transformed_series = 0.1*transformed_series1 + 0.9*transformed_series2
+    transformed_series = 0.25*transformed_series1 + 0.75*transformed_series2
 
 
     # Compute means and bands
