@@ -427,12 +427,14 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel, input_
     return means, bands
 end
 
-function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
-                            input_type1::Symbol, input_type2::Symbol,
-                            cond_type1::Symbol, cond_type2::Symbol,
+function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel, m3::AbstractDSGEModel,
+                            input_type1::Symbol, input_type2::Symbol, input_type3::Symbol,
+                            cond_type1::Symbol, cond_type2::Symbol, cond_type3::Symbol,
                             output_vars::Vector{Symbol};
                             forecast_string1::String = "",
                             forecast_string2::String = "",
+                            forecast_string3::String = "",
+                            weights::Vector{Float64} = Vector{Float64}(undef, 0),
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
                             check_empty_columns::Bool = true,
                             kwargs...)
@@ -468,10 +470,12 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
             end
 
             # Compute means and bands
-            mb = compute_meansbands(m1, m2, input_type1, input_type2,
-                                    cond_type1, cond_type2, output_var, df;
+            mb = compute_meansbands(m1, m2, m3, input_type1, input_type2, input_type3,
+                                    cond_type1, cond_type2, cond_type3, output_var, df;
                                     forecast_string1 = forecast_string1,
                                     forecast_string2 = forecast_string2,
+                                    forecast_string3 = forecast_string3,
+                                    weights = weights,
                                     population_data = population_data,
                                     population_forecast = population_forecast,
                                     verbose = verbose,
@@ -488,12 +492,14 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     end
 end
 
-function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
-                            input_type1::Symbol, input_type2::Symbol,
-                            cond_type1::Symbol, cond_type2::Symbol,
+function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel, m3::AbstractDSGEModel,
+                            input_type1::Symbol, input_type2::Symbol, input_type3::Symbol,
+                            cond_type1::Symbol, cond_type2::Symbol, cond_type3::Symbol,
                             output_var::Symbol, df::DataFrame;
                             forecast_string1::String = "",
                             forecast_string2::String = "",
+                            forecast_string3::String = "",
+                            weights::Vector{Float64} = Vector{Float64}(undef, 0),
                             population_data::DataFrame = DataFrame(),
                             population_forecast::DataFrame = DataFrame(),
                             verbose::Symbol = :none,
@@ -517,11 +523,13 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
         # pmap produces an error for trendobs sometimes, so just doing this iteratively
         mb_vec = Vector{Any}(undef,length(variable_names))
         for i in 1:length(mb_vec)
-            mb_vec[i] = compute_meansbands(m1, m2, input_type1, input_type2,
-                                           cond_type1, cond_type2, output_var,
+            mb_vec[i] = compute_meansbands(m1, m2, m3, input_type1, input_type2, input_type3,
+                                           cond_type1, cond_type2, cond_type3, output_var,
                                            variable_names[i], df; pop_growth = pop_growth,
                                            forecast_string1 = forecast_string1,
                                            forecast_string2 = forecast_string2,
+                                           forecast_string3 = forecast_string3,
+                                           weights = weights,
                                            kwargs...)
         end
         # mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
@@ -584,12 +592,14 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     return mb
 end
 
-function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
-                            input_type1::Symbol, input_type2::Symbol,
-                            cond_type1::Symbol, cond_type2::Symbol,
+function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel, m3::AbstractDSGEModel,
+                            input_type1::Symbol, input_type2::Symbol, input_type3::Symbol,
+                            cond_type1::Symbol, cond_type2::Symbol, cond_type3::Symbol,
                             output_var::Symbol, var_name::Symbol, df::DataFrame;
                             forecast_string1::String = "",
                             forecast_string2::String = "",
+                            forecast_string3::String = "",
+                            weights::Vector{Float64} = Vector{Float64}(undef, 0),
                             pop_growth::AbstractVector{Float64} = Float64[],
                             shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
@@ -612,6 +622,9 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     fcast_series2, transform2 = read_forecast_output(m2, input_type2, cond_type2,
                                                    output_var, var_name, shock_name,
                                                    forecast_string = forecast_string2)
+    fcast_series3, transform3 = read_forecast_output(m3, input_type3, cond_type3,
+                                                     output_var, var_name, shock_name,
+                                                     forecast_string = forecast_string3)
 
     # Reverse transform
     y0_index = get_y0_index(m1, product)
@@ -856,12 +869,17 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
 
     fcast_series = 0.25*fcast_series1 + 0.75*fcast_series2=#
 
-    if size(fcast_series1, 1) > 1 && size(fcast_series2, 1) > 1
-        sampled1 = sample(1:size(fcast_series1, 1), Int(20000*.1))
-        sampled2 = sample(1:size(fcast_series2, 1), Int(20000*.9))
-        fcast_series = vcat(fcast_series1[sampled1, :], fcast_series2[sampled2, :])
+    if size(fcast_series1, 1) > 1 && size(fcast_series2, 1) > 1 &&
+        size(fcast_series3, 1) > 1
+        sampled1 = sample(1:size(fcast_series1, 1), Int(20000*weights[1]))
+        sampled2 = sample(1:size(fcast_series2, 1), Int(20000*weights[2]))
+        sampled3 = sample(1:size(fcast_series3, 1), Int(20000*weights[3]))
+        fcast_series = vcat(fcast_series1[sampled1, :],
+                            fcast_series2[sampled2, :],
+                            fcast_series3[sampled3, :])
     else
-        fcast_series = .1*fcast_series1 + .9*fcast_series2
+        fcast_series = weights[1]*fcast_series1 + weights[2]*fcast_series2 +
+            weights[3]*fcast_series3
     end
 
 
