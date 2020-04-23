@@ -857,11 +857,11 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     fcast_series = 0.25*fcast_series1 + 0.75*fcast_series2=#
 
     if size(fcast_series1, 1) > 1 && size(fcast_series2, 1) > 1
-        sampled1 = sample(1:size(fcast_series1, 1), Int(20000*.25))
-        sampled2 = sample(1:size(fcast_series2, 1), Int(20000*.75))
+        sampled1 = sample(1:size(fcast_series1, 1), Int(20000*.1))
+        sampled2 = sample(1:size(fcast_series2, 1), Int(20000*.9))
         fcast_series = vcat(fcast_series1[sampled1, :], fcast_series2[sampled2, :])
     else
-        fcast_series = .25*fcast_series1 + .75*fcast_series2
+        fcast_series = .1*fcast_series1 + .9*fcast_series2
     end
 
 
