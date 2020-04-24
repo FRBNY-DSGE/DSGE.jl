@@ -156,7 +156,7 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
             if check_zlb_coincide == n_nozlb_periods
                 # In this case, the post-ZLB coincides with a specific regime,
                 # so we return the regime indices w/out splicing the ZLB in.
-                return regime_indices(m, start_date, iterate_quarters(start_date, T - 1)), i_zlb_start, true
+                return regime_indices(m, start_date, iterate_quarters(start_date, T - 1)), i_zlb_start, false
             else
                 # Populate vector of regime indices
                 if isnothing(i_splice_zlb) # post-ZLB is the last regime
@@ -194,7 +194,7 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
                     end
                     regime_inds[end] = (n_regime_periods[end] + 1):T
                 end
-                splice_zlb_regime = false
+                splice_zlb_regime = true
             end
         else
             # This is the case that date_zlb_start <= start_date so the first regime is the post-ZLB regime (no pre-ZLB)
@@ -207,7 +207,7 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
 
             i_zlb_start = 1 # start immediately in post-ZLB
 
-            splice_zlb_regime = date_zlb_start(m) == start_date ? true : false
+            splice_zlb_regime = date_zlb_start(m) == start_date ? false : true
         end
     else # Empty, so we ignore regime switching
         regime_inds = UnitRange{Int64}[1:T]
@@ -343,6 +343,7 @@ function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchi
                     QQ_preZLB[shock_inds, shock_inds] = system[1, :QQ][shock_inds, shock_inds]
                 end
                 QQ_postZLB = copy(system[1, :QQ])
+
                 TTTs[1:2] = [system[1, :TTT], system[1, :TTT]]::Vector{Matrix{S}}
                 RRRs[1:2] = [system[1, :RRR], system[1, :RRR]]::Vector{Matrix{S}}
                 CCCs[1:2] = [system[1, :CCC], system[1, :CCC]]::Vector{Vector{S}}
@@ -352,28 +353,31 @@ function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchi
                 QQs[1]    = QQ_preZLB
                 QQs[2]    = QQ_postZLB
 
-                input = 2:n_reg
-                TTTs[3:end] = map(i -> system[i, :TTT], input)::Vector{Matrix{S}}
-                RRRs[3:end] = map(i -> system[i, :RRR], input)::Vector{Matrix{S}}
-                CCCs[3:end] = map(i -> system[i, :CCC], input)::Vector{Vector{S}}
-                ZZs[3:end]  = map(i -> system[i, :ZZ],  input)::Vector{Matrix{S}}
-                QQs[3:end]  = map(i -> system[i, :QQ],  input)::Vector{Matrix{S}}
-                DDs[3:end]  = map(i -> system[i, :DD],  input)::Vector{Vector{S}}
-                EEs[3:end]  = map(i -> system[i, :EE],  input)::Vector{Matrix{S}}
-            elseif ind_zlb_start > 1
+                if n_reg >= 3
+                    input = 2:(n_reg - 1) # minus 1 b/c spliced in a ZLB regime
+
+                    TTTs[3:end] = [system[i, :TTT] for i in input]::Vector{Matrix{S}}
+                    RRRs[3:end] = [system[i, :RRR] for i in input]::Vector{Matrix{S}}
+                    CCCs[3:end] = [system[i, :CCC] for i in input]::Vector{Vector{S}}
+                    ZZs[3:end]  = [system[i, :ZZ] for i in input]::Vector{Matrix{S}}
+                    DDs[3:end]  = [system[i, :DD] for i in input]::Vector{Vector{S}}
+                    QQs[3:end]  = [system[i, :QQ] for i in input]::Vector{Matrix{S}}
+                    EEs[3:end]  = [system[i, :EE] for i in input]::Vector{Matrix{S}}
+                end
+            elseif ind_zlb_start >= 3
                 # Populate matrices for regimes before the ZLB split
                 pre_zlb_input = 1:(ind_zlb_start - 2) # minus 2 b/c ind_zlb_start - 1 will be the pre-ZLB regime
                 splice_reg    = ind_zlb_start - 1
 
-                TTTs[pre_zlb_input] = map(i -> system[i, :TTT], pre_zlb_input)::Vector{Matrix{S}}
-                RRRs[pre_zlb_input] = map(i -> system[i, :RRR], pre_zlb_input)::Vector{Matrix{S}}
-                CCCs[pre_zlb_input] = map(i -> system[i, :CCC], pre_zlb_input)::Vector{Vector{S}}
-                ZZs[pre_zlb_input]  = map(i -> system[i, :ZZ],  pre_zlb_input)::Vector{Matrix{S}}
-                DDs[pre_zlb_input]  = map(i -> system[i, :DD],  pre_zlb_input)::Vector{Vector{S}}
-                EEs[pre_zlb_input]  = map(i -> system[i, :EE],  pre_zlb_input)::Vector{Matrix{S}}
+                TTTs[pre_zlb_input] = [system[i, :TTT] for i in pre_zlb_input]::Vector{Matrix{S}}
+                RRRs[pre_zlb_input] = [system[i, :RRR] for i in pre_zlb_input]::Vector{Matrix{S}}
+                CCCs[pre_zlb_input] = [system[i, :CCC] for i in pre_zlb_input]::Vector{Vector{S}}
+                ZZs[pre_zlb_input]  = [system[i, :ZZ] for i in pre_zlb_input]::Vector{Matrix{S}}
+                DDs[pre_zlb_input]  = [system[i, :DD] for i in pre_zlb_input]::Vector{Vector{S}}
+                EEs[pre_zlb_input]  = [system[i, :EE] for i in pre_zlb_input]::Vector{Matrix{S}}
 
                 if n_mon_anticipated_shocks(m) == 0
-                    QQs[pre_zlb_input] = map(i -> system[i, :QQ], pre_zlb_input)::Vector{Matrix{S}}
+                    QQs[pre_zlb_input] = [system[i, :QQ] for i in pre_zlb_input]::Vector{Matrix{S}}
                 else
                     for i in pre_zlb_input
                         QQ_preZLB                         = zeros(size(system[i, :QQ]))
@@ -397,61 +401,65 @@ function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchi
                 DDs[splice_reg:ind_zlb_start]  = [system[splice_reg, :DD],  system[splice_reg, :DD]]::Vector{Vector{S}}
                 EEs[splice_reg:ind_zlb_start]  = [system[splice_reg, :EE],  system[splice_reg, :EE]]::Vector{Matrix{S}}
                 QQs[splice_reg]     = QQ_preZLB
-                QQs[splice_reg + 1] = QQ_postZLB
+                QQs[ind_zlb_start] = QQ_postZLB
 
                 # Handle regimes after the ZLB split
-                post_zlb_input = (ind_zlb_start + 1):n_reg
+                if n_reg >= ind_zlb_start + 1
+                    post_zlb_input = ind_zlb_start:(n_reg - 1) # minus 1 to both b/c spliced in the ZLB regime
 
-                TTTs[post_zlb_input] = map(i -> system[i, :TTT], post_zlb_input)::Vector{Matrix{S}}
-                RRRs[post_zlb_input] = map(i -> system[i, :RRR], post_zlb_input)::Vector{Matrix{S}}
-                CCCs[post_zlb_input] = map(i -> system[i, :CCC], post_zlb_input)::Vector{Vector{S}}
-                ZZs[post_zlb_input]  = map(i -> system[i, :ZZ],  post_zlb_input)::Vector{Matrix{S}}
-                QQs[post_zlb_input]  = map(i -> system[i, :QQ],  post_zlb_input)::Vector{Matrix{S}}
-                DDs[post_zlb_input]  = map(i -> system[i, :DD],  post_zlb_input)::Vector{Vector{S}}
-                EEs[post_zlb_input]  = map(i -> system[i, :EE],  post_zlb_input)::Vector{Matrix{S}}
+                    TTTs[4:end] = [system[i, :TTT] for i in post_zlb_input]::Vector{Matrix{S}}
+                    RRRs[4:end] = [system[i, :RRR] for i in post_zlb_input]::Vector{Matrix{S}}
+                    CCCs[4:end] = [system[i, :CCC] for i in post_zlb_input]::Vector{Vector{S}}
+                    ZZs[4:end]  = [system[i, :ZZ] for i in post_zlb_input]::Vector{Matrix{S}}
+                    DDs[4:end]  = [system[i, :DD] for i in post_zlb_input]::Vector{Vector{S}}
+                    QQs[4:end]  = [system[i, :QQ] for i in post_zlb_input]::Vector{Matrix{S}}
+                    EEs[4:end]  = [system[i, :EE] for i in post_zlb_input]::Vector{Matrix{S}}
+                end
              end
         else
-            pre_zlb_input = 1:(ind_zlb_start - 1) # minus 1 b/c post-ZLB coincides with a regime
+            if ind_zlb_start > 1
+                pre_zlb_input = 1:(ind_zlb_start - 1) # minus 1 b/c post-ZLB coincides with a regime
 
-            TTTs[pre_zlb_input] = map(i -> system[i, :TTT], pre_zlb_input)::Vector{Matrix{S}}
-            RRRs[pre_zlb_input] = map(i -> system[i, :RRR], pre_zlb_input)::Vector{Matrix{S}}
-            CCCs[pre_zlb_input] = map(i -> system[i, :CCC], pre_zlb_input)::Vector{Vector{S}}
-            ZZs[pre_zlb_input]  = map(i -> system[i, :ZZ],  pre_zlb_input)::Vector{Matrix{S}}
-            DDs[pre_zlb_input]  = map(i -> system[i, :DD],  pre_zlb_input)::Vector{Vector{S}}
-            EEs[pre_zlb_input]  = map(i -> system[i, :EE],  pre_zlb_input)::Vector{Matrix{S}}
+                TTTs[pre_zlb_input] = [system[i, :TTT] for i in pre_zlb_input]::Vector{Matrix{S}}
+                RRRs[pre_zlb_input] = [system[i, :RRR] for i in pre_zlb_input]::Vector{Matrix{S}}
+                CCCs[pre_zlb_input] = [system[i, :CCC] for i in pre_zlb_input]::Vector{Vector{S}}
+                ZZs[pre_zlb_input]  = [system[i, :ZZ] for i in pre_zlb_input]::Vector{Matrix{S}}
+                DDs[pre_zlb_input]  = [system[i, :DD] for i in pre_zlb_input]::Vector{Vector{S}}
+                EEs[pre_zlb_input]  = [system[i, :EE] for i in pre_zlb_input]::Vector{Matrix{S}}
 
-            if n_mon_anticipated_shocks(m) == 0
-                QQs[pre_zlb_input] = map(i -> system[i, :QQ], pre_zlb_input)::Vector{Matrix{S}}
-            else
-                for i in pre_zlb_input
-                    QQ_preZLB                         = zeros(size(system[i, :QQ]))
-                    QQ_preZLB[shock_inds, shock_inds] = system[i, :QQ][shock_inds, shock_inds]
-                    QQs[i]                            = QQ_preZLB
+                if n_mon_anticipated_shocks(m) == 0
+                    QQs[pre_zlb_input] = Matrix{S}[system[i, :QQ] for i in pre_zlb_input]::Vector{Matrix{S}}
+                else
+                    for i in pre_zlb_input
+                        QQ_preZLB                         = zeros(size(system[i, :QQ]))
+                        QQ_preZLB[shock_inds, shock_inds] = system[i, :QQ][shock_inds, shock_inds]
+                        QQs[i]                            = QQ_preZLB
+                    end
                 end
             end
 
             # Handle regimes after the ZLB split
-            post_zlb_input = ind_zlb_start:n_reg
+            post_zlb_input = ind_zlb_start:n_reg # no minus 1 b/c didn't splice in the regime
 
-            TTTs[post_zlb_input] = map(i -> system[i, :TTT], post_zlb_input)::Vector{Matrix{S}}
-            RRRs[post_zlb_input] = map(i -> system[i, :RRR], post_zlb_input)::Vector{Matrix{S}}
-            CCCs[post_zlb_input] = map(i -> system[i, :CCC], post_zlb_input)::Vector{Vector{S}}
-            ZZs[post_zlb_input]  = map(i -> system[i, :ZZ],  post_zlb_input)::Vector{Matrix{S}}
-            QQs[post_zlb_input]  = map(i -> system[i, :QQ],  post_zlb_input)::Vector{Matrix{S}}
-            DDs[post_zlb_input]  = map(i -> system[i, :DD],  post_zlb_input)::Vector{Vector{S}}
-            EEs[post_zlb_input]  = map(i -> system[i, :EE],  post_zlb_input)::Vector{Matrix{S}}
+            TTTs[post_zlb_input] = [system[i, :TTT] for i in post_zlb_input]::Vector{Matrix{S}}
+            RRRs[post_zlb_input] = [system[i, :RRR] for i in post_zlb_input]::Vector{Matrix{S}}
+            CCCs[post_zlb_input] = [system[i, :CCC] for i in post_zlb_input]::Vector{Vector{S}}
+            ZZs[post_zlb_input]  = [system[i, :ZZ] for i in post_zlb_input]::Vector{Matrix{S}}
+            DDs[post_zlb_input]  = [system[i, :DD] for i in post_zlb_input]::Vector{Vector{S}}
+            QQs[post_zlb_input]  = [system[i, :QQ] for i in post_zlb_input]::Vector{Matrix{S}}
+            EEs[post_zlb_input]  = [system[i, :EE] for i in post_zlb_input]::Vector{Matrix{S}}
          end
     elseif date_zlb_start(m) < start_date
         # We always use post-ZLB matrices in this case,
         # hence we just return the matrices of the `RegimeSwitchingSystem`
         input = 1:n_reg
-        TTTs = map(i -> system[i, :TTT], input)::Vector{Matrix{S}}
-        RRRs = map(i -> system[i, :RRR], input)::Vector{Matrix{S}}
-        CCCs = map(i -> system[i, :CCC], input)::Vector{Vector{S}}
-        ZZs  = map(i -> system[i, :ZZ],  input)::Vector{Matrix{S}}
-        QQs  = map(i -> system[i, :QQ],  input)::Vector{Matrix{S}}
-        DDs  = map(i -> system[i, :DD],  input)::Vector{Vector{S}}
-        EEs  = map(i -> system[i, :EE],  input)::Vector{Matrix{S}}
+        TTTs = [system[i, :TTT] for i in input]::Vector{Matrix{S}}
+        RRRs = [system[i, :RRR] for i in input]::Vector{Matrix{S}}
+        CCCs = [system[i, :CCC] for i in input]::Vector{Vector{S}}
+        ZZs  = [system[i, :ZZ] for i in input]::Vector{Matrix{S}}
+        DDs  = [system[i, :DD] for i in input]::Vector{Vector{S}}
+        QQs  = [system[i, :QQ] for i in input]::Vector{Matrix{S}}
+        EEs  = [system[i, :EE] for i in input]::Vector{Matrix{S}}
     end
 
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
