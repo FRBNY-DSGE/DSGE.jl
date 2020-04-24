@@ -40,7 +40,7 @@ function measurement(m::Model1002{T},
     for para in m.parameters
         if !isempty(para.regimes)
             ModelConstructors.toggle_regime!(para, reg)
-            @show para.value
+            # @show para.value
         end
         #@eval (($(para.key)) = ModelConstructors.regime_val($(para), $(reg)))
     end
