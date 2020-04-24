@@ -579,7 +579,7 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel, m3::Ab
 
     # Write to file
     filepath = get_meansbands_output_file(m1, input_type1, cond_type1, output_var,
-                                          forecast_string = forecast_string1*forecast_string2)
+                                          forecast_string = forecast_string1*forecast_string2*forecast_string3*join(map(x->string(x), weights), "_"))
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
     JLD2.jldopen(filepath, true, true, true, IOStream) do file
