@@ -465,5 +465,5 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudos[reg][pseudo[:λ_w_t], endo[:λ_w_t]] = 1.
         end
     end
-    return [PseudoMeasurement(ZZ_pseudos[1], DD_pseudos[1]), PseudoMeasurement(ZZ_pseudos[2], DD_pseudos[2])]
+    return [PseudoMeasurement(ZZ_pseudos[i], DD_pseudos[i]) for i in 1:n_reg]
 end
