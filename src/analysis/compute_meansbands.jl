@@ -533,7 +533,7 @@ function compute_meansbands(models::Vector,
         bands = Dict{Symbol,DataFrame}()
 
         for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)
-            means[!,var_name] = var_means
+            means[!,var_name] = vec(var_means)
             bands[var_name] = var_bands
             bands[var_name][!,:date] = date_list
         end
@@ -857,28 +857,24 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
 
     fcast_series = 0.25*fcast_series1 + 0.75*fcast_series2=#
 
-    fcast_series = Vector(undef, 0)
+    fcast_series = Matrix{Float64}(undef, 0, size(fcast_seriess[1], 2))
     if all(map(x->size(x, 1) > 1, fcast_seriess))
-        for i in length(models)
+        for i in 1:length(models)
             sampled = sample(1:size(fcast_seriess[i], 1), Int(20000*weights[i]))
-            fcast_series = vcat(fcast_series, fcast_seriess[i][sampled[i], :])
+            fcast_series = vcat(fcast_series, fcast_seriess[i][sampled, :])
         end
-        fcast_series = Matrix{Float64}(fcast_series')
     else
         fcast_series = zeros(size(fcast_seriess[1]))
-        for i in length(models)
+        for i in 1:length(models)
             fcast_series = fcast_series + weights[i]*fcast_seriess[i]
         end
     end
-    #fcast_series = vec(fcast_series)
-    @show size(fcast_series)
-    @show fcast_series
+
     transformed_series = mb_reverse_transform(fcast_series, transforms[1], product, class,
                                               y0_index = y0_index, yt_index = yt_index,
                                               data = data,
                                               pop_growth = pop_growth)
-    @show size(transformed_series)
-    @show transformed_series
+
     # Compute means and bands
     means = vec(mean(transformed_series, dims= 1))
     bands = if product in [:shockdec, :dettrend, :trend] && !compute_shockdec_bands
