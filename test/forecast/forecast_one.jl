@@ -1,6 +1,6 @@
 using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates
 path = dirname(@__FILE__)
-@assert false
+
 # Initialize model object
 m = AnSchorfheide(testing = true)
 m <= Setting(:cond_id, 0)
@@ -342,16 +342,6 @@ end
 @test m_rs3[:α].value == m[:α].value # check the regimes match after toggling
 
 # Read expected output
-# forecast_one_out = load("$path/../reference/forecast_one_out.jld2")
-# JLD2.jldopen("$path/../reference/forecast_one_out2.jld2", true, true, true, IOStream) do file
-#     write(file, "exp_out_true_regime_switch_full", forecast_one_out["exp_out_true_regime_switch_full"])
-# end
-# JLD2.jldopen("$path/../reference/forecast_one_out.jld2", true, true, true, IOStream) do file
-#     write(file, "exp_out", forecast_one_out["exp_out"])
-#     write(file, "exp_out_regime_switch", forecast_one_out["exp_out_regime_switch"])
-#     write(file, "exp_out_true_regime_switch", forecast_one_out["exp_out_true_regime_switch"])
-#     write(file, "exp_out_regime_switch_full", forecast_one_out["exp_out_regime_switch_full"])
-# end
 exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
     read(file, "exp_out_regime_switch"), read(file, "exp_out_true_regime_switch")
 end
