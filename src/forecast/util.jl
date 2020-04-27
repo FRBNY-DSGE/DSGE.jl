@@ -64,7 +64,9 @@ function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_in
         end_ind   = ndraws
     else
         if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
-            ndraws    = n_forecast_draws(m, input_type)
+            regime_switching = (haskey(m.settings, :regime_switching) && haskey(m.settings, :regime_switching_ndraws)) ?
+                get_setting(m, :regime_switching) : false
+            ndraws    = regime_switching ? get_setting(m, :regime_switching_ndraws) : n_forecast_draws(m, input_type)
             jstep     = get_jstep(m, ndraws)
             start_ind = 1
             end_ind   = ndraws

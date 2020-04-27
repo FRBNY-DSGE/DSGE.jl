@@ -235,7 +235,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
                     # all draws
                     if !isnull(block_number) && get(block_number) == 1
                         # Determine forecast output size
-                        dims  = get_forecast_output_dims(m, input_type, var; subset_inds = subset_inds)
+                        dims = get_forecast_output_dims(m, input_type, var; subset_inds = subset_inds)
                         block_size = forecast_block_size(m)
                         chunk_dims = collect(dims)
                         chunk_dims[1] = block_size
