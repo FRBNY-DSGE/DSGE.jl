@@ -1,3 +1,4 @@
+using DSGE, FileIO, Random, Test, ModelConstructors
 m = AnSchorfheide()
 sys = compute_system(m)
 path = dirname(@__FILE__)
@@ -72,7 +73,11 @@ end
 end
 
 @testset "Testing standardize_shocks" begin
-    @test DSGE.standardize_shocks(ones(3, 3), sys[:QQ]) ==ones(3,3) ./ sqrt.(diag(sys[:QQ]))
+    @test DSGE.standardize_shocks(ones(3, 3), sys[:QQ]) == ones(3,3) ./ sqrt.(diag(sys[:QQ]))
+    QQs = [sys[:QQ], copy(sys[:QQ])]
+    QQs[2][1, 1] = 1e3
+    @test DSGE.standardize_shocks(ones(3, 3), QQs, [1:2, 3:3]) == hcat(ones(3, 2) ./ sqrt.(diag(sys[:QQ])),
+                                                                     ones(3) ./ sqrt.(diag(QQs[2])))
 end
 
 if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))

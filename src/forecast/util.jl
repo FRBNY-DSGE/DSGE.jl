@@ -236,11 +236,31 @@ standardize_shocks(shocks, QQ)
 Normalize shocks by their standard deviations. Shocks with zero standard
 deviation will be set to zero.
 """
-function standardize_shocks(shocks::Matrix{T}, QQ::Matrix{T}) where {T<:AbstractFloat}
+function standardize_shocks(shocks::AbstractMatrix{T}, QQ::AbstractMatrix{T}) where {T<:AbstractFloat}
     stdshocks = shocks ./ sqrt.(diag(QQ))
 
     zeroed_shocks = findall(diag(QQ) .== 0)
     stdshocks[zeroed_shocks, :] .= 0
+
+    return stdshocks
+end
+
+"""
+```
+standardize_shocks(shocks, QQs, start_date, end_date)
+```
+
+Normalize shocks by their standard deviations when there is regime switching.
+Shocks with zero standard deviation will be set to zero.
+"""
+function standardize_shocks(shocks::Matrix{T}, QQs::Vector{Matrix{T}},
+                            regime_inds::Vector{UnitRange{Int}}) where {T<:AbstractFloat}
+
+    stdshocks = similar(shocks)
+    for(QQ, inds) in zip(QQs, regime_inds)
+        inshocks = @view shocks[:, inds]
+        stdshocks[:, inds] = standardize_shocks(inshocks, QQ)
+    end
 
     return stdshocks
 end

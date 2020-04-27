@@ -641,9 +641,14 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         # Standardize shocks if desired
         if :histstdshocks in output_vars
             if regime_switching
-                error("Standardizing shocks has not been implemented for regime switching.")
+                start_date = max(date_presample_start(m), df[1, :date])
+                end_date   = prev_quarter(date_forecast_start(m))
+                regime_inds = regime_indices(m, start_date, end_date)
+                forecast_output[:histstdshocks] =
+                    standardize_shocks(forecast_output[:histshocks], Matrix{eltype(system[1, :QQ])}[system[i, :QQ] for i in 1:n_regimes], regime_inds)
+            else
+                forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
             end
-            forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
         end
     end
 
@@ -743,10 +748,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
             # Standardize shocks if desired
             if :forecaststdshocks in output_vars
-                if regime_switching
-                    error("Standardizing shocks while regime switching has not been implemented.")
-                end
-                forecast_output[:forecaststdshocks] = standardize_shocks(forecast_output[:forecastshocks], system[:QQ])
+                forecast_output[:forecaststdshocks] =
+                    standardize_shocks(forecast_output[:forecastshocks],
+                                       regime_switching ? system[n_regimes, :QQ] : system[:QQ])
             end
         end
 
@@ -796,10 +800,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
             # Standardize shocks if desired
             if :bddforecaststdshocks in output_vars
-                if regime_switching
-                    error("Standardizing shocks while regime switching has not been implemented.")
-                end
-                forecast_output[:bddforecaststdshocks] = standardize_shocks(forecast_output[:bddforecastshocks], system[:QQ])
+                forecast_output[:bddforecaststdshocks] =
+                    standardize_shocks(forecast_output[:bddforecastshocks],
+                                       regime_switching ? system[n_regimes, :QQ] : system[:QQ])
             end
         end
     end
