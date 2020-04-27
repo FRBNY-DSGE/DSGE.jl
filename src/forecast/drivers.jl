@@ -79,9 +79,9 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             @assert get_setting(m, :n_regimes) == length(get_setting(m, :regime_dates)) "The number" *
                 " in Setting :n_regimes ($(string(get_setting(m, :n_regimes))))" *
                 " does not match the length of Setting :regime_dates ($(string(length(get_setting(m, :regime_dates)))))."
-            @assert get_setting(m, :regime_dates)[1] == date_mainsample_start(m) "The first regime" *
-                " date ($(string(get_setting(m, :regime_dates)[1]))) must match the mainsample start date " *
-                "($(string(date_mainsample_start(m))))."
+            @assert get_setting(m, :regime_dates)[1] == date_presample_start(m) "The first regime" *
+                " date ($(string(get_setting(m, :regime_dates)[1]))) must match the presample start date " *
+                "($(string(date_presample_start(m))))."
         end
     end
 
@@ -391,6 +391,12 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                       forecast_string = forecast_string)
     output_dir = rawpath(m, "forecast")
 
+    # Determine if we are regime_switching
+    regime_switching = haskey(get_settings(m), :regime_switching) ?
+        get_setting(m, :regime_switching) : false
+    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+        get_setting(m, :n_regimes) : 1
+
     # Print
     info_print(verbose, :low, "Forecasting input_type = $input_type, cond_type = $cond_type...")
     println(verbose, :low, "Start time: $(now())")
@@ -454,8 +460,9 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             end
         end
         # Block info
-        block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds, params = params)
+        block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
+        @show block_inds
         start_block = forecast_start_block(m)
 
         # Info needed for printing progress
@@ -472,7 +479,11 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                 params_for_map = load_draws(m, input_type, block_inds[block]; verbose = verbose)
             elseif input_type == :mode_draw_shocks
                 ndraws = length(block_inds[block])
-                params_for_map = repeat([params], ndraws)
+                @assert params <: Vector "To use mode_draw_shocks with params passed in as a keyword, params must be a Vector."
+                params_for_map = Vector{Float64}[params for i in block_inds[block]]
+            else
+                @show block_inds[block]
+                params_for_map = Vector{Float64}[params[i, :] for i in block_inds[block]]
             end
 
             mapfcn = use_parallel_workers(m) ? pmap : map
@@ -652,9 +663,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         # Standardize shocks if desired
         if :histstdshocks in output_vars
             if regime_switching
-                start_date = max(date_presample_start(m), df[1, :date])
+                start_date = max(date_mainsample_start(m), df[1, :date]) # use mainsample b/c shocks only includes mainsample, no presample
                 end_date   = prev_quarter(date_forecast_start(m))
                 regime_inds = regime_indices(m, start_date, end_date)
+                if regime_inds[1][1] < 1
+                    regime_inds[1] = 1:regime_inds[1][end]
+                end
                 forecast_output[:histstdshocks] =
                     standardize_shocks(forecast_output[:histshocks], Matrix{eltype(system[1, :QQ])}[system[i, :QQ] for i in 1:n_regimes], regime_inds)
             else
