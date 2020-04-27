@@ -438,7 +438,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 measurement_equations = measurement(m, TTTs, RRRs, CCCs)
             else=#
             for reg in 1:n_regimes
-                measurement_equations[reg]  = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
+                measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
                                                           reg = reg)
             end
             #end

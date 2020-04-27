@@ -103,7 +103,7 @@ function shock_decompositions(m::AbstractDSGEModel{S},
     # Set up regime indices. Note that we do not need to account
     # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
     # in the pre-ZLB periods.
-    regime_inds = regime_indices(m, data, start_date, end_date)
+    regime_inds = regime_indices(m, start_date, end_date)
 
     shock_decompositions(system, horizon, histshocks, start_index, end_index, regime_inds)
 end
