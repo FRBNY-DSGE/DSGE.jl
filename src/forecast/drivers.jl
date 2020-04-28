@@ -462,7 +462,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
-        @show block_inds
         start_block = forecast_start_block(m)
 
         # Info needed for printing progress
@@ -482,7 +481,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                 @assert isa(params, Vector) "To use mode_draw_shocks with params passed in as a keyword, params must be a Vector."
                 params_for_map = Vector{Float64}[params for i in block_inds[block]]
             else
-                @show block_inds[block]
                 params_for_map = Vector{Float64}[params[i, :] for i in block_inds[block]]
             end
 
@@ -845,8 +843,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histshocks
         end
 
-        start_date = max(date_presample_start(m), df[1, :date])
-        end_date   = prev_quarter(date_forecast_start(m))
+        start_date = max(date_mainsample_start(m), df[1, :date])
+        end_date   = prev_quarter(date_forecast_start(m)) # this is the end date of history period
         shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
             shock_decompositions(m, system, histshocks_shockdec, start_date, end_date) :
             shock_decompositions(m, system, histshocks_shockdec)
@@ -876,11 +874,13 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
 
     if !isempty(dettrends_to_compute)
-        start_date = max(date_presample_start(m), df[1, :date])
-        end_date   = prev_quarter(date_forecast_start(m))
-        dettrendstates, dettrendobs, dettrendpseudo = isa(system, RegimeSwitchingSystem) ?
-            deterministic_trends(m, system, initial_states, start_date, end_date) :
-            deterministic_trends(m, system, initial_states)
+        if isa(system, RegimeSwitchingSystem)
+            start_date = max(date_mainsample_start(m), df[1, :date])
+            end_date   = prev_quarter(date_forecast_start(m)) # end date of history period
+            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, end_date)
+        else
+            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
+        end
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs

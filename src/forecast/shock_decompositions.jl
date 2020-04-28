@@ -104,6 +104,9 @@ function shock_decompositions(m::AbstractDSGEModel{S},
     # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
     # in the pre-ZLB periods.
     regime_inds = regime_indices(m, start_date, end_date)
+    if regime_inds[1][1] < 1 # remove periods occuring before desired start date
+        regime_inds[1] = 1:regime_inds[1][end]
+    end
 
     shock_decompositions(system, horizon, histshocks, start_index, end_index, regime_inds)
 end
@@ -127,8 +130,8 @@ function shock_decompositions(system::RegimeSwitchingSystem{S},
     shocks = zeros(S, nshocks, histperiods)
 
     # Check dates
-    if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods || regime_inds[1][1] != 1 || regime_inds[end][end] != histperiods
-        throw(DomainError("At least one of forecast_horizons, the index for the start date of the shock decomposition, the index for the end date of the shock decomposition, and the regime-switching dates is outside the permissible range."))
+    if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
+        throw(DomainError("At least one of forecast_horizons, the index for the start date of the shock decomposition, and the index for the end date of the shock decomposition is outside the permissible range."))
     end
 
     # Set constant system matrices to 0 and start at stationary steady state
@@ -147,7 +150,7 @@ function shock_decompositions(system::RegimeSwitchingSystem{S},
             states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ = forecast(system[reg_num], init_state, shocks[:, reg_ind])
         end
 
-        fcast_inds = regime_inds[end][end] + 1:allperiods
+        fcast_inds = (histperiods + 1):allperiods
         states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
             forecast(system[length(regime_inds)], states[:, regime_inds[end][end], i], fcast_shocks)
 
@@ -257,20 +260,33 @@ function deterministic_trends(m::AbstractDSGEModel{S},
 
     # Now intersect these periods with regime indices
     regime_inds = regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
-
     first_regime = findfirst(map(x -> start_index in x, regime_inds))
     last_regime  = findfirst(map(x -> end_index in x,   regime_inds))
+    if isnothing(last_regime)
+        if !isnothing(first_regime)
+            last_regime = length(regime_inds) # then end_index occurs after the end of regime_inds
+        else
+            error("The first shockdec start date ($start_index) is not in any of the regimes ($(regime_inds)).")
+        end
+    end
+
     regimes      = first_regime:last_regime                  # need to specify which regimes we need for shockdec.
     regime_inds  = regime_inds[regimes]                      # also need to specify how long in each regime we are.
     regime_inds[1]   = start_index:regime_inds[1][end]       # if the start index is in the middle of a regime.
-    regime_inds[end] = regime_inds[end][1]:end_index         # if the end index is in the middle of a regime.
+    regime_inds[end] = regime_inds[end][1]:end_index         # if the end index is in the middle of a regime or is past the regime's end
 
-    deterministic_trends(system, z0, nperiods, regime_inds, regimes)
+    if start_index == 1 && end_index == nperiods
+        return deterministic_trends(system, z0, nperiods, regime_inds)
+    else
+        range = start_index:end_index
+        states, obs, pseudo = deterministic_trends(system, z0, nperiods, regime_inds)
+        return states[:, range], obs[:, range], pseudo[:, range]
+    end
 end
 
 
 function deterministic_trends(system::RegimeSwitchingSystem{S}, z0::Vector{S}, nperiods::Int,
-                              regime_inds::Vector{UnitRange{Int}}, regimes::UnitRange{Int}) where {S<:AbstractFloat}
+                              regime_inds::Vector{UnitRange{Int}}) where {S<:AbstractFloat}
 
     # Set constant system matrices to 0
     system = zero_system_constants(system)
@@ -285,8 +301,8 @@ function deterministic_trends(system::RegimeSwitchingSystem{S}, z0::Vector{S}, n
     pseudo = Matrix{S}(undef, npseudo, nperiods)
 
     # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
-    for (reg_num, reg_ind) in zip(regimes, regime_inds)
-        init_state = (reg_num == regimes[1]) ? z0 : states[:, reg_ind[1] - 1] # update initial state
+    for (reg_num, reg_ind) in enumerate(regime_inds)
+        init_state = (reg_num == 1) ? z0 : states[:, reg_ind[1] - 1] # update initial state
 
         # Construct matrix of 0 shocks for this regime
         shocks = zeros(S, nshocks, length(reg_ind))

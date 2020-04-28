@@ -171,15 +171,27 @@ exp_out_dict = JLD2.jldopen("$path/../reference/forecast_one_out.jld2", "r") do 
     read(file, "exp_out_regime_switch_cases")
 end
 
+# expout = load("$path/../reference/forecast_one_out.jld2")
+# tosave = deepcopy(out_regime_dates_dicts)
+# delete!(tosave, 1)
+# JLD2.jldopen("$path/../reference/forecast_one_out.jld2", true, true, true, IOStream) do file
+#     write(file, "exp_out", expout["exp_out"])
+#     write(file, "exp_out_regime_switch", out_regime_dates_dicts[1][:out])
+#     write(file, "exp_out_true_regime_switch", out_regime_dates_dicts[1][:out_rs3])
+#     write(file, "exp_out_regime_switch_cases", tosave)
+#     write(file, "exp_out_regime_switch_full", expout["exp_out_regime_switch_full"])
+#     write(file, "exp_out_true_regime_switch_full", expout["exp_out_true_regime_switch_full"])
+# end
+m = Model1002("ss10", custom_settings = custom_settings, testing = true)
+m <= Setting(:rate_expectations_source, :ois)
+dfs = Dict()
+dfs[:none] = load_data(m; check_empty_columns = false, verbose = :none, summary_statistics = :none)
+dfs[:semi] = load_data(m; cond_type = :semi, check_empty_columns = false, verbose = :none, summary_statistics = :none)
+dfs[:full] = load_data(m; cond_type = :full, check_empty_columns = false, verbose = :none, summary_statistics = :none)
+
 @testset "Test modal and full distribution forecasts with regime switching for all major output_vars" begin
     for (k, v) in enumerate(regime_dates_dicts)
         out_regime_dates_dicts[k] = Dict()
-        m = Model1002("ss10", custom_settings = custom_settings, testing = true)
-        m <= Setting(:rate_expectations_source, :ois)
-        dfs = Dict()
-        dfs[:none] = load_data(m; check_empty_columns = false, verbose = :none, summary_statistics = :none)
-        dfs[:semi] = load_data(m; cond_type = :semi, check_empty_columns = false, verbose = :none, summary_statistics = :none)
-        dfs[:full] = load_data(m; cond_type = :full, check_empty_columns = false, verbose = :none, summary_statistics = :none)
 
         m_rs1 = Model1002("ss10", testing = true, custom_settings = custom_settings) # pseudo regime switching (no values have second/third regimes)
         m_rs1 <= Setting(:rate_expectations_source, :ois)
@@ -284,10 +296,10 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
                                          :forecaststates, :forecastpseudo, :forecastobs, :forecaststdshocks,
                                          :forecastutpseudo, :forecastutobs,
                                          :forecast4qpseudo, :forecast4qobs,
-                                         :bddforecaststates, :bddforecastshocks, :bddforecastpseudo, :bddforecastobs])
-# :shockdecpseudo, :shockdecobs,
-# :trendstates, :trendobs, :trendpseudo,
-# :dettrendstates, :dettrendobs, :dettrendpseudo,
+                                         :bddforecaststates, :bddforecastshocks, :bddforecastpseudo, :bddforecastobs,
+                                         :shockdecpseudo, :shockdecobs,
+                                         :trendstates, :trendobs, :trendpseudo,
+                                         :dettrendstates, :dettrendobs, :dettrendpseudo])
 # :irfstates, :irfpseudo, :irfobs])
 
 out = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
@@ -322,10 +334,13 @@ for cond_type in [:none, :semi, :full]
     output_files_rs2 = get_forecast_output_files(m_rs2, :mode, cond_type, output_vars)
     output_files_rs3 = get_forecast_output_files(m_rs3, :mode, cond_type, output_vars)
     for var in keys(output_files)
-        out[cond_type][var] = load(output_files[var], "arr")
-        out_rs1[cond_type][var] = load(output_files_rs1[var], "arr")
-        out_rs2[cond_type][var] = load(output_files_rs2[var], "arr")
-        out_rs3[cond_type][var] = load(output_files_rs3[var], "arr")
+        if !(var in [:shockdecpseudo, :shockdecobs, :irfstates, :irfobs, :irfpseudo]) ||
+            (k == 1)
+            out[cond_type][var] = load(output_files[var], "arr")
+            out_rs1[cond_type][var] = load(output_files_rs1[var], "arr")
+            out_rs2[cond_type][var] = load(output_files_rs2[var], "arr")
+            out_rs3[cond_type][var] = load(output_files_rs3[var], "arr")
+        end
     end
 end
 
@@ -365,17 +380,20 @@ for cond_type in [:none, :semi, :full]
     @test !(exp_out[cond_type][:forecastobs] ≈                                out_rs3[cond_type][:forecastobs])
     @test !(exp_out[cond_type][:forecastpseudo] ≈                             out_rs3[cond_type][:forecastpseudo])
 
-    # # Shock decompositions, deterministic trends, trends
-    # @test @test_matrix_approx_eq exp_out[cond_type][:shockdecobs]    out[cond_type][:shockdecobs]
-    # @test @test_matrix_approx_eq exp_out[cond_type][:shockdecpseudo] out[cond_type][:shockdecpseudo]
-    # @test @test_matrix_approx_eq exp_out[cond_type][:dettrendobs]    out[cond_type][:dettrendobs]
-    # @test @test_matrix_approx_eq exp_out[cond_type][:dettrendpseudo] out[cond_type][:dettrendpseudo]
-    # @test @test_matrix_approx_eq exp_out[cond_type][:trendobs]       out[cond_type][:trendobs]
-    # @test @test_matrix_approx_eq exp_out[cond_type][:trendpseudo]    out[cond_type][:trendpseudo]
+    # B/c memory limits, only testing shock decs w/first test case
+    if k == 1
+        # Shock decompositions, deterministic trends, trends
+        @test @test_matrix_approx_eq exp_out[cond_type][:shockdecobs]    out[cond_type][:shockdecobs]
+        @test @test_matrix_approx_eq exp_out[cond_type][:shockdecpseudo] out[cond_type][:shockdecpseudo]
+        @test @test_matrix_approx_eq exp_out[cond_type][:dettrendobs]    out[cond_type][:dettrendobs]
+        @test @test_matrix_approx_eq exp_out[cond_type][:dettrendpseudo] out[cond_type][:dettrendpseudo]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendobs]       out[cond_type][:trendobs]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendpseudo]    out[cond_type][:trendpseudo]
 
-    # # IRFs
-    # @test @test_matrix_approx_eq exp_out[cond_type][:irfobs]         out[cond_type][:irfobs]
-    # @test @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]      out[cond_type][:irfpseudo]
+        # # IRFs
+        # @test @test_matrix_approx_eq exp_out[cond_type][:irfobs]         out[cond_type][:irfobs]
+        # @test @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]      out[cond_type][:irfpseudo]
+    end
 end
 
 out_regime_dates_dicts[k][:out] = out
@@ -499,20 +517,24 @@ for cond_type in [:none, :semi, :full]
         @test !(exp_out[cond_type][fcast_type][:forecastobs] ≈                                out_rs3[cond_type][fcast_type][:forecastobs])
         @test !(exp_out[cond_type][fcast_type][:forecastpseudo] ≈                             out_rs3[cond_type][fcast_type][:forecastpseudo])
 
-        # # Shock decompositions, deterministic trends, trends
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:shockdecobs]    out[cond_type][fcast_type][:shockdecobs]
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:shockdecpseudo] out[cond_type][fcast_type][:shockdecpseudo]
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:dettrendobs]    out[cond_type][fcast_type][:dettrendobs]
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:dettrendpseudo] out[cond_type][fcast_type][:dettrendpseudo]
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:trendobs]       out[cond_type][fcast_type][:trendobs]
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:trendpseudo]    out[cond_type][fcast_type][:trendpseudo]
+        # We do not compare distributional shocks decs or IRFs b/c memory limits, although we do check that the methods run
+        if k == 1
+            # # Shock decompositions, deterministic trends, trends
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:shockdecobs]    out[cond_type][fcast_type][:shockdecobs]
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:shockdecpseudo] out[cond_type][fcast_type][:shockdecpseudo]
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:dettrendobs]    out[cond_type][fcast_type][:dettrendobs]
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:dettrendpseudo] out[cond_type][fcast_type][:dettrendpseudo]
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:trendobs]       out[cond_type][fcast_type][:trendobs]
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:trendpseudo]    out[cond_type][fcast_type][:trendpseudo]
 
-        # # IRFs
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:irfobs]         out[cond_type][fcast_type][:irfobs]
-        # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:irfpseudo]      out[cond_type][fcast_type][:irfpseudo]
+            # # IRFs
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:irfobs]         out[cond_type][fcast_type][:irfobs]
+            # @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:irfpseudo]      out[cond_type][fcast_type][:irfpseudo]
+        end
     end
 end
 end
 end
 end
+
 nothing

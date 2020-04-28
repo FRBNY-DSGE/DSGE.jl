@@ -335,7 +335,12 @@ function get_forecast_output_dims(m::AbstractDSGEModel, input_type::Symbol, outp
     end
 
     if prod == :trend
-        return (ndraws, nvars)
+        regime_switching = haskey(m.settings, :regime_switching) ? get_setting(m, :regime_switching) : false
+        if regime_switching
+            return (ndraws, nvars, get_setting(m, :n_regimes))
+        else
+            return (ndraws, nvars)
+        end
     elseif prod in [:hist, :forecast, :bddforecast, :dettrend]
         return (ndraws, nvars, nperiods)
     elseif prod in [:shockdec, :irf]
