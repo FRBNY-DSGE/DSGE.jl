@@ -479,7 +479,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                 params_for_map = load_draws(m, input_type, block_inds[block]; verbose = verbose)
             elseif input_type == :mode_draw_shocks
                 ndraws = length(block_inds[block])
-                @assert params <: Vector "To use mode_draw_shocks with params passed in as a keyword, params must be a Vector."
+                @assert isa(params, Vector) "To use mode_draw_shocks with params passed in as a keyword, params must be a Vector."
                 params_for_map = Vector{Float64}[params for i in block_inds[block]]
             else
                 @show block_inds[block]

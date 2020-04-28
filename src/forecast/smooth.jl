@@ -157,9 +157,11 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     end
 
     # Map smoothed states to pseudo-observables
-    pseudo = Matrix{eltype(states)}(undef, length(system[1][:DD_pseudo]), size(states, 2))
+    pseudo = Matrix{eltype(states)}(undef, length(system[1, :DD_pseudo]), size(states, 2))
     for (i, inds) in enumerate(regime_inds)
         if i > i_zlb_start && splice_zlb_regime # if spliced ZLB and i is past the start date, then a repeat in regimes has occurred => minus 1
+            pseudo[:, inds] = system[i - 1, :ZZ_pseudo] * states[:, inds] .+ system[i - 1, :DD_pseudo]
+        elseif i >= n_regimes(system) && splice_zlb_regime # ZLB starts in middle of the last regime
             pseudo[:, inds] = system[i - 1, :ZZ_pseudo] * states[:, inds] .+ system[i - 1, :DD_pseudo]
         else # if preZLB or no splicing, then don't need to subtract 1
             pseudo[:, inds] = system[i, :ZZ_pseudo] * states[:, inds] .+ system[i, :DD_pseudo]
