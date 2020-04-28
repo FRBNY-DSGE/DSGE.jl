@@ -65,7 +65,7 @@ function shock_decompositions(system::System{S},
 
     # Check dates
     if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
-        throw(DomainError())
+        throw(DomainError("At least one of forecast_horizons, the index for the start date of the shock decomposition, and the index for the end date of the shock decomposition is outside the permissible range."))
     end
 
     # Set constant system matrices to 0
@@ -128,7 +128,7 @@ function shock_decompositions(system::RegimeSwitchingSystem{S},
 
     # Check dates
     if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods || regime_inds[1][1] != 1 || regime_inds[end][end] != histperiods
-        throw(DomainError())
+        throw(DomainError("At least one of forecast_horizons, the index for the start date of the shock decomposition, the index for the end date of the shock decomposition, and the regime-switching dates is outside the permissible range."))
     end
 
     # Set constant system matrices to 0 and start at stationary steady state
@@ -142,12 +142,9 @@ function shock_decompositions(system::RegimeSwitchingSystem{S},
 
         # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
         for (reg_num, reg_ind) in enumerate(regime_inds)
-            init_state = (reg_num == regimes[1]) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
+            init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
 
-            # Construct matrix of 0 shocks for this regime
-            shocks = zeros(S, nshocks, length(reg_ind))
-            sys    = system[reg_num] # grab the correct system
-            states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ = forecast(system, init_state, shocks[:, reg_ind])
+            states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ = forecast(system[reg_num], init_state, shocks[:, reg_ind])
         end
 
         fcast_inds = regime_inds[end][end] + 1:allperiods
@@ -155,7 +152,7 @@ function shock_decompositions(system::RegimeSwitchingSystem{S},
             forecast(system[length(regime_inds)], states[:, regime_inds[end][end], i], fcast_shocks)
 
         # zero out shocks
-        shocks[i, 1:histperiods] .= 0.
+        shocks[i, :] .= 0.
     end
 
     # Return shock decompositions in appropriate range
@@ -259,7 +256,6 @@ function deterministic_trends(m::AbstractDSGEModel{S},
     end_index   = index_shockdec_end(m)
 
     # Now intersect these periods with regime indices
-    start_date  = max(date_presample_start(m), df[1, :date])
     regime_inds = regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
 
     first_regime = findfirst(map(x -> start_index in x, regime_inds))
@@ -267,7 +263,7 @@ function deterministic_trends(m::AbstractDSGEModel{S},
     regimes      = first_regime:last_regime                  # need to specify which regimes we need for shockdec.
     regime_inds  = regime_inds[regimes]                      # also need to specify how long in each regime we are.
     regime_inds[1]   = start_index:regime_inds[1][end]       # if the start index is in the middle of a regime.
-    regime_inds[end] = end_index:regime_inds[end][end]       # if the end index is in the middle of a regime.
+    regime_inds[end] = regime_inds[end][1]:end_index         # if the end index is in the middle of a regime.
 
     deterministic_trends(system, z0, nperiods, regime_inds, regimes)
 end
@@ -294,11 +290,10 @@ function deterministic_trends(system::RegimeSwitchingSystem{S}, z0::Vector{S}, n
 
         # Construct matrix of 0 shocks for this regime
         shocks = zeros(S, nshocks, length(reg_ind))
-        sys = system[reg_num] # grab the correct system
-        states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system, init_state, shocks)
+        states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
     end
 
-    return state, obs, pseudo
+    return states, obs, pseudo
 end
 
 """
