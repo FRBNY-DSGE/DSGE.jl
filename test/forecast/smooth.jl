@@ -52,7 +52,8 @@ custom_settings = Dict{Symbol, Setting}(
 
 m = Model1002("ss10", custom_settings = custom_settings, testing = true)
 m <= Setting(:rate_expectations_source, :ois)
-df = load_data(m; check_empty_columns = false, verbose = :none, summary_statistics = :none)
+# df = load_data(m; check_empty_columns = false, verbose = :none, summary_statistics = :none)
+df = load("$path/../reference/regime_switch_data.jld2", "none")
 
 m_rs1 = Model1002("ss10", custom_settings = custom_settings) # pseudo regime switching (no values have second/third regimes)
 m_rs1 <= Setting(:rate_expectations_source, :ois)
