@@ -149,7 +149,6 @@ custom_settings = Dict{Symbol, Setting}(
     :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
     :n_anticipated_shocks     => Setting(:n_anticipated_shocks, 6))
 
-
 # Now check that regime switching works for different types of possible regimes
 regime_dates_dicts = [Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
                                       2 => DSGE.quartertodate("2010-Q1"),
@@ -174,9 +173,9 @@ end
 m = Model1002("ss10", custom_settings = custom_settings, testing = true)
 m <= Setting(:rate_expectations_source, :ois)
 dfs = Dict()
-dfs[:none] = load_data(m; check_empty_columns = false, verbose = :none, summary_statistics = :none)
-dfs[:semi] = load_data(m; cond_type = :semi, check_empty_columns = false, verbose = :none, summary_statistics = :none)
-dfs[:full] = load_data(m; cond_type = :full, check_empty_columns = false, verbose = :none, summary_statistics = :none)
+dfs[:none] = load("$path/../reference/regime_switch_data.jld2", "none")
+dfs[:semi] = load("$path/../reference/regime_switch_data.jld2", "semi")
+dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
 
 @testset "Test modal and full distribution forecasts with regime switching for all major output_vars" begin
     for (k, v) in enumerate(regime_dates_dicts)
