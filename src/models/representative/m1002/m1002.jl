@@ -211,6 +211,11 @@ function init_model_indices!(m::Model1002)
         push!(equilibrium_conditions, :eq_λ_wtil)
         push!(equilibrium_conditions, :eq_λ_wtil1)
         push!(exogenous_shocks, :λ_wtil_sh)
+        push!(endogenous_states, :φ_t)
+        push!(endogenous_states, :Eφ_t)
+        push!(equilibrium_conditions, :eq_φ)
+        push!(equilibrium_conditions, :eq_Eφ)
+        push!(exogenous_shocks, :φ_sh)
 
         # Remove eq_λ_w1 and λ_w_t1
         filter!(x -> x != :eq_λ_w1, equilibrium_conditions)
@@ -369,48 +374,6 @@ function init_parameters!(m::Model1002)
     m <= parameter(:σ_c, 0.8719, (1e-5, 10.), (1e-5, 10.), ModelConstructors.Exponential(), Normal(1.5, 0.37), fixed=false,
                    description="σ_c: Coefficient of relative risk aversion.",
                    tex_label="\\sigma_{c}")
-
-    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
-                   description="ρ: The degree of inertia in the monetary policy rule.",
-                   tex_label="\\rho_R")
-
-    if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42",
-                      "ss45", "ss46", "ss47", "ss48"]
-        m <= parameter(:ζ_p_r2, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
-                       description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
-                       tex_label="\\zeta_p")
-    end
-
-    if subspec(m) in ["ss23", "ss24", "ss25", "ss26", "ss28", "ss29", "ss43", "ss44"]
-        m <= parameter(:ρ_r2, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
-                   description="ρ: The degree of inertia in the monetary policy rule.",
-                   tex_label="\\rho_R")
-
-        m <= parameter(:ψ1_r2, 1.3679, (1e-5, 10.), (1e-5, 10.00), ModelConstructors.Exponential(), Normal(1.5, 0.25), fixed=false,
-                       description="ψ₁: Weight on inflation gap in monetary policy rule.",
-                       tex_label="\\psi_1")
-
-        m <= parameter(:ψ2_r2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
-                   description="ψ₂: Weight on output gap in monetary policy rule.",
-                   tex_label="\\psi_2")
-
-        m <= parameter(:ψ3_r2, 0.2464, (-0.5, 0.5), (-0.5, 0.5), ModelConstructors.Untransformed(), Normal(0.12, 0.05), fixed=false,
-                       description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
-                       tex_label="\\psi_3")
-
-    end
-
-    if subspec(m) in ["ss45", "ss46", "ss47", "ss48"]
-        m <= parameter(:ι_p_r2, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
-                       description="ι_p: The weight attributed to last period's inflation in price indexation (Regime 2). (1-ι_p) is the weight attributed to steady-state inflation.",
-                       tex_label="\\iota_p")
-    end
-
-    if subspec(m) in ["ss47", "ss48"]
-        m <= parameter(:Φ_r2, 1.1066, (1., 10.), (1.00, 10.00), ModelConstructors.Exponential(), Normal(1.25, 0.12), fixed=false,
-                       description="Φ: Fixed costs (Regime 2).",
-                       tex_label="\\Phi_p")
-    end
 
     m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
@@ -607,20 +570,12 @@ function init_parameters!(m::Model1002)
                        RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
                        tex_label="\\sigma_{z, iid}")
-        m <= parameter(:σ_ziid_r2, 0.6742, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
-                       tex_label="\\sigma_{z, iid}")
         m <= parameter(:ρ_biid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_biid: AR(1) coefficient in the iid component of the preference process.",
                        tex_label="\\rho_{z, iid}")
         m <= parameter(:σ_biid, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_biid: The standard deviation of the process describing the iid component of preferences.",
-                       tex_label="\\sigma_{z, iid}")
-        m <= parameter(:σ_biid_r2,  0.029, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_ziid: The standard deviation of the process describing the iid component of preferences.",
                        tex_label="\\sigma_{z, iid}")
         m <= parameter(:ρ_biidc, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_biidc: AR(1) coefficient in the iid component of the preference process.",
@@ -629,20 +584,12 @@ function init_parameters!(m::Model1002)
                        RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_biidc: The standard deviation of the process describing the iid component of preferences.",
                        tex_label="\\sigma_{z, iid}")
-        m <= parameter(:σ_biidc_r2,  0.029, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_ziid: The standard deviation of the process describing the iid component of preferences.",
-                       tex_label="\\sigma_{z, iid}")
         m <= parameter(:ρ_σ_ωiid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_σ_ωiid: AR(1) coefficient in the iid component of σ_ω.",
                        tex_label="\\rho_{z, iid}")
         m <= parameter(:σ_σ_ωiid, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_σ_ωiid: The standard deviation of the process describing the iid component of FF shock.",
-                       tex_label="\\sigma_{z, iid}")
-        m <= parameter(:σ_σ_ωiid_r2, 0.0428, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_ziid: The standard deviation of the process describing the iid component of FF shock.",
                        tex_label="\\sigma_{z, iid}")
         m <= parameter(:ρ_λ_wiid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_σ_ωiid: AR(1) coefficient in the iid component of σ_ω.",
@@ -651,78 +598,13 @@ function init_parameters!(m::Model1002)
                        RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_σ_ωiid: The standard deviation of the process describing the iid component of FF shock.",
                        tex_label="\\sigma_{z, iid}")
-        m <= parameter(:σ_λ_wiid_r2, 0.3864, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:ρ_φ, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       description="ρ_φ: AR(1) coefficient in the labor supply preference process.",
+                       tex_label="\\rho_{\\varphi}")
+        m <= parameter(:σ_φ, 0., (0., 20.), (1e-8, 0.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_ziid: The standard deviation of the process describing the iid component of FF shock.",
-                       tex_label="\\sigma_{z, iid}")
-    end
-
-
-    if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"]
-        m <= parameter(:σ_g_r2, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_g: The standard deviation of the government spending process.",
-                       tex_label="\\sigma_{g}")
-
-        m <= parameter(:σ_b_r2, 0.0292, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_b: The standard deviation of the intertemporal preference shifter process.",
-                       tex_label="\\sigma_{b}")
-
-        m <= parameter(:σ_μ_r2, 0.4559, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
-                       tex_label="\\sigma_{\\mu}")
-
-        m <= parameter(:σ_ztil_r2, 0.6742, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_ztil: The standard deviation of the process describing the stationary component of productivity.",
-                       tex_label="\\sigma_{\\tilde{z}}")
-
-        m <= parameter(:σ_λ_f_r2, 0.1314, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
-                       tex_label="\\sigma_{\\lambda_f}")
-
-        m <= parameter(:σ_λ_w_r2, 0.3864, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       tex_label="\\sigma_{\\lambda_w}")
-
-        m <= parameter(:σ_r_m_r2, 0.2380, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_r_m: The standard deviation of the monetary policy shock.",
-                       tex_label="\\sigma_{r^m}")
-
-        m <= parameter(:σ_σ_ω_r2, 0.0428, (1e-7,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
-                       description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
-                       tex_label="\\sigma_{\\sigma_\\omega}")
-
-        m <= parameter(:σ_μ_e_r2, 0.0000, (1e-7,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=true,
-                       description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",
-                       tex_label="\\sigma_{\\mu_e}")
-
-        m <= parameter(:σ_γ_r2, 0.0000, (1e-7,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.01), fixed=true,
-                       description="σ_γ: The fraction of entrepreneurs surviving period t follows an exogenous process with standard deviation σ_γ.",
-                       tex_label="\\sigma_{\\gamma}")
-
-        m <= parameter(:σ_π_star_r2, 0.0269, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(6, 0.03), fixed=false,
-                       description="σ_π_star: The standard deviation of the inflation target.",
-                       tex_label="\\sigma_{\\pi_*}")
-
-        m <= parameter(:σ_lr_r2, 0.1766, (1e-8,10.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.75), fixed=false,
-                       tex_label="\\sigma_{10y}")
-
-        m <= parameter(:σ_z_p_r2, 0.1662, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
-                       tex_label="\\sigma_{z^p}")
-
-        m <= parameter(:σ_tfp_r2, 0.9391, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       tex_label="\\sigma_{tfp}")
-
-        m <= parameter(:σ_gdpdef_r2, 0.1575, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       tex_label="\\sigma_{gdpdef}")
-
-        m <= parameter(:σ_corepce_r2, 0.0999, (1e-8, 5.),(1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-                       tex_label="\\sigma_{pce}")
-
-        m <= parameter(:σ_gdp_r2, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
-                       tex_label="\\sigma_{gdp}")
-
-        m <= parameter(:σ_gdi_r2, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
-                       tex_label="\\sigma_{gdi}")
+                       description="σ_φ: The standard deviation of the process describing the labor supply preference.",
+                       tex_label="\\sigma_{\\varphi}")
     end
 
     # standard deviations of the anticipated policy shocks
@@ -731,11 +613,6 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"]
-                m <= parameter(Symbol("σ_r_m$(i)_r2"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
-                               description="σ_r_m$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
-                               tex_label=@sprintf("\\sigma_{ant%d}",i))
-            end
         else
             m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=true,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
@@ -748,11 +625,6 @@ function init_parameters!(m::Model1002)
             m <= parameter(Symbol("σ_$(sh)$i"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_$(sh)$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
-            if subspec(m) in ["ss27", "ss28", "ss29", "ss41", "ss42", "ss43", "ss44", "ss51", "ss52", "ss53", "ss54", "ss55", "ss56", "ss57", "ss58", "ss59", "ss60"]
-                m <= parameter(Symbol("σ_$(sh)$(i)_r2"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
-                               description="σ_$(sh)$(i)r2: Standard deviation of the $i-period-ahead anticipated policy shock.",
-                               tex_label=@sprintf("\\sigma_{ant%d}",i))
-            end
         end
     end
 
@@ -797,6 +669,9 @@ function init_parameters!(m::Model1002)
     m <= SteadyStateParameter(:ystar, NaN, tex_label="\\y_*")
     m <= SteadyStateParameter(:cstar, NaN, tex_label="\\c_*")
     m <= SteadyStateParameter(:wl_c, NaN, tex_label="\\wl_c")
+    if subspec(m) == "ss60"
+        m <= SteadyStateParameter(:φstar, NaN, tex_label="\\varphi_*")
+    end
     m <= SteadyStateParameter(:nstar, NaN, tex_label="\\n_*")
     m <= SteadyStateParameter(:vstar, NaN, tex_label="\\v_*")
     m <= SteadyStateParameter(:ζ_spσ_ω, NaN, tex_label="\\zeta_{sp_{\\sigma_\\omega}}")
@@ -832,6 +707,10 @@ function steadystate!(m::Model1002)
     m[:ystar]    = (m[:kstar]^m[:α]) * (m[:Lstar]^(1-m[:α])) / m[:Φ]
     m[:cstar]    = (1-m[:g_star])*m[:ystar] - m[:istar]
     m[:wl_c]     = (m[:wstar]*m[:Lstar])/(m[:cstar]*m[:λ_w])
+
+    if subspec(m) == "ss60"
+        m[:φstar] = 0. # log(1) in steady state
+    end
 
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for σ_ω_star and zω_star
