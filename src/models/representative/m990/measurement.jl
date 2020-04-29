@@ -118,11 +118,11 @@ function measurement(m::Model990{T},
     QQ[exo[:corepce_sh], exo[:corepce_sh]] = m[:σ_corepce]^2
 
     # These lines set the standard deviations for the anticipated shocks
-    for i = 1:n_anticipated_shocks(m)
+    for i = 1:n_mon_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
         if subspec(m) == "ss6"
-            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_anticipated_shocks(m)
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
         else
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
         end
