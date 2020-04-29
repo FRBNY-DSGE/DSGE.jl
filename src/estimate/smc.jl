@@ -45,7 +45,8 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
               save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
               tempered_update_prior_weight::Float64 = 0.0,
-              run_csminwel::Bool = true)
+              run_csminwel::Bool = true,
+              aug::Bool = false)
 
     parallel    = get_setting(m, :use_parallel_workers)
     n_parts     = get_setting(m, :n_particles)
@@ -76,8 +77,14 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
     my_likelihood = if isa(m, AbstractDSGEModel)
-        function _my_likelihood_dsge(parameters::ParameterVector, data::Matrix{Float64})::Float64
-            update!(m, parameters)
+        function _my_likelihood_dsge(parameters::ParameterVector, data::Matrix{Float64};
+                                     aug::Bool)::Float64
+            if aug
+                update!(m, parameters[1:n_parameters(m)],
+                        draw_aug = parameters[n_parameters(m)+1:end])
+            else
+                update!(m, parameters)
+            end
             likelihood(m, data; sampler = false, catch_errors = true,
                        use_chand_recursion = use_chand_recursion, verbose = verbose)
         end
@@ -110,6 +117,8 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     # Calls SMC package's generic SMC
     println("Calling SMC.jl's SMC estimation routine...")
 
+    @show "smc2"
+    @show aug
     SMC.smc(my_likelihood, get_parameters(m), data;
             verbose = verbose,
             testing = m.testing,
@@ -145,7 +154,9 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
             intermediate_stage_start = intermediate_stage_start,
             save_intermediate = save_intermediate,
             intermediate_stage_increment = intermediate_stage_increment,
-	        tempered_update_prior_weight = tempered_update_prior_weight)
+	        tempered_update_prior_weight = tempered_update_prior_weight,
+            aug = aug)
+
     if run_csminwel
         m <= Setting(:sampling_method, :SMC)
         update!(m, load_draws(m, :mode))

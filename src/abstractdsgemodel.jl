@@ -411,8 +411,26 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
+function update!(m::AbstractDSGEModel, values::ParameterVector{T};
+                 draw_aug::Vector = Vector(undef, 0)) where T
     ModelConstructors.update!(m.parameters, [θ.value for θ in values])
+    n_aug = length(draw_aug)
+    i_aug = 0
+    if !isempty(draw_aug)
+        for para in values
+            if !isempty(para.regimes)
+                i_aug = i_aug + 1
+                for (ind, val) in para.regimes[:value]
+                    if ind == 1
+                        ModelConstructors.set_regime_val!(para, 1, para.value)
+                    else # ind != 1
+#                        @show ind
+                        ModelConstructors.set_regime_val!(para, ind, draw_aug[i_aug])
+                    end
+                end
+            end
+        end
+    end
     steadystate!(m)
 end
 
