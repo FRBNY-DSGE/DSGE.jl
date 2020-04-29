@@ -166,22 +166,11 @@ regime_dates_dicts = [Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
                       Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
                                       2 => DSGE.quartertodate("2000-Q2"),
                                       3 => DSGE.quartertodate("2008-Q4"))]
-out_regime_dates_dicts = Dict()
+
 exp_out_dict = JLD2.jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
     read(file, "exp_out_regime_switch_cases")
 end
 
-# expout = load("$path/../reference/forecast_one_out.jld2")
-# tosave = deepcopy(out_regime_dates_dicts)
-# delete!(tosave, 1)
-# JLD2.jldopen("$path/../reference/forecast_one_out.jld2", true, true, true, IOStream) do file
-#     write(file, "exp_out", expout["exp_out"])
-#     write(file, "exp_out_regime_switch", out_regime_dates_dicts[1][:out])
-#     write(file, "exp_out_true_regime_switch", out_regime_dates_dicts[1][:out_rs3])
-#     write(file, "exp_out_regime_switch_cases", tosave)
-#     write(file, "exp_out_regime_switch_full", expout["exp_out_regime_switch_full"])
-#     write(file, "exp_out_true_regime_switch_full", expout["exp_out_true_regime_switch_full"])
-# end
 m = Model1002("ss10", custom_settings = custom_settings, testing = true)
 m <= Setting(:rate_expectations_source, :ois)
 dfs = Dict()
@@ -191,7 +180,6 @@ dfs[:full] = load_data(m; cond_type = :full, check_empty_columns = false, verbos
 
 @testset "Test modal and full distribution forecasts with regime switching for all major output_vars" begin
     for (k, v) in enumerate(regime_dates_dicts)
-        out_regime_dates_dicts[k] = Dict()
 
         m_rs1 = Model1002("ss10", testing = true, custom_settings = custom_settings) # pseudo regime switching (no values have second/third regimes)
         m_rs1 <= Setting(:rate_expectations_source, :ois)
@@ -290,17 +278,28 @@ dfs[:full] = load_data(m; cond_type = :full, check_empty_columns = false, verbos
 # First check regime switching works in a base case
 
 # Run modal forecasts
-output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
-                                         :histutpseudo, :histutobs,
-                                         :hist4qpseudo, :hist4qobs,
-                                         :forecaststates, :forecastpseudo, :forecastobs, :forecaststdshocks,
-                                         :forecastutpseudo, :forecastutobs,
-                                         :forecast4qpseudo, :forecast4qobs,
-                                         :bddforecaststates, :bddforecastshocks, :bddforecastpseudo, :bddforecastobs,
-                                         :shockdecpseudo, :shockdecobs,
-                                         :trendstates, :trendobs, :trendpseudo,
-                                         :dettrendstates, :dettrendobs, :dettrendpseudo])
-# :irfstates, :irfpseudo, :irfobs])
+if k == 1
+    output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
+                                             :histutpseudo, :histutobs,
+                                             :hist4qpseudo, :hist4qobs,
+                                             :forecaststates, :forecastpseudo, :forecastobs, :forecaststdshocks,
+                                             :forecastutpseudo, :forecastutobs,
+                                             :forecast4qpseudo, :forecast4qobs,
+                                             :bddforecaststates, :bddforecastshocks, :bddforecastpseudo, :bddforecastobs,
+                                             :shockdecpseudo, :shockdecobs,
+                                             :trendstates, :trendobs, :trendpseudo,
+                                             :dettrendstates, :dettrendobs, :dettrendpseudo,
+                                             :irfstates, :irfpseudo, :irfobs])
+else
+    output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
+                                             :histutpseudo, :histutobs,
+                                             :hist4qpseudo, :hist4qobs,
+                                             :forecaststates, :forecastpseudo, :forecastobs, :forecaststdshocks,
+                                             :forecastutpseudo, :forecastutobs,
+                                             :forecast4qpseudo, :forecast4qobs,
+                                             :bddforecaststates, :bddforecastshocks, :bddforecastpseudo, :bddforecastobs])
+end
+
 
 out = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
 out_rs1 = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
@@ -390,16 +389,33 @@ for cond_type in [:none, :semi, :full]
         @test @test_matrix_approx_eq exp_out[cond_type][:trendobs]       out[cond_type][:trendobs]
         @test @test_matrix_approx_eq exp_out[cond_type][:trendpseudo]    out[cond_type][:trendpseudo]
 
-        # # IRFs
-        # @test @test_matrix_approx_eq exp_out[cond_type][:irfobs]         out[cond_type][:irfobs]
-        # @test @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]      out[cond_type][:irfpseudo]
+        @test @test_matrix_approx_eq exp_out[cond_type][:shockdecobs]    out_rs1[cond_type][:shockdecobs]
+        @test @test_matrix_approx_eq exp_out[cond_type][:shockdecpseudo] out_rs1[cond_type][:shockdecpseudo]
+        @test @test_matrix_approx_eq exp_out[cond_type][:dettrendobs]    out_rs1[cond_type][:dettrendobs]
+        @test @test_matrix_approx_eq exp_out[cond_type][:dettrendpseudo] out_rs1[cond_type][:dettrendpseudo]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendobs]       out_rs1[cond_type][:trendobs][:, 1]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendpseudo]    out_rs1[cond_type][:trendpseudo][:, 1]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendobs]       out_rs1[cond_type][:trendobs][:, 2]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendpseudo]    out_rs1[cond_type][:trendpseudo][:, 2]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendobs]       out_rs1[cond_type][:trendobs][:, 3]
+        @test @test_matrix_approx_eq exp_out[cond_type][:trendpseudo]    out_rs1[cond_type][:trendpseudo][:, 3]
+
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:shockdecobs]    out_rs3[cond_type][:shockdecobs]
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:shockdecpseudo] out_rs3[cond_type][:shockdecpseudo]
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:dettrendobs]    out_rs3[cond_type][:dettrendobs]
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:dettrendpseudo] out_rs3[cond_type][:dettrendpseudo]
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:trendobs]       out_rs3[cond_type][:trendobs]
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:trendpseudo]    out_rs3[cond_type][:trendpseudo]
+
+        # IRFs
+        @test @test_matrix_approx_eq exp_out[cond_type][:irfobs]              out[cond_type][:irfobs]
+        @test @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]           out[cond_type][:irfpseudo]
+        @test @test_matrix_approx_eq exp_out[cond_type][:irfobs]              out_rs1[cond_type][:irfobs]
+        @test @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]           out_rs1[cond_type][:irfpseudo]
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:irfobs]         out_rs3[cond_type][:irfobs]
+        @test @test_matrix_approx_eq exp_out_true[cond_type][:irfpseudo]      out_rs3[cond_type][:irfpseudo]
     end
 end
-
-out_regime_dates_dicts[k][:out] = out
-out_regime_dates_dicts[k][:out_rs1] = out_rs1
-out_regime_dates_dicts[k][:out_rs2] = out_rs2
-out_regime_dates_dicts[k][:out_rs3] = out_rs3
 
 if k == 1 # only testing full distribution with the first case of regime switching
 

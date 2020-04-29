@@ -836,15 +836,18 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
 
     if !isempty(shockdecs_to_compute)
-
         histshocks_shockdec = if use_filtered_shocks_in_shockdec
             filter_shocks(m, df, system, cond_type = cond_type)
         else
             histshocks
         end
 
-        start_date = max(date_mainsample_start(m), df[1, :date])
-        end_date   = prev_quarter(date_forecast_start(m)) # this is the end date of history period
+        start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
+        end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
+            max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+        else
+            prev_quarter(date_forecast_start(m)) # this is the end date of history period
+        end
         shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
             shock_decompositions(m, system, histshocks_shockdec, start_date, end_date) :
             shock_decompositions(m, system, histshocks_shockdec)
@@ -875,8 +878,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
     if !isempty(dettrends_to_compute)
         if isa(system, RegimeSwitchingSystem)
-            start_date = max(date_mainsample_start(m), df[1, :date])
-            end_date   = prev_quarter(date_forecast_start(m)) # end date of history period
+            start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
+            end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
+                max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+            else
+                prev_quarter(date_forecast_start(m)) # this is the end date of history period
+            end
             dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, end_date)
         else
             dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
