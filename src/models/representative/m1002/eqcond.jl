@@ -53,6 +53,11 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_euler], endo[:EL_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ1[eq[:eq_euler], endo[:c_t]]  = (m[:h]*exp(-m[:z_star]))/(1 + m[:h]*exp(-m[:z_star]))
 
+    if subspec(m) == "ss60"
+        Γ0[eq[:eq_euler], endo[:φ_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+        Γ0[eq[:eq_euler], endo[:Eφ_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+    end
+
     # Flexible prices and wages
     Γ0[eq[:eq_euler_f], endo[:c_f_t]]  = 1.
     Γ0[eq[:eq_euler_f], endo[:r_f_t]]  = (1 - m[:h]*exp(-m[:z_star]))/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
@@ -63,6 +68,11 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_euler_f], endo[:L_f_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ0[eq[:eq_euler_f], endo[:EL_f_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ1[eq[:eq_euler_f], endo[:c_f_t]]  = (m[:h]*exp(-m[:z_star]))/(1 + m[:h]*exp(-m[:z_star]))
+
+    if subspec(m) == "ss60"
+        Γ0[eq[:eq_euler_f], endo[:φ_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+        Γ0[eq[:eq_euler_f], endo[:Eφ_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+    end
 
     ### 2. Investment Euler Equation
 
@@ -252,12 +262,20 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_msub], endo[:z_t]]   = m[:h]*exp(-m[:z_star]) /(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_msub], endo[:w_t]]   = -1.
 
+    if subspec(m) == "ss60"
+        Γ0[eq[:eq_msub], endo[:φ_t]] = m[:ν_l]
+    end
+
     # Flexible prices and wages
     Γ0[eq[:eq_msub_f], endo[:w_f_t]] = -1.
     Γ0[eq[:eq_msub_f], endo[:L_f_t]] = m[:ν_l]
     Γ0[eq[:eq_msub_f], endo[:c_f_t]] = 1/(1 - m[:h]*exp(-m[:z_star]))
     Γ1[eq[:eq_msub_f], endo[:c_f_t]] = m[:h]*exp(-m[:z_star])/(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_msub_f], endo[:z_t]]   = m[:h]*exp(-m[:z_star])/(1 - m[:h]*exp(-m[:z_star]))
+
+    if subspec(m) == "ss60"
+        Γ0[eq[:eq_msub_f], endo[:φ_t]] = m[:ν_l]
+    end
 
     ### 12. Evolution of Wages
 
@@ -334,6 +352,12 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_Ez], endo[:ztil_t]] = -(m[:ρ_ztil]-1)/(1-m[:α])
     Γ0[eq[:eq_Ez], endo[:zp_t]]   = -m[:ρ_z_p]
 
+    # Eφ_t
+    if subspec(m) == "ss60"
+        Γ0[eq[:eq_Eφ], endo[:Eφ_t]] = 1.
+        Γ0[eq[:eq_Eφ], endo[:φ_t]]  = -m[:ρ_φ]
+    end
+
     ### EXOGENOUS SHOCKS ###
 
     # Neutral technology
@@ -345,6 +369,20 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_ztil], endo[:ztil_t]] = 1.
     Γ1[eq[:eq_ztil], endo[:ztil_t]] = m[:ρ_ztil]
     Ψ[eq[:eq_ztil], exo[:ztil_sh]]     = 1.
+
+    if subspec(m) == "ss60"
+        # Ez_t
+        Γ0[eq[:eq_Ez], endo[:ziid_t]] = -(m[:ρ_ziid]-1)/(1-m[:α])
+
+        # Neutral technology
+        Γ0[eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
+        Γ1[eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
+
+        # AR(1) for ziid
+        Γ0[eq[:eq_ziid], endo[:ziid_t]] = 1.
+        Γ1[eq[:eq_ziid], endo[:ziid_t]] = m[:ρ_ziid]
+        Ψ[eq[:eq_ziid], exo[:ziid_sh]]  = 1.
+    end
 
     # Long-run changes to productivity
     Γ0[eq[:eq_zp], endo[:zp_t]] = 1.
@@ -362,6 +400,32 @@ function eqcond(m::Model1002, reg::Int)
     Γ1[eq[:eq_b], endo[:b_t]] = m[:ρ_b]
     Ψ[eq[:eq_b], exo[:b_sh]]  = 1.
 
+    if subspec(m) == "ss60"
+        # iid shock
+        Γ0[eq[:eq_biid], endo[:biid_t]] = 1.
+        Γ1[eq[:eq_biid], endo[:biid_t]] = m[:ρ_biid]
+        Ψ[eq[:eq_biid], exo[:biid_sh]]  = 1.
+
+        Γ0[eq[:eq_biidc], endo[:biidc_t]] = 1.
+        Γ1[eq[:eq_biidc], endo[:biidc_t]] = m[:ρ_biidc] # c b/c will only affect consumption
+        Ψ[eq[:eq_biidc], exo[:biidc_sh]]  = 1.
+
+        Γ0[eq[:eq_euler], endo[:biidc_t]]   = -1.
+        Γ0[eq[:eq_euler_f], endo[:biidc_t]] = -1.
+
+        # Transient AR(1) shock to b_t
+        Γ1[eq[:eq_b], endo[:b_t]] = 0. # zero these out
+        Ψ[eq[:eq_b], exo[:b_sh]]  = 0.
+
+        Γ0[eq[:eq_btil], endo[:btil_t]] = 1.
+        Γ1[eq[:eq_btil], endo[:btil_t]] = m[:ρ_b]
+        Ψ[eq[:eq_btil], exo[:b_sh]]  = 1.
+
+        # Add to b_t
+        Γ0[eq[:eq_b], endo[:biid_t]] = -1.
+        Γ0[eq[:eq_b], endo[:btil_t]] = -1.
+    end
+
     # Investment-specific technology
     Γ0[eq[:eq_μ], endo[:μ_t]] = 1.
     Γ1[eq[:eq_μ], endo[:μ_t]] = m[:ρ_μ]
@@ -377,18 +441,46 @@ function eqcond(m::Model1002, reg::Int)
     Ψ[eq[:eq_λ_f1], exo[:λ_f_sh]]   = 1.
 
     # Wage mark-up shock
-    Γ0[eq[:eq_λ_w], endo[:λ_w_t]]  = 1.
-    Γ1[eq[:eq_λ_w], endo[:λ_w_t]]  = m[:ρ_λ_w]
-    Γ1[eq[:eq_λ_w], endo[:λ_w_t1]] = -m[:η_λ_w]
-    Ψ[eq[:eq_λ_w], exo[:λ_w_sh]]   = 1.
+    if subspec(m) == "ss60"
+        # Recreate process
+        Γ0[eq[:eq_λ_wtil], endo[:λ_wtil_t]]  = 1.
+        Γ1[eq[:eq_λ_wtil], endo[:λ_wtil_t]]  = m[:ρ_λ_w]
+        Γ1[eq[:eq_λ_wtil], endo[:λ_wtil_t1]] = -m[:η_λ_w]
+        Ψ[eq[:eq_λ_wtil], exo[:λ_w_sh]]   = 1.
 
-    Γ0[eq[:eq_λ_w1], endo[:λ_w_t1]] = 1.
-    Ψ[eq[:eq_λ_w1], exo[:λ_w_sh]]   = 1.
+        Γ0[eq[:eq_λ_wtil1], endo[:λ_wtil_t1]] = 1.
+        Ψ[eq[:eq_λ_wtil1], exo[:λ_w_sh]]   = 1.
+
+        # iid shock
+        Γ0[eq[:eq_λ_wiid], endo[:λ_wiid_t]] = 1.
+        Γ1[eq[:eq_λ_wiid], endo[:λ_wiid_t]] = m[:ρ_λ_wiid]
+        Ψ[eq[:eq_λ_wiid], exo[:λ_wiid_sh]]  = 1.
+
+        # Add to λ_w
+        Γ0[eq[:eq_λ_w], endo[:λ_wtil_t]] = -1.
+        Γ0[eq[:eq_λ_w], endo[:λ_wiid_t]] = -1.
+        Γ0[eq[:eq_λ_w], endo[:λ_w_t]]    = 1.
+    else
+        Γ0[eq[:eq_λ_w], endo[:λ_w_t]]  = 1.
+        Γ1[eq[:eq_λ_w], endo[:λ_w_t]]  = m[:ρ_λ_w]
+        Γ1[eq[:eq_λ_w], endo[:λ_w_t1]] = -m[:η_λ_w]
+        Ψ[eq[:eq_λ_w], exo[:λ_w_sh]]   = 1.
+
+        Γ0[eq[:eq_λ_w1], endo[:λ_w_t1]] = 1.
+        Ψ[eq[:eq_λ_w1], exo[:λ_w_sh]]   = 1.
+    end
 
     # Monetary policy shock
     Γ0[eq[:eq_rm], endo[:rm_t]] = 1.
     Γ1[eq[:eq_rm], endo[:rm_t]] = m[:ρ_rm]
     Ψ[eq[:eq_rm], exo[:rm_sh]]  = 1.
+
+    # Labor preference shock
+    if subspec(m) == "ss60"
+        Γ0[eq[:eq_φ], endo[:φ_t]] = 1.
+        Γ1[eq[:eq_φ], endo[:φ_t]] = m[:ρ_φ]
+        Ψ[eq[:eq_φ], exo[:φ_sh]]  = 1.
+    end
 
     ### Financial frictions
 
@@ -396,6 +488,25 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_σ_ω], endo[:σ_ω_t]] = 1.
     Γ1[eq[:eq_σ_ω], endo[:σ_ω_t]] = m[:ρ_σ_w]
     Ψ[eq[:eq_σ_ω], exo[:σ_ω_sh]]  = 1.
+
+    if subspec(m) == "ss60"
+        # iid shock
+        Γ0[eq[:eq_σ_ωiid], endo[:σ_ωiid_t]] = 1.
+        Γ1[eq[:eq_σ_ωiid], endo[:σ_ωiid_t]] = m[:ρ_σ_ωiid]
+        Ψ[eq[:eq_σ_ωiid], exo[:σ_ωiid_sh]]  = 1.
+
+        # Transient AR(1) shock to σ_ω_t
+        Γ1[eq[:eq_σ_ω], endo[:σ_ω_t]] = 0. # zero these out
+        Ψ[eq[:eq_σ_ω], exo[:σ_ω_sh]]  = 0.
+
+        Γ0[eq[:eq_σ_ωtil], endo[:σ_ωtil_t]] = 1.
+        Γ1[eq[:eq_σ_ωtil], endo[:σ_ωtil_t]] = m[:ρ_σ_w]
+        Ψ[eq[:eq_σ_ωtil], exo[:σ_ω_sh]]  = 1.
+
+        # Add to σ_ω_t
+        Γ0[eq[:eq_σ_ω], endo[:σ_ωiid_t]] = -1.
+        Γ0[eq[:eq_σ_ω], endo[:σ_ωtil_t]] = -1.
+    end
 
     # Exogenous bankruptcy costs
     Γ0[eq[:eq_μ_e], endo[:μ_e_t]] = 1.
