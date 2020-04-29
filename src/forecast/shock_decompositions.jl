@@ -305,6 +305,11 @@ function deterministic_trends(system::RegimeSwitchingSystem{S}, z0::Vector{S}, n
         shocks = zeros(S, nshocks, length(reg_ind))
         states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
     end
+    if regime_inds[end][end] < nperiods
+        shocks   = zeros(S, nshocks, nperiods - regime_inds[end][end])
+        last_ind = (1 + regime_inds[end][end]):nperiods
+        states[:, last_ind], obs[:, last_ind], pseudo[:, last_ind], _ = forecast(system[length(regime_inds)], states[:, regime_inds[end][end]], shocks)
+    end
 
     if start_index == 1 && end_index == nperiods
         return states, obs, pseudo
