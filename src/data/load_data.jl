@@ -169,8 +169,16 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             data_series[:bluechip] = [Symbol("ant$i") for i in 1:n_mon_anticipated_shocks(m)]
         end
     end
-    if n_z_anticipated_shocks(m) > 0
-        data_series[:Z] = [Symbol("z$i") for i in 1:n_z_anticipated_shocks(m)]
+    try
+        if n_z_anticipated_shocks(m) > 0
+            data_series[:Z] = [Symbol("z$i") for i in 1:n_z_anticipated_shocks(m)]
+        end
+    catch err
+        if isa(err, KeyError)
+            nothing
+        else
+            rethrow(err)
+        end
     end
 
 

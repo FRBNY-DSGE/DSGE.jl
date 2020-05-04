@@ -15,8 +15,8 @@ m <= Setting(:hessian_path, "")
 end
 
 @testset "Test setting access functions for AbstractDSGEModel objects" begin
-    n_anticipated_shocks(m) == get_setting(m, :n_anticipated_shocks)
-    n_anticipated_shocks_padding(m) == get_setting(m, :n_anticipated_shocks_padding)
+    n_mon_anticipated_shocks(m) == get_setting(m, :n_mon_anticipated_shocks)
+    n_mon_anticipated_shocks_padding(m) == get_setting(m, :n_mon_anticipated_shocks_padding)
 
     @test DSGE.date_presample_start(m) == get_setting(m, :date_presample_start)
     @test DSGE.date_mainsample_start(m) == get_setting(m, :date_mainsample_start)

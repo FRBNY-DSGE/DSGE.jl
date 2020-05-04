@@ -37,6 +37,7 @@ module DSGE
         # abstractdsgemodel.jl
         AbstractDSGEModel, AbstractRepModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
+        n_mon_anticipated_shocks, n_mon_anticipated_shocks_padding,
         date_presample_start, date_mainsample_start, date_zlb_start,
         date_presample_end, date_prezlb_end, date_mainsample_end, date_conditional_end,
         index_presample_start, index_mainsample_start, index_zlb_start, index_forecast_start,
