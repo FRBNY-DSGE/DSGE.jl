@@ -445,7 +445,7 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
     var_ind = indices[var_name]
 
     # Read forecast output
-    reg_switch = if haskey(m.settings)
+    reg_switch = if haskey(m.settings, :regime_switching)
         get_setting(m, :regime_switching)
     else
         false

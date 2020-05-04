@@ -98,6 +98,12 @@ function forecast(m::AbstractDSGEModel, system::System{S},
         end
     end
 
+    if haskey(get_settings(m), :n_periods_no_shocks)
+        if get_setting(m, :n_periods_no_shocks) > 0
+            shocks[:, 1:get_setting(m, :n_periods_no_shocks)] = zeros(size(shocks, 1), get_setting(m, :n_periods_no_shocks))
+        end
+    end
+
     # Populate shocks matrix under alternative policy, if
     # user has specified a function to do so
     alt_policy = alternative_policy(m)
