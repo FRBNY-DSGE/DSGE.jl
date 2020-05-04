@@ -18,6 +18,7 @@ specified in their proper positions.
 function eqcond(m::Model1002)
     return eqcond(m, 1)
 end
+
 function eqcond(m::Model1002, reg::Int)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
@@ -34,7 +35,6 @@ function eqcond(m::Model1002, reg::Int)
         if !isempty(para.regimes)
             ModelConstructors.toggle_regime!(para, reg)
         end
-        #@eval (($(para.key)) = ModelConstructors.regime_val($(para), $(reg)))
     end
 
     ### ENDOGENOUS STATES ###

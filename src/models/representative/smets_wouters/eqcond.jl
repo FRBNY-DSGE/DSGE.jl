@@ -7,8 +7,11 @@
 # C  (n_states x 1) is a vector of constants
 # Ψ  (n_states x n_shocks_exogenous) holds coefficients of iid shocks.
 # Π  (n_states x n_states_expectational) holds coefficients of expectational states.
-
 function eqcond(m::SmetsWouters)
+    return eqcond(m, 1)
+end
+
+function eqcond(m::SmetsWouters, reg::Int)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -19,6 +22,13 @@ function eqcond(m::SmetsWouters)
     C  = zeros(n_states(m))
     Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
     Π  = zeros(n_states(m), n_shocks_expectational(m))
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, reg)
+        end
+    end
+
 
     ### ENDOGENOUS STATES ###
 
@@ -432,6 +442,12 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:eq_Ew], endo[:w_t]]         = 1.
     Γ1[eq[:eq_Ew], endo[:Ew_t]]         = 1.
     Π[eq[:eq_Ew], ex[:Ew_sh]]          = 1.
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
+    end
 
     return Γ0, Γ1, C, Ψ, Π
 end

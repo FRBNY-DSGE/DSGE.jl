@@ -21,7 +21,7 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::SmetsWouters{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}) where {T<:AbstractFloat}
+                     CCC::Vector{T}; reg::Int = 1) where {T<:AbstractFloat}
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
     exo       = m.exogenous_shocks
@@ -35,6 +35,13 @@ function measurement(m::SmetsWouters{T},
     DD = zeros(_n_observables)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, reg)
+        end
+    end
+
 
     ## Output growth - Quarterly!
     ZZ[obs[:obs_gdp], endo[:y_t]]       = 1.0
@@ -106,6 +113,12 @@ function measurement(m::SmetsWouters{T},
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0)
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+    end
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
     end
 
     return Measurement(ZZ, DD, QQ, EE)

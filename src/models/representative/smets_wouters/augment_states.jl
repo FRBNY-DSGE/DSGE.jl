@@ -1,5 +1,7 @@
 function augment_states(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                        CCC::Vector{T}) where {T<:AbstractFloat}
+                        CCC::Vector{T};
+                        regime_switching::Bool = false,
+                        reg::Int = 1) where {T<:AbstractFloat}
     endo = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
     exo = m.exogenous_shocks
@@ -17,6 +19,13 @@ function augment_states(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(n_addl_eqs, n_exo)]
     CCC_aug = [CCC; zeros(n_addl_eqs)]
+
+    for p in m.parameters
+        if !isempty(p.regimes)
+            p = ModelConstructors.toggle_regime!(p, reg)
+        end
+    end
+
 
     ### TTT modifications
 
@@ -45,6 +54,12 @@ function augment_states(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
 
     RRR_aug[endo_addl[:Et_π_t],:] = TR[endo[:π_t],:]
     CCC_aug[endo_addl[:Et_π_t],:] = CTC[endo[:π_t],:]
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
+    end
 
     return TTT_aug, RRR_aug, CCC_aug
 end
