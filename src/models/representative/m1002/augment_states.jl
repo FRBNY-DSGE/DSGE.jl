@@ -81,6 +81,24 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
         TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
     end
 
+    if get_setting(m, :add_nominalgdp_level)
+        TTT_aug[endo_new[:cum_y_t],  endo[:y_t]]         = 1.0
+        TTT_aug[endo_new[:cum_y_t],  endo_addl[:y_t1]]   = -1.0
+        TTT_aug[endo_new[:cum_y_t],  endo_new[:cum_y_t]] = 1.0
+
+        TTT_aug[endo_new[:cum_z_t],  endo[:z_t]]         = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo_new[:cum_z_t]] = 1.0
+        CCC_aug[endo_new[:cum_z_t]]                      = 100. * (exp(m[:z_star]) - 1.)
+
+        TTT_aug[endo_new[:cum_π_t],  endo[:π_t]]         = 1.0
+        TTT_aug[endo_new[:cum_π_t],  endo_new[:cum_π_t]] = 1.0
+        CCC_aug[endo_new[:cum_π_t]]                      = 100. * (m[:π_star] - 1.)
+
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo[:e_gdp_t]]         = 1.0
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_addl[:e_gdp_t1]]   = -m[:me_level]
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:cum_e_gdp_t]] = 1.0
+    end
+
     # Expected inflation
     TTT_aug[endo_new[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
 

@@ -29,6 +29,29 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo = zeros(_n_pseudo, _n_states)
     DD_pseudo = zeros(_n_pseudo)
 
+    no_integ_inds = inds_states_no_integ_series(m)
+    if get_setting(m, :add_laborproductivity_measurement)
+        # Construct pseudo-obs from integrated states first
+        ZZ_pseudo[pseudo[:laborproductivity], endo[:y_t]] = 1.
+        ZZ_pseudo[pseudo[:laborproductivity], endo[:L_t]] = -1.
+        # ZZ_pseudo[pseudo[:laborproductivity], endo_addl[:cum_z_t]] = 1.
+        DD_pseudo[pseudo[:laborproductivity]] = 100. * log(m[:ystar] / m[:Lstar])
+
+        # Remove integrated states (e.g. states w/unit roots)
+        # RRR and CCC aren't used, so we don't do anything with them
+        TTT = @view TTT[no_integ_inds, no_integ_inds]
+    end
+
+    if get_setting(m, :add_nominalgdp_level)
+        ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_y_t]]     = 1.
+        ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_z_t]]     = 1.
+        ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_e_gdp_t]] = 1.
+        ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_π_t]]     = 1.
+    end
+
+    # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
+    TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
+
     ##########################################################
     ## PSEUDO-OBSERVABLE EQUATIONS
     ##########################################################
@@ -145,6 +168,9 @@ function pseudo_measurement(m::Model1002{T},
 
     ## k_f_t
     ZZ_pseudo[pseudo[:k_f_t], endo[:k_f_t]] = 1.
+
+    ## r_f_t
+    ZZ_pseudo[pseudo[:r_f_t], endo[:r_f_t]] = 1.
 
     ## kbar_f_t
     ZZ_pseudo[pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
@@ -375,6 +401,9 @@ function pseudo_measurement(m::Model1002{T},
 
     ## c_t
     ZZ_pseudos[reg][pseudo[:c_t], endo[:c_t]] = 1.
+
+    ## r_f_t
+    ZZ_pseudos[reg][pseudo[:r_f_t], endo[:r_f_t]] = 1.
 
     ## qk_f_t
     ZZ_pseudos[reg][pseudo[:qk_f_t], endo[:qk_f_t]] = 1.

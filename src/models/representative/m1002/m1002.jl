@@ -176,6 +176,17 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states_augmented, :cum_z_t)
         m <= Setting(:integrated_series, [:cum_z_t])
     end
+    if get_setting(m, :add_nominalgdp_level)
+        integ_series = [:cum_z_t, :cum_y_t, :cum_e_gdp_t, :cum_π_t]
+        if !(:cum_z_t in endogenous_states_augmented)
+            push!(endogenous_states_augmented, :cum_z_t)
+        end
+        push!(endogenous_states_augmented, :cum_y_t, :cum_e_gdp_t, :cum_π_t)
+        if haskey(get_settings(m), :integrated_series)
+            integ_series = union(get_setting(m, :integrated_series), integ_series)
+        end
+        m <= Setting(:integrated_series, integ_series)
+    end
     if subspec(m) == "ss52"
         push!(endogenous_states, :ϵ_λ_w_t)
         push!(equilibrium_conditions, :eq_ϵ_λ_w)
@@ -872,7 +883,11 @@ function model_settings!(m::Model1002)
                  "Whether to use population forecasts as data")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
                  "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
+
+    # Additional pseudo-observables and integrated series
     m <= Setting(:add_laborshare_measurement, false)
+    m <= Setting(:add_laborproductivity_measurement, false)
+    m <= Setting(:add_nominalgdp_level, false)
 
     nothing
 end
