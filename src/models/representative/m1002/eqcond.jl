@@ -477,6 +477,10 @@ function eqcond(m::Model1002, reg::Int)
 
     # Labor preference shock
     if subspec(m) == "ss60"
+        # Eφ_t
+        Γ0[eq[:eq_Eφ], endo[:φ_t]] = -m[:ρ_φ]
+
+        # AR(1) process
         Γ0[eq[:eq_φ], endo[:φ_t]] = 1.
         Γ1[eq[:eq_φ], endo[:φ_t]] = m[:ρ_φ]
         Ψ[eq[:eq_φ], exo[:φ_sh]]  = 1.
@@ -546,7 +550,8 @@ function eqcond(m::Model1002, reg::Int)
     end
 
     for (key, val) in get_setting(m, :antshocks)
-        ant_eq_mapping = get_setting(m, :ant_eq_mapping)
+        ant_eq_mapping  = get_setting(m, :ant_eq_mapping)    # maps antshock key to state variable name
+        ant_eq_E_mapping  = get_setting(m, :ant_eq_E_mapping)    # maps antshock key to state variable name
         if val > 0
             # This section adds the anticipated shocks. There is one state for all the
             # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
@@ -560,14 +565,21 @@ function eqcond(m::Model1002, reg::Int)
 
             if val > 1
                 for i = 2:val
-                    Γ1[eq[Symbol("eq_", key, "l$(i-1)")], endo[Symbol(ant_eq_mapping[:key], "_tl$i")]] = 1.
+                    Γ1[eq[Symbol("eq_", key, "l$(i-1)")], endo[Symbol(ant_eq_mapping[key], "_tl$i")]] = 1.
                     Γ0[eq[Symbol("eq_", key, "l$i")], endo[Symbol(key, "_tl$i")]]     = 1.
                     Ψ[eq[Symbol("eq_", key, "l$i")], exo[Symbol(key, "_shl$i")]]      = 1.
                 end
             end
+
+            if key == :z # Handle separately b/c coefficient is not -1.0
+                # Ez_t
+                Γ0[regime][eq[:eq_Ez], endo[:z_tl1]] = -1 / (1 - m[:α]) # note z_tl1 = sum of all shocks that will hit next period.
+                # so this is the only required line
+            elseif haskey(ant_eq_E_mapping, key) # Account for other expected anticipated shocks
+                Γ0[eq[Symbol("eq_", ant_eq_E_mapping[key])], endo[Symbol(ant_eq_mapping[key], "_tl1")]] = -1.
+            end
         end
     end
-
 
     ### EXPECTATION ERRORS ###
 

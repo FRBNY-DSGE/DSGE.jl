@@ -406,16 +406,23 @@ end
 
 """
 ```
-update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
+update!(m::AbstractDSGEModel, values::ParameterVector{T}; aug::Bool = false) where T
 ```
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
-### Arguments:
+
+### Arguments
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
+
+### Keywords
+- `aug`:: true if `values` is augmented with regime-switching parameters. Then
+    `update!` assumes the `value` field of each parameter in values` holds
+    the parameter value in the first regime, and then we update the field
+    `regimes` for each parameter
 """
 function update!(m::AbstractDSGEModel, values::ParameterVector{T};
                  aug::Bool = false) where T #draw_aug::Vector = Vector(undef, 0)) where T
-    ModelConstructors.update!(m.parameters, [θ.value for θ in values])
+    ModelConstructors.update!(m.parameters, [θ.value for θ in values]) # Update first-regime values
     for para in m.parameters
         if !isempty(para.regimes)
             for (ind, val) in para.regimes[:value]

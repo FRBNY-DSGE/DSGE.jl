@@ -521,7 +521,7 @@ function init_observable_mappings!(m::Model1002)
                 levels[:, Symbol("WAGEMKP")]
             end
             varphi_rev_transform = DSGE.identity
-            observables[:obs_varphi] = Observable(:obs_varphi, [:WAGEMKP__DLX],
+            observables[:obs_φ] = Observable(:obs_φ, [:WAGEMKP__DLX],
                                               varphi_fwd_transform, varphi_rev_transform,
                                               "varphi", "varphi")
             sigma_omegaiid_fwd_transform = function (levels)

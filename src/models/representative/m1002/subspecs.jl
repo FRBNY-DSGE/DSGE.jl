@@ -2609,7 +2609,7 @@ function ss60!(m::Model1002)
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                    tex_label="\\sigma_{\\sigma_\\omega}")
 
-    m <= parameter(:σ_μ_e, 0.0000, (0.,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+    m <= parameter(:σ_μ_e, 0.0000, (0. ,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
                    description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",
                    tex_label="\\sigma_{\\mu_e}")
 
