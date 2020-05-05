@@ -580,8 +580,8 @@ function init_parameters!(m::Model1002)
         m <= parameter(:ρ_biidc, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_biidc: AR(1) coefficient in the iid component of the preference process.",
                        tex_label="\\rho_{z, iid}")
-        m <= parameter(:σ_biidc, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2. * 2.88314^2, sqrt(2.88314^2  + 1.)), fixed=false, # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
+        m <= parameter(:σ_biidc, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2. * (2.88314 / 10.)^2 ./ .1, sqrt((2.88314 / 10.)^2  + .1)), fixed=false, # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2), with mode M given by ν (τ² - M²) = 2 * M²
                        description="σ_biidc: The standard deviation of the process describing the iid component of preferences.",
                        tex_label="\\sigma_{z, iid}")
         m <= parameter(:ρ_σ_ωiid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
@@ -602,7 +602,7 @@ function init_parameters!(m::Model1002)
                        description="ρ_φ: AR(1) coefficient in the labor supply preference process.",
                        tex_label="\\rho_{\\varphi}")
         m <= parameter(:σ_φ, 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2 * 400.0^2, sqrt(1. + 400.0^2)), fixed=false,
+                       RootInverseGamma(2 * (400.0 / 10.)^2 ./ 10., sqrt(10. + (400.0 / 10.)^2)), fixed=false,
                        description="σ_φ: The standard deviation of the process describing the labor supply preference.",
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
     end
@@ -842,9 +842,14 @@ function model_settings!(m::Model1002)
                      "Padding for anticipated policy shocks")
     end
 
-    m <= Setting(:ant_eq_mapping, Dict{Symbol, Symbol}(:z => :ztil))
+    m <= Setting(:ant_eq_mapping,  Dict{Symbol, Symbol}(:z => :ztil),
+                 "Dictionary mapping name of anticipated shock to name of state variable for exogenous process affected by the shock")
+    m <= Setting(:ant_eq_E_mapping, Dict{Symbol, Symbol}(),
+                 "Dictionary mapping name of anticipated shock to name of state variable for" *
+                 " one-period ahead expectation of exogenous process affected by the shock") # This mapping is intended only for anticipated shocks that are not scaled by a constant, i.e. the coefficient in the Γ0 eqcond matrix is -1.0
 
-    m <= Setting(:antshocks, Dict{Symbol, Int}())
+    m <= Setting(:antshocks, Dict{Symbol, Int}(),
+                 "Dictionary mapping name of anticipated shock to the number of periods of anticipation.")
 
     # Data
     m <= Setting(:data_id, 3, "Dataset identifier")

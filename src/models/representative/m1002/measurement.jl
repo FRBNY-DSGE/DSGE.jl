@@ -203,7 +203,7 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_b], endo[:b_t]] = 1.
         ZZ[obs[:obs_lambda_wiid], endo[:λ_wiid_t]] = 1.
         ZZ[obs[:obs_lambda_w], endo[:λ_w_t]] = 1.
-        ZZ[obs[:obs_varphi], endo[:φ_t]] = 1.
+        ZZ[obs[:obs_φ], endo[:φ_t]] = 1.
     end
 
 
@@ -222,7 +222,6 @@ function measurement(m::Model1002{T},
         if k == :z # z is a sum of a transient and persistent component, so we model this differently
             for i = 1:v
                 ZZ[obs[Symbol("obs_z$i")], no_integ_inds] = ZZ[obs[:obs_z], no_integ_inds]' * (TTT^i)
-                # DD[obs[Symbol("obs_z$i")]]    = 100. * (exp(m[:z_star]) - 1.)
                 if subspec(m) == "ss11"
                     QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_ztil]^2 / v
                 else
