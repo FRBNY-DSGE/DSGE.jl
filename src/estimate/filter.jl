@@ -243,7 +243,7 @@ function filter_likelihood(m::AbstractDSGEModel, data::AbstractArray,
 end
 
 function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::System{S},
-                       s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0); cond_type::Symbol = :none,
+                       s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0); cond_type::Symbol = :none,
                        start_date::Date = date_presample_start(m),
                        include_presample::Bool = false) where S<:AbstractFloat
 
@@ -301,7 +301,7 @@ function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::System{S},
 end
 
 function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSystem{S},
-                       s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0); cond_type::Symbol = :none,
+                       s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0); cond_type::Symbol = :none,
                        start_date::Date = date_presample_start(m),
                        include_presample::Bool = false) where S<:AbstractFloat
 
@@ -328,8 +328,8 @@ function filter_shocks(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitch
         # explicitly set to 0
         @assert all(x -> abs(x) < 1e-14, P_0[:, ant_state_inds])
         @assert all(x -> abs(x) < 1e-14, P_0[ant_state_inds, :])
-        P_0[:, ant_state_inds] = 0.
-        P_0[ant_state_inds, :] = 0.
+        P_0[:, ant_state_inds] .= 0.
+        P_0[ant_state_inds, :] .= 0.
     end
 
     # Specify number of presample periods if we don't want to include them in

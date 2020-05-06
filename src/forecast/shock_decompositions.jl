@@ -72,7 +72,6 @@ function shock_decompositions(system::System{S},
     system = zero_system_constants(system)
 
     z0 = zeros(S, nstates)
-
     for i = 1:nshocks
         # Isolate single shock
         shocks = zeros(S, nshocks, allperiods)
@@ -259,23 +258,10 @@ function deterministic_trends(m::AbstractDSGEModel{S},
 
     # Now intersect these periods with regime indices
     regime_inds = regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
-    # first_regime = findfirst(map(x -> start_index in x, regime_inds))
-    # last_regime  = findfirst(map(x -> end_index in x,   regime_inds))
-    # if isnothing(last_regime)
-    #     if !isnothing(first_regime)
-    #         last_regime = length(regime_inds) # then end_index occurs after the end of regime_inds
-    #     else
-    #         error("The first shockdec start date ($start_index) is not in any of the regimes ($(regime_inds)).")
-    #     end
-    # end
-
-    # regimes      = first_regime:last_regime                  # need to specify which regimes we need for shockdec.
-    # regime_inds  = regime_inds[regimes]                      # also need to specify how long in each regime we are.
-    # regime_inds[1]   = start_index:regime_inds[1][end]       # if the start index is in the middle of a regime.
     if regime_inds[1][1] < 1
         regime_inds[1] = 1:regime_inds[1][end]
     end
-    regime_inds[end] = regime_inds[end][1]:end_index         # if the end index is in the middle of a regime or is past the regime's end
+    regime_inds[end] = regime_inds[end][1]:end_index      # if the end index is in the middle of a regime or is past the regime's end
 
     return deterministic_trends(system, z0, nperiods, start_index, end_index, regime_inds)
 end
