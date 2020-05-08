@@ -48,57 +48,6 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_π_t]]     = 1.
     end
 
-    if get_setting(m, :add_nominalgdp_growth)
-        ZZ_pseudo[pseudo[:NominalGDPGrowth], endo[:y_t]]           = 1.
-        ZZ_pseudo[pseudo[:NominalGDPGrowth], endo_addl[:y_t1]]     = -1.
-        ZZ_pseudo[pseudo[:NominalGDPGrowth], endo_addl[:z_t]]      = 1.
-        ZZ_pseudo[pseudo[:NominalGDPGrowth], endo_addl[:e_gdp_t]]  = 1.
-        ZZ_pseudo[pseudo[:NominalGDPGrowth], endo_addl[:e_gdp_t1]] = -m[:me_level]
-        ZZ_pseudo[pseudo[:NominalGDPGrowth], endo[:π_t]]           = 1.
-        DD_pseudo[pseudo[:NominalGDPGrowth]]                       = 100. * (exp(m[:z_star] - 1.) + (m[:π_star] - 1.))
-    end
-
-    if get_setting(m, :add_cumulative)
-        ZZ_pseudo[pseudo[:AccumOutputGap], endo_addl[:cum_y_t]]   = 1.
-        ZZ_pseudo[pseudo[:AccumOutputGap], endo_addl[:cum_y_f_t]] = -1.
-
-        ZZ_pseudo[pseudo[:GDPLevel], endo_addl[:cum_y_t]]     = 1.
-        ZZ_pseudo[pseudo[:GDPLevel], endo_addl[:cum_z_t]]     = 1.
-        ZZ_pseudo[pseudo[:GDPLevel], endo_addl[:cum_e_gdp_t]] = 1.
-
-        ZZ_pseudo[pseudo[:FlexibleGDPLevel], endo_addl[:cum_y_f_t]] = 1.
-        ZZ_pseudo[pseudo[:FlexibleGDPLevel], endo_addl[:cum_z_t]]   = 1.
-
-        ZZ_pseudo[pseudo[:ConsumptionLevel], endo_addl[:cum_c_t]]     = 1.
-        ZZ_pseudo[pseudo[:ConsumptionLevel], endo_addl[:cum_z_t]]     = 1.
-
-        ZZ_pseudo[pseudo[:FlexibleConsumptionLevel], endo_addl[:cum_c_f_t]] = 1.
-        ZZ_pseudo[pseudo[:FlexibleConsumptionLevel], endo_addl[:cum_z_t]]   = 1.
-
-        ZZ_pseudo[pseudo[:InvestmentLevel], endo_addl[:cum_i_t]]     = 1.
-        ZZ_pseudo[pseudo[:InvestmentLevel], endo_addl[:cum_z_t]]     = 1.
-
-        ZZ_pseudo[pseudo[:FlexibleInvestmentLevel], endo_addl[:cum_i_f_t]] = 1.
-        ZZ_pseudo[pseudo[:FlexibleInvestmentLevel], endo_addl[:cum_z_t]]   = 1.
-    end
-
-    if get_setting(m, :add_flexible_price_growth)
-        ZZ_pseudo[pseudo[:FlexibleGDPGrowth], endo[:y_f_t]]       = 1.
-        ZZ_pseudo[pseudo[:FlexibleGDPGrowth], endo_addl[:y_f_t1]] = -1.
-        ZZ_pseudo[pseudo[:FlexibleGDPGrowth], endo[:z_t]]         = 1.
-        DD_pseudo[pseudo[:FlexibleGDPGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
-
-        ZZ_pseudo[pseudo[:FlexibleInvestmentGrowth], endo[:i_f_t]]       = 1.
-        ZZ_pseudo[pseudo[:FlexibleInvestmentGrowth], endo_addl[:i_f_t1]] = -1.
-        ZZ_pseudo[pseudo[:FlexibleInvestmentGrowth], endo[:z_t]]         = 1.
-        DD_pseudo[pseudo[:FlexibleInvestmentGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
-
-        ZZ_pseudo[pseudo[:FlexibleConsumptionGrowth], endo[:c_f_t]]       = 1.
-        ZZ_pseudo[pseudo[:FlexibleConsumptionGrowth], endo_addl[:c_f_t1]] = -1.
-        ZZ_pseudo[pseudo[:FlexibleConsumptionGrowth], endo[:z_t]]         = 1.
-        DD_pseudo[pseudo[:FlexibleConsumptionGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
-    end
-
     if haskey(get_settings(m), :integrated_series)
         if !isempty(get_setting(m, :integrated_series))
             TTT = @view TTT[no_integ_inds, no_integ_inds]
