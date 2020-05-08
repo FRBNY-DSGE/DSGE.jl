@@ -86,8 +86,7 @@ function eqcond_lite(m::TwoAssetHANK)
     nVars    = get_setting(m, :nVars)::Int64
     nEErrors = get_setting(m, :nEErrors)::Int64
 
-    #vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
-    vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
+    vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
     V_SS   = reshape(vars_SS[1:n_v], I*J, N)
     g_SS   = vars_SS[n_v + 1 : n_v + n_g]
     K_SS   = vars_SS[n_v + n_g + 1]
@@ -286,12 +285,6 @@ function eqcond_lite(m::TwoAssetHANK)
     #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_.jld2", true, true, true, IOStream) do file
     #    file["residuals"] = out
     #end
-
-    my_out = vec(DelimitedFiles.readdlm("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/my_residuals.csv", ','))
-
-    @assert maximum(abs.(my_out[1:2000] - vec(out)[1:2000])) < 1e-7
-    @show maximum(abs.(my_out[1:2000] - vec(out)[1:2000]))
-    @assert isapprox(my_out[60001:62250], vec(out)[2001:4250], rtol=1e-4)
 
     x = zeros(Float64, 2 * nVarsi + nEErrors + 1)
     @time derivs = ForwardDiff.sparse_jacobian(get_residuals_lite, x)

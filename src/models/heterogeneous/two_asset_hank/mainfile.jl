@@ -1,5 +1,4 @@
 using DSGE, SparseArrays, MAT, FileIO
-#include("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/stateSpaceReduction.jl")
 # Script for doing all that MATLAB does
 #m = TwoAssetHANK()
 #steadystate!(m)

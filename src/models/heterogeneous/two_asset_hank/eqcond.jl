@@ -91,7 +91,6 @@ function eqcond(m::TwoAssetHANK)
     util, deposit, cost = construct_problem_functions(γ, χ0, χ1, χ2, a_lb)
 
     vars_SS     = vec(m[:vars_SS].value)::Vector{Float64}
-    #vars_SS = vec(MAT.matread("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/vars_SS.mat")["vars_SS"])
     V_SS   = vars_SS[1:n_v]
     g_SS   = vars_SS[n_v + 1 : n_v + n_g]
     K_SS   = vars_SS[n_v + n_g + 1]
@@ -265,15 +264,6 @@ function eqcond(m::TwoAssetHANK)
     end
 
     out = get_residuals(zeros(Float64, 2 * nVars + nEErrors + 1))
-
-    #JLD2.jldopen("/home/rcerxs30/.julia/dev/DSGE/src/models/heterogeneous_agent/two_asset_hank/eqcond_after_.jld2", true, true, true, IOStream) do file
-    #    file["residuals"] = out
-    #end
-
-    my_out = vec(DelimitedFiles.readdlm("/data/dsge_data_dir/dsgejl/reca/HANK/TwoAssetMATLAB/src/my_residuals.csv", ','))
-
-    @show maximum(abs.(my_out - vec(out)))#, length(findall(x->x>1e-5, abs.(my_out - out)))
-    #@assert isapprox(my_out, vec(out), rtol=1e-4)
 
     nstates = nVars    # n_states(m)
     n_s_exp = nEErrors # n_shocks_expectational(m)
