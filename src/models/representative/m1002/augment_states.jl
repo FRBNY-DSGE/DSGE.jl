@@ -83,7 +83,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
 
     if get_setting(m, :add_nominalgdp_level)
         TTT_aug[endo_new[:cum_y_t],  endo[:y_t]]         = 1.0
-        TTT_aug[endo_new[:cum_y_t],  endo_addl[:y_t1]]   = -1.0
+        TTT_aug[endo_new[:cum_y_t],  endo_new[:y_t1]]   = -1.0
         TTT_aug[endo_new[:cum_y_t],  endo_new[:cum_y_t]] = 1.0
 
         TTT_aug[endo_new[:cum_z_t],  endo[:z_t]]         = 1.0
@@ -94,8 +94,8 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
         TTT_aug[endo_new[:cum_π_t],  endo_new[:cum_π_t]] = 1.0
         CCC_aug[endo_new[:cum_π_t]]                      = 100. * (m[:π_star] - 1.)
 
-        TTT_aug[endo_new[:cum_e_gdp_t],  endo[:e_gdp_t]]         = 1.0
-        TTT_aug[endo_new[:cum_e_gdp_t],  endo_addl[:e_gdp_t1]]   = -m[:me_level]
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:e_gdp_t]]         = 1.0
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:e_gdp_t1]]   = -m[:me_level]
         TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:cum_e_gdp_t]] = 1.0
     end
 

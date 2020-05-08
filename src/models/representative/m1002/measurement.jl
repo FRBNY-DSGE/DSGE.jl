@@ -44,7 +44,7 @@ function measurement(m::Model1002{T},
     end
 
     no_integ_inds = inds_states_no_integ_series(m)
-    if get_setting(m, :add_laborproductivity_measurement)
+    if get_setting(m, :add_laborproductivity_measurement) || get_setting(m, :add_nominalgdp_level)
         # Remove integrated states (e.g. states w/unit roots)
         TTT = @view TTT[no_integ_inds, no_integ_inds]
         CCC = @view CCC[no_integ_inds]
@@ -209,7 +209,7 @@ function measurement(m::Model1002{T},
 
    # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_mon_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
+        ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
         if subspec(m) == "ss11"
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)

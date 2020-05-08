@@ -577,7 +577,7 @@ function init_parameters!(m::Model1002)
         m <= parameter(:ρ_ziid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_ziid: AR(1) coefficient in the iid component of the technology process.",
                        tex_label="\\rho_{z, iid}")
-        m <= parameter(:σ_ziid, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_ziid, 0., (0., 1000.), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
                        tex_label="\\sigma_{z, iid}")
