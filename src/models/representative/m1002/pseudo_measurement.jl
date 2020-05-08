@@ -39,7 +39,6 @@ function pseudo_measurement(m::Model1002{T},
 
         # Remove integrated states (e.g. states w/unit roots)
         # RRR and CCC aren't used, so we don't do anything with them
-        TTT = @view TTT[no_integ_inds, no_integ_inds]
     end
 
     if get_setting(m, :add_nominalgdp_level)
@@ -47,6 +46,12 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_z_t]]     = 1.
         ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_e_gdp_t]] = 1.
         ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_π_t]]     = 1.
+    end
+
+    if haskey(get_settings(m), :integrated_series)
+        if !isempty(get_setting(m, :integrated_series))
+            TTT = @view TTT[no_integ_inds, no_integ_inds]
+        end
     end
 
     # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
