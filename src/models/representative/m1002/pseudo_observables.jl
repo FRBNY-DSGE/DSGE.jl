@@ -55,6 +55,15 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_cumulative)
+        if get_setting(m, :add_cumulative)
+            push!(pseudo_names, :AccumOutputGap, :GDPLevel,
+                  :TechnologyLevel, :FlexibleGDPLevel, :ConsumptionLevel,
+                  :FlexibleConsumptionLevel, :InvestmentLevel,
+                  :FlexibleInvestmentLevel)
+        end
+    end
+
     if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
         if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
             push!(pseudo_names, :LaborProductivityGrowthNoME)
@@ -238,6 +247,27 @@ function init_pseudo_observable_mappings!(m::Model1002)
         if get_setting(m, :add_nominalgdp_level)
             pseudo[:NominalGDPLevel].name     = "Nominal GDP Level"
             pseudo[:NominalGDPLevel].longname = "Nominal GDP Level"
+        end
+    end
+
+    if haskey(m.settings, :add_cumulative)
+        if get_setting(m, :add_cumulative)
+            pseudo[:AccumOutputGap].name     = "Accumulated Output Gap"
+            pseudo[:AccumOutputGap].longname = "Accumulated Output Gap"
+            pseudo[:GDPLevel].name     = "GDP Level"
+            pseudo[:GDPLevel].longname = "GDP Level"
+            pseudo[:TechnologyLevel].name     = "Technology (z) Level"
+            pseudo[:TechnologyLevel].longname = "Technology (z) Level"
+            pseudo[:FlexibleGDPLevel].name     = "Flexible GDP Level"
+            pseudo[:FlexibleGDPLevel].longname = "Flexible GDP Level"
+            pseudo[:ConsumptionLevel].name     = "Consumption Level"
+            pseudo[:ConsumptionLevel].longname = "Consumption Level"
+            pseudo[:FlexibleConsumptionLevel].name     = "Flexible Consumption Level"
+            pseudo[:FlexibleConsumptionLevel].longname = "Flexible Consumption Level"
+            pseudo[:InvestmentLevel].name     = "Investment Level"
+            pseudo[:InvestmentLevel].longname = "Investment Level"
+            pseudo[:FlexibleInvestmentLevel].name     = "Flexible Investment Level"
+            pseudo[:FlexibleInvestmentLevel].longname = "Flexible Investment Level"
         end
     end
 

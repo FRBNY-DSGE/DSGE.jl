@@ -48,6 +48,30 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudo[pseudo[:NominalGDPLevel], endo_addl[:cum_π_t]]     = 1.
     end
 
+    if get_setting(m, :add_cumulative)
+        ZZ_pseudo[pseudo[:AccumOutputGap], endo_addl[:cum_y_t]]   = 1.
+        ZZ_pseudo[pseudo[:AccumOutputGap], endo_addl[:cum_y_f_t]] = -1.
+
+        ZZ_pseudo[pseudo[:GDPLevel], endo_addl[:cum_y_t]]     = 1.
+        ZZ_pseudo[pseudo[:GDPLevel], endo_addl[:cum_z_t]]     = 1.
+        ZZ_pseudo[pseudo[:GDPLevel], endo_addl[:cum_e_gdp_t]] = 1.
+
+        ZZ_pseudo[pseudo[:FlexibleGDPLevel], endo_addl[:cum_y_f_t]] = 1.
+        ZZ_pseudo[pseudo[:FlexibleGDPLevel], endo_addl[:cum_z_t]]   = 1.
+
+        ZZ_pseudo[pseudo[:ConsumptionLevel], endo_addl[:cum_c_t]]     = 1.
+        ZZ_pseudo[pseudo[:ConsumptionLevel], endo_addl[:cum_z_t]]     = 1.
+
+        ZZ_pseudo[pseudo[:FlexibleConsumptionLevel], endo_addl[:cum_c_f_t]] = 1.
+        ZZ_pseudo[pseudo[:FlexibleConsumptionLevel], endo_addl[:cum_z_t]]   = 1.
+
+        ZZ_pseudo[pseudo[:InvestmentLevel], endo_addl[:cum_i_t]]     = 1.
+        ZZ_pseudo[pseudo[:InvestmentLevel], endo_addl[:cum_z_t]]     = 1.
+
+        ZZ_pseudo[pseudo[:FlexibleInvestmentLevel], endo_addl[:cum_i_f_t]] = 1.
+        ZZ_pseudo[pseudo[:FlexibleInvestmentLevel], endo_addl[:cum_z_t]]   = 1.
+    end
+
     if haskey(get_settings(m), :integrated_series)
         if !isempty(get_setting(m, :integrated_series))
             TTT = @view TTT[no_integ_inds, no_integ_inds]
@@ -286,16 +310,32 @@ function pseudo_measurement(m::Model1002{T},
             # Construct pseudo-obs from integrated states first
             ZZ_pseudos[reg][pseudo[:laborproductivity], endo[:y_t]] = 1.
             ZZ_pseudos[reg][pseudo[:laborproductivity], endo[:L_t]] = -1.
-            ZZ_pseudos[reg][pseudo[:laborproductivity], endo_addl[:cum_z_t]] = 1.
+            # ZZ_pseudos[reg][pseudo[:laborproductivity], endo_addl[:cum_z_t]] = 1.
             DD_pseudos[reg][pseudo[:laborproductivity]] = 100. * log(m[:ystar] / m[:Lstar])
 
             # Remove integrated states (e.g. states w/unit roots)
             # RRR and CCC aren't used, so we don't do anything with them
-            TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
+        end
+
+        if get_setting(m, :add_nominalgdp_level)
+            ZZ_pseudos[reg][pseudo[:NominalGDPLevel], endo_addl[:cum_y_t]]     = 1.
+            ZZ_pseudos[reg][pseudo[:NominalGDPLevel], endo_addl[:cum_z_t]]     = 1.
+            ZZ_pseudos[reg][pseudo[:NominalGDPLevel], endo_addl[:cum_e_gdp_t]] = 1.
+            ZZ_pseudos[reg][pseudo[:NominalGDPLevel], endo_addl[:cum_π_t]]     = 1.
+        end
+
+        if haskey(get_settings(m), :integrated_series)
+            if !isempty(get_setting(m, :integrated_series))
+                TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
+            else
+                TTT = TTTs[reg]
+            end
+        else
+            TTT = TTTs[reg]
         end
 
         # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
-        TTT10 = (1/40)*((UniformScaling(1.) - TTTs[reg])\(TTTs[reg] - TTTs[reg]^41))
+        TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
 
         ##########################################################
         ## PSEUDO-OBSERVABLE EQUATIONS
