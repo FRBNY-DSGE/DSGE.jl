@@ -55,6 +55,18 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_nominalgdp_growth)
+        if get_setting(m, :add_nominalgdp_growth)
+            push!(pseudo_names, :NominalGDPGrowth)
+        end
+    end
+
+    if haskey(m.settings, :add_flexible_price_growth)
+        if get_setting(m, :add_flexible_price_growth)
+            push!(pseudo_names, :FlexibleGDPGrowth, :FlexibleConsumptionGrowth, :FlexibleInvestmentGrowth)
+        end
+    end
+
     if haskey(m.settings, :add_cumulative)
         if get_setting(m, :add_cumulative)
             push!(pseudo_names, :AccumOutputGap, :GDPLevel,
@@ -250,6 +262,13 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_nominalgdp_growth)
+        if get_setting(m, :add_nominalgdp_growth)
+            pseudo[:NominalGDPGrowth].name     = "Nominal GDP Growth"
+            pseudo[:NominalGDPGrowth].longname = "Nominal GDP Growth"
+        end
+    end
+
     if haskey(m.settings, :add_cumulative)
         if get_setting(m, :add_cumulative)
             pseudo[:AccumOutputGap].name     = "Accumulated Output Gap"
@@ -268,6 +287,17 @@ function init_pseudo_observable_mappings!(m::Model1002)
             pseudo[:InvestmentLevel].longname = "Investment Level"
             pseudo[:FlexibleInvestmentLevel].name     = "Flexible Investment Level"
             pseudo[:FlexibleInvestmentLevel].longname = "Flexible Investment Level"
+        end
+    end
+
+    if haskey(m.settings, :add_flexible_price_growth)
+        if get_setting(m, :add_flexible_price_growth)
+            pseudo[:FlexibleGDPGrowth].name     = "Flexible GDP Level"
+            pseudo[:FlexibleGDPGrowth].longname = "Flexible GDP Growth"
+            pseudo[:FlexibleConsumptionGrowth].name     = "Flexible Consumption Growth"
+            pseudo[:FlexibleConsumptionGrowth].longname = "Flexible Consumption Growth"
+            pseudo[:FlexibleInvestmentGrowth].name     = "Flexible Investment Growth"
+            pseudo[:FlexibleInvestmentGrowth].longname = "Flexible Investment Growth"
         end
     end
 
