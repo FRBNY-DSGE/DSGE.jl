@@ -803,3 +803,28 @@ function logleveltopct_4q_approx(y::AbstractArray, data::AbstractVector = fill(N
 
     y - y_t4
 end
+
+# # Accumulation transforms
+# """
+# ```
+# get_transformlvl(transform::Function)
+# ```
+# Returns the accumulation transformation associated with the annualizing transformation.
+# """
+# function get_transform4q(transform::Function)
+#     if transform == loggrowthtopct_annualized_percapita
+#         loggrowthto_percapita
+#     elseif transform == loggrowthtopct_annualized
+#         loggrowthtopct_4q
+#     elseif transform == logleveltopct_annualized_percapita
+#         logleveltopct_4q_percapita
+#     elseif transform == logleveltopct_annualized
+#         logleveltopct_4q
+#     elseif transform == quartertoannual
+#         quartertoannual
+#     elseif transform == identity
+#         identity
+#     else
+#         error("4q equivalent not implemented for $transform")
+#     end
+# end

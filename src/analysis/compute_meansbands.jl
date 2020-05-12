@@ -109,6 +109,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
     # Compute means and bands
     if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                    :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
+                   # :forecastlvl, :histlvl, :bddforecastlvl]
         # Get to work!
         # pmap produces an error for trendobs sometimes, so just doing this iteratively
         mb_vec = Vector{Any}(undef,length(variable_names))
@@ -156,7 +157,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
 
     else
         error("Invalid product: $product")
-    end # of if product
+    end
 
     mb = MeansBands(metadata, means, bands)
 
@@ -431,6 +432,7 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                               y0_index::Int = -1, yt_index::Int = -1,
                               data::AbstractVector{Float64} = Float64[],
                               pop_growth::AbstractVector{Float64} = Float64[])
+                              # inflation_series::AbstractArray = Float64[])
     # No transformation
     if product in [:histut, :forecastut, :bddforecastut]
         return fcast_series
@@ -452,6 +454,8 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
         reverse_transform(fcast_series, transform4q;
                           fourquarter = true, y0s = y0s,
                           pop_growth = pop_growth)
+    # elseif product in [:histlvl, :forecastlvl, :bddforecastlvl]
+    #     # NEED TO ADD CASE HERE FOR HISTLVL, ETC.
     else
         # Use transformation that doesn't add back population growth for
         # products which are given in deviations

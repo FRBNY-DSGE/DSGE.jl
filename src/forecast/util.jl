@@ -140,7 +140,7 @@ added to `output_vars` when calling
 """
 function add_requisite_output_vars(output_vars::Vector{Symbol})
     # Add :bddforecast<class> if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q],
+    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q, :forecastlvl],
                                    output_vars)
     if !isempty(forecast_outputs)
         bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
@@ -168,7 +168,8 @@ function remove_meansbands_only_output_vars(output_vars::Vector{Symbol})
     # All the <product>ut<class> and <product>4q<class> variables are computed
     # during compute_meansbands
     meansbands_only_products = [:histut, :hist4q, :forecastut, :forecast4q,
-                                :bddforecastut, :bddforecast4q]
+                                :bddforecastut, :bddforecast4q, :histlvl, :forecastlvl,
+                                :bddforecastlvl]
 
     Base.filter(var -> !(get_product(var) in meansbands_only_products), output_vars)
 end

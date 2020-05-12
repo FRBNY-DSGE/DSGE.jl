@@ -31,6 +31,8 @@ function get_product(output_var::Symbol)
         :histforecast
     elseif occursin("hist4q", s)
         :hist4q
+    elseif occursin("histlvl", s)
+        :histlvl
     elseif occursin("histut", s)
         :histut
     elseif occursin("hist", s)
@@ -45,6 +47,8 @@ function get_product(output_var::Symbol)
         :forecastut
     elseif occursin("bddforecast", s)
         :bddforecast
+    elseif occursin("forecastlvl", s)
+        :forecastlvl
     elseif occursin("forecast", s)
         :forecast
     elseif occursin("shockdec", s)
