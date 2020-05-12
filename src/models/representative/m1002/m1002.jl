@@ -178,10 +178,7 @@ function init_model_indices!(m::Model1002)
     end
     if get_setting(m, :add_nominalgdp_level)
         integ_series = [:cum_z_t, :cum_y_t, :cum_e_gdp_t, :cum_π_t]
-        if !(:cum_z_t in endogenous_states_augmented)
-            push!(endogenous_states_augmented, :cum_z_t)
-        end
-        push!(endogenous_states_augmented, :cum_y_t, :cum_e_gdp_t, :cum_π_t)
+        push!(endogenous_states_augmented, setdiff(integ_series, endogenous_states_augmented)...)
         if haskey(get_settings(m), :integrated_series)
             integ_series = union(get_setting(m, :integrated_series), integ_series)
         end
@@ -197,6 +194,9 @@ function init_model_indices!(m::Model1002)
             integ_series = union(get_setting(m, :integrated_series), integ_series)
         end
         m <= Setting(:integrated_series, integ_series)
+    end
+    if get_setting(m, :add_flexiblePrice_growth)
+        push!(endogenous_states_augmented, setdiff([:y_f_t1, :c_f_t1, :i_f_t1], endogenous_states_augmented)...)
     end
     if subspec(m) == "ss52"
         push!(endogenous_states, :ϵ_λ_w_t)
@@ -899,7 +899,9 @@ function model_settings!(m::Model1002)
     m <= Setting(:add_laborshare_measurement, false)
     m <= Setting(:add_laborproductivity_measurement, false)
     m <= Setting(:add_nominalgdp_level, false)
+    m <= Setting(:add_nominalgdp_growth, false)
     m <= Setting(:add_cumulative, false)
+    m <= Setting(:add_flexible_price_growth, false)
 
     nothing
 end
