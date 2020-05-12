@@ -500,7 +500,7 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
         transforms = read(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
-        # # Handle case when series needs to be accumulated, NEED TO FIX INFLATION B/C FCAST_SERIES MAY BE A MATRIX SOMETIMES, ADD IT INSTEAD AS AN ADDITIONAL DIMENSION -> 3D ARRAY, AND THEN AFTERWARD WE NEED TO ADJUST THE NOMINAL REVERSE TRANSFORMS FOR THIS SYNTAX.
+        # # Handle case when series needs to be accumulated, NEED TO HANDLE CASE OF INFLATION
         # if product in [:histlvl, :forecastlvl, :bddforecastlvl]
         #     # Check if inflation is required for accumulation
         #     nominal_accumulation = haskey(get_setting(m, :nominal_accumulated_series), var_name)
