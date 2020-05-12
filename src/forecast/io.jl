@@ -206,7 +206,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
 
     for var in output_vars
         prod = get_product(var)
-        if prod in [:histut, :hist4q, :forecastut, :bddforecastut, :forecast4q, :bddforecast4q]
+        if prod in [:histut, :hist4q, :forecastut, :bddforecastut, :forecast4q, :bddforecast4q]#, :histlvl, :forecastlvl, :bddforecastlvl]
             # These are computed and saved in means and bands, not
             # during the forecast itself
             continue
@@ -500,6 +500,28 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
         transforms = read(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
+        # # Handle case when series needs to be accumulated
+        # if product in [:histlvl, :forecastlvl, :bddforecastlvl]
+        #     # Check if inflation is required for accumulation
+        #     nominal_accumulation = haskey(get_setting(m, :nominal_accumulated_series), var_name)
+        #     if nominal_accumulation
+        #         requisite_vars = get_setting(m, var_name) # Must have info on the real series first, then info on the inflation series second
+        #         fcast_series = Matrix{eltype(fcast_series)}(undef, length(fcast_series), length(requisite_vars))
+        #         for (i, var_info) in enumerate(requisite_vars)
+        #             # Get index corresponding to var name
+        #             req_var_name, req_var_class = var_info
+        #             req_class_long = get_class_longname(req_var_class)
+        #             req_indices = FileIO.load(filename, "$(req_class_long)_indices")
+
+        #             # Read forecast series
+        #             fcast_series[:, i] = read_forecast_series(filename, product, req_var_ind)
+        #         end
+        #     end
+
+        #     # Infer appropriate transform for accumulation
+        #     transform = get_transformlvl(transform; nominal_transform = nominal_accumulation)
+        # end
+
         fcast_series, transform
     end
 end
@@ -534,6 +556,7 @@ function read_forecast_series(filepath::String, product::Symbol, var_ind::Int)
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
                        :decompdata, :decompnews, :decomppara, :decompdettrend, :decomptotal]
+                       #:forecastlvl, :histlvl, :bddforecastlvl]
         inds_to_read = if ndims == 2 # one draw
             whole = FileIO.load(filepath, "arr")
             arr = whole[var_ind, Colon()]
