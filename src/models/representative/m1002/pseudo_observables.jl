@@ -88,7 +88,6 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
->>>>>>> Implement nominal gdp level as a pseudo-obs for m1002.
     # Create PseudoObservable objects
     pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names

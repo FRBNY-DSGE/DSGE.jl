@@ -44,7 +44,8 @@ function measurement(m::Model1002{T},
     end
 
     no_integ_inds = inds_states_no_integ_series(m)
-    if get_setting(m, :add_laborproductivity_measurement) || get_setting(m, :add_nominalgdp_level)
+    if (get_setting(m, :add_laborproductivity_measurement) || get_setting(m, :add_nominalgdp_level) ||
+        get_setting(m, :add_cumulative))
         # Remove integrated states (e.g. states w/unit roots)
         TTT = @view TTT[no_integ_inds, no_integ_inds]
         CCC = @view CCC[no_integ_inds]
