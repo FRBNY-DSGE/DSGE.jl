@@ -807,24 +807,153 @@ end
 # # Accumulation transforms
 # """
 # ```
-# get_transformlvl(transform::Function)
+# get_transformlvl(transform::Function; nominal_transform::Bool = false)
 # ```
 # Returns the accumulation transformation associated with the annualizing transformation.
 # """
-# function get_transform4q(transform::Function)
+# function get_transformlvl(transform::Function; nominal_transform::Bool = false)
+# if nominal_transform
 #     if transform == loggrowthtopct_annualized_percapita
-#         loggrowthto_percapita
+#         loggrowthto_nominallvl_percapita
 #     elseif transform == loggrowthtopct_annualized
-#         loggrowthtopct_4q
+#         loggrowthto_nominallvl
 #     elseif transform == logleveltopct_annualized_percapita
-#         logleveltopct_4q_percapita
+#         loglevelto_nominallvl_percapita
 #     elseif transform == logleveltopct_annualized
-#         logleveltopct_4q
+#         loglevelto_nominallvl
 #     elseif transform == quartertoannual
 #         quartertoannual
 #     elseif transform == identity
 #         identity
 #     else
-#         error("4q equivalent not implemented for $transform")
+#         error("lvl equivalent not implemented for $transform")
 #     end
+# else
+#     if transform == loggrowthtopct_annualized_percapita
+#         loggrowthtolvl_percapita
+#     elseif transform == loggrowthtopct_annualized
+#         loggrowthtolvl
+#     elseif transform == logleveltopct_annualized_percapita
+#         logleveltolvl_percapita
+#     elseif transform == logleveltopct_annualized
+#         logleveltolvl
+#     elseif transform == quartertoannual
+#         quartertoannual
+#     elseif transform == identity
+#         identity
+#     else
+#         error("lvl equivalent not implemented for $transform")
+#     end
+# end
+# end
+
+# function loggrowthtolvl(y::AbstractArray, y0::S) where {S <: Real}
+#     y0 .* cumprod(exp.(y ./ 100.))
+# end
+
+# function loggrowthtolvl_percapita(y::AbstractArray, y0::S, pop_growth::AbstractVector) where {S <: Real}
+#     # `y` is either a vector of length `nperiods` or an
+#     # `ndraws` x `nperiods` matrix
+#     if ndims(y) == 1
+#         nperiods = length(y)
+#     else
+#         nperiods = size(y, 2)
+
+#         # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+#         # broadcasted to match the dimensions of `y`
+#         pop_growth = pop_growth'
+#     end
+
+#     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+
+#     y0 .* cumprod(exp.(y ./ 100. .+ pop_growth))
+# end
+
+# function logleveltolvl(y::AbstractArray, y0::S) where {S <: Real}
+#    y0 .+ exp.(y ./ 100.)
+# end
+
+# function logleveltolvl_percapita(y::AbstractArray, y0::S, pop_growth::AbstractVector) where {S <: Real}
+#     # `y_t1` is an array of the same size as `y`, representing the previous
+#     # period observations for each draw
+#     if ndims(y) == 1
+#         nperiods = length(y)
+#         y_t1 = vcat([y0], y[1:end-1])
+#     else
+#         (ndraws, nperiods) = size(y)
+#         y0s  = fill(y0, ndraws, 1)
+#         y_t1 = hcat(y0s, y[:, 1:end-1])
+
+#         # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+#         # broadcasted to match the dimensions of `y`
+#         pop_growth = pop_growth'
+#     end
+
+#     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+
+#     # Subtract log levels to get log growth rates, add pop growth rates,
+#     # exponentiate to get growth rates, and cumprod to accumulate
+#     y0 .* cumprod(exp.(y ./ 100. .- y_t1 ./ 100. .+ pop_growth))
+# end
+
+# function loggrowthto_nominallvl(y::AbstractArray, y0::S, π::AbstractArray) where {S <: Real}
+#     y0 .* cumprod(exp.(y ./ 100.) + π)
+# end
+
+# function loggrowthto_nominallvl_percapita(y::AbstractArray, y0::S, π::AbstractArray, pop_growth::AbstractVector) where {S <: Real}
+#     # `y` is either a vector of length `nperiods` or an
+#     # `ndraws` x `nperiods` matrix
+#     if ndims(y) == 1
+#         nperiods = length(y)
+#     else
+#         nperiods = size(y, 2)
+
+#         # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+#         # broadcasted to match the dimensions of `y`
+#         pop_growth = pop_growth'
+#     end
+
+#     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+
+#     y0 .* cumprod(exp.(y ./ 100. .+ pop_growth) + π)
+# end
+
+# function loglevelto_nominallvl(y::AbstractArray, y0::S, π::AbstractArray) where {S <: Real}
+#     # `y_t1` is an array of the same size as `y`, representing the previous
+#     # period observations for each draw
+#     if ndims(y) == 1
+#         nperiods = length(y)
+#         y_t1 = vcat([y0], y[1:end-1])
+#     else
+#         (ndraws, nperiods) = size(y)
+#         y0s  = fill(y0, ndraws, 1)
+#         y_t1 = hcat(y0s, y[:, 1:end-1])
+#     end
+
+#     # Subtract log levels to get log growth rates, add inflation,
+#     # exponentiate to get growth rates, and cumprod to accumulate
+#     y0 .* cumprod(exp.(y ./ 100. .- y_t1 ./ 100.) + π)
+# end
+
+# function loglevelto_nominallvl_percapita(y::AbstractArray, y0::S, π::AbstractArray, pop_growth::AbstractVector) where {S <: Real}
+#     # `y_t1` is an array of the same size as `y`, representing the previous
+#     # period observations for each draw
+#     if ndims(y) == 1
+#         nperiods = length(y)
+#         y_t1 = vcat([y0], y[1:end-1])
+#     else
+#         (ndraws, nperiods) = size(y)
+#         y0s  = fill(y0, ndraws, 1)
+#         y_t1 = hcat(y0s, y[:, 1:end-1])
+
+#         # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+#         # broadcasted to match the dimensions of `y`
+#         pop_growth = pop_growth'
+#     end
+
+#     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+
+#     # Subtract log levels to get log growth rates, add pop growth rates and inflation,
+#     # exponentiate to get growth rates, and cumprod to accumulate
+#     y0 .* cumprod(exp.(y ./ 100. .- y_t1 ./ 100. .+ pop_growth) + π)
 # end
