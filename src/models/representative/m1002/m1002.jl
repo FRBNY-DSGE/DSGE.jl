@@ -869,7 +869,8 @@ function model_settings!(m::Model1002)
     m <= Setting(:ant_eq_E_mapping, Dict{Symbol, Symbol}(),
                  "Dictionary mapping name of anticipated shock to name of state variable for" *
                  " one-period ahead expectation of exogenous process affected by the shock") # This mapping is intended only for anticipated shocks that are not scaled by a constant, i.e. the coefficient in the Γ0 eqcond matrix is -1.0
-
+    m <= Setting(:proportional_antshocks, Dict{Symbol, Vector{Float64}}(),
+                 "Dictionary mapping name of anticipated shock to the vector specifying how large anticipated shocks are in proportion to the contemporaneous shock when a shock today triggers anticipated shocks tomorrow.")
     m <= Setting(:antshocks, Dict{Symbol, Int}(),
                  "Dictionary mapping name of anticipated shock to the number of periods of anticipation.")
 
