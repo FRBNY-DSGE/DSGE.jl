@@ -455,7 +455,10 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                           fourquarter = true, y0s = y0s,
                           pop_growth = pop_growth)
     # elseif product in [:histlvl, :forecastlvl, :bddforecastlvl]
-    #     # NEED TO ADD CASE HERE FOR HISTLVL, ETC.
+    #     # NEED TO ADD CASE HERE FOR HISTLVL, ETC# .
+        # reverse_transform(fcast_series, transform4q;
+        #                   accumulate = true, y0s = y0s,
+        #                   pop_growth = pop_growth)
     else
         # Use transformation that doesn't add back population growth for
         # products which are given in deviations

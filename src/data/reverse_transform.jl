@@ -75,7 +75,7 @@ series. This method is called by the higher-level functions as well as
 """
 function reverse_transform(m::AbstractDSGEModel, untransformed::AbstractArray, start_date::Dates.Date,
                            vars::Vector{Symbol}, class::Symbol;
-                           fourquarter::Bool = false,
+                           fourquarter::Bool = false, accumulate::Bool = false,
                            verbose::Symbol = :low)
     df = DataFrame()
     nperiods = size(untransformed, 2)
@@ -87,11 +87,12 @@ function reverse_transform(m::AbstractDSGEModel, untransformed::AbstractArray, s
         df[!, var] = series
     end
 
-    reverse_transform(m, df, class; fourquarter = fourquarter, verbose = verbose)
+    reverse_transform(m, df, class; fourquarter = fourquarter,
+                      accumulate = accumulate, verbose = verbose)
 end
 
 function reverse_transform(m::AbstractDSGEModel, untransformed::DataFrame, class::Symbol;
-                           fourquarter::Bool = false, verbose::Symbol = :low)
+                           fourquarter::Bool = false, accumulate::Bool = false, verbose::Symbol = :low)
     # Dates
     @assert (:date in names(untransformed)) "untransformed must have a date column"
     date_list  = convert(Vector{Dates.Date}, untransformed[!,:date])
@@ -126,15 +127,18 @@ function reverse_transform(m::AbstractDSGEModel, untransformed::DataFrame, class
         rev_transform = dict[var].rev_transform
         if fourquarter
             rev_transform = get_transform4q(rev_transform)
+        elseif accumulate
+            rev_transform = get_transformlvl(rev_transform)
         end
         transformed[!,var] = reverse_transform(y, rev_transform; fourquarter = fourquarter,
-                                             pop_growth = population_series)
+                                               accumulate = accumulate,
+                                               pop_growth = population_series)
     end
     return transformed
 end
 
 function reverse_transform(y::AbstractArray, rev_transform::Function;
-                           fourquarter::Bool = false,
+                           fourquarter::Bool = false, accumulate::Bool = false,
                            y0 = missing, y0s::Vector = Vector(undef, 0),
                            pop_growth::Vector = Vector(undef, 0)) where T<:AbstractFloat
     if fourquarter
@@ -161,6 +165,18 @@ function reverse_transform(y::AbstractArray, rev_transform::Function;
         else
             error("Invalid 4-quarter reverse transform: $rev_transform")
         end
+    # elseif accumulate # Rewrite for various cases of transformations
+    #     if rev_transform in [logleveltopct_annualized_percapita]
+    #         rev_transform(y, pop_growth, y0)
+    #     elseif rev_transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_percapita]
+    #         rev_transform(y, pop_growth)
+    #     elseif rev_transform in [logleveltopct_annualized, logleveltopct_annualized_approx]
+    #         rev_transform(y, y0)
+    #     elseif rev_transform in [loggrowthtopct_annualized, loggrowthtopct, quartertoannual, identity]
+    #         rev_transform(y)
+    #     else
+    #         error("Invalid reverse transform: $rev_transform")
+    #     end
     else
         if rev_transform in [logleveltopct_annualized_percapita]
             rev_transform(y, pop_growth, y0)
