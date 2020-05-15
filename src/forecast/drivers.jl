@@ -596,7 +596,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            param_value2::Float64 = 0.0,
                            regime_switching::Bool = false,
                            n_regimes::Int = 1)
-
+    @show output_vars
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -681,6 +681,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     bddforecast_vars = [:bddforecaststates, :bddforecastobs, :bddforecastpseudo, :bddforecastshocks, :bddforecaststdshocks]
     forecast_vars = vcat(unbddforecast_vars, bddforecast_vars)
     forecasts_to_compute = intersect(output_vars, forecast_vars)
+@show output_vars
+@show forecasts_to_compute
 
     if !isempty(forecasts_to_compute)
         # Get initial forecast state vector s_T
@@ -728,6 +730,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         end
 
         # 2A. Unbounded forecasts
+        @show output_vars
+        @show unbddforecast_vars
         if !isempty(intersect(output_vars, unbddforecast_vars))
             if pegFFR
                 nshocks = size(system[:RRR], 2)
@@ -749,10 +753,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecaststates, forecastobs, forecastpseudo, forecastshocks = forecast(system, s_T, etpeg)
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             else
-                fcast_sys = regime_switching ? system[n_regimes] : system # system to be used for forecast
+                fcast_sys = system #regime_switching ? system[n_regimes] : system # system to be used for forecast
 
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, system, s_T,
+                    forecast(m, fcast_sys, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
             end
 

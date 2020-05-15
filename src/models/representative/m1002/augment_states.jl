@@ -54,6 +54,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
 
     # Initialize augmented matrices
     n_states_add = length(endo_new)
+    @show n_states_add
     TTT_aug = zeros(n_endo + n_states_add, n_endo + n_states_add)
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(n_states_add, n_exo)]

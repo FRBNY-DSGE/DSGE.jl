@@ -121,10 +121,11 @@ function init_model_indices!(m::Model1002)
     endogenous_states = [[
         :y_t, :c_t, :i_t, :qk_t, :k_t, :kbar_t, :u_t, :rk_t, :Rktil_t, :n_t, :mc_t,
         :π_t, :μ_ω_t, :w_t, :L_t, :R_t, :g_t, :b_t, :μ_t, :z_t, :λ_f_t, :λ_f_t1,
-        :λ_w_t, :λ_w_t1, :rm_t, :σ_ω_t, :μ_e_t, :γ_t, :π_star_t, :Ec_t, :Eqk_t, :Ei_t,
-        :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERtil_k_t, :ERktil_f_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
-        :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
-        :EL_f_t,  :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t, :rktil_f_t, :n_f_t];
+        :λ_w_t, :λ_w_t1, :rm_t, :σ_ω_t, :μ_e_t, :γ_t, :π_star_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
+        :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t,
+        :Rktil_f_t, :n_f_t,
+        :Ec_t, :Eqk_t, :Ei_t, :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERktil_t, :ERktil_f_t, :Ez_t,
+        :Ec_f_t, :Eqk_f_t, :Ei_f_t, :EL_f_t];
         [Symbol("rm_tl$i") for i = 1:n_mon_anticipated_shocks(m)]]
     for (key, val) in get_setting(m, :antshocks)
         endogenous_states = vcat(endogenous_states, [Symbol(key, "_tl$i") for i = 1:val])
@@ -143,7 +144,7 @@ function init_model_indices!(m::Model1002)
     # Expectations shocks
     expected_shocks = [
         :Ec_sh, :Eqk_sh, :Ei_sh, :Eπ_sh, :EL_sh, :Erk_sh, :Ew_sh, :ERktil_sh, :Ec_f_sh,
-        :Eqk_f_sh, :Ei_f_sh, :EL_f_sh, :Erktil_f_sh]
+        :Eqk_f_sh, :Ei_f_sh, :EL_f_sh, :ERktil_f_sh]
 
     # Equilibrium conditions
     equilibrium_conditions = [[
@@ -153,7 +154,7 @@ function init_model_indices!(m::Model1002)
         :eq_Eqk, :eq_Ei, :eq_Eπ, :eq_EL, :eq_Erk, :eq_Ew, :eq_ERktil, :eq_euler_f, :eq_inv_f,
         :eq_capval_f, :eq_output_f, :eq_caputl_f, :eq_capsrv_f, :eq_capev_f, :eq_mkupp_f,
         :eq_caprnt_f, :eq_msub_f, :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f,
-        :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez, :eq_spread_f,:eq_nevol_f,  :eq_Erktil_f];
+        :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez, :eq_spread_f,:eq_nevol_f,  :eq_ERktil_f];
         [Symbol("eq_rml$i") for i=1:n_mon_anticipated_shocks(m)]]
     for (key, val) in get_setting(m, :antshocks)
         equilibrium_conditions = vcat(equilibrium_conditions, [Symbol("eq_", key, "l$i") for i = 1:val])

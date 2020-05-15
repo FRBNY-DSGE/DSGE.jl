@@ -111,7 +111,7 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_investment]]                  = 100*(exp(m[:z_star])-1)
 
     ## Spreads
-    ZZ[obs[:obs_spread], endo[:ERtil_k_t]] = 1.0
+    ZZ[obs[:obs_spread], endo[:ERktil_t]] = 1.0
     ZZ[obs[:obs_spread], endo[:R_t]]       = -1.0
     DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
@@ -243,9 +243,9 @@ function measurement(m::Model1002{T},
 
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(CCC .!= 0)
-        DD += ZZ*((UniformScaling(1) - TTT)\CCC)
-    end
+  #=  if any(CCC .!= 0)
+        DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT)\CCC)
+    end =#
 
     for para in m.parameters
         if !isempty(para.regimes)

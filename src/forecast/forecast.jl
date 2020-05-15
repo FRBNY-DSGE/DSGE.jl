@@ -52,13 +52,20 @@ where `S<:AbstractFloat`.
   pseudo-observables
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
-function forecast(m::AbstractDSGEModel, system::System{S},
+function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, System{S}},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
     horizon = forecast_horizons(m; cond_type = cond_type)
+
+    if isa(system, RegimeSwitchingSystem)
+        RS_system = system
+        system = system[1]
+    else
+        system = system
+    end
 
     if isempty(shocks)
         # Populate shocks matrix
@@ -118,8 +125,13 @@ function forecast(m::AbstractDSGEModel, system::System{S},
     ind_r_sh = m.exogenous_shocks[:rm_sh]
     zlb_value = forecast_zlb_value(m)
 
-    forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
-        ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
+    if @isdefined RS_system
+        forecast(m, RS_system, z0, shocks; enforce_zlb = enforce_zlb,
+                 ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
+    else
+        forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
+                 ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
+    end
 end
 
 function forecast(system::System{S}, z0::Vector{S},
@@ -172,6 +184,108 @@ function forecast(system::System{S}, z0::Vector{S},
     # Apply measurement and pseudo-measurement equations
     obs    = D .+ Z*states
     pseudo = D_pseudo .+ Z_pseudo * states
+
+    # Return forecasts
+    return states, obs, pseudo, shocks
+end
+
+function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S},
+    shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
+    ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
+
+    n_reg = get_setting(m, :n_regimes)
+    @show n_reg
+
+    Ts = Vector{Matrix{Float64}}(undef, n_reg-1)
+    Rs = Vector{Matrix{Float64}}(undef, n_reg-1)
+    Cs = Vector{Vector{Float64}}(undef, n_reg-1)
+    Qs = Vector{Matrix{Float64}}(undef, n_reg-1)
+    Zs = Vector{Matrix{Float64}}(undef, n_reg-1)
+    Ds = Vector{Vector{Float64}}(undef, n_reg-1)
+    Z_pseudos = Vector{Matrix{Float64}}(undef, n_reg-1)
+    D_pseudos = Vector{Vector{Float64}}(undef, n_reg-1)
+
+    # Unpack system
+    for i = 1:n_reg-1
+        # Need to index into i+11 of system since we want to start at second regime (for now since we have the first regime for all of history)
+        Ts[i], Rs[i], Cs[i] = system[i+1][:TTT], system[i+1][:RRR], system[i+1][:CCC]
+        Qs[i], Zs[i], Ds[i] = system[i+1][:QQ], system[i+1][:ZZ], system[i+1][:DD]
+        Z_pseudos[i], D_pseudos[i] = system[i+1][:ZZ_pseudo], system[i+1][:DD_pseudo]
+    end
+
+    # Setup
+    nshocks = size(Rs[1], 2)
+    nstates = size(Ts[1], 2)
+    nobs    = size(Zs[1], 1)
+    npseudo = size(Z_pseudos[1], 1)
+    horizon = size(shocks, 2)
+
+    # Define our iteration function
+    function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
+        z_t = C + T*z_t1 + R*ϵ_t
+
+        # Change monetary policy shock to account for 0.13 interest rate bound
+      #=  if enforce_zlb
+            interest_rate_forecast = getindex(D + Z*z_t, ind_r)
+            if interest_rate_forecast < zlb_value
+                # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
+                ϵ_t[ind_r_sh] = 0. # get forecast when MP shock
+                z_t = C + T*z_t1 + R*ϵ_t # is zeroed out
+                z_t_old = C + T*z_t1 + R*ϵ_t
+                ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
+
+                # Forecast again with new shocks
+                z_t = C + T*z_t1 + R*ϵ_t
+
+                # Confirm procedure worked
+                interest_rate_forecast = getindex(D + Z*z_t, ind_r)
+
+                # Subtract a small number to deal with numerical imprecision
+                @assert interest_rate_forecast >= zlb_value - 0.01 "interest_rate_forecast = $interest_rate_forecast must be >= zlb_value - 0.01 = $(zlb_value - 0.01)."
+            end
+        end =#
+        return z_t, ϵ_t
+    end
+
+    last_date = date_forecast_start(m)
+    last_ind = 1
+    regime_inds = Vector{UnitRange{Int}}(undef, 0)
+    for i in 1:n_reg
+        @show date_forecast_start(m)
+        @show get_setting(m, :regime_dates)[i]
+        if get_setting(m, :regime_dates)[i] <= date_forecast_start(m)
+            continue
+        else
+            new_end = (last_ind + subtract_quarters(get_setting(m, :regime_dates)[i], last_date))
+            regime_inds = push!(regime_inds, last_ind:(new_end-1))
+            last_ind = new_end
+            last_date = get_setting(m, :regime_dates)[i]
+            @show last_ind, last_date
+        end
+    end
+    regime_inds = push!(regime_inds, last_ind:horizon)
+
+    # Iterate state space forward
+    states = zeros(S, nstates, horizon)
+    obs = zeros(S, nobs, horizon)
+    pseudo = zeros(S, npseudo, horizon)
+    states[:, 1], shocks[:, 1] = iterate(z0, shocks[:, 1], Ts[1], Rs[1], Cs[1], Qs[1], Zs[1], Ds[1])
+    obs[:, 1] = Ds[1] .+ Zs[1]*states[:, 1]
+    pseudo[:, 1] = D_pseudos[1] .+ Z_pseudos[1] * states[:, 1]
+
+    for i = 2:length(regime_inds)
+        ts = regime_inds[i]
+        @show ts
+        for t in ts #2:horizon
+            states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
+            obs[:, t] = Ds[i] .+ Zs[i]*states[:, t]
+            pseudo[:, t] = D_pseudos[i] .+ Z_pseudos[i] * states[:, t]
+        end
+    end
+
+    # Apply measurement and pseudo-measurement equations
+   # obs    = Ds[1] .+ Zs[1]*states
+   # pseudo = D_pseudos[1] .+ Z_pseudos[1] * states
 
     # Return forecasts
     return states, obs, pseudo, shocks
