@@ -69,6 +69,8 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             n_cond = length(dates)
            # date_space = findall(x->x==true, df[!, :date] .> date_mainsample_end(m))
             ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[!, :date] .<= date_conditional_end(m), [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]
+            @show ois_data_want
+            @show df[date_mainsample_end(m) .< df[!, :date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]]
             df[date_mainsample_end(m) .< df[!, :date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Matrix{Float64}(ois_data_want)
         end
 
