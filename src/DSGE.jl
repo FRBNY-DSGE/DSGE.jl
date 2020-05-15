@@ -214,6 +214,7 @@ module DSGE
 
 
     include("solve/gensys.jl")
+    include("solve/gensys2.jl")
     include("solve/solve.jl")
     include("solve/klein.jl")
 

@@ -244,7 +244,7 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:L_f_t], endo[:L_f_t]] = 1.
 
     ## rktil_f_t
-    ZZ_pseudo[pseudo[:rktil_f_t], endo[:rktil_f_t]] = 1.
+    ZZ_pseudo[pseudo[:rktil_f_t], endo[:Rktil_f_t]] = 1.
 
     ## n_f_t
     ZZ_pseudo[pseudo[:n_f_t], endo[:n_f_t]] = 1.
@@ -550,7 +550,7 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudos[reg][pseudo[:L_f_t], endo[:L_f_t]] = 1.
 
     ## rktil_f_t
-    ZZ_pseudos[reg][pseudo[:rktil_f_t], endo[:rktil_f_t]] = 1.
+    ZZ_pseudos[reg][pseudo[:rktil_f_t], endo[:Rktil_f_t]] = 1.
 
     ## n_f_t
     ZZ_pseudos[reg][pseudo[:n_f_t], endo[:n_f_t]] = 1.

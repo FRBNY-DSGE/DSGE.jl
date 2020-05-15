@@ -27,8 +27,12 @@ Driver to compute the model solution and augment transition matrices.
 function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                regime_switching::Bool = false, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1,
                verbose::Symbol = :high) where {T <: Real}
-
     altpolicy_solve = alternative_policy(m).solve
+
+    # Need to skip that block of code (but this is clunky and confusing and need to fix)
+    if get_setting(m, :gensys2)
+        regime_switching = false
+    end
 
     if regime_switching
         if get_setting(m, :solution_method) == :gensys
@@ -61,7 +65,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     Ψs = Vector{Matrix{T}}(undef, length(regimes))
                     Πs = Vector{Matrix{T}}(undef, length(regimes))
                     for reg in regimes
-                        Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg]  = eqcond(m, reg)
+                        Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = eqcond(m, reg)
                     end
 
                     n_regimes = length(regimes)
@@ -103,9 +107,40 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
     elseif get_setting(m, :solution_method) == :klein
         TTT_jump, TTT_state = klein(m)
 
-        # Transition
-        TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
-        CCC = zeros(n_model_states(m))
+                if get_setting(m, :gensys2)
+                    TTTs = Vector{Matrix{Float64}}(undef, get_setting(m, :n_regimes))
+                    RRRs = Vector{Matrix{Float64}}(undef, get_setting(m, :n_regimes))
+                    CCCs = Vector{Vector{Float64}}(undef, get_setting(m, :n_regimes))
+                    # Put teh usual system in for the history (smoothing)
+                    TTTs[1], RRRs[1], CCCs[1] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+
+                    Γ0, Γ1, C, Ψ, Π  = eqcond(m, new_policy = true)
+                    Tcal, Rcal, Ccal = gensys_cplus(m, Γ0, Γ1, C, Ψ, Π,
+                                                    TTT_gensys, RRR_gensys, CCC_gensys)
+
+                    for i in 1:length(Tcal)
+                        TTTs[i+1], RRRs[i+1], CCCs[i+1] = augment_states(m, Tcal[i], Rcal[i], Ccal[i]) #=;
+                                                                         regime_switching = regime_switching,
+                                                                         reg = reg) =#
+                    end
+                    return TTTs, RRRs, CCCs
+                end
+
+                # Augment states
+                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+            else
+                # Change the policy rule
+                TTT, RRR, CCC = altpolicy_solve(m)
+            end
+        elseif get_setting(m, :solution_method) == :klein
+            TTT_jump, TTT_state = klein(m)
+
+            # Transition
+            TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+            CCC = zeros(n_model_states(m))
+        end
+
+        return TTT, RRR, CCC
     end
 
     return TTT, RRR, CCC

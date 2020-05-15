@@ -214,6 +214,8 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
         i_zlb_start = 0
         splice_zlb_regime = false
     end
+    # Remove regimes that only are for the forecast period (i.e. bigger than number of rows in dataframe)
+    filter!(x -> last(x) <= T, regime_inds)
     return regime_inds, i_zlb_start, splice_zlb_regime
 end
 

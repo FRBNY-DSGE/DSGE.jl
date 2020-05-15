@@ -15,11 +15,11 @@ specified in their proper positions.
 * `Ψ`  (`n_states` x `n_shocks_exogenous`) holds coefficients of iid shocks.
 * `Π`  (`n_states` x `n_states_expectational`) holds coefficients of expectational states.
 """
-function eqcond(m::Model1002)
-    return eqcond(m, 1)
+function eqcond(m::Model1002; new_policy::Bool = false)
+    return eqcond(m, 1, new_policy = new_policy)
 end
 
-function eqcond(m::Model1002, reg::Int)
+function eqcond(m::Model1002, reg::Int; new_policy = false)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -106,7 +106,7 @@ function eqcond(m::Model1002, reg::Int)
 
     # Spreads
     # Sticky prices and wages
-    Γ0[eq[:eq_spread], endo[:ERtil_k_t]] = 1.
+    Γ0[eq[:eq_spread], endo[:ERktil_t]] = 1.
     Γ0[eq[:eq_spread], endo[:R_t]]       = -1.
     Γ0[eq[:eq_spread], endo[:b_t]]       = (m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))/(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_spread], endo[:qk_t]]      = -m[:ζ_spb]
@@ -143,7 +143,7 @@ function eqcond(m::Model1002, reg::Int)
     # Flexible prices and wages
     Γ0[eq[:eq_nevol_f], endo[:n_f_t]]      = 1.
     Γ0[eq[:eq_nevol_f], endo[:z_t]]      = m[:γ_star]*m[:vstar]/m[:nstar]
-    Γ0[eq[:eq_nevol_f], endo[:rktil_f_t]] = -m[:ζ_nRk]
+    Γ0[eq[:eq_nevol_f], endo[:Rktil_f_t]] = -m[:ζ_nRk]
     Γ1[eq[:eq_nevol_f], endo[:σ_ω_t]]    = -m[:ζ_nσ_ω]/m[:ζ_spσ_ω]
     Γ1[eq[:eq_nevol_f], endo[:μ_e_t]]    = -m[:ζ_nμ_e]/m[:ζ_spμ_e]
     Γ1[eq[:eq_nevol_f], endo[:qk_f_t]]     = m[:ζ_nqk]
@@ -153,7 +153,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ1[eq[:eq_nevol_f], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1.0+m[:h]*exp(-m[:z_star])))/(1.0-m[:h]*exp(-m[:z_star])))
 
     # Flexible prices and wages - ASSUME NO FINANCIAL FRICTIONS
-    Γ0[eq[:eq_capval_f], endo[:rktil_f_t]] = 1.
+    Γ0[eq[:eq_capval_f], endo[:Rktil_f_t]] = 1.
     Γ0[eq[:eq_capval_f], endo[:rk_f_t]]     = -m[:r_k_star]/(m[:r_k_star]+1-m[:δ])
     Γ0[eq[:eq_capval_f], endo[:qk_f_t]]     = -(1-m[:δ])/(m[:r_k_star]+1-m[:δ])
     Γ1[eq[:eq_capval_f], endo[:qk_f_t]]     = -1.
@@ -296,16 +296,21 @@ function eqcond(m::Model1002, reg::Int)
 
     ### 13. Monetary Policy Rule
 
-    # Sticky prices and wages
-    Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
-    Γ1[eq[:eq_mp], endo[:R_t]]      = m[:ρ]
-    Γ0[eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
-    Γ0[eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
-    Γ0[eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
-    Γ0[eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
-    Γ1[eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
-    Γ1[eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
-    Γ0[eq[:eq_mp], endo[:rm_t]]     = -1.
+    if new_policy
+        Γ0[eq[:eq_mp], endo[:R_t]] = 1.0 #1
+        C[eq[:eq_mp]] = 0.0/4 - m[:Rstarn] #- 100*log(m[:Rstarn]) #log(Rstarn)
+    else
+        # Sticky prices and wages
+        Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
+        Γ1[eq[:eq_mp], endo[:R_t]]      = m[:ρ]
+        Γ0[eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
+        Γ0[eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
+        Γ0[eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
+        Γ0[eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
+        Γ1[eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
+        Γ1[eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
+        Γ0[eq[:eq_mp], endo[:rm_t]]     = -1.
+    end
 
     # Flexible prices and wages not necessary
 
@@ -657,9 +662,9 @@ function eqcond(m::Model1002, reg::Int)
     Π[eq[:eq_Erk], ex[:Erk_sh]]   = 1.
 
     # Flexible prices and wages
-    Γ0[eq[:eq_Erktil_f], endo[:rktil_f_t]]  = 1.
-    Γ1[eq[:eq_Erktil_f], endo[:ERktil_f_t]] = 1.
-    Π[eq[:eq_Erktil_f], ex[:Erktil_f_sh]]   = 1.
+    Γ0[eq[:eq_ERktil_f], endo[:Rktil_f_t]]  = 1.
+    Γ1[eq[:eq_ERktil_f], endo[:ERktil_f_t]] = 1.
+    Π[eq[:eq_ERktil_f], ex[:ERktil_f_sh]]   = 1.
 
     ### E(w)
 
@@ -672,7 +677,7 @@ function eqcond(m::Model1002, reg::Int)
 
     # Sticky prices and wages
     Γ0[eq[:eq_ERktil], endo[:Rktil_t]]  = 1.
-    Γ1[eq[:eq_ERktil], endo[:ERtil_k_t]] = 1.
+    Γ1[eq[:eq_ERktil], endo[:ERktil_t]] = 1.
     Π[eq[:eq_ERktil], ex[:ERktil_sh]]    = 1.
 
     for para in m.parameters
