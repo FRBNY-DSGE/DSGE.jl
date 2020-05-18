@@ -403,16 +403,13 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel, input_
 
     # Reverse transform
     y0_index = get_y0_index(m1, product)
-    yt_index = get_yt_index(m1, product)
     data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series1 = mb_reverse_transform(fcast_series1, transform1, product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
+                                              y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
     transformed_series2 = mb_reverse_transform(fcast_series2, transform2, product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
+                                              y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
     transformed_series = 0.5*transformed_series1 + 0.5*transformed_series2
 
@@ -440,7 +437,7 @@ function compute_meansbands(models::Vector,
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         output_dir = workpath(models[1], "forecast")
         println()
-        @Base.info "Computing means and bands for input_type = $input_type, cond_type = $cond_type..."
+        @Base.info "Computing means and bands for input_types = $input_types, cond_types = $cond_types..."
         println("Start time: $(now())")
         println("Means and bands will be saved in $output_dir")
     end
@@ -572,6 +569,7 @@ function compute_meansbands(models::Vector,
     # Write to file
     filepath = get_meansbands_output_file(models[1], input_types[1], cond_types[1], output_var,
                                           forecast_string = join(forecast_strings)*join(map(x->string(x), weights), "_"))
+
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
     JLD2.jldopen(filepath, true, true, true, IOStream) do file
@@ -616,7 +614,6 @@ function compute_meansbands(models::Vector,
 
     # Reverse transform
     y0_index = get_y0_index(models[1], product)
-    yt_index = get_yt_index(models[1], product)
     data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series1 = mb_reverse_transform(fcast_series1, transform1, product, class,
@@ -871,8 +868,7 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     end
 
     transformed_series = mb_reverse_transform(fcast_series, transforms[1], product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
+                                              y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
 
     # Compute means and bands
