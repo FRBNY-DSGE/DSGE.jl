@@ -32,9 +32,10 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                verbose::Symbol = :high) where {T <: Real}
     altpolicy_solve = alternative_policy(m).solve
 
+    gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
     # Need to skip that block of code (but this is clunky and confusing and need to fix)
-  #=  if get_setting(m, :gensys2)
-        regime_switching = false
+    #=  if get_setting(m, :gensys2)
+    regime_switching = false
     end=#
 
     if regime_switching
@@ -92,7 +93,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
                         # Put teh usual system in for the history (smoothing)
                         TTTs[hist_reg], RRRs[hist_reg], CCCs[hist_reg] = DSGE.augment_states(m, TTT_gensys,
-                                                                                               RRR_gensys, CCC_gensys)
+                                                                                             RRR_gensys, CCC_gensys)
                     end
 
                     # Get the last state space matrices one period after the policy ends
@@ -112,9 +113,9 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
                     for fcast_reg in fcast_regimes
                         Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg]  =
-                            eqcond(m, fcast_reg, new_policy = get_setting(m, :gensys2))
+                            eqcond(m, fcast_reg, new_policy = gensys2)
                     end
-                    if get_setting(m, :gensys2)
+                    if gensys2
                         gensys2_regimes = first(fcast_regimes)-1:last(fcast_regimes)
                         Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                                              Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
@@ -125,9 +126,23 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
                         end
                     else
-                        TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
-                                                                         regime_switching = regime_switching,
-                                                                         reg = reg)
+                        for fcast_reg in fcast_regimes
+                            TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg], 1+1e-6, verbose = verbose)
+
+                            # Check for LAPACK exception, existence and uniqueness
+                            if eu[1] != 1 || eu[2] != 1
+                                throw(GensysError("Error in Gensys, Regime $reg"))
+                            end
+
+                            TTT_gensys = real(TTT_gensys)
+                            RRR_gensys = real(RRR_gensys)
+                            CCC_gensys = real(CCC_gensys)
+
+                            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
+                                                                             regime_switching = regime_switching,
+                                                                             reg = fcast_reg)
+                        end
                     end
                     return TTTs, RRRs, CCCs
                 end
