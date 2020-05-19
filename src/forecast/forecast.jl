@@ -193,7 +193,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
 
-    n_fcast_reg = get_setting(m, :n_fcast_regimes) + 1
+    n_fcast_reg = get_setting(m, :n_fcast_regimes)
 
     Ts = Vector{Matrix{Float64}}(undef, n_fcast_reg)
     Rs = Vector{Matrix{Float64}}(undef, n_fcast_reg)
