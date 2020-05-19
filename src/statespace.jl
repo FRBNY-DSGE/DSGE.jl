@@ -418,13 +418,17 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         get_setting(m, :regime_switching) : false
     n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
         get_setting(m, :n_regimes) : 1
+    n_hist_regimes        = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
+        get_setting(m, :n_hist_regimes) : 1
 
     # Solve model
     if regime_switching
         if solution_method == :gensys
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,
-                                     regimes = 1:n_regimes, verbose = verbose)
+                                     regimes = 1:n_regimes,
+                                     hist_regimes = 1:n_hist_regimes, fcast_regimes = n_hist_regimes+1:n_regimes,
+                                     verbose = verbose)
 
             transition_equations = Vector{Transition{T}}(undef, n_regimes)
             for i = 1:n_regimes
