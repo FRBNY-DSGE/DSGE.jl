@@ -297,6 +297,16 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
     ### 13. Monetary Policy Rule
 
     if new_policy
+      #=  Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
+        Γ1[eq[:eq_mp], endo[:R_t]]      = m[:ρ]
+        Γ0[eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
+        Γ0[eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
+        Γ0[eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
+        Γ0[eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
+        Γ1[eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
+        Γ1[eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
+        Γ0[eq[:eq_mp], endo[:rm_t]]     = -1. =#
+
         Γ0[eq[:eq_mp], endo[:R_t]] = 1.0 #1
         C[eq[:eq_mp]] = 0.0/4 - m[:Rstarn] #- 100*log(m[:Rstarn]) #log(Rstarn)
     else

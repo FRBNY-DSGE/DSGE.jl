@@ -193,24 +193,23 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
 
-    n_reg = get_setting(m, :n_regimes)
-    @show n_reg
+    n_fcast_reg = get_setting(m, :n_fcast_regimes) + 1
 
-    Ts = Vector{Matrix{Float64}}(undef, n_reg-1)
-    Rs = Vector{Matrix{Float64}}(undef, n_reg-1)
-    Cs = Vector{Vector{Float64}}(undef, n_reg-1)
-    Qs = Vector{Matrix{Float64}}(undef, n_reg-1)
-    Zs = Vector{Matrix{Float64}}(undef, n_reg-1)
-    Ds = Vector{Vector{Float64}}(undef, n_reg-1)
-    Z_pseudos = Vector{Matrix{Float64}}(undef, n_reg-1)
-    D_pseudos = Vector{Vector{Float64}}(undef, n_reg-1)
+    Ts = Vector{Matrix{Float64}}(undef, n_fcast_reg)
+    Rs = Vector{Matrix{Float64}}(undef, n_fcast_reg)
+    Cs = Vector{Vector{Float64}}(undef, n_fcast_reg)
+    Qs = Vector{Matrix{Float64}}(undef, n_fcast_reg)
+    Zs = Vector{Matrix{Float64}}(undef, n_fcast_reg)
+    Ds = Vector{Vector{Float64}}(undef, n_fcast_reg)
+    Z_pseudos = Vector{Matrix{Float64}}(undef, n_fcast_reg)
+    D_pseudos = Vector{Vector{Float64}}(undef, n_fcast_reg)
 
     # Unpack system
-    for i = 1:n_reg-1
+    for (ss_ind, sys_ind) in enumerate((get_setting(m, :n_hist_regimes)+1):get_setting(m, :n_regimes))
         # Need to index into i+11 of system since we want to start at second regime (for now since we have the first regime for all of history)
-        Ts[i], Rs[i], Cs[i] = system[i+1][:TTT], system[i+1][:RRR], system[i+1][:CCC]
-        Qs[i], Zs[i], Ds[i] = system[i+1][:QQ], system[i+1][:ZZ], system[i+1][:DD]
-        Z_pseudos[i], D_pseudos[i] = system[i+1][:ZZ_pseudo], system[i+1][:DD_pseudo]
+        Ts[ss_ind], Rs[ss_ind], Cs[ss_ind] = system[sys_ind][:TTT], system[sys_ind][:RRR], system[sys_ind][:CCC]
+        Qs[ss_ind], Zs[ss_ind], Ds[ss_ind] = system[sys_ind][:QQ], system[sys_ind][:ZZ], system[sys_ind][:DD]
+        Z_pseudos[ss_ind], D_pseudos[ss_ind] = system[sys_ind][:ZZ_pseudo], system[sys_ind][:DD_pseudo]
     end
 
     # Setup
@@ -247,18 +246,16 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         return z_t, ϵ_t
     end
 
-    last_date = date_forecast_start(m)
+    last_date = iterate_quarters(date_forecast_start(m), -1)
     last_ind = 1
     regime_inds = Vector{UnitRange{Int}}(undef, 0)
-    for i in 1:n_reg
-        @show date_forecast_start(m)
-        @show get_setting(m, :regime_dates)[i]
-        if get_setting(m, :regime_dates)[i] <= date_forecast_start(m)
+    for i in 1:(get_setting(m, :n_regimes) -1) #n_fcast_reg
+        if get_setting(m, :regime_dates)[i] < date_forecast_start(m)
             continue
         else
-            new_end = (last_ind + subtract_quarters(get_setting(m, :regime_dates)[i], last_date))
-            regime_inds = push!(regime_inds, last_ind:(new_end-1))
-            last_ind = new_end
+            qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i], last_date)
+            regime_inds = push!(regime_inds, last_ind:(last_ind + qtr_diff - 1))
+            last_ind = last_ind + qtr_diff
             last_date = get_setting(m, :regime_dates)[i]
             @show last_ind, last_date
         end
@@ -266,9 +263,9 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     regime_inds = push!(regime_inds, last_ind:horizon)
 
     # Iterate state space forward
-    states = zeros(S, nstates, horizon)
-    obs = zeros(S, nobs, horizon)
-    pseudo = zeros(S, npseudo, horizon)
+    states = zeros(nstates, horizon)
+    obs = zeros(nobs, horizon)
+    pseudo = zeros(npseudo, horizon)
     states[:, 1], shocks[:, 1] = iterate(z0, shocks[:, 1], Ts[1], Rs[1], Cs[1], Qs[1], Zs[1], Ds[1])
     obs[:, 1] = Ds[1] .+ Zs[1]*states[:, 1]
     pseudo[:, 1] = D_pseudos[1] .+ Z_pseudos[1] * states[:, 1]
