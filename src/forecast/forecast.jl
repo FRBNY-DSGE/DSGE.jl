@@ -205,7 +205,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     D_pseudos = Vector{Vector{Float64}}(undef, n_fcast_reg)
 
     # Unpack system
-    for (ss_ind, sys_ind) in enumerate((get_setting(m, :n_hist_regimes)+1):get_setting(m, :n_regimes))
+    for (ss_ind, sys_ind) in enumerate((get_setting(m, :n_hist_uncond_regimes)+1):get_setting(m, :n_regimes))
         # Need to index into i+11 of system since we want to start at second regime (for now since we have the first regime for all of history)
         Ts[ss_ind], Rs[ss_ind], Cs[ss_ind] = system[sys_ind][:TTT], system[sys_ind][:RRR], system[sys_ind][:CCC]
         Qs[ss_ind], Zs[ss_ind], Ds[ss_ind] = system[sys_ind][:QQ], system[sys_ind][:ZZ], system[sys_ind][:DD]
@@ -249,19 +249,22 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     last_date = iterate_quarters(date_forecast_start(m), -1)
     last_ind = 1
     regime_inds = Vector{UnitRange{Int}}(undef, 0)
-    for i in 1:(get_setting(m, :n_regimes) -1) #n_fcast_reg
+    @show get_setting(m, :regime_dates)
+    for i in 1:(get_setting(m, :n_regimes)-1) #n_fcast_reg
         if get_setting(m, :regime_dates)[i] < date_forecast_start(m)
             continue
         else
             qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i], last_date)
+            @show qtr_diff
             regime_inds = push!(regime_inds, last_ind:(last_ind + qtr_diff - 1))
+            @show regime_inds
             last_ind = last_ind + qtr_diff
             last_date = get_setting(m, :regime_dates)[i]
             @show last_ind, last_date
         end
     end
     regime_inds = push!(regime_inds, last_ind:horizon)
-
+    @show regime_inds
     # Iterate state space forward
     states = zeros(nstates, horizon)
     obs = zeros(nobs, horizon)
@@ -274,6 +277,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         ts = regime_inds[i]
         @show ts
         for t in ts #2:horizon
+            @show t
             states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
             obs[:, t] = Ds[i] .+ Zs[i]*states[:, t]
             pseudo[:, t] = D_pseudos[i] .+ Z_pseudos[i] * states[:, t]
