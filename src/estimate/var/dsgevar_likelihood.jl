@@ -73,7 +73,7 @@ function dsgevar_likelihood(YYYY::Matrix{S}, XXYY::Matrix{S},
         Σ = YYYYD - XXYYD' * β
         n_obs  = size(YYYY, 1)
         loglik = -(n_obs * T / 2) * log(2 * π) - (T / 2) * log(det(Σ)) -
-            .5 * sum(diag(inv(Σ) * (YYYY - 2 * β' * XXYY + β' * XXXX * β)))
+            .5 * sum(diag(Σ \ (YYYY - 2 * β' * XXYY + β' * XXXX * β)))
         loglik = real(loglik)
     elseif λ < 0
         throw(DomainError("λ", "λ cannot be negative."))

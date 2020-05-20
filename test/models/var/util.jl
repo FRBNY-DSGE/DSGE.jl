@@ -65,3 +65,27 @@ end
     @test XXYY ≈ matdata["XX"][lags + 1:end, 1:end]' * matdata["YY"][lags + 1:end, :]
     @test XXXX ≈ matdata["XX"][lags + 1:end, 1:end]' * matdata["XX"][lags + 1:end, 1:end]
 end
+
+fp = dirname(@__FILE__)
+@testset "Draw stationary VAR coefficients and variance-covariance matrix" begin
+    matdata = load(joinpath(fp, "../../reference/test_dsgevar_stationary_draws.jld2"))
+    β_draw, Σ_draw = DSGE.draw_stationary_VAR(matdata["yyyyd"], matdata["xxyyd"],
+                                         matdata["xxxxd"], Int(matdata["nobsc"]),
+                                         Int(matdata["nvar"]), Int(matdata["nlags"]);
+                                         testing = true, test_Σ_draw_shock = matdata["draw"],
+                                         test_β_draw_shock = vec(matdata["beta_draw"]))
+    @test matdata["cct_sim"] ≈ convert(Matrix{Float64}, β_draw')
+    @test matdata["sig_sim"] ≈ Σ_draw
+end
+
+@testset "Draw VECM coefficients and variance-covariance matrix" begin
+    matdata = load(joinpath(fp, "../../reference/draw_vecm.jld2"))
+    β_draw, Σ_draw = DSGE.draw_VECM(matdata["yyyyc"], matdata["xxyyc"],
+                                    matdata["xxxxc"], Int(matdata["Tbar"]),
+                                    Int(matdata["n_obs"]), Int(matdata["nlags"]),
+                                    Int(matdata["coint"]);
+                                    testing = true, test_Σ_draw_shock = matdata["sigma_draw"],
+                                    test_β_draw_shock = vec(matdata["beta_draw"]))
+    @test maximum(abs.(matdata["beta_ans"] - β_draw)) < 1e-2
+    @test @test_matrix_approx_eq matdata["sigma_ans"] Σ_draw
+end

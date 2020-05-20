@@ -277,7 +277,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
     end
 end
 
-function load_draws(m::DSGEVAR, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
+function load_draws(m::AbstractDSGEVARModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
                     verbose::Symbol = :low,
                     filestring_addl::Vector{String} = Vector{String}(undef, 0),
                     use_highest_posterior_value::Bool = false,
@@ -288,7 +288,7 @@ function load_draws(m::DSGEVAR, input_type::Symbol; subset_inds::AbstractRange{I
                                                   filestring_addl = filestring_addl)
     end
 
-    return load_draws(m.dsge, input_type; subset_inds = subset_inds, verbose = verbose,
+    return load_draws(get_dsge(m), input_type; subset_inds = subset_inds, verbose = verbose,
                       filestring_addl = filestring_addl, use_highest_posterior_value =
                       use_highest_posterior_value,
                       input_file_name = input_file_name)
@@ -740,7 +740,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
-                             cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty) #enforce_zlb = true, draw_shocks = uncertainty)
+                             cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
             end
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
