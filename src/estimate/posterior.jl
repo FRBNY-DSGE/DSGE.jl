@@ -173,7 +173,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
 
     # Return total log-likelihood, excluding the presample
     try
-        if typeof(m) == PoolModel{Float64}
+        if isa(m, PoolModel)
             return ψ_l * sum(filter_likelihood(m, data; tol = tol,
                                                tuning = get_setting(m, :tuning))) + ψ_p * penalty
         elseif use_chand_recursion==false
@@ -264,7 +264,9 @@ function likelihood(m::AbstractVARModel, data::AbstractMatrix;
 
     # Return total log-likelihood (presample for VAR is excluded)
     try
-        if isa(m, AbstractDSGEVARModel)
+        if isa(m, AbstractDSGEVECMModel)
+            return ψ_l * dsgevecm_likelihood(m, data) + ψ_p * penalty
+        elseif isa(m, AbstractDSGEVARModel)
             return ψ_l * dsgevar_likelihood(m, data) + ψ_p * penalty
         end
     catch err
