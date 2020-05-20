@@ -1,4 +1,4 @@
- """
+"""
 ```
 pseudo_measurement(m::Model1002{T},
     TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
@@ -115,6 +115,24 @@ function pseudo_measurement(m::Model1002{T},
 
     ## u_t
     ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
+
+    ## Nominal Wage Growth
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
+    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
+    DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) +
+        100 * (exp(m[:z_star]) - 1)
+
+    ## labor share
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            ZZ_pseudo[pseudo[:laborshare_t], endo[:w_t]] = 1.
+            ZZ_pseudo[pseudo[:laborshare_t], endo[:L_t]] = 1.
+            ZZ_pseudo[pseudo[:laborshare_t], endo[:y_t]] = -1.
+            DD_pseudo[pseudo[:laborshare_t]] = 100. * log(m[:wstar] * m[:Lstar] / m[:ystar])
+        end
+    end
 
     ## Fundamental inflation related pseudo-obs
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
