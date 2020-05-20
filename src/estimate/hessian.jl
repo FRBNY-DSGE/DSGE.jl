@@ -1,19 +1,20 @@
 """
 ```
-hessian!(m::AbstractDSGEModel, x::Vector{T}, data::AbstractArray;
+hessian!(m::Union{AbstractDSGEModel,AbstractVARModel}, x::Vector{T}, data::AbstractArray;
          verbose::Symbol = :none) where {T<:AbstractFloat}
 ```
 
-Compute Hessian of DSGE posterior function evaluated at x.
+Compute Hessian of DSGE/VAR posterior function evaluated at x.
 """
-function hessian!(m::AbstractDSGEModel,
+function hessian!(m::Union{AbstractDSGEModel,AbstractVARModel},
                   x::Vector{T},
-                  data::AbstractArray;
+                  data::AbstractArray; check_neg_diag::Bool = true,
                   verbose::Symbol = :none) where T<:AbstractFloat
+
     DSGE.update!(m, x)
 
     # Index of free parameters
-    para_free      = [!θ.fixed for θ in m.parameters]
+    para_free      = [!θ.fixed for θ in get_parameters(m)]
     para_free_inds = findall(para_free)
 
     # Compute hessian only for freem parameters with indices less than max. Useful for
@@ -36,15 +37,15 @@ function hessian!(m::AbstractDSGEModel,
         return -posterior!(m, x_model, data)
     end
 
-    distr=use_parallel_workers(m)
+    distr = use_parallel_workers(m)
     hessian_free, has_errors = hessizero(f_hessian, x_hessian;
-        check_neg_diag=true, verbose=verbose, distr=distr)
+        check_neg_diag = check_neg_diag, verbose = verbose, distr = distr)
 
     # Fill in rows/cols of zeros corresponding to location of fixed parameters
     # For each row corresponding to a free parameter, fill in columns corresponding to free
     # parameters. Everything else is 0.
     for (row_free, row_full) in enumerate(para_free_inds)
-        hessian[row_full,para_free_inds] = hessian_free[row_free,:]
+        hessian[row_full, para_free_inds] = hessian_free[row_free, :]
     end
 
     return hessian, has_errors

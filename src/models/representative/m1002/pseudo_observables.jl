@@ -5,7 +5,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
                     :Expected10YearRateGap, :NominalFFR, :Expected10YearRate,
                     :Expected10YearNaturalRate,
                     :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth,
-                    :u_t]
+                    :u_t, :NominalWageGrowth]
 
     if subspec(m) == "ss12"
         to_add = [:g_t, :b_t, :μ_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
@@ -17,6 +17,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t)
         if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
             push!(pseudo_names, :e_tfp_t1)
+        end
+    end
+
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            push!(pseudo_names, :laborshare_t)
         end
     end
 
@@ -101,6 +107,9 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:u_t].name     = "u_t"
     pseudo[:u_t].longname = "u_t"
 
+    pseudo[:NominalWageGrowth].name = "Nominal Wage Growth"
+    pseudo[:NominalWageGrowth].longname = "Nominal Wage Growth"
+
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         pseudo[:Sinf_t].name     = "Sinf_t"
         pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
@@ -123,8 +132,15 @@ function init_pseudo_observable_mappings!(m::Model1002)
     # Other exogenous processes
     if subspec(m) == "ss12"
         for i in to_add
-            pseudo[i].name = DSGE.detexify(i)
-            pseudo[i].longname = DSGE.detexify(i)
+            pseudo[i].name = string(DSGE.detexify(i))
+            pseudo[i].longname = string(DSGE.detexify(i))
+        end
+    end
+
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            pseudo[:laborshare_t].name     = "Log Labor Share"
+            pseudo[:laborshare_t].longname = "Log Labor Share"
         end
     end
 

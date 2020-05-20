@@ -7,7 +7,7 @@ For calculating the log marginal data density for a given posterior sample.
 
 ### Inputs
 
-- `m::AbstractDSGEModel`
+- `m::Union{AbstractDSGEModel,AbstractVARModel}`
 - `data::Matrix{Float64}`
 
 ### Keyword Arguments
@@ -16,7 +16,7 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 """
-function marginal_data_density(m::AbstractDSGEModel,
+function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
                                data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
@@ -35,7 +35,7 @@ function marginal_data_density(m::AbstractDSGEModel,
         return sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
 
     elseif calculation_method == :harmonic_mean
-        free_para_inds = findall(x -> x.fixed == false, m.parameters)
+        free_para_inds = findall(x -> x.fixed == false, get_parameters(m))
 
         if estimation_method == :smc
             cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
@@ -79,11 +79,11 @@ function marginal_data_density(m::AbstractDSGEModel,
 end
 
 function tt2string(time_temper::Symbol)
-    if time_temper==:new
+    if time_temper == :new
         return "new"
-    elseif time_temper==:old
+    elseif time_temper == :old
         return "old"
-    elseif time_temper==:whole
+    elseif time_temper == :whole
         return "whole"
     end
 end

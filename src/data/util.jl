@@ -299,3 +299,44 @@ function reconcile_column_names(a::DataFrame, b::DataFrame)
     end
     return a, b
 end
+
+"""
+```
+datetoymdvec(dt)
+```
+converts a Date to a vector/matrix holding the year, month, and date.
+"""
+function datetoymdvec(dt::Date)
+    y = Year(dt).value
+    m = Month(dt).value
+    d = Day(dt).value
+    return [y, m, d]
+end
+
+function datetoymdvec(dt::Vector{Date})
+    return permutedims(hcat(map(x -> datetoymdvec(x), dt)...), [2, 1])
+end
+
+"""
+```
+quartertofloats(dt)
+```
+converts a Date to a floating point number based on the quarter
+"""
+function quartertofloats(dt::Date)
+    dtvec = datetoymdvec(dt)
+    out = dtvec[1]
+    if dtvec[2] == 3
+        return out
+    elseif dtvec[2] == 6
+        return out + .25
+    elseif dtvec[3] == 9
+        return out + .5
+    else
+        return out + .75
+    end
+end
+
+function quartertofloats(dt::Vector{Date})
+    return map(x -> quartertofloats(x), dt)
+end

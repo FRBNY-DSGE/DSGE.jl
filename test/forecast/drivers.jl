@@ -61,10 +61,10 @@ end
     m <= Setting(:sampling_method, :SMC)
     global overrides[:full] = "$path/../reference/smcsave_.h5"
     # load draws without blocks
-    @test typeof(load_draws(m, :mode, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :mode, verbose = :none, use_highest_posterior_value = true)) == Vector{Float64}
     @test typeof(load_draws(m, :mode_draw_shocks, verbose = :none)) == Vector{Float64}
     @test typeof(load_draws(m, :full, verbose = :none)) == Matrix{Float64}
-    @test typeof(load_draws(m, :subset, subset_inds = 1:10, verbose = :none)) == Matrix{Float64}
+    @test typeof(load_draws(m, :subset, subset_inds = 1:10, verbose = :none, use_highest_posterior_value = true)) == Matrix{Float64}
 
     # load draws with blocks
     @test typeof(load_draws(m, :full, 1:1, verbose = :none))==Vector{Vector{Float64}}
@@ -75,5 +75,16 @@ end
     m <= Setting(:sampling_method, :marco)
     @test_throws ErrorException load_draws(m, :mode, verbose = :none)
 
-    m <= Setting(:forecast_block_size, 100)
+    # Test it can load the csminwel mode when using SMC
+    delete!(overrides, :mode) # make sure no modal override
+    m <= Setting(:sampling_method, :SMC)
+    m <= Setting(:saveroot, joinpath(dirname(@__FILE__), "../reference"))
+    m <= Setting(:data_vintage, "")
+    @test typeof(load_draws(m, :mode, verbose = :none,
+                            use_highest_posterior_value = true)) == Vector{Float64}
+    @test typeof(load_draws(m, :mode, verbose = :none,
+                            use_highest_posterior_value = false)) == Vector{Float64}
+    m <= Setting(:fix, "true", true, "fix", "") # Add tail to estimation file name
+    @test typeof(load_draws(m, :mode, verbose = :none, # to test we default to the cloud again.
+                            use_highest_posterior_value = false)) == Vector{Float64}
 end
