@@ -1,13 +1,13 @@
 """
-    ```
-    write_standard_model_packet(m, input_type, cond_type,
-        output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
-        sections = [:estimation, :forecast]
-        forecast_string = "", outdir = joinpath(saveroot(m), \"Packets\", spec(m), subspec(m)))
-    ```
+```
+write_standard_model_packet(m, input_type, cond_type,
+    output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
+    sections = [:estimation, :forecast]
+    forecast_string = "", outdir = joinpath(saveroot(m), \"Packets\", spec(m), subspec(m)))
+```
 
-    Write standard estimation and forecast result packet to `outdir`.
-    """
+Write standard estimation and forecast result packet to `outdir`.
+"""
 function write_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                      output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                                     :shockdecobs, :shockdecpseudo];
@@ -47,16 +47,16 @@ function write_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, c
 end
 
 """
-    ```
-    plot_standard_model_packet(m, input_type, cond_type,
-        output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
-        sections = [:estimation, :forecast]
-        forecast_string = "", hist_start-date = 0001-01-01)
-    ```
+```
+plot_standard_model_packet(m, input_type, cond_type,
+    output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
+    sections = [:estimation, :forecast]
+    forecast_string = "", hist_start-date = 0001-01-01)
+```
 
-    Plot parameter prior/posterior histograms to `figurespath(m, \"estimate\")` and
-    forecasts/shock decompositions to `figurespath(m, \"forecast\')`.
-    """
+Plot parameter prior/posterior histograms to `figurespath(m, \"estimate\")` and
+forecasts/shock decompositions to `figurespath(m, \"forecast\')`.
+"""
 function plot_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                     output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                                    :shockdecobs, :shockdecpseudo];
@@ -159,13 +159,13 @@ function write_estimation_section(fid::IOStream, m::AbstractDSGEModel;
 end
 
 """
-    ```
-    write_estimation_plots(fid, m; plotroot = "")
-    ```
+```
+write_estimation_plots(fid, m; plotroot = "")
+```
 
-    Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
-    `plotroot` is not specified, plots from `figurespath(m, \"estimate\")` are used.
-    """
+ Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
+`plotroot` is not specified, plots from `figurespath(m, \"estimate\")` are used.
+"""
 function write_estimation_plots(fid::IOStream, m::AbstractDSGEModel;
                                 plotroot::String = "")
     if isempty(plotroot)
@@ -631,7 +631,8 @@ end
     """
 function plot_irf_section(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                           output_vars::Vector{Symbol};
-                          forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4)
+                          forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4,
+                          kwargs...)
     # Create file name related strings
     if isempty(plotroot)
         plotroot = figurespath(m, "forecast")
@@ -678,7 +679,7 @@ function plot_irf_section(m::AbstractDSGEModel, input_type::Symbol, cond_type::S
         for shock in shocks
             # Create individual plots
             plots = plot_impulse_response(m, shock, vars, class, input_type, cond_type,
-                                          forecast_string = forecast_string)
+                                          forecast_string = forecast_string, kwargs...)
 
             # Plot all variables together
             varplots = if mod(nvars, ncols) > 0
@@ -692,6 +693,97 @@ function plot_irf_section(m::AbstractDSGEModel, input_type::Symbol, cond_type::S
 
             # Save
             fn = joinpath(plotroot, "irf_" * string(DSGE.detexify(shock)) * "_" * string(class))
+            fn *= filestr * ".pdf"
+            DSGE.save_plot(p, fn)
+        end
+    end
+end
+
+# Extends to using two different models
+function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
+                          input_type1::Symbol, input_type2::Symbol,
+                          cond_type1::Symbol, cond_type2::Symbol,
+                          output_vars::Vector{Symbol};
+                          forecast_string1::String = "",
+                          forecast_string2::String = "",
+                          which_model::Int = 1,
+                          plotroot::String = "", ncols::Int64 = 4,
+                          bands_pcts::Vector{String} = Vector{String}(undef,0),
+                          bands_alpha1::Float64 = 0.5,
+                          bands_alpha2::Float64 = 0.5,
+                          addl_text::String = "")
+    # Create file name related strings
+    m = which_model == 1 ? m1 : m2
+    if isempty(plotroot)
+        plotroot = figurespath(m, "forecast")
+    end
+    base = DSGE.filestring_base(m)
+    addl = DSGE.get_forecast_filestring_addl((which_model == 1) ? input_type1 :
+                                             input_type2, (which_model == 2) ?
+                                             cond_type1 : cond_type2,
+                                             forecast_string = (which_model == 1) ?
+                                             forecast_string1 : forecast_string2)
+    filestr = DSGE.filestring(base, addl)
+
+
+    # Find shocks to remove from list of shocks to compute IRFs
+    ant_obs = [Symbol("obs_nominalrate" * string(i)) for i = 1:n_anticipated_shocks(m)]
+    ant_sh  = [Symbol("rm_shl" * string(i)) for i = 1:n_anticipated_shocks(m)]
+    zero_shocks = Vector{Symbol}(undef,0)
+    for k in setdiff(keys(m.exogenous_shocks),
+                     [Symbol("rm_shl" * string(i)) for i = 1:n_anticipated_shocks(m)])
+        if k == :rm_sh && m[:σ_r_m].value == 0. && m[:σ_r_m].fixed
+            zero_shocks = vcat(zero_shocks, :rm_sh)
+        elseif k == :zp_sh && m[:σ_z_p].value == 0. && m[:σ_z_p].fixed
+            zero_shocks = vcat(zero_shocks, :zp_sh)
+        elseif k != :rm_sh && k != :zp_sh
+            sig_name = Symbol("σ_" * replace(string(k), "_sh" => ""))
+            if m[sig_name].value == 0. && m[sig_name].fixed
+                zero_shocks = vcat(zero_shocks, k)
+            end
+        end
+    end
+
+    shocks = setdiff(setdiff(collect(keys(m.exogenous_shocks)), ant_sh), zero_shocks)
+
+    for output_var in intersect(output_vars, [:irfstates, :irfobs, :irfpseudo])
+        class = get_class(output_var)
+        if class == :obs
+            vars = setdiff(collect(keys(m.observables)), ant_obs)
+        elseif class == :pseudo
+            vars = collect(keys(m.pseudo_observables))
+        elseif class == :states
+            vars = collect(keys(m.endogenous_states))
+        end
+        nvars = length(vars)
+        nrows = convert(Int, ceil(nvars/ncols))
+
+
+        for shock in shocks
+            # Create individual plots
+            plots = plot_impulse_response(m1, m2, shock, vars, class,
+                                          input_type1, input_type2,
+                                          cond_type1, cond_type2,
+                                          forecast_string1 = forecast_string1,
+                                          forecast_string2 = forecast_string2,
+                                          which_model = which_model,
+                                          bands_pcts = bands_pcts,
+                                          bands_alpha1 = bands_alpha1,
+                                          bands_alpha2 = bands_alpha2,
+                                          addl_text = addl_text)
+
+            # Plot all variables together
+            varplots = if mod(nvars, ncols) > 0
+                empty = plot(grid = false, foreground_color_axis = :white, ticks = [])
+                n_empty = ncols - mod(nvars, ncols)
+                vcat(collect(values(plots)), repeat([empty], n_empty))
+            else
+                collect(values(plots))
+            end
+            p = plot(varplots..., layout = grid(nrows, ncols), size = (650, 775))
+
+            # Save
+            fn = joinpath(plotroot, "irf_" * string(DSGE.detexify(shock)) * "_" * string(class) * addl_text)
             fn *= filestr * ".pdf"
             DSGE.save_plot(p, fn)
         end

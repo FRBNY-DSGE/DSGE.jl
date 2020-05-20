@@ -730,6 +730,7 @@ function model_settings!(m::Model1002)
                  "Whether to use population forecasts as data")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
                  "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
+    m <= Setting(:add_laborshare_measurement, false)
 
     nothing
 end

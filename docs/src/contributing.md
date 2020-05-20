@@ -8,9 +8,20 @@ As these steps are under development, we would welcome improvements to
 the existing code from the community. Some examples could be:
 - Performance improvements
 - Alternatives to algorithms used here (optimization, hessian, etc.)
+- Extension of the DSGE-VAR, DSGE-VECM, and VAR code
+  a. Allowing measurement error uncorrelated with the exogenous structural shocks.
+  b. Implementing a test DSGE model with cointegrating relationships in the
+     measurement equation so that the `DSGEVECM` object and functions defined
+     for it can be tested, e.g. `impulse_responses`. Currently, most of the tested
+     DSGE-VECM code are internal functions which are not intended to be the
+     user-level interface. For example, the impulse responses of a DSGE-VECM
+     can be calculated if the state space system matrices are given as inputs, but we do
+     not have tests for the wrapper `impulse_responses(m, . . .)`, where
+     `m <: AbstractDSGEVECMModel'.
+- Extension of model averaging techniques beyond `PoolModel`
 - Other general improvements
-  - Adding documentation/test coverage
-  - Adding existing notable DSGE models into the models/ directory
+  a. Adding documentation/test coverage
+  b. Adding existing notable DSGE models into the models/ directory
 
 
 ### Git Recommendations For Pull Requests

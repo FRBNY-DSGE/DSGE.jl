@@ -107,11 +107,15 @@ Load and return parameter draws from Metropolis-Hastings or SMC.
   `Vector{Float64}`. Second method returns a `Vector{Vector{Float64}}` of
   parameter draws for this block.
 """
-function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
-                    verbose::Symbol = :low,
-                    filestring_addl::Vector{String} = Vector{String}(undef, 0))
+function load_draws(m::AbstractDSGEModel, input_type::Symbol;
+                    subset_inds::AbstractRange{Int64} = 1:0,
+                    verbose::Symbol = :low, filestring_addl::Vector{String} =
+                    Vector{String}(undef, 0), use_highest_posterior_value::Bool = false,
+                    input_file_name::String = "")
 
-    input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    end
     println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
@@ -124,8 +128,20 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
                 if :mode in collect(keys(forecast_input_file_overrides(m)))
                     params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                     # If not, load it from the cloud
+                elseif (occursin("smc_paramsmode", input_file_name) &&
+                        !use_highest_posterior_value && input_type == :mode)
+                    params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                 else
-                    cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
+                    # Check that input_file_name is correct. Note that if
+                    # it already has smc_cloud, then the following code block does not do anything.
+                    if occursin("smc_paramsmode", input_file_name) || occursin(".h5", input_file_name)
+                        input_file_name = replace(replace(input_file_name,
+                                                          "smc_paramsmode" => "smc_cloud"),
+                                                  ".h5" => ".jld2")
+                        println(verbose, :low, "Switching estimation file of draws to $input_file_name")
+                    end
+
+                    cloud = load(input_file_name, "cloud")
                     params = if typeof(cloud) <: Union{DSGE.Cloud,SMC.Cloud}
                         SMC.get_likeliest_particle_value(SMC.Cloud(cloud))
                     else
@@ -189,9 +205,13 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
 end
 
 function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::AbstractRange{Int64};
-                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0))
+                    verbose::Symbol = :low,
+                    filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    input_file_name::String = "")
 
-    input_file_name = get_forecast_input_file(m, input_type)
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    end
     println(verbose, :low, "Loading draws from $input_file_name")
 
     if input_type in [:full, :subset]
@@ -255,6 +275,23 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
     else
         error("This load_draws method can only be called with input_type in [:full, :subset]")
     end
+end
+
+function load_draws(m::AbstractDSGEVARModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
+                    verbose::Symbol = :low,
+                    filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    use_highest_posterior_value::Bool = false,
+                    input_file_name::String = "")
+
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type;
+                                                  filestring_addl = filestring_addl)
+    end
+
+    return load_draws(get_dsge(m), input_type; subset_inds = subset_inds, verbose = verbose,
+                      filestring_addl = filestring_addl, use_highest_posterior_value =
+                      use_highest_posterior_value,
+                      input_file_name = input_file_name)
 end
 
 """
@@ -703,7 +740,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
-                             cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty) #enforce_zlb = true, draw_shocks = uncertainty)
+                             cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
             end
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]

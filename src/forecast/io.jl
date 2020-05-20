@@ -31,7 +31,16 @@ function get_forecast_input_file(m, input_type;
     end
 
     if input_type == :mode || input_type == :mode_draw_shocks
-        return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
+        if get_setting(m, :sampling_method) == :MH
+            return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
+        else
+            smc_mode_file = rawpath(m,"estimate","smc_paramsmode.h5", filestring_addl)
+            if isfile(smc_mode_file)
+                return smc_mode_file
+            else
+                return rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
+            end
+        end
     elseif input_type == :mean
         return workpath(m,"estimate","paramsmean.h5", filestring_addl)
     elseif input_type == :init || input_type == :init_draw_shocks

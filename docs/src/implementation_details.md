@@ -108,21 +108,69 @@ DSGE.update!
 DSGE.transform_to_model_space!
 DSGE.load_parameters_from_file
 DSGE.specify_mode!
-DSGE.specify_hessian
+DSGE.specify_hessian!
 ```
 
-### `Parameter` Interface
+### `Parameter` and `Setting` Interface
+See [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
-```@autodocs
-Modules = [DSGE]
-Pages = ["parameters.jl"]
-Order = [:function]
+## The `PoolModel` Type
+
+A `PoolModel` has a very similar structure to concrete subtypes of `AbstractDSGEModel`, but certain
+fields have been removed because they are not necessary for a `PoolModel`, such as `exogenous_shocks`.
+We chose to define `PoolModel` as a concrete subtype of `AbstractDSGEModel` because, for the foreseeable
+future, we have no plans to implement a more complex type hierarchy for types that perform
+model averaging. By defining `PoolModel` as a subtype of a `AbstractDSGEModel` and taking advantage
+of multiple dispatch, less refactoring was required to make `PoolModel` compatible with DSGE.jl
+functions like `estimate`.
+
+## The `DSGEVAR` Type
+
+Like the `PoolModel` type, the `DSGEVAR` is not a DSGE model, but unlike the `PoolModel`,
+which is still a subtype of `AbstractDSGEModel`, `DSGEVAR` has the following type hierarchy:
+
+```
+DSGEVAR <: AbstractDSGEVARModel <: AbstractVARModel <: AbstractModel
 ```
 
-### `Setting` Interface
+The behavior of `DSGEVAR` is sufficiently distinct from `AbstractDSGEModel` and requires
+enough specialized functions that simply using multiple dispatch did not seem an effective
+way to implement `DSGEVAR`. Moreover, several functions, like the `impulse_responses` code,
+apply to generic VARs. Restricting these functions to `DSGEVAR` did not seem like the best idea.
 
-```@autodocs
-Modules = [DSGE]
-Pages = ["settings.jl"]
-Order = [:function]
+In the near term, there are no plans to further flesh out the VAR capabilities of DSGE.jl, but
+in the longer term, we may add VAR routines to DSGE.jl or implement them in a separate package.
+If we do create a separate package, then `DSGEVAR` will be refactored to be compatible
+with this new package.
+
+Features that have not been fully implemented for `DSGEVAR` include
+
+- Loading data directly from the `DSGEVAR`
+- Calling `forecast_one` on a `DSGEVAR`
+- Calling `compute_meansbands` on a `DSGEVAR`
+- Plotting with a `DSGEVAR`
+- Alternative policy
+
+## The `DSGEVECM` Type
+
+The `DSGEVECM` extends the `DSGEVAR` to accommodate DSGE-VECM methods.
+It has the following type hierarchy:
+
 ```
+DSGEVECM <: AbstractDSGEVECMModel <: AbstractDSGEVARModel <: AbstractVARModel <: AbstractModel
+```
+
+In the near term, there are no plans to further flesh out the VECM capabilities of DSGE.jl, but
+in the longer term, we may add VECM routines to DSGE.jl or implement them in a separate package.
+If we do create a separate package, then `DSGEVECM` will be refactored to be compatible
+with this new package.
+
+Features that have not been fully implemented for `DSGEVECM` include
+
+- Testing the creation of a `DSGEVECM` from a `DSGE`
+- Tests that a `DSGEVECM` can be estimated properly
+- Loading data directly from the `DSGEVECM`
+- Calling `forecast_one` on a `DSGEVECM`
+- Calling `compute_meansbands` on a `DSGEVECM`
+- Plotting with a `DSGEVECM`
+- Alternative policy

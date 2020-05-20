@@ -1,4 +1,4 @@
-# Advanced Usage
+# [Advanced Usage](@id advanced-usage)
 
 ```@meta
 CurrentModule = DSGE
@@ -36,7 +36,7 @@ so a user will need to manually set the data vintage to the desired date.
 
 Below, we describe several important settings for package usage.
 
-For more details on implementation and usage of settings, see [Model Settings](@ref).
+For more details on implementation and usage of settings, see [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
 See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults.jl) for the complete description of default settings.
 
@@ -212,8 +212,6 @@ filename collisions, preventing the user from overwriting output from previous e
 with the original parameters. The protocol for defining new sub-specifications is described
 in [Model sub-specifications](@ref model-sub-specifications-msubspec).
 
-Overriding default settings is described in the [Model Settings](@ref) section.
-
 ### [Model specification (`m.spec`)](@id model-specification-mspec)
 
 A particular model, which corresponds to a subtype of `AbstractModel`, is defined as a set
@@ -275,3 +273,12 @@ for `Model990` with `ss1` as an argument. For example,
 ```julia
 m = Model990("ss1")
 ```
+
+## Additional Tips
+* The file `abstractdsgemodel.jl` defines numerous auxiliary functions, which allow the
+  user to more easily call standard settings or count the number of dimensions for
+  important variables. For example, `data_vintage(m)` returns the vintage of the data
+  specified by the model object `m`. Additionally see `abstractmodel.jl` in
+  [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl)
+  for more functions like `n_observables(m)`, which returns
+  the number of observables in `m`.

@@ -1,7 +1,27 @@
+# DSGE.jl 1.1.5
+## New features and enhancements
++ Implement DSGE-VECMs and provide functionality to compute impulse responses.
++ Extend DSGE-VAR rotation impulse responses to compute in deviations from baseline.
++ Example for running impulse responses of a a DSGE-VECM.
++ Extend example for DSGE-VARs to allow plotting of modal impulse responses.
+
+## Bug fixes and cleanup
++ Fix summary statistics when loading data
++ Fix bugs in the documentation.
+
+# DSGE.jl 1.1.3
+## New features and enhancements
++ Implement DSGE-VARs and provide functionality to estimate them and compute impulse responses.
++ Example for running a forecast decomposition.
++ Example for running a DSGE-VAR.
+
+## Bug fixes and cleanup
++ Allow user to avoid running csminwel when using SMC and calling estimate.
+
 # DSGE.jl 1.1.2
 ## New features and enhancements
 + Support for bridging from another estimation (in SMC.jl)--this update ensures compatibility
-+ Automatically run cs_minwel after an SMC estimation to ensure you've found the mode with kwarg run_csminwel in smc2
++ Automatically run csminwel after an SMC estimation to ensure you've found the mode with kwarg run_csminwel in smc2
 
 # DSGE.jl 1.1.1
 ## New features and enhancements
