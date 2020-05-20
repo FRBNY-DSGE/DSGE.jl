@@ -1,6 +1,6 @@
 """
 ```
-write_forecast_centric_packet(m, input_type, cond_type,
+write_forecast_centric_model_packet(m, input_type, cond_type,
     output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
     sections = [:estimation, :forecast]
     forecast_string = "", outdir = joinpath(saveroot(m), \"Packets\", spec(m), subspec(m)))
@@ -10,13 +10,13 @@ Write standard estimation and forecast result packet to `outdir`, with an emphas
 on the forecasting results. The main difference with the standard packet is that the
 prior posterior plots at placed at the very end.
 """
-function write_forecast_centric_packet(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
-                               output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
-                                                              :shockdecobs, :shockdecpseudo];
-                               sections::Vector{Symbol} = [:estimation, :forecast],
-                               forecast_string::String = "",
-                               outdir::String = joinpath(saveroot(m), "Packets", spec(m), subspec(m)),
-                               purpose::String = "")
+function write_forecast_centric_model_packet(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
+                                             output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
+                                                                            :shockdecobs, :shockdecpseudo];
+                                             sections::Vector{Symbol} = [:estimation, :forecast],
+                                             forecast_string::String = "",
+                                             outdir::String = joinpath(saveroot(m), "Packets", spec(m), subspec(m)),
+                                             purpose::String = "")
     @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast, :irf]."
 
     # Title and authors
@@ -57,11 +57,10 @@ end
 ```
 write_estimation_table_section(fid, m; plotroot = "")
 ```
-
 Write parameter moment tables.
 """
 function write_estimation_table_section(fid::IOStream, m::AbstractDSGEModel;
-                                  plotroot::String = "")
+                                        plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
     @printf fid "\\section{Estimation Moments}\n"
@@ -76,11 +75,10 @@ end
 ```
 write_estimation_plot_section(fid, m; plotroot = "")
 ```
-
 Write prior/posterior plots.
 """
 function write_estimation_plot_section(fid::IOStream, m::AbstractDSGEModel;
-                                  plotroot::String = "")
+                                       plotroot::String = "")
 
     @printf fid "\\clearpage\n"
     @printf fid "\\section{Estimation Histograms}\n"
