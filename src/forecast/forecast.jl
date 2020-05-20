@@ -60,29 +60,41 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     nshocks = n_shocks_exogenous(m)
     horizon = forecast_horizons(m; cond_type = cond_type)
 
-    if isa(system, RegimeSwitchingSystem)
-        RS_system = system
-        system = system[1]
-    else
-        system = system
-    end
 
     if isempty(shocks)
         # Populate shocks matrix
         if draw_shocks
-            μ = zeros(S, nshocks)
-            σ = sqrt.(system[:QQ])
-            dist = if forecast_tdist_shocks(m)
-                # Use t-distributed shocks
-                ν = forecast_tdist_df_val(m)
-                DegenerateDiagMvTDist(μ, σ, ν)
+            if isa(system, RegimeSwitchingSystem)
+                shocks = zeros(nshocks, horizon)
+                μ = zeros(nshocks)
+                regime_inds = get_fcast_regime_inds(m, horizon)
+                sys_ind_start = get_setting(m, :n_hist_uncond_regimes) + 1
+                for ts in regime_inds
+                    σ = sqrt.(system[:QQ][sys_ind_start])
+                    dist = if forecast_tdist_shocks(m)
+                        # Use t-distributed shocks
+                        ν = forecast_tdist_df_val(m)
+                        DegenerateDiagMvTDist(μ, σ, ν)
+                    else
+                        # Use normally distributed shocks
+                        DegenerateMvNormal(μ, σ)
+                    end
+                    shocks[:, ts] = rand(dist, σ)
+                    sys_ind_start  = sys_ind_start + 1
+                end
             else
-                # Use normally distributed shocks
-                DegenerateMvNormal(μ, σ)
+                μ = zeros(S, nshocks)
+                σ = sqrt.(system[:QQ])
+                dist = if forecast_tdist_shocks(m)
+                    # Use t-distributed shocks
+                    ν = forecast_tdist_df_val(m)
+                    DegenerateDiagMvTDist(μ, σ, ν)
+                else
+                    # Use normally distributed shocks
+                    DegenerateMvNormal(μ, σ)
+                end
+                shocks = rand(dist, horizon)
             end
-
-            shocks = rand(dist, horizon)
-
             # Forecast without anticipated shocks
             if n_mon_anticipated_shocks(m) > 0
                 ind_ant1 = m.exogenous_shocks[:rm_shl1]
@@ -125,8 +137,8 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     ind_r_sh = m.exogenous_shocks[:rm_sh]
     zlb_value = forecast_zlb_value(m)
 
-    if @isdefined RS_system
-        forecast(m, RS_system, z0, shocks; enforce_zlb = enforce_zlb,
+    if isa(system, RegimeSwitchingSystem)
+        forecast(m, system, z0, shocks; enforce_zlb = enforce_zlb,
                  ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
     else
         forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
@@ -224,7 +236,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         z_t = C + T*z_t1 + R*ϵ_t
 
         # Change monetary policy shock to account for 0.13 interest rate bound
-      #=  if enforce_zlb
+        if enforce_zlb
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
@@ -242,29 +254,13 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
                 # Subtract a small number to deal with numerical imprecision
                 @assert interest_rate_forecast >= zlb_value - 0.01 "interest_rate_forecast = $interest_rate_forecast must be >= zlb_value - 0.01 = $(zlb_value - 0.01)."
             end
-        end =#
+        end
         return z_t, ϵ_t
     end
 
-    last_date = iterate_quarters(date_forecast_start(m), -1)
-    last_ind = 1
-    regime_inds = Vector{UnitRange{Int}}(undef, 0)
-    @show get_setting(m, :regime_dates)
-    for i in 1:(get_setting(m, :n_regimes)-1) #n_fcast_reg
-        if get_setting(m, :regime_dates)[i] < date_forecast_start(m)
-            continue
-        else
-            qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i], last_date)
-            @show qtr_diff
-            regime_inds = push!(regime_inds, last_ind:(last_ind + qtr_diff - 1))
-            @show regime_inds
-            last_ind = last_ind + qtr_diff
-            last_date = get_setting(m, :regime_dates)[i]
-            @show last_ind, last_date
-        end
-    end
-    regime_inds = push!(regime_inds, last_ind:horizon)
+    regime_inds = get_fcast_regime_inds(m, horizon)
     @show regime_inds
+
     # Iterate state space forward
     states = zeros(nstates, horizon)
     obs = zeros(nobs, horizon)
@@ -273,14 +269,23 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     obs[:, 1] = Ds[1] .+ Zs[1]*states[:, 1]
     pseudo[:, 1] = D_pseudos[1] .+ Z_pseudos[1] * states[:, 1]
 
-    for i = 2:length(regime_inds)
-        ts = regime_inds[i]
-        @show ts
-        for t in ts #2:horizon
-            @show t
-            states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
-            obs[:, t] = Ds[i] .+ Zs[i]*states[:, t]
-            pseudo[:, t] = D_pseudos[i] .+ Z_pseudos[i] * states[:, t]
+    # If there's multiple regimes in forecast period, go through each set of indieces. Otherwise, just take the first set
+    if length(regime_inds) > 1
+        for i in 2:length(regime_inds)
+            ts = regime_inds[i]
+            @show ts
+            for t in ts #2:horizon
+                @show t
+                states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
+                obs[:, t] = Ds[i] .+ Zs[i]*states[:, t]
+                pseudo[:, t] = D_pseudos[i] .+ Z_pseudos[i] * states[:, t]
+            end
+        end
+    else
+        for t in 2:horizon
+            states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t], Ts[1], Rs[1], Cs[1], Qs[1], Zs[1], Ds[1])
+            obs[:, t] = Ds[1] .+ Zs[1]*states[:, t]
+            pseudo[:, t] = D_pseudos[1] .+ Z_pseudos[1] * states[:, t]
         end
     end
 
@@ -290,4 +295,22 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 
     # Return forecasts
     return states, obs, pseudo, shocks
+end
+
+function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int)
+    last_date = iterate_quarters(date_forecast_start(m), -1)
+    last_ind = 1
+    regime_inds = Vector{UnitRange{Int}}(undef, 0)
+    @show get_setting(m, :regime_dates)
+    for i in 1:(get_setting(m, :n_regimes)-1) #n_fcast_reg
+        if get_setting(m, :regime_dates)[i] < date_forecast_start(m)
+            continue
+        else
+            qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i], last_date)
+            regime_inds = push!(regime_inds, last_ind:(last_ind + qtr_diff - 1))
+            last_ind = last_ind + qtr_diff
+            last_date = get_setting(m, :regime_dates)[i]
+        end
+    end
+    regime_inds = push!(regime_inds, last_ind:horizon)
 end
