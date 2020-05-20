@@ -565,9 +565,9 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
     end
 
     for (key, val) in get_setting(m, :antshocks)
-        ant_eq_mapping  = get_setting(m, :ant_eq_mapping)         # maps antshock key to state variable name
-        ant_eq_E_mapping  = get_setting(m, :ant_eq_E_mapping)     # maps antshock key to state variable name
-        ant_proportion  = get_setting(m, :proportional_antshocks) # maps antshock key to the size of anticipated shocks proportional to contemporaneous shock today
+        ant_eq_mapping   = get_setting(m, :ant_eq_mapping)         # maps antshock key to state variable name
+        ant_eq_E_mapping = get_setting(m, :ant_eq_E_mapping)       # maps antshock key to state variable name
+        ant_proportion   = get_setting(m, :proportional_antshocks) # is the antshock proportional to a contemporaneous shock?
         if val > 0
             # This section adds the anticipated shocks. There is one state for all the
             # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
@@ -579,9 +579,9 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
             Γ0[eq[Symbol("eq_", key, "l1")], endo[Symbol(key, "_tl1")]] = 1.
             Ψ[eq[Symbol("eq_", key, "l1")], exo[Symbol(key, "_shl1")]]  = 1.
 
-            if haskey(ant_proportion, key)
+            if key in ant_proportion
                 Ψ[eq[Symbol("eq_", key, "l1")], exo[Symbol(key, "_shl1")]] = 0.
-                Ψ[eq[Symbol("eq_", key, "l1")], exo[Symbol(key, "_sh")]]   = ant_proportion[key][1]
+                Ψ[eq[Symbol("eq_", key, "l1")], exo[Symbol(key, "_sh")]]   = m[Symbol(:σ_, key, :_prop)]
             end
 
             if val > 1
@@ -592,7 +592,7 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
 
                     if haskey(ant_proportion, key)
                         Ψ[eq[Symbol("eq_", key, "l$i")], exo[Symbol(key, "_shl$i")]] = 0.
-                        Ψ[eq[Symbol("eq_", key, "l$i")], exo[Symbol(key, "_sh")]]    = ant_proportion[key][i]
+                        Ψ[eq[Symbol("eq_", key, "l$i")], exo[Symbol(key, "_sh")]]    = m[Symbol(:σ_,key, :_prop, i)]
                     end
                 end
             end

@@ -630,6 +630,13 @@ function init_parameters!(m::Model1002)
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
     end
 
+    for key in get_setting(m, :proportional_antshocks)
+        m <= parameter(Symbol(:σ_, key, :_prop), 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 1.), fixed=false,
+                       description="σ_$(key)_prop: proportional of anticipated shock to contemporaneous shock to $key",
+                       tex_label="\\sigma_{\\$(DSGE.detexify(key))}^{prop}")
+    end
+
     # standard deviations of the anticipated policy shocks
     for i = 1:n_mon_anticipated_shocks_padding(m)
         if i < 13
@@ -870,8 +877,8 @@ function model_settings!(m::Model1002)
     m <= Setting(:ant_eq_E_mapping, Dict{Symbol, Symbol}(),
                  "Dictionary mapping name of anticipated shock to name of state variable for" *
                  " one-period ahead expectation of exogenous process affected by the shock") # This mapping is intended only for anticipated shocks that are not scaled by a constant, i.e. the coefficient in the Γ0 eqcond matrix is -1.0
-    m <= Setting(:proportional_antshocks, Dict{Symbol, Vector{Float64}}(),
-                 "Dictionary mapping name of anticipated shock to the vector specifying how large anticipated shocks are in proportion to the contemporaneous shock when a shock today triggers anticipated shocks tomorrow.")
+    m <= Setting(:proportional_antshocks, Vector{Symbol}(undef, 0),
+                 "Vector of anticipated shocks that are proportional to the contemporaneous shock")
     m <= Setting(:antshocks, Dict{Symbol, Int}(),
                  "Dictionary mapping name of anticipated shock to the number of periods of anticipation.")
 
