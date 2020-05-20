@@ -38,7 +38,8 @@ and bands.
 - `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
-function get_meansbands_input_file(m::AbstractDSGEModel, input_type::Symbol,
+function get_meansbands_input_file(m::Union{AbstractDSGEModel,AbstractVARModel},
+                                   input_type::Symbol,
                                    cond_type::Symbol, output_var::Symbol;
                                    forecast_string::String = "", fileformat = :jld2)
 
@@ -104,7 +105,8 @@ computed means and bands.
 - `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
-function get_meansbands_output_file(m::AbstractDSGEModel, input_type::Symbol,
+function get_meansbands_output_file(m::Union{AbstractDSGEModel,AbstractVARModel},
+                                    input_type::Symbol,
                                     cond_type::Symbol, output_var::Symbol;
                                     forecast_string::String = "",
                                     fileformat::Symbol = :jld2,
@@ -149,7 +151,8 @@ function read_mb(fn::String)
     end
 end
 
-function read_mb(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
+function read_mb(m::Union{AbstractDSGEModel,AbstractVARModel},
+                 input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
                  bdd_and_unbdd::Bool = false,
                  directory::String = workpath(m, "forecast"))

@@ -194,6 +194,8 @@ function default_settings!(m::AbstractDSGEModel)
     # Temporary setting to save different output files
     settings[:adaptive_tempering_target_smc] = Setting(:adaptive_tempering_target_smc, 0.97, false,
          "adpt", "Either the adaptive tempering target or 0.0 if using fixed schedule")
+    settings[:tempered_update_prior_weight] = Setting(:tempered_update_prior_weight, 0.0, false,
+         "prior_weight", "When bridging from old estimation, how much weight to put on prior.")
     settings[:smc_iteration] = Setting(:smc_iteration, 1, false, "iter",
         "The iteration index for the number of times smc has been run on the same data vintage. " *
         "Primarily for numerical accuracy/testing purposes.")
