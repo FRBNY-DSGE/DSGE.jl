@@ -6,6 +6,12 @@ decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old,
 decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
     cond_new, cond_old, classes; check = false)
 ```
+explains the differences between an old forecast and a new forecast
+by decomposing the differences into three sources:
+
+(1) Data revisions,
+(2) News (e.g. new data that has become available since the old forecast),
+(3) Re-estimation (i.e. changes in model parameters).
 
 ### Inputs
 

@@ -1,5 +1,5 @@
-using ClusterManagers, DSGE, ModelConstructors, FileIO
-
+using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots
+GR.inline("pdf")
 fn = dirname(@__FILE__)
 
 # This script auto-generates a packet of
@@ -29,23 +29,23 @@ n_workers         = 10
 # Initialize model objects and desired settings
 m = Model1002("ss10")
 m <= Setting(:sampling_method, :MH)
-usual_settings!(m, "181115"; cdvt = "181115", fcast_date = quartertodate("2018-Q4"))
+usual_model_settings!(m, "181115"; cdvt = "181115", fcast_date = quartertodate("2018-Q4"))
 m <= Setting(:use_population_forecast, false) # We do not make this data available
 m <= Setting(:saveroot, "$(fn)/../../save/") # set save root
 m <= Setting(:dataroot, "$(fn)/../../save/input_data/") # set data root
 m <= Setting(:date_forecast_end, quartertodate("2030-Q1")) # When to stop forecast
 forecast_string = "" # to identify different forecasts from each other
 m <= Setting(:forecast_block_size, 40) # this depends on the number of samples from estimations
-                                      # and thinning during forecast (determined by
-                                      # the setting :forecast_jstep)
+# and thinning during forecast (determined by
+# the setting :forecast_jstep)
 if get_setting(m, :sampling_method) == :SMC
     # If SMC is the estimation method, then we need t adjust some default settings
     m <= Setting(:forecast_jstep, 1)
 end
 
 # Load data to create data set. There will be empty columns
-# since not all the data used is available. This requires
-# setting the check_empty_columns flag to false.
+# since not all the data used for Model1002 is available from FRED.
+# This requires setting the check_empty_columns keyword to false.
 df = load_data(m; check_empty_columns = false)
 
 # Use overrides to give the correct file path for saved estimation output
@@ -80,11 +80,11 @@ if run_full_forecast
         @everywhere using DSGE, OrderedCollections
     end
 
-    usual_forecast(m, :full, :none, output_vars,
-                   est_override = overrides[:full],
-                   forecast_string = forecast_string,
-                   density_bands = [.5, .6, .68, .7, .8, .9],
-                   check_empty_columns = false)
+    usual_model_forecast(m, :full, :none, output_vars,
+                         est_override = overrides[:full],
+                         forecast_string = forecast_string,
+                         density_bands = [.5, .6, .68, .7, .8, .9],
+                         check_empty_columns = false)
 end
 
 # Make plots and packet
@@ -102,9 +102,9 @@ else
 end
 
 if make_plots
-    plot_standard_packet(m, :full, :none, output_vars,
-                         forecast_string = forecast_string,
-                         sections = sections)
+    plot_standard_model_packet(m, :full, :none, output_vars,
+                               forecast_string = forecast_string,
+                               sections = sections)
 end
 
 if make_packet
@@ -113,8 +113,8 @@ if make_packet
     # so you can use only one for a given data vintage!
     # write_forecast_centric_packet(m, :full, :none, output_vars,
     #                               sections = sections, forecast_string = forecast_string)
-    write_standard_packet(m, :full, :none, output_vars,
-                          sections = sections, forecast_string = forecast_string)
+    write_standard_model_packet(m, :full, :none, output_vars,
+                                sections = sections, forecast_string = forecast_string)
     moment_tables(m)
 end
 

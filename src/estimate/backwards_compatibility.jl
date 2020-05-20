@@ -26,3 +26,14 @@ end
 function SMC.Cloud(cloud::SMC.Cloud)
     return cloud
 end
+
+function DSGE.Cloud(cloud::SMC.Cloud)
+    return DSGE.Cloud(cloud.particles, cloud.tempering_schedule,
+                     cloud.ESS, cloud.stage_index, cloud.n_Φ, cloud.resamples,
+                     cloud.c, cloud.accept, cloud.total_sampling_time)
+end
+function SMC.Cloud(cloud::DSGE.Cloud)
+    return SMC.Cloud(cloud.particles, cloud.tempering_schedule,
+                     cloud.ESS, cloud.stage_index, cloud.n_Φ, cloud.resamples,
+                     cloud.c, cloud.accept, cloud.total_sampling_time)
+end

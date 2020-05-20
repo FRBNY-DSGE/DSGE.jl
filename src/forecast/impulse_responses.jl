@@ -282,6 +282,234 @@ function impulse_responses(m::AbstractDSGEModel, system::System{S},
     return states, obs, pseudo
 end
 
+"""
+```
+function impulse_responses(system::System{S}, horizon::Int, permute_mat::AbstractMatrix{T},
+                           shocks::AbstractVector{S} = Vector{S}(undef, 0);
+                           restriction::Symbol = :short_run, flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S <: Real, T <: Number}
+```
+computes impulse responses using a Cholesky-identified shock
+to observables, with the ability to apply a permutation matrix.
+
+### Inputs
+- `system::System{S}`: state-space system matrices
+- `horizon::Int`: number of periods ahead to forecast
+- `permute_mat::AbstractMatrix{T}`: permutation matrix
+- `shocks::AbstractVector{S}`: vector of orthogonal shocks to observables.
+    See the section Restriction Types below for a mathematical explanation.
+    If no vector is provided, then we assume the user wants a shock vector
+    whose first entry is one and all other entries are zero (a 1 standard deviation
+    shock to the innovation affecting the first variable).
+- `restriction::Symbol`: type of restriction for the Cholesky identification.
+    Can be either `:short_run` or `:long_run`. We also let `:cholesky` refer
+    specifically to the `:short_run` restriction and
+    `:choleskyLR` or `:cholesky_long_run` refer to the `:long_run` restriction.
+- `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock
+    (by default the shock magnitude is a negative 1 std. shock)
+- `get_shocks::Bool`: Whether to return the Cholesky-identified shocks and the
+    underlying structural shocks
+
+### Outputs
+
+- `states::Matrix{S}`: matrix of size `nstates` x `horizon` x `nshocks` of
+  state impulse response functions
+- `obs::Matrix{S}`: matrix of size `nobs` x `horizon` x `nshocks` of
+  observable impulse response functions
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` x `nshocks` of
+  pseudo-observable impulse response functions
+- `cholesky_shock::Vector{S}`: Cholesky-identified shock on impact (only if `get_shocks = true`)
+- `structural_shock::Vector{S}`: structural shocks causing the
+    Cholesky-identified shock (only if `get_shocks = true`)
+
+### Restriction Types
+Consider a state space system
+```
+sₜ = TTT * sₜ₋₁ + RRR * sqrt(QQ) * ϵₜ
+yₜ = ZZ * sₜ
+```
+where `ϵₜ ∼ 𝒩 (0, I)` and `QQ` is a diagonal matrix specifying the
+variances of the structural shocks `ϵₜ`. Under this specification,
+the units of `ϵₜ` are standard deviations.
+
+A Cholesky identification searches for a lower triangular matrix `M` such that `M * M'` equals the
+covariance of observables. The restriction is short-run if we take the short-run covariance and is long
+run if we take the long-run covariance (i.e. the covariance of observables when shocks occur to the
+stationary level of sₜ). Explicitly, the short- and long-run restrictions are, respectively,
+```
+Covₛᵣ = (ZZ * RRR) * QQ * (ZZ * RRR)',
+Covₗᵣ = (ZZ * (I - TTT)⁻¹ * RRR) * QQ * (ZZ * (I - TTT)⁻¹ * RRR)'.
+```
+Taking the Cholesky decomposition of the appropriate covariance matrix yields the
+lower triangular matrix `M`.
+
+Using `M`, we may re-write the measurement equation of the state space as
+```
+yₜ = ZZ * TTT * sₜ₋₁ + M * uₜ,
+```
+where `uₜ ∼ 𝒩 (0, I)` are orthogonal shocks identified from the covariance of `yₜ`
+using `M`. The orthogonal shocks `uₜ` are precisely the input argument `shocks`.
+We can map `uₜ` to `ϵₜ`, i.e. identify structural shocks, by solving the linear system
+```
+(ZZ * RRR * sqrt(QQ)) * ϵₜ = M * uₜ
+```
+when using the short-run restriction and
+```
+(ZZ * (I - TTT)⁻¹ * RRR * sqrt(QQ)) * ϵₜ = M * uₜ
+```
+when using the long-run restriction.
+"""
+function impulse_responses(system::System{S}, horizon::Int, permute_mat::AbstractMatrix{T},
+                           shocks::AbstractVector{S} = Vector{S}(undef, 0);
+                           restriction::Symbol = :short_run, flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S <: Real, T <: Number}
+    if !(restriction in [:short_run, :long_run, :cholesky, :choleskyLR, :cholesky_long_run])
+        error("The restriction $restriction has not been implemented. "
+              * "Choose either `:short_run` or `:long_run")
+    end
+    if restriction == :cholesky
+        restriction = :short_run
+    elseif restriction in [:choleskyLR, :cholesky_long_run]
+        restriction = :long_run
+    end
+
+    # Permute matrices
+    if !(permute_mat ≈ Matrix{eltype(permute_mat)}(I, size(permute_mat)...))
+        do_permute = true
+        ZZold = copy(system[:ZZ])
+        system.measurement.ZZ = permute_mat * system[:ZZ]
+    else
+        do_permute = false
+    end
+
+    # Set up IRFs
+    nshocks = size(system[:RRR], 2)
+    nstates = size(system[:TTT], 1)
+    nobs    = size(system[:ZZ], 1)
+    npseudo = size(system[:ZZ_pseudo], 1)
+
+    system = DSGE.zero_system_constants(system) # Set constant system matrices to 0
+    s₀ = zeros(S, nstates)
+
+    # Back out structural shocks corresponding to Cholesky shock to observables
+    if isempty(shocks)
+        shocks = vcat(1., zeros(nobs - 1)) # First orthogonal shock to observables
+    end
+
+    obs_std = if restriction == :short_run
+        system[:ZZ] * system[:RRR] * sqrt.(system[:QQ])
+    elseif restriction == :long_run
+        system[:ZZ] * inv(Matrix{S}(I, nstates, nstates) - system[:TTT]) *
+            system[:RRR] * sqrt.(system[:QQ])
+    end
+
+    obs_cov = obs_std * obs_std'
+    cholmat = try
+        cholesky(obs_cov).L
+    catch e
+        if isa(e, PosDefException)
+            cholesky((obs_cov + obs_cov') ./ 2).L
+        else
+            rethrow(e)
+        end
+    end
+    structural_shock = obs_std \ (cholmat * shocks)
+
+    # Run IRFs
+    shocks_augmented = zeros(S, nshocks, horizon)
+    shocks_augmented[:, 1] = flip_shocks ? structural_shock : -structural_shock # negative shock by default
+    states, obs, pseudo = forecast(system, s₀, shocks_augmented)
+
+    # Restore system if permutation matrix is not the identity
+    if do_permute
+        system.measurement.ZZ = ZZold
+    end
+
+    if get_shocks
+        return states, obs, pseudo, structural_shock
+    else
+        return states, obs, pseudo
+    end
+end
+
+"""
+```
+function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tuple{S,S},
+                           n_obs_shock::Int; flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S<:Real}
+```
+computes impulse responses by identifying the shock which
+maximizes the variance explained of a chosen observable within
+a certain frequency band.
+
+For typical business-cycle frequences, we recommend setting
+`frequency_band = (2 * π / 32, 2 * π / 6)`.
+
+### Inputs
+- `system::System{S}`: state-space system matrices
+- `horizon::Int`: number of periods ahead to forecast
+- `frequency_band::Tuple{S, S}`: the frequencies at which we want to maximize the variance explained.
+    The first frequency must be less than the second one.
+- `n_obs_shock::Int`: the index of the observable whose variance we want to maximally explain
+    in the state space model implied by `system`.
+- `flip_shocks::Bool`: Whether to compute IRFs in response to a positive shock (by default the shock magnitude is a negative 1 std. shock)
+- `get_shocks::Bool`: Whether to return the structural shocks.
+
+where `S <: Real`
+
+### Outputs
+- `states::Matrix{S}`: matrix of size `nstates` x `horizon` x `nshocks` of
+  state impulse response functions
+- `obs::Matrix{S}`: matrix of size `nobs` x `horizon` x `nshocks` of
+  observable impulse response functions
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` x `nshocks` of
+  pseudo-observable impulse response functions
+- `structural_shock::Vector{S}`: structural shocks causing the
+    Cholesky-identified shock (only if `get_shocks = true`)
+"""
+function impulse_responses(system::System{S}, horizon::Int, frequency_band::Tuple{S,S},
+                           n_obs_shock::Int; flip_shocks::Bool = false,
+                           get_shocks::Bool = false) where {S<:Real}
+    if frequency_band[1] > frequency_band[2]
+        @warn "First frequency in `frequency_band` is larger than second one. Switching the order of the frequencies."
+        frequency_band = (frequency_band[2], frequency_band1[1])
+    end
+
+    # Setup
+    nshocks = size(system[:RRR], 2)
+    nstates = size(system[:TTT], 1)
+    nobs    = size(system[:ZZ], 1)
+    npseudo = size(system[:ZZ_pseudo], 1)
+    system  = zero_system_constants(system)
+
+    # Compute business-cycle variance maximizing shock
+    increment = abs(frequency_band[1] - frequency_band[2]) / 200.
+    variance = zeros(S, nshocks, nshocks)
+    sd_shock = system[:RRR] * sqrt.(system[:QQ]) # one standard deviation shock
+    I_state = Matrix{S}(I, nstates, nstates)
+    for f = frequency_band[1]:increment:round(frequency_band[2], digits=10) # not rounding sometimes leads to one fewer loop than desired
+        sumG = system[:TTT] .* exp(-im * f)
+        invA = system[:ZZ] * ((I_state - sumG) \ sd_shock)
+        variance += real.(invA[n_obs_shock,:] * invA[n_obs_shock,:]') .* increment ./
+            abs(frequency_band[1] - frequency_band[2])
+    end
+    eigout = eigen(variance)
+    q = eigout.vectors[:, argmax(eigout.values)]
+    q .*= sign(q[n_obs_shock])
+
+    # Compute IRFs
+    states = zeros(S, nstates, horizon)
+    shocks_augmented      = zeros(S, nshocks, horizon)
+    shocks_augmented[:,1] = flip_shocks ? (sqrt.(system[:QQ]) * q) : -(sqrt.(system[:QQ]) * q) # q -> positive shock. To stick with convention, "flip_shock" should yield a positive shock.
+    states, obs, pseudo = forecast(system, zeros(S, nstates), shocks_augmented)
+
+    if get_shocks
+        return states, obs, pseudo, vec(shocks_augmented[:,1])
+    else
+        return states, obs, pseudo
+    end
+end
+
 function impulse_responses_peg(m::AbstractRepModel, system::System{S}, horizon::Int;
                            flip_shocks::Bool = false, H::Int = 0, peg::Symbol = :all_periods, real_rate = false) where {S<:AbstractFloat}
     ## H is peg horizon

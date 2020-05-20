@@ -17,10 +17,6 @@ function init_observable_mappings!(m::Model1002)
 
     gdp_rev_transform = loggrowthtopct_annualized_percapita
 
-    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPDEF__FRED],
-                                       gdp_fwd_transform, gdp_rev_transform,
-                                       "Real GDP Growth", "Real GDP Growth Per Capita")
-
     ############################################################################
     ## 2. Hours per-capita
     ############################################################################
@@ -47,10 +43,30 @@ function init_observable_mappings!(m::Model1002)
 
     hrs_rev_transform = logleveltopct_annualized_percapita
 
-    observables[:obs_hours] = Observable(:obs_hours, [:AWHNONAG__FRED, :CE16OV__FRED],
-                                         hrs_fwd_transform, hrs_rev_transform,
-                                         "Hours Per Capita", "Log Hours Per Capita")
-
+    if haskey(m.settings, :hours_first_observable)
+        if get_setting(m, :hours_first_observable)
+            observables[:obs_hours] = Observable(:obs_hours, [:AWHNONAG__FRED, :CE16OV__FRED],
+                                                 hrs_fwd_transform, hrs_rev_transform,
+                                                 "Hours Per Capita", "Log Hours Per Capita")
+            observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPDEF__FRED],
+                                               gdp_fwd_transform, gdp_rev_transform,
+                                               "Real GDP Growth", "Real GDP Growth Per Capita")
+        else
+            observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPDEF__FRED],
+                                               gdp_fwd_transform, gdp_rev_transform,
+                                               "Real GDP Growth", "Real GDP Growth Per Capita")
+            observables[:obs_hours] = Observable(:obs_hours, [:AWHNONAG__FRED, :CE16OV__FRED],
+                                                 hrs_fwd_transform, hrs_rev_transform,
+                                                 "Hours Per Capita", "Log Hours Per Capita")
+        end
+    else
+        observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPDEF__FRED],
+                                           gdp_fwd_transform, gdp_rev_transform,
+                                           "Real GDP Growth", "Real GDP Growth Per Capita")
+        observables[:obs_hours] = Observable(:obs_hours, [:AWHNONAG__FRED, :CE16OV__FRED],
+                                             hrs_fwd_transform, hrs_rev_transform,
+                                             "Hours Per Capita", "Log Hours Per Capita")
+    end
 
     ############################################################################
     ## 3. Wages

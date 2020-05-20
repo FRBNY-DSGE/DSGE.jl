@@ -45,6 +45,11 @@ function describe_series(m::AbstractDSGEModel, var::Symbol, class::Symbol;
     detexify ? DSGE.detexify(res) : res
 end
 
+function describe_series(m::AbstractDSGEVARModel, var::Symbol, class::Symbol;
+                         detexify::Bool = false)
+    return describe_series(get_dsge(m), var, class; detexify = detexify)
+end
+
 function series_ylabel(m::AbstractDSGEModel, var::Symbol, class::Symbol;
                        untrans::Bool = false,
                        fourquarter::Bool = false)
@@ -96,7 +101,7 @@ function series_ylabel(m::AbstractDSGEModel, var::Symbol, class::Symbol;
     end
 end
 
-function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :low)
+function save_plot(output_file::String = ""; verbose::Symbol = :low)
     if !isempty(output_file)
         output_dir = dirname(output_file)
         !isdir(output_dir) && mkpath(output_dir)
