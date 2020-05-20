@@ -296,6 +296,12 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudo[pseudo[:λ_w_t], endo[:λ_w_t]] = 1.
     end
 
+    if subspec(m) == "ss60"
+        ZZ_pseudo[pseudo[:ziid], endo[:ziid_t]] = 1.
+        ZZ_pseudo[pseudo[:biidc], endo[:biidc_t]] = 1.
+        ZZ_pseudo[pseudo[:varphiiid], endo[:φ_t]] = 1.
+    end
+
     if haskey(m.settings, :add_ztil)
         if get_setting(m, :add_ztil)
             ZZ_pseudo[pseudo[:ztil], endo[:ztil_t]] = 1.
@@ -639,6 +645,12 @@ function pseudo_measurement(m::Model1002{T},
 
         if subspec(m) == "ss52"
             ZZ_pseudos[reg][pseudo[:λ_w_t], endo[:λ_w_t]] = 1.
+        end
+
+        if subspec(m) == "ss60"
+            ZZ_pseudos[reg][pseudo[:ziid], endo[:ziid_t]] = 1.
+            ZZ_pseudos[reg][pseudo[:biidc], endo[:biidc_t]] = 1.
+            ZZ_pseudos[reg][pseudo[:varphiiid], endo[:φ_t]] = 1.
         end
     end
     return [PseudoMeasurement(ZZ_pseudos[i], DD_pseudos[i]) for i in 1:n_reg]
