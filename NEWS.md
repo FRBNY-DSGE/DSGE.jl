@@ -1,3 +1,14 @@
+# DSGE.jl 1.1.5
+## New features and enhancements
++ Implement DSGE-VECMs and provide functionality to compute impulse responses.
++ Extend DSGE-VAR rotation impulse responses to compute in deviations from baseline.
++ Example for running impulse responses of a a DSGE-VECM.
++ Extend example for DSGE-VARs to allow plotting of modal impulse responses.
+
+## Bug fixes and cleanup
++ Fix summary statistics when loading data
++ Fix bugs in the documentation.
+
 # DSGE.jl 1.1.3
 ## New features and enhancements
 + Implement DSGE-VARs and provide functionality to estimate them and compute impulse responses.
