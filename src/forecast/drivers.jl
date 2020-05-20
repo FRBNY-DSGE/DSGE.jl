@@ -767,7 +767,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
                 # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN TEH SYSTEM
-                forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, fcast_sys[1], T)
+                forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, isa(fcast_sys, RegimeSwitchingSystem) ? fcast_sys[1] : fcast_sys, T)
             else
                 forecast_output[:forecaststates] = forecaststates
                 forecast_output[:forecastshocks] = forecastshocks

@@ -1,7 +1,7 @@
 function gensys_cplus(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, C::Vector{Float64},
                       Ψ::Matrix{Float64}, Π::Matrix{Float64}, TTT::Matrix{Float64}, RRR::Matrix{Float64},
                       CCC::Vector{Float64})
-    T_switch = get_setting(m, :n_regimes) - 1
+    T_switch = get_setting(m, :n_rule_periods) + 1 #get_setting(m, :n_regimes) - 1
     exp_eq_ind = sum(Π, dims = 2)
     Γ0_til = zeros(size(Γ0))
     Γ1_til = zeros(size(Γ1))
