@@ -24,13 +24,13 @@ function hessizero(fcn::Function,
     # Compute diagonal elements first
     if distr && nworkers() > 1
         diag_elements = @sync @distributed (hcat) for i = 1:n_para
-            hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose)
+            hess_diag_element(fcn, x, i; check_neg_diag = check_neg_diag, verbose = verbose)
         end
         hessian = diagm(0 => diag_elements)
     else
         for i=1:n_para
-            hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag,
-                                             verbose=verbose)
+            hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag = check_neg_diag,
+                                             verbose = verbose)
         end
     end
 
@@ -40,12 +40,12 @@ function hessizero(fcn::Function,
     invalid_corr = Dict{Tuple{Int,Int}, Float64}()
 
     # Build indices to iterate over
-    n_off_diag_els = Int(n_para*(n_para-1)/2)
+    n_off_diag_els = Int(n_para * (n_para - 1) / 2)
     off_diag_inds = Vector{Tuple{Int,Int}}(undef, n_off_diag_els)
-    k=1
-    for i=1:(n_para-1), j=(i+1):n_para
+    k = 1
+    for i = 1:(n_para - 1), j = (i + 1):n_para
         off_diag_inds[k] = (i,j)
-        k = k+1
+        k = k + 1
     end
 
     # Iterate over off diag elements

@@ -110,7 +110,9 @@ function csminwel(fcn::Function,
     f_x = fcn(x0, args...; kwargs...)
     f_calls += 1
 
-    if f_x > 1e50
+    if isinf(f_x)
+        throw(ArgumentError("Bad initial guess, `f_x` returned Inf. Try again"))
+    elseif f_x > 1e50
         throw(ArgumentError("Bad initial guess. Try again"))
     end
 

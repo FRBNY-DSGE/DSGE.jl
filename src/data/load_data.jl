@@ -40,7 +40,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
     if try_disk && has_saved_data(m; cond_type=cond_type)
         filename = get_data_filename(m, cond_type)
         print(verbose, :low, "Reading dataset $(filename) from disk...")
-        df = read_data(m; cond_type = cond_type)
+        df = read_data(m; cond_type = cond_type, check_empty_columns = check_empty_columns)
         if isvalid_data(m, df; cond_type = cond_type, check_empty_columns = check_empty_columns)
             println(verbose, :low, "dataset from disk valid")
         else
@@ -62,6 +62,25 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             levels = vcat(levels, cond_levels)
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
+
+        if :obs_nominalrate1 in cond_semi_names(m) || :obs_nominalrate1 in cond_full_names(m)
+            try
+                global q2 = "_"*get_setting(m, :ois_q2_only)
+            catch err
+                if isa(err, KeyError)
+                    global q2 = ""
+                else
+                    rethrow(err)
+                end
+            end
+
+            ois_data = CSV.read(inpath(m, "raw", "ois_$(data_vintage(m))$(q2).csv"), copycols = true)
+            dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
+            n_cond = length(dates)
+            # date_space = findall(x->x==true, df[!, :date] .> date_mainsample_end(m))
+            ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[:date] .<= date_conditional_end(m), [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]
+            df[date_mainsample_end(m) .< df[:date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Matrix{Float64}(ois_data_want)
+        end
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
@@ -90,7 +109,9 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             for (colnum, name) in enumerate(names(df[:,2:end]))
                 is_missing_in_col = ismissing.(df[!,name])
                 is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
-                freq_nan_empty[colnum] = mean(vcat(is_missing_in_col, is_nan_in_col))
+                n_miss = count(is_missing_in_col)
+                n_nan  = count(is_nan_in_col)
+                freq_nan_empty[colnum] = (n_nan + n_miss) / length(is_missing_in_col)
                 println("$(name), Frequency of missing/NaNs: $(freq_nan_empty[colnum])")
                 if summary_statistics == :high
                     colmean = mean(df[!,name][.!is_missing_in_col][.!is_nan_in_col])
@@ -317,14 +338,14 @@ read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
 
 Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
-function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
+function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none, check_empty_columns::Bool = true)
     filename = get_data_filename(m, cond_type)
     df       = CSV.read(filename, copycols=true)
 
     # Convert date column from string to Date
     df[!,:date] = map(Date, df[!,:date])
 
-    missing_cond_vars!(m, df; cond_type = cond_type)
+    missing_cond_vars!(m, df; cond_type = cond_type, check_empty_columns = check_empty_columns)
 
     return df
 end
@@ -387,8 +408,13 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
         end
     else
         for col in setdiff(names(df), [:date])
-            if all(ismissing.(df[!,col])) || all(isnan.(df[!,col]))
+            if all(ismissing.(df[!,col]))
                 @warn "df[$col] is all missing."
+            else
+                not_missing_inds = .!(ismissing.(df[!, col]))
+                if all(isnan.(df[not_missing_inds, col]))
+                    @warn "df[$col] is entirely NaNs and/or missings."
+                end
             end
         end
     end
@@ -412,7 +438,7 @@ function is suitable for direct use in `estimate`, `posterior`, etc.
 - `in_sample::Bool`: indicates whether or not to discard rows that are out of sample. Set this flag to false in
 the case that you are calling filter_shocks! in the scenarios codebase.
 """
-function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
+function df_to_matrix(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
     # Sort rows by date
     df1 = sort(df, :date)
 
@@ -431,8 +457,8 @@ function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     end
 
     # Discard columns not used
-    cols = collect(keys(m.observables))
-    sort!(cols, by = x -> m.observables[x])
+    cols = collect(keys(get_observables(m)))
+    sort!(cols, by = x -> get_observables(m)[x])
     df1 = df1[!,cols]
 
     return permutedims(Float64.(collect(Missings.replace(convert(Matrix{Union{Missing, Float64}}, df1), NaN))))
