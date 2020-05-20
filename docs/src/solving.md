@@ -1,4 +1,4 @@
-# Solving the Model
+# [Solving the Model](@id solving-dsge-doc)
 
 ## The `gensys` routine
 
@@ -30,4 +30,19 @@ substitute the `gensysdt` method for our code.
 
 ```@docs
 DSGE.solve
+```
+
+## The `System` Type
+The `solve` function only returns the ``TTT``, ``RRR``, and ``CCC`` matrices.
+To obtain the other matrices in the state-space representation of the DSGE,
+we provide a wrapper function `compute_system`, which returns an object of
+type `System`, whose fields are also special types we have implemented to
+faciltiate use of the state-space form.
+
+```@docs
+System
+Transition
+Measurement
+PseudoMeasurement
+compute_system
 ```

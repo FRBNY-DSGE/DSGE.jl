@@ -27,7 +27,10 @@ m <= Setting(:sampling_method, :SMC)
 println("estimation beginning")
 # If verbose=:low instead, the mean and sd of the model's
 # parameters will not be displayed at each stage of SMC
-estimate(m, data, verbose = :low)
+# By default, when using SMC, we run csminwel after
+# the estimation completes to find the true posterior mode,
+# but this can take several hours, even if SMC finishes relatively quickly.
+estimate(m, data, verbose = :low, run_csminwel = false)
 println("estimation finished")
 println("sample saved in $(rawpath(m, "estimate", "smcsave.h5")))")
 println("particle cloud saved in $(rawpath(m, "estimate", "smc_cloud.jld2")))")

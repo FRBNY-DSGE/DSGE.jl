@@ -376,6 +376,25 @@ function get_y0_index(m::AbstractDSGEModel, product::Symbol)
     end
 end
 
+function get_yt_index(m::AbstractDSGEModel, product::Symbol)
+    if product in [:forecastut, :forecast, :bddforecastut, :bddforecast]
+        return index_forecast_start(m) - 1
+    elseif product in [:forecast4q, :bddforecast4q]
+        return index_forecast_start(m) - 1
+    elseif product in [:shockdec, :dettrend, :trend, :hist, :histut, :hist4q, :irf]
+        return -1
+        # Note: below, I don't immediately know what we want for yt (end) and I don't think I need to implmented
+#=    elseif product in [:shockdec, :dettrend, :trend]
+        return n_presample_periods(m) + index_shockdec_start(m) - 1
+    elseif product in [:hist, :histut, :hist4q]
+        return index_mainsample_start(m) - 1
+    elseif product == :irf
+        return -1=#
+    else
+        error("get_yt_index not implemented for product = $product")
+    end
+end
+
 """
 ```
 check_consistent_order(l1, l2)
