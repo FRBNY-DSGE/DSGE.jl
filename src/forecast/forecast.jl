@@ -126,10 +126,13 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     # Populate shocks matrix under alternative policy, if
     # user has specified a function to do so
     alt_policy = alternative_policy(m)
-    if alt_policy.solve != identity &&
-        alt_policy.forecast_init != identity
 
+    if (alt_policy.solve != identity &&
+        alt_policy.forecast_init != identity)
         shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
+    end
+    if haskey(get_settings(m), :pgap_value)
+        shocks, z0 = ngdp_forecast_init(m, shocks, z0, cond_type = cond_type)
     end
 
     # Get variables necessary to enforce the zero lower bound in the forecast
@@ -313,4 +316,15 @@ function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int)
         end
     end
     regime_inds = push!(regime_inds, last_ind:horizon)
+end
+
+function ngdp_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T};
+                           cond_type::Symbol = :none) where {T<:AbstractFloat}
+
+    pgap_t = m.endogenous_states[:pgap_t]
+
+    # THIS IS WRONG --> #final_state[pgap_t] = -3.5 # todo: figure out how to program automatically
+    final_state = vcat(final_state[1:pgap_t-1], [-get_setting(m, :pgap_value)], final_state[pgap_t+1:end]) #-3.5
+    @show pgap_t, final_state[pgap_t], size(final_state)
+    return shocks, final_state
 end
