@@ -131,7 +131,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
         alt_policy.forecast_init != identity)
         shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
     end
-    if haskey(get_settings(m), :pgap_value)
+    if haskey(get_settings(m), :pgap_value) && get_setting(m, :gensys2)
         shocks, z0 = ngdp_forecast_init(m, shocks, z0, cond_type = cond_type)
     end
 
