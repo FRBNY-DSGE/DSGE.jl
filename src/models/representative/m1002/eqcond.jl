@@ -690,39 +690,15 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
     Γ1[eq[:eq_ERktil], endo[:ERktil_t]] = 1.
     Π[eq[:eq_ERktil], ex[:ERktil_sh]]    = 1.
 
-    if haskey(get_settings(m), :add_pgap) ? get_setting(m, :add_pgap) : false
-        if new_policy
-            Thalf = 10
-            ρ_ait = exp(log(0.5)/Thalf)
-            ρ = 0.0
-            φ = 0.25
-            Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
-            Γ0[eq[:eq_pgap], endo[:π_t]]     = -1.
-            Γ1[eq[:eq_pgap], endo[:pgap_t]]  =  ρ_ait
-
-            # Zero out old policy rule
-            Γ0[eq[:eq_mp], :]             .= 0.
-            Γ1[eq[:eq_mp], :]             .= 0.
-            Ψ[eq[:eq_mp], :]              .= 0.
-
-            # replace monetary policy rule
-            Γ0[eq[:eq_mp], endo[:R_t]]       = 1.
-            Γ0[eq[:eq_mp], endo[:pgap_t]]    = -φ*(1/(1-ρ_ait))
-            Γ1[eq[:eq_mp], endo[:R_t]]       = ρ
-            C[eq[:eq_mp]]                    = 0.
-
-           # #y: copy MP rule and set #gam0[eqy, endo[y]] = -1.0 (residual in policy rule). if no mP shocks, residual is zero
-       #=    Γ0[eq[:check], endo[:check]]       = -1.
-           Γ0[eq[:check], endo[:pgap_t]]    = -φ*(1/(1-ρ_ait))
-           Γ1[eq[:check], endo[:R_t]]       = ρ
-            C[eq[:check]]                    = 0. =#
-        else
-            Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
-            #        Γ1[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+   if haskey(get_settings(m), :add_pgap) ? get_setting(m, :add_pgap) : false
+       if new_policy
+           Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond)(m, Γ0, Γ1, C, Ψ, Π)
+       else
+           Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
        end
-    end
+   end
 
-    for para in m.parameters
+   for para in m.parameters
         if !isempty(para.regimes)
             ModelConstructors.toggle_regime!(para, 1)
         end
