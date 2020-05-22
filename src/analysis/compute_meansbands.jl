@@ -430,8 +430,11 @@ function compute_meansbands(models::Vector,
                             output_vars::Vector{Symbol};
                             forecast_strings::Vector{String} = Vector{String}("", 0),
                             weights::Vector{Float64} = Vector{Float64}(undef, 0),
-                            verbose::Symbol = :low, df::DataFrame = DataFrame(),
+                            combo_forecast_string::String = join(forecast_strings) * join(map(x->string(x), weights), "_"),
+                            df::DataFrame = DataFrame(),
                             check_empty_columns::Bool = true,
+                            variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                            verbose::Symbol = :low,
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -468,9 +471,11 @@ function compute_meansbands(models::Vector,
             mb = compute_meansbands(models, input_types,
                                     cond_types, output_var, df;
                                     forecast_strings = forecast_strings,
+                                    combo_forecast_string = combo_forecast_string,
                                     weights = weights,
                                     population_data = population_data,
                                     population_forecast = population_forecast,
+                                    variable_names = variable_names,
                                     verbose = verbose,
                                     kwargs...)
             GC.gc()
@@ -490,9 +495,11 @@ function compute_meansbands(models::Vector,
                             cond_types::Vector{Symbol},
                             output_var::Symbol, df::DataFrame;
                             forecast_strings::Vector{String} = Vector{String}("", 0),
+                            combo_forecast_string::String = "",
                             weights::Vector{Float64} = Vector{Float64}(undef, 0),
                             population_data::DataFrame = DataFrame(),
                             population_forecast::DataFrame = DataFrame(),
+                            variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             verbose::Symbol = :none,
                             kwargs...)
 
@@ -504,7 +511,9 @@ function compute_meansbands(models::Vector,
     metadata = get_mb_metadata(models[1], input_types[1], cond_types[1], output_var; forecast_string = forecast_strings[1])
 
     date_list      = product == :irf ? Date[] : collect(keys(metadata[:date_inds]))
-    variable_names = collect(keys(metadata[:indices]))
+    if isempty(variable_names)
+        variable_names = collect(keys(metadata[:indices]))
+    end
     pop_growth     = get_mb_population_series(product, population_data, population_forecast, date_list)
 
     # Compute means and bands
@@ -568,7 +577,7 @@ function compute_meansbands(models::Vector,
 
     # Write to file
     filepath = get_meansbands_output_file(models[1], input_types[1], cond_types[1], output_var,
-                                          forecast_string = join(forecast_strings)*join(map(x->string(x), weights), "_"))
+                                          forecast_string = combo_forecast_string)
 
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
