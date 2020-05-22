@@ -45,7 +45,7 @@ the DSGE's forecasting performance.
 For more details on the theory and performance, see
 [Del Negro and Schorfheide (2004)](https://onlinelibrary.wiley.com/doi/full/10.1111/j.1468-2354.2004.00139.x),
 [Del Negro and Schorfheide (2006)](https://www.newyorkfed.org/medialibrary/media/research/economists/delnegro/erq206_delnegro.pdf),
-[Del Negro, Schorfheide, Smets, and Wouters (2007)][https://www.jstor.org/stable/27638915#metadata_info_tab_contents], and
+[Del Negro, Schorfheide, Smets, and Wouters (2007)][https://www.jstor.org/stable/27638915], and
 [Del Negro and Schorfheide (2009)](https://www.aeaweb.org/articles?id=10.1257/aer.99.4.1415).
 
 We implement DSGE-VARs with the `DSGEVAR` concrete type so that it is easy to interface them with DSGE models. A `DSGEVAR` type
@@ -101,7 +101,7 @@ which extend VARs to account for long-run stochastic trends, i.e. cointegration.
 For more details on the theory and performance, see
 [Del Negro and Schorfheide (2004)](https://onlinelibrary.wiley.com/doi/full/10.1111/j.1468-2354.2004.00139.x),
 [Del Negro and Schorfheide (2006)](https://www.newyorkfed.org/medialibrary/media/research/economists/delnegro/erq206_delnegro.pdf), and
-[Del Negro, Schorfheide, Smets, and Wouters (2007)][https://www.jstor.org/stable/27638915#metadata_info_tab_contents].
+[Del Negro, Schorfheide, Smets, and Wouters (2007)][https://www.jstor.org/stable/27638915].
 
 We implement DSGE-VECMs with the `DSGEVECM` concrete type so that it is easy to interface them with DSGE models. The `DSGEVECM`
 has very similar behavior to the `DSGEVAR` type, with extensions as needed. For example, the `DSGEVECM` type includes additional fields
