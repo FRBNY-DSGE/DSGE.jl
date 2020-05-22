@@ -295,32 +295,16 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
     # Flexible prices and wages not necessary
 
     ### 13. Monetary Policy Rule
-
-#=    if new_policy
-      #=  Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
-        Γ1[eq[:eq_mp], endo[:R_t]]      = m[:ρ]
-        Γ0[eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
-        Γ0[eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
-        Γ0[eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
-        Γ0[eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
-        Γ1[eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
-        Γ1[eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
-        Γ0[eq[:eq_mp], endo[:rm_t]]     = -1. =#
-
-        Γ0[eq[:eq_mp], endo[:R_t]] = 1.0 #1
-        C[eq[:eq_mp]] = 0.0/4 - m[:Rstarn] #- 100*log(m[:Rstarn]) #log(Rstarn)
-    else=#
-        # Sticky prices and wages
-        Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
-        Γ1[eq[:eq_mp], endo[:R_t]]      = m[:ρ]
-        Γ0[eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
-        Γ0[eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
-        Γ0[eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
-        Γ0[eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
-        Γ1[eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
-        Γ1[eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
-        Γ0[eq[:eq_mp], endo[:rm_t]]     = -1.
-  #  end
+    # Sticky prices and wages
+    Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
+    Γ1[eq[:eq_mp], endo[:R_t]]      = m[:ρ]
+    Γ0[eq[:eq_mp], endo[:π_t]]      = -(1 - m[:ρ])*m[:ψ1]
+    Γ0[eq[:eq_mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
+    Γ0[eq[:eq_mp], endo[:y_t]]      = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
+    Γ0[eq[:eq_mp], endo[:y_f_t]]    = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
+    Γ1[eq[:eq_mp], endo[:y_t]]      = -m[:ψ3]
+    Γ1[eq[:eq_mp], endo[:y_f_t]]    = m[:ψ3]
+    Γ0[eq[:eq_mp], endo[:rm_t]]     = -1.
 
     # Flexible prices and wages not necessary
 
@@ -690,11 +674,13 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
     Γ1[eq[:eq_ERktil], endo[:ERktil_t]] = 1.
     Π[eq[:eq_ERktil], ex[:ERktil_sh]]    = 1.
 
-   if haskey(get_settings(m), :add_pgap) ? get_setting(m, :add_pgap) : false
+   if haskey(m.settings, :add_pgap) ? get_setting(m, :add_pgap) : false
+       Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+   end
+
+   if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
        if new_policy
-           Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond)(m, Γ0, Γ1, C, Ψ, Π)
-       else
-           Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+           Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func)(m, Γ0, Γ1, C, Ψ, Π)
        end
    end
 
