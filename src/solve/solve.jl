@@ -117,12 +117,15 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     end
                     if gensys2
                         gensys2_regimes = first(fcast_regimes)-1:last(fcast_regimes)
-                        @show gensys2_regimes
                         Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                                              Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                                              TTT_gensys_final,
                                                              RRR_gensys_final,
                                                              CCC_gensys_final)
+                        Tcal[end] = TTT_gensys_final
+                        Rcal[end] = RRR_gensys_final
+                        Ccal[end] = CCC_gensys_final
+
                         @show size(Tcal), size(Rcal), size(Ccal)
                         for (i, fcast_reg) = enumerate(fcast_regimes)
                             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
@@ -141,9 +144,9 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                             RRR_gensys = real(RRR_gensys)
                             CCC_gensys = real(CCC_gensys)
 
-                            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
+                            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys) #=;
                                                                              regime_switching = regime_switching,
-                                                                             reg = fcast_reg)
+                                                                             reg = fcast_reg) =#
                         end
                     end
                     return TTTs, RRRs, CCCs
