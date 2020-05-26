@@ -424,6 +424,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # Solve model
     if regime_switching
         if solution_method == :gensys
+            @show 1:n_hist_regimes
+            @show n_hist_regimes+1:n_regimes
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,
                                      regimes = 1:n_regimes,
