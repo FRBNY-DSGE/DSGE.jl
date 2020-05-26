@@ -68,7 +68,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
                 shocks = zeros(nshocks, horizon)
                 μ = zeros(nshocks)
                 regime_inds = get_fcast_regime_inds(m, horizon)
-                sys_ind_start = get_setting(m, :n_hist_uncond_regimes) + 1
+                sys_ind_start = get_setting(m, :reg_forecast_start) #get_setting(m, :n_hist_uncond_regimes) + 1
                 for ts in regime_inds
                     σ = sqrt.(system[:QQ][sys_ind_start])
                     dist = if forecast_tdist_shocks(m)
@@ -220,7 +220,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     D_pseudos = Vector{Vector{Float64}}(undef, n_fcast_reg)
 
     # Unpack system
-    for (ss_ind, sys_ind) in enumerate((get_setting(m, :n_hist_uncond_regimes)+1):get_setting(m, :n_regimes))
+    for (ss_ind, sys_ind) in enumerate(get_setting(m, :reg_forecast_start):get_setting(m, :n_regimes)) #(get_setting(m, :n_hist_uncond_regimes)+1):get_setting(m, :n_regimes))
         # Need to index into i+11 of system since we want to start at second regime (for now since we have the first regime for all of history)
         Ts[ss_ind], Rs[ss_ind], Cs[ss_ind] = system[sys_ind][:TTT], system[sys_ind][:RRR], system[sys_ind][:CCC]
         Qs[ss_ind], Zs[ss_ind], Ds[ss_ind] = system[sys_ind][:QQ], system[sys_ind][:ZZ], system[sys_ind][:DD]

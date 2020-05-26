@@ -127,8 +127,8 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
     T = size(data, 2)
     if !isempty(data)
         # Calculate the number of periods since start date for each regime
-        n_regime_periods = Vector{Int}(undef, get_setting(m, :n_hist_regimes)) #length(get_setting(m, :regime_dates)))
-        for k in 1:get_setting(m, :n_hist_regimes)
+        n_regime_periods = Vector{Int}(undef, get_setting(m, :n_hist_regimes) + get_setting(m, :n_conditional_inc)) #length(get_setting(m, :regime_dates)))
+        for k in 1:(get_setting(m, :n_hist_regimes)  + get_setting(m, :n_conditional_inc))
             n_regime_periods[k] = subtract_quarters(get_setting(m, :regime_dates)[k], start_date)
         end
         #=for (k, v) in get_setting(m, :regime_dates)
