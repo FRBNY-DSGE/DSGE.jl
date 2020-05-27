@@ -112,15 +112,20 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                    # :forecastlvl, :histlvl, :bddforecastlvl]
         # Get to work!
         # pmap produces an error for trendobs sometimes, so just doing this iteratively
-        mb_vec = Vector{Any}(undef,length(variable_names))
-        for i in 1:length(mb_vec)
-            mb_vec[i] = compute_meansbands(m, input_type, cond_type, output_var,
-                                           variable_names[i], df; pop_growth = pop_growth,
-                                           forecast_string = forecast_string, kwargs...)
+        if product == :trend
+            mb_vec = Vector{Any}(undef,length(variable_names))
+            for i in 1:length(mb_vec)
+                mb_vec[i] = compute_meansbands(m, input_type, cond_type, output_var,
+                                               variable_names[i], df; pop_growth = pop_growth,
+                                               forecast_string = forecast_string,
+                                               do_cond_obs_shocks = do_cond_obs_shocks,
+                                               kwargs...)
+            end
+        else
+            mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+                                                         pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
+                          variable_names)
         end
-        # mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
-        #                               pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
-        #               variable_names)
 
         # Re-assemble pmap outputs
         means = DataFrame(date = date_list)
@@ -434,6 +439,7 @@ function compute_meansbands(models::Vector,
                             df::DataFrame = DataFrame(),
                             check_empty_columns::Bool = true,
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                            shock_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             verbose::Symbol = :low,
                             kwargs...)
 
@@ -476,6 +482,7 @@ function compute_meansbands(models::Vector,
                                     population_data = population_data,
                                     population_forecast = population_forecast,
                                     variable_names = variable_names,
+                                    shock_names = shock_names,
                                     verbose = verbose,
                                     kwargs...)
             GC.gc()
@@ -500,6 +507,7 @@ function compute_meansbands(models::Vector,
                             population_data::DataFrame = DataFrame(),
                             population_forecast::DataFrame = DataFrame(),
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                            shock_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             verbose::Symbol = :none,
                             kwargs...)
 
@@ -521,18 +529,22 @@ function compute_meansbands(models::Vector,
                    :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
         # Get to work!
         # pmap produces an error for trendobs sometimes, so just doing this iteratively
-        mb_vec = Vector{Any}(undef,length(variable_names))
-        for i in 1:length(mb_vec)
-            mb_vec[i] = compute_meansbands(models, input_types,
-                                           cond_types, output_var,
-                                           variable_names[i], df; pop_growth = pop_growth,
-                                           forecast_strings = forecast_strings,
-                                           weights = weights,
-                                           kwargs...)
+        if product == :trend
+            mb_vec = Vector{Any}(undef,length(variable_names))
+            for i in 1:length(mb_vec)
+                mb_vec[i] = compute_meansbands(models, input_types,
+                                               cond_types, output_var,
+                                               variable_names[i], df; pop_growth = pop_growth,
+                                               forecast_strings = forecast_strings,
+                                               weights = weights,
+                                               kwargs...)
+            end
+        else
+            mb_vec = pmap(var_name -> compute_meansbands(models, input_types, cond_types, output_var, var_name, df;
+                                                         pop_growth = pop_growth,
+                                                         forecast_strings = forecast_strings, weights = weights, kwargs...),
+                          variable_names)
         end
-        # mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
-        #                               pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
-        #               variable_names)
 
         # Re-assemble pmap outputs
         means = DataFrame(date = date_list)
@@ -549,15 +561,19 @@ function compute_meansbands(models::Vector,
         bands = Dict{Symbol, DataFrame}()
 
         # Get to work!
-        for shock_name in keys(metadata[:shock_indices])
+        if isempty(shock_names)
+            shock_names = keys(metadata[:shock_indices])
+        end
+        for shock_name in shock_names
             println(verbose, :high, "  * " * string(shock_name))
 
-            mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
-                                          pop_growth = pop_growth, shock_name = Nullables.Nullable(shock_name),
-                                          forecast_string1 = forecast_string1,
-                                          forecast_string2 = forecast_string2,
-                                                         kwargs...),
-                          variable_names)
+            mb_vec = pmap(var_name -> compute_meansbands(models, input_types,
+                                           cond_types, output_var,
+                                           var_name, df; pop_growth = pop_growth,
+                                           forecast_strings = forecast_strings,
+                                           weights = weights, shock_name = Nullables.Nullable(shock_name),
+                                           kwargs...),
+                             variable_names)
 
             # Re-assemble pmap outputs
             for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)

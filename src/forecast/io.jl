@@ -384,8 +384,12 @@ function combine_raw_forecast_output_and_metadata(m::AbstractDSGEModel,
     for jld_file_path in values(forecast_output_files)
         h5_file_path = replace(jld_file_path, "jld2" => "h5")
         arr = h5read(h5_file_path, "arr")
-        JLD2.jldopen(jld_file_path, "r+") do file
+        metadata = load(jld_file_path)
+        JLD2.jldopen(jld_file_path, true, true, true, IOStream) do file
             write(file, "arr", arr)
+            for (k, v) in metadata
+                write(file, k, v)
+            end
         end
         # Remove the h5 containing the raw forecast output when the data has been transferred.
         rm(h5_file_path)
@@ -488,20 +492,15 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
                 for reg in 1:n_regs
                     regime_ind = reg == n_regs ? findall(trend_dates .>= regime_dates[reg]) :
                         findall(regime_dates[reg + 1] .> trend_dates .>= regime_dates[reg])
-                    @show regime_ind
                     if isnothing(regime_ind) # may be none! so just default to a dummy range
                         regime_inds[reg] = 0:0
                     else
                         regime_inds[reg] = date_indices[trend_dates[regime_ind][1]]:date_indices[trend_dates[regime_ind][end]]
-                        @show regime_inds[reg]
                     end
                 end
 
                 for (reg, reg_inds) in enumerate(regime_inds)
                     if reg_inds != 0:0
-                        @show reg_inds
-                        @show size(fcast_series)
-                        @show size(fcast_series_out)
                         fcast_series_out[:, reg_inds] = repeat(fcast_series[:, reg], outer = (1, length(reg_inds)))
                     end
                 end
