@@ -467,27 +467,44 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
     end
 
     JLD2.jldopen(filename, "r") do file
-        # The `fcast_output` for trends only is of size `ndraws` x `nvars`. We
+        # The `fcast_output` for trends only is of size `ndraws`. We
         # need to use `repeat` below because population adjustments will be
-        # different in each period. Now we have something of size `ndraws` x
-        # `nvars` x `nperiods`
+        # different in each period. Now we have something of size `ndraws` x `nperiods`
         #
         # If regime switching was used, then `fcast_output` is
-        # `ndraws` x `nvars` x `n_regimes`, so we still need to use `repeat`.
+        # `ndraws` x `n_regimes`, so we still need to use `repeat`.
         if product == :trend
             if reg_switch
                 regime_dates = read(file, "regime_dates")
                 date_indices = read(file, "date_indices")
                 n_regs       = length(regime_dates)
                 nperiods     = length(date_indices)
-                fcast_series_out = Array{eltype(fcast_series)}(size(fcast_series, 1), size(fcast_series, 2), nperiods)
-                for reg in 1:(n_regs - 1)
-                    nreg_per = date_indices[regime_dates[reg + 1]] - date_indices[regime_dates[reg]]
-                    fcast_series_out[:, :, date_indices[regime_dates[reg]]:(date_indices[regime_dates[reg + 1]] - 1)] =
-                        repeat(fcast_series[:, :, reg], outer = (1, nreg_per))
+
+                fcast_series_out = Array{eltype(fcast_series)}(undef, size(fcast_series, 1), nperiods)
+
+                # Figure out to which regimes the dates in date_indices belong
+                regime_inds = Vector{UnitRange{Int}}(undef, length(regime_dates))
+                trend_dates = sort(collect(keys(date_indices)))
+                for reg in 1:n_regs
+                    regime_ind = reg == n_regs ? findall(trend_dates .>= regime_dates[reg]) :
+                        findall(regime_dates[reg + 1] .> trend_dates .>= regime_dates[reg])
+                    @show regime_ind
+                    if isnothing(regime_ind) # may be none! so just default to a dummy range
+                        regime_inds[reg] = 0:0
+                    else
+                        regime_inds[reg] = date_indices[trend_dates[regime_ind][1]]:date_indices[trend_dates[regime_ind][end]]
+                        @show regime_inds[reg]
+                    end
                 end
-                fcast_series_out[:, :, date_indices[regime_dates[end]]:end] =
-                    repeat(fcast_series[:, :, end], outer = (1, nperiods - date_indices[regime_dates[end]] + 1))
+
+                for (reg, reg_inds) in enumerate(regime_inds)
+                    if reg_inds != 0:0
+                        @show reg_inds
+                        @show size(fcast_series)
+                        @show size(fcast_series_out)
+                        fcast_series_out[:, reg_inds] = repeat(fcast_series[:, reg], outer = (1, length(reg_inds)))
+                    end
+                end
                 fcast_series = fcast_series_out
             else
                 nperiods = length(read(file, "date_indices"))
@@ -597,12 +614,13 @@ read_regime_switching_trend(filepath, var_ind)
 Read only the trend output for a particular variable (e.g. for a particular
 observable). Result should be a matrix of size `ndraws` × `nvars` × `n_regimes`.
 """
-function read_regime_switcing_trend(filepath::String, var_ind::Int)
+function read_regime_switching_trend(filepath::String, var_ind::Int)
     whole = FileIO.load(filepath, "arr")
-    if ndims == 2 # one draw
+    if ndims(whole) == 2 # one draw
         arr = whole[var_ind, Colon()]
         arr = reshape(arr, (1, length(arr)))
-    elseif ndims == 3 # many draws
+    elseif ndims(whole) == 3 # many draws
         arr = whole[Colon(), var_ind, Colon()]
     end
+    return arr
 end
