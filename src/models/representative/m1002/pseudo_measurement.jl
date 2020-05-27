@@ -148,8 +148,8 @@ function pseudo_measurement(m::Model1002{T},
     ## Flexible Wages
     ZZ_pseudo[pseudo[:FlexibleWages],endo[:w_f_t]] = 1.
 
-    ## b Wages
-    ZZ_pseudo[pseudo[:b_t],endo[:b_t]] = 1.
+    # ## b Wages
+    # ZZ_pseudo[pseudo[:b_t],endo[:b_t]] = 1.
 
     ## Hours
     ZZ_pseudo[pseudo[:Hours],endo[:L_t]] = 1.
@@ -195,8 +195,8 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:LaborProductivityGrowth], endo_addl[:L_t1]]     = 1.
     DD_pseudo[pseudo[:LaborProductivityGrowth]]                       = 100*(exp(m[:z_star]) - 1)
 
-    ## u_t
-    ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
+    # ## u_t
+    # ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
     ## Nominal Wage Growth
     ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
@@ -206,48 +206,48 @@ function pseudo_measurement(m::Model1002{T},
     DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) +
         100 * (exp(m[:z_star]) - 1)
 
-    ## i_f_t
-    ZZ_pseudo[pseudo[:i_f_t], endo[:i_f_t]] = 1.
+    # ## i_f_t
+    # ZZ_pseudo[pseudo[:i_f_t], endo[:i_f_t]] = 1.
 
-    ## R_t
-    ZZ_pseudo[pseudo[:R_t], endo[:R_t]] = 1.
-    DD_pseudo[pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
+    # ## R_t
+    # ZZ_pseudo[pseudo[:R_t], endo[:R_t]] = 1.
+    # DD_pseudo[pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
 
-    ## c_f_t
-    ZZ_pseudo[pseudo[:c_f_t], endo[:c_f_t]] = 1.
+    # ## c_f_t
+    # ZZ_pseudo[pseudo[:c_f_t], endo[:c_f_t]] = 1.
 
-    ## c_t
-    ZZ_pseudo[pseudo[:c_t], endo[:c_t]] = 1.
+    # ## c_t
+    # ZZ_pseudo[pseudo[:c_t], endo[:c_t]] = 1.
 
-    ## qk_f_t
-    ZZ_pseudo[pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
+    # ## qk_f_t
+    # ZZ_pseudo[pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
 
-    ## k_f_t
-    ZZ_pseudo[pseudo[:k_f_t], endo[:k_f_t]] = 1.
+    # ## k_f_t
+    # ZZ_pseudo[pseudo[:k_f_t], endo[:k_f_t]] = 1.
 
-    ## r_f_t
-    ZZ_pseudo[pseudo[:r_f_t], endo[:r_f_t]] = 1.
+    # ## r_f_t
+    # ZZ_pseudo[pseudo[:r_f_t], endo[:r_f_t]] = 1.
 
-    ## kbar_f_t
-    ZZ_pseudo[pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
+    # ## kbar_f_t
+    # ZZ_pseudo[pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
 
-    ## u_f_t
-    ZZ_pseudo[pseudo[:u_f_t], endo[:u_f_t]] = 1.
+    # ## u_f_t
+    # ZZ_pseudo[pseudo[:u_f_t], endo[:u_f_t]] = 1.
 
-    ## rk_f_t
-    ZZ_pseudo[pseudo[:rk_f_t], endo[:rk_f_t]] = 1.
+    # ## rk_f_t
+    # ZZ_pseudo[pseudo[:rk_f_t], endo[:rk_f_t]] = 1.
 
-    ## w_f_t
-    ZZ_pseudo[pseudo[:w_f_t], endo[:w_f_t]] = 1.
+    # ## w_f_t
+    # ZZ_pseudo[pseudo[:w_f_t], endo[:w_f_t]] = 1.
 
-    ## L_f_t
-    ZZ_pseudo[pseudo[:L_f_t], endo[:L_f_t]] = 1.
+    # ## L_f_t
+    # ZZ_pseudo[pseudo[:L_f_t], endo[:L_f_t]] = 1.
 
-    ## rktil_f_t
-    ZZ_pseudo[pseudo[:rktil_f_t], endo[:Rktil_f_t]] = 1.
+    # ## rktil_f_t
+    # ZZ_pseudo[pseudo[:rktil_f_t], endo[:rktil_f_t]] = 1.
 
-    ## n_f_t
-    ZZ_pseudo[pseudo[:n_f_t], endo[:n_f_t]] = 1.
+    # ## n_f_t
+    # ZZ_pseudo[pseudo[:n_f_t], endo[:n_f_t]] = 1.
 
     ## labor share
     if haskey(m.settings, :add_laborshare_measurement)
@@ -296,11 +296,11 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudo[pseudo[:λ_w_t], endo[:λ_w_t]] = 1.
     end
 
-    if subspec(m) == "ss60"
-        ZZ_pseudo[pseudo[:ziid], endo[:ziid_t]] = 1.
-        ZZ_pseudo[pseudo[:biidc], endo[:biidc_t]] = 1.
-        ZZ_pseudo[pseudo[:varphiiid], endo[:φ_t]] = 1.
-    end
+    # if subspec(m) == "ss60"
+    #     ZZ_pseudo[pseudo[:ziid], endo[:ziid_t]] = 1.
+    #     ZZ_pseudo[pseudo[:biidc], endo[:biidc_t]] = 1.
+    #     ZZ_pseudo[pseudo[:varphiiid], endo[:φ_t]] = 1.
+    # end
 
     if haskey(m.settings, :add_ztil)
         if get_setting(m, :add_ztil)
@@ -463,8 +463,8 @@ function pseudo_measurement(m::Model1002{T},
         ## Wages
         ZZ_pseudos[reg][pseudo[:Wages],endo[:w_t]] = 1.
 
-        ## b Wages
-        ZZ_pseudos[reg][pseudo[:b_t],endo[:b_t]] = 1.
+        # ## b Wages
+        # ZZ_pseudos[reg][pseudo[:b_t],endo[:b_t]] = 1.
 
         ## Flexible Wages
         ZZ_pseudos[reg][pseudo[:FlexibleWages],endo[:w_f_t]] = 1.
@@ -513,58 +513,58 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudos[reg][pseudo[:LaborProductivityGrowth], endo_addl[:L_t1]]     = 1.
         DD_pseudos[reg][pseudo[:LaborProductivityGrowth]]                       = 100*(exp(m[:z_star]) - 1)
 
-        ## u_t
-        ZZ_pseudos[reg][pseudo[:u_t], endo[:u_t]] = 1.
+    #     ## u_t
+    #     ZZ_pseudos[reg][pseudo[:u_t], endo[:u_t]] = 1.
 
-        ## Nominal Wage Growth
-        ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
-        ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
-        ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
-        ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
-        DD_pseudos[reg][pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) + 100*(exp(m[:z_star])-1)
+    #     ## Nominal Wage Growth
+    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
+    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
+    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
+    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
+    #     DD_pseudos[reg][pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) + 100*(exp(m[:z_star])-1)
 
-    ## i_f_t
-    ZZ_pseudos[reg][pseudo[:i_f_t], endo[:i_f_t]] = 1.
+    # ## i_f_t
+    # ZZ_pseudos[reg][pseudo[:i_f_t], endo[:i_f_t]] = 1.
 
-    ## R_t
-    ZZ_pseudos[reg][pseudo[:R_t], endo[:R_t]] = 1.
-    DD_pseudos[reg][pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
+    # ## R_t
+    # ZZ_pseudos[reg][pseudo[:R_t], endo[:R_t]] = 1.
+    # DD_pseudos[reg][pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
 
-    ## c_f_t
-    ZZ_pseudos[reg][pseudo[:c_f_t], endo[:c_f_t]] = 1.
+    # ## c_f_t
+    # ZZ_pseudos[reg][pseudo[:c_f_t], endo[:c_f_t]] = 1.
 
-    ## c_t
-    ZZ_pseudos[reg][pseudo[:c_t], endo[:c_t]] = 1.
+    # ## c_t
+    # ZZ_pseudos[reg][pseudo[:c_t], endo[:c_t]] = 1.
 
-    ## r_f_t
-    ZZ_pseudos[reg][pseudo[:r_f_t], endo[:r_f_t]] = 1.
+    # ## r_f_t
+    # ZZ_pseudos[reg][pseudo[:r_f_t], endo[:r_f_t]] = 1.
 
-    ## qk_f_t
-    ZZ_pseudos[reg][pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
+    # ## qk_f_t
+    # ZZ_pseudos[reg][pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
 
-    ## k_f_t
-    ZZ_pseudos[reg][pseudo[:k_f_t], endo[:k_f_t]] = 1.
+    # ## k_f_t
+    # ZZ_pseudos[reg][pseudo[:k_f_t], endo[:k_f_t]] = 1.
 
-    ## kbar_f_t
-    ZZ_pseudos[reg][pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
+    # ## kbar_f_t
+    # ZZ_pseudos[reg][pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
 
-    ## u_f_t
-    ZZ_pseudos[reg][pseudo[:u_f_t], endo[:u_f_t]] = 1.
+    # ## u_f_t
+    # ZZ_pseudos[reg][pseudo[:u_f_t], endo[:u_f_t]] = 1.
 
-    ## rk_f_t
-    ZZ_pseudos[reg][pseudo[:rk_f_t], endo[:rk_f_t]] = 1.
+    # ## rk_f_t
+    # ZZ_pseudos[reg][pseudo[:rk_f_t], endo[:rk_f_t]] = 1.
 
-    ## w_f_t
-    ZZ_pseudos[reg][pseudo[:w_f_t], endo[:w_f_t]] = 1.
+    # ## w_f_t
+    # ZZ_pseudos[reg][pseudo[:w_f_t], endo[:w_f_t]] = 1.
 
-    ## L_f_t
-    ZZ_pseudos[reg][pseudo[:L_f_t], endo[:L_f_t]] = 1.
+    # ## L_f_t
+    # ZZ_pseudos[reg][pseudo[:L_f_t], endo[:L_f_t]] = 1.
 
-    ## rktil_f_t
-    ZZ_pseudos[reg][pseudo[:rktil_f_t], endo[:Rktil_f_t]] = 1.
+    # ## rktil_f_t
+    # ZZ_pseudos[reg][pseudo[:rktil_f_t], endo[:rktil_f_t]] = 1.
 
-    ## n_f_t
-    ZZ_pseudos[reg][pseudo[:n_f_t], endo[:n_f_t]] = 1.
+    # ## n_f_t
+    # ZZ_pseudos[reg][pseudo[:n_f_t], endo[:n_f_t]] = 1.
 
         ## labor share
         if haskey(m.settings, :add_laborshare_measurement)
@@ -657,11 +657,11 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudos[reg][pseudo[:λ_w_t], endo[:λ_w_t]] = 1.
         end
 
-        if subspec(m) == "ss60"
-            ZZ_pseudos[reg][pseudo[:ziid], endo[:ziid_t]] = 1.
-            ZZ_pseudos[reg][pseudo[:biidc], endo[:biidc_t]] = 1.
-            ZZ_pseudos[reg][pseudo[:varphiiid], endo[:φ_t]] = 1.
-        end
+        # if subspec(m) == "ss60"
+        #     ZZ_pseudos[reg][pseudo[:ziid], endo[:ziid_t]] = 1.
+        #     ZZ_pseudos[reg][pseudo[:biidc], endo[:biidc_t]] = 1.
+        #     ZZ_pseudos[reg][pseudo[:varphiiid], endo[:φ_t]] = 1.
+        # end
     end
     return [PseudoMeasurement(ZZ_pseudos[i], DD_pseudos[i]) for i in 1:n_reg]
 end
