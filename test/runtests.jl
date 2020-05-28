@@ -9,7 +9,6 @@ my_tests = [
             "plot/plot", # They are prone to segmentation fault errors.
   	        "plot/util", # This way, they error early if these fault errors happen.
 
-            "core",
             "abstractdsgemodel",
             "abstractvarmodel",
             "defaults",
