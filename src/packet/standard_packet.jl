@@ -97,7 +97,7 @@ function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String
     @printf fid "\\subsection{User}\n"
     @printf fid "\n"
     @printf fid "\\begin{itemize}\n"
-    @printf fid "  \\item Packet creator: %s\n" string(ENV["USER"])
+    @printf fid "  \\item Packet creator: %s\n" splitdir(homedir())[end]
     @printf fid "  \\item Creation time: %s\n" Dates.format(now(), "U d, YYYY at H:MM")
     if !isempty(purpose)
         @printf fid "\\item Purpose: %s\n" purpose
@@ -121,8 +121,8 @@ function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String
     @printf fid "\\subsection{Data}\n"
     @printf fid "\n"
     @printf fid "\\begin{itemize}\n"
-    @printf fid "  \\item Input data directory: \\path{%s}\n" get_setting(m, :dataroot)
-    @printf fid "  \\item Output data directory: \\path{%s}\n" get_setting(m, :saveroot)
+    @printf fid "  \\item Input data directory: \\path{%s}\n" replace(get_setting(m, :dataroot),"\\"=>"/")
+    @printf fid "  \\item Output data directory: \\path{%s}\n" replace(get_setting(m, :saveroot),"\\"=>"/")
     @printf fid "  \\item Data vintage: %s\n" get_setting(m, :data_vintage)
     @printf fid "  \\item Dataset ID: %d\n" get_setting(m, :data_id)
     @printf fid "  \\item Conditional data vintage: %s\n" get_setting(m, :cond_vintage)
@@ -155,7 +155,7 @@ function write_estimation_section(fid::IOStream, m::AbstractDSGEModel;
     @printf fid "\\subsection{Moments}\n"
     @printf fid "\n"
 
-    @printf fid "\\input{%s}\n" tablespath(m, "estimate", "moments.tex")
+    @printf fid "\\input{%s}\n" replace(tablespath(m, "estimate", "moments.tex"),"\\"=>"/")
 end
 
 """
@@ -169,7 +169,7 @@ write_estimation_plots(fid, m; plotroot = "")
 function write_estimation_plots(fid::IOStream, m::AbstractDSGEModel;
                                 plotroot::String = "")
     if isempty(plotroot)
-        plotroot = figurespath(m, "estimate")
+        plotroot = replace(figurespath(m, "estimate"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     filestr = DSGE.filestring(base, String[])
@@ -222,7 +222,7 @@ function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type:
         end
         @printf fid "  \\item Forecast identifying string: %s\n" fc_string
     end
-    @printf fid "  \\item Estimation used: \\path{%s}\n" DSGE.get_forecast_input_file(m, input_type)
+    @printf fid "  \\item Estimation used: \\path{%s}\n" replace(DSGE.get_forecast_input_file(m, input_type),"\\"=>"/")
     @printf fid "\\end{itemize}\n"
 
     products = map(get_product, output_vars)
@@ -277,7 +277,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
 
     # Output directory
     if isempty(plotroot)
-        plotroot = figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
 
     # Set class-specific variables
@@ -365,7 +365,7 @@ function write_forecast_plots(fid::IOStream, m::AbstractDSGEModel,
                               forecast_string::String = "",
                               plotroot::String = "")
     if isempty(plotroot)
-        plotroot = figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl(input_type, cond_type, forecast_string = forecast_string)
@@ -551,7 +551,7 @@ end
 function write_irf_plots(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                          output_var::Symbol; forecast_string::String = "", plotroot::String = "")
     if isempty(plotroot)
-        plotroot = figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl(input_type, cond_type,
@@ -635,7 +635,7 @@ function plot_irf_section(m::AbstractDSGEModel, input_type::Symbol, cond_type::S
                           kwargs...)
     # Create file name related strings
     if isempty(plotroot)
-        plotroot = figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl(input_type, cond_type,
@@ -715,7 +715,7 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     # Create file name related strings
     m = which_model == 1 ? m1 : m2
     if isempty(plotroot)
-        plotroot = figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl((which_model == 1) ? input_type1 :
