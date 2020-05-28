@@ -1,7 +1,7 @@
 using DSGE, Test, ModelConstructors
 
 m = AnSchorfheide()
-if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
     load_data(m)
 
     @testset "Test util functions" begin

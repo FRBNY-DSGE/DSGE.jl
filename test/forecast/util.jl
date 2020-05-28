@@ -75,7 +75,7 @@ end
     @test DSGE.standardize_shocks(ones(3, 3), sys[:QQ]) ==ones(3,3) ./ sqrt.(diag(sys[:QQ]))
 end
 
-if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
     df = load_data(m)
     output_vars = [:histstates, :histobs, :forecaststates, :forecastobs]
     ndraws = 10

@@ -132,7 +132,7 @@ end
 
     specify_hessian!(m, "reference/hessian.h5")
     @test get_setting(m, :calculate_hessian) == false
-    @test get_setting(m, :hessian_path) == "$path/reference/hessian.h5"
+    @test get_setting(m, :hessian_path) == joinpath(dirname("$path"),"test","reference","hessian.h5")
 
     para = deepcopy(map(x -> x.value, m.parameters))
     m.parameters[1].value = 1.

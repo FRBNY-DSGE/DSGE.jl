@@ -64,7 +64,7 @@ end
 
 fp = dirname(@__FILE__)
 @testset "Pathing for DSGEVAR" begin
-    ans_base = joinpath(fp, "save/output_data/m1002/ss10/dsgevar_m1002/ss0/estimate")
+    ans_base = joinpath(fp, "save","output_data","m1002","ss10","dsgevar_m1002","ss0","estimate")
     ans_end = ["raw", "work", "tables", "figures", "log"]
     m = DSGE.DSGEVAR(dsge, Vector{Symbol}(undef, 0), "ss0")
     m <= Setting(:saveroot, joinpath(fp, "save"))
