@@ -317,18 +317,24 @@ function write_meansbands_tables_timeseries(m::AbstractDSGEModel, input_type::Sy
     end
 
     # Call second method
+    if isempty(forecast_string)
+        forecast_string = mb.metadata[:forecast_string]
+    end
     write_meansbands_tables_timeseries(write_dirname, filestring_base(m), mb;
+                                       forecast_string = forecast_string,
                                        kwargs...)
 end
 
 function write_meansbands_tables_timeseries(dirname::String, filestring_base::Vector{String},
                                             mb::MeansBands;
                                             tablevars::Vector{Symbol} = Symbol[],
-                                            bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
+                                            bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true),
+                                            forecast_string::String = mb.metadata[:forecast_string])
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
                                                  # shocks = columnvars)
-        write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
+        write_meansbands_table(dirname, filestring_base, mb, df, tablevar,
+                               forecast_string = forecast_string)
     end
 end
 
@@ -453,12 +459,12 @@ write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
 - `tablevar::Symbol`: used for computing the base output file name
 """
 function write_meansbands_table(dirname::String, filestring_base::Vector{String},
-                                mb::MeansBands, df::DataFrame, tablevar::Symbol)
+                                mb::MeansBands, df::DataFrame, tablevar::Symbol;
+                                forecast_string::String = mb.metadata[:forecast_string])
     # Extract metadata
     prod = get_product(mb)
     para = get_para(mb)
     cond = get_cond_type(mb)
-    forecast_string = mb.metadata[:forecast_string]
 
     # Compute output file name
     filename = detexify(string(prod) * "_" * string(tablevar) * ".csv")
@@ -500,7 +506,7 @@ Write all `output_vars` corresponding to model `m` to tables in `dirname`.
 """
 function write_meansbands_tables_all(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                      output_vars::Vector{Symbol};
-                                     forecast_string = "",
+                                     forecast_string::String = "",
                                      write_dirname::String = tablespath(m, "forecast"),
                                      vars::Vector{Symbol} = Symbol[],
                                      shocks::Vector{Symbol} = Symbol[],

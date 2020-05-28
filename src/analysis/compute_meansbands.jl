@@ -513,10 +513,10 @@ function compute_meansbands(models::Vector,
 
     # Determine class and product
     class   = get_class(output_var)
-    product = get_product(output_var)
 
     # Read in forecast metadata
     metadata = get_mb_metadata(models[1], input_types[1], cond_types[1], output_var; forecast_string = forecast_strings[1])
+    mb.metadata[:forecast_string] = combo_forecast_string
 
     date_list      = product == :irf ? Date[] : collect(keys(metadata[:date_inds]))
     if isempty(variable_names)
