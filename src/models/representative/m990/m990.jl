@@ -551,7 +551,8 @@ function steadystate!(m::Model990)
     m[:Rstarn]   = 100*(m[:rstar]*m[:π_star] - 1)
     m[:r_k_star] = m[:spr]*m[:rstar]*m[:Upsilon] - (1-m[:δ])
     m[:wstar]    = (m[:α]^m[:α] * (1-m[:α])^(1-m[:α]) * m[:r_k_star]^(-m[:α]) / m[:Φ])^(1/(1-m[:α]))
-    m[:Lstar]    = 1.
+    m[:Lstar]    = (m[:wstar]/m[:λ_w]/((1-m[:g_star])*(m[:α]/(1-m[:α])*m[:wstar]/m[:r_k_star])^m[:α]/m[:Φ]-
+     (1-(1-m[:δ])/m[:Upsilon]*exp(-m[:z_star]))*m[:Upsilon]*exp(m[:z_star])*m[:α]/(1-m[:α])*m[:wstar]/m[:r_k_star])/(1-m[:h]*exp(-m[:z_star])))^(1/(1+m[:ν_l]))
     m[:kstar]    = (m[:α]/(1-m[:α])) * m[:wstar] * m[:Lstar] / m[:r_k_star]
     m[:kbarstar] = m[:kstar] * (1+m[:γ]) * m[:Upsilon]^(1 / (1-m[:α]))
     m[:istar]    = m[:kbarstar] * (1-((1-m[:δ])/((1+m[:γ]) * m[:Upsilon]^(1/(1-m[:α])))))
