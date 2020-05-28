@@ -23,6 +23,7 @@ do_shockdecs      = true  # Compute shock decompositions
 do_irfs           = true  # Compute impulse response functions
 make_packet       = true  # Create packet w/info on estimation, forecasts, and IRFs
 make_plots        = true  # Make plots
+windows_os        = false # Are you using Windows OS or Linux/MacOS?
 add_workers       = false # Run in parallel
 n_workers         = 10
 
@@ -104,7 +105,7 @@ end
 if make_plots
     plot_standard_model_packet(m, :full, :none, output_vars,
                                forecast_string = forecast_string,
-                               sections = sections)
+                               sections = sections, windows_os = windows_os)
 end
 
 if make_packet
@@ -114,7 +115,8 @@ if make_packet
     # write_forecast_centric_packet(m, :full, :none, output_vars,
     #                               sections = sections, forecast_string = forecast_string)
     write_standard_model_packet(m, :full, :none, output_vars,
-                                sections = sections, forecast_string = forecast_string)
+                                sections = sections, forecast_string = forecast_string,
+                                windows_os = windows_os)
     moment_tables(m)
 end
 
