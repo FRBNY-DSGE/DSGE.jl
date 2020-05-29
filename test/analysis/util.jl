@@ -1,7 +1,8 @@
 using DSGE, Test, ModelConstructors
 
 m = AnSchorfheide()
-if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+homedirpath = Sys.iswindows() ? joinpath(homedir(),".freddatarc") : joinpath(ENV["HOME"],".freddatarc")
+if haskey(ENV, "FRED_API_KEY") || isfile(homedirpath)
     load_data(m)
 
     @testset "Test util functions" begin
@@ -48,8 +49,8 @@ if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
         # get_mb_populuation_series
 
     end
- else
-        @warn "Skipping fred_data test because FRED_API_KEY not present"
+else
+    @warn "Skipping fred_data test because FRED_API_KEY not present"
 end
 
 @testset "Test prior_table works" begin

@@ -142,10 +142,10 @@ end
         @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc_h
         @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] -out_maxbc_flip
     else
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc)) < 5e-6
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc2)) < 5e-6
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc_h)) < 5e-6
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] + out_maxbc_flip)) < 5e-6
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc)) < 6e-6
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc2)) < 6e-6
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc_h)) < 6e-6
+        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] + out_maxbc_flip)) < 6e-6
     end
 end
 
