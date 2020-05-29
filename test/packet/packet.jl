@@ -1,5 +1,5 @@
 if haskey(ENV, "FRED_API_KEY")
-    using DSGE, Test, ModelConstructors
+    using DSGE, Test, ModelConstructors, Plots
 
     GR.inline("pdf")
     GR.inline("png")
