@@ -146,6 +146,7 @@ end
 @testset "File paths" begin
     m = DSGEVAR(AnSchorfheide("ss0", testing = true), [:z_sh])
     for folder in ["raw", "work", "figures", "tables", "log"]
-        @test eval(Symbol(folder, "path"))(m, "estimate") == joinpath(saveroot(m), "output_data/an_schorfheide/ss0/dsgevar_an_schorfheide/ss0/estimate/" * folder)
+        @test eval(Symbol(folder, "path"))(m, "estimate") ==
+            joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0", "dsgevar_an_schorfheide", "ss0", "estimate", folder)
     end
 end

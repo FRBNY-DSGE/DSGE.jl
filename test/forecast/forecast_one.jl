@@ -13,7 +13,7 @@ overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
 skip_forecast_one_draw = false
-if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
     df = load_data(m)
     skip_forecast_one_draw = true
 else
