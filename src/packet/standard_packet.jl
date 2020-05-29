@@ -3,8 +3,7 @@
 write_standard_model_packet(m, input_type, cond_type,
     output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
     sections = [:estimation, :forecast]
-    forecast_string = "", outdir = joinpath(saveroot(m), \"Packets\", spec(m), subspec(m)),
-    windows_os::Bool = false)
+    forecast_string = "", outdir = joinpath(saveroot(m), \"Packets\", spec(m), subspec(m)))
 ```
 
 Write standard estimation and forecast result packet to `outdir`.
@@ -15,7 +14,6 @@ function write_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, c
                                      sections::Vector{Symbol} = [:estimation, :forecast],
                                      forecast_string::String = "",
                                      outdir::String = joinpath(saveroot(m), "Packets", spec(m), subspec(m)),
-                                     windows_os::Bool = false,
                                      purpose::String = "")
     @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast, :irf]."
 
@@ -31,19 +29,17 @@ function write_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, c
     # Write packet
     open(fn, "w") do fid
         write_preamble(fid, title, authors)
-        write_spec_section(fid, m, purpose = purpose, windows_os = windows_os)
+        write_spec_section(fid, m, purpose = purpose)
         if :estimation in sections
-            write_estimation_section(fid, m, windows_os = windows_os)
+            write_estimation_section(fid, m)
         end
         if :forecast in sections
             write_forecast_section(fid, m, input_type, cond_type, setdiff(output_vars, [:irfstates, :irfobs, :irfpseudo]),
-                                   forecast_string = forecast_string,
-                                   windows_os = windows_os)
+                                   forecast_string = forecast_string)
         end
         if :irf in sections
             write_irf_section(fid, m, input_type, cond_type,
-                              output_vars, forecast_string = forecast_string,
-                              windows_os = windows_os)
+                              output_vars, forecast_string = forecast_string)
         end
         write_postamble(fid)
     end
@@ -55,8 +51,7 @@ end
 plot_standard_model_packet(m, input_type, cond_type,
     output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
     sections = [:estimation, :forecast]
-    forecast_string = "", hist_start-date = 0001-01-01,
-    windows_os = false)
+    forecast_string = "", hist_start-date = 0001-01-01)
 ```
 
 Plot parameter prior/posterior histograms to `figurespath(m, \"estimate\")` and
@@ -67,8 +62,7 @@ function plot_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, co
                                                                    :shockdecobs, :shockdecpseudo];
                                     sections::Vector{Symbol} = [:estimation, :forecast],
                                     forecast_string::String = "",
-                                    hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"),
-                                    windows_os::Bool = false)
+                                    hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"))
     @assert issubset(sections, [:estimation, :forecast, :irf]) "Section specified in `section` kwarg is not supported. Must be a subset of [:estimation, :forecast, :irf]."
     if :estimation in sections
         plot_prior_posterior(m)
@@ -77,26 +71,24 @@ function plot_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, co
         for output_var in setdiff(output_vars, [:irfstates, :irfobs, :irfpseudo])
             make_forecast_plots(m, input_type, cond_type, output_var,
                                 forecast_string = forecast_string,
-                                hist_start_date = hist_start_date,
-                                windows_os = windows_os)
+                                hist_start_date = hist_start_date)
         end
     end
     if :irf in sections
         plot_irf_section(m, input_type, cond_type, output_vars;
-                         forecast_string = forecast_string,
-                         windows_os = windows_os)
+                         forecast_string = forecast_string)
     end
 end
 
 """
 ```
-write_spec_section(fid, m; purpose = "", windows_os = false)
+write_spec_section(fid, m; purpose = "")
 ```
 
 Write user, model, and data specification section.
 """
-function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String = "",
-                            windows_os::Bool = true)
+function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String = "")
+  
     @printf fid "\n\n"
     @printf fid "\\section{Specification}\n"
     @printf fid "\n"
@@ -104,7 +96,7 @@ function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String
     @printf fid "\\subsection{User}\n"
     @printf fid "\n"
     @printf fid "\\begin{itemize}\n"
-    @printf fid "  \\item Packet creator: %s\n" windows_os ? splitdir(homedir())[end] : string(ENV["USER"])
+    @printf fid "  \\item Packet creator: %s\n" splitdir(homedir())[end]
     @printf fid "  \\item Creation time: %s\n" Dates.format(now(), "U d, YYYY at H:MM")
     if !isempty(purpose)
         @printf fid "\\item Purpose: %s\n" purpose
@@ -128,10 +120,8 @@ function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String
     @printf fid "\\subsection{Data}\n"
     @printf fid "\n"
     @printf fid "\\begin{itemize}\n"
-    @printf fid "  \\item Input data directory: \\path{%s}\n" windows_os ?
-        replace(get_setting(m, :dataroot), "\\" => "/") : get_setting(m, :dataroot)
-    @printf fid "  \\item Output data directory: \\path{%s}\n" windows_os ?
-        replace(get_setting(m, :saveroot), "\\" => "/") : get_setting(m, :saveroot)
+    @printf fid "  \\item Input data directory: \\path{%s}\n" replace(get_setting(m, :dataroot),"\\"=>"/")
+    @printf fid "  \\item Output data directory: \\path{%s}\n" replace(get_setting(m, :saveroot),"\\"=>"/")
     @printf fid "  \\item Data vintage: %s\n" get_setting(m, :data_vintage)
     @printf fid "  \\item Dataset ID: %d\n" get_setting(m, :data_id)
     @printf fid "  \\item Conditional data vintage: %s\n" get_setting(m, :cond_vintage)
@@ -144,13 +134,13 @@ end
 
 """
 ```
-write_estimation_section(fid, m; plotroot = "", windows_os = false)
+write_estimation_section(fid, m; plotroot = "")
 ```
 
 Write parameter moment tables and prior/posterior plots.
 """
 function write_estimation_section(fid::IOStream, m::AbstractDSGEModel;
-                                  plotroot::String = "", windows_os::Bool = false)
+                                  plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
     @printf fid "\\section{Estimation}\n"
@@ -164,22 +154,21 @@ function write_estimation_section(fid::IOStream, m::AbstractDSGEModel;
     @printf fid "\\subsection{Moments}\n"
     @printf fid "\n"
 
-    @printf fid "\\input{%s}\n" windows_os ?
-        replace(tablespath(m, "estimate", "moments.tex"), "\\" => "/") : tablespath(m, "estimate", "moments.tex")
+    @printf fid "\\input{%s}\n" replace(tablespath(m, "estimate", "moments.tex"),"\\"=>"/")
 end
 
 """
 ```
-write_estimation_plots(fid, m; plotroot = "", windows_os = false)
+write_estimation_plots(fid, m; plotroot = "")
 ```
 
  Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
 `plotroot` is not specified, plots from `figurespath(m, \"estimate\")` are used.
 """
 function write_estimation_plots(fid::IOStream, m::AbstractDSGEModel;
-                                plotroot::String = "", windows_os::Bool = false)
+                                plotroot::String = "")
     if isempty(plotroot)
-        plotroot = windows_os ? replace(figurespath(m, "estimate"), "\\" => "/") : figurespath(m, "estimate")
+        plotroot = replace(figurespath(m, "estimate"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     filestr = DSGE.filestring(base, String[])
@@ -203,7 +192,7 @@ end
 ```
 write_forecast_section(fid, m, input_type, cond_type,
     output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
-    forecast_string = "". plotroot = "", windows_os = false)
+    forecast_string = "". plotroot = "")
 ```
 
 Write forecast specification and plots for the given `output_vars`. If `plotroot`
@@ -213,7 +202,7 @@ function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type:
                                 output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                                :shockdecobs, :shockdecpseudo];
                                 forecast_string::String = "",
-                                plotroot::String = "", windows_os::Bool = false)
+                                plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
     @printf fid "\\section{Forecast}\n"
@@ -232,8 +221,7 @@ function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type:
         end
         @printf fid "  \\item Forecast identifying string: %s\n" fc_string
     end
-    @printf fid "  \\item Estimation used: \\path{%s}\n" windows_os ?
-        replace(DSGE.get_forecast_input_file(m, input_type), "\\" => "/") : DSGE.get_forecast_input_file(m, input_type)
+    @printf fid "  \\item Estimation used: \\path{%s}\n" replace(DSGE.get_forecast_input_file(m, input_type),"\\"=>"/")
     @printf fid "\\end{itemize}\n"
 
     products = map(get_product, output_vars)
@@ -245,7 +233,7 @@ function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type:
         for output_var in Base.filter(x -> get_product(x) == :forecast, output_vars)
             write_forecast_plots(fid, m, input_type, cond_type, output_var,
                                  forecast_string = forecast_string,
-                                 plotroot = plotroot, windows_os = windows_os)
+                                 plotroot = plotroot)
             @printf fid "\n"
         end
     end
@@ -265,7 +253,7 @@ function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type:
         for output_var in Base.filter(x -> get_product(x) == :shockdec, output_vars)
             write_forecast_plots(fid, m, input_type, cond_type, output_var,
                                  forecast_string = forecast_string,
-                                 plotroot = plotroot, windows_os = windows_os)
+                                 plotroot = plotroot)
             @printf fid "\n"
         end
     end
@@ -274,8 +262,7 @@ end
 """
 ```
 make_forecast_plots(m, input_type, cond_type, output_var;
-    forecast_string = "", plotroot = "", hist_start_date = 0001-01-01,
-    windows_os = false)
+    forecast_string = "", plotroot = "", hist_start_date = 0001-01-01)
 ```
 
 Generate all `output_var` plots for the forecast of `m` specified by the
@@ -285,12 +272,11 @@ specified, plots are saved to `figurespath(m, \"forecast\")`.
 function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
                              plotroot::String = "",
-                             hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"),
-                             windows_os::Bool = false)
+                             hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"))
 
     # Output directory
     if isempty(plotroot)
-        plotroot = windows_os ? replace(figurespath(m, "forecast"), "\\" => "/") : figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
 
     # Set class-specific variables
@@ -367,7 +353,7 @@ end
 """
 ```
 write_forecast_plots(fid, m, input_type, cond_type, output_var;
-    forecast_string = "", plotroot = "", windows_os = false)
+    forecast_string = "", plotroot = "")
 ```
 
 Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
@@ -376,9 +362,9 @@ Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
 function write_forecast_plots(fid::IOStream, m::AbstractDSGEModel,
                               input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                               forecast_string::String = "",
-                              plotroot::String = "", windows_os::Bool = false)
+                              plotroot::String = "")
     if isempty(plotroot)
-        plotroot = windows_os ? replace(figurespath(m, "forecast"), "\\" => "/") : figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl(input_type, cond_type, forecast_string = forecast_string)
@@ -523,7 +509,7 @@ end
 
 """
 ```
-write_irf_section(fid, m, input_type, cond_type, forecast_string = "", plotroot = "", windows_os = false)
+write_irf_section(fid, m, input_type, cond_type, forecast_string = "", plotroot = "")
 ```
 
 Write impulse responses. If `plotroot`
@@ -531,7 +517,7 @@ is not specified, plots from `figurespath(m, \"forecast\")` are used.
 """
 function write_irf_section(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                            output_vars::Vector{Symbol}; forecast_string::String = "",
-                           plotroot::String = "", windows_os::Bool = false)
+                           plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
     @printf fid "\\section{Impulse Responses}\n"
@@ -540,33 +526,31 @@ function write_irf_section(fid::IOStream, m::AbstractDSGEModel, input_type::Symb
     @printf fid "\\subsection{Plots}\n"
     if :irfstates in output_vars
         write_irf_plots(fid, m, input_type, cond_type, :irfstates, plotroot = plotroot,
-                        forecast_string = forecast_string, windows_os = windows_os)
+                        forecast_string = forecast_string)
     end
     if :irfobs in output_vars
         write_irf_plots(fid, m, input_type, cond_type, :irfobs, plotroot = plotroot,
-                        forecast_string = forecast_string, windows_os = windows_os)
+                        forecast_string = forecast_string)
     end
     if :irfpseudo in output_vars
         write_irf_plots(fid, m, input_type, cond_type, :irfpseudo, plotroot = plotroot,
-                        forecast_string = forecast_string, windows_os = windows_os)
+                        forecast_string = forecast_string)
     end
     @printf fid "\n"
 end
 
 """
 ```
-write_irf_plots(fid, m, input_type, cond_type, output_var; forecast_string = "", plotroot = "",
-    windows_os = false)
+write_irf_plots(fid, m, input_type, cond_type, output_var; forecast_string = "", plotroot = "")
 ```
 
 Plot impulse responses. If `plotroot`
 is not specified, plots from `figurespath(m, \"forecast\")` are used.
 """
 function write_irf_plots(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
-                         output_var::Symbol; forecast_string::String = "", plotroot::String = "",
-                         windows_os::Bool = false)
+                         output_var::Symbol; forecast_string::String = "", plotroot::String = "")
     if isempty(plotroot)
-        plotroot = windows_os ? replace(figurespath(m, "forecast"), "\\" => "/") : figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl(input_type, cond_type,
@@ -638,8 +622,7 @@ end
 
 """
 ```
-plot_irf_section(fid, m, input_type, cond_type; forecast_string = "", plotroot = "", ncols = 4,
-    windows_os = false)
+plot_irf_section(fid, m, input_type, cond_type; forecast_string = "", plotroot = "", ncols = 4)
 ```
 
 Plot impulse responses. If `plotroot`
@@ -649,11 +632,10 @@ We assume the default number of columns for the joint plot is 3.
 function plot_irf_section(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                           output_vars::Vector{Symbol};
                           forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4,
-                          windows_os::Bool = false,
                           kwargs...)
     # Create file name related strings
     if isempty(plotroot)
-        plotroot = windows_os ? replace(figurespath(m, "forecast"), "\\" => "/") : figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl(input_type, cond_type,
@@ -729,12 +711,11 @@ function plot_irf_section(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                           bands_pcts::Vector{String} = Vector{String}(undef,0),
                           bands_alpha1::Float64 = 0.5,
                           bands_alpha2::Float64 = 0.5,
-                          addl_text::String = "",
-                          windows_os::Bool = false)
+                          addl_text::String = "")
     # Create file name related strings
     m = which_model == 1 ? m1 : m2
     if isempty(plotroot)
-        plotroot = windows_os ? replace(figurespath(m, "forecast"), "\\" => "/") : figurespath(m, "forecast")
+        plotroot = replace(figurespath(m, "forecast"), "\\" => "/")
     end
     base = DSGE.filestring_base(m)
     addl = DSGE.get_forecast_filestring_addl((which_model == 1) ? input_type1 :
