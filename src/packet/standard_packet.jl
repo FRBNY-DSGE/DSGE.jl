@@ -81,15 +81,14 @@ function plot_standard_model_packet(m::AbstractDSGEModel, input_type::Symbol, co
 end
 
 """
-    ```
-    write_spec_section(fid, m; purpose = "")
+```
+write_spec_section(fid, m; purpose = "")
+```
 
-    write_spec_section(fid, m1, m2; purpose = "")
-    ```
-
-    Write user, model, and data specification section.
-    """
+Write user, model, and data specification section.
+"""
 function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String = "")
+  
     @printf fid "\n\n"
     @printf fid "\\section{Specification}\n"
     @printf fid "\n"
@@ -134,12 +133,12 @@ function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String
 end
 
 """
-    ```
-    write_estimation_section(fid, m; plotroot = "")
-    ```
+```
+write_estimation_section(fid, m; plotroot = "")
+```
 
-    Write parameter moment tables and prior/posterior plots.
-    """
+Write parameter moment tables and prior/posterior plots.
+"""
 function write_estimation_section(fid::IOStream, m::AbstractDSGEModel;
                                   plotroot::String = "")
     @printf fid "\n\n"
@@ -190,20 +189,20 @@ function write_estimation_plots(fid::IOStream, m::AbstractDSGEModel;
 end
 
 """
-    ```
-    write_forecast_section(fid, m, input_type, cond_type,
-        output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
-        forecast_string = "". plotroot = "")
-    ```
+```
+write_forecast_section(fid, m, input_type, cond_type,
+    output_vars = [:forecastobs, :forecastpseudo, :shockdecobs, :shockdecpseudo];
+    forecast_string = "". plotroot = "")
+```
 
-    Write forecast specification and plots for the given `output_vars`. If `plotroot`
-    is not specified, plots from `figurespath(m, \"forecast\")` are used.
-    """
+Write forecast specification and plots for the given `output_vars`. If `plotroot`
+is not specified, plots from `figurespath(m, \"forecast\")` are used.
+"""
 function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                                 output_vars::Vector{Symbol} = [:forecastobs, :forecastpseudo,
                                                                :shockdecobs, :shockdecpseudo];
                                 forecast_string::String = "",
-                                plotroot = "")
+                                plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
     @printf fid "\\section{Forecast}\n"
@@ -261,19 +260,19 @@ function write_forecast_section(fid::IOStream, m::AbstractDSGEModel, input_type:
 end
 
 """
-    ```
-    make_forecast_plots(m, input_type, cond_type, output_var;
-        forecast_string = "", plotroot = "", hist_start_date = 0001-01-01)
-    ```
+```
+make_forecast_plots(m, input_type, cond_type, output_var;
+    forecast_string = "", plotroot = "", hist_start_date = 0001-01-01)
+```
 
-    Generate all `output_var` plots for the forecast of `m` specified by the
-    `input_type`, `cond_type`, and optional `forecast_string`. If `plotroot` is not
-    specified, plots are saved to `figurespath(m, \"forecast\")`.
-    """
+Generate all `output_var` plots for the forecast of `m` specified by the
+`input_type`, `cond_type`, and optional `forecast_string`. If `plotroot` is not
+specified, plots are saved to `figurespath(m, \"forecast\")`.
+"""
 function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
                              plotroot::String = "",
-                             hist_start_date = Date("0001-01-01", "yyyy-mm-dd"))
+                             hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"))
 
     # Output directory
     if isempty(plotroot)
@@ -352,14 +351,14 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
 end
 
 """
-    ```
-    write_forecast_plots(fid, m, input_type, cond_type, output_var;
-        forecast_string = "", plotroot = "")
-    ```
+```
+write_forecast_plots(fid, m, input_type, cond_type, output_var;
+    forecast_string = "", plotroot = "")
+```
 
-    Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
-    `plotroot` is not specified, plots from `figurespath(m, \"forecast\")` are used.
-    """
+Write LaTeX code displaying plots of `m` `product`s to the `IOStream` `fid`. If
+`plotroot` is not specified, plots from `figurespath(m, \"forecast\")` are used.
+"""
 function write_forecast_plots(fid::IOStream, m::AbstractDSGEModel,
                               input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                               forecast_string::String = "",
@@ -394,24 +393,24 @@ function write_forecast_plots(fid::IOStream, m::AbstractDSGEModel,
 end
 
 """
-    ```
-    write_forecast_table(fid, m, cond_type, output_vars;
-        forecast_string = "")
-    ```
+```
+write_forecast_table(fid, m, cond_type, output_vars;
+    forecast_string = "")
+```
 
-    Write the standard packet's forecast table listing forecasts 3 years out.
+Write the standard packet's forecast table listing forecasts 3 years out.
 
-    ### Inputs
+### Inputs
 
-    - `fid::IOStream`: file to write to
-    - `m::AbstractDSGEModel`: model object for current Snapshot forecast
-    - `cond_type::Symbol`: type of conditional forecast
-    - `output_vars`: which type of forecast variables to print out
+- `fid::IOStream`: file to write to
+- `m::AbstractDSGEModel`: model object for current Snapshot forecast
+- `cond_type::Symbol`: type of conditional forecast
+- `output_vars`: which type of forecast variables to print out
 
-    ### Keyword Arguments
+### Keyword Arguments
 
-    - `forecast_str::String`: string to use
-    """
+- `forecast_str::String`: string to use
+"""
 function write_forecast_table(fid::IOStream, m::AbstractDSGEModel, cond_type::Symbol,
                               output_vars::Vector{Symbol};
                               forecast_string::String = "")
@@ -509,16 +508,16 @@ end
 
 
 """
-    ```
-    write_irf_section(fid, m, input_type, cond_type, forecast_string = "", plotroot = "")
-    ```
+```
+write_irf_section(fid, m, input_type, cond_type, forecast_string = "", plotroot = "")
+```
 
-    Write impulse responses. If `plotroot`
-    is not specified, plots from `figurespath(m, \"forecast\")` are used.
-    """
+Write impulse responses. If `plotroot`
+is not specified, plots from `figurespath(m, \"forecast\")` are used.
+"""
 function write_irf_section(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                            output_vars::Vector{Symbol}; forecast_string::String = "",
-                           plotroot = "")
+                           plotroot::String = "")
     @printf fid "\n\n"
     @printf fid "\\clearpage\n"
     @printf fid "\\section{Impulse Responses}\n"
@@ -541,13 +540,13 @@ function write_irf_section(fid::IOStream, m::AbstractDSGEModel, input_type::Symb
 end
 
 """
-    ```
-    write_irf_plots(fid, m, input_type, cond_type, output_var; forecast_string = "", plotroot = "")
-    ```
+```
+write_irf_plots(fid, m, input_type, cond_type, output_var; forecast_string = "", plotroot = "")
+```
 
-    Plot impulse responses. If `plotroot`
-    is not specified, plots from `figurespath(m, \"forecast\")` are used.
-    """
+Plot impulse responses. If `plotroot`
+is not specified, plots from `figurespath(m, \"forecast\")` are used.
+"""
 function write_irf_plots(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                          output_var::Symbol; forecast_string::String = "", plotroot::String = "")
     if isempty(plotroot)
@@ -620,15 +619,16 @@ function write_irf_plots(fid::IOStream, m::AbstractDSGEModel, input_type::Symbol
     end
     @printf fid "\\clearpage\n"
 end
-"""
-    ```
-    plot_irf_section(fid, m, input_type, cond_type; forecast_string = "", plotroot = "", ncols = 4)
-    ```
 
-    Plot impulse responses. If `plotroot`
-    is not specified, plots from `figurespath(m, \"forecast\")` are used.
-    We assume the default number of columns for the joint plot is 3.
-    """
+"""
+```
+plot_irf_section(fid, m, input_type, cond_type; forecast_string = "", plotroot = "", ncols = 4)
+```
+
+Plot impulse responses. If `plotroot`
+is not specified, plots from `figurespath(m, \"forecast\")` are used.
+We assume the default number of columns for the joint plot is 3.
+"""
 function plot_irf_section(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                           output_vars::Vector{Symbol};
                           forecast_string::String = "", plotroot::String = "", ncols::Int64 = 4,

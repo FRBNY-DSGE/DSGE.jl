@@ -3,6 +3,7 @@ path = dirname(@__FILE__)
 m = AnSchorfheide()
 m <= Setting(:date_zlb_end, get_setting(m, :date_zlb_start))
 m <= Setting(:hessian_path, "")
+
 # Dates, indices, number of periods for each regime
 @testset "Test field access functions for AbstractDSGEModel objects" begin
     @test DSGE.get_parameters(m) == m.parameters
@@ -132,7 +133,7 @@ end
 
     specify_hessian!(m, "reference/hessian.h5")
     @test get_setting(m, :calculate_hessian) == false
-    @test get_setting(m, :hessian_path) == joinpath(dirname("$path"),"test","reference","hessian.h5")
+    @test get_setting(m, :hessian_path) == joinpath(dirname("$path"), "test", "reference", "hessian.h5")
 
     para = deepcopy(map(x -> x.value, m.parameters))
     m.parameters[1].value = 1.

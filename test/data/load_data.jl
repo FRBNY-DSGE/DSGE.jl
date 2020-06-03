@@ -5,7 +5,8 @@ path = dirname(@__FILE__)
 
 @testset "Test various forms of data loading" begin
     # Can we actually test? Require that FRED API key exists
-    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
+    homedirpath = Sys.iswindows() ? joinpath(homedir(),".freddatarc") : joinpath(ENV["HOME"],".freddatarc")
+    if haskey(ENV, "FRED_API_KEY") || isfile(homedirpath)
 
         # Specify vintage and dates
         global custom_settings = Dict{Symbol, Setting}(

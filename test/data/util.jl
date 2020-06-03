@@ -36,7 +36,7 @@ m <= Setting(:rate_expectations_source, :ois)
     @test sum(ismissing.(df_nan2miss[!,:a])) == 1
 
     # Can we actually test? Require that FRED API key exists
-    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
+    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(), ".freddatarc"))
         @info "The following warnings are expected."
         df_full = load_data(m; cond_type = :full, check_empty_columns = false,
                             verbose = :none, summary_statistics = :none)
