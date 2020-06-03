@@ -25,7 +25,7 @@ Further extensions of the DSGE model code may be released at the discretion of t
 pkg> add DSGE
 ```
 
-*Note we do not test our code in Windows OS*, so we cannot guarantee the code works properly.
+*Note we do not test our code in Windows OS, so we cannot guarantee the code works properly on Windows.*
 
 ## Versioning
 
