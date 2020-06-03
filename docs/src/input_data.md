@@ -207,6 +207,11 @@ Given the complexity of the data download, you may find that the dataset generat
     specified". This means that observations are not provided for some periods in which the
     model requires data. This is perfectly okay if your data series starts after
     `date_presample_start`.
+- If you successfully created a data set but it is missing observations that you want to add,
+  you may need to recreate the data set. By default, `load_data` checks if a data set
+  with the correct vintage already exists. If it does, then `load_data` loads the saved data
+  rather than recreate a data set from scratch. However, if the saved data set is missing
+  observations, then you want to recreate it by calling `load_data(m; try_disk = false)`.
 
 If you experience any problems using FredData.jl, ensure your API key is provided correctly
 and that there are no issues with your firewall, etc. Any issues with FredData.jl proper
