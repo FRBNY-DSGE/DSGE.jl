@@ -25,6 +25,8 @@ Further extensions of the DSGE model code may be released at the discretion of t
 pkg> add DSGE
 ```
 
+*Note we do not test our code in Windows OS*, so we cannot guarantee the code works properly.
+
 ## Versioning
 
 `DSGE.jl` is currently compatible with Julia `v1.0` and `v1.1`.
@@ -32,6 +34,9 @@ pkg> add DSGE
 To use `DSGE.jl` with Julia `v0.7`, please check out tag `0.8.1`. To do this, click on the drop-down menu that reads `branch:master` on the left-hand side of the page. Select `tags`, then `v0.8.1`.  If you've already cloned the repo, you can simply run `git checkout v0.8.1`.
 
 To use `DSGE.jl` with Julia `v0.6`, please check out tag `0.4.1`.
+
+*In Windows OS*, installing `DSGE.jl` in Julia `v1.1` appears to trigger the error `AssertionError: length(dirs) == 1` for more than one user. Because we do not test the package in Windows OS, unfortunately we do not know the source of this error.
+
 
 Disclaimer
 ------
