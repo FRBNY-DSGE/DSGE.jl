@@ -95,10 +95,10 @@ with some exceptions:
   vectors. Then the state space in deviations is
 
   ```math
-  \begin{align*}
+  \begin{aligned}
   s^a_t - s^b_t &= T(s^a_{t-1} - s^b_{t-1}) + R \epsilon_t & \mathrm{(transition)} \\
   y^a_t - y^b_t &= Z(y^a_t - y^b_t) & \mathrm{(measurement)}
-  \end{align*}
+  \end{aligned}
   ```
 
 The main function to run is `forecast_scenario`, which is similar in spirit to

@@ -60,10 +60,10 @@ impulse_responses(m, system, horizon, shock_name , var_name, var_value)
 There are two categories of impulse responses for DSGEs provided by DSGE.jl.
 It is easy to distinguish them by examining the state space form of a DSGE model (see [Solving](@ref solving-dsge-doc)):
 ```math
-\begin{align*}
+\begin{aligned}
 s_t &= T s_{t-1} + R \epsilon_t + C & \epsilon_t &\sim N(0, Q) & \mathrm{(transition)} \\
 y_t &= Z s_t + D + u_t & u_t &\sim N(0, E) & \mathrm{(measurement)}
-\end{align*}
+\end{aligned}
 ```
 Impulse responses in the first category are "structural" impulse responses, which are
 the response of states and observables to the exogenous structural shocks ``\epsilon_t``.
@@ -73,9 +73,7 @@ Impulse responses in the second category are "observables-identified" impulse re
 First, we may suppose that the measurement equation generically follows
 
 ```math
-\begin{align*}
-y_t &= F(s_t) + \eta_t,
-\end{align*}
+y_t = F(s_t) + \eta_t,
 ```
 
 where ``F(\cdot)`` is some function of the unknown states ``s_t``,
