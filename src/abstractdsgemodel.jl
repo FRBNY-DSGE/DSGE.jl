@@ -471,3 +471,31 @@ mutable struct SteadyStateConvergenceError <: Exception
 end
 SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't converge")
 Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
+
+
+function setup_regime_switching_inds(m::AbstractDSGEModel)
+    n_hist_regimes = 0
+    n_fcast_regimes = 0
+    n_conditional_inc = 0
+    n_regimes = length(keys(get_setting(m, :regime_dates)))
+    for (key, val) in get_setting(m, :regime_dates)
+        if val == date_forecast_start(m)
+            m <= Setting(:reg_forecast_start, key)
+        end
+        if val < date_forecast_start(m)
+            n_hist_regimes += 1
+        else
+            n_fcast_regimes += 1
+        end
+        if date_forecast_start(m) <= val <= date_conditional_end(m)
+            n_conditional_inc += 1
+        end
+    end
+    m <= Setting(:n_regimes, n_regimes)
+    m <= Setting(:n_hist_regimes, n_hist_regimes)
+    m <= Setting(:n_fcast_regimes, n_fcast_regimes)
+    m <= Setting(:n_conditional_inc, n_conditional_inc)
+    # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
+    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m60, :n_hist_regimes)+1))
+    return m
+end
