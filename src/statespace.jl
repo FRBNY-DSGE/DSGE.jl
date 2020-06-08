@@ -329,7 +329,7 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                 # Draw stationary VAR system
                 n_periods = size(data, 2) - lags
                 β, Σ =  draw_stationary_VAR(YYYYC, XXYYC, XXXXC,
-                                            convert(Int, n_periods + λ * n_periods),
+                                            convert(Int, floor(n_periods + λ * n_periods)),
                                             size(data, 1), lags)
 
                 return β, Σ
