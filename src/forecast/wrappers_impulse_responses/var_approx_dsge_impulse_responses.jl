@@ -160,11 +160,12 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
 
         # Means and Bands for each variable in a class
         for (name_i,name) in enumerate(observables)
-            # irf_output is Vector{nperiod x nobs} -> for each observable,
-            # we want to select its specific IRF, i.e. map(x -> x[:,obs_index]).
+            # irf_output is Vector{nobs x nperiod} -> for each observable,
+            # we want to select its specific IRF, i.e. map(x -> x[obs_index, :]).
             # This creates a nperiod x ndraws matrix, which we want to transpose
             # to get a ndraws x nperiod matrix
-            single_var = Matrix(reduce(hcat, map(x -> x[:,name_i], irf_output))')
+            single_var = Matrix(reduce(hcat, map(x -> x[name_i, :], irf_output))')
+            @show size(single_var)
             means[!,name] = vec(mean(single_var, dims = 1))
             bands[name]   = find_density_bands(single_var, density_bands;
                                                minimize = minimize)
@@ -182,7 +183,7 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
             end
 
             var_names = save_as_DSGE ?
-                Symbol("_" * join(string.(DSGE.detexify(observables)), "_") * "_") : Symbol("_")
+                Symbol("_" * join(string.(map(x -> DSGE.detexify(x), observables)), "_") * "_") : Symbol("_")
             fp = get_meansbands_output_file(save_as_DSGE ? get_dsge(m) : m, input_type, :none,
                                             Symbol(:dsgevarirf, :obs,
                                                    var_names, tail),

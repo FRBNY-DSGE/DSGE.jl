@@ -185,11 +185,11 @@ function impulse_responses(m::AbstractDSGEVARModel{S}, paras::Matrix{S},
             end
         else
             for (name, name_i) in get_observables(m)
-                # irf_output is Vector{nperiod x nobs} -> for each observable,
+                # irf_output is Vector{nobs x nperiod} -> for each observable,
                 # we want to select its specific IRF, i.e. map(x -> x[:,obs_index]).
                 # This creates a nperiod x ndraws matrix, which we want to transpose
                 # to get a ndraws x nperiod matrix
-                single_var = Matrix(reduce(hcat, map(x -> x[:, name_i], irf_output))')
+                single_var = Matrix(reduce(hcat, map(x -> x[name_i, :], irf_output))')
                 means[!, name] = vec(mean(single_var, dims = 1))
                 bands[name]    = find_density_bands(single_var, density_bands;
                                                     minimize = minimize)
