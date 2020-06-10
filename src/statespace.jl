@@ -424,8 +424,6 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # Solve model
     if regime_switching
         if solution_method == :gensys
-            @show 1:n_hist_regimes
-            @show n_hist_regimes+1:n_regimes
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,
                                      regimes = 1:n_regimes,
@@ -447,6 +445,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
                                                           reg = reg)
             end
+          #  @show measurement_equations[1]
             #end
 
             if hasmethod(pseudo_measurement, type_tuple)
