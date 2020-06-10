@@ -479,8 +479,11 @@ end
             out_rs2 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
             out_rs3 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
 
-            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", "r") do file
-                read(file, "exp_out_regime_switch_full"), read(file, "exp_out_true_regime_switch_full")
+            exp_out = JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", "r") do file
+                read(file, "exp_out_regime_switch_full")
+            end
+            exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs3.jld2", "r") do file
+                read(file, "exp_out_true_regime_switch_full")
             end
 
             for cond_type in [:none, :semi, :full]
@@ -549,9 +552,11 @@ end
                     write(file, "exp_out_regime_switch", exp_out_regime_switch_new)
                     write(file, "exp_out_true_regime_switch", exp_out_true_regime_switch_new)
                     write(file, "exp_out_regime_switch_full", exp_out_regime_switch_full_new)
-                    write(file, "exp_out_true_regime_switch_full", exp_out_true_regime_switch_full_new)
                 end
 
+                JLD2.jldopen("$path/../reference/forecast_one_out_rs3.jld2", true, true, true, IOStream) do file
+                    write(file, "exp_out_true_regime_switch_full", exp_out_true_regime_switch_full_new)
+                end
             else
                 for cond_type in [:none, :semi, :full]
                     for fcast_type in [:full, :subset, :init_draw_shocks, :mode_draw_shocks] # TODO: ADD PRIOR
