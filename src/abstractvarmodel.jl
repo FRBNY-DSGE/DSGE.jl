@@ -44,8 +44,8 @@ DSGE-VECM methods.
 abstract type AbstractDSGEVECMModel{T} <: AbstractDSGEVARModel{T} end
 
 # Number of anticipated policy shocks
-n_anticipated_shocks(m::AbstractDSGEVARModel) = get_setting(m, :n_anticipated_shocks)
-n_anticipated_shocks_padding(m::AbstractDSGEVARModel) = get_setting(m, :n_anticipated_shocks_padding)
+n_anticipated_shocks(m::AbstractDSGEVARModel) = get_setting(m, :n_mon_anticipated_shocks)
+n_anticipated_shocks_padding(m::AbstractDSGEVARModel) = get_setting(m, :n_mon_anticipated_shocks_padding)
 
 # Dates, indices, number of periods for each regime
 date_presample_start(m::AbstractDSGEVARModel) = get_setting(m, :date_presample_start)
