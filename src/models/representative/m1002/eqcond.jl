@@ -676,11 +676,34 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
 
    if haskey(m.settings, :add_pgap) ? get_setting(m, :add_pgap) : false
        Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               haskey(m.settings, :pgap_type)
+               if get_setting(m, :pgap_type) == :ngdp
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]     = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+
+                   Γ0[eq[:eq_pgap], endo[:y_t]]     = -1.
+                   Γ0[eq[:eq_pgap], endo[:z_t]]     = -1.
+                   Γ1[eq[:eq_pgap], endo[:y_t]]     =  -1.
+               elseif get_setting(m, :pgap_type) == :ait
+                   Thalf = 10
+                   ρ_ait = exp(log(0.5)/Thalf)
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]     = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]]  = ρ_ait
+               end
+           end
+       end
    end
 
    if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
-       if new_policy
-           Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func)(m, Γ0, Γ1, C, Ψ, Π)
+       if haskey(m.settings, :replace_eqcond_func_dict) #&& new_policy
+           if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
+           Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
+           end
        end
    end
 
