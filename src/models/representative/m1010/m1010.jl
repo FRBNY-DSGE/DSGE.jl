@@ -733,9 +733,9 @@ function model_settings!(m::Model1010)
     default_settings!(m)
 
     # Anticipated shocks
-    m <= Setting(:n_anticipated_shocks, 6,
+    m <= Setting(:n_mon_anticipated_shocks, 6,
                  "Number of anticipated policy shocks")
-    m <= Setting(:n_anticipated_shocks_padding, 20,
+    m <= Setting(:n_mon_anticipated_shocks_padding, 20,
                  "Padding for anticipated policy shocks")
 
     # Data
