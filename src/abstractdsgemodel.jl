@@ -491,11 +491,18 @@ function setup_regime_switching_inds(m::AbstractDSGEModel)
             n_conditional_inc += 1
         end
     end
+    if !haskey(m.settings, :reg_forecast_start)
+        m <= Setting(:reg_forecast_start, n_regimes)
+    end
+    # If no dates during forecast periodn, need at least one fcast regime to do the forecast
+    if n_fcast_regimes == 0
+        n_fcast_regimes = 1
+    end
     m <= Setting(:n_regimes, n_regimes)
     m <= Setting(:n_hist_regimes, n_hist_regimes)
     m <= Setting(:n_fcast_regimes, n_fcast_regimes)
     m <= Setting(:n_conditional_inc, n_conditional_inc)
     # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
-    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m60, :n_hist_regimes)+1))
+    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m, :n_hist_regimes)+1))
     return m
 end
