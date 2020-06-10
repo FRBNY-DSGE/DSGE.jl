@@ -170,7 +170,7 @@ regime_dates_dicts = [Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
 
 # Read in the expected outputs for all the regimes except when the first one,
 # which we use to test for shockdec and irf outputs. Those cases are handled separately
-exp_out_dict = JLD2.jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
+exp_out_dict = JLD2.jldopen("$path/../reference/forecast_one_out_rs1.jld2", "r") do file
     read(file, "exp_out_regime_switch_cases")
 end
 
@@ -369,7 +369,7 @@ end
 
         # Read expected output
         if k == 1
-            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
+            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", "r") do file
                 read(file, "exp_out_regime_switch"), read(file, "exp_out_true_regime_switch")
             end
         else
@@ -479,7 +479,7 @@ end
             out_rs2 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
             out_rs3 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
 
-            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
+            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", "r") do file
                 read(file, "exp_out_regime_switch_full"), read(file, "exp_out_true_regime_switch_full")
             end
 
@@ -544,23 +544,14 @@ end
                 exp_out_regime_switch_full_new = out_rs1
                 exp_out_true_regime_switch_full_new = out_rs3
 
-                # Write output!
-                save_jld2 = load("$path/../reference/forecast_one_out.jld2")
-                JLD2.jldopen("$path/../reference/forecast_one_out.jld2", true, true, true, IOStream) do file
-                    for (sk, sv) in save_jld2
-                        if !(sk in ["exp_out_regime_switch_cases", "exp_out_regime_switch", "exp_out_true_regime_switch",
-                                   "exp_out_regime_switch_full", "exp_out_true_regime_switch_full"])
-                            # Then we want to keep the same values as before
-                            write(file, sk, sv)
-                        end
-                    end
-
+                JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", true, true, true, IOStream) do file
                     # Now for the new additions
                     write(file, "exp_out_regime_switch", exp_out_regime_switch_new)
                     write(file, "exp_out_true_regime_switch", exp_out_true_regime_switch_new)
                     write(file, "exp_out_regime_switch_full", exp_out_regime_switch_full_new)
                     write(file, "exp_out_true_regime_switch_full", exp_out_true_regime_switch_full_new)
                 end
+
             else
                 for cond_type in [:none, :semi, :full]
                     for fcast_type in [:full, :subset, :init_draw_shocks, :mode_draw_shocks] # TODO: ADD PRIOR
@@ -603,14 +594,7 @@ end
 
 # Add the other cases where we don't calculate shockdecobs
 if generate_regime_switch_tests
-    save_jld2 = load("$path/../reference/forecast_one_out.jld2")
-    JLD2.jldopen("$path/../reference/forecast_one_out.jld2", true, true, true, IOStream) do file
-        for (sk, sv) in save_jld2
-            if sk !== "exp_out_regime_switch_cases"
-                # Then we want to keep the same values as before
-                write(file, sk, sv)
-            end
-        end
+    JLD2.jldopen("$path/../reference/forecast_one_out_rs1.jld2", true, true, true, IOStream) do file
 
         # Now for the new additions
         write(file, "exp_out_regime_switch_cases", exp_out_dict_new)
