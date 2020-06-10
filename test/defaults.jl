@@ -27,8 +27,8 @@ DSGE.default_settings!(m)
     @test get_setting(m, :date_conditional_end) == Dates.lastdayofquarter(Dates.today())
 
     # Anticipated shocks
-    @test get_setting(m, :n_anticipated_shocks) == 0
-    @test get_setting(m, :n_anticipated_shocks_padding) == 20
+    @test get_setting(m, :n_mon_anticipated_shocks) == 0
+    @test get_setting(m, :n_mon_anticipated_shocks_padding) == 20
 
     # General computation
     @test get_setting(m, :use_parallel_workers) == true

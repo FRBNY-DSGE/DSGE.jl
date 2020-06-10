@@ -64,10 +64,10 @@ end
 
 ### Custom settings
 custom_settings = Dict{Symbol, Setting}(
-    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
+    :n_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
 model = Model990(sub, custom_settings = custom_settings)
 @testset "Checking n_ant_shocks == 6" begin
-    @test get_setting(model, :n_anticipated_shocks) == 6
+    @test get_setting(model, :n_mon_anticipated_shocks) == 6
 end
 
 # Indices initialized correctly under custom settings
