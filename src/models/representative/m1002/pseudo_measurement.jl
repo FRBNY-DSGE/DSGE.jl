@@ -30,6 +30,7 @@ function pseudo_measurement(m::Model1002{T},
     DD_pseudo = zeros(_n_pseudo)
 
     no_integ_inds = inds_states_no_integ_series(m)
+
     if get_setting(m, :add_laborproductivity_measurement)
         # Construct pseudo-obs from integrated states first
         ZZ_pseudo[pseudo[:laborproductivity], endo[:y_t]] = 1.
@@ -344,6 +345,10 @@ function pseudo_measurement(m::Model1002{T},
         DD_pseudos[reg] = zeros(_n_pseudo)
 
         no_integ_inds = inds_states_no_integ_series(m)
+        if haskey(m.endogenous_states, :pgap_t) #(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+            no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
+        end
+
         if get_setting(m, :add_laborproductivity_measurement)
             # Construct pseudo-obs from integrated states first
             ZZ_pseudos[reg][pseudo[:laborproductivity], endo[:y_t]] = 1.
@@ -413,12 +418,8 @@ function pseudo_measurement(m::Model1002{T},
             DD_pseudos[reg][pseudo[:FlexibleConsumptionGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
         end
 
-        if haskey(get_settings(m), :integrated_series)
-            if !isempty(get_setting(m, :integrated_series))
+        if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) #(haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false)
                 TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
-            else
-                TTT = TTTs[reg]
-            end
         else
             TTT = TTTs[reg]
         end
