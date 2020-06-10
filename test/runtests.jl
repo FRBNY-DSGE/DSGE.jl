@@ -84,7 +84,7 @@ my_tests = [
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
-            "forecast/io",
+            "forecast/io", =#
             "forecast/forecast_one",
             "forecast/util",
             "forecast/var/impulse_responses",
