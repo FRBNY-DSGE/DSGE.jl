@@ -445,8 +445,6 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
                                                           reg = reg)
             end
-          #  @show measurement_equations[1]
-            #end
 
             if hasmethod(pseudo_measurement, type_tuple)
                 pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
