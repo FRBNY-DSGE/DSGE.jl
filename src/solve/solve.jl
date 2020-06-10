@@ -33,14 +33,10 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
     altpolicy_solve = alternative_policy(m).solve
 
     gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
-    # Need to skip that block of code (but this is clunky and confusing and need to fix)
-    #=  if get_setting(m, :gensys2)
-    regime_switching = false
-    end=#
 
     if regime_switching
         if get_setting(m, :solution_method) == :gensys
-            if altpolicy_solve == solve || !apply_altpolicy
+            #if altpolicy_solve == solve || !apply_altpolicy
                 if isa(regimes, Int)
                     # Get equilibrium condition matrices
                     Γ0, Γ1, C, Ψ, Π  = eqcond(m, regimes)
@@ -97,14 +93,25 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     end
 
                     # Get the last state space matrices one period after the policy ends
-                    TTT_gensys_final, CCC_gensys_final, RRR_gensys_final, eu = gensys(Γ0s[end], Γ1s[end], Cs[end],
-                                                                                      Ψs[end], Πs[end],
-                                                                                      1+1e-6, verbose = verbose)
-
-                    # Check for LAPACK exception, existence and uniqueness
-                    if eu[1] != 1 || eu[2] != 1
-                        throw(GensysError("Error in Gensys, Regime $reg"))
+                    if altpolicy_solve == solve || !apply_altpolicy
+                        # If normal rule
+                        TTT_gensys_final, CCC_gensys_final, RRR_gensys_final, eu = gensys(Γ0s[end], Γ1s[end], Cs[end],
+                                                                                          Ψs[end], Πs[end],
+                                                                                          1+1e-6, verbose = verbose)
+                        # Check for LAPACK exception, existence and uniqueness
+                        if eu[1] != 1 || eu[2] != 1
+                            throw(GensysError("Error in Gensys, Regime $reg"))
+                        end
+                    else
+                        # If alternative rule
+                        n_endo = length(keys(m.endogenous_states))
+                        TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = altpolicy_solve(m; regime_switching = regime_switching,
+                                                   regimes = get_setting(m, :n_regimes))
+                        TTT_gensys_final = TTT_gensys_final[1:n_endo, 1:n_endo]
+                        RRR_gensys_final = RRR_gensys_final[1:n_endo, :]
+                        CCC_gensys_final = CCC_gensys_final[1:n_endo]
                     end
+
 
                     TTT_gensys_final = real(TTT_gensys_final)
                     RRR_gensys_final = real(RRR_gensys_final)
@@ -126,36 +133,40 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                         Rcal[end] = RRR_gensys_final
                         Ccal[end] = CCC_gensys_final
 
-                        @show size(Tcal), size(Rcal), size(Ccal)
                         for (i, fcast_reg) = enumerate(fcast_regimes)
                             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
                         end
                     else
                         for fcast_reg in fcast_regimes
-                            TTT_gensys, CCC_gensys, RRR_gensys, eu =
-                                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg], 1+1e-6, verbose = verbose)
+                            if altpolicy_solve == solve || !apply_altpolicy
+                                TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                                    gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg], 1+1e-6, verbose = verbose)
 
-                            # Check for LAPACK exception, existence and uniqueness
-                            if eu[1] != 1 || eu[2] != 1
-                                throw(GensysError("Error in Gensys, Regime $reg"))
+                                # Check for LAPACK exception, existence and uniqueness
+                                if eu[1] != 1 || eu[2] != 1
+                                    throw(GensysError("Error in Gensys, Regime $fcast_reg"))
+                                end
+
+                                TTT_gensys = real(TTT_gensys)
+                                RRR_gensys = real(RRR_gensys)
+                                CCC_gensys = real(CCC_gensys)
+
+                                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys) #=;
+                                regime_switching = regime_switching,
+                                reg = fcast_reg) =#
+                            else
+                                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = altpolicy_solve(m; regime_switching = regime_switching,
+                                                                  regimes = fcast_reg)
                             end
-
-                            TTT_gensys = real(TTT_gensys)
-                            RRR_gensys = real(RRR_gensys)
-                            CCC_gensys = real(CCC_gensys)
-
-                            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys) #=;
-                                                                             regime_switching = regime_switching,
-                                                                             reg = fcast_reg) =#
                         end
                     end
                     return TTTs, RRRs, CCCs
                 end
-            else
+          #=  else
                 # Change the policy rule
                 TTTs, RRRs, CCCs = altpolicy_solve(m; regime_switching = regime_switching,
                                                    regimes = regimes)
-            end
+            end =#
         else
             # Change the policy rule
             TTT, RRR, CCC = altpolicy_solve(m)
