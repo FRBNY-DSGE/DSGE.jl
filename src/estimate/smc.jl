@@ -153,7 +153,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
         m <= Setting(:sampling_method, :SMC)
         update!(m, load_draws(m, :mode))
         out, H = optimize!(m, data)
-        @show savepath
+        println("Saving to " * replace(savepath, "smc_cloud" => "paramsmode") * "...")
         jldopen(replace(savepath, "smc_cloud" => "paramsmode"), true, true, true, IOStream) do file
             write(file, "mode", out.minimizer)
         end

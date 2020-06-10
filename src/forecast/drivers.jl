@@ -656,7 +656,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             forecast_output[:histshocks] = histshocks
             forecast_output[:histpseudo] = histpseudo
         end
- #       @show forecast_output[:histstates][end, :]
 
         # Standardize shocks if desired
         if :histstdshocks in output_vars
