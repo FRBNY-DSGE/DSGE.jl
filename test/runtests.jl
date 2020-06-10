@@ -72,7 +72,7 @@ my_tests = [
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
-            "forecast/io",
+            "forecast/io", =#
             "forecast/forecast_one",
             "forecast/automatic_tempalt_zlb_fulldist",
             "forecast/regime_switching",
