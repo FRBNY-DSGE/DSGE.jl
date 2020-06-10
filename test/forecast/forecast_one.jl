@@ -190,6 +190,7 @@ dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
         m_rs1.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs1.settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs1.test_settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs1 = DSGE.setup_regime_switching_inds(m_rs1)
 
         m_rs2 = Model1002("ss51v", testing = true, custom_settings = custom_settings) # pseudo regime switching (identical values for standard deviations)
         m_rs2 <= Setting(:rate_expectations_source, :ois)
@@ -201,6 +202,7 @@ dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
         m_rs2.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs2.settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs2.test_settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs2 = DSGE.setup_regime_switching_inds(m_rs2)
 
         m_rs3 = Model1002("ss51v", testing = true, custom_settings = custom_settings) # non-trivial regime switching
         m_rs3 <= Setting(:rate_expectations_source, :ois)
@@ -212,6 +214,7 @@ dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
         m_rs3.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs3.settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs3.test_settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs3 = DSGE.setup_regime_switching_inds(m_rs3)
 
         # Need to set shocks for second and third regimes
         global prop = 1.
@@ -230,16 +233,16 @@ dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
             ModelConstructors.set_regime_val!(m_rs2[:σ_λ_w], i, prop * m[:σ_λ_w].value)
             ModelConstructors.set_regime_val!(m_rs2[:σ_r_m], i, prop * m[:σ_r_m].value)
             ModelConstructors.set_regime_val!(m_rs2[:σ_σ_ω], i, prop * m[:σ_σ_ω].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_μ_e], i, prop * m[:σ_μ_e].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_γ], i, prop * m[:σ_γ].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_π_star], i, prop * m[:σ_π_star].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_lr], i, prop * m[:σ_lr].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_z_p], i, prop * m[:σ_z_p].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_tfp], i, prop * m[:σ_tfp].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_gdpdef], i, prop * m[:σ_gdpdef].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_corepce], i, prop * m[:σ_corepce].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_gdp], i, prop * m[:σ_gdp].value)
-            ModelConstructors.set_regime_val!(m_rs2[:σ_gdi], i, prop * m[:σ_gdi].value)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_μ_e], i, prop * m[:σ_μ_e].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_γ], i, prop * m[:σ_γ].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_π_star], i, prop * m[:σ_π_star].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_lr], i, prop * m[:σ_lr].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_z_p], i, prop * m[:σ_z_p].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_tfp], i, prop * m[:σ_tfp].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_gdpdef], i, prop * m[:σ_gdpdef].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_corepce], i, prop * m[:σ_corepce].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_gdp], i, prop * m[:σ_gdp].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs2[:σ_gdi], i, prop * m[:σ_gdi].value, override_bounds = true)
 
             for j = 1:DSGE.n_mon_anticipated_shocks(m_rs2)
                 ModelConstructors.set_regime_val!(m_rs2[Symbol("σ_r_m$(j)")], i, prop * m[Symbol("σ_r_m$(i)")])
@@ -254,16 +257,16 @@ dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
             ModelConstructors.set_regime_val!(m_rs3[:σ_λ_w], i, prop3 * m[:σ_λ_w].value)
             ModelConstructors.set_regime_val!(m_rs3[:σ_r_m], i, prop3 * m[:σ_r_m].value)
             ModelConstructors.set_regime_val!(m_rs3[:σ_σ_ω], i, prop3 * m[:σ_σ_ω].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_μ_e], i, prop3 * m[:σ_μ_e].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_γ], i, prop3 * m[:σ_γ].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_π_star], i, prop3 * m[:σ_π_star].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_lr], i, prop3 * m[:σ_lr].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_z_p], i, prop3 * m[:σ_z_p].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_tfp], i, prop3 * m[:σ_tfp].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_gdpdef], i, prop3 * m[:σ_gdpdef].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_corepce], i, prop3 * m[:σ_corepce].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_gdp], i, prop3 * m[:σ_gdp].value)
-            ModelConstructors.set_regime_val!(m_rs3[:σ_gdi], i, prop3 * m[:σ_gdi].value)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_μ_e], i, prop3 * m[:σ_μ_e].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_γ], i, prop3 * m[:σ_γ].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_π_star], i, prop3 * m[:σ_π_star].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_lr], i, prop3 * m[:σ_lr].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_z_p], i, prop3 * m[:σ_z_p].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_tfp], i, prop3 * m[:σ_tfp].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_gdpdef], i, prop3 * m[:σ_gdpdef].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_corepce], i, prop3 * m[:σ_corepce].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_gdp], i, prop3 * m[:σ_gdp].value, override_bounds = true)
+            ModelConstructors.set_regime_val!(m_rs3[:σ_gdi], i, prop3 * m[:σ_gdi].value, override_bounds = true)
 
             for j = 1:DSGE.n_mon_anticipated_shocks(m_rs3)
                 ModelConstructors.set_regime_val!(m_rs3[Symbol("σ_r_m$(j)")], i, prop3 * m[Symbol("σ_r_m$(i)")])
@@ -342,6 +345,9 @@ for cond_type in [:none, :semi, :full]
     end
 end
 
+for para in m_rs3.parameters
+    ModelConstructors.toggle_regime!(para, 3)
+end
 @test m_rs3[:α].value != m[:α].value # check the regimes do not match
 for para in m_rs3.parameters
     ModelConstructors.toggle_regime!(para, 1)
@@ -488,7 +494,6 @@ if k == 1 # only testing full distribution with the first case of regime switchi
                     forecast_one(model, fcast_type, cond_type, output_vars, verbose = :none, params = para_rs, df = dfs[cond_type])
                 end
             end
-
             out_rs1[cond_type][fcast_type] = Dict{Symbol, Array{Float64}}()
             out_rs2[cond_type][fcast_type] = Dict{Symbol, Array{Float64}}()
             out_rs3[cond_type][fcast_type] = Dict{Symbol, Array{Float64}}()
