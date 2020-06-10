@@ -124,7 +124,7 @@ function init_model_indices!(m::Model1002)
         :λ_w_t, :λ_w_t1, :rm_t, :σ_ω_t, :μ_e_t, :γ_t, :π_star_t,
         :Ec_t, :Eqk_t, :Ei_t, :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERktil_t, :ERktil_f_t,
         :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
-        :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t, :EL_f_t
+        :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t, :EL_f_t,
         :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t,
         :Rktil_f_t, :n_f_t];
         [Symbol("rm_tl$i") for i = 1:n_mon_anticipated_shocks(m)]]
