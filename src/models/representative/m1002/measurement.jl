@@ -44,8 +44,11 @@ function measurement(m::Model1002{T},
     end
 
     no_integ_inds = inds_states_no_integ_series(m)
+    if haskey(m.endogenous_states, :pgap_t) #m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
+    end
     if (get_setting(m, :add_laborproductivity_measurement) || get_setting(m, :add_nominalgdp_level) ||
-        get_setting(m, :add_cumulative))
+        get_setting(m, :add_cumulative)) || (haskey(m.endogenous_states, :pgap_t)) #m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false)
         # Remove integrated states (e.g. states w/unit roots)
         TTT = @view TTT[no_integ_inds, no_integ_inds]
         CCC = @view CCC[no_integ_inds]
