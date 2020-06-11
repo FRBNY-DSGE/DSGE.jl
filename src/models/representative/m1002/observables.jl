@@ -516,7 +516,7 @@ function init_observable_mappings!(m::Model1002)
     #     observables[:obs_lambda_wiid] = Observable(:obs_lambda_wiid, [:WAGEMKP__DLX],
     #                                                lambda_wiidfwd_transform, lambda_wiidrev_transform,
     #                                                "lambda_wiid", "lambda_wiid")
-    end
+    # end
 
     if haskey(m.settings, :first_observable)
         new_observables = OrderedDict{Symbol,Observable}()

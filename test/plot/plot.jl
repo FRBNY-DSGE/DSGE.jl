@@ -1,4 +1,4 @@
-using Plots
+using Plots, DSGE, ModelConstructors, FileIO, Test
 path = dirname(@__FILE__)
 
 # Initialize the plotting backend
