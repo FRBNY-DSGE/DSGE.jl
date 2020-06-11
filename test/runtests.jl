@@ -27,7 +27,7 @@ my_tests = [
             "models/var/dsgevecm/dsgevecm",
             "models/var/util",
 
-            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
+            # "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
             #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
             #"models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
             # "models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
@@ -84,12 +84,13 @@ my_tests = [
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
-            "forecast/io", =#
+            "forecast/io",
             "forecast/forecast_one",
             "forecast/util",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",
             "forecast/var/dsgevecm/impulse_responses",
+
             "analysis/compute_meansbands",
             "analysis/df_to_table",
             "analysis/io",
@@ -104,6 +105,7 @@ my_tests = [
             "scenarios/switching",
             "scenarios/drivers",
             "decomp/decompose_forecast",
+
             "models/representative/an_schorfheide/an_schorfheide",
             "models/representative/smets_wouters/smets_wouters",
             "models/representative/smets_wouters_orig/smets_wouters_orig",

@@ -75,7 +75,7 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
     :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
     :forecast_horizons        => Setting(:forecast_horizons, 16),
-    :n_anticipated_shocks     => Setting(:n_anticipated_shocks, 6))
+    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
 m    = Model1002("ss10", testing = true, custom_settings = custom_settings)  # baseline model
 m_rs = Model1002("ss51v", testing = true, custom_settings = custom_settings) # pseudo regime switching (identical values for standard deviations)
 m_rs <= Setting(:rate_expectations_source, :ois)
@@ -93,28 +93,28 @@ df = load("$path/../reference/regime_switch_data.jld2", "none")
 
 for i in 1:3
     adj = (i == 1) ? 1. : .95
-    ModelConstructors.set_regime_val!(m_rs[:α], i, adj * m[:α].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_g], i, adj * m[:σ_g].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_b], i, adj * m[:σ_b].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_μ], i, adj * m[:σ_μ].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_ztil], i, adj * m[:σ_ztil].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_λ_f], i, adj * m[:σ_λ_f].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_λ_w], i, adj * m[:σ_λ_w].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_r_m], i, adj * m[:σ_r_m].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_σ_ω], i, adj * m[:σ_σ_ω].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_μ_e], i, adj * m[:σ_μ_e].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_γ], i, adj * m[:σ_γ].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_π_star], i, adj * m[:σ_π_star].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_lr], i, adj * m[:σ_lr].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_z_p], i, adj * m[:σ_z_p].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_tfp], i, adj * m[:σ_tfp].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_gdpdef], i, adj * m[:σ_gdpdef].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_corepce], i, adj * m[:σ_corepce].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_gdp], i, adj * m[:σ_gdp].value)
-    ModelConstructors.set_regime_val!(m_rs[:σ_gdi], i, adj * m[:σ_gdi].value)
+    ModelConstructors.set_regime_val!(m_rs[:α], i, adj * m[:α].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_g], i, adj * m[:σ_g].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_b], i, adj * m[:σ_b].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_μ], i, adj * m[:σ_μ].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_ztil], i, adj * m[:σ_ztil].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_λ_f], i, adj * m[:σ_λ_f].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_λ_w], i, adj * m[:σ_λ_w].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_r_m], i, adj * m[:σ_r_m].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_σ_ω], i, adj * m[:σ_σ_ω].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_μ_e], i, adj * m[:σ_μ_e].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_γ], i, adj * m[:σ_γ].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_π_star], i, adj * m[:σ_π_star].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_lr], i, adj * m[:σ_lr].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_z_p], i, adj * m[:σ_z_p].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_tfp], i, adj * m[:σ_tfp].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_gdpdef], i, adj * m[:σ_gdpdef].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_corepce], i, adj * m[:σ_corepce].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_gdp], i, adj * m[:σ_gdp].value; override_bounds = true)
+    ModelConstructors.set_regime_val!(m_rs[:σ_gdi], i, adj * m[:σ_gdi].value; override_bounds = true)
 
     for j = 1:DSGE.n_mon_anticipated_shocks(m_rs)
-        ModelConstructors.set_regime_val!(m_rs[Symbol("σ_r_m$(j)")], i, adj * m[Symbol("σ_r_m$(j)")])
+        ModelConstructors.set_regime_val!(m_rs[Symbol("σ_r_m$(j)")], i, adj * m[Symbol("σ_r_m$(j)")]; override_bounds = true)
     end
 end
 

@@ -77,7 +77,6 @@ function init_subspec!(m::Model1002)
         return ss48!(m)
     elseif subspec(m) == "ss51"
         return ss51!(m)
-
     elseif subspec(m) == "ss51v"
         return ss51v!(m)
 
@@ -1901,16 +1900,16 @@ function ss51v!(m::Model1002)
     ModelConstructors.set_regime_val!(m[:σ_γ], 2, 0., override_bounds = true)
     ModelConstructors.set_regime_val!(m[:σ_π_star], 2, 0., override_bounds = true)
     ModelConstructors.set_regime_val!(m[:σ_lr], 2, 0., override_bounds = true)
-    ModelConstructors.set_regime_val!(m[:σ_z_p], 2, 0., override_bounds =true)
-    ModelConstructors.set_regime_val!(m[:σ_tfp], 2, 0., override_bounds =true)
-    ModelConstructors.set_regime_val!(m[:σ_gdpdef], 2, 0., override_bounds =true)
-    ModelConstructors.set_regime_val!(m[:σ_corepce], 2, 0., override_bounds =true)
-    ModelConstructors.set_regime_val!(m[:σ_gdp], 2, 0., override_bounds =true)
-    ModelConstructors.set_regime_val!(m[:σ_gdi], 2, 0., override_bounds =true)
+    ModelConstructors.set_regime_val!(m[:σ_z_p], 2, 0., override_bounds = true)
+    ModelConstructors.set_regime_val!(m[:σ_tfp], 2, 0., override_bounds = true)
+    ModelConstructors.set_regime_val!(m[:σ_gdpdef], 2, 0., override_bounds = true)
+    ModelConstructors.set_regime_val!(m[:σ_corepce], 2, 0., override_bounds = true)
+    ModelConstructors.set_regime_val!(m[:σ_gdp], 2, 0., override_bounds = true)
+    ModelConstructors.set_regime_val!(m[:σ_gdi], 2, 0., override_bounds = true)
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_mon_anticipated_shocks(m)
-        ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(i)")], 2, 0., override_bounds =true)
+        ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(i)")], 2, 0., override_bounds = true)
     end
 
     # Add regime switching settings
