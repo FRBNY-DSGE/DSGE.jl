@@ -302,6 +302,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
     else
         start_date = min(DSGE.quartertodate("2007-Q1"), date_mainsample_end(m) - Dates.Year(5))
     end
+
     if haskey(m.settings, :date_forecast_end)
         end_date = get_setting(m, :date_forecast_end)
 
@@ -318,6 +319,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
     else
         end_date = DSGE.quartertodate("2020-Q1")
     end
+
     forecast_label = "Mean Forecast"
     tick_size = 2
 

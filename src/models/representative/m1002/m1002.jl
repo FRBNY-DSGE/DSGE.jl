@@ -331,7 +331,6 @@ function init_parameters!(m::Model1002)
                    description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label="\\alpha")
 
-    @show fieldnames(typeof(m[:α]))
     m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                    description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
