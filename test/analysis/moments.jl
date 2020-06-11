@@ -1,8 +1,9 @@
+using DSGE, Test, FileIO, Random, ModelConstructors
 m = AnSchorfheide()
 @testset "Test moments" begin
-    @test moments(m.parameters[findfirst(x -> x.key==:τ, m.parameters)]) == (2.0, 0.5)
-    @test moments(m.parameters[findfirst(x -> x.key==:e_y, m.parameters)]) == (0.1159846, 0.0)
-    @test moments(m.parameters[findfirst(x -> x.key==:σ_R, m.parameters)]) == (0.4, 4.0)
+    @test DSGE.moments(m.parameters[findfirst(x -> x.key==:τ, m.parameters)]) == (2.0, 0.5)
+    @test DSGE.moments(m.parameters[findfirst(x -> x.key==:e_y, m.parameters)]) == (0.1159846, 0.0)
+    @test DSGE.moments(m.parameters[findfirst(x -> x.key==:σ_R, m.parameters)]) == (0.4, 4.0)
 end
 
 # This script currently just tests sample_λ, compute_Eλ

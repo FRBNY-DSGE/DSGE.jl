@@ -10,7 +10,7 @@ custom_settings = Dict{Symbol, Setting}(
     :use_population_forecast  => Setting(:use_population_forecast, true),
     :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
     :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
-    :n_anticipated_shocks     => Setting(:n_anticipated_shocks, 6))
+    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
 m = Model990(testing = true, custom_settings = custom_settings)
 m <= Setting(:rate_expectations_source, :ois)
 

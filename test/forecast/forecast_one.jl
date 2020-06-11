@@ -149,7 +149,7 @@ custom_settings = Dict{Symbol, Setting}(
     :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
     :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
     :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
-    :n_anticipated_shocks     => Setting(:n_anticipated_shocks, 6))
+    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
 
 # Now check that regime switching works for different types of possible regimes
 regime_dates_dicts = [Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
