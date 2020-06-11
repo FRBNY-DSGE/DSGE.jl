@@ -171,45 +171,17 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
 
-    if subspec(m) == "ss52"
-        # Add in wage markup shocks as an additional observable
-        ZZ[obs[:obs_wagemarkupshock], endo[:ϵ_λ_w_t]] = 1.
-    end
-    if subspec(m) == "ss53"
-        # Add in wage markup as an additional observable
-        ZZ[obs[:obs_wagemarkup], endo[:λ_w_t]] = 1.
-    end
-    if subspec(m) == "ss56"
-        # Add in wage markup as an additional observable
-        ZZ[obs[:obs_ztil], endo[:ztil_t]] = 1.
-    end
-    if subspec(m) == "ss57"
-        # Add in wage markup as an additional observable
-        ZZ[obs[:obs_ztilshock], endo[:ϵ_ztil_t]] = 1.
-    end
-    if subspec(m) in ["ss58", "ss59", "ss60"]
-        # Add in wage markup as an additional observable
-        ZZ[obs[:obs_ztil], endo[:ztil_t]] = 1.
-        ZZ[obs[:obs_z], endo[:z_t]] = 1.
-        # DD[obs[:obs_z]] = 100. * (exp(m[:z_star]) - 1.)
-        ZZ[obs[:obs_zp], endo[:zp_t]] = 1.
-    end
-    if subspec(m) == "ss59"
-        ZZ[obs[:obs_b], endo[:b_t]] = 1.
-    end
-
-    if subspec(m) in ["ss60"]
-        ZZ[obs[:obs_ziid], endo[:ziid_t]] = 1.
-        ZZ[obs[:obs_biid], endo[:biid_t]] = 1.
-        ZZ[obs[:obs_biidc], endo[:biidc_t]] = 1.
-        ZZ[obs[:obs_sigma_omegaiid], endo[:σ_ωiid_t]] = 1.
-        ZZ[obs[:obs_sigma_omega], endo[:σ_ω_t]] = 1.
-        ZZ[obs[:obs_b], endo[:b_t]] = 1.
-        ZZ[obs[:obs_lambda_wiid], endo[:λ_wiid_t]] = 1.
-        ZZ[obs[:obs_lambda_w], endo[:λ_w_t]] = 1.
-        ZZ[obs[:obs_φ], endo[:φ_t]] = 1.
-    end
-
+    # if subspec(m) in ["ss60"]
+    #     ZZ[obs[:obs_ziid], endo[:ziid_t]] = 1.
+    #     ZZ[obs[:obs_biid], endo[:biid_t]] = 1.
+    #     ZZ[obs[:obs_biidc], endo[:biidc_t]] = 1.
+    #     ZZ[obs[:obs_sigma_omegaiid], endo[:σ_ωiid_t]] = 1.
+    #     ZZ[obs[:obs_sigma_omega], endo[:σ_ω_t]] = 1.
+    #     ZZ[obs[:obs_b], endo[:b_t]] = 1.
+    #     ZZ[obs[:obs_lambda_wiid], endo[:λ_wiid_t]] = 1.
+    #     ZZ[obs[:obs_lambda_w], endo[:λ_w_t]] = 1.
+    #     ZZ[obs[:obs_φ], endo[:φ_t]] = 1.
+    # end
 
    # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_mon_anticipated_shocks(m)
@@ -246,9 +218,9 @@ function measurement(m::Model1002{T},
 
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-  #=  if any(CCC .!= 0)
-        DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT)\CCC)
-    end =#
+    if any(CCC .!= 0)
+        DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT) \ CCC)
+    end
 
     for para in m.parameters
         if !isempty(para.regimes)

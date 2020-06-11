@@ -431,135 +431,91 @@ function init_observable_mappings!(m::Model1002)
         end
     end
 
-    # Create a fake observable if observing wage markup shock
-    if subspec(m) == "ss52"
-        wagemarkupshock_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
-        end
-        wagemarkupshock_rev_transform = DSGE.identity
-        observables[:obs_wagemarkupshock] = Observable(:obs_wagemarkupshock, [:WAGEMKP__DLX],
-                                                       wagemarkupshock_fwd_transform, wagemarkupshock_rev_transform,
-                                                       "Wage mark up shock", "Wage mark up shock")
-    elseif subspec(m) == "ss53"
-        wagemarkup_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
-        end
-        wagemarkup_rev_transform = DSGE.identity
-        observables[:obs_wagemarkup] = Observable(:obs_wagemarkup, [:WAGEMKP__DLX],
-                                                       wagemarkup_fwd_transform, wagemarkup_rev_transform,
-                                                       "Wage mark up", "Wage mark up")
-    elseif subspec(m) == "ss56"
-       ztil_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
-        end
-        ztil_rev_transform = DSGE.identity
-        observables[:obs_ztil] = Observable(:obs_ztil, [:WAGEMKP__DLX],
-                                                       ztil_fwd_transform, ztil_rev_transform,
-                                                       "ztil", "ztil")
-    elseif subspec(m) == "ss57"
-       ztil_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
-        end
-        ztil_rev_transform = DSGE.identity
-        observables[:obs_ztilshock] = Observable(:obs_ztilshock, [:WAGEMKP__DLX],
-                                                       ztil_fwd_transform, ztil_rev_transform,
-                                                       "ztil shock", "ztil shock")
-    elseif subspec(m) in ["ss58", "ss59", "ss60"]
-       ztil_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
-        end
-        ztil_rev_transform = DSGE.identity
-        observables[:obs_ztil] = Observable(:obs_ztil, [:WAGEMKP__DLX],
-                                                       ztil_fwd_transform, ztil_rev_transform,
-                                                       "ztil", "ztil")
-       z_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
-        end
-        z_rev_transform = DSGE.identity
-        observables[:obs_z] = Observable(:obs_z, [:WAGEMKP__DLX],
-                                                       z_fwd_transform, z_rev_transform,
-                                                       "z", "z")
-       zp_fwd_transform = function (levels)
-            levels[:, Symbol("WAGEMKP")]
-        end
-        zp_rev_transform = DSGE.identity
-        observables[:obs_zp] = Observable(:obs_zp, [:WAGEMKP__DLX],
-                                                       zp_fwd_transform, zp_rev_transform,
-                                                       "zp", "zp")
-        if subspec(m) == "ss59"
-            b_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            b_rev_transform = DSGE.identity
-            observables[:obs_b] = Observable(:obs_b, [:WAGEMKP__DLX],
-                                              b_fwd_transform, b_rev_transform,
-                                              "b", "b")
-        end
-        if subspec(m) == "ss60"
-            ziid_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            ziid_rev_transform = DSGE.identity
-            observables[:obs_ziid] = Observable(:obs_ziid, [:WAGEMKP__DLX],
-                                              ziid_fwd_transform, ziid_rev_transform,
-                                              "ziid", "ziid")
-            biid_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            biid_rev_transform = DSGE.identity
-            observables[:obs_biid] = Observable(:obs_biid, [:WAGEMKP__DLX],
-                                              biid_fwd_transform, biid_rev_transform,
-                                              "biid", "biid")
-            biidc_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            biidc_rev_transform = DSGE.identity
-            observables[:obs_biidc] = Observable(:obs_biidc, [:WAGEMKP__DLX],
-                                              biidc_fwd_transform, biidc_rev_transform,
-                                              "biidc", "biidc")
-            varphi_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            varphi_rev_transform = DSGE.identity
-            observables[:obs_φ] = Observable(:obs_φ, [:WAGEMKP__DLX],
-                                              varphi_fwd_transform, varphi_rev_transform,
-                                              "varphi", "varphi")
-            sigma_omegaiid_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            sigma_omegaiid_rev_transform = DSGE.identity
-            observables[:obs_sigma_omegaiid] = Observable(:obs_sigma_omegaiid, [:WAGEMKP__DLX],
-                                              sigma_omegaiid_fwd_transform, sigma_omegaiid_rev_transform,
-                                              "sigma_omegaiid", "sigma_omegaiid")
-            b_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            b_rev_transform = DSGE.identity
-            observables[:obs_b] = Observable(:obs_b, [:WAGEMKP__DLX],
-                                              b_fwd_transform, b_rev_transform,
-                                              "b", "b")
-            sigma_omega_fwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            sigma_omega_rev_transform = DSGE.identity
-            observables[:obs_sigma_omega] = Observable(:obs_sigma_omega, [:WAGEMKP__DLX],
-                                              sigma_omega_fwd_transform, sigma_omega_rev_transform,
-                                              "sigma_omega", "sigma_omega")
-            lambda_wfwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            lambda_wrev_transform = DSGE.identity
-            observables[:obs_lambda_w] = Observable(:obs_lambda_w, [:WAGEMKP__DLX],
-                                              lambda_wfwd_transform, lambda_wrev_transform,
-                                              "lambda_w", "lambda_w")
-            lambda_wiidfwd_transform = function (levels)
-                levels[:, Symbol("WAGEMKP")]
-            end
-            lambda_wiidrev_transform = DSGE.identity
-            observables[:obs_lambda_wiid] = Observable(:obs_lambda_wiid, [:WAGEMKP__DLX],
-                                              lambda_wiidfwd_transform, lambda_wiidrev_transform,
-                                              "lambda_wiid", "lambda_wiid")
-        end
+    # if subspec(m) in ["ss60"]
+    #     ztil_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     ztil_rev_transform = DSGE.identity
+    #     observables[:obs_ztil] = Observable(:obs_ztil, [:WAGEMKP__DLX],
+    #                                         ztil_fwd_transform, ztil_rev_transform,
+    #                                         "ztil", "ztil")
+    #     z_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     z_rev_transform = DSGE.identity
+    #     observables[:obs_z] = Observable(:obs_z, [:WAGEMKP__DLX],
+    #                                      z_fwd_transform, z_rev_transform,
+    #                                      "z", "z")
+    #     zp_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     zp_rev_transform = DSGE.identity
+    #     observables[:obs_zp] = Observable(:obs_zp, [:WAGEMKP__DLX],
+    #                                       zp_fwd_transform, zp_rev_transform,
+    #                                       "zp", "zp")
+    #     ziid_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     ziid_rev_transform = DSGE.identity
+    #     observables[:obs_ziid] = Observable(:obs_ziid, [:WAGEMKP__DLX],
+    #                                         ziid_fwd_transform, ziid_rev_transform,
+    #                                         "ziid", "ziid")
+    #     biid_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     biid_rev_transform = DSGE.identity
+    #     observables[:obs_biid] = Observable(:obs_biid, [:WAGEMKP__DLX],
+    #                                         biid_fwd_transform, biid_rev_transform,
+    #                                         "biid", "biid")
+    #     biidc_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     biidc_rev_transform = DSGE.identity
+    #     observables[:obs_biidc] = Observable(:obs_biidc, [:WAGEMKP__DLX],
+    #                                          biidc_fwd_transform, biidc_rev_transform,
+    #                                          "biidc", "biidc")
+    #     varphi_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     varphi_rev_transform = DSGE.identity
+    #     observables[:obs_φ] = Observable(:obs_φ, [:WAGEMKP__DLX],
+    #                                      varphi_fwd_transform, varphi_rev_transform,
+    #                                      "varphi", "varphi")
+    #     sigma_omegaiid_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     sigma_omegaiid_rev_transform = DSGE.identity
+    #     observables[:obs_sigma_omegaiid] = Observable(:obs_sigma_omegaiid, [:WAGEMKP__DLX],
+    #                                                   sigma_omegaiid_fwd_transform, sigma_omegaiid_rev_transform,
+    #                                                   "sigma_omegaiid", "sigma_omegaiid")
+    #     b_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     b_rev_transform = DSGE.identity
+    #     observables[:obs_b] = Observable(:obs_b, [:WAGEMKP__DLX],
+    #                                      b_fwd_transform, b_rev_transform,
+    #                                      "b", "b")
+    #     sigma_omega_fwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     sigma_omega_rev_transform = DSGE.identity
+    #     observables[:obs_sigma_omega] = Observable(:obs_sigma_omega, [:WAGEMKP__DLX],
+    #                                                sigma_omega_fwd_transform, sigma_omega_rev_transform,
+    #                                                "sigma_omega", "sigma_omega")
+    #     lambda_wfwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     lambda_wrev_transform = DSGE.identity
+    #     observables[:obs_lambda_w] = Observable(:obs_lambda_w, [:WAGEMKP__DLX],
+    #                                             lambda_wfwd_transform, lambda_wrev_transform,
+    #                                             "lambda_w", "lambda_w")
+    #     lambda_wiidfwd_transform = function (levels)
+    #         levels[:, Symbol("WAGEMKP")]
+    #     end
+    #     lambda_wiidrev_transform = DSGE.identity
+    #     observables[:obs_lambda_wiid] = Observable(:obs_lambda_wiid, [:WAGEMKP__DLX],
+    #                                                lambda_wiidfwd_transform, lambda_wiidrev_transform,
+    #                                                "lambda_wiid", "lambda_wiid")
     end
 
     if haskey(m.settings, :first_observable)
