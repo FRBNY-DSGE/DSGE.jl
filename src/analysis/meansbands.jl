@@ -684,6 +684,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # Get the variable-shock combinations we want to print
     varshocks = [Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock") for shock in shocks]
+
     # Fetch the columns corresponding to varshocks
     df_shockdec = mb_shockdec.means[!,union([:date], varshocks)]
     df_trend    = mb_trend.means[!,[:date, var]]

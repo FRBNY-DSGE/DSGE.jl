@@ -50,7 +50,7 @@ end
                                matdata1["impact"].^2, Int(matdata2["k"]),
                                convert(Matrix{Float64}, matdata2["cct_sim"]'),
                                matdata2["sig_sim"], Int(matdata2["qahead"]),
-                               vec(matdata2["XXpred"]);normalize_rotation = false,
+                               vec(matdata2["XXpred"]); normalize_rotation = false,
                                test_shocks =
                                convert(Matrix{Float64}, matdata2["Shocks"]'))
 
