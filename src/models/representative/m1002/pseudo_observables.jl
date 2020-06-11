@@ -4,8 +4,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
                     :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t,
                     :Expected10YearRateGap, :NominalFFR, :Expected10YearRate,
                     :Expected10YearNaturalRate,
-                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth]
-                    # :u_t, :NominalWageGrowth
+                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth, :u_t]
                     # :i_f_t, :R_t, :c_f_t, :qk_f_t, :k_f_t, :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :rktil_f_t, :n_f_t, :c_t,
                     # :b_t, :r_f_t]
 
@@ -22,14 +21,15 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if subspec(m) == "ss52"
-        push!(pseudo_names, :λ_w_t)
-    end
-
     if subspec(m) == "ss60"
         push!(pseudo_names, :ziid, :varphiiid, :biidc)
     end
 
+    if haskey(m.settings, :add_NominalWageGrowth)
+        if get_setting(m, :add_NominalWageGrowth)
+            push!(pseudo_names, :NominalWageGrowth)
+        end
+    end
     if haskey(m.settings, :add_ztil)
         if get_setting(m, :add_ztil)
             push!(pseudo_names, :ztil)
@@ -176,11 +176,8 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:LaborProductivityGrowth].longname = "Labor Productivity Growth Rate"
     pseudo[:LaborProductivityGrowth].rev_transform = quartertoannual
 
-    # pseudo[:u_t].name     = "u_t"
-    # pseudo[:u_t].longname = "u_t"
-
-    # pseudo[:NominalWageGrowth].name = "Nominal Wage Growth"
-    # pseudo[:NominalWageGrowth].longname = "Nominal Wage Growth"
+    pseudo[:u_t].name     = "u_t"
+    pseudo[:u_t].longname = "u_t"
 
     # pseudo[:i_f_t].name     = "i_f_t"
     # pseudo[:i_f_t].longname = "i_f_t"
@@ -252,9 +249,11 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if subspec(m) == "ss52"
-        pseudo[:λ_w_t].name = "Wage Markup"
-        pseudo[:λ_w_t].longname = "Wage Markup"
+    if haskey(m.settings, :add_NominalWageGrowth)
+        if get_setting(m, :add_NominalWageGrowth)
+            pseudo[:NominalWageGrowth].name = "Nominal Wage Growth"
+            pseudo[:NominalWageGrowth].longname = "Nominal Wage Growth"
+        end
     end
 
     if haskey(m.settings, :add_laborshare_measurement)

@@ -167,7 +167,7 @@ function init_model_indices!(m::Model1002)
     endogenous_states_augmented = [
         :y_t1, :c_t1, :i_t1, :w_t1, :π_t1_dup, :L_t1, :u_t1, :Et_π_t, :e_lr_t, :e_tfp_t, :e_gdpdef_t,
         :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_gdp_t1, :e_gdi_t1]
-    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
+    if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"]
         push!(endogenous_states_augmented, :Sinf_t, :πtil_t, :πtil_t1)
     end
     if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
@@ -204,7 +204,6 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
     end
-
 
     if subspec(m) == "ss52"
         push!(endogenous_states, :ϵ_λ_w_t)
@@ -252,6 +251,7 @@ function init_model_indices!(m::Model1002)
         filter!(x -> x != :λ_w_t1, endogenous_states)
     end
 
+
     # Observables
     observables = keys(m.observable_mappings)
 
@@ -268,7 +268,7 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(pseudo_observables);          m.pseudo_observables[k]          = i end
 end
 
-function Model1002(subspec::String="ss10";
+function Model1002(subspec::String = "ss10";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
@@ -331,6 +331,7 @@ function init_parameters!(m::Model1002)
                    description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label="\\alpha")
 
+    @show fieldnames(typeof(m[:α]))
     m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                    description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
@@ -867,17 +868,10 @@ function model_settings!(m::Model1002)
     m <= Setting(:n_mon_anticipated_shocks_padding, 20,
                  "Padding for anticipated policy shocks")
 
-    if subspec(m) == "ss58"
-        m <= Setting(:n_z_anticipated_shocks, 1,
-                     "Number of anticipated policy shocks")
-        m <= Setting(:n_z_anticipated_shocks_padding, 1,
-                     "Padding for anticipated policy shocks")
-    else
-        m <= Setting(:n_z_anticipated_shocks, 0,
-                     "Number of anticipated policy shocks")
-        m <= Setting(:n_z_anticipated_shocks_padding, 0,
-                     "Padding for anticipated policy shocks")
-    end
+    m <= Setting(:n_z_anticipated_shocks, 0,
+                 "Number of anticipated policy shocks")
+    m <= Setting(:n_z_anticipated_shocks_padding, 0,
+                 "Padding for anticipated policy shocks")
 
     m <= Setting(:ant_eq_mapping,  Dict{Symbol, Symbol}(:z => :ztil),
                  "Dictionary mapping name of anticipated shock to name of state variable for exogenous process affected by the shock")

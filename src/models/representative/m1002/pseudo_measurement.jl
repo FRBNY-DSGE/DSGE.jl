@@ -196,16 +196,19 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:LaborProductivityGrowth], endo_addl[:L_t1]]     = 1.
     DD_pseudo[pseudo[:LaborProductivityGrowth]]                       = 100*(exp(m[:z_star]) - 1)
 
-    # ## u_t
-    # ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
+    ## u_t
+    ZZ_pseudo[pseudo[:u_t], endo[:u_t]] = 1.
 
     ## Nominal Wage Growth
-    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
-    ZZ_pseudo[pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
-    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
-    ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
-    DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) +
-        100 * (exp(m[:z_star]) - 1)
+    if haskey(m.settings, :add_NominalWageGrowth)
+        if get_setting(m, :add_NominalWageGrowth)
+            ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
+            ZZ_pseudo[pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
+            ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
+            ZZ_pseudo[pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
+            DD_pseudo[pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) + 100*(exp(m[:z_star])-1)
+        end
+    end
 
     # ## i_f_t
     # ZZ_pseudo[pseudo[:i_f_t], endo[:i_f_t]] = 1.
@@ -291,10 +294,6 @@ function pseudo_measurement(m::Model1002{T},
         for i in to_add_addl
             ZZ_pseudo[pseudo[i], endo_addl[i]] = 1.
         end
-    end
-
-    if subspec(m) == "ss52"
-        ZZ_pseudo[pseudo[:λ_w_t], endo[:λ_w_t]] = 1.
     end
 
     # if subspec(m) == "ss60"
@@ -514,15 +513,19 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudos[reg][pseudo[:LaborProductivityGrowth], endo_addl[:L_t1]]     = 1.
         DD_pseudos[reg][pseudo[:LaborProductivityGrowth]]                       = 100*(exp(m[:z_star]) - 1)
 
-    #     ## u_t
-    #     ZZ_pseudos[reg][pseudo[:u_t], endo[:u_t]] = 1.
+        ## u_t
+        ZZ_pseudos[reg][pseudo[:u_t], endo[:u_t]] = 1.
 
-    #     ## Nominal Wage Growth
-    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
-    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
-    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
-    #     ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
-    #     DD_pseudos[reg][pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) + 100*(exp(m[:z_star])-1)
+        ## Nominal Wage Growth
+        if haskey(m.settings, :add_NominalWageGrowth)
+            if get_setting(m, :add_NominalWageGrowth)
+                ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:w_t]] = 1.
+                ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo_addl[:w_t1]] = -1.
+                ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:z_t]] = 1.
+                ZZ_pseudos[reg][pseudo[:NominalWageGrowth],endo[:π_t]] = 1.
+                DD_pseudos[reg][pseudo[:NominalWageGrowth]]            = 100*(m[:π_star]-1) + 100*(exp(m[:z_star])-1)
+            end
+        end
 
     # ## i_f_t
     # ZZ_pseudos[reg][pseudo[:i_f_t], endo[:i_f_t]] = 1.
@@ -652,10 +655,6 @@ function pseudo_measurement(m::Model1002{T},
             for i in to_add_addl
                 ZZ_pseudos[reg][pseudo[i], endo_addl[i]] = 1.
             end
-        end
-
-        if subspec(m) == "ss52"
-            ZZ_pseudos[reg][pseudo[:λ_w_t], endo[:λ_w_t]] = 1.
         end
 
         # if subspec(m) == "ss60"
