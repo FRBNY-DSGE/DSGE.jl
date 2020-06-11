@@ -78,8 +78,10 @@ end
 
 @testset "DSGEVAR subspecs" begin
     dsge = Model1002("ss10"; custom_settings =
-                     Dict{Symbol,Setting}(:add_laborshare_measurement =>
-                                          Setting(:add_laborshare_measurement, true)))
+                  Dict{Symbol,Setting}(:add_laborshare_measurement =>
+                                       Setting(:add_laborshare_measurement, true),
+                                       :add_NominalWageGrowth =>
+                                       Setting(:add_NominalWageGrowth, true)))
     m0  = DSGEVAR(dsge, collect(keys(dsge.exogenous_shocks)), "ss0")
     m1  = DSGEVAR(dsge, collect(keys(dsge.exogenous_shocks)), "ss1")
     m10 = DSGEVAR(dsge, collect(keys(dsge.exogenous_shocks)), "ss10")

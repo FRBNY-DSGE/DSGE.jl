@@ -94,8 +94,9 @@ end
 @testset "VAR approximation of state space" begin
     m = Model1002("ss10"; custom_settings =
                   Dict{Symbol,Setting}(:add_laborshare_measurement =>
-                                       Setting(:add_laborshare_measurement, true)))
-
+                                       Setting(:add_laborshare_measurement, true),
+                                       :add_NominalWageGrowth =>
+                                       Setting(:add_NominalWageGrowth, true)))
     system = compute_system(m)
     system = compute_system(m, system; observables = [:obs_hours, :obs_gdpdeflator,
                                                       :laborshare_t, :NominalWageGrowth],
