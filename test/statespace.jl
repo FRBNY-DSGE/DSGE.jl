@@ -178,7 +178,9 @@ end
 @testset "VAR using DSGE as a prior" begin
     m = Model1002("ss10"; custom_settings =
                   Dict{Symbol,Setting}(:add_laborshare_measurement =>
-                                       Setting(:add_laborshare_measurement, true)))
+                                       Setting(:add_laborshare_measurement, true),
+                                       :add_NominalWageGrowth =>
+                                       Setting(:add_NominalWageGrowth, true)))
     dsgevar = DSGEVAR(m)
     jlddata = load(joinpath(dirname(@__FILE__), "reference/test_dsgevar_lambda_irfs.jld2"))
     DSGE.update!(dsgevar, shocks = collect(keys(m.exogenous_shocks)),

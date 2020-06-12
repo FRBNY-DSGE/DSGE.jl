@@ -90,7 +90,9 @@ end
     jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs.jld2"))
     m = Model1002("ss10", custom_settings =
                   Dict{Symbol,Setting}(:add_laborshare_measurement =>
-                                       Setting(:add_laborshare_measurement, true)))
+                                       Setting(:add_laborshare_measurement, true),
+                                       :add_NominalWageGrowth =>
+                                       Setting(:add_NominalWageGrowth, true)))
     m <= Setting(:impulse_response_horizons, 10)
     dsgevar = DSGEVAR(m, collect(keys(m.exogenous_shocks)), "ss11")
     DSGE.update!(dsgevar, λ = 1.)
@@ -153,7 +155,9 @@ end
     jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs.jld2"))
     m = Model1002("ss10", custom_settings =
                   Dict{Symbol,Setting}(:add_laborshare_measurement =>
-                                       Setting(:add_laborshare_measurement, true)))
+                                       Setting(:add_laborshare_measurement, true),
+                                       :add_NominalWageGrowth =>
+                                       Setting(:add_NominalWageGrowth, true)))
     m <= Setting(:impulse_response_horizons, 10)
     dsgevar = DSGEVAR(m, collect(keys(m.exogenous_shocks)), "ss11")
     DSGE.update!(dsgevar, λ = 1.)

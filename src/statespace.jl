@@ -620,15 +620,13 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
     if get_λ(m) == Inf
         # Then we just want the VAR approximation of the DSGE
         return compute_system(m; apply_altpolicy = apply_altpolicy,
-                              regime_switching = regime_switching, regime = regime, n_regimes = n_regimes,
                               check_system = check_system, get_system = get_system,
                               get_population_moments = get_population_moments, use_intercept = true,
                               verbose = verbose)
     else
         # Create a system using the method for DSGE-VARs and λ = ∞
         system = compute_system(m; apply_altpolicy = apply_altpolicy,
-                                regime_switching = regime_switching, regime = regime,
-                                n_regimes = n_regimes, check_system = check_system,
+                                check_system = check_system,
                                 get_system = true, use_intercept = true,
                                 verbose = verbose)
 
@@ -668,20 +666,13 @@ end
 
 # Same functions as above but for AbstractDSGEVECMModel types
 function compute_system(m::AbstractDSGEVECMModel{T}; apply_altpolicy::Bool = false,
-                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false, use_intercept::Bool = false,
                         verbose::Symbol = :high) where {T<:Real}
-    dsge = get_dsge(m)
-    if regime_switching
-        regime_system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
-                                       regime_switching = regime_switching, n_regimes = n_regimes,
-                                       verbose = verbose)
-        system = System(regime_system, regime)
-    else
-        system = compute_system(dsge; verbose = verbose)
 
-    end
+dsge = get_dsge(m)
+    system = compute_system(dsge; verbose = verbose)
+
     # Use wrapper compute_system for AbstractDSGEVECMModel types
     # (as opposed to compute_system(m::AbstractDSGEModel, system::System; ...))
     system, DD_coint_add = compute_system(m, system; observables = collect(keys(get_observables(m))),
@@ -706,7 +697,6 @@ end
 
 function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
                         apply_altpolicy::Bool = false,
-                        regime_switching::Bool = false, regime::Int = 1, n_regimes::Int = 2,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false,
                         verbose::Symbol = :high) where {T<:Real}
@@ -715,15 +705,13 @@ function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
         # Then we just want the VECM approximation of the DSGE
         # with no additional cointegration
         return compute_system(m; apply_altpolicy = apply_altpolicy,
-                              regime_switching = regime_switching, regime = regime, n_regimes = n_regimes,
                               check_system = check_system, get_system = get_system,
                               get_population_moments = get_population_moments, use_intercept = true,
                               verbose = verbose)
     else
         # Create a system using the method for DSGE-VECMs and λ = ∞
         system, DD_coint_add = compute_system(m; apply_altpolicy = apply_altpolicy,
-                                regime_switching = regime_switching, regime = regime,
-                                n_regimes = n_regimes, check_system = check_system,
+                                              check_system = check_system,
                                 get_system = true, use_intercept = true,
                                 verbose = verbose)
 

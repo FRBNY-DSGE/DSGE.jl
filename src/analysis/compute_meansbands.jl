@@ -118,7 +118,6 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                 mb_vec[i] = compute_meansbands(m, input_type, cond_type, output_var,
                                                variable_names[i], df; pop_growth = pop_growth,
                                                forecast_string = forecast_string,
-                                               do_cond_obs_shocks = do_cond_obs_shocks,
                                                kwargs...)
             end
         else
@@ -209,8 +208,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
     data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
+                                              y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
 
     # Compute means and bands
@@ -608,7 +606,7 @@ function compute_meansbands(models::Vector,
     return mb
 end
 
-function compute_meansbands(models::Vector,
+function compute_meansbands(models::Vector{AbstractDSGEModel},
                             input_types::Vector{Symbol},
                             cond_types::Vector{Symbol},
                             output_var::Symbol, var_name::Symbol, df::DataFrame;
@@ -643,15 +641,12 @@ function compute_meansbands(models::Vector,
     data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series1 = mb_reverse_transform(fcast_series1, transform1, product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
+                                              y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
     transformed_series2 = mb_reverse_transform(fcast_series2, transform2, product, class,
-                                              y0_index = y0_index, yt_index = yt_index,
-                                              data = data,
+                                              y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
-    @show size(transformed_series1)
-    @show size(transformed_series2)
+
     if size(transformed_series1, 1) < size(transformed_series2, 1)
         mult = Int(size(transformed_series2, 1) / size(transformed_series1, 1))
         transformed_series1 = repeat(transformed_series1, mult, 1)
@@ -659,8 +654,6 @@ function compute_meansbands(models::Vector,
         mult = Int(size(transformed_series1, 1) / size(transformed_series2, 1))
         transformed_series2 = repeat(transformed_series2, mult, 1)
     end
-    @show size(transformed_series1)
-    @show size(transformed_series2)
 
     transformed_series = 0.1*transformed_series1 + 0.9*transformed_series2
 
@@ -674,7 +667,7 @@ function compute_meansbands(models::Vector,
     return means, bands
 end
 
-function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
+#=function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
                             input_type1::Symbol, input_type2::Symbol,
                             cond_type1::Symbol, cond_type2::Symbol,
                             output_vars::Vector{Symbol};
@@ -862,23 +855,7 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
 
     # Reverse transform
     y0_index = get_y0_index(m1, product)
-    yt_index = get_yt_index(m1, product)
     data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
-    # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
-
-   #= @show size(fcast_series1)
-    @show size(fcast_series2)
-    if size(fcast_series1, 1) < size(fcast_series2, 1)
-        mult = Int(size(fcast_series2, 1) / size(fcast_series1, 1))
-        fcast_series1 = repeat(fcast_series1, mult, 1)
-    else
-        mult = Int(size(fcast_series1, 1) / size(fcast_series2, 1))
-        fcast_series2 = repeat(fcast_series2, mult, 1)
-    end
-    @show size(fcast_series1)
-    @show size(fcast_series2)
-
-    fcast_series = 0.25*fcast_series1 + 0.75*fcast_series2=#
 
     fcast_series = Matrix{Float64}(undef, 0, size(fcast_seriess[1], 2))
     if all(map(x->size(x, 1) > 1, fcast_seriess))
@@ -906,11 +883,10 @@ function compute_meansbands(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     end
     return means, bands
 end
-
+=#
 function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                               product::Symbol, class::Symbol;
-                              y0_index::Int = -1, yt_index::Int = -1,
-                              data::AbstractVector{Float64} = Float64[],
+                              y0_index::Int = -1, data::AbstractVector{Float64} = Float64[],
                               pop_growth::AbstractVector{Float64} = Float64[])
                               # inflation_series::AbstractArray = Float64[])
     # No transformation
