@@ -202,6 +202,18 @@ function inds_obs_no_ant(m::AbstractDSGEModel)
     end
 end
 
+# From an augmented state space with integrated series (e.g. unit root),
+# get indices corresponding to stationary states
+function inds_states_no_integ_series(m::AbstractDSGEModel)
+    if haskey(m.settings, :integrated_series)
+        inds = map(i -> m.endogenous_states_augmented[i],
+                   get_setting(m, :integrated_series))
+        return setdiff(1:n_states_augmented(m), inds)
+    else
+        return collect(1:n_states_augmented(m))
+    end
+end
+
 # Interface for accessing parameters
 get_parameters(m::AbstractDSGEModel) = m.parameters
 

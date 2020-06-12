@@ -85,6 +85,8 @@ end
     @test typeof(load_draws(m, :mode, verbose = :none,
                             use_highest_posterior_value = false)) == Vector{Float64}
     m <= Setting(:fix, "true", true, "fix", "") # Add tail to estimation file name
-    @test typeof(load_draws(m, :mode, verbose = :none, # to test we default to the cloud again.
+    @test_throws SystemError typeof(load_draws(m, :mode, verbose = :none, # Check no such smc_cloud file
                             use_highest_posterior_value = false)) == Vector{Float64}
+    @test_throws SystemError typeof(load_draws(m, :mode, verbose = :none, # Check there is such a smc_paramsmode file
+                            use_highest_posterior_value = true)) == Vector{Float64}
 end
