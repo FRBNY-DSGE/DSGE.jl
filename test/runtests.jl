@@ -1,4 +1,5 @@
-using ModelConstructors, Nullables, SMC, Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, SparseArrays
+using ModelConstructors, Nullables, SMC, Test, Distributed, Distributions
+using Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, SparseArrays
 using StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT, Plots
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC

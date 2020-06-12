@@ -90,6 +90,7 @@ julia = "1.0, 1.1"
 
 [extras]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -99,4 +100,4 @@ SMC = "c6043b28-c053-11e9-348c-19d3cb73bbb3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["CSV", "InteractiveUtils", "LinearAlgebra", "ModelConstructors", "SMC", "Test", "Plots"]
+test = ["CSV", "Distributions", "InteractiveUtils", "LinearAlgebra", "ModelConstructors", "SMC", "Test", "Plots"]
