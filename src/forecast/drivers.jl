@@ -309,7 +309,7 @@ end
 """
 ```
 forecast_one(m, input_type, cond_type, output_vars; df = DataFrame(),
-    subset_inds = 1:0, forecast_string = "", verbose = :low)
+    subset_inds = 1:0, forecast_string = "", verbose = :low, ...)
 ```
 
 Compute and save `output_vars` for input draws given by `input_type` and
@@ -356,6 +356,13 @@ conditional data case given by `cond_type`.
   `forecast_string` is empty, an error is thrown.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`.
+- `check_empty_columns::Bool = true`: check empty columns or not when loading data (if `df` is empty)
+- `pegFFR::Bool = false`: peg the nominal FFR at the value specified by `FFRpeg`
+- `FFRpeg::Float64 = -0.25/4`: value of the FFR peg
+- `H::Int = 4`: number of horizons for which the FFR is pegged
+- `bdd_fcast::Bool = true`: are we computing the bounded forecasts or not?
+- `params::AbstractArray{Float64} = Vector{Float64}(undef, 0)`: parameter draws for the forecast.
+     If empty, then we load draws from estimation files implied by the settings in `m`.
 
 ### Outputs
 
@@ -365,17 +372,14 @@ None. Output is saved to files returned by
 function forecast_one(m::AbstractDSGEModel{Float64},
                       input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                       df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-                      forecast_string::String = "", verbose::Symbol = :low,
+                      forecast_string::String = "",
                       use_filtered_shocks_in_shockdec::Bool = false,
-                      shock_name::Symbol = :none,
-                      shock_var_name::Symbol = :none,
+                      shock_name::Symbol = :none, shock_var_name::Symbol = :none,
                       shock_var_value::Float64 = 0.0,
-                      check_empty_columns = true,
-                      pegFFR::Bool = false,
-                      FFRpeg::Float64 = -0.25/4,
-                      H::Int = 4, bdd_fcast::Bool = true,
-                      params::AbstractArray{Float64} = Vector{Float64}(undef, 0))
-                      bdd_fcast::Bool = true, params::AbstractArray{Float64} = Vector{Float64}(undef, 0))
+                      check_empty_columns = true, pegFFR::Bool = false,
+                      FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
+                      params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
+                      verbose::Symbol = :low)
 
     ### Common Setup
 
@@ -584,18 +588,12 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, cond_type::Symbol,
                            output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low,
                            use_filtered_shocks_in_shockdec::Bool = false,
-                           shock_name::Symbol = :none,
-                           shock_var_name::Symbol = :none,
+                           shock_name::Symbol = :none, shock_var_name::Symbol = :none,
                            shock_var_value::Float64 = 0.0,
-                           pegFFR::Bool = false,
-                           FFRpeg::Float64 = -0.25/4,
-                           H::Int = 4)
-                           param_key::Symbol = :nothing,
-                           param_value::Float64 = 0.0,
-                           param_key2::Symbol = :nothing,
-                           param_value2::Float64 = 0.0,
-                           regime_switching::Bool = false,
-                           n_regimes::Int = 1)
+                           pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
+                           param_key::Symbol = :nothing, param_value::Float64 = 0.0,
+                           param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
+                           regime_switching::Bool = false, n_regimes::Int = 1)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
