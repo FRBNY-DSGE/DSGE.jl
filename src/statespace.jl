@@ -402,13 +402,13 @@ function Base.copy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
 end=#
 
 """
-```
-compute_system(m; apply_altpolicy = false)
-```
+    ```
+    compute_system(m; apply_altpolicy = false)
+    ```
 
-Given the current model parameters, compute the state-space system
-corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
-"""
+    Given the current model parameters, compute the state-space system
+    corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
+    """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         verbose::Symbol = :high) where {T <: Real}
 
@@ -438,12 +438,12 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
             measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
-           #= if hasmethod(measurement, type_tuple)
-                measurement_equations = measurement(m, TTTs, RRRs, CCCs)
+            #= if hasmethod(measurement, type_tuple)
+            measurement_equations = measurement(m, TTTs, RRRs, CCCs)
             else=#
             for reg in 1:n_regimes
                 measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                          reg = reg)
+                                                         reg = reg)
             end
 
             if hasmethod(pseudo_measurement, type_tuple)
@@ -463,6 +463,14 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
         TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
         CCC = zeros(n_model_states(m))
+
+        # Solve measurement equation
+        measurement_equation = measurement(m, TTT, RRR, CCC)
+    else
+        if solution_method == :gensys
+
+            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+            transition_equation = Transition(TTT, RRR, CCC)
 
             # Solve measurement equation
             measurement_equation = measurement(m, TTT, RRR, CCC)
@@ -486,8 +494,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
                 # Measurement (needs the additional TTT_jump argument)
                 measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-            elseif m.spec == "het_dsge"
-                TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC)
+            elseif m.spec == "het_dsge" || m.spec == "rep_dsge"
+                TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
                 measurement_equation = measurement(m, TTT, RRR, CCC)
             else
                 TTT, RRR, CCC        = augment_states(m, TTT, RRR, CCC)
@@ -495,9 +503,9 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             end
 
             transition_equation = Transition(TTT, RRR, CCC)
+
         else
-            TTT, RRR, CCC        = augment_states(m, TTT, RRR, CCC)
-            measurement_equation = measurement(m, TTT, RRR, CCC)
+            throw("solution_method provided does not exist.")
         end
     end
 
