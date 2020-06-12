@@ -516,4 +516,9 @@ module DSGE
     # include("dsgevar/dsgevar_likelihood.jl")
     # include("dsgevar/impulse_responses.jl")
     # include("dsgevar/util.jl")
+
+    if (VERSION >= v"1.0") && (VERSION <= v"1.1")
+        println("Got here")
+        isnothing(x::Any) = x === nothing ? true : false
+    end
 end
