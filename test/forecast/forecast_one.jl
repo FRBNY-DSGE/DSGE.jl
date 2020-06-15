@@ -561,9 +561,9 @@ end
                 for cond_type in [:none, :semi, :full]
                     for fcast_type in [:full, :subset, :init_draw_shocks, :mode_draw_shocks] # TODO: ADD PRIOR
                         # Histories
-                        @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:histpseudo]          out_rs1[cond_type][fcast_type][:histpseudo]
-                        @test @test_matrix_approx_eq exp_out[cond_type][fcast_type][:histpseudo]          out_rs2[cond_type][fcast_type][:histpseudo]
-                        @test @test_matrix_approx_eq exp_out_true[cond_type][fcast_type][:histpseudo]     out_rs3[cond_type][fcast_type][:histpseudo]
+                        @test maximum(abs.(exp_out[cond_type][fcast_type][:histpseudo] - out_rs1[cond_type][fcast_type][:histpseudo])) < 1e-5
+                        @test maximum(abs.(exp_out[cond_type][fcast_type][:histpseudo] - out_rs2[cond_type][fcast_type][:histpseudo])) < 1e-5
+                        @test maximum(abs.(exp_out_true[cond_type][fcast_type][:histpseudo] - out_rs3[cond_type][fcast_type][:histpseudo])) < 1e-5
                         @test !(exp_out[cond_type][fcast_type][:histpseudo] ≈                             out_rs3[cond_type][fcast_type][:histpseudo])
 
                         # Forecasts
