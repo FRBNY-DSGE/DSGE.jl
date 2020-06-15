@@ -42,7 +42,7 @@ ModelConstructors.set_regime_val!(m[:σ_b], 2, 0.0292)
 ModelConstructors.set_regime_val!(m[:α], 1, 0.1596)
 ModelConstructors.set_regime_val!(m[:α], 2, 0.0292)
 
-draw = vec(rand(m.parameters, 1, aug = true))
+draw = vec(rand(m.parameters, 1, regime_switching = true))
 ModelConstructors.update(m.parameters, draw)
 σ_g_ind = findfirst(x->x.key==:σ_g, m.parameters)
 σ_b_ind = findfirst(x->x.key==:σ_b, m.parameters)
@@ -67,7 +67,7 @@ ModelConstructors.set_regime_val!(m[:σ_g], 1, 2.523)
 ModelConstructors.set_regime_val!(m[:σ_g], 2, 0.; override_bounds = true)
 ModelConstructors.set_regime_val!(m[:σ_g], 3, 2.523)
 
-draw = vec(rand(m.parameters, 1, aug = true))
+draw = vec(rand(m.parameters, 1, regime_switching = true))
 ModelConstructors.update(m.parameters, draw)
 
 @testset "Test regime switching with two regimes" begin
