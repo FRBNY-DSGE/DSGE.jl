@@ -198,7 +198,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
              regime_switching::Bool = false)
 
     data_mat = df_to_matrix(m, data)
-    return smc2(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
+    return smc2(m, data_mat, verbose = verbose,
                 old_data = old_data, old_cloud = old_cloud,
                 filestring_addl = filestring_addl, run_test = run_test,
                 save_intermediate = save_intermediate,
@@ -222,7 +222,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
              regime_switching::Bool = false)
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
-    return smc2(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
+    return smc2(m, data_mat, verbose = verbose,
                 old_data = old_data, old_cloud = old_cloud,
                 filestring_addl = filestring_addl, run_test = run_test,
                 save_intermediate = save_intermediate,
