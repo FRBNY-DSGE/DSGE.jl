@@ -205,50 +205,18 @@ function init_model_indices!(m::Model1002)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
     end
 
-    if subspec(m) == "ss52"
-        push!(endogenous_states, :ϵ_λ_w_t)
-        push!(equilibrium_conditions, :eq_ϵ_λ_w)
-    end
-    if subspec(m) == "ss57"
-        push!(endogenous_states, :ϵ_ztil_t)
-        push!(equilibrium_conditions, :eq_ϵ_ztil)
-    end
     if subspec(m) == "ss60"
         push!(endogenous_states, :ziid_t)
         push!(equilibrium_conditions, :eq_ziid)
         push!(exogenous_shocks, :ziid_sh)
-        push!(endogenous_states, :biid_t)
-        push!(equilibrium_conditions, :eq_biid)
-        push!(exogenous_shocks, :biid_sh)
         push!(endogenous_states, :biidc_t)
         push!(equilibrium_conditions, :eq_biidc)
         push!(exogenous_shocks, :biidc_sh)
-        push!(endogenous_states, :btil_t)
-        push!(equilibrium_conditions, :eq_btil)
-        push!(exogenous_shocks, :btil_sh)
-        push!(endogenous_states, :σ_ωiid_t)
-        push!(equilibrium_conditions, :eq_σ_ωiid)
-        push!(exogenous_shocks, :σ_ωiid_sh)
-        push!(endogenous_states, :σ_ωtil_t)
-        push!(equilibrium_conditions, :eq_σ_ωtil)
-        push!(exogenous_shocks, :σ_ωtil_sh)
-        push!(endogenous_states, :λ_wiid_t)
-        push!(equilibrium_conditions, :eq_λ_wiid)
-        push!(exogenous_shocks, :λ_wiid_sh)
-        push!(endogenous_states, :λ_wtil_t)
-        push!(endogenous_states, :λ_wtil_t1)
-        push!(equilibrium_conditions, :eq_λ_wtil)
-        push!(equilibrium_conditions, :eq_λ_wtil1)
-        push!(exogenous_shocks, :λ_wtil_sh)
         push!(endogenous_states, :φ_t)
         push!(endogenous_states, :Eφ_t)
         push!(equilibrium_conditions, :eq_φ)
         push!(equilibrium_conditions, :eq_Eφ)
         push!(exogenous_shocks, :φ_sh)
-
-        # Remove eq_λ_w1 and λ_w_t1
-        filter!(x -> x != :eq_λ_w1, equilibrium_conditions)
-        filter!(x -> x != :λ_w_t1, endogenous_states)
     end
 
 
@@ -600,33 +568,12 @@ function init_parameters!(m::Model1002)
                        RootInverseGamma(2. * (5.)^2 ./ 5., sqrt((5.)^2 + 5.)), fixed=false,
                        description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
                        tex_label="\\sigma_{z, iid}")
-        m <= parameter(:ρ_biid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                       description="ρ_biid: AR(1) coefficient in the iid component of the preference process.",
-                       tex_label="\\rho_{z, iid}")
-        m <= parameter(:σ_biid, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_biid: The standard deviation of the process describing the iid component of preferences.",
-                       tex_label="\\sigma_{z, iid}")
         m <= parameter(:ρ_biidc, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_biidc: AR(1) coefficient in the iid component of the preference process.",
                        tex_label="\\rho_{z, iid}")
         m <= parameter(:σ_biidc, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2. * (4.)^2 ./ 4., sqrt((4.)^2  + 4.)), fixed=false, # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2), with mode M given by ν (τ² - M²) = 2 * M²
                        description="σ_biidc: The standard deviation of the process describing the iid component of preferences.",
-                       tex_label="\\sigma_{z, iid}")
-        m <= parameter(:ρ_σ_ωiid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                       description="ρ_σ_ωiid: AR(1) coefficient in the iid component of σ_ω.",
-                       tex_label="\\rho_{z, iid}")
-        m <= parameter(:σ_σ_ωiid, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_σ_ωiid: The standard deviation of the process describing the iid component of FF shock.",
-                       tex_label="\\sigma_{z, iid}")
-        m <= parameter(:ρ_λ_wiid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                       description="ρ_σ_ωiid: AR(1) coefficient in the iid component of σ_ω.",
-                       tex_label="\\rho_{z, iid}")
-        m <= parameter(:σ_λ_wiid, 0., (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2, 0.10), fixed=false,
-                       description="σ_σ_ωiid: The standard deviation of the process describing the iid component of FF shock.",
                        tex_label="\\sigma_{z, iid}")
         m <= parameter(:ρ_φ, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_φ: AR(1) coefficient in the labor supply preference process.",

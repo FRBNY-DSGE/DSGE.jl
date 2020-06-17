@@ -145,10 +145,7 @@ function measurement(m::Model1002{T},
 
     if subspec(m) in ["ss60"]
         QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
-        QQ[exo[:biid_sh], exo[:biid_sh]] = m[:σ_biid]^2
         QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
-        QQ[exo[:σ_ωiid_sh], exo[:σ_ωiid_sh]] = m[:σ_σ_ωiid]^2
-        QQ[exo[:λ_wiid_sh], exo[:λ_wiid_sh]] = m[:σ_λ_wiid]^2
         QQ[exo[:φ_sh], exo[:φ_sh]] = m[:σ_φ]^2
     end
 
@@ -171,19 +168,7 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
 
-    # if subspec(m) in ["ss60"]
-    #     ZZ[obs[:obs_ziid], endo[:ziid_t]] = 1.
-    #     ZZ[obs[:obs_biid], endo[:biid_t]] = 1.
-    #     ZZ[obs[:obs_biidc], endo[:biidc_t]] = 1.
-    #     ZZ[obs[:obs_sigma_omegaiid], endo[:σ_ωiid_t]] = 1.
-    #     ZZ[obs[:obs_sigma_omega], endo[:σ_ω_t]] = 1.
-    #     ZZ[obs[:obs_b], endo[:b_t]] = 1.
-    #     ZZ[obs[:obs_lambda_wiid], endo[:λ_wiid_t]] = 1.
-    #     ZZ[obs[:obs_lambda_w], endo[:λ_w_t]] = 1.
-    #     ZZ[obs[:obs_φ], endo[:φ_t]] = 1.
-    # end
-
-   # These lines set the standard deviations for the anticipated shocks
+    # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_mon_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
@@ -194,7 +179,7 @@ function measurement(m::Model1002{T},
         end
     end
 
-#= # We may not want anticipated shocks to be part of the measurement equation
+#= # We do not want anticipated shocks to automatically be part of the measurement equation
     for (k, v) in get_setting(m, :antshocks)
         if k == :z # z is a sum of a transient and persistent component, so we model this differently
             for i = 1:v

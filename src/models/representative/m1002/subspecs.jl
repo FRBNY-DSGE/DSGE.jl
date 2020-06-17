@@ -717,10 +717,16 @@ end
 ss60!(m::Model1002)
 ```
 
-Second regime where b, σ_ω, mp, and anticipated shocks are active. Adds ztil, z_t, zp_t, and b as observables.
-Adds an iid ziid shock.
+Adds iid shocks to technology (ziid), households' Euler equation (biidc), and labor supply (φ)
+to capture the COVID-19 pandemic. See the official documentation about the COVID-19 shocks on the GitHub page.
 """
 function ss60!(m::Model1002)
+    # Set up regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+
+    # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
@@ -788,13 +794,62 @@ function ss60!(m::Model1002)
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_mon_anticipated_shocks(m)
-        m <= parameter(Symbol("σ_r_m$(i)"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+        m <= parameter(Symbol("σ_r_m$(i)"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(),
+                       RootInverseGamma(4, .2), fixed=false,
                        description="σ_r_m$(i): Standard deviation of the $i-period-ahead anticipated policy shock.",
                        tex_label=@sprintf("\\sigma_{ant%d}",i))
     end
     for i = n_mon_anticipated_shocks(m) + 1:n_mon_anticipated_shocks_padding(m)
-        m <= parameter(Symbol("σ_r_m$(i)"), 0., (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+        m <= parameter(Symbol("σ_r_m$(i)"), 0., (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(),
+                       RootInverseGamma(4, .2), fixed=false,
                        description="σ_r_m$(i): Standard deviation of the $i-period-ahead anticipated policy shock.",
                        tex_label=@sprintf("\\sigma_{ant%d}",i))
     end
+
+    # Define regimes for standard shocks
+    for i in 1:4
+        ModelConstructors.set_regime_val!(m[:σ_g], i, m[:σ_g].value)
+        ModelConstructors.set_regime_val!(m[:σ_b], i, m[:σ_b].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ], i, m[:σ_μ].value)
+        ModelConstructors.set_regime_val!(m[:σ_ztil], i, m[:σ_ztil].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_f], i, m[:σ_λ_f].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_w], i, m[:σ_λ_w].value)
+        ModelConstructors.set_regime_val!(m[:σ_r_m], i, m[:σ_r_m].value)
+        ModelConstructors.set_regime_val!(m[:σ_σ_ω], i, m[:σ_σ_ω].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ_e], i, m[:σ_μ_e].value)
+        ModelConstructors.set_regime_val!(m[:σ_γ], i, m[:σ_γ].value)
+        ModelConstructors.set_regime_val!(m[:σ_π_star], i, m[:σ_π_star].value)
+        ModelConstructors.set_regime_val!(m[:σ_lr], i, m[:σ_lr].value)
+        ModelConstructors.set_regime_val!(m[:σ_z_p], i, m[:σ_z_p].value)
+        ModelConstructors.set_regime_val!(m[:σ_tfp], i, m[:σ_tfp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, m[:σ_gdpdef].value)
+        ModelConstructors.set_regime_val!(m[:σ_corepce], i, m[:σ_corepce].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdp], i, m[:σ_gdp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdi], i, m[:σ_gdi].value)
+
+        for j = 1:DSGE.n_mon_anticipated_shocks(m)
+            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m[Symbol("σ_r_m$(j)")])
+        end
+    end
+
+    ModelConstructors.set_regime_val!(m[:σ_r_m], 2, 10. * m[:σ_r_m].value) # By default, we set these to 10 times their
+    ModelConstructors.set_regime_val!(m[:σ_r_m], 3, 10. * m[:σ_r_m].value) # value in the pre-COVID and post-COVID regimes
+
+    # Set up the COVID-19 shocks. We do not add anticipation by default
+    ModelConstructors.set_regime_val!(m[:σ_φ], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ], 2, 400.) # initial value from literature, blown up by 100
+    ModelConstructors.set_regime_val!(m[:σ_φ], 3, 400.)
+    ModelConstructors.set_regime_val!(m[:σ_φ], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 2, 4.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 3, 4.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 2, 5.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 3, 5.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 4, 0.)
 end
