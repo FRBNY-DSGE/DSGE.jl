@@ -44,7 +44,20 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 
 - `saveroot::String`: The root directory for model output.
 - `use_parallel_workers::Bool`: Use available parallel workers in computations.
-- `n_anticipated_shocks`: Number of anticipated policy shocks.
+- `n_mon_anticipated_shocks::Int`: Number of anticipated policy shocks.
+- `antshocks::Dict{Symbol, Int}`: a dictionary mapping the name of an anticipated shock
+  to the number of periods of anticipation, e.g. `:b => 2` adds anticipated `b` shocks up to
+  two periods ahead.
+- `ant_eq_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's exogenous process, e.g. `:b => :b`
+  maps an anticipated `b` shock to the equation `eq_b`.
+- `ant_eq_E_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's one-period ahead expectation
+  e.g. `:b => :Eb`  maps an anticipated `b` shock to the equation `eq_Eb`, where `Eb` is ``E_t[b_{t + 1}]``.
+- `proportional_antshocks::Vector{Symbol}`: a vector of the names of one-period ahead anticipated shocks which are specified
+  as directly proportional to the realizations of the current period's unanticipated shocks. For a shock `b`,
+  the automatically generated parameter `σ_b_prop` defines the proportionality to the current period shock, e.g.
+  a value of 1 indicates an anticipated shock in the next period of the same size as the current period's unanticipated shock.
 
 #### Data and I/O
 
@@ -140,6 +153,9 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
   [Forecasting](@ref).
 - `forecast_horizons::Int`: Number of periods to forecast.
 - `impulse_response_horizons::Int`: Number of periods for which to calculate IRFs.
+- `n_periods_no_shocks::Int`: Number of periods for which no shocks are drawn (e.g.
+  a full-distribution forecast draws shocks, but if `n_periods_no_shocks = 3`, then for
+  3 periods in the forecast horizon, no shocks will be drawn)
 
 #### Alternative Policy
 
@@ -283,6 +299,35 @@ This approach also economizes on unnecessary switching,
 For instance, during the calculation of shock decompositions and trends, it is unnecessary
 to distinguish between the pre- and post-ZLB regimes.
 
+## Automatically Generating Anticipated Shocks
+
+We have implemented some functionality for automatically adding anticipated shocks
+for `Model1002`. To add these shocks, the user must pass custom settings
+into the constructor using the `custom_settings` keyword. The available settings
+for defining these shocks are:
+
+- `antshocks::Dict{Symbol, Int}`: a dictionary mapping the name of an anticipated shock
+  to the number of periods of anticipation, e.g. `:b => 2` adds anticipated `b` shocks up to
+  two periods ahead.
+- `ant_eq_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's exogenous process, e.g. `:b => :b`
+  maps an anticipated `b` shock to the equation `eq_b`.
+- `ant_eq_E_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's one-period ahead expectation
+  e.g. `:b => :Eb`  maps an anticipated `b` shock to the equation `eq_Eb`, where `Eb` is ``E_t[b_{t + 1}]``.
+- `proportional_antshocks::Vector{Symbol}`: a vector of the names of one-period ahead anticipated shocks which are specified
+  as directly proportional to the realizations of the current period's unanticipated shocks. For a shock `b`,
+  the automatically generated parameter `σ_b_prop` defines the proportionality to the current period shock, e.g.
+  a value of 1 indicates an anticipated shock in the next period of the same size as the current period's unanticipated shock.
+
+As an example, the following code
+creates an instance of `Model1002` with anticipation of `b` shocks up to two periods ahead.
+
+```
+custom_settings = Dict{Symbol, Setting}(:antshocks => Setting(:antshocks, Dict{Symbol, Int}(:b => 2)),
+                :ant_eq_mapping => Setting(:ant_eq_mapping, Dict{Symbol, Symbol}(:b => :b)))
+m = Model1002("ss10"; custom_settings = custom_settings)
+```
 
 ## [Editing or Extending a Model](@id editing-extending-model)
 
