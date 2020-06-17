@@ -194,6 +194,7 @@ function measurement(m::Model1002{T},
         end
     end
 
+#= # We may not want anticipated shocks to be part of the measurement equation
     for (k, v) in get_setting(m, :antshocks)
         if k == :z # z is a sum of a transient and persistent component, so we model this differently
             for i = 1:v
@@ -215,7 +216,7 @@ function measurement(m::Model1002{T},
             end
         end
     end
-
+=#
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0)

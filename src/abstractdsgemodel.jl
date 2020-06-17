@@ -412,7 +412,7 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function update!(m::AbstractDSGEModel, values::Vector{T}) where T<:AbstractFloat
+function update!(m::AbstractDSGEModel, values::Vector{T}) where {T <: Real}
     ModelConstructors.update!(m.parameters, values)
     steadystate!(m)
 end
@@ -428,25 +428,32 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `values`: the new values to assign to non-steady-state parameters.
 
 ### Keywords
-- `regiem_switching`:: true if `values` is augmented with regime-switching parameters. Then
+- `regime_switching`:: true if `values` is augmented with regime-switching parameters. Then
     `update!` assumes the `value` field of each parameter in values` holds
     the parameter value in the first regime, and then we update the field
     `regimes` for each parameter
 """
 function update!(m::AbstractDSGEModel, values::ParameterVector{T};
-                 regime_switching::Bool = false)
+                 regime_switching::Bool = false) where {T <: Real}
+
     ModelConstructors.update!(m.parameters, [θ.value for θ in values]) # Update first-regime values
-    for para in m.parameters
-        if !isempty(para.regimes)
-            for (ind, val) in para.regimes[:value]
-                if ind == 1
-                    ModelConstructors.set_regime_val!(para, 1, para.value)
-                else
-                    ModelConstructors.set_regime_val!(para, ind, values[findfirst(x->x.key==para.key, values)].regimes[:value][ind])
+
+    # Update regime-switching
+    if regime_switching
+        for para in m.parameters
+            if !isempty(para.regimes)
+                for (ind, val) in para.regimes[:value]
+                    if ind == 1
+                        ModelConstructors.set_regime_val!(para, 1, para.value)
+                    else
+                        ModelConstructors.set_regime_val!(para, ind,
+                                                          values[findfirst(x->x.key==para.key, values)].regimes[:value][ind])
+                    end
                 end
             end
         end
     end
+
     steadystate!(m)
 end
 
@@ -484,7 +491,7 @@ SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't 
 Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 
 
-function setup_regime_switching_inds(m::AbstractDSGEModel)
+function setup_regime_switching_inds!(m::AbstractDSGEModel)
     n_hist_regimes = 0
     n_fcast_regimes = 0
     n_conditional_inc = 0
