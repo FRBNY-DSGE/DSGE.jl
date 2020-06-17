@@ -492,13 +492,22 @@ Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 
 
 function setup_regime_switching_inds!(m::AbstractDSGEModel)
+
     n_hist_regimes = 0
     n_fcast_regimes = 0
-    n_conditional_inc = 0
+    n_cond_regimes = 0
     n_regimes = length(keys(get_setting(m, :regime_dates)))
+    post_cond_end = iterate_quarters(date_conditional_end(m), 1) # Period after conditional forecasting ends
+    set_reg_forecast_start   = false # These flags are needed to tell whether or not we actually set these regimes.
+    set_post_conditional_end = false # W/out these flags, if m already has reg_forecast_start, then it won't be properly set
     for (key, val) in get_setting(m, :regime_dates)
         if val == date_forecast_start(m)
             m <= Setting(:reg_forecast_start, key)
+            set_reg_forecast_start = true
+        end
+        if val == post_cond_end
+            m <= Setting(:reg_post_conditional_end, key)
+            set_post_conditional_end = true
         end
         if val < date_forecast_start(m)
             n_hist_regimes += 1
@@ -506,21 +515,27 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel)
             n_fcast_regimes += 1
         end
         if date_forecast_start(m) <= val <= date_conditional_end(m)
-            n_conditional_inc += 1
+            n_cond_regimes += 1
         end
     end
-    if !haskey(m.settings, :reg_forecast_start)
-        m <= Setting(:reg_forecast_start, n_regimes)
+    if !set_reg_forecast_start
+        # Then the forecast begins in the middle of a regime
+        m <= Setting(:reg_forecast_start, findlast(collect(values(get_setting(m, :regime_dates))) .< date_forecast_start(m)))
     end
-    # If no dates during forecast periodn, need at least one fcast regime to do the forecast
+    if !set_post_conditional_end
+        # Then the conditional forecast ends in the middle of a regime
+        m <= Setting(:reg_post_conditional_end,
+                     findlast(collect(values(get_setting(m, :regime_dates))) .<= date_conditional_end(m))) # or .< post_cond_end
+    end
+    # If no dates during forecast period, need at least one fcast regime to do the forecast
     if n_fcast_regimes == 0
         n_fcast_regimes = 1
     end
     m <= Setting(:n_regimes, n_regimes)
     m <= Setting(:n_hist_regimes, n_hist_regimes)
     m <= Setting(:n_fcast_regimes, n_fcast_regimes)
-    m <= Setting(:n_conditional_inc, n_conditional_inc)
+    m <= Setting(:n_cond_regimes, n_cond_regimes)
     # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
-    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m, :n_hist_regimes)+1))
+    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m, :n_hist_regimes) + 1))
     return m
 end

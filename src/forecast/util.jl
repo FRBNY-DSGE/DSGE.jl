@@ -121,7 +121,7 @@ end
 
 """
 ```
-add_requisite_output_vars(output_vars::Vector{Symbol})
+add_requisite_output_vars(output_vars::Vector{Symbol}; bdd_fcast = true)
 ```
 
 Based on the given `output_vars`, this function determines which
@@ -142,12 +142,15 @@ order to compute a shock decomposition for a state variable, but need
 not be saved to produce plots later on. Therefore, `histstates` is not
 added to `output_vars` when calling
 `add_requisite_output_vars([shockdecstates])`.
+
+The option `bdd_fcast` can allow us to avoid adding `bdd` forecast output vars
+if these are not wanted by the user.
 """
-function add_requisite_output_vars(output_vars::Vector{Symbol})
+function add_requisite_output_vars(output_vars::Vector{Symbol}; bdd_fcast::Bool = true)
     # Add :bddforecast<class> if :forecast<class> is in output_vars
     forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q, :forecastlvl],
                                    output_vars)
-    if !isempty(forecast_outputs)
+    if !isempty(forecast_outputs) && bdd_fcast
         bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
     end

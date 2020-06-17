@@ -200,8 +200,9 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
         end
     elseif input_type == :prior
         params = rand(m.parameters, n_forecast_draws(m, :prior))
-    # Return initial parameters of model object
+
     elseif input_type == :init || input_type == :init_draw_shocks
+        # Return initial parameters of model object
 
 #=        if m.spec == "het_dsge"
             init_parameters!(m, testing_gamma = false)
@@ -463,6 +464,14 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                 end
             end
         end
+
+        if !isempty(params) && isa(params, AbstractMatrix)
+            m <= Setting(:regime_switching_ndraws, size(params, 1))
+        elseif input_type == :mode_draw_shocks && !haskey(get_settings(m), :regime_switching_ndraws)
+            error("If using :mode_draw_shocks, then the user must manually add the Setting :regime_switching_ndraws " *
+                  "to indicate the number of times shocks will be drawn.")
+        end
+
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
@@ -497,7 +506,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  shock_var_name = shock_var_name,
                                                                  shock_var_value = shock_var_value,
                                                                  regime_switching = regime_switching,
-                                                                 n_regimes = n_regimes),
+                                                                 n_regimes = n_regimes, pegFFR = pegFFR,
+                                                                 FFRpeg = FFRpeg, H = H),
                                       params_for_map)
 
             # Assemble outputs from this block and write to file
@@ -665,7 +675,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     regime_inds[1] = 1:regime_inds[1][end]
                 end
                 forecast_output[:histstdshocks] =
-                    standardize_shocks(forecast_output[:histshocks], Matrix{eltype(system[1, :QQ])}[system[i, :QQ] for i in 1:n_regimes], regime_inds)
+                    standardize_shocks(forecast_output[:histshocks],
+                                       Matrix{eltype(system[1, :QQ])}[system[i, :QQ] for i in 1:n_regimes], regime_inds)
             else
                 forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
             end
@@ -743,8 +754,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 monshocks = MH\bb
                 etpeg = zeros(nshocks, forecast_horizons(m))
                 etpeg[vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")]), 1] = monshocks
-                forecaststates, forecastobs, forecastpseudo, forecastshocks = forecast(system, s_T, etpeg)
-                @show forecastobs[m.observables[:obs_nominalrate], :]
+                forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                    forecast(system, s_T, etpeg; cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
+                println("The forecasted interest rate path is $(forecastobs[m.observables[:obs_nominalrate], :])")
             else
                 fcast_sys = system #regime_switching ? system[n_regimes] : system # system to be used for forecast
 
@@ -752,7 +764,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     forecast(m, fcast_sys, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
                 if haskey(m.endogenous_states, :pgap_t)
-                    @show forecaststates[68, :]
+                    println("The forecasted pgap is $(forecaststates[m.endogenous_states[:pgap_t], :])")
                 end
             end
 

@@ -60,7 +60,6 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     nshocks = n_shocks_exogenous(m)
     horizon = forecast_horizons(m; cond_type = cond_type)
 
-
     if isempty(shocks)
         # Populate shocks matrix
         if draw_shocks
@@ -69,11 +68,12 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
                 shocks = zeros(nshocks, horizon)
                 μ = zeros(nshocks)
                 # Forecast regime indices (starting with 1 in 1st fcast period, going up to horizon)
-                regime_inds = get_fcast_regime_inds(m, horizon)
+                regime_inds = get_fcast_regime_inds(m, horizon, cond_type)
                 # The regime in which forecast starts (indexing from presample_start as reg=1)
-                sys_ind = get_setting(m, :reg_forecast_start)
+                sys_ind = cond_type == :none ? get_setting(m, :reg_forecast_start) :
+                    max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
                 for ts in regime_inds
-                    σ = sqrt.(system[sys_ind][:QQ])
+                    σ = sqrt.(system[sys_ind, :QQ])
                     dist = if forecast_tdist_shocks(m)
                         # Use t-distributed shocks
                         ν = forecast_tdist_df_val(m)
@@ -83,7 +83,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
                         DegenerateMvNormal(μ, σ)
                     end
                     shocks[:, ts] = rand(dist, length(ts))
-                    sys_ind  = sys_ind + 1
+                    sys_ind += 1
                 end
             else
                 μ = zeros(S, nshocks)
@@ -98,6 +98,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
                 end
                 shocks = rand(dist, horizon)
             end
+
             # Forecast without anticipated shocks
             if n_mon_anticipated_shocks(m) > 0
                 ind_ant1 = m.exogenous_shocks[:rm_shl1]
@@ -147,7 +148,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     zlb_value = forecast_zlb_value(m)
 
     if isa(system, RegimeSwitchingSystem)
-        forecast(m, system, z0, shocks; enforce_zlb = enforce_zlb,
+        forecast(m, system, z0, shocks; cond_type = cond_type, enforce_zlb = enforce_zlb,
                  ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
     else
         forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
@@ -211,10 +212,18 @@ function forecast(system::System{S}, z0::Vector{S},
 end
 
 function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S},
-    shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
+    shocks::Matrix{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
 
+    # Determine how many regimes occur in the forecast, depending
+    # on whether we need to subtract conditional forecast regimes or not
     n_fcast_reg = get_setting(m, :n_fcast_regimes)
+    if cond_type != :none
+        n_fcast_reg -= get_setting(m, :n_cond_regimes) # remove no. of cond regimes during cond fcast from no. of fcast regimes
+        if n_fcast_reg == 0 # Then no new regimes after conditional forecast ends
+            n_fcast_reg = 1 # So we use the last conditional forecast regime
+        end
+    end
 
     Ts = Vector{Matrix{Float64}}(undef, n_fcast_reg)
     Rs = Vector{Matrix{Float64}}(undef, n_fcast_reg)
@@ -225,11 +234,16 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     Z_pseudos = Vector{Matrix{Float64}}(undef, n_fcast_reg)
     D_pseudos = Vector{Vector{Float64}}(undef, n_fcast_reg)
 
+    # Determine in which regime the forecast starts, after accounting for
+    # conditional forecast regimes, if applicable
+    reg_fcast_cond_start = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
+        max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
+
     # Unpack system
-    for (ss_ind, sys_ind) in enumerate(get_setting(m, :reg_forecast_start):get_setting(m, :n_regimes))
-        Ts[ss_ind], Rs[ss_ind], Cs[ss_ind] = system[sys_ind][:TTT], system[sys_ind][:RRR], system[sys_ind][:CCC]
-        Qs[ss_ind], Zs[ss_ind], Ds[ss_ind] = system[sys_ind][:QQ], system[sys_ind][:ZZ], system[sys_ind][:DD]
-        Z_pseudos[ss_ind], D_pseudos[ss_ind] = system[sys_ind][:ZZ_pseudo], system[sys_ind][:DD_pseudo]
+    for (ss_ind, sys_ind) in enumerate(reg_fcast_cond_start:get_setting(m, :n_regimes))
+        Ts[ss_ind], Rs[ss_ind], Cs[ss_ind] = system[sys_ind, :TTT], system[sys_ind, :RRR], system[sys_ind, :CCC]
+        Qs[ss_ind], Zs[ss_ind], Ds[ss_ind] = system[sys_ind, :QQ], system[sys_ind, :ZZ], system[sys_ind, :DD]
+        Z_pseudos[ss_ind], D_pseudos[ss_ind] = system[sys_ind, :ZZ_pseudo], system[sys_ind, :DD_pseudo]
     end
 
     # Setup
@@ -267,7 +281,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     end
 
     # These are the fcast regime indices
-    regime_inds = get_fcast_regime_inds(m, horizon)
+    regime_inds = get_fcast_regime_inds(m, horizon, cond_type)
 
     # Iterate state space forward
     states = zeros(nstates, horizon)
@@ -278,20 +292,23 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     obs[:, 1] = Ds[1] .+ Zs[1]*states[:, 1]
     pseudo[:, 1] = D_pseudos[1] .+ Z_pseudos[1] * states[:, 1]
 
-    # If there's multiple regimes in forecast period, go through each set of indieces. Otherwise, just take the first set
+    # If there's multiple regimes in forecast period, go through each set of indices. Otherwise, just take the first set
     if length(regime_inds) > 1
-        for i in 2:length(regime_inds)
+        for i in 1:length(regime_inds)
             ts = regime_inds[i]
+            if ts[1] == 1 # We already did this period in the initialization
+                ts = 2:ts[end]
+            end
             for t in ts
-                states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
-                obs[:, t] = Ds[i] .+ Zs[i]*states[:, t]
+                states[:, t], shocks[:, t] = iterate(states[:, t - 1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
+                obs[:, t] = Ds[i] .+ Zs[i] * states[:, t]
                 pseudo[:, t] = D_pseudos[i] .+ Z_pseudos[i] * states[:, t]
             end
         end
     else
         for t in 2:horizon
-            states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t], Ts[1], Rs[1], Cs[1], Qs[1], Zs[1], Ds[1])
-            obs[:, t] = Ds[1] .+ Zs[1]*states[:, t]
+            states[:, t], shocks[:, t] = iterate(states[:, t - 1], shocks[:, t], Ts[1], Rs[1], Cs[1], Qs[1], Zs[1], Ds[1])
+            obs[:, t] = Ds[1] .+ Zs[1] * states[:, t]
             pseudo[:, t] = D_pseudos[1] .+ Z_pseudos[1] * states[:, t]
         end
     end
@@ -300,12 +317,17 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     return states, obs, pseudo, shocks
 end
 
-function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int)
-    last_date = iterate_quarters(date_forecast_start(m), -1)
+function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Symbol)
+
+    fcast_start_date = (cond_type == :none) ? date_forecast_start(m) : # If conditional forecast, then we want to start forecasting
+        max(date_forecast_start(m), iterate_quarters(date_conditional_end(m), 1)) # from the period after the conditional end period
+    last_date = iterate_quarters(fcast_start_date, -1) # minus 1 to get one date before the forecast start
     last_ind = 1
+
+    # Construct vector of time periods for each regime in the forecast periods after the conditional forecast
     regime_inds = Vector{UnitRange{Int}}(undef, 0)
-    for i in 1:(get_setting(m, :n_regimes)-1) # -1 because, we add the last regime:horizon to end
-        if get_setting(m, :regime_dates)[i] < date_forecast_start(m)
+    for i in 1:(get_setting(m, :n_regimes) - 1) # -1 because, we add the last regime:horizon to end
+        if get_setting(m, :regime_dates)[i] < fcast_start_date # date_forecast_start(m)
             continue
         else
             qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i], last_date)
@@ -314,16 +336,5 @@ function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int)
             last_date = get_setting(m, :regime_dates)[i]
         end
     end
-    regime_inds = push!(regime_inds, last_ind:horizon)
-end
-
-function ngdp_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T};
-                           cond_type::Symbol = :none) where {T<:AbstractFloat}
-
-    pgap_t = m.endogenous_states[:pgap_t]
-
-    # THIS IS WRONG --> #final_state[pgap_t] = -3.5 # todo: figure out how to program automatically
-    final_state = vcat(final_state[1:pgap_t-1], [-get_setting(m, :pgap_value)], final_state[pgap_t+1:end]) #-3.5
-    @show pgap_t, final_state[pgap_t], size(final_state)
-    return shocks, final_state
+    regime_inds = push!(regime_inds, last_ind:horizon) # This covers case where final history regime is also first (and only) forecast regime.
 end
