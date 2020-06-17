@@ -18,6 +18,12 @@ the existing code from the community. Some examples could be:
      can be calculated if the state space system matrices are given as inputs, but we do
      not have tests for the wrapper `impulse_responses(m, . . .)`, where
      `m <: AbstractDSGEVECMModel'.
+- Extension of regime-switching code to include regime-switching beyond changes
+  in parameter values and in policy rules
+  a. Example "toy" extension: A second sector is introduced at some point in the history,
+  so the final consumption good is now an aggregate of intermediate goods from two sectors.
+  This example would require extending solution functions (e.g. `solve` and `compute_system`)
+  to be robust to regime switches in the equilibrium conditions of a DSGE model.
 - Extension of model averaging techniques beyond `PoolModel`
 - Other general improvements
   a. Adding documentation/test coverage
