@@ -120,18 +120,18 @@ function measurement(m::Model1002{T},
 
     ## 10 yrs infl exp
 
-    TTT10                          = (1/40)*((Matrix{Float64}(I, size(TTT, 1), size(TTT,1))
-                                              - TTT)\(TTT - TTT^41))
-    ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
-    DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
+    TTT10                                      = (1/40) * ((Matrix{Float64}(I, size(TTT, 1), size(TTT,1))
+                                                            - TTT) \ (TTT - TTT^41))
+    ZZ[obs[:obs_longinflation], no_integ_inds] = TTT10[endo[:π_t], :]
+    DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]' * TTT10
+    ZZ[obs[:obs_longrate], no_integ_inds]     = ZZ[6, no_integ_inds]' * TTT10
     ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
-    DD[obs[:obs_longrate]]                  = m[:Rstarn]
+    DD[obs[:obs_longrate]]                    = m[:Rstarn]
 
     ## TFP
-    ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
+    ZZ[obs[:obs_tfp], endo[:z_t]] = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
     if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
         ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]]  = 1.0
         ZZ[obs[:obs_tfp], endo_new[:e_tfp_t1]] = -m[:me_level]

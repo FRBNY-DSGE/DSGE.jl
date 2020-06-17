@@ -165,7 +165,6 @@ function impulse_responses(m::AbstractDSGEVARModel, paras::Union{Vector{S}, Matr
             # This creates a nperiod x ndraws matrix, which we want to transpose
             # to get a ndraws x nperiod matrix
             single_var = Matrix(reduce(hcat, map(x -> x[name_i, :], irf_output))')
-            @show size(single_var)
             means[!,name] = vec(mean(single_var, dims = 1))
             bands[name]   = find_density_bands(single_var, density_bands;
                                                minimize = minimize)
