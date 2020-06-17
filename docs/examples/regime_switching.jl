@@ -53,13 +53,13 @@ forecast_string = ""
 # Set up regime switching and forecast settings
 m <= Setting(:n_regimes, 3, true, "reg", "")   # How many regimes?
 m <= Setting(:regime_switching, true)          # Need to set that the model does have regime-switching
-m <= Setting(:regime_switching_ndraws, 100000) # b/c we don't have an estimation file, need this setting for dimension purposes
+# m <= Setting(:regime_switching_ndraws, 100000) # b/c we don't have an estimation file, need this setting for dimension purposes
 m <= Setting(:forecast_block_size, 5000)
 m <= Setting(:use_parallel_workers, true)
 baseline_regime_dates = Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(1990, 3, 31),
                                         3 => Date(2015, 3, 31))
 m <= Setting(:regime_dates, baseline_regime_dates)
-DSGE.setup_regime_switching_inds!(m60)
+setup_regime_switching_inds!(m60)
 
 # Some settings for alternative policy
 if temp_alt || perm_alt
@@ -186,24 +186,24 @@ end
 
 if temp_alt
     # First, need to set up new set of regime dates to implement a temporary alternative policy (temp alt policy)
-    temp_n_regimes = 15    # 3 historical regimes, plus 12 quarters or 3 years of the temp alt policy
+    temp_n_regimes = 16    # 3 historical regimes, 12 quarters or 3 years of the temp alt policy, and a return to normal in the last eregime
     temp_regime_dates = Dict{Int, Date}()
     temp_regime_dates[1] = date_presample_start(m)
     for (k, v) in baseline_regime_dates # Add the historical regimes
         temp_regime_dates[k] = v
     end
     for (i, date) in zip(4:n_regimes,
-                         Date(2018, 12, 31):Dates.Month(3):(Date(2018, 12, 31) + Dates.Year(3))) # add forecast regimes
+                         Date(2018, 12, 31):Dates.Month(3):(Date(2018, 12, 31) + Dates.Year(3) + Dates.Month(3))) # add forecast regimes
         temp_regime_dates[i] = date
     end
     m <= Setting(:regime_dates, temp_regime_dates)
     m <= Setting(:regime_switching, true)
-    DSGE.setup_regime_switching_inds!(m)
+    setup_regime_switching_inds!(m)
 
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
     replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
-    for i in 4:n_regimes
+    for i in 4:(temp_n_regimes - 1)
         replace_eqcond[i] = replace_policy # Use the alternative policy for these regimes!
     end
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond) # Add mapping of regimes to new eqcond matrices
@@ -220,7 +220,7 @@ if perm_alt
     m <= Setting(:pgap_type, policy)     # Use NGDP
     m <= Setting(:regime_switching, true) # Regime-switching should still be on b/c historical regimes
     m <= Setting(:regime_dates, baseline_regime_dates) # Make sure to use historical regimes
-    DSGE.setup_regime_switching_inds!(m)
+    setup_regime_switching_inds!(m)
 
     m <= Setting(:gensys2, false) # Make sure we use the normal gensys algorithm
 
@@ -283,7 +283,6 @@ if make_plots
             end
 
             if obs == :obs_hours
-                #histobs_plot ./= 4. # deannualize
                 forecast_plot = vcat(histobs_plot[end], forecast_plot[2:end])
                 @show forecast_plot
             end
