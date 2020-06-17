@@ -46,3 +46,39 @@ Measurement
 PseudoMeasurement
 compute_system
 ```
+
+## The `RegimeSwitchingSystem` Type
+When there are multiple (exogenous) regimes in the state-space representation
+of the DSGE, it is useful to treat the system as one type rather than
+a vector of individual `System` objects. The `RegimeSwitchingSystem` type
+implements this idea, and via multiple dispatch, most commands that work
+on a `System` object also work on a `RegimeSwitchingSystem` object.
+
+```@docs
+RegimeSwitchingSystem
+```
+
+To get the number of regimes, one can call `n_regimes(regime_switch_system)` or
+`regime_switch_system[:regimes]`.
+Like a `System` object, the fields of a `RegimeSwitchingSystem` can be accessed by
+
+```
+regime_switch_system[:transitions]
+regime_switch_system[:measurements]
+regime_switch_system[:pseudo_measurements]
+```
+
+A `System` can be formed from a specific regime by calling
+
+```
+sys_reg2 = regime_switch_system[2]
+```
+
+and specific matrices/types in a given regime can be accessed by
+
+```
+regime_switch_system[2, :TTT]
+regime_switch_system[2, :transition]
+regime_switch_system[2, :measurement]
+regime_switch_system[2, :pseudo_measurement]
+```
