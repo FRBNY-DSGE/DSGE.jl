@@ -22,7 +22,17 @@ y_t &= Z s_t + D + u_t & u_t &\sim N(0, E) & \mathrm{(measurement)}
 ```
 
 using the `gensys` routine of Chris Sims, introduced in
-[this paper](http://sims.princeton.edu/yftp/gensys/LINRE3A.pdf). We provide a
+[this paper](http://sims.princeton.edu/yftp/gensys/LINRE3A.pdf).
+This algorithm can be easily extended to (exogenous) regime switching.
+For each regime ``i``, define the canonical matrices
+``\Gamma_{0, i}``, ``\Gamma_{1, i}``, ``C_i``, ``\Psi_i``, and ``\Pi_i``.
+Calling `gensys` on each regime and constructing the relevant easurement matrix
+yields the matrices ``T_i``, ``R_i``,
+``C_i``, ``Q_i``, ``Z_i``, ``D_i``, and ``E_i``, which define the state-space form
+of a DSGE with multiple regimes.
+
+
+We provide a
 standalone native Julia implementation of the routine ([`gensys`](@ref)) as well
 as a wrapper for `AbstractDSGEModel` subtypes ([`solve`](@ref)). When the Gensys.jl
 package becomes ready for use, we intend to deprecate our `gensys` code and
