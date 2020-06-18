@@ -352,7 +352,7 @@ if save_plots
     end
 
     for (k, p) in plots_dict
-        Plots.savefig(p, joinpath(figurespath(m, "forecast"), "$(pol_str)_(string(k)).pdf"))
+        Plots.savefig(p, joinpath(figurespath(m, "forecast"), "$(pol_str)_$(string(k)).pdf"))
     end
 end
 
