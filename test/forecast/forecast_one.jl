@@ -187,6 +187,8 @@ end
 
 @testset "Test modal and full distribution forecasts with regime switching for all major output_vars" begin
     # Loop over different times at which the regime switches, e.g. does the regime before or after ZLB
+    m.settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
+    m.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
     for (k, v) in enumerate(regime_dates_dicts)
 
         # pseudo regime switching (no values have second/third regimes, but we are still saying regime_switching = true)
@@ -200,7 +202,7 @@ end
         m_rs1.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs1.settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs1.test_settings[:regime_dates] = Setting(:regime_dates, v)
-        m_rs1 = DSGE.setup_regime_switching_inds(m_rs1)
+        m_rs1 = DSGE.setup_regime_switching_inds!(m_rs1)
 
         # pseudo regime switching (identical values for standard deviations)
         m_rs2 = Model1002("ss51v", testing = true, custom_settings = custom_settings)
@@ -213,7 +215,7 @@ end
         m_rs2.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs2.settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs2.test_settings[:regime_dates] = Setting(:regime_dates, v)
-        m_rs2 = DSGE.setup_regime_switching_inds(m_rs2)
+        m_rs2 = DSGE.setup_regime_switching_inds!(m_rs2)
 
         # non-trivial regime switching: eqcond matrices different and QQ matrix is different
         # - Does not test for switching in ZZ or ZZ_pseudo
@@ -227,7 +229,7 @@ end
         m_rs3.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs3.settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs3.test_settings[:regime_dates] = Setting(:regime_dates, v)
-        m_rs3 = DSGE.setup_regime_switching_inds(m_rs3)
+        m_rs3 = DSGE.setup_regime_switching_inds!(m_rs3)
 
         # Need to set shocks for second and third regimes
         global prop = 1.   # Use the same value as the first regime
