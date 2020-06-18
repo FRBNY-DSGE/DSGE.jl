@@ -763,9 +763,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, fcast_sys, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
-                if haskey(m.endogenous_states, :pgap_t)
-                    println("The forecasted pgap is $(forecaststates[m.endogenous_states[:pgap_t], :])")
-                end
             end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
