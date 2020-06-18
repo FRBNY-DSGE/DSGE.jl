@@ -1,4 +1,5 @@
-using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots
+using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots, Dates, OrderedCollections
+using Plots.PlotMeasures
 GR.inline("pdf")
 fn = dirname(@__FILE__)
 
@@ -19,9 +20,6 @@ fn = dirname(@__FILE__)
 
 # What do you want to do?
 run_full_forecast = true  # Run full distribution forecast
-do_histforecast   = true  # Compute history and forecast of observables and pseudo-observables
-do_shockdecs      = true  # Compute shock decompositions
-do_irfs           = true  # Compute impulse response functions
 temp_alt          = true  # Temporary NGDP targeting?
 perm_alt          = true  # Permanent NGDP targeting?
 make_plots        = true  # Make plots
@@ -31,7 +29,7 @@ n_workers         = 10
 
 # Initialize model objects and desired settings
 custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true))
-m = Model1002("ss10")   # We will directly construct the matrix of parameter draws
+m = Model1002("ss10"; custom_settings = custom_settings)   # We will directly construct the matrix of parameter draws
 m10 = Model1002("ss10") # b/c loading from a saved estimation file has not been fully implemented
 
 for models in [m, m10]
@@ -59,7 +57,7 @@ m <= Setting(:use_parallel_workers, true)
 baseline_regime_dates = Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(1990, 3, 31),
                                         3 => Date(2015, 3, 31))
 m <= Setting(:regime_dates, baseline_regime_dates)
-setup_regime_switching_inds!(m60)
+setup_regime_switching_inds!(m)
 
 # Some settings for alternative policy
 if temp_alt || perm_alt
@@ -77,7 +75,7 @@ end
 # of the matrix of parameter draws
 overrides = forecast_input_file_overrides(m10)
 overrides[:full] = "$(fn)/../../test/reference/mhsave_vint=181115.h5"
-modal_parameters = map(x -> x.value, m10.parameters) # The default parameters will be our "modal" parameters for this exercise
+modal_params = map(x -> x.value, m10.parameters) # The default parameters will be our "modal" parameters for this exercise
 θ10 = load_draws(m10, :full)
 
 for i in 1:3
@@ -117,12 +115,14 @@ df = load_data(m; check_empty_columns = false)
 if run_full_forecast
 
     # Set up matrix of parameter draws
-    params = zeros(get_setting(m, :regime_switching_ndraws),
+    m <= Setting(:forecast_jstep, 1)
+    m <= Setting(:forecast_block_size, 100)
+    param_mat = zeros(100,
                    ModelConstructors.n_parameters_regime_switching(m)) # Need to use a special method to count the additional regimes
     n_pvec = n_parameters(m) # This is just length(m.parameters), so it counts the "unique" number of parameters, excluding regimes
-    for i in 1:size(params, 1)
+    for i in 1:size(param_mat, 1)
         # Start w/regime 1 b/c all regime 1 parameters are grouped together
-        params[i, 1:n_pvec] = map(x -> (abs(x) < 1e-15) ? 0. : x, θ10[i, :])
+        param_mat[i, 1:n_pvec] = map(x -> (abs(x) < 1e-15) ? 0. : x, θ10[i, :])
 
         # Now do the other regimes, which grouped by parameter rather than by regime
         j = n_pvec # To help index for regime-switching parameters
@@ -132,9 +132,9 @@ if run_full_forecast
                     if k > 1
                         j += 1
                         drawv = θ10[i, m10.keys[para.key]] # Find the column for the parameter in θ10 using the parameter's key
-                        params[i, j] = (k  == 2) ? .9 * drawv : drawv # Adjust the value
-                        if abs(params[i, j]) < 1e-15 # Make sure essentially zero parameters are actually zero
-                            params[i, j] = 0.
+                        param_mat[i, j] = (k  == 2) ? .9 * drawv : drawv # Adjust the value
+                        if abs(param_mat[i, j]) < 1e-15 # Make sure essentially zero parameters are actually zero
+                            param_mat[i, j] = 0.
                         end
                     end
                 end
@@ -142,25 +142,10 @@ if run_full_forecast
         end
     end
 
-    output_vars = Vector{Symbol}(undef,0)
-    if do_histforecast
-        # Write data to create historical and forecast output
-        output_vars = vcat(output_vars, [:histpseudo, :histobs, :histstdshocks,
-                                         :hist4qpseudo, :hist4qobs, :histutpseudo,
-                                         :forecastpseudo, :forecastobs, :forecastutpseudo,
-                                         :forecast4qpseudo, :forecast4qobs, :forecaststdshocks])
-    end
-
-    if do_shockdecs
-        # Shock decompositions of forecasts
-        output_vars = vcat(output_vars, [:dettrendobs, :dettrendpseudo, :trendobs,
-                                         :trendpseudo, :shockdecpseudo, :shockdecobs])
-    end
-
-    if do_irfs
-        # Impulse response to all shocks, including for endogenous states
-        output_vars = vcat(output_vars, [:irfstates, :irfobs, :irfpseudo])
-    end
+    output_vars = [:histpseudo, :histobs, :histstdshocks,
+                   :hist4qpseudo, :hist4qobs, :histutpseudo,
+                   :forecastpseudo, :forecastobs, :forecastutpseudo,
+                   :forecast4qpseudo, :forecast4qobs, :forecaststdshocks]
 
     if add_workers
         my_procs = addprocs(n_workers)
@@ -168,11 +153,10 @@ if run_full_forecast
     end
 
     usual_model_forecast(m, :full, :none, output_vars,
-                         est_override = overrides[:full],
                          forecast_string = forecast_string,
                          density_bands = [.5, .6, .68, .7, .8, .9],
                          check_empty_columns = false,
-                         params = params) # Need to pass in parameters directly, see ?forecast_one
+                         params = param_mat) # Need to pass in parameters directly, see ?forecast_one
 
     if add_workers
         rmprocs(my_procs)
@@ -184,22 +168,66 @@ if run_full_forecast
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
 
+if perm_alt
+    m <= Setting(:replace_eqcond, false)  # Make sure this setting is false
+    m <= Setting(:pgap_type, policy)      # Use NGDP
+    m <= Setting(:pgap_value, 12.0)       # parametrizing the NGDP rule
+    m <= Setting(:regime_switching, true) # Regime-switching should still be on b/c historical regimes
+    m <= Setting(:regime_dates, baseline_regime_dates) # Make sure to use historical regimes
+    setup_regime_switching_inds!(m)
+
+    m <= Setting(:gensys2, false) # Make sure we use the normal gensys algorithm
+
+    m <= Setting(:alternative_policy, AltPolicy(policy, policy_eqcond, policy_solve,
+                                                forecast_init = policy_forecast_init)) # Set up permanent alternative policy
+    fcast_permalt = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
+                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+end
+
 if temp_alt
     # First, need to set up new set of regime dates to implement a temporary alternative policy (temp alt policy)
-    temp_n_regimes = 16    # 3 historical regimes, 12 quarters or 3 years of the temp alt policy, and a return to normal in the last eregime
+    temp_n_regimes = 16 # 3 historical regimes, 12 quarters or 3 years of the temp alt policy, and a return to normal in the last eregime
     temp_regime_dates = Dict{Int, Date}()
     temp_regime_dates[1] = date_presample_start(m)
     for (k, v) in baseline_regime_dates # Add the historical regimes
         temp_regime_dates[k] = v
     end
-    for (i, date) in zip(4:n_regimes,
-                         Date(2018, 12, 31):Dates.Month(3):(Date(2018, 12, 31) + Dates.Year(3) + Dates.Month(3))) # add forecast regimes
+    end_date = Date(2018, 12, 31) + Dates.Year(3) + Dates.Month(3)
+    for (i, date) in zip(4:temp_n_regimes,
+                         Date(2018, 12, 31):Dates.Month(3):end_date) # add forecast dates
         temp_regime_dates[i] = date
     end
     m <= Setting(:regime_dates, temp_regime_dates)
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m)
 
+    # Add parameter values for additional regimes
+    for i in 4:temp_n_regimes
+        ModelConstructors.set_regime_val!(m[:σ_g], i, m10[:σ_g].value)
+        ModelConstructors.set_regime_val!(m[:σ_b], i, m10[:σ_b].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ], i, m10[:σ_μ].value)
+        ModelConstructors.set_regime_val!(m[:σ_ztil], i, m10[:σ_ztil].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_f], i, m10[:σ_λ_f].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_w], i, m10[:σ_λ_w].value)
+        ModelConstructors.set_regime_val!(m[:σ_r_m], i, m10[:σ_r_m].value)
+        ModelConstructors.set_regime_val!(m[:σ_σ_ω], i, m10[:σ_σ_ω].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ_e], i, m10[:σ_μ_e].value)
+        ModelConstructors.set_regime_val!(m[:σ_γ], i, m10[:σ_γ].value)
+        ModelConstructors.set_regime_val!(m[:σ_π_star], i, m10[:σ_π_star].value)
+        ModelConstructors.set_regime_val!(m[:σ_lr], i, m10[:σ_lr].value)
+        ModelConstructors.set_regime_val!(m[:σ_z_p], i, m10[:σ_z_p].value)
+        ModelConstructors.set_regime_val!(m[:σ_tfp], i, m10[:σ_tfp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, m10[:σ_gdpdef].value)
+        ModelConstructors.set_regime_val!(m[:σ_corepce], i, m10[:σ_corepce].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdp], i, m10[:σ_gdp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdi], i, m10[:σ_gdi].value)
+
+        for j = 1:DSGE.n_mon_anticipated_shocks(m)
+            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m10[Symbol("σ_r_m$(j)")].value)
+        end
+    end
+
+    # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
     replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
@@ -215,22 +243,9 @@ if temp_alt
                                          df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
 
-if perm_alt
-    m <= Setting(:replace_eqcond, false) # Make sure this setting is false, in case we run temp_alt first
-    m <= Setting(:pgap_type, policy)     # Use NGDP
-    m <= Setting(:regime_switching, true) # Regime-switching should still be on b/c historical regimes
-    m <= Setting(:regime_dates, baseline_regime_dates) # Make sure to use historical regimes
-    setup_regime_switching_inds!(m)
-
-    m <= Setting(:gensys2, false) # Make sure we use the normal gensys algorithm
-
-    m <= Setting(:alternative_policy, AltPolicy(policy, policy_eqcond, policy_solve,
-                                                forecast_init = policy_forecast_init)) # Set up permanent alternative policy
-    fcast_permalt = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
-                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-end
-
 if make_plots
+    plots_dict = Dict()
+
     # Define some plotting functions
     function make_comp_plot(m::AbstractDSGEModel, plot_mat::OrderedDict{String, Dict{Symbol, Array{Float64}}},
                             obs::Symbol, product::Symbol,
@@ -245,19 +260,9 @@ if make_plots
         end
 
         if product == :forecastobs
-            if ismissing(data_plot[end, obs]) || isnan(data_plot[end, obs])
-                dates_plot = data_plot[1:end - 1, :date]
-                if obs == :obs_hours
-                    histobs_plot = data_plot[1:end - 1, obs]
-                else
-                    histobs_plot = 4 .* data_plot[1:end - 1, obs]
-                end
-                fcast_date_tmp = vcat(data_plot[end - 2, :date], fcast_date)
-            else
-                dates_plot = data_plot[!, :date]
-                histobs_plot = 4 .* data_plot[!, obs]
-                fcast_date_tmp = fcast_date
-            end
+            dates_plot = data_plot[!, :date]
+            histobs_plot = obs == :obs_hours ? data_plot[!, obs] : 4 .* data_plot[!, obs]
+            fcast_date_tmp = fcast_date
             dates_plot = map(x -> DSGE.prev_quarter(x), dates_plot)
             p = Plots.plot(dates_plot, histobs_plot, color = :black,
                            label = "Data", linewidth = 3, legend = :bottomright, left_margin = 20px)
@@ -284,7 +289,6 @@ if make_plots
 
             if obs == :obs_hours
                 forecast_plot = vcat(histobs_plot[end], forecast_plot[2:end])
-                @show forecast_plot
             end
             plot!(fcast_date_tmp, forecast_plot, color = colors[i],
                   label = key, linewidth = 1, linestyle = styles[i])
@@ -320,7 +324,13 @@ if make_plots
         return p
     end
 
-    for obs in collect(keys(m10.observables))
+    data_plot  = df[df[:, :date] .>= Date(2016, 3, 31), :]
+    fcast_date = map(x -> DSGE.prev_quarter(x), DSGE.get_quarter_ends(date_forecast_start(m), DSGE.quartertodate("2031-Q4")))
+    nfcast     = length(fcast_date)
+    dates_plot = map(x -> DSGE.prev_quarter(x), data_plot[!, :date])
+
+    for obs in [:obs_gdp, :obs_corepce, :obs_gdpdeflator, :obs_nominalrate, :obs_investment, :obs_consumption,
+                :obs_spread, :obs_wages, :obs_hours]
         plots_dict[obs] = make_comp_plot(m, OrderedDict("Temp $(pol_str)" => fcast_tempalt,
                                                           "Shock" => fcast,
                                                           "$(pol_str)" => fcast_permalt),
@@ -337,6 +347,10 @@ if make_plots
 end
 
 if save_plots
+    if !isdir(figurespath(m, "forecast"))
+        mkdir(figurespath(m, "forecast"))
+    end
+
     for (k, p) in plots_dict
         Plots.savefig(p, joinpath(figurespath(m, "forecast"), "$(pol_str)_(string(k)).pdf"))
     end
