@@ -88,6 +88,108 @@ end
     @test DSGE.alternative_policy(m) == get_setting(m, :alternative_policy)
 end
 
+@testset "Check automatic calculation of settings for regime switching forecasts" begin
+    rss = Vector{Dict{Int, Date}}(undef, 0)
+    fss = Vector{Date}(undef, 0)
+    ces = Vector{Date}(undef, 0)
+    nreg = Vector{Int}(undef, 0)
+    nhistreg = Vector{Int}(undef, 0)
+    nfcastreg = Vector{Int}(undef, 0)
+    ncondreg = Vector{Int}(undef, 0)
+    nruleper = Vector{Int}(undef, 0)
+    regfcaststart = Vector{Int}(undef, 0)
+    regpostcond = Vector{Int}(undef, 0)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 6, 30))
+    push!(nreg, 4)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 2)
+    push!(ncondreg, 1)
+    push!(nruleper, 1)
+    push!(regfcaststart, 3)
+    push!(regpostcond, 4)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 6, 30)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 6, 30))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 1)
+    push!(ncondreg, 1)
+    push!(nruleper, 0)
+    push!(regfcaststart, 3)
+    push!(regpostcond, 3)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2019, 12, 31), 3 => Date(2020, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 3, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 1)
+    push!(ncondreg, 0)
+    push!(nruleper, 0)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 2)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2015, 3, 31), 3 => Date(2019, 6, 30)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 3, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 3)
+    push!(nfcastreg, 1)
+    push!(ncondreg, 0)
+    push!(nruleper, -1)
+    push!(regfcaststart, 3)
+    push!(regpostcond, 3)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 1)
+    push!(ncondreg, 1)
+    push!(nruleper, 0)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 3)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2021, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 1)
+    push!(ncondreg, 0)
+    push!(nruleper, 0)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 2)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 6, 30), 3 => Date(2021, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 1)
+    push!(nfcastreg, 2)
+    push!(ncondreg, 1)
+    push!(nruleper, 1)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 2)
+
+    for (rs, fs, ce, nr, nhr, nfr, ncr, nrp, rfs, rpc) in zip(rss, fss, ces, nreg, nhistreg,
+                                                              nfcastreg, ncondreg, nruleper, regfcaststart, regpostcond)
+        m <= Setting(:regime_dates, rs)
+        m <= Setting(:date_forecast_start, fs)
+        m <= Setting(:date_conditional_end, ce)
+        setup_regime_switching_inds!(m)
+        for (set, setans) in zip([:n_regimes, :n_hist_regimes, :n_fcast_regimes, :n_cond_regimes, :n_rule_periods,
+                                  :reg_forecast_start, :reg_post_conditional_end], [nr, nhr, nfr, ncr, nrp, rfs, rpc])
+            @test get_setting(m, set) == setans
+        end
+    end
+end
+
 @testset "Test other auxiliary setting functions for AbstractDSGEModel objects" begin
     m <= Setting(:population_mnemonic, :test)
     @test get(DSGE.parse_population_mnemonic(m)[1]) == :test

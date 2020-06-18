@@ -828,7 +828,7 @@ function ss60!(m::Model1002)
         ModelConstructors.set_regime_val!(m[:σ_gdi], i, m[:σ_gdi].value)
 
         for j = 1:DSGE.n_mon_anticipated_shocks(m)
-            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m[Symbol("σ_r_m$(j)")])
+            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m[Symbol("σ_r_m$(j)")].value)
         end
     end
 
