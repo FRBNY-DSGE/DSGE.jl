@@ -87,6 +87,7 @@ my_tests = [
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
+            "forecast/regime_switching",
             "forecast/util",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",

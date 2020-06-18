@@ -219,7 +219,8 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     # on whether we need to subtract conditional forecast regimes or not
     n_fcast_reg = get_setting(m, :n_fcast_regimes)
     if cond_type != :none
-        n_fcast_reg -= get_setting(m, :n_cond_regimes) # remove no. of cond regimes during cond fcast from no. of fcast regimes
+        n_fcast_reg -= get_setting(m, :reg_post_conditional_end) - # Remove number of regimes switched since starting
+            get_setting(m, :reg_forecast_start) - 1                # the conditional forecast
         if n_fcast_reg == 0 # Then no new regimes after conditional forecast ends
             n_fcast_reg = 1 # So we use the last conditional forecast regime
         end
