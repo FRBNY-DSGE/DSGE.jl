@@ -7,6 +7,7 @@ end
 function ait_replace_eq_entries(m::AbstractDSGEModel,
                                 Γ0::Matrix{Float64}, Γ1::Matrix{Float64},
                                 C::Vector{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64})
+
     # add law of motion for pgap
     eq             = m.equilibrium_conditions
     endo           = m.endogenous_states
@@ -35,7 +36,7 @@ function ait_replace_eq_entries(m::AbstractDSGEModel,
 
     # replace monetary policy rule
     Γ0[eq[:eq_mp], endo[:R_t]]       = 1.
-    @show -φ*(1/(1-ρ_ait))
+
     Γ0[eq[:eq_mp], endo[:pgap_t]]    = -φ*(1/(1-ρ_ait))
     Γ1[eq[:eq_mp], endo[:R_t]]       = ρ
     C[eq[:eq_mp]]                    = 0.
@@ -52,7 +53,7 @@ Solves for the transition equation of `m` under a price level
 targetingl rule (implemented by adding a price-gap state)
 """
 function ait_eqcond(m::AbstractDSGEModel, reg::Int = 1)
-    @show "aaa"
+
     # get the old indices
     old_states = sort!(collect(values(m.endogenous_states)))
     old_eqs    = sort!(collect(values(m.equilibrium_conditions)))
@@ -99,9 +100,7 @@ function ait_eqcond(m::AbstractDSGEModel, reg::Int = 1)
         end
     end
 
-    @show "bbb"
     Γ0, Γ1, C, Ψ, Π = ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
-    @show "ccc"
     for para in m.parameters
         if !isempty(para.regimes)
             ModelConstructors.toggle_regime!(para, 1)
@@ -120,8 +119,8 @@ Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
 function ait_solve(m::AbstractDSGEModel; regime_switching::Bool, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
+
     # Get equilibrium condition matrices
-@show "aaa"
     if isa(regimes, Int)
         Γ0, Γ1, C, Ψ, Π  = ait_eqcond(m, regimes)
         TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = :low)
@@ -187,6 +186,6 @@ function ait_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state:
     pgap_t = m.endogenous_states[:pgap_t]
     # THIS IS WRONG --> #final_state[pgap_t] = -3.5 # todo: figure out how to program automatically
    final_state = vcat(final_state[1:pgap_t-1], [-get_setting(m, :pgap_value)], final_state[pgap_t+1:end]) #-3.5
-     @show pgap_t, final_state[pgap_t], size(final_state)
+
     return shocks, final_state
 end

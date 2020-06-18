@@ -82,7 +82,7 @@ function ngdp_eqcond(m::AbstractDSGEModel, reg::Int = 1)
     # 2. increment the indices of every augmented state
 
     if !in(:pgap_t, keys(m.endogenous_states))
-        @show "adding!"
+        @show "adding pgap_t to the endogenous states of m!"
         # add pgap state to endogenous_staets
         m.endogenous_states[:pgap_t]       = n_states(m) + 1
         m.equilibrium_conditions[:eq_pgap] = n_equilibrium_conditions(m) + 1
@@ -207,6 +207,5 @@ function ngdp_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state
 
     # THIS IS WRONG --> #final_state[pgap_t] = -3.5 # todo: figure out how to program automatically
     final_state = vcat(final_state[1:pgap_t-1], [-get_setting(m, :pgap_value)], final_state[pgap_t+1:end]) #-3.5
-    @show pgap_t, final_state[pgap_t], size(final_state)
     return shocks, final_state
 end
