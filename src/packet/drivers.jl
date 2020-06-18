@@ -58,7 +58,7 @@ function usual_model_forecast(m::AbstractDSGEModel, input_type::Symbol, cond_typ
                               shock_var_name::Symbol = :none,
                               shock_var_value::Float64 = 0.0,
                               check_empty_columns = true,
-                              params::AbstractArray{Float64} = AbstractVector{Float64}(undef, 0))
+                              params::AbstractArray{Float64} = Vector{Float64}(undef, 0))
 
     # Override estimation file if necessary
     if !isempty(est_override)
