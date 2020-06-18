@@ -19,16 +19,17 @@ or the equivalent folder inside your Julia packages directory for example script
 
 For getting started, see these two scripts.
 - `run_default.jl`: a simple example of the standard workflow with DSGE.jl
-- `make_packet.jl`: basic auto-generation of a packet of plots and figures which
+- `make_packet.jl`: auto-generate a packet of plots and figures which
   help the user analyze estimation, forecast, and impulse response results. This script
   also provides an example of how we recommend structuring "master" files that launch
   a forecast and generate results with one "click."
 
 For more advanced usage, see
-- `test_smc.jl`: using SMC to estimate DSGE models.
-- `decompose_forecast.jl`: an example showing the forecast decomposition code.
-- `run_dsgevar.jl`: an example showing how to use a `DSGEVAR`.
-- `run_dsgevecm.jl`: an example showing how to use impulse responses for DSGE-VECMs.
+- `test_smc.jl`: use SMC to estimate DSGE models.
+- `decompose_forecast.jl`: understand why a forecast has changed by running a forecast decomposition
+- `regime_switching.jl`: set up a forecast with regime-switching in the history and forecast horizon
+- `run_dsgevar.jl`: estimate and analyze impulse responses for a `DSGEVAR`.
+- `run_dsgevecm.jl`: analyze impulse response for DSGE-VECMs.
 
 ## Running with Default Settings
 

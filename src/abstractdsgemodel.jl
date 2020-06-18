@@ -494,7 +494,6 @@ Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 function setup_regime_switching_inds!(m::AbstractDSGEModel)
 
     n_hist_regimes = 0
-    n_fcast_regimes = 0
     n_cond_regimes = 0
     n_regimes = length(keys(get_setting(m, :regime_dates)))
     post_cond_end = iterate_quarters(date_conditional_end(m), 1) # Period after conditional forecasting ends
@@ -513,8 +512,6 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel)
         end
         if val < date_forecast_start(m)
             n_hist_regimes += 1
-        else
-            n_fcast_regimes += 1
         end
         if date_forecast_start(m) <= val <= date_conditional_end(m)
             n_cond_regimes += 1
@@ -531,10 +528,10 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel)
                      findlast(sort!(collect(values(get_setting(m, :regime_dates)))) .<= date_conditional_end(m)),
                      reg_post_conditional_end_str) # or .< post_cond_end
     end
-    # If no dates during forecast period, need at least one fcast regime to do the forecast
-    if n_fcast_regimes == 0
-        n_fcast_regimes = 1
-    end
+
+    # Infer number of regimes in the forecast horizon from reg_forecast_start
+    n_fcast_regimes = n_regimes - get_setting(m, :reg_forecast_start) + 1
+
     m <= Setting(:n_regimes, n_regimes, "Total number of regimes")
     m <= Setting(:n_hist_regimes, n_hist_regimes, "Number of regimes in the history")
     m <= Setting(:n_fcast_regimes, n_fcast_regimes, "Number of regimes in the forecast horizon")
