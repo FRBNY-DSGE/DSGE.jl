@@ -68,7 +68,14 @@ saved_fore_4q = load("$path/../reference/df_to_table_out.jld2", "fore_4q")
     @test Matrix(fore_4q) == Matrix(saved_fore_4q)
     @test_throws AssertionError construct_fcast_and_hist_dfs(m, :none, [:obs_gdp], save_to_table = true)
     # Test that saving to tex table functionality runs
-    construct_fcast_and_hist_dfs(m, :none, [:obs_gdp], save_to_table = true, table_caption = "Test Caption", filename = "test.tex", savedir = "$path")
+    construct_fcast_and_hist_dfs(m, :none, [:obs_gdp], save_to_table = true, table_caption = "Test Caption",
+                                 filename = "test.tex", savedir = "$path")
+    if isfile("test.tex_forecast.tex")
+        rm("test.tex_forecast.tex")
+    end
+    if isfile("test.tex_history.tex")
+        rm("test.tex_history.tex")
+    end
 end
 
 @testset "Test auxiliary methods" begin
