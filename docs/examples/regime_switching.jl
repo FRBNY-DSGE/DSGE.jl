@@ -19,7 +19,7 @@ fn = dirname(@__FILE__)
 # alternative policy of nominal GDP (NGDP) targeting.
 
 # What do you want to do?
-run_full_forecast = true  # Run full distribution forecast
+run_full_forecast = false  # Run full distribution forecast
 temp_alt          = true  # Temporary NGDP targeting?
 perm_alt          = true  # Permanent NGDP targeting?
 make_plots        = true  # Make plots
@@ -262,7 +262,7 @@ if make_plots
         if product == :forecastobs
             dates_plot = data_plot[!, :date]
             histobs_plot = obs == :obs_hours ? data_plot[!, obs] : 4 .* data_plot[!, obs]
-            fcast_date_tmp = fcast_date
+            fcast_date_tmp = vcat(dates_plot[end - 1], fcast_date)
             dates_plot = map(x -> DSGE.prev_quarter(x), dates_plot)
             p = Plots.plot(dates_plot, histobs_plot, color = :black,
                            label = "Data", linewidth = 3, legend = :bottomright, left_margin = 20px)
@@ -279,17 +279,9 @@ if make_plots
                 forecast_plot = 4 .* val[product][series_ind, :][1:nfcast]
             end
             if product == :forecastobs
-                if ismissing(data_plot[end, obs]) || isnan(data_plot[end, obs])
-                    forecast_plot = vcat(histobs_plot[end], forecast_plot)
-                end
-                if obs == :obs_hours
-                    forecast_plot = vcat(histobs_plot[end], forecast_plot[2:end])
-                end
+                forecast_plot = vcat(histobs_plot[end], forecast_plot)
             end
 
-            if obs == :obs_hours
-                forecast_plot = vcat(histobs_plot[end], forecast_plot[2:end])
-            end
             plot!(fcast_date_tmp, forecast_plot, color = colors[i],
                   label = key, linewidth = 1, linestyle = styles[i])
             if obs == :obs_nominalrate
@@ -298,7 +290,6 @@ if make_plots
         end
         return p
     end
-
 
     function make_ngdp_plot(m::AbstractDSGEModel, plot_mat::OrderedDict{String, Dict{Symbol, Array{Float64}}},
                             dates_plot, data_plot,
