@@ -500,13 +500,15 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel)
     post_cond_end = iterate_quarters(date_conditional_end(m), 1) # Period after conditional forecasting ends
     set_reg_forecast_start   = false # These flags are needed to tell whether or not we actually set these regimes.
     set_post_conditional_end = false # W/out these flags, if m already has reg_forecast_start, then it won't be properly set
+    reg_forecast_start_str = "Regime in which the forecast starts."
+    reg_post_conditional_end_str = "Regime one period after the conditional forecast ends."
     for (key, val) in get_setting(m, :regime_dates)
         if val == date_forecast_start(m)
-            m <= Setting(:reg_forecast_start, key)
+            m <= Setting(:reg_forecast_start, key, reg_forecast_start_str)
             set_reg_forecast_start = true
         end
         if val == post_cond_end
-            m <= Setting(:reg_post_conditional_end, key)
+            m <= Setting(:reg_post_conditional_end, key, reg_post_conditional_end_str)
             set_post_conditional_end = true
         end
         if val < date_forecast_start(m)
@@ -520,22 +522,25 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel)
     end
     if !set_reg_forecast_start
         # Then the forecast begins in the middle of a regime
-        m <= Setting(:reg_forecast_start, findlast(collect(values(get_setting(m, :regime_dates))) .< date_forecast_start(m)))
+        m <= Setting(:reg_forecast_start, findlast(sort!(collect(values(get_setting(m, :regime_dates)))) .< date_forecast_start(m)),
+                     reg_forecast_start_str)
     end
     if !set_post_conditional_end
         # Then the conditional forecast ends in the middle of a regime
         m <= Setting(:reg_post_conditional_end,
-                     findlast(collect(values(get_setting(m, :regime_dates))) .<= date_conditional_end(m))) # or .< post_cond_end
+                     findlast(sort!(collect(values(get_setting(m, :regime_dates)))) .<= date_conditional_end(m)),
+                     reg_post_conditional_end_str) # or .< post_cond_end
     end
     # If no dates during forecast period, need at least one fcast regime to do the forecast
     if n_fcast_regimes == 0
         n_fcast_regimes = 1
     end
-    m <= Setting(:n_regimes, n_regimes)
-    m <= Setting(:n_hist_regimes, n_hist_regimes)
-    m <= Setting(:n_fcast_regimes, n_fcast_regimes)
-    m <= Setting(:n_cond_regimes, n_cond_regimes)
+    m <= Setting(:n_regimes, n_regimes, "Total number of regimes")
+    m <= Setting(:n_hist_regimes, n_hist_regimes, "Number of regimes in the history")
+    m <= Setting(:n_fcast_regimes, n_fcast_regimes, "Number of regimes in the forecast horizon")
+    m <= Setting(:n_cond_regimes, n_cond_regimes, "Number of regime switches during the conditional forecast horizon")
     # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
-    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m, :n_hist_regimes) + 1))
+    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m, :n_hist_regimes) + 1),
+                 "Number of periods during which the (temporary) alternative policy applies.")
     return m
 end
