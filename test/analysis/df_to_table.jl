@@ -70,12 +70,6 @@ saved_fore_4q = load("$path/../reference/df_to_table_out.jld2", "fore_4q")
     # Test that saving to tex table functionality runs
     construct_fcast_and_hist_dfs(m, :none, [:obs_gdp], save_to_table = true, table_caption = "Test Caption",
                                  filename = "test.tex", savedir = "$path")
-    if isfile("test.tex_forecast.tex")
-        rm("test.tex_forecast.tex")
-    end
-    if isfile("test.tex_history.tex")
-        rm("test.tex_history.tex")
-    end
 end
 
 @testset "Test auxiliary methods" begin
@@ -131,4 +125,13 @@ end
 
 @testset "Test meansbands_to_matrix works" begin
     meansbands_to_matrix(m, :full, :none, [:histobs])
+end
+
+
+fp = dirname(@__FILE__)
+if isfile(joinpath(fp, "test.tex_forecast.tex"))
+    rm(joinpath(fp, "test.tex_forecast.tex"))
+end
+if isfile(joinpath(fp, "test.tex_history.tex"))
+    rm(joinpath(fp, "test.tex_history.tex"))
 end
