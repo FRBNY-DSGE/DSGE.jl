@@ -618,7 +618,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     irfs_only = all(x -> x == :irf, output_prods)
 
     # Compute state space
-    update!(m, params)
+    update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
     system = compute_system(m)
 
     # Initialize output dictionary
