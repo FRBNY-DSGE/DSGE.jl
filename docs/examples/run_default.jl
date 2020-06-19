@@ -6,7 +6,7 @@ using Nullables, DataFrames, OrderedCollections, Dates
 # Just run in the Julia REPL
 # include("run_default.jl")
 # Note that the estimation
-# step will take 1-2 hours.
+# step will take 2-3 hours.
 #############################
 
 ##############

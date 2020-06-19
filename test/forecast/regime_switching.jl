@@ -77,7 +77,8 @@ end
                                                   3 => Date(2020, 6, 30)))
     m = setup_regime_switching_inds!(m)
 
-    df = load("../../test/reference/regime_switch_data.jld2", "regime_switch_df_none")
+    fp = dirname(@__FILE__)
+    df = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_none")
 
     m <= Setting(:replace_eqcond, false)
     m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
@@ -123,7 +124,7 @@ end
     m <= Setting(:use_parallel_workers, false)
     fp = dirname(@__FILE__)
     overrides = forecast_input_file_overrides(m)
-    overrides[:full] = "$(fp)/../../test/reference/mhsave_vint=181115.h5"
+    overrides[:full] = "$(fp)/../reference/mhsave_vint=181115.h5"
     θ = load_draws(m, :full)[1:3, :]
     m <= Setting(:forecast_jstep, 1)
     m <= Setting(:forecast_block_size, 3)
@@ -155,12 +156,13 @@ end
 
     output_vars = [:forecastobs, :forecast4qobs, :forecastpseudo, :histpseudo]
     dfs = Dict()
-    dfs[:full] = load("../../test/reference/regime_switch_data.jld2", "regime_switch_df_full")
-    dfs[:semi] = load("../../test/reference/regime_switch_data.jld2", "regime_switch_df_semi")
-    dfs[:none] = load("../../test/reference/regime_switch_data.jld2", "regime_switch_df_none")
+    fp = dirname(@__FILE__)
+    dfs[:full] = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_full")
+    dfs[:semi] = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_semi")
+    dfs[:none] = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_none")
 
     if !generate_fulldist_forecast_data
-        check_results = load("../reference/regime_switching_fulldist_forecast.jld2", "fcast_out")
+        check_results = load(joinpath(fp, "../reference/regime_switching_fulldist_forecast.jld2"), "fcast_out")
     end
 
     for (i, rs, fs, ce) in zip(1:length(rss), rss, fss, ces)
