@@ -1,3 +1,25 @@
+"""
+```
+ait()
+```
+
+creates a permanent alternative policy of "Average Inflation Targeting".
+To run this permanent policy, a user needs to run the following code:
+
+```
+m <= Setting(:alternative_policy, ait())
+m <= Setting(:pgap_type, :ait)
+m <= Setting(:pgap_value, 0.)
+```
+
+The first line initializes the alternative policy, and the next two lines
+indicates what information is represented by the price gap (`pgap`). It is
+standard to set `pgap_value = 0.`, which means that the AIT rule
+implements a price gap target of 0.
+
+A user should also check that temporary alternative policies are turned off,
+namely that the settings `replace_eqcond` and `gensys2` should be set to `false`.
+"""
 function ait()
     AltPolicy(:ait, ait_eqcond, ait_solve,
               forecast_init = ait_forecast_init,
@@ -50,7 +72,7 @@ ait_eqcond(m::AbstractDSGEModel)
 ```
 
 Solves for the transition equation of `m` under a price level
-targetingl rule (implemented by adding a price-gap state)
+targeting rule (implemented by adding a price-gap state)
 """
 function ait_eqcond(m::AbstractDSGEModel, reg::Int = 1)
 
@@ -116,7 +138,8 @@ ait_solve(m::AbstractDSGEModel)
 ```
 
 Solves for the transition equation of `m` under a price level
-targeting rule (implemented by adding a price-gap state)
+targeting rule (implemented by adding a price-gap state, which uses the value
+held in the setting `get_setting(m, :pgap_value)`. A value of 12.0 is standard.)
 """
 function ait_solve(m::AbstractDSGEModel; regime_switching::Bool, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
 

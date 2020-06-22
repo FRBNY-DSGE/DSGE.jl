@@ -1,3 +1,27 @@
+"""
+```
+ngdp()
+```
+
+creates a permanent alternative policy of "Nominal GDP Targeting".
+To run this permanent policy, a user needs to run the following code:
+
+```
+m <= Setting(:alternative_policy, ngdp())
+m <= Setting(:pgap_type, :ngdp)
+m <= Setting(:pgap_value, 12.)
+```
+
+The first line initializes the alternative policy, and the next two lines
+indicates what information is represented by the price gap (`pgap`). For NGDP
+targeting, the price gap value `pgap_value` is the initial price gap
+at the beginning of the forecast horizon (i.e. in the first period of the
+forecast horizon, we assume a price gap of `pgap_value`). Note that a
+positive `pgap_value` corresponds to a *negative* price gap.
+
+A user should also check that temporary alternative policies are turned off,
+namely that the settings `replace_eqcond` and `gensys2` should be set to `false`.
+"""
 function ngdp()
     AltPolicy(:ngdp, ngdp_eqcond, ngdp_solve,
               forecast_init = ngdp_forecast_init,
