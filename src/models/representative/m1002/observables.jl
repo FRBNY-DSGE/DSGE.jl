@@ -392,10 +392,10 @@ function init_observable_mappings!(m::Model1002)
     end
 
     ############################################################################
-    # Columns ??
+    # Automatic addition of anticipated shocks
     ############################################################################
-
-    for (k, v) in get_setting(m, :antshocks)
+    # Currently this code is unused b/c other shocks aren't observable, generally
+#=    for (k, v) in get_setting(m, :antshocks)
         if k == :z
             for i = 1:v
                 # FROM: fake data of z expectations
@@ -430,6 +430,7 @@ function init_observable_mappings!(m::Model1002)
             end
         end
     end
+=#
 
     # if subspec(m) in ["ss60"]
     #     ztil_fwd_transform = function (levels)
