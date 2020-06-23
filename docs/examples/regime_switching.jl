@@ -19,7 +19,7 @@ fn = dirname(@__FILE__)
 # alternative policy of nominal GDP (NGDP) targeting.
 
 # What do you want to do?
-run_full_forecast = false  # Run full distribution forecast
+run_full_forecast = true  # Run full distribution forecast
 temp_alt          = true  # Temporary NGDP targeting?
 perm_alt          = true  # Permanent NGDP targeting?
 make_plots        = false  # Make plots
