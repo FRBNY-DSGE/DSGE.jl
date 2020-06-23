@@ -19,11 +19,11 @@ fn = dirname(@__FILE__)
 # alternative policy of nominal GDP (NGDP) targeting.
 
 # What do you want to do?
-run_full_forecast = false  # Run full distribution forecast
+run_full_forecast = true  # Run full distribution forecast
 temp_alt          = true  # Temporary NGDP targeting?
 perm_alt          = true  # Permanent NGDP targeting?
-make_plots        = true  # Make plots
-save_plots        = true  # Save plots to figurespath(m, "forecast")
+make_plots        = false  # Make plots
+save_plots        = false  # Save plots to figurespath(m, "forecast")
 add_workers       = false # Run in parallel
 n_workers         = 10
 
@@ -152,11 +152,11 @@ if run_full_forecast
         @everywhere using DSGE, OrderedCollections
     end
 
-    usual_model_forecast(m, :full, :none, output_vars,
+#=    usual_model_forecast(m, :full, :none, output_vars,
                          forecast_string = forecast_string,
                          density_bands = [.5, .6, .68, .7, .8, .9],
                          check_empty_columns = false,
-                         params = param_mat) # Need to pass in parameters directly, see ?forecast_one
+                         params = param_mat) # Need to pass in parameters directly, see ?forecast_one=#
 
     if add_workers
         rmprocs(my_procs)
@@ -164,6 +164,10 @@ if run_full_forecast
 
     # For comparison to the alternative policies. We want the raw output here, so we call
     # forecast_one_draw rataher than the wrappers usual_model_forecast or forecast_one
+    # Note m is already calibrated to the "mode", so passing in parameters of same length
+    # as m.parameters will just trigger the non-regime-switching updating of the parameters in m.
+    # If the parameters of m were not already calibrated, then modal_params would need to be extended
+    # to include the correct regime-switching values (rather than just map(x -> x.value, m10.parameter))
     fcast = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
