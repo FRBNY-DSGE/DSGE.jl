@@ -219,7 +219,6 @@ function init_model_indices!(m::Model1002)
         push!(exogenous_shocks, :φ_sh)
     end
 
-
     # Observables
     observables = keys(m.observable_mappings)
 

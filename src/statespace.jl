@@ -330,6 +330,20 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                                                          reg = reg)
             end
 
+            # Adjustments to measurement equation when using alternative policies
+            if haskey(get_settings(m), :replace_eqcond_func_dict)
+                for (reg, v) in get_setting(m, :replace_eqcond_func_dict)
+                    if v == zero_rate_eqcond || # ensure that the steady state value of the nominal interest rate is m[:Rstarn]
+                        v == zero_rate_replace_eq_entries
+                        measurement_equations[reg][:DD][get_observables(m)[:obs_nominalrate]] = m[:Rstarn]
+                    end
+                end
+            elseif get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond
+                for reg in 1:n_regimes
+                    measurement_equations[reg][:DD][get_observables(m)[:obs_nominalrate]] = m[:Rstarn]
+                end
+            end
+
             if hasmethod(pseudo_measurement, type_tuple)
                 pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
                 return RegimeSwitchingSystem(transition_equations,
@@ -358,6 +372,10 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
             # Solve measurement equation
             measurement_equation = measurement(m, TTT, RRR, CCC)
+
+            if get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond
+                measurement_equation[:DD][get_observables(m)[:obs_nominalrate]] = m[:Rstarn]
+            end
 
         elseif solution_method == :klein
             # Unpacking the method from solve to hang on to TTT_jump
