@@ -188,6 +188,62 @@ end
     @test fcast_altperm[:forecastobs] == fcast_altperm2[:forecastobs]
 end
 
+@testset "Calculation of regime indices" begin
+    m = AnSchorfheide("ss0")
+
+    rss = Vector{Dict{Int, Date}}(undef, 0)
+    fss = Vector{Date}(undef, 0)
+    ces = Vector{Date}(undef, 0)
+    answers = Dict()
+    answers[:full] = []
+    answers[:none] = []
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 6, 30))
+    push!(answers[:none], [1:1, 2:60])
+    push!(answers[:full], [1:59])
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 6, 30),
+                               4 => Date(2021, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 6, 30))
+    push!(answers[:none], [1:6, 7:60])
+    push!(answers[:full], [1:5, 6:59])
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 12, 31),
+                               4 => Date(2021, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(answers[:none], [1:2, 3:6, 7:60])
+    push!(answers[:full], [1:3, 4:57])
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2021, 12, 31),
+                           4 => Date(2022, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(answers[:none], [1:6, 7:10, 11:60])
+    push!(answers[:full], [1:3, 4:7, 8:57])
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 6, 30), 3 => Date(2021, 12, 31),
+                               4 => Date(2022, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(answers[:none], [1:6, 7:10, 11:60])
+    push!(answers[:full], [1:3, 4:7, 8:57])
+
+    for cond_type in [:full, :none]
+        for (i, rs, fs, ce) in zip(1:length(rss), rss, fss, ces)
+            m <= Setting(:regime_dates, rs)
+            m <= Setting(:date_forecast_start, fs)
+            m <= Setting(:date_conditional_end, ce)
+            setup_regime_switching_inds!(m)
+            fcast_reg_inds = DSGE.get_fcast_regime_inds(m, forecast_horizons(m; cond_type = cond_type), cond_type)
+            @test fcast_reg_inds == answers[cond_type][i]
+        end
+    end
+end
+
 @testset "Full-distribution forecast with conditioning and regime switching during forecast horizon" begin
     # Now we check regime switching properly draws shocks
     mtest = AnSchorfheide(;testing = true)

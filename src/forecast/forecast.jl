@@ -338,4 +338,6 @@ function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Sy
         last_date = get_setting(m, :regime_dates)[i + 1]
     end
     regime_inds = push!(regime_inds, last_ind:horizon) # Covers case where final hist regime is also first (and only) forecast regime.
+
+    return regime_inds
 end
