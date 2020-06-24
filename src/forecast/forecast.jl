@@ -137,7 +137,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     end
 
     if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value) #&& (haskey(m.settings, :gensys2) ? get_setting(m, :gensys2) : false)
-        if get_setting(m, :pgap_type) ==:ngdp
+        if get_setting(m, :pgap_type) == :ngdp
             shocks, z0 = ngdp_forecast_init(m, shocks, z0, cond_type = cond_type)
         end
     end
@@ -220,7 +220,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     n_fcast_reg = get_setting(m, :n_fcast_regimes)
     if cond_type != :none
         n_fcast_reg -= get_setting(m, :reg_post_conditional_end) - # Remove number of regimes switched since starting
-            get_setting(m, :reg_forecast_start) - 1                # the conditional forecast
+            get_setting(m, :reg_forecast_start)                    # the conditional forecast
         if n_fcast_reg == 0 # Then no new regimes after conditional forecast ends
             n_fcast_reg = 1 # So we use the last conditional forecast regime
         end
@@ -240,6 +240,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     reg_fcast_cond_start = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
         max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
 
+    # n_regimes is incorrectly being computed, as is n_fcast_reg
     # Unpack system
     for (ss_ind, sys_ind) in enumerate(reg_fcast_cond_start:get_setting(m, :n_regimes))
         Ts[ss_ind], Rs[ss_ind], Cs[ss_ind] = system[sys_ind, :TTT], system[sys_ind, :RRR], system[sys_ind, :CCC]
@@ -290,7 +291,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     pseudo = zeros(npseudo, horizon)
 
     states[:, 1], shocks[:, 1] = iterate(z0, shocks[:, 1], Ts[1], Rs[1], Cs[1], Qs[1], Zs[1], Ds[1])
-    obs[:, 1] = Ds[1] .+ Zs[1]*states[:, 1]
+    obs[:, 1] = Ds[1] .+ Zs[1] * states[:, 1]
     pseudo[:, 1] = D_pseudos[1] .+ Z_pseudos[1] * states[:, 1]
 
     # If there's multiple regimes in forecast period, go through each set of indices. Otherwise, just take the first set
@@ -320,22 +321,21 @@ end
 
 function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Symbol)
 
-    fcast_start_date = (cond_type == :none) ? date_forecast_start(m) : # If conditional forecast, then we want to start forecasting
+    fcast_post_cond_date = (cond_type == :none) ? date_forecast_start(m) : # If cond forecast, then we want to start forecasting
         max(date_forecast_start(m), iterate_quarters(date_conditional_end(m), 1)) # from the period after the conditional end period
-    last_date = iterate_quarters(fcast_start_date, -1) # minus 1 to get one date before the forecast start
+    # last_date = iterate_quarters(fcast_post_cond_date, -1) # minus 1 to get one date before the forecast start
+    last_date = fcast_post_cond_date
     last_ind = 1
 
     # Construct vector of time periods for each regime in the forecast periods after the conditional forecast
     regime_inds = Vector{UnitRange{Int}}(undef, 0)
-    for i in 1:(get_setting(m, :n_regimes) - 1) # -1 because, we add the last regime:horizon to end
-        if get_setting(m, :regime_dates)[i] < fcast_start_date # date_forecast_start(m)
-            continue
-        else
-            qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i], last_date)
-            regime_inds = push!(regime_inds, last_ind:(last_ind + qtr_diff - 1))
-            last_ind = last_ind + qtr_diff
-            last_date = get_setting(m, :regime_dates)[i]
-        end
+    start_reg = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
+        max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
+    for i in start_reg:(get_setting(m, :n_regimes) - 1) # Last regime handled separately
+        qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i + 1], last_date)
+        push!(regime_inds, last_ind:(last_ind + qtr_diff - 1))
+        last_ind += qtr_diff
+        last_date = get_setting(m, :regime_dates)[i + 1]
     end
-    regime_inds = push!(regime_inds, last_ind:horizon) # This covers case where final history regime is also first (and only) forecast regime.
+    regime_inds = push!(regime_inds, last_ind:horizon) # Covers case where final hist regime is also first (and only) forecast regime.
 end
