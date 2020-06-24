@@ -87,6 +87,7 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_wages], endo[:z_t]]      = 1.0
         DD[obs[:obs_wages]]                  = 100*(exp(m[:z_star])-1)
     end
+
     ## Inflation (GDP Deflator)
     ZZ[obs[:obs_gdpdeflator], endo[:π_t]]            = m[:Γ_gdpdef]
     ZZ[obs[:obs_gdpdeflator], endo_new[:e_gdpdef_t]] = 1.0

@@ -759,10 +759,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     forecast(system, s_T, etpeg; cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
                 println("The forecasted interest rate path is $(forecastobs[m.observables[:obs_nominalrate], :])")
             else
-                fcast_sys = system #regime_switching ? system[n_regimes] : system # system to be used for forecast
-
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, fcast_sys, s_T;
+                    forecast(m, system, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
             end
 
@@ -772,7 +770,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
                 # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN THE SYSTEM
-                forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, isa(fcast_sys, RegimeSwitchingSystem) ? fcast_sys[1] : fcast_sys, T)
+                forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
             else
                 forecast_output[:forecaststates] = forecaststates
                 forecast_output[:forecastshocks] = forecastshocks
@@ -815,7 +813,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, fcast_sys, s_T;
+                    forecast(m, system, s_T;
                              cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
             end
 
@@ -826,7 +824,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
                 # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN TEH SYSTEM
                 forecast_output[:bddforecastobs]    = transplant_forecast_observables(histstates, forecastobs,
-                                                                                      isa(fcast_sys, RegimeSwitchingSystem) ? fcast_sys[1] : fcast_sys, T)
+                                                                                      isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
             else
                 forecast_output[:bddforecaststates] = forecaststates
                 forecast_output[:bddforecastshocks] = forecastshocks
