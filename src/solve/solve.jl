@@ -82,7 +82,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
                     # Check for LAPACK exception, existence and uniqueness
                     if eu[1] != 1 || eu[2] != 1
-                        throw(GensysError("Error in Gensys, Regime $reg"))
+                        throw(GensysError("Error in Gensys, Regime $hist_reg"))
                     end
 
                     TTT_gensys = real(TTT_gensys)
