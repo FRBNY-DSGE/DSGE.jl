@@ -2,8 +2,21 @@
 ```
 forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}(undef, 0,0))
 
+forecast(m, altpolicy, z0, shocks)
+
 forecast(system, z0, shocks; enforce_zlb = false)
 ```
+
+The first method produces a forecast, given a state space system,
+initial state, and shocks, using information about the desired forecast
+contained in `m`. It enforces the ZLB by using monetary policy shocks.
+
+The second method is similar but differs in two ways. First,
+it produces forecasts specifically when an alternative policy
+is used. Second, it enforces the ZLB by treating it as a temporary
+alternative policy.
+
+The third method is an internal function used by the first two methods.
 
 ### Inputs
 
@@ -14,9 +27,14 @@ forecast(system, z0, shocks; enforce_zlb = false)
   have to equal `forecast_horizons(m)`; it will be truncated or padded with
   zeros appropriately
 
-**Method 1 only:**
+**Method 1 and 2 only:**
 
 - `m::AbstractDSGEModel`
+
+**Method 2 only:**
+
+- `altpolicy::Symbol`: Which alternative policy is being used
+- `obs::Matrix{S <: Real}`: matrix of forecasted observables
 
 where `S<:AbstractFloat`.
 
@@ -44,6 +62,23 @@ where `S<:AbstractFloat`.
   `false`. If `shocks` is provided as a keyword argument, this flag has no
   effect.
 
+**Method 2 only:**
+
+- `temporary_altpolicy_max_iter::Int`: maximum number of iterations for which the
+    function attempts to enforce the ZLB as a temporary alternative policy. Defaults to 10.
+
+- `set_zlb_regime_vals::Function`: user-provided function that adds additional regimes to
+    regime-switching parameters if not enough regimes exist to impose the ZLB
+    as a temporary alternative policy. Defaults to `identity`, and nothing will happen
+    if this is the case.
+
+- `state_dims::Tuple{Int, Int}`: Dimensions of the forecasted states. Defaults are inferred from `m`.
+
+- `pseudo_dims::Tuple{Int, Int}`: Dimensions of the forecasted pseudo-observables. Defaults are inferred from `m`.
+
+- `tol::{<: Real}`: Tolerance for the smallest permissible value for the nominal interest rate.
+    Defaults to -1e-14.
+
 ### Outputs
 
 - `states::Matrix{S}`: matrix of size `nstates` x `horizon` of forecasted states
@@ -53,8 +88,8 @@ where `S<:AbstractFloat`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, System{S}},
-    z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
+                  z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
+                  shocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -63,7 +98,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     if isempty(shocks)
         # Populate shocks matrix
         if draw_shocks
-            # If Rgeime Switching System, need to get proper QQ in each forecast period.
+            # If Regime Switching System, need to get proper QQ in each forecast period.
             if isa(system, RegimeSwitchingSystem)
                 shocks = zeros(nshocks, horizon)
                 μ = zeros(nshocks)
@@ -156,6 +191,100 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     end
 end
 
+function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::AbstractMatrix{S}, shocks::AbstractMatrix{S};
+                  cond_type::Symbol = :none, temporary_altpolicy_max_iter::Int = 10, set_zlb_regime_vals::Function = identity,
+                  dims::Vector{Tuple{Int, Int}} = Vector{Tuple{Int, Int}}(undef, 0), tol::S = -1e-14) where {S <: Real}
+
+    # Grab "original" settings" so they can be restored later
+    is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
+    is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+    is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
+
+    # Grab some information about the forecast
+    n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 0
+    if haskey(DSGE.get_settings(m), :regime_dates) # dates of first and last regimes we need to add for the alt policy
+        start_altpol_date = get_setting(m, :regime_dates)[2]
+        end_altpol_date   = get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] +
+            Dates.Month(3) * (forecast_horizons(m) + 1)
+    else
+        start_altpol_date = date_forecast_start(m)
+        end_altpol_date   = start_altpol_date + Dates.Month(3) * (forecast_horizons(m) + 1)
+    end
+
+    # Loop for enforcing zero rate
+    states, pseudo = if isempty(dims)
+        zeros(S, n_states_augmented(m), forecast_horizons(m)), zeros(S, n_pseudo_observables(m), forecast_horizons(m))
+    else
+       zeros(S, dims[1]...),  zeros(S, dims[2]...)
+    end
+    obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
+
+    for iter in 1:temporary_altpolicy_max_iter
+
+        # Figure out which periods need temporary ZLB regimes
+        which_zlb_regimes = findall(obs[get_observables(m)[:obs_nominalrate], :] .<
+                                    get_setting(m, :forecast_zlb_value)) .+ n_hist_regimes # add historical regimes to get the right regime number
+        # Count the number of necessary regimes. For now, we add in a separate regime for every
+        # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
+        # that this is necessary anyway but not always, especially depending on the drawn shocks
+        n_total_regimes = maximum(which_zlb_regimes) + 1 + n_hist_regimes
+
+        # Set up parameters if there are switching parameter values.
+        #
+        # User needs to provide a function which takes in the model object `m`
+        # and the total number of regimes (after adding the required temporary regimes),
+        # and sets up regime-switching parameters for these new additional regimes.
+        if set_zlb_regime_vals != identity
+            set_zlb_regime_vals(m, n_total_regimes)
+        end
+
+        # Set up regime dates
+        altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
+        for (regind, date) in zip(2:n_total_regimes, # We want to have enough regimes to fill up altpol_regime_dates properly
+                                  start_altpol_date:Dates.Month(3):end_altpol_date)
+            altpol_regime_dates[regind] = date
+        end
+        m <= Setting(:regime_dates, altpol_regime_dates)
+        m <= Setting(:regime_switching, true)
+        setup_regime_switching_inds!(m)
+
+        # Set up replace_eqcond entries
+        m <= Setting(:replace_eqcond, true)
+        m <= Setting(:gensys2, true)
+        replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
+        for regind in which_zlb_regimes
+            replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
+        end
+        replace_eqcond[n_total_regimes] = if altpolicy == :ait
+            DSGE.ait_replace_eq_entries # Add permanent AIT regime
+        elseif altpolicy == :ngdp
+            DSGE.ngdp_replace_eq_entries # Add permanent NGDP regime
+        end
+        m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+
+        # Recompute to account for new regimes
+        system = compute_system(m; apply_altpolicy = true)
+
+        # Forecast!
+        states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
+
+        if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
+            break
+        end
+
+        if iter == temporary_altpolicy_max_iter
+            @warn "Reached maximum number of iterations for enforcing the ZLB."
+        end
+    end
+
+    # Restore original settings
+    m <= Setting(:regime_switching, is_regime_switch)
+    m <= Setting(:replace_eqcond,   is_replace_eqcond)
+    m <= Setting(:gensys2,          is_gensys2)
+
+    return states, obs, pseudo
+end
+
 function forecast(system::System{S}, z0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
@@ -177,7 +306,7 @@ function forecast(system::System{S}, z0::Vector{S},
         z_t = C + T*z_t1 + R*ϵ_t
 
         # Change monetary policy shock to account for 0.13 interest rate bound
-        if enforce_zlb
+        if enforce_zlb && zlb_method == :shock
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
