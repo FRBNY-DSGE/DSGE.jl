@@ -29,6 +29,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                hist_regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1,
                fcast_regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1,
                regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1,
+               uncertain_altpolicy::Bool = false,
                verbose::Symbol = :high) where {T <: Real}
 
     altpolicy_solve = alternative_policy(m).solve
@@ -38,25 +39,40 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
         if get_setting(m, :solution_method) == :gensys
             if isa(regimes, Int) # Calculate the solution to a specific regime
+                if uncertain_altpolicy
+                    weights = get_setting(m, :alternative_policy_weights)
+                    altpols = get_setting(m, :alternative_policies)
 
-                # Get equilibrium condition matrices
-                Γ0, Γ1, C, Ψ, Π  = eqcond(m, regimes)
+                    TTT_gensys, RRR_gensys, CCC_gensys = gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy)
 
-                # Solve model
-                TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
+                    # Augment states
+                    TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
+                                                   regime = regimes)
 
-                # Check for LAPACK exception, existence and uniqueness
-                if eu[1] != 1 || eu[2] != 1
-                    throw(GensysError())
+                elseif altpolicy_solve == solve || !apply_altpolicy
+
+                    # Get equilibrium condition matrices
+                    Γ0, Γ1, C, Ψ, Π  = eqcond(m, regimes)
+
+                    # Solve model
+                    TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
+
+                    # Check for LAPACK exception, existence and uniqueness
+                    if eu[1] != 1 || eu[2] != 1
+                        throw(GensysError())
+                    end
+
+                    TTT_gensys = real(TTT_gensys)
+                    RRR_gensys = real(RRR_gensys)
+                    CCC_gensys = real(CCC_gensys)
+
+                    # Augment states
+                    TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
+                                                   regime = regimes)
+
+                else
+                    TTT, RRR, CCC = altpolicy_solve(m; regime_switching = regime_switching, regimes = regimes)
                 end
-
-                TTT_gensys = real(TTT_gensys)
-                RRR_gensys = real(RRR_gensys)
-                CCC_gensys = real(CCC_gensys)
-
-                # Augment states
-                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
-                                               regime = regimes)
 
                 return TTT, RRR, CCC
 
@@ -95,7 +111,14 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                 end
 
                 # Get the last state space matrices one period after the alternative policy ends (if there is one)
-                if altpolicy_solve == solve || !apply_altpolicy
+                if uncertain_altpolicy
+                    weights = get_setting(m, :alternative_policy_weights)
+                    altpols = get_setting(m, :alternative_policies)
+
+                    TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
+                        gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy)
+
+                elseif altpolicy_solve == solve || !apply_altpolicy
                     # If normal rule
                     TTT_gensys_final, CCC_gensys_final, RRR_gensys_final, eu = gensys(Γ0s[end], Γ1s[end], Cs[end],
                                                                                       Ψs[end], Πs[end],
@@ -138,6 +161,14 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     for (i, fcast_reg) in enumerate(fcast_regimes)
                         TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
                     end
+                elseif uncertain_altpolicy
+                    # MAYBE PASS IN THE GAMMA0, GAMMA1, etc. AS KEYWORDS FOR REGIME SWITCHING
+                    TTTs[fcast_regimes], RRRs[fcast_regimes], CCCs[fcast_regimes] =
+                        gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy,
+                                                  regime_switching = regime_switching, regimes = fcast_regimes)
+                    for fcast_reg in fcast_regimes
+                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg])
+                    end
                 else
                     for fcast_reg in fcast_regimes
                         if altpolicy_solve == solve || !apply_altpolicy
@@ -170,7 +201,16 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
         end
     else
         if get_setting(m, :solution_method) == :gensys
-            if altpolicy_solve == solve || !apply_altpolicy
+            if uncertain_altpolicy
+                weights = get_setting(m, :alternative_policy_weights)
+                altpols = get_setting(m, :alternative_policies)
+
+                TTT_gensys, RRR_gensys, CCC_gensys = gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy)
+
+                # Augment states
+                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+
+            elseif altpolicy_solve == solve || !apply_altpolicy
 
                 # Get equilibrium condition matrices
                 Γ0, Γ1, C, Ψ, Π  = eqcond(m)
@@ -203,6 +243,10 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
         return TTT, RRR, CCC
     end
+end
+
+function uncertain_altpolicy_solve()
+
 end
 
 """

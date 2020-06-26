@@ -58,6 +58,8 @@ function gensys_cplus(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s:
                       TTT::Matrix{Float64}, RRR::Matrix{Float64},
                       CCC::Vector{Float64})
     T_switch = get_setting(m, :n_rule_periods) + 1
+
+#=
     Γ0_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
     Γ1_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
     Γ2_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
@@ -84,6 +86,9 @@ function gensys_cplus(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s:
             end
         end
     end
+=#
+
+    Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
 
     Tcal = Vector{Matrix{Float64}}(undef, T_switch)
     Rcal = Vector{Matrix{Float64}}(undef, T_switch)
@@ -105,6 +110,30 @@ function gensys_cplus(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s:
     return Tcal, Rcal, Ccal
 end
 
+function gensys_to_predictable_form(Γ0::AbstractMatrix{S}, Γ1::AbstractMatrix{S}, C::AbstractVector{S},
+                                    Ψ::AbstractMatrix{S}, Π::AbstractMatrix{S}) where {S <: Real}
+
+    nonexp_eq_ind = map(i -> all(Π[i, :] .== 0.), 1:size(Π, 1))
+    Γ0_til = zeros(S, size(Γ0))
+    Γ1_til = zeros(S, size(Γ1))
+    Γ2_til = zeros(S, size(Γ0))
+    C_til  = C
+    Ψ_til  = Ψ
+
+    for row in 1:length(nonexp_eq_ind)
+        if nonexp_eq_ind[row]
+            # Not expectational equation
+            Γ1_til[row, :]  = Γ1[row, :]
+            Γ0_til[row, :]  = Γ0[row, :]
+        else
+            # expectational equation, assumed to take the form zₜ = Eₜ₋₁[zₜ] + ηₜ
+            Γ0_til[row, findfirst(Γ1[row, :] .> 0)] = -1.
+            Γ2_til[row, findfirst(Γ0[row, :] .> 0)] = 1.
+        end
+    end
+
+    return Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til
+end
 
 
 #=
