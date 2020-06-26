@@ -306,7 +306,7 @@ function forecast(system::System{S}, z0::Vector{S},
         z_t = C + T*z_t1 + R*ϵ_t
 
         # Change monetary policy shock to account for 0.13 interest rate bound
-        if enforce_zlb && zlb_method == :shock
+        if enforce_zlb
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
