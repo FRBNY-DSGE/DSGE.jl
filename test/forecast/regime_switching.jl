@@ -144,6 +144,80 @@ end
     @test all(isapprox.(p[1:10, :], pseudo[1:10, :], atol = 1e-3))
 end
 
+@testset "Test regime switching IRFs match Forward Guidance method IRFs" begin
+    horizon = 60
+    m = Model1002()
+    m <= Setting(:replace_eqcond, false)
+    m <= Setting(:gensys2, false)
+    m <= Setting(:regime_switching, false)
+    m[:ρ_rm] = 0.0
+
+    system = compute_system(m)
+    H = 2
+    nstates = size(system[:TTT], 1)
+    nshocks = size(system[:RRR], 2)
+    nobs         = size(system[:ZZ], 1)
+    npseudo      = size(system[:ZZ_pseudo], 1)
+
+    shocks = m.exogenous_shocks
+
+    states = zeros(nstates, horizon) #, nshocks)
+    obs    = zeros(nobs,    horizon) #, nshocks)
+    pseudo = zeros(npseudo, horizon) #, nshocks)
+
+    s_0 = zeros(nstates)
+    ### IRFs to FFR peg for H periods
+    # Set anticipated shocks to peg FFR from t+1 to t+H
+    FFRpeg = -m[:Rstarn].value #-0.25/4 #/400
+
+    PsiR1 = 0 #constant
+    # ZZ matrix
+    PsiR2 = zeros(nstates)
+    PsiR2[m.endogenous_states[:R_t]] = 1
+
+    Rht = system[:RRR][:,vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")])]
+
+    bb = zeros(H+1,1)
+    MH = zeros(H+1,H+1)
+    for hh = 1:H+1
+        bb[hh,1] = (FFRpeg - PsiR1 - PsiR2'*(system[:TTT])^hh*s_0)
+        MH[hh,:] = PsiR2'*(system[:TTT])^(hh-1)*Rht
+    end
+    monshocks = MH\bb
+    #% Simulate the model
+    etpeg = zeros(nshocks,horizon)
+    etpeg[vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")]),1] = monshocks
+    states[:, :], obs[:, :], pseudo[:, :] = forecast(system, s_0, etpeg, enforce_zlb = false)
+
+    m = Model1002()
+    m <= Setting(:gensys2, true)
+    m <= Setting(:replace_eqcond, true)
+    replace_eqcond = Dict{Int, Function}()
+    for i in 3:5
+        replace_eqcond[i] = zero_rate_replace_eq_entries
+    end
+    m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
+                                                2 => Date(1990, 3, 31),
+                                                3 => Date(2020, 6, 30),
+                                                4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31),
+                                                6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m = setup_regime_switching_inds!(m)
+
+    sys = compute_system(m)
+    @show isapprox(sys[4][:TTT], system[:TTT], atol = 1e-5)
+
+    s, o, p = forecast(m, sys, zeros(84), zeros(24, 60),  enforce_zlb = false)
+
+    @test all(isapprox.(s[1:20, :], states[1:20, :], atol = 1e-3))
+    @test all(isapprox.(o[1:9, :], obs[1:9, :], atol = 1e-3))
+    @test all(isapprox.(p[1:10, :], pseudo[1:10, :], atol = 1e-3))
+end
+
 @testset "Test rule switching forecast" begin
     output_vars = [:forecastobs, :histobs, :histpseudo, :forecastpseud]
 
