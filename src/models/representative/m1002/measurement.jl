@@ -204,9 +204,9 @@ function measurement(m::Model1002{T},
 =#
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(CCC .!= 0)
+  #=  if any(CCC .!= 0)
         DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT) \ CCC)
-    end
+    end =#
 
     for para in m.parameters
         if !isempty(para.regimes)
