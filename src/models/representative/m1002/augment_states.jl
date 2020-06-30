@@ -239,7 +239,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     ### CCC Modifications
 
     # Expected inflation
-    CCC_aug[endo_new[:Et_π_t]] = (CCC + TTT*CCC)[endo[:π_t]]
+    CCC_aug[endo_new[:Et_π_t]] = (CCC + TTT*CCC)[endo[:π_t]] # note that currently this term is not used anywhere
 
     for para in m.parameters
         if !isempty(para.regimes)

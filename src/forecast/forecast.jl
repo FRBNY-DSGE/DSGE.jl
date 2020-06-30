@@ -193,7 +193,9 @@ end
 
 function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, temporary_altpolicy_max_iter::Int = 10, set_zlb_regime_vals::Function = identity,
-                  dims::Vector{Tuple{Int, Int}} = Vector{Tuple{Int, Int}}(undef, 0), tol::S = -1e-14) where {S <: Real}
+                  state_dims::Tuple{Int, Int} = (n_states_augmented(m), forecast_horizons(m, cond_type = cond_type)),
+                  pseudo_dims::Tuple{Int, Int} = (n_pseudo_observables(m), forecast_horizons(m, cond_type = cond_type)),
+                  tol::S = -1e-14) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
@@ -201,7 +203,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
 
     # Grab some information about the forecast
-    n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 0
+    n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     if haskey(DSGE.get_settings(m), :regime_dates) # dates of first and last regimes we need to add for the alt policy
         start_altpol_date = get_setting(m, :regime_dates)[2]
         end_altpol_date   = get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] +
@@ -212,11 +214,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
     end
 
     # Loop for enforcing zero rate
-    states, pseudo = if isempty(dims)
-        zeros(S, n_states_augmented(m), forecast_horizons(m)), zeros(S, n_pseudo_observables(m), forecast_horizons(m))
-    else
-       zeros(S, dims[1]...),  zeros(S, dims[2]...)
-    end
+    states = zeros(state_dims)
+    pseudo = zeros(pseudo_dims)
     obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
 
     for iter in 1:temporary_altpolicy_max_iter
@@ -224,10 +223,15 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
         # Figure out which periods need temporary ZLB regimes
         which_zlb_regimes = findall(obs[get_observables(m)[:obs_nominalrate], :] .<
                                     get_setting(m, :forecast_zlb_value)) .+ n_hist_regimes # add historical regimes to get the right regime number
+        if is_regime_switch && cond_type != :none
+            which_zlb_regimes .+= get_setting(m, :reg_post_conditional_end) - # additional conditional regimes should be added
+                get_setting(m, :reg_forecast_start)
+        end
+
         # Count the number of necessary regimes. For now, we add in a separate regime for every
         # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
         # that this is necessary anyway but not always, especially depending on the drawn shocks
-        n_total_regimes = maximum(which_zlb_regimes) + 1 + n_hist_regimes
+        n_total_regimes = maximum(which_zlb_regimes) + 1 # plus 1 for lift off
 
         # Set up parameters if there are switching parameter values.
         #
@@ -255,6 +259,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
         for regind in which_zlb_regimes
             replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
         end
+
         replace_eqcond[n_total_regimes] = if altpolicy == :ait
             DSGE.ait_replace_eq_entries # Add permanent AIT regime
         elseif altpolicy == :ngdp
@@ -266,6 +271,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
         system = compute_system(m; apply_altpolicy = true)
 
         # Forecast!
+
         states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
         if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
