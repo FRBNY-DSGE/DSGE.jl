@@ -205,9 +205,28 @@ function measurement(m::Model1002{T},
 =#
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-  #=  if any(CCC .!= 0)
-        DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT) \ CCC)
-    end =#
+    if any(CCC .!= 0.)
+        # Are we using the zero rate alternative policy or not?
+        is_zero_rate_rule = (haskey(get_settings(m), :replace_eqcond_func_dict) ?
+                             (!isempty(get_setting(m, :replace_eqcond_func_dict)) && get_setting(m, :replace_eqcond)) : false) ||
+                             get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond
+
+        # If we are using the zero rate rule, then we don't adjust DD. If we run the code block below,
+        # then the zero rate rule will cause CCC to be nonzero in multiple places, leading to the
+        # wrong steady state measurement vector DD.
+        #
+        # The current coding of is_zero_rate_rule assumes that, when using a zero_rate rule (perhaps with gensys2 and temp alt policies)
+        # any regimes in which the zero rate rule does not apply also will not have to update DD to reflect nonzero CCC.
+        # This is typically the case for m1002.
+        #
+        # Currently it looks like we modify CCC in augment_states to track expected inflation,
+        # but it doesn't look like we use this variable anywhere anyway. So ignoring this code block is fine on that front.
+        # However, all the observables and pseudo-observables were not thoroughly checked, so it is possible
+        # that the measurement equation is flawed in some way given how this has been coded.
+        if !is_zero_rate_rule
+            DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT) \ CCC)
+        end
+    end
 
     for para in m.parameters
         if !isempty(para.regimes)
