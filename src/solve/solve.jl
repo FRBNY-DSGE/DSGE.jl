@@ -157,7 +157,10 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     Tcal[end] = TTT_gensys_final
                     Rcal[end] = RRR_gensys_final
                     Ccal[end] = CCC_gensys_final
-
+                    @show size(Tcal)
+                    @show size(TTTs)
+                    @show gensys2_regimes
+                    @show fcast_regimes
                     for (i, fcast_reg) in enumerate(fcast_regimes)
                         TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
                     end
