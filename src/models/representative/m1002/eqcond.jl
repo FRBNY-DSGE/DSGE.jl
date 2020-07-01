@@ -621,32 +621,69 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
    if haskey(m.settings, :add_pgap) ? get_setting(m, :add_pgap) : false
        Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
        if haskey(m.settings, :replace_eqcond_func_dict)
+           # We additionally need to directly add the equation for pgap here rather than just
+           # in the altpolicy files b/c we may want to define the pgap at the beginning of the forecast period
+           # rather than just when we start using the alt rule.
            if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                haskey(m.settings, :pgap_type)
                if get_setting(m, :pgap_type) == :ngdp
-                   Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
-                   Γ0[eq[:eq_pgap], endo[:π_t]]     = -1.
-                   Γ1[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] =  1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] =  1.
 
-                   Γ0[eq[:eq_pgap], endo[:y_t]]     = -1.
-                   Γ0[eq[:eq_pgap], endo[:z_t]]     = -1.
-                   Γ1[eq[:eq_pgap], endo[:y_t]]     =  -1.
+                   Γ0[eq[:eq_pgap], endo[:y_t]]    = -1.
+                   Γ0[eq[:eq_pgap], endo[:z_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:y_t]]    = -1.
                elseif get_setting(m, :pgap_type) == :ait
                    Thalf = 10
                    ρ_ait = exp(log(0.5)/Thalf)
-                   Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
-                   Γ0[eq[:eq_pgap], endo[:π_t]]     = -1.
-                   Γ1[eq[:eq_pgap], endo[:pgap_t]]  = ρ_ait
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_ait
+               elseif get_setting(m, :pgap_type) == :smooth_ait
+                   Thalf = 8 # hard coded for now
+                   ρ_smooth_ait = exp(log(0.5) / Thalf)
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_smooth_ait
+               elseif get_setting(m, :pgap_type) == :smooth_ngdp
+                   Thalf = 8 # hard coded for now
+                   ρ_smooth_ait = exp(log(0.5) / Thalf)
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_smooth_ait
+               end
+           end
+       end
+   end
+
+   if haskey(m.settings, :add_nygap) ? get_setting(m, :add_nygap) : false
+       Γ0[eq[:eq_nygap], endo[:nygap_t]]  =  1.
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           # We additionally need to directly add the equation for pgap here rather than just
+           # in the altpolicy files b/c we may want to define the pgap at the beginning of the forecast period
+           # rather than just when we start using the alt rule.
+           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               haskey(m.settings, :nygap_type)
+               if get_setting(m, :nygap_type) == :smooth_ait_ngdp
+                   Γ0[eq[:eq_nygap], endo[:nygap_t]] = 1.
+                   Γ0[eq[:eq_nygap], endo[:π_t]]     = -1.
+                   Γ1[eq[:eq_nygap], endo[:nygap_t]] = 1.
+
+                   Γ0[eq[:eq_nygap], endo[:y_t]]     = -1.
+                   Γ0[eq[:eq_nygap], endo[:z_t]]     = -1.
+                   Γ1[eq[:eq_nygap], endo[:y_t]]     = -1.
                end
            end
        end
    end
 
    if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
-       if haskey(m.settings, :replace_eqcond_func_dict) #&& new_policy
+       if haskey(m.settings, :replace_eqcond_func_dict)
            if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
-           Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
+               Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
            end
        end
    end
@@ -656,5 +693,6 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
             ModelConstructors.toggle_regime!(para, 1)
         end
     end
+
     return Γ0, Γ1, C, Ψ, Π
 end
