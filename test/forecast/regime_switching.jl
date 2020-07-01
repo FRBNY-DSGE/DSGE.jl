@@ -7,7 +7,7 @@ Random.seed!(1793)
     n_reg_temp = 14
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true)))
-
+    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
                                                   2 => Date(2020, 3, 31),
@@ -41,7 +41,7 @@ Random.seed!(1793)
 
     m <= Setting(:pgap_value, 12.0 : 0.0)
     m <= Setting(:pgap_type, :ngdp)
-
+    m = setup_regime_switching_inds!(m)
 
     sys_temp = solve(m, regime_switching = true, regimes = 1:n_reg_temp, hist_regimes = 1:2, fcast_regimes = 3:n_reg_temp)
     Γ0s = Vector{Matrix{Float64}}(undef, n_reg_temp-2)
