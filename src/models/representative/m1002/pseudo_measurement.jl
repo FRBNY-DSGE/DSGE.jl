@@ -306,9 +306,14 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudo[pseudo[:zp], endo[:zp_t]] = 1.
         end
     end
- if haskey(m.settings, :add_pgap)
+    if haskey(m.settings, :add_pgap)
         if get_setting(m, :add_pgap)
             ZZ_pseudo[pseudo[:pgap], endo[:pgap_t]] = 1.
+        end
+    end
+    if haskey(m.settings, :add_nygap)
+        if get_setting(m, :add_nygap)
+            ZZ_pseudo[pseudo[:nygap], endo[:nygap_t]] = 1.
         end
     end
 
@@ -338,8 +343,11 @@ function pseudo_measurement(m::Model1002{T},
         DD_pseudos[reg] = zeros(_n_pseudo)
 
         no_integ_inds = inds_states_no_integ_series(m)
-        if haskey(m.endogenous_states, :pgap_t) #(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+        if haskey(m.endogenous_states, :pgap_t)
             no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
+        end
+        if haskey(m.endogenous_states, :nygap_t)
+            no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:nygap_t]])
         end
 
         if get_setting(m, :add_laborproductivity_measurement)
@@ -411,7 +419,7 @@ function pseudo_measurement(m::Model1002{T},
             DD_pseudos[reg][pseudo[:FlexibleConsumptionGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
         end
 
-        if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) #(haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false)
+        if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) || haskey(m.endogenous_states, :nygap_t)
                 TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
         else
             TTT = TTTs[reg]
@@ -609,21 +617,20 @@ function pseudo_measurement(m::Model1002{T},
                 ZZ_pseudos[reg][pseudo[:pgap], endo[:pgap_t]] = 1.
             end
         end
+        if haskey(m.settings, :add_nygap)
+            if get_setting(m, :add_nygap)
+                ZZ_pseudos[reg][pseudo[:nygap], endo[:nygap_t]] = 1.
+            end
+        end
 
         ## Fundameantal inflation related pseudo-obs
         if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"] #,
                           # "ss21", "ss22", "ss23","ss24", "ss25", "ss26"]
             # Compute coefficient on Sinf
             betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
-            if subspec(m) in ["ss21", "ss22", "ss25", "ss26", "ss28", "ss29", "ss41", "ss42"] && reg == 2
-                κ = ((1 - m[:ζ_p_r2]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                     (1 - m[:ζ_p_r2]))/(m[:ζ_p_r2]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
-                (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
-            else
-                κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
-                     (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
-                (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
-            end
+            κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
+                 (1 - m[:ζ_p]))/(m[:ζ_p]*((m[:Φ]- 1)*m[:ϵ_p] + 1))/
+            (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
 
             κcoef = κ * (1 + m[:ι_p] * betabar)
 

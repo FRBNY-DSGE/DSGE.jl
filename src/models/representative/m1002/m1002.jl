@@ -204,6 +204,10 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
     end
+    if haskey(get_settings(m), :add_nygap) ? get_setting(m, :add_nygap) : false
+        push!(endogenous_states, setdiff([:nygap_t], endogenous_states)...)
+        push!(equilibrium_conditions, setdiff([:eq_nygap], equilibrium_conditions)...)
+    end
 
     if subspec(m) == "ss60"
         push!(endogenous_states, :ziid_t)
