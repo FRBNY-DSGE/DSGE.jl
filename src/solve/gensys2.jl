@@ -11,6 +11,8 @@ function gensys_cplus(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Fl
                       Ψ::Matrix{Float64}, Π::Matrix{Float64}, TTT::Matrix{Float64}, RRR::Matrix{Float64},
                       CCC::Vector{Float64})
     T_switch = get_setting(m, :n_rule_periods) + 1 #get_setting(m, :n_regimes) - 1
+
+#=
     exp_eq_ind = sum(Π, dims = 2)
     Γ0_til = zeros(size(Γ0))
     Γ1_til = zeros(size(Γ1))
@@ -30,6 +32,9 @@ function gensys_cplus(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Fl
             Γ2_til[row, findfirst(Γ0[row, :] .> 0)] = 1
         end
     end
+=#
+
+    Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
 
     Tcal = Vector{Matrix{Float64}}(undef, T_switch)
     Rcal = Vector{Matrix{Float64}}(undef, T_switch)
@@ -58,13 +63,13 @@ function gensys_cplus(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s:
                       TTT::Matrix{Float64}, RRR::Matrix{Float64},
                       CCC::Vector{Float64})
     T_switch = get_setting(m, :n_rule_periods) + 1
-
-#=
     Γ0_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
     Γ1_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
     Γ2_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
     C_tils = Vector{Vector{Float64}}(undef, length(Γ0s))
     Ψ_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
+
+#=
     for i in 1:length(Γ0s)
         exp_eq_ind = sum(Πs[i], dims = 2)
         Γ0_tils[i] = zeros(size(Γ0s[i]))
@@ -88,7 +93,9 @@ function gensys_cplus(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s:
     end
 =#
 
-    Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
+    for i in 1:length(Γ0s)
+        Γ0_tils[i], Γ1_tils[i], Γ2_tils[i], C_tils[i], Ψ_tils[i] = gensys_to_predictable_form(Γ0s[i], Γ1s[i], Cs[i], Ψs[i], Πs[i])
+    end
 
     Tcal = Vector{Matrix{Float64}}(undef, T_switch)
     Rcal = Vector{Matrix{Float64}}(undef, T_switch)
