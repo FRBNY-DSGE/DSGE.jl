@@ -647,7 +647,7 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_smooth_ait
-               elseif get_setting(m, :pgap_type) == :smooth_ngdp
+               elseif get_setting(m, :pgap_type) == :smooth_ait_ngdp
                    Thalf = 8 # hard coded for now
                    ρ_smooth_ait = exp(log(0.5) / Thalf)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.

@@ -39,7 +39,6 @@ function ait_replace_eq_entries(m::AbstractDSGEModel,
     ρ     = 0.0
     φ     = 0.25
 
-
     # This assumes that the inflation target is the model's steady state
     Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
     Γ0[eq[:eq_pgap], endo[:π_t]]     = -1.
