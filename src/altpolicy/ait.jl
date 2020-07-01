@@ -15,7 +15,7 @@ m <= Setting(:pgap_value, 0.)
 The first line initializes the alternative policy, and the next two lines
 indicates what information is represented by the price gap (`pgap`). It is
 standard to set `pgap_value = 0.`, which means that the AIT rule
-implements a price gap target of 0.
+implements an initial price gap target of 0 percent.
 
 A user should also check that temporary alternative policies are turned off,
 namely that the settings `replace_eqcond` and `gensys2` should be set to `false`.
@@ -34,10 +34,10 @@ function ait_replace_eq_entries(m::AbstractDSGEModel,
     eq             = m.equilibrium_conditions
     endo           = m.endogenous_states
 
-    Thalf = 10
-    ρ_ait = exp(log(0.5)/Thalf)
-    ρ = 0.0
-    φ = 0.25
+    Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+    ρ_ait = exp(log(0.5) / Thalf)
+    ρ     = 0.0
+    φ     = 0.25
 
 
     # This assumes that the inflation target is the model's steady state
@@ -139,7 +139,7 @@ ait_solve(m::AbstractDSGEModel)
 
 Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state, which uses the value
-held in the setting `get_setting(m, :pgap_value)`. A value of 12.0 is standard.)
+held in the setting `get_setting(m, :pgap_value)`. A value of 0. is standard.)
 """
 function ait_solve(m::AbstractDSGEModel; regime_switching::Bool, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
 
