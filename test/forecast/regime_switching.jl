@@ -111,6 +111,7 @@ end
     states[:, :], obs[:, :], pseudo[:, :] = forecast(system, s_0, etpeg, enforce_zlb = false)
 
     m = Model1002()
+    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:gensys2, true)
     m <= Setting(:replace_eqcond, true)
     replace_eqcond = Dict{Int, Function}()
@@ -125,8 +126,8 @@ end
                                                 3 => Date(2020, 6, 30),
                                                 4 => Date(2020, 9, 30),
                                                 5 => Date(2020, 12, 31),
-                                                6 => Date(2021, 3, 31),
-                                                7 => Date(2021, 6, 30)))
+                                                6 => Date(2021, 3, 31)))
+
     m = setup_regime_switching_inds!(m)
 
     sys = compute_system(m)
@@ -144,6 +145,7 @@ end
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_pgap =>
                                                                   Setting(:add_pgap, true)))
+    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
 
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -170,6 +172,7 @@ end
     # Testing ore basic permanent BGDP
     m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_pgap =>
                                                                     Setting(:add_pgap, true)))
+    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
                                                 2 => Date(2020, 3, 31),
