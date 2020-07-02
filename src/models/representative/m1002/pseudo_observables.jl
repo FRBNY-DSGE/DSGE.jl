@@ -45,9 +45,9 @@ function init_pseudo_observable_mappings!(m::Model1002)
             push!(pseudo_names, :pgap)
         end
     end
-    if haskey(m.settings, :add_nygap)
-        if get_setting(m, :add_nygap)
-            push!(pseudo_names, :nygap)
+    if haskey(m.settings, :add_ygap)
+        if get_setting(m, :add_ygap)
+            push!(pseudo_names, :ygap)
         end
     end
 
@@ -331,10 +331,10 @@ function init_pseudo_observable_mappings!(m::Model1002)
             pseudo[:pgap].longname = "pgap"
         end
     end
-    if haskey(m.settings, :add_nygap)
-        if get_setting(m, :add_nygap)
-            pseudo[:nygap].name     = "nygap"
-            pseudo[:nygap].longname = "nygap"
+    if haskey(m.settings, :add_ygap)
+        if get_setting(m, :add_ygap)
+            pseudo[:ygap].name     = "ygap"
+            pseudo[:ygap].longname = "ygap"
         end
     end
 

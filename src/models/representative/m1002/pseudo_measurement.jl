@@ -311,9 +311,9 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudo[pseudo[:pgap], endo[:pgap_t]] = 1.
         end
     end
-    if haskey(m.settings, :add_nygap)
-        if get_setting(m, :add_nygap)
-            ZZ_pseudo[pseudo[:nygap], endo[:nygap_t]] = 1.
+    if haskey(m.settings, :add_ygap)
+        if get_setting(m, :add_ygap)
+            ZZ_pseudo[pseudo[:ygap], endo[:ygap_t]] = 1.
         end
     end
 
@@ -346,8 +346,8 @@ function pseudo_measurement(m::Model1002{T},
         if haskey(m.endogenous_states, :pgap_t)
             no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
         end
-        if haskey(m.endogenous_states, :nygap_t)
-            no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:nygap_t]])
+        if haskey(m.endogenous_states, :ygap_t)
+            no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:ygap_t]])
         end
 
         if get_setting(m, :add_laborproductivity_measurement)
@@ -419,7 +419,7 @@ function pseudo_measurement(m::Model1002{T},
             DD_pseudos[reg][pseudo[:FlexibleConsumptionGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
         end
 
-        if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) || haskey(m.endogenous_states, :nygap_t)
+        if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) || haskey(m.endogenous_states, :ygap_t)
                 TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
         else
             TTT = TTTs[reg]
@@ -617,9 +617,9 @@ function pseudo_measurement(m::Model1002{T},
                 ZZ_pseudos[reg][pseudo[:pgap], endo[:pgap_t]] = 1.
             end
         end
-        if haskey(m.settings, :add_nygap)
-            if get_setting(m, :add_nygap)
-                ZZ_pseudos[reg][pseudo[:nygap], endo[:nygap_t]] = 1.
+        if haskey(m.settings, :add_ygap)
+            if get_setting(m, :add_ygap)
+                ZZ_pseudos[reg][pseudo[:ygap], endo[:ygap_t]] = 1.
             end
         end
 
