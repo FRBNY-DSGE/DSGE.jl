@@ -171,6 +171,40 @@ function find_steadystate!(m::HetDSGEGovDebt;
         end
     end
 
+    @show β
+    GR.inline("png")
+    p = Plots.plot(xgrid, μ[1:300], label = "lowskill")
+    Plots.plot!(p, xgrid, μ[301:600], label = "highskill")
+    Plots.savefig(p, "agrid_vs_D_together_old.png")
+    p = Plots.plot(xgrid, μ[1:300], label = "lowskill")
+    Plots.savefig(p, "agrid_vs_D_lowskill_old.png")
+    p = Plots.plot(xgrid, μ[301:600], label = "highskill")
+    Plots.savefig(p, "agrid_vs_D_highskill_old.png")
+
+    Plots.plot(μ)
+    Plots.savefig("mu_old.png")
+
+    p = Plots.plot(xgrid, c[1:300], label = "lowskill")
+    Plots.plot!(p, xgrid, c[301:600], label = "highskill")
+    Plots.savefig(p, "agrid_vs_cpol_old.png")
+
+    p = Plots.plot(xgrid, xgrid - c[1:300], label = "lowskill")
+    Plots.plot!(p, xgrid, xgrid - c[301:600], label = "highskill")
+    Plots.savefig(p, "agrid_minus_cpol_old.png")
+
+    p = Plots.plot()
+    for mult = 1:6
+        for i = 1:mult*100
+            Plots.plot!(p, KF[:, i])
+        end
+        Plots.savefig(p,"KF_old_mult=$mult.png")
+    end
+    for i = 1:600
+        p = Plots.plot(KF[:, i])
+        Plots.savefig(p, "KF_dir/KF_old_$i.png")
+    end
+
+
     # If policy function does not converge, we signal to likelihood that should reject
     m <= Setting(:auto_reject, reject)
     m[:lstar]  = Win
@@ -319,6 +353,7 @@ end
 
     # Pick eigenvector associated w/ largest eigenvalue and moving it back to values
     μ = real(V[:,max_D])
+    @show μ
     μ = μ ./ dot(xswts, μ) # Scale of eigenvectors not determinate: rescale to integrate to 1
     excess = dot(xswts, (μ .* bp)) - bg # Compute excess supply of savings, which is a fn of w
     return excess, μ
@@ -359,6 +394,8 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S
         return c, bp, Wout, zeros(n,n), reject
     end
     tr = kolmogorov_fwd_hetdsgegovdebt(nx, ns, ω, H, T, R, γ, qfunction, xgrid, sgrid, bp, f)
+    @show size(tr)
+    @show size(xgrid)
     return c, bp, Wout, tr, reject
 end
 
