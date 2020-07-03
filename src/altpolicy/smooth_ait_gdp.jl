@@ -11,43 +11,43 @@ function smooth_ait_gdp_replace_eq_entries(m::AbstractDSGEModel,
                                             Γ0::Matrix{Float64}, Γ1::Matrix{Float64},
                                             C::Vector{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64})
     # add law of motion for pgap
-    eq             = m.equilibrium_conditions
-    endo           = m.endogenous_states
+    eq        = m.equilibrium_conditions
+    endo      = m.endogenous_states
 
-    ait_Thalf = haskey(DSGE.get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
-    gdp_Thalf = haskey(DSGE.get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 12.
-    ρ_smooth_ait_gdp1 = exp(log(0.5) / ait_Thalf)
-    ρ_smooth_ait_gdp2 = 0.0
-    ρ_ygap = exp(log(0.5) / gdp_Thalf)
-    φ_π = 0.25
-    φ_y = 0.25
+    ait_Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+    gdp_Thalf = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+    ρ_pgap    = exp(log(0.5) / ait_Thalf)
+    ρ_ygap    = exp(log(0.5) / gdp_Thalf)
+    ρ_smooth  = haskey(get_settings(m), :smooth_ait_gdp_ρ_smooth) ? get_setting(m, :smooth_ait_gdp_ρ_smooth) : 0.656 # m[:ρ]
+    φ_π       = 0.25
+    φ_y       = 0.25
 
     # This assumes that the inflation target is the model's steady state
-    Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
-    Γ0[eq[:eq_pgap], endo[:π_t]]     = -1.
-    Γ1[eq[:eq_pgap], endo[:pgap_t]]  = ρ_smooth_ait_gdp1
+    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
 
     # Add in the GDP targeting rule
     Γ0[eq[:eq_ygap], endo[:ygap_t]] = 1.
-    # Γ0[eq[:eq_ygap], endo[:π_t]]     = -1. # already accounted for by AIT
+    # Γ0[eq[:eq_ygap], endo[:π_t]]    = -1. # already accounted for by AIT
     Γ1[eq[:eq_ygap], endo[:ygap_t]] = ρ_ygap # 1.
 
-    Γ0[eq[:eq_ygap], endo[:y_t]]     = -1.
-    Γ0[eq[:eq_ygap], endo[:z_t]]     = -1.
-    Γ1[eq[:eq_ygap], endo[:y_t]]     = -1.
+    Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
+    Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
+    Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
 
     # Zero out old policy rule
-    Γ0[eq[:eq_mp], :]                .= 0.
-    Γ1[eq[:eq_mp], :]                .= 0.
-    Ψ[eq[:eq_mp], :]                 .= 0.
+    Γ0[eq[:eq_mp], :]              .= 0.
+    Γ1[eq[:eq_mp], :]              .= 0.
+    Ψ[eq[:eq_mp], :]               .= 0.
 
     # Replace monetary policy rule
-    Γ0[eq[:eq_mp], endo[:R_t]]     = 1. # This is the AIT part
-    Γ0[eq[:eq_mp], endo[:pgap_t]]  = -φ_π * (1. / (1. - ρ_smooth_ait_gdp1)) * (1 - m[:ρ])
-    Γ1[eq[:eq_mp], endo[:R_t]]     = ρ_smooth_ait_gdp2
-    C[eq[:eq_mp]]                  = 0.
+    Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
+    Γ1[eq[:eq_mp], endo[:R_t]]      = ρ_smooth
+    C[ eq[:eq_mp]]                  = 0.
 
-    Γ0[eq[:eq_mp], endo[:ygap_t]] = -(1. - m[:ρ]) * φ_y # This is the GDP part
+    Γ0[eq[:eq_mp], endo[:pgap_t]]   = -φ_π * (1. / (1. - ρ_pgap)) * (1. - ρ_smooth) # (1 - m[:ρ]) # This is the AIT part
+    Γ0[eq[:eq_mp], endo[:ygap_t]]   = -φ_y * (1. / (1. - ρ_ygap)) * (1. - ρ_smooth) # (1. - m[:ρ]) # This is the GDP part
 
     return Γ0, Γ1, C, Ψ, Π
 end
@@ -210,5 +210,6 @@ function smooth_ait_gdp_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, f
         vcat(final_state[1:ygap_t - 1], -get_setting(m, :ygap_value), final_state[ygap_t + 1:pgap_t - 1],
              -get_setting(m, :pgap_value), final_state[pgap_t + 1:end])
     end
+
     return shocks, final_state
 end
