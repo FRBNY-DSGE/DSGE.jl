@@ -129,9 +129,6 @@ module DSGE
         # decomp/
         decompose_forecast, decomposition_means,
 
-        # decomp/
-        decompose_forecast, decomposition_means,
-
         # altpolicy/
         AltPolicy, taylor93, taylor99, alt_inflation,
         ait, ait_replace_eq_entries, ait_solve, ait_eqcond,
@@ -219,6 +216,7 @@ module DSGE
 
     include("solve/gensys.jl")
     include("solve/gensys2.jl")
+    # include("solve/gensys_uncertain_altpol.jl") # Included after altpolicy code b/c this file uses the AltPolicy type
     include("solve/solve.jl")
     include("solve/klein.jl")
 
@@ -283,7 +281,9 @@ module DSGE
     include("altpolicy/alt_inflation.jl")
     include("altpolicy/ait.jl")
     include("altpolicy/ngdp_target.jl")
+    include("altpolicy/smooth_ait_gdp.jl")
     include("altpolicy/zero_rate.jl")
+    include("solve/gensys_uncertain_altpol.jl")
 
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")
@@ -519,7 +519,6 @@ module DSGE
     # include("dsgevar/util.jl")
 
     if (VERSION >= v"1.0") && (VERSION <= v"1.1")
-        println("Got here")
         isnothing(x::Any) = x === nothing ? true : false
     end
 end

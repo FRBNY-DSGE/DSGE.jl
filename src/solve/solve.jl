@@ -149,7 +149,8 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
                 # Are there temporary policies in the forecast that had been unanticipated in the history?
                 if gensys2
-                    gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes)
+                    gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
+
                     Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                                     Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                                     TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
@@ -160,14 +161,18 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     for (i, fcast_reg) in enumerate(fcast_regimes)
                         TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
                     end
+#=
                 elseif uncertain_altpolicy
-                    # MAYBE PASS IN THE GAMMA0, GAMMA1, etc. AS KEYWORDS FOR REGIME SWITCHING
+                    # Regime-switching with the uncertain altpolicy approach
                     TTTs[fcast_regimes], RRRs[fcast_regimes], CCCs[fcast_regimes] =
                         gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy,
-                                                  regime_switching = regime_switching, regimes = fcast_regimes)
+                                                  regime_switching = regime_switching, regimes = fcast_regimes,
+                                                  Γ0s = Γ0s, Γ1s = Γ1s, Cs = Cs, Ψs = Ψs, Πs = Πs)
                     for fcast_reg in fcast_regimes
-                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg])
+                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
+                            augment_states(m, TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg])
                     end
+=#
                 else
                     for fcast_reg in fcast_regimes
                         if altpolicy_solve == solve || !apply_altpolicy
