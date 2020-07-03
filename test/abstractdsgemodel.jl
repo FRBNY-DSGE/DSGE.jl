@@ -187,6 +187,10 @@ end
                                   :reg_forecast_start, :reg_post_conditional_end], [nr, nhr, nfr, ncr, nrp, rfs, rpc])
             @test get_setting(m, set) == setans
         end
+        setup_regime_switching_inds!(m; cond_type = :full)
+        @test get_setting(m, :n_rule_periods) == (nrp - ncr)
+        setup_regime_switching_inds!(m; cond_type = :semi)
+        @test get_setting(m, :n_rule_periods) == (nrp - ncr)
     end
 end
 
