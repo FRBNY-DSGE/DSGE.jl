@@ -636,23 +636,23 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
                    Γ0[eq[:eq_pgap], endo[:z_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:y_t]]    = -1.
                elseif get_setting(m, :pgap_type) == :ait
-                   Thalf = 10
-                   ρ_ait = exp(log(0.5)/Thalf)
+                   Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_ait = exp(log(0.5) / Thalf)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_ait
                elseif get_setting(m, :pgap_type) == :smooth_ait
-                   Thalf = 8 # hard coded for now
-                   ρ_smooth_ait = exp(log(0.5) / Thalf)
+                   Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_pgap = exp(log(0.5) / Thalf)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
-                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_smooth_ait
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
                elseif get_setting(m, :pgap_type) == :smooth_ait_gdp
-                   Thalf = 8 # hard coded for now
-                   ρ_smooth_ait = exp(log(0.5) / Thalf)
+                   Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_pgap = exp(log(0.5) / Thalf)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
-                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_smooth_ait
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
                end
            end
        end
@@ -668,13 +668,16 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
                reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                haskey(m.settings, :ygap_type)
                if get_setting(m, :ygap_type) == :smooth_ait_gdp
-                   Γ0[eq[:eq_ygap], endo[:ygap_t]] = 1.
-                   Γ0[eq[:eq_ygap], endo[:π_t]]     = -1.
-                   Γ1[eq[:eq_ygap], endo[:ygap_t]] = 1.
+                   Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+                   ρ_ygap = exp(log(0.5) / Thalf)
 
-                   Γ0[eq[:eq_ygap], endo[:y_t]]     = -1.
-                   Γ0[eq[:eq_ygap], endo[:z_t]]     = -1.
-                   Γ1[eq[:eq_ygap], endo[:y_t]]     = -1.
+                   Γ0[eq[:eq_ygap], endo[:ygap_t]] = 1.
+                   # Γ0[eq[:eq_ygap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_ygap], endo[:ygap_t]] = ρ_ygap
+
+                   Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
+                   Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
+                   Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
                end
            end
        end
@@ -684,6 +687,18 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
        if haskey(m.settings, :replace_eqcond_func_dict)
            if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
                Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
+           end
+       end
+   end
+
+   if haskey(m.settings, :track_pgap)
+       if get_setting(m, :track_pgap)
+           if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait]
+               Thalf = haskey(m.settings, :ait_Thalf) ? get_setting(m, :ait_Thalf) : 8
+               ρ_smooth_ait = exp(log(0.5) / Thalf)
+               Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+               Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+               Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_smooth_ait
            end
        end
    end
