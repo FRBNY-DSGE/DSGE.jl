@@ -756,6 +756,24 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             system = compute_system(m; apply_altpolicy = true)
         end
 
+        # Adjust the initial state vector for pgap and ygap
+        if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
+            if get_setting(m, :pgap_type) == :ngdp
+                _, s_T = ngdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            elseif get_setting(m, :pgap_type) == :ait
+                _, s_T = ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            end
+            histstates[:, end] = s_T
+        end
+
+        if haskey(m.settings, :ygap_type) && haskey(get_settings(m), :ygap_value) &&
+            haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
+            if get_setting(m, :ygap_type) == :smooth_ait_gdp && get_setting(m, :pgap_type) == :smooth_ait_gdp
+                _, s_T = smooth_ait_gdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            end
+            histstates[:, end] = s_T
+        end
+
         # 2A. Unbounded forecasts
         if !isempty(intersect(output_vars, unbddforecast_vars))
             if pegFFR
@@ -790,7 +808,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
                 # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN THE SYSTEM
-                forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
+                forecast_output[:forecastobs]    =
+                    transplant_forecast_observables(histstates, forecastobs,
+                                                    isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
             else
                 forecast_output[:forecaststates] = forecaststates
                 forecast_output[:forecastshocks] = forecastshocks
@@ -832,8 +852,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 @show forecaststates[m.endogenous_states[:R_t], :]
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             elseif zlb_method == :temporary_altpolicy
-                altpolicy = get_setting(m, :alternative_policy)
-                @assert altpolicy.key in [:ait, :ngdp] "altpolicy must be permanent and either :ait or :ngdp for this method of enforcing the ZLB."
+                altpolicy = get_setting(m, :alternative_policy).key
+                @assert altpolicy in [:ait, :ngdp, :smooth_ait_gdp] "altpolicy must be permanent " *
+                    "and among [:ait, :ngdp, :smooth_ait_gdp] for this method of enforcing the ZLB."
 
                 # Run the unbounded forecast if they haven't already been computed
                 if isempty(intersect(output_vars, unbddforecast_vars))
@@ -843,10 +864,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 end
 
                 # Now run the ZLB enforcing forecast
-                forecaststates, forecastobs, forecastpseudo = forecast(m, altpolicy.key, s_T, forecastobs, forecastshocks; cond_type = cond_type,
-                                                                       temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
-                                                                       set_zlb_regime_vals = set_regime_vals_altpolicy,
-                                                                       state_dims = size(forecaststates), pseudo_dims = size(forecastpseudo))
+                forecaststates, forecastobs, forecastpseudo =
+                    forecast(m, altpolicy, s_T, forecastobs, forecastshocks; cond_type = cond_type,
+                             temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
+                             set_zlb_regime_vals = set_regime_vals_altpolicy,
+                             state_dims = size(forecaststates), pseudo_dims = size(forecastpseudo))
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
@@ -859,8 +881,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
                 # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN TEH SYSTEM
-                forecast_output[:bddforecastobs]    = transplant_forecast_observables(histstates, forecastobs,
-                                                                                      isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
+                forecast_output[:bddforecastobs]    =
+                    transplant_forecast_observables(histstates, forecastobs,
+                                                    isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
             else
                 forecast_output[:bddforecaststates] = forecaststates
                 forecast_output[:bddforecastshocks] = forecastshocks

@@ -65,7 +65,7 @@ Random.seed!(1793)
         @test Tcal[i] ≈ t[1:n_endo, 1:n_endo]
     end
 end
-
+#=
 @testset "Test regime switching IRFs match Forward Guidance method IRFs" begin
     horizon = 60
     m = Model1002()
@@ -192,6 +192,71 @@ end
                                             df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
     @test fcast_altperm[:forecastobs] == fcast_altperm2[:forecastobs]
+end
+=#
+@testset "Temporary alternative policies with non-trivial conditional forecasting" begin
+    output_vars = [:forecastobs]
+
+    m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_pgap =>
+                                                                  Setting(:add_pgap, true)))
+
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
+                                                2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30),
+                                                4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31),
+                                                6 => Date(2021, 3, 31)))
+    m <= Setting(:date_conditional_end, Date(2020, 6, 30))
+    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
+    m <= Setting(:forecast_horizons, 10)
+    m = setup_regime_switching_inds!(m)
+
+    fp = dirname(@__FILE__)
+    df = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_full")
+    date_ind = findfirst(df[!, :date] .== Date(2020, 6, 30))
+    df[date_ind, :obs_nominalrate] = .3 / 4.
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
+        3 => zero_rate_replace_eq_entries))
+    # m <= Setting(:pgap_type, :ngdp)
+    # m <= Setting(:pgap_value, 12.0)
+    m <= Setting(:gensys2, true)
+
+    # Check zero rate rule does not apply if it's specified in a conditional regime
+    fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
+                                   df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+    @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > get_setting(m, :forecast_zlb_value) / 4.
+    @test all(fcast[:forecastobs][m.observables[:obs_nominalrate], 2:end] .!= get_setting(m, :forecast_zlb_value) / 4.)
+
+    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
+        3 => zero_rate_replace_eq_entries, 4 => zero_rate_replace_eq_entries, 5 => zero_rate_replace_eq_entries))
+    fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
+                                   df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+    @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
+    @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 4:end]) .> .01)
+
+    m <= Setting(:date_conditional_end, Date(2020, 6, 30))
+    m <= Setting(:date_forecast_start, Date(2020, 3, 31))
+    fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
+                                   df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+    @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) > .01
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-15
+    @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 5:end]) .> .01)
+
+    m <= Setting(:date_conditional_end, Date(2020, 3, 31))
+    m <= Setting(:date_forecast_start, Date(2020, 3, 31))
+    fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
+                                   df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+    @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > 0.
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-15
+    @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 5:end]) .> 0.)
 end
 
 @testset "Temporary alternative policies with non-trivial conditional forecasting" begin

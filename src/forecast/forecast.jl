@@ -166,16 +166,30 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
     # user has specified a function to do so
     alt_policy = alternative_policy(m)
 
+    # TODO: check that these handling of the altpolicy cases work properly
     if (alt_policy.solve != identity &&
         alt_policy.forecast_init != identity)
         shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
     end
 
-    if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value) #&& (haskey(m.settings, :gensys2) ? get_setting(m, :gensys2) : false)
+#=
+    # This code block has been moved to forecast_one_draw in drivers.jl
+    # b/c we want to actually alter the smoothed states so that pgap or ygap
+    # starts from the user-specified gap value and that this start is actually recorded.
+    # TODO: check that these handling of the altpolicy cases work properly
+    # Added separately to cover case where you're not using altpolicy but are using gensys2
+    if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
         if get_setting(m, :pgap_type) == :ngdp
-            shocks, z0 = ngdp_forecast_init(m, shocks, z0, cond_type = cond_type)
+            _, z0 = ngdp_forecast_init(m, shocks, z0, cond_type = cond_type)
         end
     end
+
+    if haskey(m.settings, :ygap_type) && haskey(get_settings(m), :ygap_value)
+        if get_setting(m, :ygap_type) == :smooth_ait_gdp
+            _, z0 = smooth_ait_gdp_forecast_init(m, shocks, z0, cond_type = cond_type)
+        end
+    end
+=#
 
     # Get variables necessary to enforce the zero lower bound in the forecast
     ind_r = m.observables[:obs_nominalrate]
@@ -425,9 +439,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
         end
 
         replace_eqcond[n_total_regimes] = if altpolicy == :ait
-            DSGE.ait_replace_eq_entries # Add permanent AIT regime
+            ait_replace_eq_entries # Add permanent AIT regime
         elseif altpolicy == :ngdp
-            DSGE.ngdp_replace_eq_entries # Add permanent NGDP regime
+            ngdp_replace_eq_entries # Add permanent NGDP regime
+        elseif altpolicy == :smooth_ait_gdp
+            smooth_ait_gdp_replace_eq_entries # Add permanent smooth AIT-GDP regime
         end
         m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
 
@@ -435,7 +451,6 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
         system = compute_system(m; apply_altpolicy = true)
 
         # Forecast!
-
         states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
         if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
