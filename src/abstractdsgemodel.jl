@@ -491,7 +491,7 @@ SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't 
 Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 
 
-function setup_regime_switching_inds!(m::AbstractDSGEModel)
+function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none)
 
     n_hist_regimes = 0
     n_cond_regimes = 0
@@ -537,7 +537,8 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel)
     m <= Setting(:n_fcast_regimes, n_fcast_regimes, "Number of regimes in the forecast horizon")
     m <= Setting(:n_cond_regimes, n_cond_regimes, "Number of regime switches during the conditional forecast horizon")
     # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
-    m <= Setting(:n_rule_periods, n_regimes - (get_setting(m, :n_hist_regimes) + 1),
+    m <= Setting(:n_rule_periods, (cond_type == :none) ? n_regimes - (get_setting(m, :n_hist_regimes) + 1) :
+                 n_regimes - (get_setting(m, :n_hist_regimes) + 1 + get_setting(m, :n_cond_regimes)) ,
                  "Number of periods during which the (temporary) alternative policy applies.")
     return m
 end
