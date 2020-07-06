@@ -28,22 +28,6 @@ my_tests = [
             "models/var/dsgevecm/dsgevecm",
             "models/var/util",
 
-            # "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell",
-            #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
-            #"models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
-            # "models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
-            # "models/heterogeneous/het_dsge/het_dsge",
-            # "models/heterogeneous/het_dsge_lag/het_dsge_lag",
-            # "models/heterogeneous/het_dsge/het_dsge",
-
-            #"models/heterogeneous/krusell_smith/krusell_smith",
-            #"models/heterogeneous/bond_labor/bond_labor",
-            #"models/heterogeneous/real_bond/real_bond",
-            #"models/heterogeneous/real_bond_mkup/real_bond_mkup",
-            #"models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
-            #"models/heterogeneous/one_asset_hank/one_asset_hank",
-            #"models/heterogeneous/one_asset_hank/interns",
-
             "data/fred_data",
             "data/load_data",
             "data/load_data_poolmodel",
