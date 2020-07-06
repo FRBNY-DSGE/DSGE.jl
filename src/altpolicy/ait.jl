@@ -140,7 +140,7 @@ Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state, which uses the value
 held in the setting `get_setting(m, :pgap_value)`. A value of 0. is standard.)
 """
-function ait_solve(m::AbstractDSGEModel; regime_switching::Bool, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
+function ait_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
 
     # Get equilibrium condition matrices
     if isa(regimes, Int)
