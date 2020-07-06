@@ -43,7 +43,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     weights = get_setting(m, :alternative_policy_weights)
                     altpols = get_setting(m, :alternative_policies)
 
-                    TTT_gensys, RRR_gensys, CCC_gensys = gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy)
+                    TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy)
 
                     # Augment states
                     TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
@@ -115,7 +115,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     altpols = get_setting(m, :alternative_policies)
 
                     TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
-                        gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy)
+                        gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy)
 
                 elseif altpolicy_solve == solve || !apply_altpolicy
                     # If normal rule
@@ -165,7 +165,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                 elseif uncertain_altpolicy
                     # Regime-switching with the uncertain altpolicy approach
                     TTTs[fcast_regimes], RRRs[fcast_regimes], CCCs[fcast_regimes] =
-                        gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy,
+                        gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
                                                   regime_switching = regime_switching, regimes = fcast_regimes,
                                                   Γ0s = Γ0s, Γ1s = Γ1s, Cs = Cs, Ψs = Ψs, Πs = Πs)
                     for fcast_reg in fcast_regimes
@@ -209,7 +209,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                 weights = get_setting(m, :alternative_policy_weights)
                 altpols = get_setting(m, :alternative_policies)
 
-                TTT_gensys, RRR_gensys, CCC_gensys = gensys_prob_regime_switch(m, weights, altpols; apply_altpolicy = apply_altpolicy)
+                TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy)
 
                 # Augment states
                 TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
