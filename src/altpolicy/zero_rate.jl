@@ -62,7 +62,7 @@ zero_rate_solve(m::AbstractDSGEModel)
 Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
-function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
+function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
 
     # Get equilibrium condition matrices
     if isa(regimes, Int)
