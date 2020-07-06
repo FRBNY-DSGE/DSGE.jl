@@ -1,4 +1,4 @@
-save_output = true
+save_output = false
 
 using DSGE, ModelConstructors, Test, JLD2, FileIO, OrderedCollections, CSV
 path = dirname(@__FILE__)
