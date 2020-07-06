@@ -34,6 +34,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
     altpolicy_solve = alternative_policy(m).solve
 
+    # TODO: place the regime_switching branch inside its own function, too messy as is
     if regime_switching
         gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
 
@@ -149,8 +150,9 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
                 # Are there temporary policies in the forecast that had been unanticipated in the history?
                 if gensys2
+                    # TODO: generalize this policy beyond assuming the final regime HAS to be the final regime-switch
+                    # and that the final regime is the policy after the temporary alternative policy finishes
                     gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
-
                     Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                                     Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                                     TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
@@ -158,9 +160,39 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                     Rcal[end] = RRR_gensys_final
                     Ccal[end] = CCC_gensys_final
 
-                    for (i, fcast_reg) in enumerate(fcast_regimes)
-                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
+                    n_no_alt_reg = get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1
+                    if n_no_alt_reg > 0
+                        # Get the T, R, C matrices for the rule period + lift-off period
+                        for (i, fcast_reg) in enumerate((gensys2_regimes[end] - # minus n_rule_periods b/c including lift-off regime
+                                                         get_setting(m, :n_rule_periods)):gensys2_regimes[end])
+                            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
+                        end
+
+                        # Get the T, R, C matrices between the first forecast period & first rule period
+                        for fcast_reg in first(fcast_regimes):(first(fcast_regimes) + n_no_alt_reg - 1)
+                            # TODO: place this code block inside its own function
+                            TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
+                                       1+1e-6, verbose = verbose)
+
+                            # Check for LAPACK exception, existence and uniqueness
+                            if eu[1] != 1 || eu[2] != 1
+                                throw(GensysError("Error in Gensys, Regime $fcast_reg"))
+                            end
+                            TTT_gensys = real(TTT_gensys)
+                            RRR_gensys = real(RRR_gensys)
+                            CCC_gensys = real(CCC_gensys)
+
+                            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = DSGE.augment_states(m, TTT_gensys,
+                                                                                                    RRR_gensys, CCC_gensys)
+                        end
+                    else
+                        # The alternative policy will cover all the regimes in the forecast period
+                        for (i, fcast_reg) in enumerate(fcast_regimes)
+                            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
+                        end
                     end
+
 #=
                 elseif uncertain_altpolicy
                     # Regime-switching with the uncertain altpolicy approach
