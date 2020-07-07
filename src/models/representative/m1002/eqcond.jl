@@ -703,6 +703,23 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
        end
    end
 
+   if haskey(m.settings, :track_ygap)
+       if get_setting(m, :track_ygap)
+           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait]
+               Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+               ρ_ygap = exp(log(0.5) / Thalf)
+
+               Γ0[eq[:eq_ygap], endo[:ygap_t]] = 1.
+               # Γ0[eq[:eq_ygap], endo[:π_t]]    = -1.
+               Γ1[eq[:eq_ygap], endo[:ygap_t]] = ρ_ygap
+
+               Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
+               Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
+               Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
+           end
+       end
+   end
+
    for para in m.parameters
         if !isempty(para.regimes)
             ModelConstructors.toggle_regime!(para, 1)
