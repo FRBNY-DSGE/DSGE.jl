@@ -15,6 +15,7 @@ function Base.show(io::IO, m::AbstractDSGEModel)
     @printf io "description:\n %s\n"          description(m)
 end
 
+
 # Retrieve model type
 model_type(m::AbstractDSGEModel{T}) where T = T
 
