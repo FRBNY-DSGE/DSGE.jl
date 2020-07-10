@@ -1,3 +1,5 @@
+# constructs f which is the transition matrix between different skill levels
+# also contstructs the sgrid (agin this uses uniform weights where the weights sum to the difference between shi and slo, not 1)
 function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat,
                                   pHL::AbstractFloat, ns::Int)
     f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
@@ -10,6 +12,7 @@ function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat,
     return f, sgrid, swts, sscale
 end
 
+# constructs the cash on hand grid (known as both agrid and xgrid and kinda used interchangebly throughout the code
 function cash_grid(sgrid::AbstractArray, ω::AbstractFloat, H::AbstractFloat,
                    r::AbstractFloat, η::AbstractFloat, γ::AbstractFloat,
                    T::AbstractFloat, zlo::AbstractFloat, na::Int)
