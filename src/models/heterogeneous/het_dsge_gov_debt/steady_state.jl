@@ -171,7 +171,8 @@ function find_steadystate!(m::HetDSGEGovDebt;
         end
     end
 
-    @show β
+  #=  @show β
+    This all was for testing when we were trying to compare the old steadystate to the new steadystate
     GR.inline("png")
     p = Plots.plot(xgrid, μ[1:300], label = "lowskill")
     Plots.plot!(p, xgrid, μ[301:600], label = "highskill")
@@ -202,7 +203,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
     for i = 1:600
         p = Plots.plot(KF[:, i])
         Plots.savefig(p, "KF_dir/KF_old_$i.png")
-    end
+    end=#
 
 
     # If policy function does not converge, we signal to likelihood that should reject
@@ -215,6 +216,7 @@ function find_steadystate!(m::HetDSGEGovDebt;
     nothing
 end
 
+# These are for computing moments to compare against targets (the next few functions)
 function ave_mpc(m::AbstractArray, c::AbstractArray, agrid::AbstractArray,
                  aswts::AbstractArray, na::Int, ns::Int)
 	mpc = 0.
@@ -336,7 +338,7 @@ function zsample(uz::Matrix{S}, zgrid::AbstractArray, zcdf::AbstractArray,
 	return zs
 end
 
-
+# This function computes excess savings. The KF that pops out of steadystate is nx*ns by nx*ns but we want to reduce that to a vector of length nx*ns which is the stationary distribution (this is what the eigenstuff is doing). Stationary because no matter where you are now, you want to have the same probability of going to all the different gridpoints tomorrow.
 @inline function compute_excess(xswts::Vector{S}, KF::Matrix{S}, bp::Vector{S},
                                 bg::S; print_warning::Bool = false,
                                 tol::S = 2e-1) where {S<:Float64}
@@ -359,6 +361,7 @@ end
     return excess, μ
 end
 
+# policy function (consumption and ell = 1/consumption are the "policies" being decied on here)
 function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S,
                                T::S, γ::S, zhi::S, zlo::S, xgrid::Vector{S},
                                sgrid::Vector{S}, xswts::Vector{S}, Win::Vector{S},
@@ -381,6 +384,7 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S
         end
 
         bp = R*(exp(-γ))*(repeat(xgrid, ns) - c)  # compute bp(w) given guess for Win
+        # Wout and Win are the ell function (in the paper!). The point is we're trying to get the policy function (ell) to converge (which is the business with Win and Wout because you need to compare the difference between Win and Wout to see if it converged)
         Wout = parameterized_expectations_hetdsgegovdebt(nx, ns, β, R, ω, H, T, γ,
                                                          qfunction, xgrid,
                                                          sgrid, xswts, c, bp, f)
@@ -389,16 +393,15 @@ function policy_hetdsgegovdebt(nx::Int, ns::Int, β::S, R::S, ω::S, H::S, η::S
         counter += 1
     end
     if counter == maxit
-        #@warn "Euler iteration did not converge"
+        @warn "Euler iteration did not converge"
         reject = true
         return c, bp, Wout, zeros(n,n), reject
     end
     tr = kolmogorov_fwd_hetdsgegovdebt(nx, ns, ω, H, T, R, γ, qfunction, xgrid, sgrid, bp, f)
-    @show size(tr)
-    @show size(xgrid)
     return c, bp, Wout, tr, reject
 end
 
+# This function is the formula for ell_t in the middle top of page 7 of the paper
 @inline function parameterized_expectations_hetdsgegovdebt(nx::Int, ns::Int, β::S,
                                                            R::S, ω::S, H::S, T::S, γ::S,
                                                            qfunc::Function, xgrid::Vector{S},
@@ -406,11 +409,19 @@ end
                                                            c::Vector{S}, bp::Vector{S},
                                                            f::Matrix{S}) where {S<:AbstractFloat}
     l_out = zeros(nx*ns)
-    for iss=1:ns
-        for ia=1:nx
+    for iss=1:ns     # loop off s (only 2 values)
+        for ia=1:nx # loop over a
             sumn = 0.0
-            for isp=1:ns
-                for iap=1:nx
+            for isp=1:ns # loop over s' (only 2 values)
+                for iap=1:nx # loop over a'
+                    # Name in code                                                 : notation in paper
+                    #xswts                                                         : weights for the integral approximation
+                    #c[nx*(isp-1)+iap]                                             : c_{t+1}(a', s')
+                    # qfunc                                                        : g(⋅)
+                    # qfunc((xgrid[iap] - bp[nx*(iss-1)+ia] - T) / (ω*H*sgrid[isp]): (a'-(1+r)exp(-γ)(a-c_t(a,s) - T))/ w*s'*H
+                    # f[iss, isp]/ sgrid[isp]                                      : p(s'|s)/s'
+                    # β*R*exp(-γ))/ω*H  (line 429)                                 β*(1+r)*exp(-z)/ω_{t+1}*H{t+1}
+                    # When you're trying to match code to paper, be creative in the ordering of stuff as the variables in the paper are commutatively multipled in different orders
                     sumn += (xswts[nx*(isp-1)+iap]/c[nx*(isp-1)+iap]) *
                         qfunc((xgrid[iap] - bp[nx*(iss-1)+ia] - T) /
                               (ω*H*sgrid[isp])) * f[iss,isp] ./ sgrid[isp]
@@ -422,6 +433,8 @@ end
     return l_out
 end
 
+
+# This function is the exprression for m_{t+1} in the middle of page 7 of the paper. See the key in lines 417-424 of this file to help you in matching stuff up
 @inline function kolmogorov_fwd_hetdsgegovdebt(nx::Int, ns::Int, ω::S, H::S, T::S, R::S,
                                                γ::S, qfunc::Function, xgrid::Vector{S},
                                                sgrid::Vector{S}, bp::Vector{S},
@@ -442,6 +455,7 @@ end
     return tr
 end
 
+# also known as qfunction of g(⋅)
 @inline function mollifier_hetdsgegovdebt(z::S, ehi::S, elo::S) where {S<:AbstractFloat}
     In = 0.443993816237631
     if z<ehi && z>elo
@@ -450,7 +464,7 @@ end
     end
     return 0.0
 end
-
+# also known as qfunction of g(⋅) but the derivative of it
 @inline function dmollifier_hetdsgegovdebt(x::S, ehi::S, elo::S) where {S<:AbstractFloat}
     In = 0.443993816237631
     if x<ehi && x>elo
