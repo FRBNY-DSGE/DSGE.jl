@@ -770,6 +770,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
             if get_setting(m, :ygap_type) == :smooth_ait_gdp && get_setting(m, :pgap_type) == :smooth_ait_gdp
                 _, s_T = smooth_ait_gdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            elseif get_setting(m, :ygap_type) == :smooth_ait_gdp_alt && get_setting(m, :pgap_type) == :smooth_ait_gdp_alt
+                _, s_T = smooth_ait_gdp_alt_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
             end
             histstates[:, end] = s_T
         end
@@ -853,8 +855,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             elseif zlb_method == :temporary_altpolicy
                 altpolicy = get_setting(m, :alternative_policy).key
-                @assert altpolicy in [:ait, :ngdp, :smooth_ait_gdp] "altpolicy must be permanent " *
-                    "and among [:ait, :ngdp, :smooth_ait_gdp] for this method of enforcing the ZLB."
+                @assert altpolicy in [:ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] "altpolicy must be permanent " *
+                    "and among [:ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] for this method of enforcing the ZLB."
 
                 # Run the unbounded forecast if they haven't already been computed
                 if isempty(intersect(output_vars, unbddforecast_vars))

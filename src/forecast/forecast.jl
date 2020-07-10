@@ -444,6 +444,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
             ngdp_replace_eq_entries # Add permanent NGDP regime
         elseif altpolicy == :smooth_ait_gdp
             smooth_ait_gdp_replace_eq_entries # Add permanent smooth AIT-GDP regime
+        elseif altpolicy == :smooth_ait_gdp_alt
+            smooth_ait_gdp_alt_replace_eq_entries # Add permanent smooth AIT-GDP (alternative specification) regime
         end
         m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
 

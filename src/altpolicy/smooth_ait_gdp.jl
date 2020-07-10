@@ -19,8 +19,8 @@ function smooth_ait_gdp_replace_eq_entries(m::AbstractDSGEModel,
     ρ_pgap    = exp(log(0.5) / ait_Thalf)
     ρ_ygap    = exp(log(0.5) / gdp_Thalf)
     ρ_smooth  = haskey(get_settings(m), :smooth_ait_gdp_ρ_smooth) ? get_setting(m, :smooth_ait_gdp_ρ_smooth) : 0.656 # m[:ρ]
-    φ_π       = 0.25
-    φ_y       = 0.25
+    φ_π       = haskey(get_settings(m), :smooth_ait_gdp_φ_π) ? get_setting(m, :smooth_ait_gdp_φ_π) : 0.25
+    φ_y       = haskey(get_settings(m), :smooth_ait_gdp_φ_y) ? get_setting(m, :smooth_ait_gdp_φ_y) : 0.25
 
     # This assumes that the inflation target is the model's steady state
     Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
@@ -203,6 +203,7 @@ function smooth_ait_gdp_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, f
 
     pgap_t  = m.endogenous_states[:pgap_t]
     ygap_t = m.endogenous_states[:ygap_t]
+
     final_state = if pgap_t < ygap_t
         vcat(final_state[1:pgap_t - 1], -get_setting(m, :pgap_value), final_state[pgap_t + 1:ygap_t - 1],
              -get_setting(m, :ygap_value), final_state[ygap_t + 1:end])

@@ -647,7 +647,7 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
-               elseif get_setting(m, :pgap_type) == :smooth_ait_gdp
+               elseif get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt]
                    Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
                    ρ_pgap = exp(log(0.5) / Thalf)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
@@ -667,7 +667,7 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
            if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                haskey(m.settings, :ygap_type)
-               if get_setting(m, :ygap_type) == :smooth_ait_gdp
+               if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt]
                    Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
                    ρ_ygap = exp(log(0.5) / Thalf)
 
@@ -693,19 +693,19 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
 
    if haskey(m.settings, :track_pgap)
        if get_setting(m, :track_pgap)
-           if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait]
-               Thalf = haskey(m.settings, :ait_Thalf) ? get_setting(m, :ait_Thalf) : 8
-               ρ_smooth_ait = exp(log(0.5) / Thalf)
+           if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt]
+               Thalf = haskey(m.settings, :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10
+               ρ_pgap = exp(log(0.5) / Thalf)
                Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
-               Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_smooth_ait
+               Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
            end
        end
    end
 
    if haskey(m.settings, :track_ygap)
        if get_setting(m, :track_ygap)
-           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait]
+           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt]
                Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
                ρ_ygap = exp(log(0.5) / Thalf)
 

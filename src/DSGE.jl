@@ -282,6 +282,7 @@ module DSGE
     include("altpolicy/ait.jl")
     include("altpolicy/ngdp_target.jl")
     include("altpolicy/smooth_ait_gdp.jl")
+    include("altpolicy/smooth_ait_gdp_alt.jl")
     include("altpolicy/zero_rate.jl")
     include("solve/gensys_uncertain_altpol.jl")
 
