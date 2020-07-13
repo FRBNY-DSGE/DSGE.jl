@@ -136,11 +136,11 @@ smooth_ait_gdp_alt_solve(m::AbstractDSGEModel)
 Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
-function smooth_ait_gdp_alt_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
+function smooth_ait_gdp_alt_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Vector{Int} = Int[1])
     # Get equilibrium condition matrices
 
-    if isa(regimes, Int)
-        Γ0, Γ1, C, Ψ, Π  = smooth_ait_gdp_alt_eqcond(m, regimes)
+    if length(regimes) == 1
+        Γ0, Γ1, C, Ψ, Π  = smooth_ait_gdp_alt_eqcond(m, regimes[1])
         TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = :low)
 
         # Check for LAPACK exception, existence and uniqueness
@@ -154,7 +154,7 @@ function smooth_ait_gdp_alt_solve(m::AbstractDSGEModel; regime_switching::Bool =
 
         # Augment states
         TTT, RRR, CCC = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
-                                            reg = regimes)
+                                            reg = regimes[1])
         return TTT, RRR, CCC
     else
         Γ0s = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -171,7 +171,7 @@ function smooth_ait_gdp_alt_solve(m::AbstractDSGEModel; regime_switching::Bool =
         RRRs = Vector{Matrix{Float64}}(undef, n_regimes)
         CCCs = Vector{Vector{Float64}}(undef, n_regimes)
 
-    # Solve model
+        # Solve model
         for reg in regimes
             TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg], 1+1e-6)
 
@@ -187,6 +187,7 @@ function smooth_ait_gdp_alt_solve(m::AbstractDSGEModel; regime_switching::Bool =
                                                              regime_switching = regime_switching,
                                                              reg = reg)
         end
+
         return TTTs, RRRs, CCCs
     end
 end
