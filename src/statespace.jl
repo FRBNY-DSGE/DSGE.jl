@@ -287,14 +287,14 @@ end
 
 """
 ```
-compute_system(m; apply_altpolicy = false)
+compute_system(m; apply_altpolicy = false, uncertain_altpolicy = false, verbose = :high)
 ```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                        verbose::Symbol = :high) where {T <: Real}
+                        uncertain_altpolicy::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
     solution_method = get_setting(m, :solution_method)
 
@@ -309,9 +309,11 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     if regime_switching
         if solution_method == :gensys
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
+                                     uncertain_altpolicy = uncertain_altpolicy,
                                      regime_switching = regime_switching,
-                                     regimes = 1:n_regimes,
-                                     hist_regimes = 1:n_hist_regimes, fcast_regimes = n_hist_regimes+1:n_regimes,
+                                     regimes = collect(1:n_regimes),
+                                     hist_regimes = collect(1:n_hist_regimes),
+                                     fcast_regimes = collect(n_hist_regimes+1:n_regimes),
                                      verbose = verbose)
 
             transition_equations = Vector{Transition{T}}(undef, n_regimes)
@@ -321,13 +323,14 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
-            measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
-            #= if hasmethod(measurement, type_tuple)
-            measurement_equations = measurement(m, TTTs, RRRs, CCCs)
-            else=#
-            for reg in 1:n_regimes
-                measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                         reg = reg)
+            if hasmethod(measurement, type_tuple)
+                measurement_equations = measurement(m, TTTs, RRRs, CCCs)
+            else
+                measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
+                for reg in 1:n_regimes
+                    measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
+                                                             reg = reg)
+                end
             end
 
             if hasmethod(pseudo_measurement, type_tuple)
@@ -353,7 +356,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     else
         if solution_method == :gensys
 
-            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy,
+                                  uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
             transition_equation = Transition(TTT, RRR, CCC)
 
             # Solve measurement equation

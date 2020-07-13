@@ -160,11 +160,11 @@ ngdp_solve(m::AbstractDSGEModel)
 Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
-function ngdp_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1)
+function ngdp_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Vector{Int} = Int[1])
 
     # Get equilibrium condition matrices
-    if isa(regimes, Int)
-        Γ0, Γ1, C, Ψ, Π  = ngdp_eqcond(m, regimes)
+    if length(regimes) == 1
+        Γ0, Γ1, C, Ψ, Π  = ngdp_eqcond(m, regimes[1])
 
         TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = :low)
 
@@ -179,7 +179,7 @@ function ngdp_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regime
 
         # Augment states
         TTT, RRR, CCC = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
-                                       reg = regimes)
+                                            reg = regimes[1])
         return TTT, RRR, CCC
 
     else
@@ -197,7 +197,7 @@ function ngdp_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regime
         RRRs = Vector{Matrix{Float64}}(undef, n_regimes)
         CCCs = Vector{Vector{Float64}}(undef, n_regimes)
 
-    # Solve model
+        # Solve model
         for reg in regimes
             TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg], 1+1e-6)
 
@@ -214,6 +214,7 @@ function ngdp_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regime
                                                              reg = reg)
         end
     end
+
     return TTTs, RRRs, CCCs
 end
 
