@@ -51,6 +51,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_urhat)
+        if get_setting(m, :add_urhat)
+            push!(pseudo_names, :urhat)
+        end
+    end
+
     if haskey(m.settings, :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
             push!(pseudo_names, :laborshare_t)
@@ -338,6 +344,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_urhat)
+        if get_setting(m, :add_urhat)
+            pseudo[:urhat].name     = "urhat"
+            pseudo[:urhat].longname = "urhat"
+        end
+    end
     # if subspec(m) == "ss60"
     #     pseudo[:ziid].name     = "ziid"
     #     pseudo[:ziid].longname = "ziid"
