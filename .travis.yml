@@ -8,8 +8,7 @@ os:
     #- osx
     - linux
 julia:
-    - 1.0
-    - 1.1
+    - 1
 notifications:
     email: false
 addons:
@@ -22,7 +21,7 @@ script:
     - julia --color=yes -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
 branches:
   only:
-    - master 
+    - master
     - gh-pages
 after_success:
 - julia -e 'Pkg.add("Documenter")'
@@ -32,7 +31,7 @@ after_success:
 jobs:
   include:
     - stage: "Documentation"
-      julia: 1.1
+      julia: 1
       os: linux
       script:
         - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd()));
