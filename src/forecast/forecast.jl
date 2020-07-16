@@ -343,8 +343,10 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     if length(regime_inds) > 1
         for i in 1:length(regime_inds)
             ts = regime_inds[i]
-            if ts[1] == 1 # We already did this period in the initialization
-                ts = 2:ts[end]
+            if length(ts) > 0 # Check in case the regime is empty
+                if ts[1] == 1 # We already did this period in the initialization
+                    ts = 2:ts[end]
+                end
             end
             for t in ts
                 states[:, t], shocks[:, t] = iterate(states[:, t - 1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
@@ -381,12 +383,17 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     # Grab some information about the forecast
     n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     if haskey(DSGE.get_settings(m), :regime_dates) # dates of first and last regimes we need to add for the alt policy
-        start_altpol_date = get_setting(m, :regime_dates)[2]
-        end_altpol_date   = get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] +
-            Dates.Month(3) * (forecast_horizons(m) + 1)
+        if length(get_setting(m, :regime_dates)) > 1
+            start_altpol_date = get_setting(m, :regime_dates)[2]
+            end_altpol_date   = get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] +
+                Dates.Month(3) * (forecast_horizons(m; cond_type = cond_type) + 1)
+        else
+            start_altpol_date = date_forecast_start(m)
+            end_altpol_date   = iterate_quarters(start_altpol_date, forecast_horizons(m; cond_type = cond_type) + 1)
+        end
     else
         start_altpol_date = date_forecast_start(m)
-        end_altpol_date   = start_altpol_date + Dates.Month(3) * (forecast_horizons(m) + 1)
+        end_altpol_date   = iterate_quarters(start_altpol_date, forecast_horizons(m; cond_type = cond_type) + 1)
     end
 
     # Figure out which periods need temporary ZLB regimes

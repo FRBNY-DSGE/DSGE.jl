@@ -496,7 +496,7 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = 
 
     n_hist_regimes = 0
     n_cond_regimes = 0
-    n_regimes = length(keys(get_setting(m, :regime_dates)))
+    n_regimes = length(get_setting(m, :regime_dates))
     post_cond_end = iterate_quarters(date_conditional_end(m), 1) # Period after conditional forecasting ends
     set_reg_forecast_start   = false # These flags are needed to tell whether or not we actually set these regimes.
     set_post_conditional_end = false # W/out these flags, if m already has reg_forecast_start, then it won't be properly set
