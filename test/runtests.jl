@@ -16,17 +16,6 @@ my_tests = [
             "parameters",
             "util",
             "statespace",
-            "models/representative/an_schorfheide/an_schorfheide",
-            "models/representative/smets_wouters/smets_wouters",
-            "models/representative/smets_wouters_orig/smets_wouters_orig",
-            "models/representative/m990/m990",
-            "models/representative/m1002/m1002",
-            "models/representative/m1010/m1010",
-
-            "models/poolmodel/poolmodel",
-            "models/var/dsgevar/dsgevar",
-            "models/var/dsgevecm/dsgevecm",
-            "models/var/util",
 
             "data/fred_data",
             "data/load_data",
@@ -92,7 +81,6 @@ my_tests = [
             "scenarios/drivers",
             "decomp/decompose_forecast",
 
-            "models/representative/an_schorfheide/an_schorfheide",
             "models/representative/smets_wouters/smets_wouters",
             "models/representative/smets_wouters_orig/smets_wouters_orig",
             "models/representative/m990/m990",
@@ -101,6 +89,10 @@ my_tests = [
             "models/representative/m904/m904",
             "models/representative/m805/m805",
             "models/poolmodel/poolmodel",
+            "models/var/dsgevar/dsgevar",
+            "models/var/dsgevecm/dsgevecm",
+            "models/var/util",
+
             "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell"
             #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
             #"models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
