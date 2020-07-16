@@ -176,8 +176,11 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
 
     if get_setting(m, :solution_method) == :gensys
         if length(regimes) == 1 # Calculate the solution to a specific regime
-            solve_one_regime(m; apply_altpolicy = apply_altpolicy, regime = regimes[1],
-                             uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
+            @show regimes
+            @show hist_regimes
+            @show fcast_regimes
+            return solve_one_regime(m; apply_altpolicy = apply_altpolicy, regime = regimes[1],
+                                    uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
         else # Calculate the reduced-form state space matrices for all regimes
             Γ0s = Vector{Matrix{Float64}}(undef, length(regimes))
             Γ1s = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -330,9 +333,9 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
                     end
                 end
             end
-        end
 
-        return TTTs, RRRs, CCCs
+            return TTTs, RRRs, CCCs
+        end
     else
         error("Regime switching has not been implemented for other solution methods.")
     end
@@ -352,11 +355,11 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
         # Augment states
         TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = true,
-                                       regime = regimes)
+                                       regime = regime)
     elseif altpolicy_solve == solve || !apply_altpolicy
 
         # Get equilibrium condition matrices
-        Γ0, Γ1, C, Ψ, Π  = eqcond(m, regimes)
+        Γ0, Γ1, C, Ψ, Π  = eqcond(m, regime)
 
         # Solve model
         TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
@@ -372,10 +375,10 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
         # Augment states
         TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = true,
-                                       regime = regimes)
+                                       reg = regime)
 
     else
-        TTT, RRR, CCC = altpolicy_solve(m; regime_switching = true, regimes = regimes)
+        TTT, RRR, CCC = altpolicy_solve(m; regime_switching = true, regimes = Int[regime])
     end
 
     return TTT, RRR, CCC

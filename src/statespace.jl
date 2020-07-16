@@ -302,7 +302,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         get_setting(m, :regime_switching) : false
     n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
         get_setting(m, :n_regimes) : 1
-    n_hist_regimes        = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
+    n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
         get_setting(m, :n_hist_regimes) : 1
 
     # Solve model
