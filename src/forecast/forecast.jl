@@ -368,9 +368,10 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     return states, obs, pseudo, shocks
 end
 
-# Automatic enforcing of the ZLB as a temporary alterantive policy
+# Automatic enforcing of the ZLB as a temporary alternative policy
 function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::AbstractMatrix{S}, shocks::AbstractMatrix{S};
-                  cond_type::Symbol = :none, temporary_altpolicy_max_iter::Int = 10, set_zlb_regime_vals::Function = identity,
+                  cond_type::Symbol = :none, uncertain_altpolicy::Bool = false,
+                  temporary_altpolicy_max_iter::Int = 10, set_zlb_regime_vals::Function = identity,
                   state_dims::Tuple{Int, Int} = (n_states_augmented(m), forecast_horizons(m, cond_type = cond_type)),
                   pseudo_dims::Tuple{Int, Int} = (n_pseudo_observables(m), forecast_horizons(m, cond_type = cond_type)),
                   tol::S = -1e-14) where {S <: Real}
@@ -391,77 +392,86 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
         end_altpol_date   = start_altpol_date + Dates.Month(3) * (forecast_horizons(m) + 1)
     end
 
-    # Loop for enforcing zero rate
-    states = zeros(state_dims)
-    pseudo = zeros(pseudo_dims)
-    obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
+    # Figure out which periods need temporary ZLB regimes
+#     which_zlb_regimes = findall(obs[get_observables(m)[:obs_nominalrate], :] .<
+#                                 get_setting(m, :forecast_zlb_value)) .+ n_hist_regimes # add historical regimes to get the right regime number
+#     if is_regime_switch && cond_type != :none
+#         which_zlb_regimes .+= get_setting(m, :reg_post_conditional_end) - # additional conditional regimes should be added
+#             get_setting(m, :reg_forecast_start)
+#     end
 
-    for iter in 1:temporary_altpolicy_max_iter
-
-        # Figure out which periods need temporary ZLB regimes
-        which_zlb_regimes = findall(obs[get_observables(m)[:obs_nominalrate], :] .<
-                                    get_setting(m, :forecast_zlb_value)) .+ n_hist_regimes # add historical regimes to get the right regime number
+    first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
+                                 get_setting(m, :forecast_zlb_value))
+    if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
+        first_zlb_regime += n_hist_regimes
         if is_regime_switch && cond_type != :none
-            which_zlb_regimes .+= get_setting(m, :reg_post_conditional_end) - # additional conditional regimes should be added
-                get_setting(m, :reg_forecast_start)
+            first_zlb_regime += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
         end
 
-        # Count the number of necessary regimes. For now, we add in a separate regime for every
-        # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
-        # that this is necessary anyway but not always, especially depending on the drawn shocks
-        n_total_regimes = maximum(which_zlb_regimes) + 1 # plus 1 for lift off
+        # Setup for loop enforcing zero rate
+        states = zeros(state_dims)
+        pseudo = zeros(pseudo_dims)
+        obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
 
-        # Set up parameters if there are switching parameter values.
-        #
-        # User needs to provide a function which takes in the model object `m`
-        # and the total number of regimes (after adding the required temporary regimes),
-        # and sets up regime-switching parameters for these new additional regimes.
-        if set_zlb_regime_vals != identity
-            set_zlb_regime_vals(m, n_total_regimes)
+        # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
+        for iter in 0:(size(obs, 2) - 1)
+            # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
+            # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
+            # that this is necessary anyway but not always, especially depending on the drawn shocks
+            n_total_regimes = first_zlb_regime + iter + 1 # plus 1 for lift off
+
+            # Set up parameters if there are switching parameter values.
+            #
+            # User needs to provide a function which takes in the model object `m`
+            # and the total number of regimes (after adding the required temporary regimes),
+            # and sets up regime-switching parameters for these new additional regimes.
+            if set_zlb_regime_vals != identity
+                set_zlb_regime_vals(m, n_total_regimes)
+            end
+
+            # Set up regime dates
+            altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
+            for (regind, date) in zip(2:n_total_regimes, # We want to have enough regimes to fill up altpol_regime_dates properly
+                                      start_altpol_date:Dates.Month(3):end_altpol_date)
+                altpol_regime_dates[regind] = date
+            end
+            m <= Setting(:regime_dates, altpol_regime_dates)
+            m <= Setting(:regime_switching, true)
+            setup_regime_switching_inds!(m)
+
+            # Set up replace_eqcond entries
+            m <= Setting(:replace_eqcond, true)
+            m <= Setting(:gensys2, true)
+            replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
+            for regind in first_zlb_regime:(n_total_regimes - 1)
+                replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
+            end
+
+            replace_eqcond[n_total_regimes] = if altpolicy == :ait
+                ait_replace_eq_entries # Add permanent AIT regime
+            elseif altpolicy == :ngdp
+                ngdp_replace_eq_entries # Add permanent NGDP regime
+            elseif altpolicy == :smooth_ait_gdp
+                smooth_ait_gdp_replace_eq_entries # Add permanent smooth AIT-GDP regime
+            elseif altpolicy == :smooth_ait_gdp_alt
+                smooth_ait_gdp_alt_replace_eq_entries # Add permanent smooth AIT-GDP (alternative specification) regime
+            end
+            m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+
+            # Recompute to account for new regimes
+            system = compute_system(m; apply_altpolicy = true)
+
+            # Forecast!
+            states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
+
+            if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
+                break
+            end
         end
+    end
 
-        # Set up regime dates
-        altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
-        for (regind, date) in zip(2:n_total_regimes, # We want to have enough regimes to fill up altpol_regime_dates properly
-                                  start_altpol_date:Dates.Month(3):end_altpol_date)
-            altpol_regime_dates[regind] = date
-        end
-        m <= Setting(:regime_dates, altpol_regime_dates)
-        m <= Setting(:regime_switching, true)
-        setup_regime_switching_inds!(m)
-
-        # Set up replace_eqcond entries
-        m <= Setting(:replace_eqcond, true)
-        m <= Setting(:gensys2, true)
-        replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
-        for regind in which_zlb_regimes
-            replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
-        end
-
-        replace_eqcond[n_total_regimes] = if altpolicy == :ait
-            ait_replace_eq_entries # Add permanent AIT regime
-        elseif altpolicy == :ngdp
-            ngdp_replace_eq_entries # Add permanent NGDP regime
-        elseif altpolicy == :smooth_ait_gdp
-            smooth_ait_gdp_replace_eq_entries # Add permanent smooth AIT-GDP regime
-        elseif altpolicy == :smooth_ait_gdp_alt
-            smooth_ait_gdp_alt_replace_eq_entries # Add permanent smooth AIT-GDP (alternative specification) regime
-        end
-        m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
-
-        # Recompute to account for new regimes
-        system = compute_system(m; apply_altpolicy = true)
-
-        # Forecast!
-        states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
-
-        if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
-            break
-        end
-
-        if iter == temporary_altpolicy_max_iter
-            @warn "Reached maximum number of iterations for enforcing the ZLB."
-        end
+    if !all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
+        @warn "Unable to enforce the ZLB."
     end
 
     # Restore original settings
