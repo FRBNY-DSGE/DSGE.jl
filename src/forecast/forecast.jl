@@ -72,10 +72,6 @@ where `S<:AbstractFloat`.
     as a temporary alternative policy. Defaults to `identity`, and nothing will happen
     if this is the case.
 
-- `state_dims::Tuple{Int, Int}`: Dimensions of the forecasted states. Defaults are inferred from `m`.
-
-- `pseudo_dims::Tuple{Int, Int}`: Dimensions of the forecasted pseudo-observables. Defaults are inferred from `m`.
-
 - `tol::{<: Real}`: Tolerance for the smallest permissible value for the nominal interest rate.
     Defaults to -1e-14.
 
@@ -369,11 +365,12 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 end
 
 # Automatic enforcing of the ZLB as a temporary alternative policy
-function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::AbstractMatrix{S}, shocks::AbstractMatrix{S};
+function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states::AbstractMatrix{S},
+                  obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, uncertain_altpolicy::Bool = false,
                   temporary_altpolicy_max_iter::Int = 10, set_zlb_regime_vals::Function = identity,
-                  state_dims::Tuple{Int, Int} = (n_states_augmented(m), forecast_horizons(m, cond_type = cond_type)),
-                  pseudo_dims::Tuple{Int, Int} = (n_pseudo_observables(m), forecast_horizons(m, cond_type = cond_type)),
+                  # state_dims::Tuple{Int, Int} = (n_states_augmented(m), forecast_horizons(m, cond_type = cond_type)),
+                  # pseudo_dims::Tuple{Int, Int} = (n_pseudo_observables(m), forecast_horizons(m, cond_type = cond_type)),
                   tol::S = -1e-14) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
@@ -409,8 +406,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
         end
 
         # Setup for loop enforcing zero rate
-        states = zeros(state_dims)
-        pseudo = zeros(pseudo_dims)
+        states = similar(states)
+        pseudo = similar(pseudo)
         obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
 
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
@@ -455,6 +452,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, obs::A
                 smooth_ait_gdp_replace_eq_entries # Add permanent smooth AIT-GDP regime
             elseif altpolicy == :smooth_ait_gdp_alt
                 smooth_ait_gdp_alt_replace_eq_entries # Add permanent smooth AIT-GDP (alternative specification) regime
+            else # Default to historical policy
+                eqcond
             end
             m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
 
