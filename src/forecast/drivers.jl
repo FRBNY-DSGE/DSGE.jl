@@ -855,8 +855,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             elseif zlb_method == :temporary_altpolicy
                 altpolicy = get_setting(m, :alternative_policy).key
-                @assert altpolicy in [:ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] "altpolicy must be permanent " *
-                    "and among [:ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] for this method of enforcing the ZLB."
+                @assert altpolicy in [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] "altpolicy must be permanent " *
+                    "and among [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] for this method of enforcing the ZLB."
 
                 # Run the unbounded forecast if they haven't already been computed
                 if isempty(intersect(output_vars, unbddforecast_vars))
@@ -867,10 +867,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
                 # Now run the ZLB enforcing forecast
                 forecaststates, forecastobs, forecastpseudo =
-                    forecast(m, altpolicy, s_T, forecastobs, forecastshocks; cond_type = cond_type,
+                    forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks; cond_type = cond_type,
                              temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
-                             set_zlb_regime_vals = set_regime_vals_altpolicy,
-                             state_dims = size(forecaststates), pseudo_dims = size(forecastpseudo))
+                             set_zlb_regime_vals = set_regime_vals_altpolicy)
+                             # state_dims = size(forecaststates), pseudo_dims = size(forecastpseudo))
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
