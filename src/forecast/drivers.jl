@@ -764,6 +764,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 _, s_T = ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
             end
             histstates[:, end] = s_T
+            ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+            DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+            histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
         end
 
         if haskey(m.settings, :ygap_type) && haskey(get_settings(m), :ygap_value) &&
@@ -774,6 +777,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 _, s_T = smooth_ait_gdp_alt_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
             end
             histstates[:, end] = s_T
+            ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+            DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+            histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
         end
 
         if haskey(m.settings, :Rref_type)
@@ -782,6 +788,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 _, s_T = rw_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
             end
             histstates[:, end] = s_T
+            ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+            DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+            histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
         end
 
         # 2A. Unbounded forecasts
