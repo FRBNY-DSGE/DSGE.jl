@@ -618,12 +618,14 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
     Γ1[eq[:eq_ERktil], endo[:ERktil_t]] = 1.
     Π[eq[:eq_ERktil], ex[:ERktil_sh]]    = 1.
 
+   # We additionally need to directly add the equation(s) for pgap, ygap, etc. here rather than just
+   # in the altpolicy files b/c
+   # (1) Regime-switching won't work otherwise
+   # (2) we may want to define the their values at the beginning of the forecast period
+   #     rather than just when we start using the alt rule.
    if haskey(m.settings, :add_pgap) ? get_setting(m, :add_pgap) : false
        Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
        if haskey(m.settings, :replace_eqcond_func_dict)
-           # We additionally need to directly add the equation for pgap here rather than just
-           # in the altpolicy files b/c we may want to define the pgap at the beginning of the forecast period
-           # rather than just when we start using the alt rule.
            if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                haskey(m.settings, :pgap_type)
@@ -647,7 +649,7 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
-               elseif get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt]
+               elseif get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
                    Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
                    ρ_pgap = exp(log(0.5) / Thalf)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
@@ -661,13 +663,10 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
    if haskey(m.settings, :add_ygap) ? get_setting(m, :add_ygap) : false
        Γ0[eq[:eq_ygap], endo[:ygap_t]]  =  1.
        if haskey(m.settings, :replace_eqcond_func_dict)
-           # We additionally need to directly add the equation for pgap here rather than just
-           # in the altpolicy files b/c we may want to define the pgap at the beginning of the forecast period
-           # rather than just when we start using the alt rule.
            if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                haskey(m.settings, :ygap_type)
-               if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt]
+               if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
                    Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
                    ρ_ygap = exp(log(0.5) / Thalf)
 
@@ -678,6 +677,51 @@ function eqcond(m::Model1002, reg::Int; new_policy = false)
                    Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
                    Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
                    Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
+               end
+           end
+       end
+   end
+
+   if haskey(m.settings, :add_rw) ? get_setting(m, :add_rw) : false
+       Γ0[eq[:eq_rw], endo[:rw_t]]     =  1.
+       Γ0[eq[:eq_Rref], endo[:Rref_t]] =  1.
+
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               haskey(m.settings, :Rref_type)
+
+               ρ_rw = haskey(get_settings(m), :ρ_rw) ? get_setting(m, :ρ_rw) : 0.93
+               Γ0[eq[:eq_rw], endo[:rw_t]]   = 1.
+               Γ1[eq[:eq_rw], endo[:rw_t]]   = ρ_rw
+
+               if get_setting(m, :Rref_type) in [:ait]
+                   Thalf  = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_pgap = exp(log(0.5) / Thalf)
+                   φ      = haskey(get_settings(m), :ait_φ) ? get_setting(m, :ait_φ) : 0.25
+
+                   Γ0[eq[:eq_Rref], endo[:Rref_t]] = 1.
+                   Γ0[eq[:eq_Rref], endo[:pgap_t]] = -φ * (1/(1 - ρ_pgap))
+                   Γ1[eq[:eq_Rref], endo[:Rref_t]] = 0.
+                   C[eq[:eq_Rref]]                 = 0.
+                   Γ0[eq[:eq_Rref], endo[:rw_t]]   = -1.
+
+               elseif get_setting(m, :Rref_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
+
+                   ait_Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   gdp_Thalf = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+                   ρ_pgap    = exp(log(0.5) / ait_Thalf)
+                   ρ_ygap    = exp(log(0.5) / gdp_Thalf)
+                   ρ_smooth  = haskey(get_settings(m), :rw_ρ_smooth) ? get_setting(m, :rw_ρ_smooth) : 0.656
+                   φ_π       = haskey(get_settings(m), :rw_φ_π) ? get_setting(m, :rw_φ_π) : 11.13
+                   φ_y       = haskey(get_settings(m), :rw_φ_y) ? get_setting(m, :rw_φ_y) : 11.13
+
+                   Γ0[eq[:eq_Rref], endo[:Rref_t]] = 1.
+                   Γ1[eq[:eq_Rref], endo[:Rref_t]] = ρ_smooth
+                   C[eq[:eq_Rref]]                 = 0.
+
+                   Γ0[eq[:eq_Rref], endo[:pgap_t]]   = -φ_π * (1. - ρ_pgap) * (1. - ρ_smooth) # This is the AIT part
+                   Γ0[eq[:eq_Rref], endo[:ygap_t]]   = -φ_y * (1. - ρ_ygap) * (1. - ρ_smooth) # This is the GDP part
                end
            end
        end

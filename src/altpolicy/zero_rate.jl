@@ -83,7 +83,6 @@ function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false, r
         TTT, RRR, CCC = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
                                        reg = regimes[1])
         return TTT, RRR, CCC
-
     else
         Γ0s = Vector{Matrix{Float64}}(undef, length(regimes))
         Γ1s = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -101,12 +100,11 @@ function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false, r
 
         # Solve model
         for reg in regimes
-            @show reg
             TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg], 1+1e-6)
 
-           #= if !((eu[1] == 1) & (eu[2] == 1))
+            if !((eu[1] == 1) & (eu[2] == 1))
                 throw(GensysError("Gensys does not give existence"))
-            end=#
+            end
             TTT_gensys = real(TTT_gensys)
             RRR_gensys = real(RRR_gensys)
             CCC_gensys = reshape(CCC_gensys, size(CCC_gensys, 1))

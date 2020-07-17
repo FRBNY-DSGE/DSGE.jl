@@ -4,9 +4,9 @@ module DSGE
     using ModelConstructors, SMC
     using Dates, Test, BenchmarkTools
     using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra
+    using GR
     using Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions
     using StateSpaceRoutines, StatsPlots
-    using GR
     using CSV, DataFrames, DataStructures, OrderedCollections
     using DataStructures: SortedDict, insert!, ForwardOrdering
     using Roots: fzero, ConvergenceFailed
@@ -285,6 +285,8 @@ module DSGE
     include("altpolicy/smooth_ait_gdp.jl")
     include("altpolicy/smooth_ait_gdp_alt.jl")
     include("altpolicy/zero_rate.jl")
+    include("altpolicy/rw.jl")
+    include("altpolicy/rw_zero_rate.jl")
     include("solve/gensys_uncertain_altpol.jl")
 
     include("scenarios/scenario.jl")
