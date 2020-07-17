@@ -776,6 +776,14 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histstates[:, end] = s_T
         end
 
+        if haskey(m.settings, :Rref_type)
+            if get_setting(m, :ygap_type) == :rw && get_setting(m, :pgap_type) == :rw &&
+                get_setting(m, :Rref_type) == :rw
+                _, s_T = rw_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            end
+            histstates[:, end] = s_T
+        end
+
         # 2A. Unbounded forecasts
         if !isempty(intersect(output_vars, unbddforecast_vars))
             if pegFFR
