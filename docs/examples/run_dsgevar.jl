@@ -13,13 +13,14 @@ do_parallel       = false  # Use parallel workers
 n_workers         = 10
 dsgevar_λ         = 0.5    # What λ do you want to use?
 
-Random.seed!(1793)
+Random.seed!(20201793)
 
 # Set up DSGE and load data
 m = AnSchorfheide("ss0")
 m[:e_R] = 0. # DSGEVAR does not use
 m[:e_π] = 0. # measurement error with
 m[:e_y] = 0. # subspec ss3
+modal_paras = map(x -> x.value, m.parameters)
 forecast_string = "test_dsgevar" # Change this to an empty string if you don't want an identifier for saved output
 m <= Setting(:sampling_method, :SMC)
 m <= Setting(:impulse_response_horizons, 20)
@@ -77,6 +78,7 @@ if get_VAR_system
     var_system = Dict()
     var_system[:var_approx] = Dict()
     var_system[:dsgevar_λ] = Dict()
+    DSGE.update!(dsgevar, modal_paras)
 
     # Coefficients and innovations variance-covariance matrices when approximating the DSGE
     # and when using the DSGE as a prior for the VAR
