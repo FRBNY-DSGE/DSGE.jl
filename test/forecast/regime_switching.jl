@@ -16,7 +16,7 @@ Random.seed!(1793)
                                                   3 => Date(2020, 6, 30)))
     m = setup_regime_switching_inds!(m)
 
-    t_s, r_s, c_s = solve(m, regimes = 3)
+    t_s, r_s, c_s = solve(m, regimes = Int[3])
 
     regime_dates = Dict{Int, Date}()
     regime_dates[1] = date_presample_start(m)
@@ -59,7 +59,7 @@ Random.seed!(1793)
     Tcal,Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t_s[1:n_endo, 1:n_endo], r_s[1:n_endo, :], c_s[1:n_endo])
     @test Tcal[1] ≈ sys_temp[1][3][1:n_endo, 1:n_endo]
     # Then when start recrusion with rule, should get same TTTs in every perod
-    t, r, c = ngdp_solve(m, regime_switching = false, regimes =3)
+    t, r, c = ngdp_solve(m, regime_switching = false, regimes = Int[3])
 
     Tcal,Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t[1:n_endo, 1:n_endo], r[1:n_endo, :], c[1:n_endo])
     for i in 1:length(Tcal)
