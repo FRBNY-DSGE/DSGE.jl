@@ -1,12 +1,12 @@
 function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{S},
-                                   altpolicies::Vector{AltPolicy} = [get_setting(m, :alternative_policy)];
-                                   apply_altpolicy::Bool = false, regime_switching::Bool = false,
-                                   regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1,
-                                   Γ0s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
-                                   Γ1s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
-                                   Cs::Vector{Vector{S}} = Vector{Vector{S}}(undef, 0),
-                                   Ψs::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
-                                   Πs::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0)) where {S <: Real}
+                                 altpolicies::Vector{AltPolicy} = [get_setting(m, :alternative_policy)];
+                                 apply_altpolicy::Bool = false, regime_switching::Bool = false,
+                                 regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1,
+                                 Γ0s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
+                                 Γ1s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
+                                 Cs::Vector{Vector{S}} = Vector{Vector{S}}(undef, 0),
+                                 Ψs::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
+                                 Πs::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0)) where {S <: Real}
 
     @assert sum(prob_vec) == 1. "The vector of probabilities must sum to 1"
     # prob[1] = probability of usual rule
