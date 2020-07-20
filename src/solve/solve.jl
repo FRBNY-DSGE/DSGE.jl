@@ -84,10 +84,6 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
     end
 end
 
-function uncertain_altpolicy_solve()
-
-end
-
 """
 solve(m::PoolModel)
 ```
@@ -156,7 +152,26 @@ Base.showerror(io::IO, ex::KleinError) = print(io, ex.msg)
 """
 ```
 solve_regime_switching(m::AbstractDSGEModel; apply_altpolicy = false)
+
 solve_one_regime(m::AbstractDSGEModel; apply_altpolicy = false)
+
+solve_histregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ01::Vector{Matrix{S}},
+    Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}};
+    TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
+    n_hist_regimes::Vector{Int} = Int[1], verbose::Symbol = :high)
+
+solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ01::Vector{Matrix{S}},
+    Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}};
+    TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
+    n_fcast_regimes::Vector{Int} = Int[1], apply_altpolicy::Bool = false,
+    altpolicy_solve = altpolicy_solve, verbose::Symbol = :high)
+
+solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ01::Vector{Matrix{S}},
+    Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
+    TTT_gensys_final::AbstractMatrix{S}, RRR_gensys_final::AbstractMatrix{S},
+    CCC_gensys_final::AbstractMatrix{S},
+    TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
+    fcast_regimes::Vector{Int} = Int[1], verbose::Symbol = :high)
 ```
 
 calculates the reduced form state transition matrices in the case of regime switching.
@@ -173,12 +188,10 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
 
     altpolicy_solve = alternative_policy(m).solve
     gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
+    uncertain_zlb = haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false
 
     if get_setting(m, :solution_method) == :gensys
         if length(regimes) == 1 # Calculate the solution to a specific regime
-            @show regimes
-            @show hist_regimes
-            @show fcast_regimes
             return solve_one_regime(m; apply_altpolicy = apply_altpolicy, regime = regimes[1],
                                     uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
         else # Calculate the reduced-form state space matrices for all regimes
@@ -187,6 +200,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
             Cs = Vector{Vector{Float64}}(undef, length(regimes))
             Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
             Πs = Vector{Matrix{Float64}}(undef, length(regimes))
+
             for reg in regimes
                 Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = eqcond(m, reg)
             end
@@ -196,23 +210,8 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
             CCCs = Vector{Vector{Float64}}(undef, length(regimes))
 
             # Solve model for regimes corresponding to the history of a forecast
-            for hist_reg in hist_regimes
-                TTT_gensys, CCC_gensys, RRR_gensys, eu =
-                    gensys(Γ0s[hist_reg], Γ1s[hist_reg], Cs[hist_reg], Ψs[hist_reg], Πs[hist_reg],
-                           1+1e-6, verbose = verbose)
-
-                # Check for LAPACK exception, existence and uniqueness
-                if eu[1] != 1 || eu[2] != 1
-                    throw(GensysError("Error in Gensys, Regime $hist_reg"))
-                end
-                TTT_gensys = real(TTT_gensys)
-                RRR_gensys = real(RRR_gensys)
-                CCC_gensys = real(CCC_gensys)
-
-                # Put the usual system in for the history (smoothing)
-                TTTs[hist_reg], RRRs[hist_reg], CCCs[hist_reg] = DSGE.augment_states(m, TTT_gensys,
-                                                                                     RRR_gensys, CCC_gensys)
-            end
+            solve_histregimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs;
+                               hist_regimes = hist_regimes, verbose = verbose)
 
             # Get the last state space matrices one period after the alternative policy ends (if there is one)
             if uncertain_altpolicy
@@ -236,8 +235,8 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
                 n_endo = length(keys(m.endogenous_states))
                 TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = altpolicy_solve(m; regime_switching = true,
                                                                                        regimes = Int[get_setting(m, :n_regimes)])
-                TTT_gensys_final = TTT_gensys_final[1:n_endo, 1:n_endo]
-                RRR_gensys_final = RRR_gensys_final[1:n_endo, :]
+                TTT_gensys_final = TTT_gensys_final[1:n_endo, 1:n_endo] # make sure the non-augmented version
+                RRR_gensys_final = RRR_gensys_final[1:n_endo, :]        # is returned
                 CCC_gensys_final = CCC_gensys_final[1:n_endo]
             end
 
@@ -245,93 +244,19 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
             RRR_gensys_final = real(RRR_gensys_final)
             CCC_gensys_final = real(CCC_gensys_final)
 
-            # Now we handle regime switching during forecast time periods
-            # 123-126 might be unnecessary now
-            for fcast_reg in fcast_regimes
-                Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =
-                    eqcond(m, fcast_reg, new_policy = gensys2)
-            end
-
             # Are there temporary policies in the forecast that had been unanticipated in the history?
             if gensys2
                 # TODO: generalize this policy beyond assuming the final regime HAS to be the final regime-switch
                 # and that the final regime is the policy after the temporary alternative policy finishes
-                gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
-                Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
-                                                Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                                TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
-                Tcal[end] = TTT_gensys_final
-                Rcal[end] = RRR_gensys_final
-                Ccal[end] = CCC_gensys_final
-
-                n_no_alt_reg = get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1
-                if n_no_alt_reg > 0
-                    # Get the T, R, C matrices for the rule period + lift-off period
-                    for (i, fcast_reg) in enumerate((gensys2_regimes[end] - # minus n_rule_periods b/c including lift-off regime
-                                                     get_setting(m, :n_rule_periods)):gensys2_regimes[end])
-                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
-                    end
-
-                    # Get the T, R, C matrices between the first forecast period & first rule period
-                    for fcast_reg in first(fcast_regimes):(first(fcast_regimes) + n_no_alt_reg - 1)
-                        # TODO: place this code block inside its own function
-                        TTT_gensys, CCC_gensys, RRR_gensys, eu =
-                            gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
-                                   1+1e-6, verbose = verbose)
-
-                        # Check for LAPACK exception, existence and uniqueness
-                        if eu[1] != 1 || eu[2] != 1
-                            throw(GensysError("Error in Gensys, Regime $fcast_reg"))
-                        end
-                        TTT_gensys = real(TTT_gensys)
-                        RRR_gensys = real(RRR_gensys)
-                        CCC_gensys = real(CCC_gensys)
-
-                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = DSGE.augment_states(m, TTT_gensys,
-                                                                                                RRR_gensys, CCC_gensys)
-                    end
-                else
-                    # The alternative policy will cover all the regimes in the forecast period
-                    for (i, fcast_reg) in enumerate(fcast_regimes)
-                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
-                    end
-                end
-
-                #=
-                elseif uncertain_altpolicy
-                # Regime-switching with the uncertain altpolicy approach
-                TTTs[fcast_regimes], RRRs[fcast_regimes], CCCs[fcast_regimes] =
-                gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
-                regime_switching = regime_switching, regimes = fcast_regimes,
-                Γ0s = Γ0s, Γ1s = Γ1s, Cs = Cs, Ψs = Ψs, Πs = Πs)
-                for fcast_reg in fcast_regimes
-                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
-                augment_states(m, TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg])
-                end
-                =#
+                solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTT_gensys_final, RRR_gensys_final, CCC_gensys_final,
+                               TTTs, RRRs, CCCs; fcast_regimes = fcast_regimes, uncertain_zlb = uncertain_zlb,
+                               verbose = verbose)
+                # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
+                #       any temporary policy
             else
-                for fcast_reg in fcast_regimes
-                    if altpolicy_solve == solve || !apply_altpolicy
-                        TTT_gensys, CCC_gensys, RRR_gensys, eu =
-                            gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
-                                   1+1e-6, verbose = verbose)
-
-                        # Check for LAPACK exception, existence and uniqueness
-                        if eu[1] != 1 || eu[2] != 1
-                            throw(GensysError("Error in Gensys, Regime $fcast_reg"))
-                        end
-
-                        TTT_gensys = real(TTT_gensys)
-                        RRR_gensys = real(RRR_gensys)
-                        CCC_gensys = real(CCC_gensys)
-
-                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
-                            augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-                    else
-                        TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
-                            altpolicy_solve(m; regime_switching = true, regimes = Int[fcast_reg])
-                    end
-                end
+                solve_fcastregimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs;
+                                    fcast_regimes = fcast_regimes, apply_altpolicy = apply_altpolicy,
+                                    altpolicy_solve = altpolicy_solve, verbose = verbose)
             end
 
             return TTTs, RRRs, CCCs
@@ -382,4 +307,163 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
     end
 
     return TTT, RRR, CCC
+end
+
+function solve_histregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
+                            Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
+                            TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
+                            hist_regimes::Vector{Int} = Int[1], verbose::Symbol = :high) where {S <: Real}
+    for hist_reg in hist_regimes
+        TTT_gensys, CCC_gensys, RRR_gensys, eu =
+            gensys(Γ0s[hist_reg], Γ1s[hist_reg], Cs[hist_reg], Ψs[hist_reg], Πs[hist_reg],
+                   1+1e-6, verbose = verbose)
+
+        # Check for LAPACK exception, existence and uniqueness
+        if eu[1] != 1 || eu[2] != 1
+            throw(GensysError("Error in Gensys, Regime $hist_reg"))
+        end
+        TTT_gensys = real(TTT_gensys)
+        RRR_gensys = real(RRR_gensys)
+        CCC_gensys = real(CCC_gensys)
+
+        # Put the usual system in for the history (smoothing)
+        TTTs[hist_reg], RRRs[hist_reg], CCCs[hist_reg] =
+            augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+    end
+
+    return TTTs, RRRs, CCCs
+end
+
+function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
+                             Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
+                             TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
+                             fcast_regimes::Vector{Int} = Int[1], apply_altpolicy::Bool = false,
+                             verbose::Symbol = :high, altpolicy_solve = nothing) where {S <: Real}
+
+    for fcast_reg in fcast_regimes
+        if altpolicy_solve == solve || !apply_altpolicy
+            TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
+                       1+1e-6, verbose = verbose)
+
+            # Check for LAPACK exception, existence and uniqueness
+            if eu[1] != 1 || eu[2] != 1
+                throw(GensysError("Error in Gensys, Regime $fcast_reg"))
+            end
+
+            TTT_gensys = real(TTT_gensys)
+            RRR_gensys = real(RRR_gensys)
+            CCC_gensys = real(CCC_gensys)
+
+            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
+                augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+        else
+            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
+                altpolicy_solve(m; regime_switching = true, regimes = Int[fcast_reg])
+        end
+    end
+
+    return TTTs, RRRs, CCCs
+end
+
+function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
+                        Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
+                        TTT_gensys_final::AbstractMatrix{S}, RRR_gensys_final::AbstractMatrix{S},
+                        CCC_gensys_final::AbstractMatrix{S},
+                        TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
+                        fcast_regimes::Vector{Int} = Int[1], uncertain_zlb::Bool = false,
+                        verbose::Symbol = :high) where {S <: Real}
+
+    # Calculate the matrices for the temporary alternative policies
+    gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
+
+    # Are there periods between the first forecast period and first period with temporary alt policies?
+    # For example, are there conditional periods?
+    n_no_alt_reg = get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1
+    if n_no_alt_reg > 0
+        # Get the T, R, C matrices between the first forecast period & first rule period
+        for fcast_reg in first(fcast_regimes):(first(fcast_regimes) + n_no_alt_reg - 1)
+            TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
+                       1+1e-6, verbose = verbose)
+
+            # Check for LAPACK exception, existence and uniqueness
+            if eu[1] != 1 || eu[2] != 1
+                throw(GensysError("Error in Gensys, Regime $fcast_reg"))
+            end
+            TTT_gensys = real(TTT_gensys)
+            RRR_gensys = real(RRR_gensys)
+            CCC_gensys = real(CCC_gensys)
+
+            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = DSGE.augment_states(m, TTT_gensys,
+                                                                                    RRR_gensys, CCC_gensys)
+        end
+    end
+
+    # Populate TTTs, RRRs, CCCs matrices
+    if uncertain_zlb
+        # Setup
+        ffreg = first(fcast_regimes)
+        altpols = get_setting(m, :alternative_policies)
+        weights = get_setting(m, :alternative_policy_weights)
+        @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
+        Talt, Ralt, Calt = altpols[1].solve(m)
+
+        # Calculate the desired lift-off policy
+        altpolicy_solve = get_setting(m, :alternative_policy).solve
+        TTT_liftoff, RRR_liftoff, CCC_liftoff = altpolicy_solve(m; regime_switching = true,
+                                                                regimes = Int[get_setting(m, :n_regimes)])
+        n_endo = length(m.endogenous_states)
+        TTT_liftoff = TTT_liftoff[1:n_endo, 1:n_endo] # make sure the non-augmented version
+        RRR_liftoff = RRR_liftoff[1:n_endo, :]        # is returned
+        CCC_liftoff = CCC_liftoff[1:n_endo]
+
+        # Calculate gensys2 matrices under belief that the desired lift-off policy will occur
+        Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
+                                        Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
+                                        TTT_liftoff, RRR_liftoff, CCC_liftoff)
+        Tcal[end] = TTT_liftoff
+        Rcal[end] = RRR_liftoff
+        Ccal[end] = CCC_liftoff
+
+        # Now calculate transition matrices under an uncertain ZLB
+        Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
+            gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
+        inreg = gensys2_regimes[2:end]
+        Tcal[inreg], Rcal[inreg], Ccal[inreg] =
+            gensys_uncertain_zlb(weights, Talt[1:n_endo, 1:n_endo], Calt[1:n_endo], Tcal[2:end], Rcal[2:end], Ccal[2:end],
+                                 Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+
+        Tcal[end] = TTT_gensys_final
+        Rcal[end] = RRR_gensys_final
+        Ccal[end] = CCC_gensys_final
+
+        for i in inreg
+            TTTs[i], RRRs[i], CCCs[i] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
+        end
+    else
+        Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
+                                        Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
+                                        TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
+        Tcal[end] = TTT_gensys_final
+        Rcal[end] = RRR_gensys_final
+        Ccal[end] = CCC_gensys_final
+
+        if n_no_alt_reg > 0
+            # Get the T, R, C matrices for the rule period + lift-off period
+            for (i, fcast_reg) in enumerate((gensys2_regimes[end] - # minus n_rule_periods b/c including lift-off regime
+                                             get_setting(m, :n_rule_periods)):gensys2_regimes[end])
+                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
+            end
+        else
+            # The alternative policy will cover all the regimes in the forecast period, namely
+            # there are no periods between the first forecast period and the first temporary
+            # alternative policy period
+            for (i, fcast_reg) in enumerate(fcast_regimes)
+                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
+            end
+        end
+    end
+
+    return TTTs, RRRs, CCCs
 end
