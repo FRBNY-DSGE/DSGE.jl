@@ -127,7 +127,6 @@ end
 GensysError() = GensysError("Error in Gensys")
 Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
 
-
 """
 ```
 KleinError <: Exception
@@ -369,7 +368,7 @@ end
 function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
                         Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                         TTT_gensys_final::AbstractMatrix{S}, RRR_gensys_final::AbstractMatrix{S},
-                        CCC_gensys_final::AbstractMatrix{S},
+                        CCC_gensys_final::AbstractVector{S},
                         TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                         fcast_regimes::Vector{Int} = Int[1], uncertain_zlb::Bool = false,
                         verbose::Symbol = :high) where {S <: Real}
@@ -398,12 +397,15 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = DSGE.augment_states(m, TTT_gensys,
                                                                                     RRR_gensys, CCC_gensys)
         end
+        populate_reg = (fcast_regimes[end] - get_setting(m, :n_rule_periods)):fcast_regimes[end]
+    else
+        populate_reg = fcast_regimes
     end
 
     # Populate TTTs, RRRs, CCCs matrices
     if uncertain_zlb
         # Setup
-        ffreg = first(fcast_regimes)
+        ffreg = first(fcast_regimes) + n_no_alt_reg
         altpols = get_setting(m, :alternative_policies)
         weights = get_setting(m, :alternative_policy_weights)
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
@@ -413,6 +415,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         altpolicy_solve = get_setting(m, :alternative_policy).solve
         TTT_liftoff, RRR_liftoff, CCC_liftoff = altpolicy_solve(m; regime_switching = true,
                                                                 regimes = Int[get_setting(m, :n_regimes)])
+
         n_endo = length(m.endogenous_states)
         TTT_liftoff = TTT_liftoff[1:n_endo, 1:n_endo] # make sure the non-augmented version
         RRR_liftoff = RRR_liftoff[1:n_endo, :]        # is returned
@@ -429,8 +432,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         # Now calculate transition matrices under an uncertain ZLB
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
-        inreg = gensys2_regimes[2:end]
-        Tcal[inreg], Rcal[inreg], Ccal[inreg] =
+
+        Tcal, Rcal, Ccal =
             gensys_uncertain_zlb(weights, Talt[1:n_endo, 1:n_endo], Calt[1:n_endo], Tcal[2:end], Rcal[2:end], Ccal[2:end],
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
@@ -438,8 +441,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Rcal[end] = RRR_gensys_final
         Ccal[end] = CCC_gensys_final
 
-        for i in inreg
-            TTTs[i], RRRs[i], CCCs[i] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
+        for (i, reg) in enumerate(populate_reg)
+            TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
         end
     else
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
@@ -449,19 +452,10 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Rcal[end] = RRR_gensys_final
         Ccal[end] = CCC_gensys_final
 
-        if n_no_alt_reg > 0
-            # Get the T, R, C matrices for the rule period + lift-off period
-            for (i, fcast_reg) in enumerate((gensys2_regimes[end] - # minus n_rule_periods b/c including lift-off regime
-                                             get_setting(m, :n_rule_periods)):gensys2_regimes[end])
-                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
-            end
-        else
-            # The alternative policy will cover all the regimes in the forecast period, namely
-            # there are no periods between the first forecast period and the first temporary
-            # alternative policy period
-            for (i, fcast_reg) in enumerate(fcast_regimes)
-                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
-            end
+        #=populate_reg = n_no_alt_reg > 0 ? (fcast_regimes[end] - get_setting(m, :n_rule_periods)):fcast_regimes[end] :
+            fcast_regimes=#
+        for (i, fcast_reg) in enumerate(populate_reg)
+            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
         end
     end
 
