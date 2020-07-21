@@ -1,3 +1,11 @@
+"""
+```
+rw_zero_rate()
+```
+
+implements the ZLB when using the rule described in Reifschneider and Williams (2000). This rule essentially penalizes
+deviations from a reference rate.
+"""
 function rw_zero_rate()
     AltPolicy(:rw_zero_rate, rw_zero_rate_eqcond, rw_zero_rate_solve,
               forecast_init = rw_zero_rate_forecast_init,

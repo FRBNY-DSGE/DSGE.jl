@@ -1,6 +1,11 @@
->># See Reifschneider and Williams (2000). This rule essentially penalizes
-# deviations from a reference rate.
+"""
+```
+rw()
+```
 
+implements the rule described in Reifschneider and Williams (2000). This rule essentially penalizes
+deviations from a reference rate.
+"""
 function rw()
     AltPolicy(:rw, rw_eqcond, rw_solve,
               forecast_init = rw_forecast_init,
