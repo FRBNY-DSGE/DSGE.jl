@@ -29,27 +29,18 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                hist_regimes::Vector{Int} = Int[1],
                fcast_regimes::Vector{Int} = Int[1],
                regimes::Vector{Int} = Int[1],
-               uncertain_altpolicy::Bool = false,
                verbose::Symbol = :high) where {T <: Real}
 
     altpolicy_solve = alternative_policy(m).solve
+    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
 
     if regime_switching
         return solve_regime_switching(m; apply_altpolicy = apply_altpolicy, hist_regimes = hist_regimes,
-                                      fcast_regimes = fcast_regimes, regimes = regimes,
-                                      uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
+                                      fcast_regimes = fcast_regimes, regimes = regimes, uncertain_altpolicy = uncertain_altpolicy,
+                                      verbose = verbose)
     else
         if get_setting(m, :solution_method) == :gensys
-            if uncertain_altpolicy
-                weights = get_setting(m, :alternative_policy_weights)
-                altpols = get_setting(m, :alternative_policies)
-
-                TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy)
-
-                # Augment states
-                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-
-            elseif altpolicy_solve == solve || !apply_altpolicy
+            if altpolicy_solve == solve || !apply_altpolicy
 
                 # Get equilibrium condition matrices
                 Γ0, Γ1, C, Ψ, Π  = eqcond(m)
@@ -72,6 +63,18 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                 # Change the policy rule
                 TTT, RRR, CCC = altpolicy_solve(m)
             end
+
+            if uncertain_altpolicy && apply_altpolicy
+                weights = get_setting(m, :alternative_policy_weights)
+                altpols = get_setting(m, :alternative_policies)
+                inds = 1:n_states(m)
+                TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
+                                                                             TTT = TTT[inds, inds])
+
+                # Augment states
+                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+            end
+
         elseif get_setting(m, :solution_method) == :klein
             TTT_jump, TTT_state = klein(m)
 
@@ -178,11 +181,11 @@ These functions are intended to be internal functions hidden from the user but a
 from the definition of the main `solve` function to ensure the main function is
 comprehensible.
 """
-function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false,
+function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
+                                uncertain_altpolicy::Bool = false,
                                 hist_regimes::Vector{Int} = Int[1],
                                 fcast_regimes::Vector{Int} = Int[1],
                                 regimes::Vector{Int} = Int[1],
-                                uncertain_altpolicy::Bool = false,
                                 verbose::Symbol = :high) where {T <: Real}
 
     altpolicy_solve = alternative_policy(m).solve
@@ -213,14 +216,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
                                hist_regimes = hist_regimes, verbose = verbose)
 
             # Get the last state space matrices one period after the alternative policy ends (if there is one)
-            if uncertain_altpolicy
-                weights = get_setting(m, :alternative_policy_weights)
-                altpols = get_setting(m, :alternative_policies)
-
-                TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
-                    gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy)
-
-            elseif altpolicy_solve == solve || !apply_altpolicy
+            if altpolicy_solve == solve || !apply_altpolicy
                 # If normal rule
                 TTT_gensys_final, CCC_gensys_final, RRR_gensys_final, eu = gensys(Γ0s[end], Γ1s[end], Cs[end],
                                                                                   Ψs[end], Πs[end],
@@ -238,6 +234,16 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy = false
                 RRR_gensys_final = RRR_gensys_final[1:n_endo, :]        # is returned
                 CCC_gensys_final = CCC_gensys_final[1:n_endo]
             end
+
+            if uncertain_altpolicy && apply_altpolicy
+                weights = get_setting(m, :alternative_policy_weights)
+                altpols = get_setting(m, :alternative_policies)
+
+                TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
+                    gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
+                                            TTT = TTT_gensys_final)
+            end
+
 
             TTT_gensys_final = real(TTT_gensys_final)
             RRR_gensys_final = real(RRR_gensys_final)
@@ -271,16 +277,7 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
     altpolicy_solve = alternative_policy(m).solve
 
-    if uncertain_altpolicy
-        weights = get_setting(m, :alternative_policy_weights)
-        altpols = get_setting(m, :alternative_policies)
-
-        TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy)
-
-        # Augment states
-        TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = true,
-                                       regime = regime)
-    elseif altpolicy_solve == solve || !apply_altpolicy
+    if altpolicy_solve == solve || !apply_altpolicy
 
         # Get equilibrium condition matrices
         Γ0, Γ1, C, Ψ, Π  = eqcond(m, regime)
@@ -303,6 +300,19 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
     else
         TTT, RRR, CCC = altpolicy_solve(m; regime_switching = true, regimes = Int[regime])
+    end
+
+    if uncertain_altpolicy && apply_altpolicy
+        weights = get_setting(m, :alternative_policy_weights)
+        altpols = get_setting(m, :alternative_policies)
+
+        inds = 1:n_states(m)
+        TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
+                                                                     TTT = TTT[inds, inds])
+
+        # Augment states
+        TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = true,
+                                       regime = regime)
     end
 
     return TTT, RRR, CCC

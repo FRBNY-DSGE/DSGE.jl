@@ -2,6 +2,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
                                  altpolicies::Vector{AltPolicy} = [get_setting(m, :alternative_policy)];
                                  apply_altpolicy::Bool = false, regime_switching::Bool = false,
                                  regimes::Union{Int, Vector{Int}, UnitRange{Int}} = 1,
+                                 TTT::Matrix{S} = Matrix{S}(undef, 0, 0),
                                  Γ0s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
                                  Γ1s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
                                  Cs::Vector{Vector{S}} = Vector{Vector{S}}(undef, 0),
@@ -9,7 +10,6 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
                                  Πs::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0)) where {S <: Real}
 
     @assert sum(prob_vec) == 1. "The vector of probabilities must sum to 1"
-    # prob[1] = probability of usual rule
 
     @assert length(altpolicies) == length(prob_vec) - 1
 
@@ -78,15 +78,18 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             eqcond(m)
         end
 
-        T, R, _ = solve(m; apply_altpolicy = apply_altpolicy)
-        # May need to update later to have m's policy also have apply_altpolicy = true, with the understanding that
-        # in the standard case, the altpolicy should be the "historical" altpolicy, i.e. not really altpolicy
+        if isempty(TTT)
+            assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
+            @assert assert_cond "The Setting :uncertain_altpolicy must be false if TTT is empty."
+            TTT, _, _ = solve(m; apply_altpolicy = apply_altpolicy)
+        end
+
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
 
         inds = 1:n_states(m) # Don't want augmented states
         Td = Vector{Matrix{S}}(undef, length(prob_vec))
         Cd = Vector{Vector{S}}(undef, length(prob_vec))
-        Td[1] = T[inds, inds]
+        Td[1] = TTT[inds, inds]
         Cd[1] = C[inds]
         for (i, altpolicy) in enumerate(altpolicies)
             j = i + 1 # may refactor to directly use solve(m; apply_altpolicy = true) by updating the alternative policy
