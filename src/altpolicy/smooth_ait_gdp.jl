@@ -1,6 +1,12 @@
-# This monetary policy rule replaces the inflation target with
-# average inflation targeting.
+"""
+```
+smooth_ait_gdp()
+```
 
+implements flexible AIT policy, which combines AIT with GDP targeting and discounting of the history.
+The "smooth" part in the name describes how the degree to which history is discounted smooths
+the response of monetary policy to deviations from the average inflation and GDP targets.
+"""
 function smooth_ait_gdp()
     AltPolicy(:smooth_ait_gdp, smooth_ait_gdp_eqcond, smooth_ait_gdp_solve,
               forecast_init = smooth_ait_gdp_forecast_init,
