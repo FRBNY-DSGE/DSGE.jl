@@ -1,7 +1,7 @@
 """
 ```
-pseudo_measurement(m::Model1002{T},
-    TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
+pseudo_measurement(m::Model1002{T}, TTT::Matrix{T}, RRR::Matrix{T},
+    CCC::Vector{T}; reg::Int = 1) where {T<:AbstractFloat}
 ```
 
 Assign pseudo-measurement equation (a linear combination of states):
@@ -13,23 +13,44 @@ x_t = ZZ_pseudo*s_t + DD_pseudo
 function pseudo_measurement(m::Model1002{T},
                             TTT::Matrix{T},
                             RRR::Matrix{T},
-                            CCC::Vector{T}) where {T<:AbstractFloat}
+                            CCC::Vector{T};
+                            reg::Int = 1) where {T<:AbstractFloat}
 
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
     pseudo    = m.pseudo_observables
 
+    # Initialize pseudo ZZ and DD matrices
     _n_states = n_states_augmented(m)
     _n_pseudo = n_pseudo_observables(m)
 
-    # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
-    TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
-
-    # Initialize pseudo ZZ and DD matrices
     ZZ_pseudo = zeros(_n_pseudo, _n_states)
     DD_pseudo = zeros(_n_pseudo)
 
+    # Set parameters
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, reg)
+        end
+    end
+
+    # Handle integrated series
     no_integ_inds = inds_states_no_integ_series(m)
+
+    if haskey(m.endogenous_states, :pgap_t)
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
+    end
+    if haskey(m.endogenous_states, :ygap_t)
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:ygap_t]])
+    end
+
+    if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) ||
+        haskey(m.endogenous_states, :ygap_t)
+        TTT = @view TTT[no_integ_inds, no_integ_inds]
+    end
+
+    # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
+    TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
 
     if get_setting(m, :add_laborproductivity_measurement)
         # Construct pseudo-obs from integrated states first
@@ -100,15 +121,6 @@ function pseudo_measurement(m::Model1002{T},
         DD_pseudo[pseudo[:FlexibleConsumptionGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
     end
 
-    if haskey(get_settings(m), :integrated_series)
-        if !isempty(get_setting(m, :integrated_series))
-            TTT = @view TTT[no_integ_inds, no_integ_inds]
-        end
-    end
-
-    # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
-    TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
-
     ##########################################################
     ## PSEUDO-OBSERVABLE EQUATIONS
     ##########################################################
@@ -162,18 +174,18 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:z_t], endo[:z_t]] = 1.
 
     ## Expected 10-Year Rate Gap
-    ZZ_pseudo[pseudo[:Expected10YearRateGap], :] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearRateGap], no_integ_inds] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
 
     ## Nominal FFR
     ZZ_pseudo[pseudo[:NominalFFR], endo[:R_t]] = 1.
     DD_pseudo[pseudo[:NominalFFR]] = m[:Rstarn]
 
     ## Expected 10-Year Interest Rate
-    ZZ_pseudo[pseudo[:Expected10YearRate], :] = TTT10[endo[:R_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearRate], no_integ_inds] = TTT10[endo[:R_t], :]
     DD_pseudo[pseudo[:Expected10YearRate]]    = m[:Rstarn]
 
     ## Expected 10-Year Natural Rate
-    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], :] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], no_integ_inds] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
     DD_pseudo[pseudo[:Expected10YearNaturalRate]]    = m[:Rstarn]
 
     ## Expected Nominal Natural Rate
@@ -335,6 +347,12 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
+    end
+
     return PseudoMeasurement(ZZ_pseudo, DD_pseudo)
 end
 
@@ -360,6 +378,12 @@ function pseudo_measurement(m::Model1002{T},
         ZZ_pseudos[reg] = zeros(_n_pseudo, _n_states)
         DD_pseudos[reg] = zeros(_n_pseudo)
 
+        for para in m.parameters
+            if !isempty(para.regimes)
+                ModelConstructors.toggle_regime!(para, reg)
+            end
+        end
+
         no_integ_inds = inds_states_no_integ_series(m)
         if haskey(m.endogenous_states, :pgap_t)
             no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
@@ -367,6 +391,15 @@ function pseudo_measurement(m::Model1002{T},
         if haskey(m.endogenous_states, :ygap_t)
             no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:ygap_t]])
         end
+
+        if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) || haskey(m.endogenous_states, :ygap_t)
+            TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
+        else
+            TTT = TTTs[reg]
+        end
+
+        # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
+        TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
 
         if get_setting(m, :add_laborproductivity_measurement)
             # Construct pseudo-obs from integrated states first
@@ -436,15 +469,6 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudos[reg][pseudo[:FlexibleConsumptionGrowth], endo[:z_t]]         = 1.
             DD_pseudos[reg][pseudo[:FlexibleConsumptionGrowth]]                     = 100. * (exp(m[:z_star]) - 1.)
         end
-
-        if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) || haskey(m.endogenous_states, :ygap_t)
-                TTT = @view TTTs[reg][no_integ_inds, no_integ_inds]
-        else
-            TTT = TTTs[reg]
-        end
-
-        # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
-        TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
 
         ##########################################################
         ## PSEUDO-OBSERVABLE EQUATIONS
@@ -691,5 +715,12 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
     end
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
+    end
+
     return [PseudoMeasurement(ZZ_pseudos[i], DD_pseudos[i]) for i in 1:n_reg]
 end

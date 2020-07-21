@@ -29,6 +29,9 @@ my_tests = [
 
             "solve/gensys",
             "solve/solve",
+            "solve/gensys_uncertain_altpol",
+            "solve/uncertain_altpolicy_uncertain_zlb_test1",
+            "solve/uncertain_altpolicy_uncertain_zlb_test2",
             "solve/solve_poolmodel",
             #"solve/solve_ct",
             #"solve/gensys_ct",
