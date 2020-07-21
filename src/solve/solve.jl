@@ -452,8 +452,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Rcal[end] = RRR_gensys_final
         Ccal[end] = CCC_gensys_final
 
-        #=populate_reg = n_no_alt_reg > 0 ? (fcast_regimes[end] - get_setting(m, :n_rule_periods)):fcast_regimes[end] :
-            fcast_regimes=#
         for (i, fcast_reg) in enumerate(populate_reg)
             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
         end
