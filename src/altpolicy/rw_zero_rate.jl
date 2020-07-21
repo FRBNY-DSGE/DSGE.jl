@@ -19,6 +19,7 @@ function rw_zero_rate_replace_eq_entries(m::AbstractDSGEModel,
     φ_π       = haskey(get_settings(m), :rw_φ_π) ? get_setting(m, :rw_φ_π) : 11.13
     φ_y       = haskey(get_settings(m), :rw_φ_y) ? get_setting(m, :rw_φ_y) : 11.13
     ρ_rw      = haskey(get_settings(m), :ρ_rw) ? get_setting(m, :ρ_rw) : 0.93
+
     # This assumes that the inflation target is the model's steady state
     Γ0[eq[:eq_pgap], endo[:pgap_t]] =  1.
     Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
@@ -127,6 +128,7 @@ function rw_zero_rate_eqcond(m::AbstractDSGEModel, reg::Int = 1)
     end
 
     nstates = n_states(m)
+
     # fill in new Γ0, Γ1, C, Ψ, Π
     Γ0 = zeros(Float64, nstates, nstates)
     Γ0[old_eqs, old_states] = Γ0_noaltpol
@@ -187,7 +189,7 @@ function rw_zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false
         CCC_gensys = real(CCC_gensys)
 
         # Augment states
-        TTT, RRR, CCC = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
+        TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
                                        reg = regimes[1])
         return TTT, RRR, CCC
 
@@ -218,13 +220,12 @@ function rw_zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false
             CCC_gensys = reshape(CCC_gensys, size(CCC_gensys, 1))
 
             # Augment states
-            TTTs[reg], RRRs[reg], CCCs[reg] = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
+            TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
                                                              regime_switching = regime_switching,
                                                              reg = reg)
         end
+        return TTTs, RRRs, CCCs
     end
-
-    return TTTs, RRRs, CCCs
 end
 
 """

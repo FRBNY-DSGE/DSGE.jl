@@ -1,4 +1,4 @@
-# See Reifschneider and Williams (2000). This rule essentially penalizes
+>># See Reifschneider and Williams (2000). This rule essentially penalizes
 # deviations from a reference rate.
 
 function rw()
@@ -57,6 +57,8 @@ function rw_replace_eq_entries(m::AbstractDSGEModel,
     Γ0[eq[:eq_mp], :]              .= 0.
     Γ1[eq[:eq_mp], :]              .= 0.
     Ψ[eq[:eq_mp], :]               .= 0.
+    C[eq[:eq_mp]]                   = 0.
+    Π[eq[:eq_mp], :]               .= 0.
 
     # replace monetary policy rule
     Γ0[eq[:eq_mp], endo[:R_t]]    = 1.
@@ -243,7 +245,7 @@ function rw_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::
     ygap_t = m.endogenous_states[:ygap_t]
     rw_t   = m.endogenous_states[:rw_t]
     Rref_t = m.endogenous_states[:Rref_t]
-    R_t   = m.endogenous_states[:R_t]
+    R_t    = m.endogenous_states[:R_t]
 
     # THIS IS WRONG --> #final_state[pgap_t] = -3.5 # todo: figure out how to program automatically
     final_state = if pgap_t < rw_t && rw_t < Rref_t

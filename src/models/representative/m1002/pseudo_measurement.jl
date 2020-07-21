@@ -301,16 +301,19 @@ function pseudo_measurement(m::Model1002{T},
             ZZ_pseudo[pseudo[:ztil], endo[:ztil_t]] = 1.
         end
     end
+
     if haskey(m.settings, :add_zp)
         if get_setting(m, :add_zp)
             ZZ_pseudo[pseudo[:zp], endo[:zp_t]] = 1.
         end
     end
+
     if haskey(m.settings, :add_pgap)
         if get_setting(m, :add_pgap)
             ZZ_pseudo[pseudo[:pgap], endo[:pgap_t]] = 1.
         end
     end
+
     if haskey(m.settings, :add_ygap)
         if get_setting(m, :add_ygap)
             ZZ_pseudo[pseudo[:ygap], endo[:ygap_t]] = 1.
@@ -321,6 +324,14 @@ function pseudo_measurement(m::Model1002{T},
         if get_setting(m, :add_urhat)
             ZZ_pseudo[pseudo[:urhat], endo[:L_t]] = -0.7366220966444673
             DD_pseudo[pseudo[:urhat]] = -32.257825316004364 + -0.7366220966444673 * m[:Lmean]
+        end
+    end
+
+    if haskey(m.settings, :add_rw)
+        if get_setting(m, :add_rw)
+            ZZ_pseudo[pseudo[:rw], endo[:rw_t]]     = 1.
+            ZZ_pseudo[pseudo[:Rref], endo[:Rref_t]] = 1.
+            DD_pseudo[pseudo[:Rref]]                = m[:Rstarn]
         end
     end
 
@@ -634,6 +645,14 @@ function pseudo_measurement(m::Model1002{T},
             if get_setting(m, :add_urhat)
                 ZZ_pseudos[reg][pseudo[:urhat], endo[:L_t]] = -0.7366220966444673
                 DD_pseudos[reg][pseudo[:urhat]] = -32.257825316004364 + -0.7366220966444673 * m[:Lmean]
+            end
+        end
+
+        if haskey(m.settings, :add_rw)
+            if get_setting(m, :add_rw)
+                ZZ_pseudos[reg][pseudo[:rw], endo[:rw_t]] = 1.
+                ZZ_pseudos[reg][pseudo[:Rref], endo[:Rref_t]] = 1.
+                DD_pseudos[reg][pseudo[:Rref]]                = m[:Rstarn]
             end
         end
 
