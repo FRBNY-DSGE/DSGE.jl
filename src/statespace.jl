@@ -287,14 +287,14 @@ end
 
 """
 ```
-compute_system(m; apply_altpolicy = false, uncertain_altpolicy = false, verbose = :high)
+compute_system(m; apply_altpolicy = false, verbose = :high)
 ```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                        uncertain_altpolicy::Bool = false, verbose::Symbol = :high) where {T <: Real}
+                        verbose::Symbol = :high) where {T <: Real}
 
     solution_method = get_setting(m, :solution_method)
 
@@ -309,7 +309,6 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     if regime_switching
         if solution_method == :gensys
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
-                                     uncertain_altpolicy = uncertain_altpolicy,
                                      regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
                                      hist_regimes = collect(1:n_hist_regimes),
@@ -338,8 +337,14 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 return RegimeSwitchingSystem(transition_equations,
                                              measurement_equations,
                                              pseudo_measurement_equations)
-            else
-                return RegimeSwitchingSystem(transition_equations, measurement_equations)
+            elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+                pseudo_measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
+                for reg in 1:n_regimes
+                    pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
+                                                                           reg = reg)
+                end
+
+                return RegimeSwitchingSystem(transition_equations, measurement_equations, pseudo_measurement_equations)
             end
         else
             TTT_jump, TTT_state, eu = klein(m)

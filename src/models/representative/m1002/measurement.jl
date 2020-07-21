@@ -1,7 +1,7 @@
 """
 ```
 measurement(m::Model1002{T}, TTT::Matrix{T}, RRR::Matrix{T},
-            CCC::Vector{T}) where {T<:AbstractFloat}
+    CCC::Vector{T}; reg::Int = 1) where {T<:AbstractFloat}
 ```
 
 Assign measurement equation
