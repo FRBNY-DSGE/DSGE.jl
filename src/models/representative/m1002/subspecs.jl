@@ -39,8 +39,12 @@ function init_subspec!(m::Model1002)
         return ss20!(m)
     elseif subspec(m) == "ss51v"
         return ss51v!(m)
+    elseif subspec(m) == "ss59"
+        return ss59!(m)
     elseif subspec(m) == "ss60"
         return ss60!(m)
+    elseif subspec(m) == "ss61"
+        return ss61!(m)
     else
         error("This subspec is not defined.")
     end
@@ -714,17 +718,191 @@ end
 
 """
 ```
-ss60!(m::Model1002)
+ss59!(m::Model1002)
 ```
 
-Adds iid shocks to technology (ziid), households' Euler equation (biidc), and labor supply (φ)
-to capture the COVID-19 pandemic. See the official documentation about the COVID-19 shocks on the GitHub page.
+models a "temporary shutdown" scenario of the COVID-19 pandemic by using the following features:
+
+1. biidc, φ, and ziid shocks alive in 2020Q1-Q2
+2. One-period ahead anticipated shocks for the iid shocks alive in 2020Q1 and expected to hit in 2020Q2.
+     These shocks are assumed to be twice the size of the unanticipated shocks which are realized in 2020Q1.
+3. The standard deviation of the zp (permanent technology shock) is zero.
+4. The standard deviation of the other shocks are set to 0.25 times their value in the time periods before 2020Q1.
+5. The standard deviation of monetary policy shocks are set to 10 times their value in the time periods before 2020Q1.
+
+Confer with the official documentation about the COVID-19 shocks on the GitHub page.
+"""
+function ss59!(m::Model1002)
+    # Set up regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    setup_regime_switching_inds!(m)
+
+    # Allow the lower bound of non-COVID-19 parameters to equal zero
+    m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_g: The standard deviation of the government spending process.",
+                   tex_label="\\sigma_{g}")
+
+    m <= parameter(:σ_b, 0.0292, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                   tex_label="\\sigma_{b}")
+
+    m <= parameter(:σ_μ, 0.4559, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                   tex_label="\\sigma_{\\mu}")
+
+    m <= parameter(:σ_ztil, 0.6742, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_ztil: The standard deviation of the process describing the stationary component of productivity.",
+                   tex_label="\\sigma_{\\tilde{z}}")
+
+    m <= parameter(:σ_λ_f, 0.1314, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                   tex_label="\\sigma_{\\lambda_f}")
+
+    m <= parameter(:σ_λ_w, 0.3864, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{\\lambda_w}")
+
+    m <= parameter(:σ_r_m, 0.2380, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_r_m: The standard deviation of the monetary policy shock.",
+                   tex_label="\\sigma_{r^m}")
+
+    m <= parameter(:σ_σ_ω, 0.0428, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+                   description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
+                   tex_label="\\sigma_{\\sigma_\\omega}")
+
+    m <= parameter(:σ_μ_e, 0.0000, (0. ,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+                   description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",
+                   tex_label="\\sigma_{\\mu_e}")
+
+    m <= parameter(:σ_γ, 0.0000, (0.,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.01), fixed=false,
+                   description="σ_γ: The fraction of entrepreneurs surviving period t follows an exogenous process with standard deviation σ_γ.",
+                   tex_label="\\sigma_{\\gamma}")
+
+    m <= parameter(:σ_π_star, 0.0269, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(6, 0.03), fixed=false,
+                   description="σ_π_star: The standard deviation of the inflation target.",
+                   tex_label="\\sigma_{\\pi_*}")
+
+    m <= parameter(:σ_lr, 0.1766, (0.,10.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.75), fixed=false,
+                   tex_label="\\sigma_{10y}")
+
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                   tex_label="\\sigma_{z^p}")
+
+    m <= parameter(:σ_tfp, 0.9391, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{tfp}")
+
+    m <= parameter(:σ_gdpdef, 0.1575, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdpdef}")
+
+    m <= parameter(:σ_corepce, 0.0999, (0., 5.),(0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{pce}")
+
+    m <= parameter(:σ_gdp, 0.1, (0., 5.),(0., 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdp}")
+
+    m <= parameter(:σ_gdi, 0.1, (0., 5.),(0., 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdi}")
+
+    # standard deviations of the anticipated policy shocks
+    for i = 1:n_mon_anticipated_shocks(m)
+        m <= parameter(Symbol("σ_r_m$(i)"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(),
+                       RootInverseGamma(4, .2), fixed=false,
+                       description="σ_r_m$(i): Standard deviation of the $i-period-ahead anticipated policy shock.",
+                       tex_label=@sprintf("\\sigma_{ant%d}",i))
+    end
+    for i = n_mon_anticipated_shocks(m) + 1:n_mon_anticipated_shocks_padding(m)
+        m <= parameter(Symbol("σ_r_m$(i)"), 0., (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(),
+                       RootInverseGamma(4, .2), fixed=false,
+                       description="σ_r_m$(i): Standard deviation of the $i-period-ahead anticipated policy shock.",
+                       tex_label=@sprintf("\\sigma_{ant%d}",i))
+    end
+
+    # Define regimes for standard shocks
+    for i in 1:4
+        adj = (i == 2 || i == 3) ? .25 : 1.
+        ModelConstructors.set_regime_val!(m[:σ_g], i, adj * m[:σ_g].value)
+        ModelConstructors.set_regime_val!(m[:σ_b], i, adj * m[:σ_b].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ], i, adj * m[:σ_μ].value)
+        ModelConstructors.set_regime_val!(m[:σ_ztil], i, adj * m[:σ_ztil].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_f], i, adj * m[:σ_λ_f].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_w], i, adj * m[:σ_λ_w].value)
+        ModelConstructors.set_regime_val!(m[:σ_r_m], i, adj * m[:σ_r_m].value)
+        ModelConstructors.set_regime_val!(m[:σ_σ_ω], i, adj * m[:σ_σ_ω].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ_e], i, adj * m[:σ_μ_e].value)
+        ModelConstructors.set_regime_val!(m[:σ_γ], i, adj * m[:σ_γ].value)
+        ModelConstructors.set_regime_val!(m[:σ_π_star], i, adj * m[:σ_π_star].value)
+        ModelConstructors.set_regime_val!(m[:σ_lr], i, adj * m[:σ_lr].value)
+        ModelConstructors.set_regime_val!(m[:σ_z_p], i, adj * m[:σ_z_p].value)
+        ModelConstructors.set_regime_val!(m[:σ_tfp], i, adj * m[:σ_tfp].value)
+        err_adj = (i == 3) ? 10. : adj
+        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, err_adj * m[:σ_gdpdef].value)
+        ModelConstructors.set_regime_val!(m[:σ_corepce], i, err_adj * m[:σ_corepce].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdp], i, adj * m[:σ_gdp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdi], i, adj * m[:σ_gdi].value)
+
+        for j = 1:DSGE.n_mon_anticipated_shocks(m)
+            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, adj * m[Symbol("σ_r_m$(j)")].value)
+        end
+    end
+
+    ModelConstructors.set_regime_val!(m[:σ_r_m], 2, 10. * m[:σ_r_m].value) # By default, we set these to 10 times their
+    ModelConstructors.set_regime_val!(m[:σ_r_m], 3, 10. * m[:σ_r_m].value) # value in the pre-COVID and post-COVID regimes
+    for i = 2:3
+        for j = 1:n_mon_anticipated_shocks(m)
+            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m[Symbol("σ_r_m$(j)")].value)
+        end
+    end
+    ModelConstructors.set_regime_val!(m[:σ_z_p], 2, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_z_p], 3, 0.)
+
+    # Set up the COVID-19 shocks. We do not add anticipation by default
+    ModelConstructors.set_regime_val!(m[:σ_φ], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ], 2, 400.) # initial value from literature, blown up by 100
+    ModelConstructors.set_regime_val!(m[:σ_φ], 3, 400.)
+    ModelConstructors.set_regime_val!(m[:σ_φ], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 2, 4.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 3, 4.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 2, 5.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 3, 5.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 4, 0.)
+end
+
+"""
+```
+ss60!(m::Model1002)
+```
+models a "temporary shutdown with business cycle dynamics" scenario of the COVID-19 pandemic by using the following features:
+
+1. biidc, φ, and ziid shocks alive in 2020Q1-Q2
+2. One-period ahead anticipated shocks for the iid shocks alive in 2020Q1 and expected to hit in 2020Q2.
+     These shocks are assumed to be twice the size of the unanticipated shocks which are realized in 2020Q1.
+3. The standard deviation of monetary policy shocks are set to 10 times their value in the time periods before 2020Q1.
+
+Confer with the official documentation about the COVID-19 shocks on the GitHub page.
 """
 function ss60!(m::Model1002)
     # Set up regime-switching
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    setup_regime_switching_inds!(m)
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
@@ -822,8 +1000,9 @@ function ss60!(m::Model1002)
         ModelConstructors.set_regime_val!(m[:σ_lr], i, m[:σ_lr].value)
         ModelConstructors.set_regime_val!(m[:σ_z_p], i, m[:σ_z_p].value)
         ModelConstructors.set_regime_val!(m[:σ_tfp], i, m[:σ_tfp].value)
-        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, m[:σ_gdpdef].value)
-        ModelConstructors.set_regime_val!(m[:σ_corepce], i, m[:σ_corepce].value)
+        err_adj = (i == 3) ? 10. : 1.
+        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, err_adj * m[:σ_gdpdef].value)
+        ModelConstructors.set_regime_val!(m[:σ_corepce], i, err_adj * m[:σ_corepce].value)
         ModelConstructors.set_regime_val!(m[:σ_gdp], i, m[:σ_gdp].value)
         ModelConstructors.set_regime_val!(m[:σ_gdi], i, m[:σ_gdi].value)
 
@@ -840,12 +1019,185 @@ function ss60!(m::Model1002)
     ModelConstructors.set_regime_val!(m[:σ_φ], 2, 400.) # initial value from literature, blown up by 100
     ModelConstructors.set_regime_val!(m[:σ_φ], 3, 400.)
     ModelConstructors.set_regime_val!(m[:σ_φ], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 4, 0.)
     ModelConstructors.set_regime_val!(m[:σ_biidc], 1, 0.)
     ModelConstructors.set_regime_val!(m[:σ_biidc], 2, 4.)
     ModelConstructors.set_regime_val!(m[:σ_biidc], 3, 4.)
     ModelConstructors.set_regime_val!(m[:σ_biidc], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 4, 0.)
     ModelConstructors.set_regime_val!(m[:σ_ziid], 1, 0.)
     ModelConstructors.set_regime_val!(m[:σ_ziid], 2, 5.)
     ModelConstructors.set_regime_val!(m[:σ_ziid], 3, 5.)
     ModelConstructors.set_regime_val!(m[:σ_ziid], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 4, 0.)
+end
+
+"""
+```
+ss61!(m::Model1002)
+```
+
+models a "persistent demand shortfall" scenario of the COVID-19 pandemic by using the following features:
+
+1. biidc, φ, and ziid shocks alive in 2020Q1-Q2
+2. One-period ahead anticipated shock for all the iid shocks alive in 2020Q1 (expected to hit in 2020Q2). Only the
+    one-period ahead anticipated shock for the biidc shock is alive in 2020Q2 (expected to hit in 2020Q3).
+    The anticipated shocks in 2020Q1 are assumed to be twice the size of
+    the unanticipated shocks realized in 2020Q1. The anticipated biidc shock in 2020Q2 is assumed to be the same size of
+    the unanticipated biidc shock realized in 2020Q2.
+3. The standard deviation of monetary policy shocks are set to 10 times their value in the time periods before 2020Q1.
+
+Confer with the official documentation about the COVID-19 shocks on the GitHub page.
+"""
+function ss61!(m::Model1002)
+    # Set up regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    setup_regime_switching_inds!(m)
+
+    # Allow the lower bound of non-COVID-19 parameters to equal zero
+    m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_g: The standard deviation of the government spending process.",
+                   tex_label="\\sigma_{g}")
+
+    m <= parameter(:σ_b, 0.0292, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_b: The standard deviation of the intertemporal preference shifter process.",
+                   tex_label="\\sigma_{b}")
+
+    m <= parameter(:σ_μ, 0.4559, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                   tex_label="\\sigma_{\\mu}")
+
+    m <= parameter(:σ_ztil, 0.6742, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_ztil: The standard deviation of the process describing the stationary component of productivity.",
+                   tex_label="\\sigma_{\\tilde{z}}")
+
+    m <= parameter(:σ_λ_f, 0.1314, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                   tex_label="\\sigma_{\\lambda_f}")
+
+    m <= parameter(:σ_λ_w, 0.3864, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{\\lambda_w}")
+
+    m <= parameter(:σ_r_m, 0.2380, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_r_m: The standard deviation of the monetary policy shock.",
+                   tex_label="\\sigma_{r^m}")
+
+    m <= parameter(:σ_σ_ω, 0.0428, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+                   description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
+                   tex_label="\\sigma_{\\sigma_\\omega}")
+
+    m <= parameter(:σ_μ_e, 0.0000, (0. ,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+                   description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",
+                   tex_label="\\sigma_{\\mu_e}")
+
+    m <= parameter(:σ_γ, 0.0000, (0.,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.01), fixed=false,
+                   description="σ_γ: The fraction of entrepreneurs surviving period t follows an exogenous process with standard deviation σ_γ.",
+                   tex_label="\\sigma_{\\gamma}")
+
+    m <= parameter(:σ_π_star, 0.0269, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(6, 0.03), fixed=false,
+                   description="σ_π_star: The standard deviation of the inflation target.",
+                   tex_label="\\sigma_{\\pi_*}")
+
+    m <= parameter(:σ_lr, 0.1766, (0.,10.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.75), fixed=false,
+                   tex_label="\\sigma_{10y}")
+
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                   tex_label="\\sigma_{z^p}")
+
+    m <= parameter(:σ_tfp, 0.9391, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{tfp}")
+
+    m <= parameter(:σ_gdpdef, 0.1575, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdpdef}")
+
+    m <= parameter(:σ_corepce, 0.0999, (0., 5.),(0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{pce}")
+
+    m <= parameter(:σ_gdp, 0.1, (0., 5.),(0., 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdp}")
+
+    m <= parameter(:σ_gdi, 0.1, (0., 5.),(0., 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                   tex_label="\\sigma_{gdi}")
+
+    # standard deviations of the anticipated policy shocks
+    for i = 1:n_mon_anticipated_shocks(m)
+        m <= parameter(Symbol("σ_r_m$(i)"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(),
+                       RootInverseGamma(4, .2), fixed=false,
+                       description="σ_r_m$(i): Standard deviation of the $i-period-ahead anticipated policy shock.",
+                       tex_label=@sprintf("\\sigma_{ant%d}",i))
+    end
+    for i = n_mon_anticipated_shocks(m) + 1:n_mon_anticipated_shocks_padding(m)
+        m <= parameter(Symbol("σ_r_m$(i)"), 0., (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(),
+                       RootInverseGamma(4, .2), fixed=false,
+                       description="σ_r_m$(i): Standard deviation of the $i-period-ahead anticipated policy shock.",
+                       tex_label=@sprintf("\\sigma_{ant%d}",i))
+    end
+
+    # Define regimes for standard shocks
+    for i in 1:4
+        ModelConstructors.set_regime_val!(m[:σ_g], i, m[:σ_g].value)
+        ModelConstructors.set_regime_val!(m[:σ_b], i, m[:σ_b].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ], i, m[:σ_μ].value)
+        ModelConstructors.set_regime_val!(m[:σ_ztil], i, m[:σ_ztil].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_f], i, m[:σ_λ_f].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_w], i, m[:σ_λ_w].value)
+        ModelConstructors.set_regime_val!(m[:σ_r_m], i, m[:σ_r_m].value)
+        ModelConstructors.set_regime_val!(m[:σ_σ_ω], i, m[:σ_σ_ω].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ_e], i, m[:σ_μ_e].value)
+        ModelConstructors.set_regime_val!(m[:σ_γ], i, m[:σ_γ].value)
+        ModelConstructors.set_regime_val!(m[:σ_π_star], i, m[:σ_π_star].value)
+        ModelConstructors.set_regime_val!(m[:σ_lr], i, m[:σ_lr].value)
+        ModelConstructors.set_regime_val!(m[:σ_z_p], i, m[:σ_z_p].value)
+        ModelConstructors.set_regime_val!(m[:σ_tfp], i, m[:σ_tfp].value)
+        err_adj = (i == 3) ? 10. : 1.
+        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, err_adj * m[:σ_gdpdef].value)
+        ModelConstructors.set_regime_val!(m[:σ_corepce], i, err_adj * m[:σ_corepce].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdp], i, m[:σ_gdp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdi], i, m[:σ_gdi].value)
+
+        for j = 1:DSGE.n_mon_anticipated_shocks(m)
+            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m[Symbol("σ_r_m$(j)")].value)
+        end
+    end
+
+    ModelConstructors.set_regime_val!(m[:σ_r_m], 2, 10. * m[:σ_r_m].value) # By default, we set these to 10 times their
+    ModelConstructors.set_regime_val!(m[:σ_r_m], 3, 10. * m[:σ_r_m].value) # value in the pre-COVID and post-COVID regimes
+
+    # Set up the COVID-19 shocks. We do not add anticipation by default
+    ModelConstructors.set_regime_val!(m[:σ_φ], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ], 2, 400.) # initial value from literature, blown up by 100
+    ModelConstructors.set_regime_val!(m[:σ_φ], 3, 400.)
+    ModelConstructors.set_regime_val!(m[:σ_φ], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_φ_prop], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 2, 4.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 3, 4.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 3, 1.)
+    ModelConstructors.set_regime_val!(m[:σ_biidc_prop], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 2, 5.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 3, 5.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid], 4, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 1, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 2, 2.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 3, 0.)
+    ModelConstructors.set_regime_val!(m[:σ_ziid_prop], 4, 0.)
 end

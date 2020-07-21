@@ -154,7 +154,7 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end
 
-    if subspec(m) in ["ss60"]
+    if subspec(m) in ["ss59", "ss60", "ss61"]
         QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
         QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
         QQ[exo[:φ_sh], exo[:φ_sh]] = m[:σ_φ]^2

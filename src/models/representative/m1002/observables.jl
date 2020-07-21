@@ -432,7 +432,7 @@ function init_observable_mappings!(m::Model1002)
     end
 =#
 
-    # if subspec(m) in ["ss60"]
+    # if subspec(m) in ["ss59", "ss60", "ss61"]
     #     ztil_fwd_transform = function (levels)
     #         levels[:, Symbol("WAGEMKP")]
     #     end
