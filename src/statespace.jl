@@ -361,8 +361,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     else
         if solution_method == :gensys
 
-            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy,
-                                  uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
+            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
             transition_equation = Transition(TTT, RRR, CCC)
 
             # Solve measurement equation
