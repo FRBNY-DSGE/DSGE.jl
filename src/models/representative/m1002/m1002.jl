@@ -213,7 +213,7 @@ function init_model_indices!(m::Model1002)
         push!(equilibrium_conditions, setdiff([:eq_rw, :eq_Rref], equilibrium_conditions)...)
     end
 
-    if subspec(m) == "ss60"
+    if subspec(m) in ["ss59", "ss60", "ss61"]
         push!(endogenous_states, :ziid_t)
         push!(equilibrium_conditions, :eq_ziid)
         push!(exogenous_shocks, :ziid_sh)
@@ -567,7 +567,7 @@ function init_parameters!(m::Model1002)
     m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
 
-    if subspec(m) == "ss60"
+    if subspec(m) in ["ss59", "ss60", "ss61"]
         m <= parameter(:ρ_ziid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_ziid: AR(1) coefficient in the iid component of the technology process.",
                        tex_label="\\rho_{z, iid}")
@@ -660,7 +660,7 @@ function init_parameters!(m::Model1002)
     m <= SteadyStateParameter(:ystar, NaN, tex_label="\\y_*")
     m <= SteadyStateParameter(:cstar, NaN, tex_label="\\c_*")
     m <= SteadyStateParameter(:wl_c, NaN, tex_label="\\wl_c")
-    if subspec(m) == "ss60"
+    if subspec(m) in ["ss59", "ss60", "ss61"]
         m <= SteadyStateParameter(:φstar, NaN, tex_label="\\varphi_*")
     end
     m <= SteadyStateParameter(:nstar, NaN, tex_label="\\n_*")
@@ -699,7 +699,7 @@ function steadystate!(m::Model1002)
     m[:cstar]    = (1-m[:g_star])*m[:ystar] - m[:istar]
     m[:wl_c]     = (m[:wstar]*m[:Lstar])/(m[:cstar]*m[:λ_w])
 
-    if subspec(m) == "ss60"
+    if subspec(m) in ["ss59", "ss60", "ss61"]
         m[:φstar] = 0. # log(1) in steady state
     end
 
@@ -866,6 +866,14 @@ function model_settings!(m::Model1002)
     m <= Setting(:add_cumulative, false)
     m <= Setting(:add_flexible_price_growth, false)
 
+    # COVID-19 settings
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        m <= Setting(:antshocks, Dict{Symbol, Int}(:biidc => 1, :φ => 1, :ziid => 1))
+        m <= Setting(:ant_eq_mapping, Dict{Symbol, Symbol}(:biidc => :biidc, :φ => :φ, :ziid => :ziid))
+        m <= Setting(:ant_eq_E_mapping, Dict{Symbol, Symbol}(:φ => :Eφ))
+        m <= Setting(:proportional_antshocks, Symbol[:biidc, :φ, :ziid])
+    end
+
     nothing
 end
 
@@ -918,7 +926,7 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 `plot_shock_decomposition`. See `?ShockGroup` for details.
 """
 function shock_groupings(m::Model1002)
-    if subspec(m) == "ss60"
+    if subspec(m) in ["ss59", "ss60", "ss61"]
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
         bet = ShockGroup("b", [:b_sh, :biidc_sh], RGB(0.3, 0.3, 1.0))
         fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
