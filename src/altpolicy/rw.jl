@@ -45,10 +45,8 @@ function rw_replace_eq_entries(m::AbstractDSGEModel,
     # Create reference rate penalty
     Γ0[eq[:eq_rw], endo[:rw_t]]   = 1.
     Γ1[eq[:eq_rw], endo[:rw_t]]   = ρ_rw
-
-    # Applies only during ZLB
-    # Γ1[eq[:eq_rw], endo[:Rref_t]] = 1.
-    # Γ1[eq[:eq_rw], endo[:R_t]]    = -1
+    Γ1[eq[:eq_rw], endo[:Rref_t]] = 1.
+    Γ1[eq[:eq_rw], endo[:R_t]]    = -1
 
     # reference rate evolution; in principle could just be set equal to R_t though
     Γ0[eq[:eq_Rref], endo[:Rref_t]] = 1.
