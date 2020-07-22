@@ -1,10 +1,11 @@
 using DSGE, Test, ModelConstructors
 
 # Initialize model object
-m = Model990(testing = true)
+m = Model1002(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
+m <= Setting(:data_vintage, "160812")
 
 # Forecast under historical rule
 paras = [α.value for α in m.parameters]
@@ -195,4 +196,35 @@ end
 @testset "Check forecast under ngdp" begin
     @test out_hist[:histpseudo] ≈ out_alt_ngdp[:histpseudo]
     @test !(out_hist[:forecastpseudo] ≈ out_alt_ngdp[:forecastpseudo])
+end
+
+
+# Checking if setting variables works
+## These values are random and not actually good choices
+m <= Setting(:ait_Thalf, 14.2)
+m <= Setting(:gdp_Thalf, 5.6)
+m <= Setting(:smooth_ait_gdp_ρ_smooth, 0.23)
+m <= Setting(:smooth_ait_gdp_φ_π, 0.36)
+m <= Setting(:smooth_ait_gdp_φ_y, 0.56)
+m <= Setting(:smooth_ait_gdp_alt_ρ_smooth, 0.76)
+m <= Setting(:smooth_ait_gdp_alt_φ_π, 0.11)
+m <= Setting(:smooth_ait_gdp_alt_φ_y, 0.89)
+m <= Setting(:rw_ρ_smooth, 0.45)
+m <= Setting(:rw_φ_π, 0.83)
+m <= Setting(:rw_φ_y, 0.94)
+m <= Setting(:ρ_rw, 0.63)
+
+@testset "Checking Settings assignments" begin
+    @test get_setting(m, :ait_Thalf) == 14.2
+    @test get_setting(m, :gdp_Thalf) == 5.6
+    @test get_setting(m, :smooth_ait_gdp_ρ_smooth) == 0.23
+    @test get_setting(m, :smooth_ait_gdp_φ_π) == 0.36
+    @test get_setting(m, :smooth_ait_gdp_φ_y) == 0.56
+    @test get_setting(m, :smooth_ait_gdp_alt_ρ_smooth) == 0.76
+    @test get_setting(m, :smooth_ait_gdp_alt_φ_π) == 0.11
+    @test get_setting(m, :smooth_ait_gdp_alt_φ_y) == 0.89
+    @test get_setting(m, :rw_ρ_smooth) == 0.45
+    @test get_setting(m, :rw_φ_π) == 0.83
+    @test get_setting(m, :rw_φ_y) == 0.94
+    @test get_setting(m, :ρ_rw) == 0.63
 end
