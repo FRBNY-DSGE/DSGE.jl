@@ -32,11 +32,11 @@ necessary.
 function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-    check_empty_columns::Bool = true,
+    check_empty_columns::Bool = true, bdd_fcast::Bool = true,
     verbose::Symbol = :none) where {S<:AbstractFloat}
 
     # Compute everything that will be needed to plot original output_vars
-    output_vars = add_requisite_output_vars(output_vars)
+    output_vars = add_requisite_output_vars(output_vars, bdd_fcast = bdd_fcast)
     if input_type == :prior
         output_vars = setdiff(output_vars, [:bddforecastobs])
     end
@@ -400,10 +400,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
 
     # Add necessary output_vars and load data
     output_vars, df = prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
-                                               df = df, verbose = verbose,
+                                               df = df, verbose = verbose, bdd_fcast = bdd_fcast,
                                                subset_inds = subset_inds,
                                                check_empty_columns = check_empty_columns)
-
+    @show output_vars
     # Get output file names
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_forecast_output_files(m, input_type, cond_type, output_vars;
