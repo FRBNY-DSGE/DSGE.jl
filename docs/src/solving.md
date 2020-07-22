@@ -15,10 +15,10 @@ coefficients for ``s_t`` (states at time ``t``), ``s_{t-1}`` (lagged states),
 DSGE.jl solves the model to obtain its state-space form:
 
 ```math
-\begin{align*}
+\begin{aligned}
 s_t &= T s_{t-1} + R \epsilon_t + C & \epsilon_t &\sim N(0, Q) & \mathrm{(transition)} \\
 y_t &= Z s_t + D + u_t & u_t &\sim N(0, E) & \mathrm{(measurement)}
-\end{align*}
+\end{aligned}
 ```
 
 using the `gensys` routine of Chris Sims, introduced in

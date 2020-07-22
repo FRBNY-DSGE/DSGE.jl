@@ -134,6 +134,30 @@ This step is done by `add_requisite_output_vars`:
 
 This is done the usual way, using `load_data` with the appropriate `cond_type`.
 
+Note that if you are running a conditional forecast, then you should check that
+the appropriate observables are found in `cond_full_names(m)` and/or
+`cond_semi_names(m)`. If the observables on which you are conditioning do not
+match the ones found in these settings exactly, then conditional forecasting
+will not generate the results you want. To change these observables to, for example,
+condition on `custom_obs1` and `custom_obs2`, add the line
+
+```
+m <= Setting(:cond_full_names, [custom_obs1, custom_obs2])
+```
+
+to your script for full conditional forecasts.
+The syntax is similar for semi-conditional forecasts.
+If you have already created a conditional dataset successfully, then
+you should be sure to re-create the data set by running
+
+```
+load_data(m; try_disk = false, cond_type = cond_type)
+```
+
+If you do not have `try_disk = false`, then the code may load
+a saved data set that does not have the conditional observables you want to use.
+
+
 **Loading Draws:**
 
 By default, the draws are loaded from the file whose path is given by
