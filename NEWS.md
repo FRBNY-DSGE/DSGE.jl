@@ -2,10 +2,11 @@
 ## New features and enhancements
 + Implement (exogenously) regime-switching DSGE models
 + Implement (exogenously) regime-switching forecasts during the history and forecast horizon
-+ New subspec of `Model1002` to model the impact of the COVID-19 pandemic
++ New subspecs of `Model1002` to model the impact of the COVID-19 pandemic
 + Interface for the automated addition of anticipated shocks to DSGE models for shocks other than monetary policy shocks.
 + Interface for calculating weighted averages of different full-distribution forecasts
 + Add Nominal GDP targeting and average inflation targeting as alternative policies
++ Raise Julia compatibility to all v1.x.
 
 ## Bug fixes and cleanup
 + Filepathing for Windows OS should work properly now (although we still do not test on Windows OS)
