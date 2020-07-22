@@ -29,7 +29,27 @@ m <= Setting(:alternative_policy, DSGE.taylor93())
 m <= Setting(:alternative_policy, DSGE.taylor99())
 Γ0_alt99,  Γ1_alt99,  ~ = alternative_policy(m).eqcond(m)
 
-# Repeat for alt_inflation
+## First, check if coefficients in matrices correct
+### Taylor 93
+endo = m.endogenous_states
+@testset "Check Taylor93 rule has the right coefficients." begin
+    @test Γ0_alt93[eq_mp, endo[:R_t]] == 1
+    @test Γ0_alt93[eq_mp, endo[:π_a_t]] == -1.5/4
+    @test Γ0_alt93[eq_mp, endo[:y_t]]  == -0.5/4
+    @test Γ0_alt93[eq_mp, endo[:y_f_t]] == 0.5/4
+end
+
+### Taylor 99
+endo = m.endogenous_states
+@testset "Check Taylor99 rule has the right coefficients." begin
+    @test Γ0_alt99[eq_mp, endo[:R_t]] == 1
+    @test Γ0_alt99[eq_mp, endo[:π_a_t]] == -1.5/4
+    @test Γ0_alt99[eq_mp, endo[:y_t]]  == -1/4
+    @test Γ0_alt99[eq_mp, endo[:y_f_t]] == 1/4
+end
+
+
+# Matrices for alt_inflation
 m <= Setting(:alternative_policy, DSGE.alt_inflation())
 Γ0_alt_inf,  Γ1_alt_inf,  ~ = alternative_policy(m).eqcond(m)
 
@@ -133,8 +153,8 @@ m <= Setting(:alternative_policy, DSGE.taylor99())
 out_alt99 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
 
 # Forecast under alt_inflation and rw
-m <= Setting(:alternative_policy, DSGE.alt_inflation())
-out_alt_inf = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
+#m <= Setting(:alternative_policy, DSGE.alt_inflation())
+#out_alt_inf = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
 #m <= Setting(:alternative_policy, DSGE.rw())
 #m<= Setting(:pgap_type, :rw)
 #out_alt_rw = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
