@@ -35,7 +35,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     shockdec_mb.metadata[:product] = :shockdec
     if individual_shocks
         for var in vars
-            shocks = setdiff(names(decomps[var]), vcat([:date, :dettrend, :total], comps))
+            shocks = setdiff(propertynames(decomps[var]), vcat([:date, :dettrend, :total], comps))
             if var == vars[1]
                 shockdec_mb.metadata[:shock_indices] = OrderedDict(shock => i for (i, shock) in enumerate(shocks))
             end

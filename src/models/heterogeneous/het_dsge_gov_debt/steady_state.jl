@@ -355,7 +355,7 @@ end
 
     # Pick eigenvector associated w/ largest eigenvalue and moving it back to values
     μ = real(V[:,max_D])
-    @show μ
+    # @show μ
     μ = μ ./ dot(xswts, μ) # Scale of eigenvectors not determinate: rescale to integrate to 1
     excess = dot(xswts, (μ .* bp)) - bg # Compute excess supply of savings, which is a fn of w
     return excess, μ

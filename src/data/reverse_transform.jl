@@ -94,7 +94,7 @@ end
 function reverse_transform(m::AbstractDSGEModel, untransformed::DataFrame, class::Symbol;
                            fourquarter::Bool = false, accumulate::Bool = false, verbose::Symbol = :low)
     # Dates
-    @assert (:date in names(untransformed)) "untransformed must have a date column"
+    @assert (:date in propertynames(untransformed)) "untransformed must have a date column"
     date_list  = convert(Vector{Dates.Date}, untransformed[!,:date])
     start_date = date_list[1]
     end_date   = date_list[end]
@@ -121,7 +121,7 @@ function reverse_transform(m::AbstractDSGEModel, untransformed::DataFrame, class
     transformed = DataFrame()
     transformed[!,:date] = untransformed[!,:date]
 
-    vars = setdiff(names(untransformed), [:date])
+    vars = setdiff(propertynames(untransformed), [:date])
     for var in vars
         y = convert(Vector{Float64}, untransformed[!,var])
         rev_transform = dict[var].rev_transform

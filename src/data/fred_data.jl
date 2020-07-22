@@ -57,7 +57,7 @@ function load_fred_data(m::AbstractDSGEModel;
             # If we have the right dates but the series isn't in the file, add it to
             # missing_series
             for series in mnemonics
-                if !in(series, names(data))
+                if !in(series, propertynames(data))
                     push!(missing_series,series)
                 end
             end

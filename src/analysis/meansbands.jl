@@ -56,7 +56,7 @@ mutable struct MeansBands
         if !isempty(bands)
 
             # assert that means and bands fields have the same keys (provide info for same products)
-            @assert sort(setdiff(names(means),[:date])) == sort(collect(keys(bands)))
+            @assert sort(setdiff(propertynames(means),[:date])) == sort(collect(keys(bands)))
 
             # check to make sure that # of periods in all dataframes are the same
             n_periods_means = size(means,1)
@@ -115,7 +115,7 @@ function Base.isempty(mb::MeansBands)
 
     return get_class(mb) == :none && get_product(mb) == :none &&
         startdate_means(mb) == Dates.Date(0) &&
-        collect(names(mb.means)) ==  [:date, :none] &&
+        collect(propertynames(mb.means)) ==  [:date, :none] &&
         collect(keys(mb.bands)) ==  [:none]
 end
 
@@ -234,7 +234,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[!, :date]))
 
     # variable indices
-    indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(names(means)))
+    indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(propertynames(means)))
 
     # forecast string
     if isempty(forecast_string) && (mb1.metadata[:forecast_string] != mb2.metadata[:forecast_string])
@@ -306,7 +306,7 @@ decomposition stored in a shock decomposition or irf MeansBands object `mb`.
 """
 function get_shocks(mb::MeansBands)
     @assert get_product(mb) in [:shockdec, :irf] "Function only for shockdec or irf MeansBands objects"
-    varshocks = setdiff(names(mb.means), [:date])
+    varshocks = setdiff(propertynames(mb.means), [:date])
     unique(map(x -> Symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[2]), varshocks))
 end
 
@@ -333,7 +333,7 @@ decomposition stored in a shock decomposition or irf MeansBands object `mb`.
 """
 function get_variables(mb::MeansBands)
     @assert get_product(mb) in [:shockdec, :irf] "Function only for shockdec or irf MeansBands objects"
-    varshocks = setdiff(names(mb.means), [:date])
+    varshocks = setdiff(propertynames(mb.means), [:date])
     unique(map(x -> Symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[1]), varshocks))
 end
 
@@ -422,7 +422,7 @@ function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol} 
 
     # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
     # If `shocks` not provided, give all the shocks
-    var_cols = collect(names(mb.means))[findall([contains(string(col), string(var)) for col in names(mb.means)])]
+    var_cols = collect(propertynames(mb.means))[findall([contains(string(col), string(var)) for col in propertynames(mb.means)])]
     if !isempty(shocks)
         var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
     end
@@ -511,7 +511,7 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
         var  = collect(keys(mb.bands))[1]
 
         # get all the columns in the corresponding dataframe that aren't dates
-        strs = map(string,names(mb.bands[var]))
+        strs = map(string,propertynames(mb.bands[var]))
         strs = setdiff(strs, ["date"])
 
         lowers = strs[map(occursin, repeat([r"LB"], outer=length(strs)), strs)]
@@ -570,7 +570,7 @@ function get_shockdec_bands(mb::MeansBands, var::Symbol;
 
     # Extract the subset of bands we want to return. Return all bands if `bands` not provided.
     bands_keys = if isempty(bands)
-        names(mb.bands[var_cols[1]])
+        propertynames(mb.bands[var_cols[1]])
     else
         [[Symbol("$(100x)% LB") for x in bands]; [Symbol("$(100x)% UB") for x in bands]]
     end
@@ -605,7 +605,7 @@ ordered as follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
 
 - `mb::MeansBands`: time-series MeansBands object
 - `var::Symbol`: an economic variable stored in `mb`. If `mb` stores
-  observables, `var` would be an element of `names(m.observables)`. If
+  observables, `var` would be an element of `propertynames(m.observables)`. If
   it stores pseudo-observables, `var` would be the name of a
   pseudo-observable defined in the pseudo-measurement equation.
 
@@ -698,13 +698,13 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # Add each shock's contribution and deterministic trend to output DataFrame
     df = DataFrame(date = df_shockdec[!,:date])
-    for col in setdiff(names(df_shockdec), [:date, :trend])
+    for col in setdiff(propertynames(df_shockdec), [:date, :trend])
         df[!,col] = df_shockdec[!,col]
     end
     df_shockdec[!,:dettrend] = df_shockdec[!,:dettrend]
 
     # Rename columns to just the shock names
-    map(x -> rename!(df, x => parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
+    map(x -> rename!(df, x => parse_mb_colname(x)[2]), setdiff(propertynames(df), [:date, :trend, :dettrend]))
 
     # If mb_forecast and mb_hist are passed in, add the detrended time series
     # mean of var to the table
@@ -735,7 +735,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # Remove Unicode characters from shock names
     if detexify_shocks
-        for x in setdiff(names(df), [:date, :trend, :dettrend])
+        for x in setdiff(propertynames(df), [:date, :trend, :dettrend])
             x_detexed = detexify(x)
             if x != x_detexed
                 rename!(df, x => x_detexed)
@@ -762,7 +762,7 @@ follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
 ### Inputs
 - `mb::MeansBands`: time-series MeansBands object
 - `var::Symbol`: an economic variable stored in `mb`. If `mb` stores
-  observables, `var` would be an element of `names(m.observables)`. If
+  observables, `var` would be an element of `propertynames(m.observables)`. If
   it stores pseudoobservables, `var` would be the name of a
   pseudoobservable defined in the pseudomeasurement equation.
 """

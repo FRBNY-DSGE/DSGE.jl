@@ -1,7 +1,7 @@
 using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates, HDF5
 path = dirname(@__FILE__)
 
-#=generate_regime_switch_tests = false # Set to true if you want to regenerate the jld2 files for testing
+generate_regime_switch_tests = false # Set to true if you want to regenerate the jld2 files for testing
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -607,7 +607,7 @@ if generate_regime_switch_tests
         write(file, "exp_out_regime_switch_cases", exp_out_dict_new)
     end
 end
-=#
+
 
 # Test automatic enforcement of ZLB as a temporary ZLB
 custom_settings = Dict{Symbol, Setting}(

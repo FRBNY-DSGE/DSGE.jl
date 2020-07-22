@@ -66,7 +66,7 @@ Random.seed!(1793)
         @test Tcal[i] ≈ t[1:n_endo, 1:n_endo]
     end
 end
-#=
+
 @testset "Test regime switching IRFs match Forward Guidance method IRFs" begin
     horizon = 60
     m = Model1002()
@@ -194,7 +194,7 @@ end
 
     @test fcast_altperm[:forecastobs] == fcast_altperm2[:forecastobs]
 end
-=#
+
 @testset "Temporary alternative policies with non-trivial conditional forecasting" begin
     output_vars = [:forecastobs]
 
@@ -235,8 +235,8 @@ end
     fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-14
     @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 4:end]) .> .01)
 
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
@@ -245,8 +245,8 @@ end
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
     @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) > .01
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-14
     @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 5:end]) .> .01)
 
     m <= Setting(:date_conditional_end, Date(2020, 3, 31))
@@ -254,9 +254,9 @@ end
     fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > 0.
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-14
     @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 5:end]) .> 0.)
 end
 
@@ -300,8 +300,8 @@ end
     fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-14
     @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 4:end]) .> .01)
 
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
@@ -310,8 +310,8 @@ end
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
     @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) > .01
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-14
     @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 5:end]) .> .01)
 
     m <= Setting(:date_conditional_end, Date(2020, 3, 31))
@@ -319,9 +319,9 @@ end
     fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > 0.
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-15
-    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-15
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 2]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 3]) < 1e-14
+    @test abs(fcast[:forecastobs][m.observables[:obs_nominalrate], 4]) < 1e-14
     @test all(abs.(fcast[:forecastobs][m.observables[:obs_nominalrate], 5:end]) .> 0.)
 end
 
@@ -456,7 +456,7 @@ end
         θ_rs = zeros(size(θ, 1), ModelConstructors.n_parameters_regime_switching(m))
         n_pvec = DSGE.n_parameters(m)
         for i in 1:size(θ_rs, 1)
-            θ_rs[i, 1:n_pvec] = map(x -> (abs(x) < 1e-15) ? 0. : x, θ[i, :])
+            θ_rs[i, 1:n_pvec] = map(x -> (abs(x) < 1e-14) ? 0. : x, θ[i, :])
             j = n_pvec
             for para in DSGE.get_parameters(m)
                 if !isempty(para.regimes)
@@ -465,7 +465,7 @@ end
                             j += 1
                             drawv = θ[i, m.keys[para.key]]
                             θ_rs[i, j] = (k  == 2) ? .9 * drawv : drawv
-                            if abs(θ_rs[i, j]) < 1e-15
+                            if abs(θ_rs[i, j]) < 1e-14
                                 θ_rs[i, j] = 0.
                             end
                         end
@@ -498,7 +498,7 @@ end
 
             if !generate_fulldist_forecast_data
                 for var in keys(output_files)
-                    @test @test_matrix_approx_eq check_results[i][cond_type][var] fcast_out[i][cond_type][var]
+                    @test maximum(abs.(check_results[i][cond_type][var] - fcast_out[i][cond_type][var])) < 5e-5
                 end
             end
         end
