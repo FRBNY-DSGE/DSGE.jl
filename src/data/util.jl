@@ -129,7 +129,7 @@ function missing2nan(a::Array)
 end
 
 function missing2nan!(df::DataFrame)
-    for col in names(df)
+    for col in propertynames(df)
         if col != :date
             df[!, col] = map(x -> ismissing(x) ? NaN : x, df[!, col])
             df[!, col] = convert(Vector{Float64}, df[!, col])
@@ -139,7 +139,7 @@ end
 
 # Temp function to ensure proper transition into 0.7
 function nan2missing!(df::DataFrame)
-    for col in names(df)
+    for col in propertynames(df)
         if col != :date
             df[!,col] = convert(Vector{Union{Missing, Float64}}, df[!,col])
             df[!,col] = replace(x -> isnan(x) ? missing : x, df[!,col])
@@ -155,7 +155,7 @@ na2nan!(df::DataFrame)
 Convert all NAs in a DataFrame to NaNs.
 """
 function na2nan!(df::DataFrame)
-    for col in names(df)
+    for col in propertynames(df)
         if typeof(df[!,col])==Vector{Date}
             nothing
         else
@@ -196,7 +196,7 @@ function missing_cond_vars!(m::AbstractDSGEModel, df::DataFrame; cond_type::Symb
         end
 
         # Make non-conditional variables missing
-        cond_names_missing = setdiff(names(df), [cond_names; :date])
+        cond_names_missing = setdiff(propertynames(df), [cond_names; :date])
         for var_name in cond_names_missing
             df[!,var_name] = convert(Vector{Union{Missing, eltype(df[!,var_name])}}, df[!,var_name])
             df[df[!,:date] .>= date_forecast_start(m), var_name] .= missing
@@ -289,8 +289,8 @@ adds columns of missings to a and b so that both have
 the same set of column names.
 """
 function reconcile_column_names(a::DataFrame, b::DataFrame)
-    new_a_cols = setdiff(names(b), names(a))
-    new_b_cols = setdiff(names(a), names(b))
+    new_a_cols = setdiff(propertynames(b), propertynames(a))
+    new_b_cols = setdiff(propertynames(a), propertynames(b))
     for col in new_a_cols
         a[!, col] = fill(missing, size(a, 1))
     end

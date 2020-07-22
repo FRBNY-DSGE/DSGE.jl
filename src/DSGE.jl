@@ -4,7 +4,6 @@ module DSGE
     using ModelConstructors, SMC
     using Dates, Test, BenchmarkTools
     using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra
-    using GR
     using Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions
     using StateSpaceRoutines, StatsPlots
     using CSV, DataFrames, DataStructures, OrderedCollections

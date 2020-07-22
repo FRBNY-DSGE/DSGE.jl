@@ -154,7 +154,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
     function write_single_table(fid::IOStream, df::DataFrame, units::OrderedDict{Symbol, String})
 
         # Write header
-        n_columns = length(names(df))
+        n_columns = length(propertynames(df))
         col_str   = repeat("c", n_columns)
 
         @printf fid "%s%s%s" "\\begin{longtable}{" col_str "}\n"
@@ -164,7 +164,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
         # Write column names
         date_range = Vector(df[:, :date])
 
-        column_keys = names(df)
+        column_keys = propertynames(df)
 
         @printf fid "%s " column_keys[1]
         for i in 2:n_columns
@@ -256,7 +256,7 @@ function unit_mappings(m::AbstractDSGEModel, df::DataFrame,
     quarter = use_4q ? "Q4" : "Q"
     obs_keys = m.observables.keys
     pseudo_keys = m.pseudo_observables.keys
-    for key in names(df)
+    for key in propertynames(df)
         name = key != :date ? header_mappings[key] : continue
         if key in obs_keys
             if occursin(r"pct_annualized", string(m.observable_mappings[key].rev_transform))

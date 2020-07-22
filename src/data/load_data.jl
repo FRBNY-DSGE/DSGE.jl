@@ -104,9 +104,9 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
 
         # print summary statistics
         if summary_statistics == :low || summary_statistics == :high
-            str_nondate_names = [string(name) for name in names(df[:,2:end])]
+            str_nondate_names = [string(name) for name in propertynames(df[:,2:end])]
             freq_nan_empty = zeros(size(df,2) - 1)
-            for (colnum, name) in enumerate(names(df[:,2:end]))
+            for (colnum, name) in enumerate(propertynames(df[:,2:end]))
                 is_missing_in_col = ismissing.(df[!,name])
                 is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
                 n_miss = count(is_missing_in_col)
@@ -225,7 +225,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
             # Make sure each mnemonic that was specified is present
             for series in mnemonics
-                if !in(series, names(addl_data))
+                if !in(series, propertynames(addl_data))
                     error("$(string(series)) is missing from $file.")
                 end
             end
@@ -377,7 +377,7 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
 
     # Ensure that every series in m_series is present in df_series
     m_series = collect(keys(m.observable_mappings))
-    df_series = names(df)
+    df_series = propertynames(df)
     coldiff = setdiff(m_series, df_series)
     valid = valid && isempty(coldiff)
     if !isempty(coldiff)
@@ -406,10 +406,10 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     # Ensure that no series is all missing or NaNs
     if check_empty_columns
         empty_cols = Vector{String}(undef,0)
-        for name in names(df)[names(df) .!= :date]
-            is_missing_in_col = ismissing.(df[!,name])
-            is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
-            if sum(vcat(is_missing_in_col, is_nan_in_col)) == length(df[!,name])
+        for name in setdiff(propertynames(df), [:date])
+            is_missing_in_col = ismissing.(df[!, name])
+            is_nan_in_col = isnan.(df[!, name][.!is_missing_in_col])
+            if sum(vcat(is_missing_in_col, is_nan_in_col)) == length(df[!, name])
                 push!(empty_cols, string(name) * ", ")
             end
         end
@@ -418,7 +418,7 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
             error("Column(s) $(as_str[1:end-2]) have only NaNs and/or missings.")
         end
     else
-        for col in setdiff(names(df), [:date])
+        for col in setdiff(propertynames(df), [:date])
             if all(ismissing.(df[!,col]))
                 @warn "df[$col] is all missing."
             else

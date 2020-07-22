@@ -85,8 +85,27 @@ end
     @test typeof(load_draws(m, :mode, verbose = :none,
                             use_highest_posterior_value = false)) == Vector{Float64}
     m <= Setting(:fix, "true", true, "fix", "") # Add tail to estimation file name
-    @test_throws SystemError typeof(load_draws(m, :mode, verbose = :none, # Check no such smc_cloud file
-                            use_highest_posterior_value = false)) == Vector{Float64}
-    @test_throws SystemError typeof(load_draws(m, :mode, verbose = :none, # Check there is such a smc_paramsmode file
-                            use_highest_posterior_value = true)) == Vector{Float64}
+    out_err = [false]
+    try
+        load_draws(m, :mode, verbose = :none, # Check no such smc_cloud file
+                          use_highest_posterior_value = false)
+    catch e
+        if isa(e, SystemError) || isa(e, ArgumentError) # seems to be different depending on the Julia version
+            out_err[1] = true
+        else
+            rethrow(e)
+        end
+    end
+    @test out_err[1]
+    try
+        load_draws(m, :mode, verbose = :none, # Check no such smc_cloud file
+                          use_highest_posterior_value = true)
+    catch e
+        if isa(e, SystemError) || isa(e, ArgumentError) # seems to be different depending on the Julia version
+            out_err[1] = true
+        else
+            rethrow(e)
+        end
+    end
+    @test out_err[1]
 end
