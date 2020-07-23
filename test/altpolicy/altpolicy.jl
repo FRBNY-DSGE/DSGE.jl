@@ -1,7 +1,7 @@
 using DSGE, Test, ModelConstructors
 
 # Initialize model object
-m = Model1002(testing = true)
+m = Model990(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
 
@@ -38,7 +38,6 @@ endo = m.endogenous_states
 end
 
 ### Taylor 99
-endo = m.endogenous_states
 @testset "Check Taylor99 rule has the right coefficients." begin
     @test Γ0_alt99[eq_mp, endo[:R_t]] == 1
     @test Γ0_alt99[eq_mp, endo[:π_a_t]] == -1.5/4
@@ -46,6 +45,56 @@ endo = m.endogenous_states
     @test Γ0_alt99[eq_mp, endo[:y_f_t]] == 1/4
 end
 
+
+# Testing
+@testset "Compare AltPolicy eqconds under hist and alt rules" begin
+    @test Γ0_hist[eq_other, :] ≈ Γ0_alt93[eq_other, :]
+    @test Γ1_hist[eq_other, :] ≈ Γ1_alt93[eq_other, :]
+    @test !(Γ0_hist[eq_mp, :]  ≈ Γ0_alt93[eq_mp, :])
+    @test !(Γ1_hist[eq_mp, :]  ≈ Γ1_alt93[eq_mp, :])
+
+    @test Γ0_hist[eq_other, :] ≈ Γ0_alt99[eq_other, :]
+    @test Γ1_hist[eq_other, :] ≈ Γ1_alt99[eq_other, :]
+    @test !(Γ0_hist[eq_mp, :]  ≈ Γ0_alt99[eq_mp, :])
+    @test !(Γ1_hist[eq_mp, :]  ≈ Γ1_alt99[eq_mp, :])
+end
+
+# Test error thrown if trying to run shockdec products
+@testset "Check AltPolicy error thrown with shockdec products" begin
+    @test_throws ErrorException forecast_one(m, :mode, :none, [:shockdecobs])
+    @test_throws ErrorException forecast_one(m, :mode, :none, [:dettrendobs])
+    @test_throws ErrorException forecast_one(m, :mode, :none, [:trendobs])
+end
+
+# Forecast under Taylor 93 and Taylor 99
+m <= Setting(:alternative_policy, DSGE.taylor93())
+out_alt93 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
+m <= Setting(:alternative_policy, DSGE.taylor99())
+out_alt99 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
+
+@testset "Check forecast under Taylor 93" begin
+    @test out_hist[:histpseudo] ≈ out_alt93[:histpseudo]
+    @test !(out_hist[:forecastpseudo] ≈ out_alt93[:forecastpseudo])
+end
+@testset "Check forecast under Taylor 99" begin
+    @test out_hist[:histpseudo] ≈ out_alt99[:histpseudo]
+    @test !(out_hist[:forecastpseudo] ≈ out_alt99[:forecastpseudo])
+end
+
+####################
+# New Policy Rules #
+####################
+
+m = Model1002(testing = true)
+m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
+m <= Setting(:use_population_forecast, true)
+
+# Getting indices
+eq_mp    = m.equilibrium_conditions[:eq_mp]
+eq_other = setdiff(1:n_equilibrium_conditions(m), eq_mp)
+
+# Compare equilibrium conditions under historical and alternative rules
+Γ0_hist, Γ1_hist, ~ = eqcond(m)
 
 # Matrices for alt_inflation
 m <= Setting(:alternative_policy, DSGE.alt_inflation())
@@ -69,6 +118,7 @@ m <= Setting(:alternative_policy, DSGE.zero_rate())
 
 # Repeat for smooth_ait_gdp_alt
 #m <= Setting(:alternative_policy, DSGE.smooth_ait_gdp_alt())
+
 #Γ0_alt_smooth_alt,  Γ1_alt_smooth_alt,  ~ = alternative_policy(m).eqcond(m)
 
 # Repeat for ait
@@ -86,15 +136,6 @@ m <= Setting(:alternative_policy, DSGE.zero_rate())
 
 # Testing
 @testset "Compare AltPolicy eqconds under hist and alt rules" begin
-    @test Γ0_hist[eq_other, :] ≈ Γ0_alt93[eq_other, :]
-    @test Γ1_hist[eq_other, :] ≈ Γ1_alt93[eq_other, :]
-    @test !(Γ0_hist[eq_mp, :]  ≈ Γ0_alt93[eq_mp, :])
-    @test !(Γ1_hist[eq_mp, :]  ≈ Γ1_alt93[eq_mp, :])
-
-    @test Γ0_hist[eq_other, :] ≈ Γ0_alt99[eq_other, :]
-    @test Γ1_hist[eq_other, :] ≈ Γ1_alt99[eq_other, :]
-    @test !(Γ0_hist[eq_mp, :]  ≈ Γ0_alt99[eq_mp, :])
-    @test !(Γ1_hist[eq_mp, :]  ≈ Γ1_alt99[eq_mp, :])
 
     @test Γ0_hist[eq_other, :] ≈ Γ0_alt_inf[eq_other, :]
     @test Γ1_hist[eq_other, :] ≈ Γ1_alt_inf[eq_other, :]
@@ -137,19 +178,6 @@ m <= Setting(:alternative_policy, DSGE.zero_rate())
     #@test !(Γ1_hist[eq_mp, :]  ≈ Γ1_alt_ngdp[eq_mp, :])
 end
 
-# Test error thrown if trying to run shockdec products
-@testset "Check AltPolicy error thrown with shockdec products" begin
-    @test_throws ErrorException forecast_one(m, :mode, :none, [:shockdecobs])
-    @test_throws ErrorException forecast_one(m, :mode, :none, [:dettrendobs])
-    @test_throws ErrorException forecast_one(m, :mode, :none, [:trendobs])
-end
-
-# Forecast under Taylor 93 and Taylor 99
-m <= Setting(:alternative_policy, DSGE.taylor93())
-out_alt93 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
-m <= Setting(:alternative_policy, DSGE.taylor99())
-out_alt99 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
-
 # Forecast under alt_inflation and rw
 #m <= Setting(:alternative_policy, DSGE.alt_inflation())
 #out_alt_inf = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
@@ -179,14 +207,6 @@ out_alt99 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verb
 #m <= Setting(:pgap_value, 12.)
 #out_alt_ngdp = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
 
-@testset "Check forecast under Taylor 93" begin
-    @test out_hist[:histpseudo] ≈ out_alt93[:histpseudo]
-    @test !(out_hist[:forecastpseudo] ≈ out_alt93[:forecastpseudo])
-end
-@testset "Check forecast under Taylor 99" begin
-    @test out_hist[:histpseudo] ≈ out_alt99[:histpseudo]
-    @test !(out_hist[:forecastpseudo] ≈ out_alt99[:forecastpseudo])
-end
 
 # @testset "Check forecast under alt_inflation" begin
 #     @test out_hist[:histpseudo] ≈ out_alt_inf[:histpseudo]
