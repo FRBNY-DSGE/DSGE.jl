@@ -298,13 +298,20 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
-            #DSGE.na2nan!(pop_forecast)
-            DSGE.format_dates!(:date, pop_forecast)
+            # na2nan!(pop_forecast) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
+            format_dates!(:date, pop_forecast)
 
-            cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
+            dataframes_version = Pkg.installed()["DataFrames"]
+            cond_df = if dataframes_version >= v"0.21" # left joins using `join` is deprecated in DataFrames v0.21 (and higher)
+                leftjoin(cond_df, pop_forecast, on = :date)
+            else
+                join(cond_df, pop_forecast, on = :date, kind = :left)
+            end
 
             # Turn NAs into NaNs
-            #na2nan!(cond_df)
+            # na2nan!(cond_df) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
+
+            # Make sure the data is ordered by the date
             sort!(cond_df, :date)
 
             return cond_df

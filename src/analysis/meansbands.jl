@@ -179,7 +179,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
 
     # compute means field
     means = vcat(mb1.means, mb2.means)
-    #na2nan!(means)
+    # na2nan!(means) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
 
     # compute bands field
     bands = Dict{Symbol, DataFrame}()
@@ -198,7 +198,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         else
             vcat(fill(NaN, nperiods_mb1), mb2vars[var])
         end
-        #na2nan!(bands[var])
+        # na2nan!(bands[var]) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
     end
 
     # compute metadata

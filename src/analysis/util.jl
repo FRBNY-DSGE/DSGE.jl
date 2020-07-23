@@ -244,7 +244,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         padding, unpadded_data = reconcile_column_names(padding, unpadded_data)
         padded_data = vcat(padding, unpadded_data)
-        # na2nan!(padded_data)
+        # na2nan!(padded_data) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
         padded_data
 
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
