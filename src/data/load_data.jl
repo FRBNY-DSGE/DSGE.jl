@@ -301,8 +301,7 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             # na2nan!(pop_forecast) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
             format_dates!(:date, pop_forecast)
 
-            dataframes_version = Pkg.installed()["DataFrames"]
-            cond_df = if dataframes_version >= v"0.21" # left joins using `join` is deprecated in DataFrames v0.21 (and higher)
+            cond_df = if isdefined(DataFrames, :leftjoin) # left joins using `join` is deprecated in DataFrames v0.21 (and higher)
                 leftjoin(cond_df, pop_forecast, on = :date)
             else
                 join(cond_df, pop_forecast, on = :date, kind = :left)
