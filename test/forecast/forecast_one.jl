@@ -121,8 +121,10 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
     end
 end
 
-@testset "Test forecast_one_draw" begin
-    if !skip_forecast_one_draw
+if !skip_forecast_one_draw
+    @show haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
+    @show forecast_one_draw
+    @testset "Test forecast_one_draw" begin
         for input_type in [:mode, :full]
             params = if input_type == :mode
                 load_draws(m, input_type)
