@@ -15,11 +15,11 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
-skip_forecast_one_draw = false
 if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
     df = load_data(m)
-    skip_forecast_one_draw = true
+    skip_forecast_one_draw = false
 else
+    skip_forecast_one_draw = true
     @warn "Skipping forecast_one_draw tests because FRED_API_KEY not present"
 end
 # Make sure output_vars ignores the untransformed and 4Q things because they are
@@ -121,10 +121,8 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
     end
 end
 
-if !skip_forecast_one_draw
-    @show haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
-    @show forecast_one_draw
-    @testset "Test forecast_one_draw" begin
+@testset "Test forecast_one_draw" begin
+    if !skip_forecast_one_draw
         for input_type in [:mode, :full]
             params = if input_type == :mode
                 load_draws(m, input_type)
