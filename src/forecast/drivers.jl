@@ -35,6 +35,8 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     check_empty_columns::Bool = true, bdd_fcast::Bool = true,
     verbose::Symbol = :none) where {S<:AbstractFloat}
 
+    @assert cond_type in [:none, :semi, :full] "cond_type must be one of :none, :semi, or :full"
+
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars, bdd_fcast = bdd_fcast)
     if input_type == :prior
@@ -632,6 +634,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     if alternative_policy(m).key != :historical
         init_model_indices!(m)
     end
+    if zlb_method == :temporary_altpolicy
+        # Need to save original regime dates b/c these will be changed during use of the temporary altpolicy
+        orig_regime_dates = deepcopy(get_setting(m, :regime_dates))
+    end
 
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)
@@ -1002,6 +1008,21 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:irfpseudo] = irfpseudo
     end
 
+    if zlb_method == :temporary_altpolicy
+        # Fix regime dates
+        m <= Setting(:regime_dates, orig_regime_dates)
+        setup_regime_switching_inds!(m; cond_type = cond_type)
+        n_reg_p1 = get_setting(m, :n_regimes) + 1
+        for p in m.parameters
+            if haskey(p.regimes, :value)
+                if length(p.regimes[:value]) >= n_reg_p1
+                    for i in n_reg_p1:length(p.regimes[:value])
+                        delete!(p.regimes[:value], i)
+                    end
+                end
+            end
+        end
+    end
 
     ### Return only desired output_vars
 
