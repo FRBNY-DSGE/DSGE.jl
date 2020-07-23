@@ -44,8 +44,7 @@ function transform_data(m::AbstractDSGEModel, levels::DataFrame;
                                                        verbose = verbose,
                                                        use_hpfilter = hpfilter_population(m))
 
-        dataframes_version = Pkg.installed()["DataFrames"]
-        levels = if dataframes_version >= v"0.21" # left joins using `join` is deprecated in DataFrames v0.21 (and higher)
+        levels = if isdefined(DataFrames, :leftjoin) # left joins using `join` is deprecated in DataFrames v0.21 (and higher)
             leftjoin(levels, population_data, on = :date)
         else
             join(levels, population_data, on = :date, kind = :left)
