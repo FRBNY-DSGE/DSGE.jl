@@ -8,7 +8,9 @@ os:
     #- osx
     - linux
 julia:
+    # Test 1.1 explicitly to ensure deprecations b/n 1.1 and 1.4 are handled properly
     - 1
+    - 1.1
 notifications:
     email: false
 addons:
@@ -19,8 +21,8 @@ addons:
 script:
     - julia --color=yes -e 'using Pkg; Pkg.build()'
     - julia --check-bounds=yes --color=yes -e 'using Pkg; Pkg.test(coverage=true)'
-#     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#     - julia --color=yes -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
+    # - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    # - julia --color=yes -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
 branches:
   only:
     - master
