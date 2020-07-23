@@ -394,14 +394,6 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         end_altpol_date   = iterate_quarters(start_altpol_date, forecast_horizons(m; cond_type = cond_type) + 1)
     end
 
-    # Figure out which periods need temporary ZLB regimes
-#     which_zlb_regimes = findall(obs[get_observables(m)[:obs_nominalrate], :] .<
-#                                 get_setting(m, :forecast_zlb_value)) .+ n_hist_regimes # add historical regimes to get the right regime number
-#     if is_regime_switch && cond_type != :none
-#         which_zlb_regimes .+= get_setting(m, :reg_post_conditional_end) - # additional conditional regimes should be added
-#             get_setting(m, :reg_forecast_start)
-#     end
-
     first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
                                  get_setting(m, :forecast_zlb_value))
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
@@ -416,6 +408,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
 
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
+        orig_regimes = get_setting(m, :n_regimes) # get the original number of regimes
         for iter in 0:(size(obs, 2) - 1)
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
@@ -439,7 +432,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             end
             m <= Setting(:regime_dates, altpol_regime_dates)
             m <= Setting(:regime_switching, true)
-            setup_regime_switching_inds!(m)
+            setup_regime_switching_inds!(m; cond_type = cond_type)
 
             # Set up replace_eqcond entries
             m <= Setting(:replace_eqcond, true)
@@ -470,6 +463,18 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
                 break
+            else
+                if set_zlb_regime_vals != identity
+                    for p in m.parameters
+                        if haskey(p.regimes, :value)
+                            if length(p.regimes[:value]) > orig_regimes
+                                for i in (orig_regimes + 1):length(p.regimes[:value])
+                                    delete!(p.regimes[:value], i)
+                                end
+                            end
+                        end
+                    end
+                end
             end
         end
     end
