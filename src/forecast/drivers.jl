@@ -405,7 +405,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                df = df, verbose = verbose, bdd_fcast = bdd_fcast,
                                                subset_inds = subset_inds,
                                                check_empty_columns = check_empty_columns)
-    @show output_vars
+
     # Get output file names
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_forecast_output_files(m, input_type, cond_type, output_vars;
