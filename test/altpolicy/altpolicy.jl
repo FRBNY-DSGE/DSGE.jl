@@ -4,7 +4,6 @@ using DSGE, Test, ModelConstructors
 m = Model1002(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
-m <= Setting(:data_vintage, "160812")
 
 # Forecast under historical rule
 paras = [α.value for α in m.parameters]
