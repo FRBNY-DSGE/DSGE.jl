@@ -17,6 +17,8 @@ m = AnSchorfheide()
     run(`rm -r a`)
 
     @test Matrix(read_mb("$path/../reference/mbhistobs.jld2").means) == Matrix(load("$path/../reference/mbhistobs.jld2", "mb").means)
+    @test Matrix(read_mb("$path/../reference/mbhistobs.jld2", "$path/../reference/mbhistobs.jld2").means) ==
+                 Matrix(load("$path/../reference/mbhistobs.jld2", "mb").means)
     @test_throws AssertionError read_bdd_and_unbdd_mb("", "")
     @test Matrix(read_bdd_and_unbdd_mb("$path/../reference/mbbddforecastobs.jld2", "$path/../reference/mbforecastobs.jld2").means) == Matrix(load("$path/../reference/bdd_unbdd.jld2", "bdd_unbdd"))
 end
