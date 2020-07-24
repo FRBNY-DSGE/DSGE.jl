@@ -113,13 +113,15 @@ function load_fred_data(m::AbstractDSGEModel;
         end
 
         # Extract dataframe from each series and merge on date
+        has_oj = isdefined(DataFrames, :outerjoin)
         for i = 1:length(fredseries)
             if isassigned(fredseries, i)
                 series = fredseries[i]
                 series_id = Symbol(series.id)
                 rename!(series.df, :value => series_id)
                 map!(x->lastdayofquarter(x), series.df[!, :date], series.df[!, :date])
-                data = join(data, series.df[!, [:date, series_id]], on=:date, kind=:outer)
+                data = has_oj ? outerjoin(data, series.df[!, [:date, series_id]], on = :date) :
+                    join(data, series.df[!, [:date, series_id]], on = :date, kind = :outer)
             end
         end
 

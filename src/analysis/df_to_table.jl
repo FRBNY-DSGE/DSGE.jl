@@ -79,8 +79,13 @@ function construct_fcast_and_hist_dfs(m::AbstractDSGEModel, cond_type::Symbol,
         df_forecastpseudo = append!(DataFrame(df_histpseudo[end, :]), df_forecastpseudo)
     end
 
-    df_forecast = join(df_forecastobs, df_forecastpseudo, on = :date)
-    df_hist     = join(df_histobs, df_histpseudo, on =:date)
+    if isdefined(DataFrames, :innerjoin)
+        df_forecast = innerjoin(df_forecastobs, df_forecastpseudo, on = :date)
+        df_hist     = innerjoin(df_histobs, df_histpseudo, on = :date)
+    else
+        df_forecast = join(df_forecastobs, df_forecastpseudo, on = :date)
+        df_hist     = join(df_histobs, df_histpseudo, on = :date)
+    end
 
     obs_keys = m.observables.keys
     pseudo_keys = m.pseudo_observables.keys
