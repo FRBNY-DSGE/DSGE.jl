@@ -93,7 +93,8 @@ else
             @test @test_matrix_approx_eq refdata[string(k)] load(v, "arr")
         end
     end
-    for v in values(output_files)
+#=    for v in values(output_files)
         rm(v)
     end
+=#
 end
