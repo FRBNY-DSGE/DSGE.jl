@@ -295,12 +295,38 @@ outputs.
 function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
     out = Dict{Symbol, Array{Float64}}()
     if !isempty(dicts)
+        _populate_empty_dictionaries!(dicts)
         for var in keys(dicts[1])
             outputs  = map(dict -> reshape(dict[var], (1, size(dict[var])...)), dicts)
             out[var] = cat(outputs..., dims=1)
         end
     end
     return out
+end
+
+"""
+```
+_populate_empty_dictionaries!(dicts)
+```
+
+helps `assemble_block_outputs` handle empty dictionaries by populating
+them with NaNs.
+"""
+function _populate_empty_dictionaries!(dicts::Vector{Dict{Symbol, Array{Float64}}})
+    check = isempty.(dicts)
+    if any(check)
+        empty_dicts  = findall(check)
+        if length(empty_dicts) == length(dicts)
+            error("All dictionaries in dicts are empty. No valid forecast output was computed by forecast_one_draw")
+        else
+            ref_dict = dicts[findfirst(.!check)]
+            for i in empty_dicts
+                for (k, v) in ref_dict
+                    dicts[i][k] = fill(NaN, size(v))
+                end
+            end
+        end
+    end
 end
 
 """

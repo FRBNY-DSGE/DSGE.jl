@@ -217,8 +217,15 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
 
+    # Handle NaNs
+    if output_var != :histobs && any(isnan.(transformed_series))
+        # Remove rows with NaNs
+        nanrows = vec(mapslices(x -> any(isnan.(x)), transformed_series, dims = Int[2]))
+        transformed_series = transformed_series[.!nanrows, :]
+    end
+
     # Compute means and bands
-    means = vec(mean(transformed_series, dims= 1))
+    means = vec(mean(transformed_series, dims = 1))
     bands = if product in [:shockdec, :dettrend, :trend] && !compute_shockdec_bands
         Dict{Symbol,DataFrame}()
     else
