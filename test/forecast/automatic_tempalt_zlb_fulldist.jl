@@ -1,11 +1,15 @@
-using DSGE, ModelConstructors, Dates, OrderedCollections, Test, CSV, DataFrames, Random
+using DSGE, ModelConstructors, Dates, OrderedCollections, Test, CSV, DataFrames, Random, FileIO
 
 regenerate_output = false
 
 # Initialize model objects
 Random.seed!(1793)
 m = Model1002("ss60")
-df_full = DataFrame(CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
+if VERSION >= v"1.3"
+    df_full = DataFrame!(CSV.File(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
+else
+    df_full = DataFrame(CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
+end
 m <= Setting(:forecast_horizons, 30)
 m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, # Have to add anticipated rates to conditional data
                                 :obs_nominalrate, :obs_longrate,
@@ -89,7 +93,8 @@ else
             @test @test_matrix_approx_eq refdata[string(k)] load(v, "arr")
         end
     end
-    for v in values(output_files)
+#=    for v in values(output_files)
         rm(v)
     end
+=#
 end
