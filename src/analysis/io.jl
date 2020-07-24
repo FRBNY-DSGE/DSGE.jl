@@ -133,16 +133,23 @@ end
 ```
 read_mb(fn::String)
 
+read_mb(fn1::String, fn2::String)
+
 read_mb(m, input_type, cond_type, output_var; forecast_string = "",
-    bdd_and_unbdd::Bool = false, directory = workpath(m, \"forecast\"))
+    bdd_and_unbdd = false, modal_line = false, directory = workpath(m, \"forecast\"))
 ```
 
 Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
 determine the file location.
 
+The second method construct a `MeansBands` object with means from the modal object
+and bands, where `fn1` is the file location of the bands and `fn2` is
+the file location of the means.
+
 If `bdd_and_unbdd`, then `output_var` must be either `:forecast` or
 `:forecast4q`. Then this function calls `read_bdd_and_unbdd` to return a
-`MeansBands` with unbounded means and bounded bands.
+`MeansBands` with unbounded means and bounded bands. If modal line is set to true,
+then the modal mean rather than the full-distribution mean is returned.
 """
 function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
@@ -151,14 +158,34 @@ function read_mb(fn::String)
     end
 end
 
+function read_mb(fn1::String, fn2::String)
+    if isempty(fn2)
+        read_mb(fn1)
+    else
+        @assert isfile(fn1) "File $(fn1) could not be found"
+        @assert isfile(fn2) "File $(fn2) could not be found"
+        mb1 = JLD2.jldopen(fn1, "r") do f
+            read(f, "mb")
+        end
+        mb2 = JLD2.jldopen(fn2, "r") do f
+            read(f, "mb")
+        end
+        # Return MeansBands using the full-distribution metadata
+        MeansBands(mb1.metadata, mb2.means, mb1.bands)
+    end
+end
+
 function read_mb(m::Union{AbstractDSGEModel,AbstractVARModel},
                  input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
-                 bdd_and_unbdd::Bool = false,
+                 bdd_and_unbdd::Bool = false, modal_line::Bool = false,
                  directory::String = workpath(m, "forecast"))
     unbdd_file = get_meansbands_output_file(m, input_type, cond_type, output_var;
                                             forecast_string = forecast_string,
                                             directory = directory)
+    modal_file = modal_line ? get_meansbands_output_file(m, :mode, cond_type, output_var;
+                                                         forecast_string = forecast_string,
+                                                         directory = directory) : ""
 
     if bdd_and_unbdd
         @assert get_product(output_var) in [:forecast, :forecast4q]
@@ -167,9 +194,9 @@ function read_mb(m::Union{AbstractDSGEModel,AbstractVARModel},
                                               forecast_string = forecast_string,
                                               directory = directory)
 
-        read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
+        read_bdd_and_unbdd_mb(bdd_file, modal_line ? modal_file : unbdd_file, modal_line = modal_line)
     else
-        read_mb(unbdd_file)
+        read_mb(unbdd_file, modal_file)
     end
 end
 
@@ -201,14 +228,15 @@ end=#
 
 """
 ```
-read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
+read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String; modal_line::Bool = false)
 ```
 
 Read in the bounded and unbounded forecast `MeansBands` from `bdd_fn` and
 `unbdd_fn`. Create and return a `MeansBands` with the unbounded means and
-bounded bands.
+bounded bands. If `modal_line` is true, then the `unbdd_fn` is known to load in
+a modal forecast but should be treated as having the same `input_type` as the bounded forecast.
 """
-function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
+function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String; modal_line::Bool = false)
     # Check files exist
     @assert isfile(bdd_fn)   "File $bdd_fn could not be found"
     @assert isfile(unbdd_fn) "File $unbdd_fn could not be found"
@@ -216,6 +244,9 @@ function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
     # Read MeansBands
     bdd_mb   = read_mb(bdd_fn)
     unbdd_mb = read_mb(unbdd_fn)
+    if modal_line
+        unbdd_mb.metadata[:para] = bdd_mb.metadata[:para]
+    end
 
     # Check well-formed
     for fld in [:para, :forecast_string, :cond_type, :date_inds, :class, :indices]
@@ -223,7 +254,7 @@ function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
             @assert bdd_mb.metadata[fld].vals == unbdd_mb.metadata[fld].vals
             @assert bdd_mb.metadata[fld].keys == unbdd_mb.metadata[fld].keys
         else
-            @assert bdd_mb.metadata[fld] == unbdd_mb.metadata[fld] "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
+            @assert (bdd_mb.metadata[fld] == unbdd_mb.metadata[fld]) "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
         end
     end
     @assert (bdd_mb.metadata[:product], unbdd_mb.metadata[:product]) in [(:bddforecast, :forecast), (:bddforecast4q, :forecast4q)] "Invalid product fields: $((bdd_mb.metadata[:product], unbdd_mb.metadata[:product]))"
