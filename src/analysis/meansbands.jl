@@ -634,7 +634,7 @@ function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
     bands = mb.bands[var][:, [:date; my_bands]]
 
     # Join so mean is on far right and date is on far left
-    df = join(bands, means, on = :date)
+    df = isdefined(DataFrames, :innerjoin) ? innerjoin(bands, means, on = :date) : join(bands, means, on = :date)
     rename!(df, var => Symbol("mean"))
 
     return df
@@ -691,10 +691,18 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     df_dettrend = mb_dettrend.means[!,[:date, var]]
 
     # Line up dates between trend, dettrend and shockdec
-    df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
-    rename!(df_shockdec, var => :trend)
-    df_shockdec = join(df_shockdec, df_dettrend, on = :date, kind = :inner)
-    rename!(df_shockdec, var => :dettrend)
+    has_ij = isdefined(DataFrames, :innerjoin)
+    if has_ij
+        df_shockdec = innerjoin(df_shockdec, df_trend, on = :date)
+        rename!(df_shockdec, var => :trend)
+        df_shockdec = innerjoin(df_shockdec, df_dettrend, on = :date)
+        rename!(df_shockdec, var => :dettrend)
+    else
+        df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
+        rename!(df_shockdec, var => :trend)
+        df_shockdec = join(df_shockdec, df_dettrend, on = :date, kind = :inner)
+        rename!(df_shockdec, var => :dettrend)
+    end
 
     # Add each shock's contribution and deterministic trend to output DataFrame
     df = DataFrame(date = df_shockdec[!,:date])
@@ -716,7 +724,8 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         enddate   = df[end, :date]
         df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[!,:date] .<= enddate, [:date, var]]
 
-        df_shockdec = join(df_shockdec, df_mean, on = :date, kind = :inner)
+        df_shockdec = has_ij ? innerjoin(df_shockdec, df_mean, on = :date) :
+            join(df_shockdec, df_mean, on = :date, kind = :inner)
         df[!,:detrendedMean] = df_shockdec[!,var] - df_shockdec[!,:trend]
     end
 
