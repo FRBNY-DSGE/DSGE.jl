@@ -396,6 +396,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       temporary_altpolicy_max_iter::Int = 10,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
                       params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
+                      show_failed_percent::Bool = false,
                       verbose::Symbol = :low)
 
     ### Common Setup
@@ -533,7 +534,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
 
             # Assemble outputs from this block and write to file
             forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-            forecast_output = assemble_block_outputs(forecast_outputs)
+            forecast_output = assemble_block_outputs(forecast_outputs; show_failed_percent = show_failed_percent)
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable(block),
                                    verbose = block_verbose, block_inds = block_inds_thin[block],

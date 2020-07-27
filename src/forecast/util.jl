@@ -292,10 +292,10 @@ Given a vector `dicts` of forecast output dictionaries, concatenate each output
 along the draw dimension and return a new dictionary of the concatenated
 outputs.
 """
-function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
+function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}}; show_failed_percent::Bool = false)
     out = Dict{Symbol, Array{Float64}}()
     if !isempty(dicts)
-        _populate_empty_dictionaries!(dicts)
+        _populate_empty_dictionaries!(dicts; show_failed_percent = show_failed_percent)
         for var in keys(dicts[1])
             outputs  = map(dict -> reshape(dict[var], (1, size(dict[var])...)), dicts)
             out[var] = cat(outputs..., dims=1)
@@ -312,7 +312,7 @@ _populate_empty_dictionaries!(dicts)
 helps `assemble_block_outputs` handle empty dictionaries by populating
 them with NaNs.
 """
-function _populate_empty_dictionaries!(dicts::Vector{Dict{Symbol, Array{Float64}}})
+function _populate_empty_dictionaries!(dicts::Vector{Dict{Symbol, Array{Float64}}}; show_failed_percent::Bool = false)
     check = isempty.(dicts)
     if any(check)
         empty_dicts  = findall(check)
@@ -324,6 +324,10 @@ function _populate_empty_dictionaries!(dicts::Vector{Dict{Symbol, Array{Float64}
                 for (k, v) in ref_dict
                     dicts[i][k] = fill(NaN, size(v))
                 end
+            end
+            if show_failed_percent
+                nan_percent = round(100. * count(check) / length(dicts), digits = 2)
+                println("The percentage of failed forecasts is $(nan_percent)%")
             end
         end
     end
