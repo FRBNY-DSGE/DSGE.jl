@@ -371,8 +371,6 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, uncertain_altpolicy::Bool = false,
                   temporary_altpolicy_max_iter::Int = 10, set_zlb_regime_vals::Function = identity,
-                  # state_dims::Tuple{Int, Int} = (n_states_augmented(m), forecast_horizons(m, cond_type = cond_type)),
-                  # pseudo_dims::Tuple{Int, Int} = (n_pseudo_observables(m), forecast_horizons(m, cond_type = cond_type)),
                   tol::S = -1e-14) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
