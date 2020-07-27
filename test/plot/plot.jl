@@ -21,7 +21,6 @@ overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :irfobs])
 
-@everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
 compute_meansbands(m, :full, :none, output_vars; verbose = :none)
@@ -34,9 +33,24 @@ if haskey(ENV, "FRED_API_KEY")
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none)
 
+    plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
+                              bdd_and_unbdd = false,
+                              start_date = DSGE.quartertodate("2007-Q1"),
+                              verbose = :none)
+
+    plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
+                              bdd_and_unbdd = false, bdd_and_bdd = true,
+                              start_date = DSGE.quartertodate("2007-Q1"),
+                              verbose = :none)
+
     # Plot forecast comparison
     plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
                              bdd_and_unbdd = true,
+                             start_date = DSGE.quartertodate("2007-Q1"),
+                             verbose = :none)
+
+    plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
+                             bdd_and_unbdd = false,
                              start_date = DSGE.quartertodate("2007-Q1"),
                              verbose = :none)
 
@@ -87,6 +101,18 @@ if haskey(ENV, "FRED_API_KEY")
                              bdd_and_unbdd = true,
                              start_date = DSGE.quartertodate("2007-Q1"),
                              verbose = :none, plotroot = tmp_saveroot)
+    plot_history_and_forecast(m, :y_t, :pseudo, :full, :none,
+                              bdd_and_unbdd = false,
+                              start_date = DSGE.quartertodate("2007-Q1"),
+                              verbose = :none, plotroot = tmp_saveroot)
+    plot_forecast_comparison(m, m, :y_t, :pseudo, :full, :none,
+                             bdd_and_unbdd = false,
+                             start_date = DSGE.quartertodate("2007-Q1"),
+                             verbose = :none, plotroot = tmp_saveroot)
+    plot_history_and_forecast(m, :y_t, :pseudo, :full, :none,
+                              bdd_and_unbdd = false, bdd_and_bdd = true,
+                              start_date = DSGE.quartertodate("2007-Q1"),
+                              verbose = :none, plotroot = tmp_saveroot)
     plot_shock_decomposition(m, :y_t, :pseudo, :full, :none, verbose = :none, plotroot = tmp_saveroot)
     plot_impulse_response(m, :rm_sh, collect(keys(m.pseudo_observables)), :pseudo, :full, :none,
                           verbose = :none, plotroot = tmp_saveroot)
