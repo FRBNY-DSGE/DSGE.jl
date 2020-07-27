@@ -893,7 +893,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks; cond_type = cond_type,
                              temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
                              set_zlb_regime_vals = set_regime_vals_altpolicy)
-                             # state_dims = size(forecaststates), pseudo_dims = size(forecastpseudo))
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
