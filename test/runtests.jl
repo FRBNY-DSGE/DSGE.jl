@@ -6,17 +6,6 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
-            "forecast/automatic_tempalt_zlb_fulldist",
-            "data/fred_data",
-            "data/load_data",
-            "data/load_data_poolmodel",
-            "data/misc",
-            "data/reverse_transform",
-            "data/simulate_data",
-            "data/transformations",
-            "data/transform_data",
-            "data/util",
-
             "packet/packet", # ideally these 3 tests go elsewhere.
             "plot/plot", # They are prone to segmentation fault errors.
             "plot/util", # This way, they error early if these fault errors happen.
