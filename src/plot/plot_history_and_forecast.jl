@@ -5,7 +5,7 @@ plot_history_and_forecast(m, var, class, input_type, cond_type;
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false,
-
+    bdd_and_bdd::Bool = false,
     plotroot = figurespath(m, \"forecast\"), titles = [],
     plot_handles = fill(plot(), length(vars)), verbose = :low,
     kwargs...)
@@ -27,6 +27,7 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
+- `bdd_and_bdd::Bool`: if true, then bounded means and bounded bands are plotted
 - `untrans::Bool`: whether to plot untransformed (model units) history and forecast
 - `fourquarter::Bool`: whether to plot four-quarter history and forecast
 - `plotroot::String`: if nonempty, plots will be saved in that directory
@@ -57,8 +58,8 @@ end
 function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
                                    forecast_string::String = "",
-                                   bdd_and_unbdd::Bool = false, modal_line::Bool = false,
-                                   untrans::Bool = false,
+                                   bdd_and_unbdd::Bool = false, bdd_and_bdd::Bool = false,
+                                   modal_line::Bool = false, untrans::Bool = false,
                                    fourquarter::Bool = false,
                                    plotroot::String = figurespath(m, "forecast"),
                                    titles::Vector{String} = String[],
@@ -68,6 +69,12 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
     # Determine output_vars
     if untrans && fourquarter
         error("Only one of untrans or fourquarter can be true")
+    elseif bdd_and_bdd
+        if bdd_and_unbdd
+            error("Only one of bdd_and_unbdd and bdd_and_bdd can be true")
+        end
+        hist_prod  = :hist
+        fcast_prod = :bddforecast
     elseif untrans
         hist_prod  = :histut
         fcast_prod = :forecastut

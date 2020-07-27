@@ -21,6 +21,8 @@ m = AnSchorfheide()
                  Matrix(load("$path/../reference/mbhistobs.jld2", "mb").means)
     @test_throws AssertionError read_bdd_and_unbdd_mb("", "")
     @test Matrix(read_bdd_and_unbdd_mb("$path/../reference/mbbddforecastobs.jld2", "$path/../reference/mbforecastobs.jld2").means) == Matrix(load("$path/../reference/bdd_unbdd.jld2", "bdd_unbdd"))
+    @test Matrix(read_mb("$path/../reference/mbbddforecastobs.jld2", "$path/../reference/mbbddforecastobs.jld2").means) ==
+                 Matrix(load("$path/../reference/mbbddforecastobs.jld2", "mb").means)
 end
 
 @testset "Testing add_requisite_output_vars_meansbands" begin
