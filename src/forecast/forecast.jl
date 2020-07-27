@@ -480,7 +480,10 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     end
 
     if !all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
-        @warn "Unable to enforce the ZLB."
+        @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
+        states .= fill(NaN, size(states))
+        obs    .= fill(NaN, size(obs))
+        pseudo .= fill(NaN, size(pseudo))
     end
 
     # Restore original settings
