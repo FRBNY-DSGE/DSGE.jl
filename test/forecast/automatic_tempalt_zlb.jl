@@ -2,6 +2,64 @@ using DSGE, ModelConstructors, Dates, OrderedCollections, Test, CSV, DataFrames,
 
 regenerate_output = false
 
+# Test automatic enforcement of ZLB as a temporary ZLB with no regime-switching
+custom_settings = Dict{Symbol, Setting}(
+    :data_vintage             => Setting(:data_vintage, "160812"),
+    :cond_vintage             => Setting(:cond_vintage, "160812"),
+    :cond_id                  => Setting(:cond_id, 0),
+    :use_population_forecast  => Setting(:use_population_forecast, true),
+    :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
+    :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
+    :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
+    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
+
+dfs = Dict()
+path = dirname(@__FILE__)
+dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
+dfs[:none] = load("$path/../reference/regime_switch_data.jld2", "none")
+dfs[:full][end, :obs_nominalrate] = .5
+dfs[:none][end, :obs_nominalrate] = 0.5
+dfs[:full][end, :obs_gdp] = -.5
+
+m = Model1002("ss10", custom_settings = custom_settings)
+m <= Setting(:rate_expectations_source, :ois)
+m.settings[:regime_switching] = Setting(:regime_switching, false)
+m.settings[:forecast_ndraws] = Setting(:forecast_ndraws, 3)
+m.settings[:forecast_block_size] = Setting(:forecast_block_size, 2)
+m.settings[:forecast_jstep] = Setting(:forecast_jstep, 1)
+output_vars = [:forecastobs, :bddforecastobs]
+
+para = repeat(Matrix(map(x -> x.value, m.parameters)'), 3, 1)
+out = Dict()
+Random.seed!(1793 * 5)
+for cond_type in [:full, :none]
+    out[cond_type] = Dict()
+    forecast_one(m, :mode, cond_type, output_vars, verbose = :none, params = para[1, :], df = dfs[cond_type],
+                 zlb_method = :temporary_altpolicy)
+    forecast_one(m, :full, cond_type, output_vars, verbose = :none, params = para, df = dfs[cond_type],
+                 zlb_method = :temporary_altpolicy)
+    for input_type in [:mode, :full]
+        out[cond_type][input_type] = Dict()
+        outfn = get_forecast_output_files(m, input_type, cond_type, output_vars)
+        out[cond_type][input_type][:bddforecastobs] = load(outfn[:bddforecastobs], "arr")
+        out[cond_type][input_type][:forecastobs]    = load(outfn[:forecastobs], "arr")
+    end
+end
+
+@testset "Automatic enforcement of ZLB as temporary alternative policy (no regime-switching)" begin
+    for cond_type in [:none, :full]
+        for input_type in [:mode, :full]
+            @show cond_type, input_type
+            if input_type == :mode
+                @test all(out[cond_type][input_type][:bddforecastobs][m.observables[:obs_nominalrate], :] .> -1e-14)
+            else
+                @test all(out[cond_type][input_type][:bddforecastobs][:, m.observables[:obs_nominalrate], :] .> -1e-14)
+            end
+        end
+    end
+end
+
+## Regime switching and full-distriution
 # Initialize model objects
 Random.seed!(1793)
 m = Model1002("ss60")

@@ -380,15 +380,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
     # Grab some information about the forecast
     n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
-    if haskey(DSGE.get_settings(m), :regime_dates) # dates of first and last regimes we need to add for the alt policy
-        if length(get_setting(m, :regime_dates)) > 1
-            start_altpol_date = get_setting(m, :regime_dates)[2]
-            end_altpol_date   = get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] +
-                Dates.Month(3) * (forecast_horizons(m; cond_type = cond_type) + 1)
-        else
-            start_altpol_date = date_forecast_start(m)
-            end_altpol_date   = iterate_quarters(start_altpol_date, forecast_horizons(m; cond_type = cond_type) + 1)
-        end
+    has_reg_dates = haskey(get_settings(m), :regime_dates) # calculate dates of first & last regimes we need to add for the alt policy
+    if has_reg_dates && length(get_setting(m, :regime_dates)) > 1
+        start_altpol_date = get_setting(m, :regime_dates)[2]
+        end_altpol_date   = get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] +
+            Dates.Month(3) * (forecast_horizons(m; cond_type = cond_type) + 1)
     else
         start_altpol_date = date_forecast_start(m)
         end_altpol_date   = iterate_quarters(start_altpol_date, forecast_horizons(m; cond_type = cond_type) + 1)
@@ -398,8 +394,13 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                                  get_setting(m, :forecast_zlb_value))
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
         first_zlb_regime += n_hist_regimes
-        if is_regime_switch && cond_type != :none
-            first_zlb_regime += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
+        if cond_type != :none
+            if is_regime_switch
+                first_zlb_regime += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
+            else
+                first_zlb_regime += subtract_quarters(get_setting(m, :date_conditional_end),
+                                                      get_setting(m, :date_forecast_start)) + 1
+            end
         end
 
         # Setup for loop enforcing zero rate
@@ -408,7 +409,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
 
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
-        orig_regimes = get_setting(m, :n_regimes) # get the original number of regimes
+        orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
+        orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
         for iter in 0:(size(obs, 2) - 1)
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
@@ -439,7 +441,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             m <= Setting(:gensys2, true)
             replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
             for regind in first_zlb_regime:(n_total_regimes - 1)
-                replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
+                replace_eqcond[regind] = zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
             end
 
             replace_eqcond[n_total_regimes] = if altpolicy == :ait
@@ -461,20 +463,31 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # Forecast!
             states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
-            if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
-                break
-            else
-                if set_zlb_regime_vals != identity
-                    for p in m.parameters
-                        if haskey(p.regimes, :value)
-                            if length(p.regimes[:value]) > orig_regimes
-                                for i in (orig_regimes + 1):length(p.regimes[:value])
-                                    delete!(p.regimes[:value], i)
-                                end
+            # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
+            # in forecast_one will not work.
+            if set_zlb_regime_vals != identity
+                for p in m.parameters
+                    if haskey(p.regimes, :value)
+                        if length(p.regimes[:value]) > orig_regimes
+                            for i in (orig_regimes + 1):length(p.regimes[:value])
+                                delete!(p.regimes[:value], i)
                             end
                         end
                     end
                 end
+            end
+
+            if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
+                # Restore the original number of regimes and regime dates
+                m <= Setting(:n_regimes, orig_regimes)
+                if isempty(orig_regime_dates)
+                    delete!(get_settings(m), :regime_dates)
+                else
+                    m <= Setting(:regime_dates, orig_regime_dates)
+                    setup_regime_switching_inds!(m; cond_type = cond_type)
+                    n_reg_p1 = get_setting(m, :n_regimes) + 1
+                end
+                break
             end
         end
     end

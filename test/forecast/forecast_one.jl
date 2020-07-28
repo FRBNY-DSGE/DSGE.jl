@@ -108,7 +108,6 @@ end
 
 
 # Test full-distribution blocking
-@everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
 # Test read_forecast_output
@@ -338,6 +337,9 @@ end
 
         # Run modal forecasts w/different conditioning
         for cond_type in [:none, :semi, :full]
+            setup_regime_switching_inds!(m_rs1; cond_type = cond_type)
+            setup_regime_switching_inds!(m_rs2; cond_type = cond_type)
+            setup_regime_switching_inds!(m_rs3; cond_type = cond_type)
             forecast_one(m, :mode, cond_type, output_vars, verbose = :none, params = params, df = dfs[cond_type])
             forecast_one(m, :init, cond_type, output_vars, verbose = :none, params = params, df = dfs[cond_type])
             forecast_one(m_rs1, :mode, cond_type, output_vars, verbose = :none, params = params_rs1, df = dfs[cond_type])
@@ -615,64 +617,5 @@ if generate_regime_switch_tests
         write(file, "exp_out_regime_switch_cases", exp_out_dict_new)
     end
 end
-
-
-# Test automatic enforcement of ZLB as a temporary ZLB
-custom_settings = Dict{Symbol, Setting}(
-    :data_vintage             => Setting(:data_vintage, "160812"),
-    :cond_vintage             => Setting(:cond_vintage, "160812"),
-    :cond_id                  => Setting(:cond_id, 0),
-    :use_population_forecast  => Setting(:use_population_forecast, true),
-    :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
-    :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
-    :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
-    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
-
-dfs = Dict()
-dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
-dfs[:none] = load("$path/../reference/regime_switch_data.jld2", "none")
-dfs[:full][end, :obs_nominalrate] = -.5
-dfs[:none][end, :obs_nominalrate] = -.5
-
-# pseudo regime switching (identical values for standard deviations)
-m = Model1002("ss10", custom_settings = custom_settings)
-m <= Setting(:rate_expectations_source, :ois)
-m.settings[:regime_switching] = Setting(:regime_switching, false)
-m.settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
-m.settings[:forecast_block_size] = Setting(:forecast_block_size, 2)
-m.settings[:forecast_jstep] = Setting(:forecast_jstep, 1)
-output_vars = [:forecastobs, :bddforecastobs]
-
-para = repeat(Matrix(map(x -> x.value, m.parameters)'), 4, 1)
-
-function example_set_regime_vals(m::AbstractDSGEModel, n::Int)
-    for p in m.parameters
-        if p.key == :σ_b
-            for i in 1:n
-                ModelConstructors.set_regime_val!(p, i, p.value)
-            end
-        end
-    end
-end
-
-out = Dict()
-Random.seed!(1793)
-for cond_type in [:none, :full]
-    out[cond_type] = Dict()
-    forecast_one(m, :mode, cond_type, output_vars, verbose = :none, params = para[1, :], df = dfs[cond_type],
-                     zlb_method = :temporary_altpolicy, set_regime_vals_altpolicy = example_set_regime_vals)
-    forecast_one(m, :full, cond_type, output_vars, verbose = :none, params = para, df = dfs[cond_type],
-                 zlb_method = :temporary_altpolicy, set_regime_vals_altpolicy = example_set_regime_vals)
-
-    for input_type in [:mode, :full]
-        out[cond_type][input_type] = Dict()
-        outfn = get_forecast_output_files(m, input_type, cond_type, output_vars)
-        out[cond_type][input_type][:bddforecastobs] = load(outfn[:bddforecastobs], "arr")
-        out[cond_type][input_type][:forecastobs]    = load(outfn[:forecastobs], "arr")
-    end
-end
-
-
-
 
 nothing

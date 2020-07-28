@@ -635,10 +635,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     if alternative_policy(m).key != :historical
         init_model_indices!(m)
     end
-    if zlb_method == :temporary_altpolicy
+    #=if zlb_method == :temporary_altpolicy
         # Need to save original regime dates b/c these will be changed during use of the temporary altpolicy
-        orig_regime_dates = deepcopy(get_setting(m, :regime_dates))
-    end
+        if haskey(get_settings(m, :regime_dates))
+            orig_regime_dates = deepcopy(get_setting(m, :regime_dates))
+        end
+    end=#
 
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)
@@ -1009,21 +1011,21 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:irfpseudo] = irfpseudo
     end
 
-    if zlb_method == :temporary_altpolicy
+#=    if zlb_method == :temporary_altpolicy
         # Fix regime dates
-        m <= Setting(:regime_dates, orig_regime_dates)
-        setup_regime_switching_inds!(m; cond_type = cond_type)
-        n_reg_p1 = get_setting(m, :n_regimes) + 1
-        for p in m.parameters
-            if haskey(p.regimes, :value)
-                if length(p.regimes[:value]) >= n_reg_p1
-                    for i in n_reg_p1:length(p.regimes[:value])
-                        delete!(p.regimes[:value], i)
+        if haskey(get_settings(m), :n_regimes)
+            n_reg_p1 = get_setting(m, :n_regimes) + 1
+            for p in m.parameters
+                if haskey(p.regimes, :value)
+                    if length(p.regimes[:value]) >= n_reg_p1
+                        for i in n_reg_p1:length(p.regimes[:value])
+                            delete!(p.regimes[:value], i)
+                        end
                     end
                 end
             end
         end
-    end
+    end=#
 
     ### Return only desired output_vars
 

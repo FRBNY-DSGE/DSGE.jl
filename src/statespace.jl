@@ -308,11 +308,16 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # Solve model
     if regime_switching
         if solution_method == :gensys
+            if haskey(get_settings(m), :reg_forecast_start)
+                fcast_regimes = collect(get_setting(m, :reg_forecast_start):n_regimes)
+            else
+                fcast_regimes = collect(n_hist_regimes + 1:n_regimes)
+            end
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
                                      hist_regimes = collect(1:n_hist_regimes),
-                                     fcast_regimes = collect(n_hist_regimes+1:n_regimes),
+                                     fcast_regimes = fcast_regimes,
                                      verbose = verbose)
 
             transition_equations = Vector{Transition{T}}(undef, n_regimes)
