@@ -1,4 +1,4 @@
-using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots
+using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots, Distributed
 GR.inline("pdf")
 fn = dirname(@__FILE__)
 

@@ -1,4 +1,4 @@
-using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots, Dates, OrderedCollections
+using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots, Dates, OrderedCollections, Distributed
 using Plots.PlotMeasures
 GR.inline("pdf")
 fn = dirname(@__FILE__)

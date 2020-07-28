@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors
+using DSGE, ModelConstructors, Distributed
 using Nullables, DataFrames, OrderedCollections, Dates
 
 #############################

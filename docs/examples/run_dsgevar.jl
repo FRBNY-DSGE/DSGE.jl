@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, Random, Plots
+using DSGE, ModelConstructors, Random, Plots, Distributed
 using Plots.PlotMeasures
 
 # What do you want to do?
