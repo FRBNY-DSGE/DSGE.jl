@@ -64,22 +64,14 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
         if :obs_nominalrate1 in cond_semi_names(m) || :obs_nominalrate1 in cond_full_names(m)
-            ois_data = CSV.read(inpath(m, "raw", "ois_$(data_vintage(m)).csv"), copycols = true)
+            ois_data = VERSION >= v"1.3" ? DataFrame(CSV.File(inpath(m, "raw", "ois_$(data_vintage(m)).csv"))) :
+                CSV.read(inpath(m, "raw", "ois_$(data_vintage(m)).csv"), copycols = true)
             dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
             n_cond = length(dates)
 
             ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[!, :date] .<= date_conditional_end(m), [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]
 
             df[date_mainsample_end(m) .< df[!, :date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Matrix{Float64}(ois_data_want)
-        end
-
-        if :obs_z1 in cond_semi_names(m) || :obs_z1 in cond_full_names(m)
-            z_data = CSV.read(inpath(m, "raw", "z_$(data_vintage(m)).csv"), copycols = true)
-            dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
-            n_cond = length(dates)
-            z_data_want = z_data[date_mainsample_end(m) .< z_data[:date] .<= date_conditional_end(m), [:z1]]
-
-            df[date_mainsample_end(m) .< df[:date] .<= date_conditional_end(m), [:obs_z1]] .= Matrix{Float64}(z_data_want)
         end
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
@@ -210,7 +202,8 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             println(verbose, :low, "Reading data from $file...")
 
             # Read in dataset and check that the file contains data for the proper dates
-            addl_data = CSV.read(file, copycols=true)
+            addl_data = VERSION >= v"1.3" ? DataFrame(CSV.File(file)) :
+                CSV.read(file, copycols = true)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
@@ -286,7 +279,7 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         println(verbose, :low, "Reading conditional data from $file...")
 
         # Read data
-        cond_df = CSV.read(file, copycols=true)
+        cond_df = VERSION >= v"1.3" ? DataFrame(CSV.File(file)) : CSV.read(file, copycols = true)
         format_dates!(:date, cond_df)
 
         date_cond_end = cond_df[end, :date]
@@ -294,7 +287,8 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         # Use population forecast as population data
         population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
         if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
-            pop_forecast = CSV.read(population_forecast_file, copycols=true)
+            pop_forecast = VERSION >= v"1.3" ? DataFrame(CSV.File(population_forecast_file)) :
+                CSV.read(population_forecast_file, copycols = true)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
@@ -357,7 +351,8 @@ Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
 function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none, check_empty_columns::Bool = true)
     filename = get_data_filename(m, cond_type)
-    df       = CSV.read(filename, copycols=true)
+    df       = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
+        CSV.read(filename, copycols = true)
 
     # Convert date column from string to Date
     df[!,:date] = map(Date, df[!,:date])
@@ -559,7 +554,8 @@ end
 function read_population_data(filename::String; verbose::Symbol = :low)
     println(verbose, :low, "Reading population data from $filename...")
 
-    df = CSV.read(filename, copycols=true)
+    df = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
+        CSV.read(filename, copycols = true)
     DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
@@ -594,7 +590,8 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
     if isfile(filename)
         println(verbose, :low, "Loading population forecast from $filename...")
 
-        df = CSV.read(filename, copycols=true)
+        df = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
+            CSV.read(filename, copycols = true)
         rename!(df, :POPULATION => population_mnemonic)
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
@@ -637,7 +634,7 @@ function load_reference_forecast(m::AbstractModel, year::Int, quarter::Int, file
 
     df = DataFrame(date = dates)
 
-    series = CSV.read(file)
+    series = VERSION >= v"1.3" ? DataFrame!(CSV.File(file)) : CSV.read(file)
 
     datestr = reference_forecast_vintage(year, quarter, :bluechip)
     date_index = something(findfirst(isequal(datestr), series[:date]), 0)
