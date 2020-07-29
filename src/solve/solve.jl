@@ -244,7 +244,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                                             TTT = TTT_gensys_final)
             end
 
-
             TTT_gensys_final = real(TTT_gensys_final)
             RRR_gensys_final = real(RRR_gensys_final)
             CCC_gensys_final = real(CCC_gensys_final)

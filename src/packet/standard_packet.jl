@@ -88,7 +88,7 @@ write_spec_section(fid, m; purpose = "")
 Write user, model, and data specification section.
 """
 function write_spec_section(fid::IOStream, m::AbstractDSGEModel; purpose::String = "")
-  
+
     @printf fid "\n\n"
     @printf fid "\\section{Specification}\n"
     @printf fid "\n"

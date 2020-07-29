@@ -331,6 +331,21 @@ function _populate_empty_dictionaries!(dicts::Vector{Dict{Symbol, Array{Float64}
             end
         end
     end
+
+    ct = 0
+    for dict in dicts
+        for (k, v) in dict
+            if any(isnan.(v))
+                ct += 1
+                break
+            end
+        end
+    end
+    if show_failed_percent
+        nan_percent = round(100. * ct / length(dicts), digits = 2)
+        println("The percentage of failed forecasts is $(nan_percent)%")
+    end
+
 end
 
 """
