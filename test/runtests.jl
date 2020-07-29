@@ -6,9 +6,31 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
-            "packet/packet", # ideally these 3 tests go elsewhere.
-            "plot/plot", # They are prone to segmentation fault errors.
-            "plot/util", # This way, they error early if these fault errors happen.
+            "forecast/smooth",
+            "forecast/forecast",
+            "forecast/shock_decompositions",
+            "forecast/impulse_responses",
+            "forecast/io",
+            "forecast/forecast_one",
+            "forecast/automatic_tempalt_zlb",
+            "forecast/regime_switching",
+
+            "data/fred_data",
+            "data/load_data",
+            "data/load_data_poolmodel",
+            "data/misc",
+            "data/reverse_transform",
+            "data/simulate_data",
+            "data/transformations",
+            "data/transform_data",
+            "data/util",
+
+            "analysis/compute_meansbands",
+            "analysis/df_to_table",
+            "analysis/io",
+            "analysis/meansbands",
+            "analysis/moments",
+            "analysis/util",
 
             "abstractdsgemodel",
             "abstractvarmodel",
@@ -63,7 +85,7 @@ my_tests = [
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
-            "forecast/automatic_tempalt_zlb_fulldist",
+            "forecast/automatic_tempalt_zlb",
             "forecast/regime_switching",
             "forecast/util",
             "forecast/var/impulse_responses",
@@ -82,6 +104,8 @@ my_tests = [
             "scenarios/switching",
             "scenarios/drivers",
             "decomp/decompose_forecast",
+
+            "plot/util",
 
             "models/representative/smets_wouters/smets_wouters",
             "models/representative/smets_wouters_orig/smets_wouters_orig",
@@ -111,6 +135,15 @@ my_tests = [
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
             ]
+
+if VERSION >= v"1.3"
+    my_tests = vcat([
+                     "packet/packet", # These two tests generate segmentation fault errors
+                     "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1
+                    ],
+                    my_tests)
+end
+
 
 for test in my_tests
     test_file = string("$test.jl")
