@@ -49,6 +49,7 @@ end
 @testset "Automatic enforcement of ZLB as temporary alternative policy (no regime-switching)" begin
     for cond_type in [:none, :full]
         for input_type in [:mode, :full]
+            @show cond_type, input_type
             if input_type == :mode
                 @test all(out[cond_type][input_type][:bddforecastobs][m.observables[:obs_nominalrate], :] .> -1e-14)
             else
