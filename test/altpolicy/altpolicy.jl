@@ -1,7 +1,7 @@
 using DSGE, Test, ModelConstructors
 
 # Initialize model object
-m = Model1002(testing = true)
+m = Model990(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
 
