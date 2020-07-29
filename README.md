@@ -37,6 +37,21 @@ To use `DSGE.jl` with Julia `v0.6`, please check out tag `0.4.1`.
 
 *In Windows OS, installing `DSGE.jl` in Julia `v1.1` appears to trigger the error `AssertionError: length(dirs) == 1` according to several users. Because we do not test the package in Windows OS, unfortunately we do not know the source of this error.*
 
+## Precompilation
+
+The `DSGE.jl` package is not precompiled by default because when running code in parallel, we want to re-compile
+the copy of `DSGE.jl` on each processor to guarantee the right version of the code is being used. If users do not
+anticipate using parallelism, then users ought to change the first line of `src/DSGE.jl` from
+
+```
+isdefined(Base, :__precompile__) && __precompile__(false)
+```
+
+to
+
+```
+isdefined(Base, :__precompile__) && __precompile__(true)
+```
 
 Disclaimer
 ------
