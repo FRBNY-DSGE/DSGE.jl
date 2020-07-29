@@ -6,14 +6,14 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
+            "forecast/automatic_tempalt_zlb",
+            "forecast/regime_switching",
             "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
-            "forecast/automatic_tempalt_zlb",
-            "forecast/regime_switching",
 
             "data/fred_data",
             "data/load_data",
@@ -136,13 +136,13 @@ my_tests = [
             #"models/heterogeneous/one_asset_hank/interns",
             ]
 
-if VERSION >= v"1.3"
+#=if VERSION >= v"1.3"
     my_tests = vcat([
                      "packet/packet", # These two tests generate segmentation fault errors
                      "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1
                     ],
                     my_tests)
-end
+end=#
 
 
 for test in my_tests

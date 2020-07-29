@@ -635,12 +635,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     if alternative_policy(m).key != :historical
         init_model_indices!(m)
     end
-    #=if zlb_method == :temporary_altpolicy
-        # Need to save original regime dates b/c these will be changed during use of the temporary altpolicy
-        if haskey(get_settings(m, :regime_dates))
-            orig_regime_dates = deepcopy(get_setting(m, :regime_dates))
-        end
-    end=#
 
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)
@@ -825,10 +819,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     forecast(system, s_T, etpeg; cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
                 println("The forecasted interest rate path is $(forecastobs[m.observables[:obs_nominalrate], :])")
             else
-                fcast_sys = regime_switching ? system[n_regimes] : system # system to be used for forecast
-
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, fcast_sys, s_T;
+                    forecast(m, system, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
             end
 
@@ -900,7 +892,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                              set_zlb_regime_vals = set_regime_vals_altpolicy)
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, fcast_sys, s_T;
+                    forecast(m, system, s_T;
                              cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
             end
 
@@ -1012,22 +1004,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:irfobs] = irfobs
         forecast_output[:irfpseudo] = irfpseudo
     end
-
-#=    if zlb_method == :temporary_altpolicy
-        # Fix regime dates
-        if haskey(get_settings(m), :n_regimes)
-            n_reg_p1 = get_setting(m, :n_regimes) + 1
-            for p in m.parameters
-                if haskey(p.regimes, :value)
-                    if length(p.regimes[:value]) >= n_reg_p1
-                        for i in n_reg_p1:length(p.regimes[:value])
-                            delete!(p.regimes[:value], i)
-                        end
-                    end
-                end
-            end
-        end
-    end=#
 
     ### Return only desired output_vars
 
