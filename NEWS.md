@@ -1,6 +1,7 @@
 # DSGE.jl 1.1.6
 ## Version Restrictions
 + Raise Julia compatibility to all v1.x.
++ Increase version restrictions for most packages to most recent ones (e.g. Plots)
 
 ## New features and enhancements
 + Implement (exogenously) regime-switching DSGE models (but estimations are not tested)
