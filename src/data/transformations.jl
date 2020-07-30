@@ -164,17 +164,17 @@ end
 difflog(x::AbstractVector)
 ```
 """
-function difflog(x::Vector)
+function difflog(x::AbstractVector)
     [missing; log.(x[2:end]) - log.(x[1:end-1])]
 end
 
 
 """
 ```
-difflog(x::Array{AbstractFloat})
+difflog(x::AbstractArray{AbstractFloat})
 ```
 """
-function difflog(x::Array)
+function difflog(x::AbstractArray)
     return difflog(convert(Vector, x))
 end
 
