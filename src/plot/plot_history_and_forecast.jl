@@ -112,7 +112,8 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
                                                 Symbol(fcast_prod, "_", detexify(var)),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
-            save_plot(plots[var], output_file, verbose = verbose)
+            @show output_file
+            DSGE.save_plot(plots[var], output_file, verbose = verbose)
         end
     end
     return plots
@@ -261,7 +262,11 @@ histforecast
         seriestype :=  :line
         linewidth  --> 2
         linecolor  :=  haskey(colors, :hist) ? colors[:hist] : :black
-        alpha      :=  haskey(alphas, :hist) ? alphas[:hist] : 1.0
+        if VERSION >= v"1.3"
+            seriesalpha := haskey(alphas, :hist) ? alphas[:hist] : 1.0
+        else
+            alpha       := haskey(alphas, :hist) ? alphas[:hist] : 1.0
+        end
         linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :solid
         label      :=  haskey(names, :hist) ? names[:hist] : "History"
 
@@ -275,7 +280,11 @@ histforecast
         seriestype :=  :line
         linewidth  --> 2
         linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
-        alpha      :=  haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+        if VERSION >= v"1.3"
+            seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+        else
+            alpha       := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+        end
         linestyle  :=  haskey(styles, :forecast) ? styles[:forecast] : :solid
         label      :=  haskey(names, :forecast) ? names[:forecast] : "Forecast"
 

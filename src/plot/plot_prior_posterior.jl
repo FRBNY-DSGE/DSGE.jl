@@ -108,7 +108,11 @@ priorpost
         seriestype := :histogram
         normalize  := true
         label      := param.fixed ? "Posterior: " * ModelConstructors.describe_prior(param) : "Posterior"
-        color      := posterior_color
+        if VERSION >= v"1.3"
+            seriescolor := posterior_color
+        else
+            color       := posterior_color
+        end
 
         posterior_draws
     end
@@ -116,7 +120,12 @@ priorpost
     # Prior
     @series begin
         label      := "Prior: " * ModelConstructors.describe_prior(param)
-        color      := prior_color
+        if VERSION >= v"1.3"
+            seriescolor := prior_color
+        else
+            color       := prior_color
+        end
+
         linewidth --> 4
 
         if param.fixed

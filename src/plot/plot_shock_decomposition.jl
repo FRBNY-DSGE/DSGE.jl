@@ -184,11 +184,16 @@ shockdec
         colors    = map(x -> x.color, groups)
         ngroups   = length(groups)
 
-        labels     --> reshape(labels, 1, ngroups)
-        color      --> reshape(colors, 1, ngroups)
-        linealpha  --> 0
-        bar_width  --> 1
-        legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
+        if VERSION >= v"1.3"
+            label       --> reshape(labels, 1, ngroups)
+            seriescolor --> reshape(colors, 1, ngroups)
+        else
+            labels      --> reshape(labels, 1, ngroups)
+            color       --> reshape(colors, 1, ngroups)
+        end
+        linealpha       --> 0
+        bar_width       --> 1
+        legendfont      --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
         inds = findall(start_date .<= dates .<= end_date)
         x = xnums[inds]
