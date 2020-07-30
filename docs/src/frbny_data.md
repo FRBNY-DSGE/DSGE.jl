@@ -81,6 +81,12 @@ trained on data that includes six quarters of interest rate expectations. The us
 responsible for procuring interest rate expectations and appending it to the provided sample
 data set, as discussed in this documentation.
 
+To use anticipated policy shocks during a forecast, a conditional forecast has to be run, and
+interest rate expectations must be added as conditional observables to the setting `:cond_full_names` for
+full-conditional forecasts and `:cond_semi_names` for semi-conditional forecasts. The reason is that if the forecast is
+unconditional, only data up to the last period before the first forecast period will be used. Since the current quarter
+is typically part of the forecast horizon (e.g. current quarter GDP is not known yet), interest rate expectations
+in the current quarter have to be treated as conditional data.
 
 ### Implementation
 
@@ -218,4 +224,3 @@ Reserve Bank of New York.
 
 Company and product names mentioned in connection with the data remain the
 trademark and property of their respective owners.
-
