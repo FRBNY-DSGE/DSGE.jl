@@ -68,6 +68,6 @@ end
     @test find_density_bands(ones(1, 100), 0.95) == ones(2, 100)
     @test find_density_bands(ones(100, 100), 0.95, minimize = true) == ones(2, 100)
     dens = find_density_bands(ones(100, 100), [.8, .9])
-    @test names(dens) == [Symbol("80.0% UB"), Symbol("80.0% LB"), Symbol("90.0% UB"), Symbol("90.0% LB")]
+    @test propertynames(dens) == [Symbol("80.0% UB"), Symbol("80.0% LB"), Symbol("90.0% UB"), Symbol("90.0% LB")]
     @test Matrix(dens) == ones(100,4)
 end
