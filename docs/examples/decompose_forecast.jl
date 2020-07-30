@@ -1,5 +1,6 @@
 using DSGE, ModelConstructors, Distributed
-using DataFrames, OrderedCollections, Dates
+using DataFrames, OrderedCollections, Dates, Plots
+GR.inline("pdf")
 
 ####################################
 # To use:
