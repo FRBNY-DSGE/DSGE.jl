@@ -72,7 +72,7 @@ if run_full_forecast
 
     if do_irfs
         # Impulse response to all shocks, including for endogenous states
-        output_vars = vcat(output_vars, [:irfstates, :irfobs, :irfpseudo])
+        output_vars = vcat(output_vars, [:irfobs, :irfpseudo]) # :irfstates not calculated by default b/c takes a long time
     end
 
     if add_workers
