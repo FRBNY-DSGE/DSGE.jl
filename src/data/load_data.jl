@@ -229,7 +229,11 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             rows = start_date .<= addl_data[!,:date] .<= end_date
 
             addl_data = addl_data[rows, cols]
-            df = join(df, addl_data, on=:date, kind=:outer)
+            if isdefined(DataFrames, :outerjoin)
+                df = outerjoin(df, addl_data, on=:date)
+            else
+                df = join(df, addl_data, on=:date, kind = :outer)
+            end
         else
             # If series not found, use all missings
             addl_data = DataFrame(fill(missing, (size(df,1), length(mnemonics))))
