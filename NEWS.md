@@ -1,4 +1,4 @@
-# DSGE.jl 1.1.7
+# DSGE.jl 1.1.7 (in development)
 
 ## Bug fixes and cleanup
 + Fix error in calculating the diagonal of the Hessian with parallel workers
