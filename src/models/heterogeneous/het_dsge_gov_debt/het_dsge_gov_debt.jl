@@ -526,6 +526,10 @@ end
 ```
 init_grids!(m::HetDSGEGovDebt)
 ```
+This function initializes the grids used for distribution/functional states. the xgrid/agrid is cash on hand and the sgrid is skill (right now we only have 2 sgrid points: low and high skill)
+They are constructed with uniform weights on each gridpoint and the weights sum up to the kwarg passed into `scale' (which defaults to the difference between the max and min of the grid. e.g. if your max and min are 12.0 amnd 0.0, the weights wqill sum to 12.0).
+
+f is the transition matrix to and from different skills levels
 """
 function init_grids!(m::HetDSGEGovDebt)
 
@@ -569,14 +573,14 @@ function model_settings!(m::HetDSGEGovDebt)
     vint = Dates.format(now(), DSGE_DATE_FORMAT)
     m <= Setting(:data_vintage, vint, true, "vint", "Data vintage")
 
-    saveroot = normpath(joinpath(dirname(@__FILE__), "../../../","save"))
-    datapath = normpath(joinpath(dirname(@__FILE__), "../../../","save","input_data"))
+    saveroot = normpath(joinpath(dirname(@__FILE__), "../../../../","save"))
+    datapath = normpath(joinpath(dirname(@__FILE__), "../../../../","save","input_data"))
 
     m <= Setting(:saveroot, saveroot, "Root of data directory structure")
     m <= Setting(:dataroot, datapath, "Input data directory path")
 
     # Solution method
-    m <= Setting(:solution_method, :klein)
+    m <= Setting(:solution_method, :klein, false, "", "This should always be klein")
 
     # Likelihood method
     m <= Setting(:use_chand_recursion, true)
@@ -602,7 +606,7 @@ function model_settings!(m::HetDSGEGovDebt)
                  This set to 0 is just the default setting, since it will always be
                  overwritten once the Jacobian is calculated.")
 
-    m <= Setting(:reduce_ell, true)
+    m <= Setting(:reduce_ell, true, false, "", "Whether to reduce the ell function (the inverse of consumption)")
 
     m <= Setting(:policy_damp, 0.5, "Dampening parameter for policy function iteration")
     m <= Setting(:policy_maxit, 500, true,
@@ -622,7 +626,7 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:nx2_jump,  300, "Cash on hand distribution grid points (hi)")
     m <= Setting(:nx,        300, "Cash on hand distribution grid points")
 
-    m <= Setting(:binsize, 4) # Setting binsize=1 gives us what we had before doing the binning reduction
+    m <= Setting(:binsize, 4, false, "", "Number of people to put in each bin when doing avg proxy reduction") # Setting binsize=1 gives us what we had before doing the binning reduction
     m <= Setting(:poor_man_reduc, true) #note that we're actually doing more than the "poor man reduction" now however this turns ont both poorman truncation and binning reduction
 
     # Set targets
@@ -649,14 +653,14 @@ function model_settings!(m::HetDSGEGovDebt)
     m <= Setting(:auto_reject, false, "This flag is set when policy function doesn't converge")
 
     # Steady state constants
-    m <= Setting(:ni, 10000)
+    m <= Setting(:ni, 10000) # This and the next line have to do with the random draws we draw for steadystate but are presaved in a file (the u's and z's)
     m <= Setting(:nz, 1000)
     m <= Setting(:fix_random_matrices, true, "Determines if use fixed matrices")
     m <= Setting(:us, load(get_setting(m, :ref_dir) * "/us_zs.jld2","us"))
     m <= Setting(:zs, load(get_setting(m, :ref_dir) * "/us_zs.jld2","zs"))
 
     # Misc
-    m <= Setting(:trunc_distr, false)
+    m <= Setting(:trunc_distr, false) #old setting, we dont do this any more
     m <= Setting(:rescale_weights, true)
     m <= Setting(:mindens, 1e-8)
 
@@ -860,6 +864,12 @@ function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol},
                  method, we have n_states and n_jumps")
 end
 
+"""
+```
+init_grids!(m::HetDSGEGovDebt)
+```
+This is a very important function. ANy time you reduce the grid, you need to restore to the full grid before evaluating steadystate/jacobian/likelihood again. Otherwise, you'll keep redsucing and after just a few times, you'll be left with NOTHING. So PSA: reset your grid when you're done with whatever you need to do with the smaller grid!
+"""
 function reset_grids!(m)
     m <= Setting(:nx1_state, 300)
     m <= Setting(:nx2_state, 300)

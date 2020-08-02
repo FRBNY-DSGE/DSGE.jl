@@ -82,7 +82,7 @@ function meansbands_to_matrix(mb::MeansBands)
     vars       = get_vars_means(mb)             # get names of variables
     nvars      = length(vars)                   # get number of variables
 
-    tmp        = setdiff(names(mb.means), [:date])[1]
+    tmp        = setdiff(propertynames(mb.means), [:date])[1]
     T          = eltype(mb.means[!, tmp])          # type of elements of mb structure
 
     nperiods   = n_periods_means(mb)            # get number of periods
@@ -101,7 +101,7 @@ function meansbands_to_matrix(mb::MeansBands)
         bands = Array{T}(undef, nbands, nvars, nperiods)
 
         # extract each series and place in arrays
-        for series in setdiff(names(mb.means), [:date])
+        for series in setdiff(propertynames(mb.means), [:date])
             ind = inds[series]
             means[ind,:] = convert(Array{T},mb.means[!, series])
 
@@ -119,7 +119,7 @@ function meansbands_to_matrix(mb::MeansBands)
         means = Array{T}(undef, nvars, nperiods, nshocks)
         bands = Array{T}(undef, nbands, nvars, nperiods, nshocks)
 
-        for series in setdiff(names(mb.means), [:date])
+        for series in setdiff(propertynames(mb.means), [:date])
 
             var, shock = parse_mb_colname(series)
             ind = inds[var]

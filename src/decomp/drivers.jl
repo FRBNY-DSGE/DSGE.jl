@@ -6,6 +6,12 @@ decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old,
 decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
     cond_new, cond_old, classes; check = false)
 ```
+explains the differences between an old forecast and a new forecast
+by decomposing the differences into three sources:
+
+(1) Data revisions,
+(2) News (e.g. new data that has become available since the old forecast),
+(3) Re-estimation (i.e. changes in model parameters).
 
 ### Inputs
 
@@ -242,6 +248,9 @@ Returns `out::Dict{Symbol, Array{Float64}}`, which has keys determined as follow
 function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol,
                                 T::Int, k::Int, H::Int;
                                 outputs::Vector{Symbol} = [:forecast, :shockdec], check::Bool = false)
+
+    regime_switching = haskey(m.settings, :regime_switching) ? get_setting(m, :regime_switching) : false
+
     # Compute state space
     DSGE.update!(m, params)
     system = compute_system(m)
@@ -251,12 +260,34 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
 
     # Smooth and forecast
     histstates, histshocks, histpseudo, s_0 = smooth(m, df, system, cond_type = cond_type, draw_states = false)
-    histobs = system[:ZZ] * histstates .+ system[:DD]
+    if regime_switching
+        start_date = max(date_mainsample_start(m), df[1, :date])
+        data = df_to_matrix(m, df)
+        regime_inds, i_zlb_start, splice_zlb_regime = zlb_plus_regime_indices(m, data, start_date)
+        if regime_inds[1][1] < 1
+            regime_inds[1] = 1:regime_inds[1][end]
+        end
+        regime_inds[end] = regime_inds[end][1]:(T + H)
+        histobs = zeros(size(data))
+        for (reg_num, reg_ind) in enumerate(regime_inds[1:end - 1])
+            if reg_num > i_zlb_start && splice_zlb_regime # if spliced ZLB and i is past the start date, then a repeat in regimes has occurred => minus 1
+                histobs[:, reg_ind] = system[reg_num - 1, :ZZ] * histstates[:, reg_ind] .+ system[reg_num - 1, :DD]
+            elseif reg_num >= n_regimes(system) && splice_zlb_regime # ZLB starts in middle of the last regime
+                histobs[:, reg_ind] = system[reg_num - 1, :ZZ] * histstates[:, reg_ind] .+ system[reg_num - 1, :DD]
+            else
+                histobs[:, reg_ind] = system[reg_num, :ZZ] * histstates[:, reg_ind] .+ system[reg_num, :DD]
+            end
+        end
+        # histobs[:, regime_inds[end]] = system[length(regime_inds) - 1, :ZZ] * histstates[:, regime_inds[end][1]:T
+    else
+        histobs = system[:ZZ] * histstates .+ system[:DD]
+    end
 
     if :forecast in outputs || check
         s_T = histstates[:, end]
         _, forecastobs, forecastpseudo, _ =
-            forecast(m, system, s_T, cond_type = cond_type, enforce_zlb = false, draw_shocks = false)
+            forecast(m, regime_switching ? system[n_regimes(system)] : system, # select correct regime for forecast
+                     s_T, cond_type = cond_type, enforce_zlb = false, draw_shocks = false)
 
         out[:histforecastobs]    = hcat(histobs,    forecastobs)[:, 1:T+H]
         out[:histforecastpseudo] = hcat(histpseudo, forecastpseudo)[:, 1:T+H]
@@ -268,14 +299,32 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
         nshocks = n_shocks_exogenous(m)
 
         _, out[:trendobs],    out[:trendpseudo]    = trends(system)
-        _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(system, s_0, T+H, 1, T+H)
 
-        # Applying all shocks
-        _, out[:shockdecobs], out[:shockdecpseudo] =
-            shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H)
+        if regime_switching
+            # Create regime indices
+            end_date = if cond_type in [:semi, :full]
+                max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+            else
+                prev_quarter(date_forecast_start(m))
+            end
+            regime_inds      = regime_indices(m, date_mainsample_start(m), end_date) # main sample b/c smooth doesn't include presample
+            regime_inds[1]   = 1:regime_inds[1][end]
+
+            _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(system, s_0, T+H, 1, T+H, regime_inds)
+
+            # Applying all shocks
+            _, out[:shockdecobs], out[:shockdecpseudo] =
+                shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H, regime_inds)
+        else
+            _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(system, s_0, T+H, 1, T+H)
+
+            # Applying all shocks
+            _, out[:shockdecobs], out[:shockdecpseudo] =
+                shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H)
+        end
 
         # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
-        system0 = zero_system_constants(system)
+        system0 = regime_switching ? zero_system_constants(system[length(regime_inds)]) : zero_system_constants(system)
 
         data_shocks = zeros(nshocks, T+H)
         data_shocks[:, 1:T-k] = histshocks[:, 1:T-k]
@@ -283,6 +332,7 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
 
         Tstar = size(histshocks, 2) # either T or T+1
         news_shocks = zeros(nshocks, T+H)
+
         news_shocks[:, T-k+1:Tstar] = histshocks[:, T-k+1:Tstar]
         _, out[:newsobs], out[:newspseudo], _ = forecast(system0, zeros(nstates), news_shocks)
     end

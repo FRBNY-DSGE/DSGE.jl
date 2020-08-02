@@ -31,6 +31,8 @@ function get_product(output_var::Symbol)
         :histforecast
     elseif occursin("hist4q", s)
         :hist4q
+    elseif occursin("histlvl", s)
+        :histlvl
     elseif occursin("histut", s)
         :histut
     elseif occursin("hist", s)
@@ -45,6 +47,8 @@ function get_product(output_var::Symbol)
         :forecastut
     elseif occursin("bddforecast", s)
         :bddforecast
+    elseif occursin("forecastlvl", s)
+        :forecastlvl
     elseif occursin("forecast", s)
         :forecast
     elseif occursin("shockdec", s)
@@ -240,7 +244,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         padding, unpadded_data = reconcile_column_names(padding, unpadded_data)
         padded_data = vcat(padding, unpadded_data)
-        # na2nan!(padded_data)
+        # na2nan!(padded_data) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
         padded_data
 
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
@@ -373,6 +377,25 @@ function get_y0_index(m::AbstractDSGEModel, product::Symbol)
         return -1
     else
         error("get_y0_index not implemented for product = $product")
+    end
+end
+
+function get_yt_index(m::AbstractDSGEModel, product::Symbol)
+    if product in [:forecastut, :forecast, :bddforecastut, :bddforecast]
+        return index_forecast_start(m) - 1
+    elseif product in [:forecast4q, :bddforecast4q]
+        return index_forecast_start(m) - 1
+    elseif product in [:shockdec, :dettrend, :trend, :hist, :histut, :hist4q, :irf]
+        return -1
+        # Note: below, I don't immediately know what we want for yt (end) and I don't think I need to implmented
+#=    elseif product in [:shockdec, :dettrend, :trend]
+        return n_presample_periods(m) + index_shockdec_start(m) - 1
+    elseif product in [:hist, :histut, :hist4q]
+        return index_mainsample_start(m) - 1
+    elseif product == :irf
+        return -1=#
+    else
+        error("get_yt_index not implemented for product = $product")
     end
 end
 

@@ -1,3 +1,50 @@
+# DSGE.jl 1.1.6
+## Version Restrictions
++ Raise Julia compatibility to all v1.x.
++ Increase version restrictions for most packages to most recent ones (e.g. Plots)
+
+## New features and enhancements
++ Implement (exogenously) regime-switching DSGE models (but estimations are not tested)
++ Implement (exogenously) regime-switching forecasts during the history and forecast horizon
++ New subspecs of `Model1002` to model the impact of the COVID-19 pandemic
++ Interface for the automated addition of anticipated shocks to DSGE models for shocks other than monetary policy shocks.
++ Interface for calculating weighted averages of different full-distribution forecasts
++ Add Nominal GDP targeting and average inflation targeting as alternative policies
++ Automatic enforcement of ZLB as a temporary alternative policy
+
+## Bug fixes and cleanup
++ Filepathing for Windows OS should work properly now (although we still do not test on Windows OS)
+
+# DSGE.jl 1.1.5
+## New features and enhancements
++ Implement DSGE-VECMs and provide functionality to compute impulse responses.
++ Extend DSGE-VAR rotation impulse responses to compute in deviations from baseline.
++ Example for running impulse responses of a a DSGE-VECM.
++ Extend example for DSGE-VARs to allow plotting of modal impulse responses.
+
+## Bug fixes and cleanup
++ Fix summary statistics when loading data
++ Fix bugs in the documentation.
+
+# DSGE.jl 1.1.3
+## New features and enhancements
++ Implement DSGE-VARs and provide functionality to estimate them and compute impulse responses.
++ Example for running a forecast decomposition.
++ Example for running a DSGE-VAR.
+
+## Bug fixes and cleanup
++ Allow user to avoid running csminwel when using SMC and calling estimate.
+
+# DSGE.jl 1.1.2
+## New features and enhancements
++ Support for bridging from another estimation (in SMC.jl)--this update ensures compatibility
++ Automatically run csminwel after an SMC estimation to ensure you've found the mode with kwarg run_csminwel in smc2
+
+# DSGE.jl 1.1.1
+## New features and enhancements
++ Bug fixes and improvements
++ Add models m904 (SWFF) and m805 (SWpi)
+
 # DSGE.jl 1.1.0
 ## New features and enhancements
 + Functionality to specify heterogeneous agent models, in addition to representative agent models.

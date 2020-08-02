@@ -6,7 +6,7 @@ estimate(m, data; verbose=:low, proposal_covariance=Matrix(), method=:SMC)
 Estimate the DSGE parameter posterior distribution.
 
 ### Arguments:
-- `m::AbstractDSGEModel`: model object
+- `m::AbstractDSGEModel` or `m::AbstractVARModel`: model object
 
 ### Optional Arguments:
 - `data`: well-formed data as `Matrix` or `DataFrame`. If this is not provided, the `load_data` routine will be executed.
@@ -28,8 +28,24 @@ Estimate the DSGE parameter posterior distribution.
 - `mle`: Set to true if parameters should be estimated by maximum likelihood directly.
     If this is set to true, this function will return after estimating parameters.
 - `sampling`: Set to false to disable sampling from the posterior.
+- `filestring_addl::Vector{String}`: Additional strings to add to the file name
+    of estimation output as a way to distinguish output from each other.
+- `continue_intermediate::Bool`: set to true if the estimation is starting
+    from an intermediate stage that has been previously saved.
+- `intermediate_stage_start::Int`: number of the stage from which the user wants
+    to continue the estimation (see `continue_intermediate`)
+- `save_intermediate::Bool`: set to true to save intermediate stages when using SMC
+- `intermediate_stage_increment::Int`: number of stages that must pass before saving
+    another intermediate stage.
+- `tempered_update_prior_weight::Float64`: when using a tempered update, the user
+    can create a bridge distribution as a convex combination of the prior and a
+    previously ran estimation. This keyword is the relative weight on the prior
+    in the convex combination.
+-  `run_csminwel::Bool`: by default, csminwel is run after a SMC estimation finishes
+    to recover the true mode of the posterior. Set to false to avoid this step
+    (csminwel can take hours for medium-scale DSGE models).
 """
-function estimate(m::AbstractDSGEModel, df::DataFrame;
+function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
@@ -38,15 +54,19 @@ function estimate(m::AbstractDSGEModel, df::DataFrame;
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
-                  save_intermediate::Bool = false)
+                  save_intermediate::Bool = false,
+                  tempered_update_prior_weight::Float64 = 0.,
+                  run_csminwel::Bool = true)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              intermediate_stage_increment = intermediate_stage_increment,
-             save_intermediate = save_intermediate)
+             save_intermediate = save_intermediate,
+             tempered_update_prior_weight = tempered_update_prior_weight,
+             run_csminwel = run_csminwel)
 end
 
-function estimate(m::AbstractDSGEModel;
+function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
@@ -55,16 +75,21 @@ function estimate(m::AbstractDSGEModel;
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
-		          save_intermediate::Bool = false)
+		          save_intermediate::Bool = false,
+                  tempered_update_prior_weight::Float64 = 0.,
+                  run_csminwel::Bool = true)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              intermediate_stage_increment = intermediate_stage_increment,
-	         save_intermediate = save_intermediate)
+	         save_intermediate = save_intermediate,
+             tempered_update_prior_weight = tempered_update_prior_weight,
+
+             run_csminwel = run_csminwel)
 end
 
-function estimate(m::AbstractDSGEModel, data::AbstractArray;
+function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractArray;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
@@ -73,7 +98,9 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
-		          save_intermediate::Bool = false)
+		          save_intermediate::Bool = false,
+                  tempered_update_prior_weight::Float64 = 0.,
+                  run_csminwel::Bool = true)
 
     if !(get_setting(m, :sampling_method) in [:SMC, :MH])
         error("method must be :SMC or :MH")
@@ -124,7 +151,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
             println(verbose, :low, @sprintf "Optimization time elapsed: %5.2f\n" optimization_time += end_time)
 
             # Write params to file after every `n_iterations` iterations
-            params = map(θ->θ.value, m.parameters)
+            params = map(θ -> θ.value, get_parameters(m))
             h5open(rawpath(m, "estimate", "paramsmode.h5"),"w") do file
                 file["params"] = params
             end
@@ -136,7 +163,7 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
         end
     end
 
-    params = map(θ->θ.value, m.parameters)
+    params = map(θ -> θ.value, get_parameters(m))
 
     # Sampling does not make sense if mle=true
     if mle || !sampling
@@ -229,11 +256,13 @@ function estimate(m::AbstractDSGEModel, data::AbstractArray;
         ### of the posterior. Portions of this method are executed in
         ### parallel.
         ########################################################################################
-        smc(m, data; verbose = verbose, filestring_addl = filestring_addl,
-            continue_intermediate = continue_intermediate,
-            intermediate_stage_start = intermediate_stage_start,
-            save_intermediate = save_intermediate,
-            intermediate_stage_increment = intermediate_stage_increment)
+        smc2(m, data; verbose = verbose, filestring_addl = filestring_addl,
+             continue_intermediate = continue_intermediate,
+             intermediate_stage_start = intermediate_stage_start,
+             save_intermediate = save_intermediate,
+             intermediate_stage_increment = intermediate_stage_increment,
+             run_csminwel = run_csminwel,
+             tempered_update_prior_weight = tempered_update_prior_weight)
     end
 
     ########################################################################################
@@ -247,16 +276,16 @@ end
 
 """
 ```
-compute_parameter_covariance(m::AbstractDSGEModel)
+compute_parameter_covariance(m::Union{AbstractDSGEModel,AbstractVARModel})
 ```
 
 Calculates the parameter covariance matrix from saved parameter draws, and writes it to the
 parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 
 ### Arguments
-* `m::AbstractDSGEModel`: the model object
+* `m::Union{AbstractDSGEModel,AbstractVARModel}`: the model object
 """
-function compute_parameter_covariance(m::AbstractDSGEModel;
+function compute_parameter_covariance(m::Union{AbstractDSGEModel,AbstractVARModel};
                                       filestring_addl::Vector{String} = Vector{String}(undef, 0))
 
     sampling_method = get_setting(m, :sampling_method)
@@ -323,7 +352,7 @@ get_estimation_output_files(m)
 
 Returns a `Dict{Symbol, String}` with all files created by `estimate(m)`.
 """
-function get_estimation_output_files(m::AbstractDSGEModel)
+function get_estimation_output_files(m::Union{AbstractDSGEModel,AbstractVARModel})
     output_files = Dict{Symbol, String}()
 
     for file in [:paramsmode, :hessian, :mhsave]

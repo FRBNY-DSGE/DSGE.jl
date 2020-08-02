@@ -17,7 +17,7 @@ loading
 - `df`: A dataframe containing the aforementioned moments/bands
 """
 function load_posterior_moments(m::AbstractDSGEModel;
-                                cloud::ParticleCloud = ParticleCloud(m, 0),
+                                cloud::Union{SMC.Cloud,DSGE.Cloud,ParticleCloud} = ParticleCloud(m, 0),
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
                                 excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
@@ -25,7 +25,7 @@ function load_posterior_moments(m::AbstractDSGEModel;
     parameters = m.parameters
 
     # Read in Posterior Draws
-    if isempty(cloud)
+    if cloud_isempty(cloud)
         if get_setting(m, :sampling_method) == :MH
             params = load_draws(m, :full)
             params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params # TODO
@@ -65,7 +65,7 @@ end
 # Aggregating many ParticleClouds to calculate moments across
 # multiple SMC estimations
 function load_posterior_moments(m::AbstractDSGEModel,
-                                clouds::Vector{ParticleCloud};
+                                clouds::Union{Vector{ParticleCloud},Vector{SMC.Cloud}};
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
                                 excl_list::Vector{Symbol} = Vector{Symbol}(undef, 0),
@@ -329,7 +329,7 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
         params = groupings[group_desc]
 
         # Take out anticipated shock SDs 2 to k - these priors are all the same
-        antshock_params = [m[k] for k in [Symbol("σ_r_m$i") for i = 2:n_anticipated_shocks(m)]]
+        antshock_params = [m[k] for k in [Symbol("σ_r_m$i") for i = 2:n_mon_anticipated_shocks(m)]]
         params = setdiff(params, antshock_params)
 
         n_params = length(params)
@@ -342,8 +342,8 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
 
         # Write footnote about standard deviations of anticipated policy shocks
         function anticipated_shock_footnote(θ::Parameter)
-            if n_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
-                nantpad          = n_anticipated_shocks_padding(m)
+            if n_mon_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
+                nantpad          = n_mon_anticipated_shocks_padding(m)
                 all_sigmas       = [m[Symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
                 nonzero_sigmas   = Base.filter(θ -> !(θ.fixed && θ.value == 0), all_sigmas)
                 n_nonzero_sigmas = length(nonzero_sigmas)

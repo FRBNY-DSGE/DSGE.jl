@@ -1,67 +1,5 @@
-# Have all been moved to ModelConstructors.jl
-
-#=using DSGE, ModelConstructors
-using Test, Distributions, InteractiveUtils, Nullables
-
-@testset "Ensure transformations to the real line/model space are valid" begin
-    for T in subtypes(Transform)
-        global u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
-        @test ( transform_to_real_line(u) |> x -> transform_to_model_space(u,x) ) == u.value
-
-        if !isa(T,Type{ModelConstructors.Untransformed})
-            # check transform_to_real_line and transform_to_model_space to different things if T is not ModelConstructors.Untransformed
-            @test transform_to_real_line(u,u.value) != transform_to_model_space(u,u.value)
-        end
-    end
-end
-
-# probability
-N = 10^2
-u = parameter(:bloop, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.SquareRoot(); fixed = true)
-v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), Gamma(2.00, 0.1))
-
-pvec =  ParameterVector{Float64}(undef, N)
-for i in 1:length(pvec)
-	pvec[i] = (i%2 == 0) ? u : v
-end
-@testset "Check logpdf/pdf function approximations" begin
-    @test logpdf(pvec) ≈ 50*logpdf(v)
-    @test pdf(pvec) ≈ exp(50*logpdf(v))
-end
-
-updated = update(pvec, ones(length(pvec)))
-ModelConstructors.update!(pvec, ones(length(pvec)))
-
-@testset "Check if update! preserves dimensions and values" begin
-    @test all(updated .== pvec)
-    @test logpdf(pvec) == logpdf(updated)
-end
-
-# test we only update non-fixed parameters
-@testset "Ensure only non-fixed parameters are updated" begin
-    for p in pvec
-        if p.fixed
-            @test p.value == 2.5230
-        elseif isa(p, Parameter)
-            @test p.value == one(Float64)
-        end
-    end
-end
-
-# vector of new values must be the same length
-@testset "Ensure update! enforces the same length of the parameter vector being updated" begin
-    @test_throws AssertionError ModelConstructors.update!(pvec, ones(length(pvec)-1))
-end
-
-@testset "Ensure parameters being updated are of the same type." begin
-    for w in [parameter(:moop, 3.0, fixed=false), parameter(:moop, 3.0; scaling = log, fixed=false)]
-        # new values must be of the same type
-        @test_throws MethodError parameter(w, one(Int))
-
-        # new value is out of bounds
-        @test_throws ParamBoundsError parameter(w, -1.)
-    end
-end
+# Tests related to ModelConstructors and making sure
+# its code related to parameters work w/DSGE.jl
 
 # subspecs
 function sstest(m::AnSchorfheide)
@@ -77,18 +15,65 @@ function sstest(m::AnSchorfheide)
                    description= "ι_p: Another new parameter",
                    tex_label="\\iota_p")
 
-
     # Change a fixed parameter
     m <= parameter(:δ, 0.02,  fixed=true,
                    description="δ: The capital depreciation rate.", tex_label="\\delta" )
 
-
     # Overwrite a fixed parameter with an unfixed parameter
-    m <= parameter(:ϵ_p, 0.750, (1e-5, 10.),   (1e-5, 10.),     ModelConstructors.Exponential(),    GammaAlt(0.75, 0.4),        fixed=false,  scaling = x -> 1 + x/100,
+    m <= parameter(:ϵ_p, 0.750, (1e-5, 10.),   (1e-5, 10.),     ModelConstructors.Exponential(),    GammaAlt(0.75, 0.4),
+                   fixed=false,  scaling = x -> 1 + x/100,
                    description="ϵ_p: No description available.",
                    tex_label="\\varepsilon_{p}")
 
     steadystate!(m)
+end
+
+# Test update! with regime switching
+m = Model1002()
+m <= Setting(:regime_switching, true)
+m <= Setting(:n_regimes, 2)
+m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
+                                            2 => Date(2012, 3, 31)))
+
+ModelConstructors.set_regime_val!(m[:σ_g], 1, 2.523)
+ModelConstructors.set_regime_val!(m[:σ_g], 2, 0.; override_bounds = true)
+ModelConstructors.set_regime_val!(m[:σ_b], 1, 0.0292)
+ModelConstructors.set_regime_val!(m[:σ_b], 2, 0.0292)
+ModelConstructors.set_regime_val!(m[:α], 1, 0.1596)
+ModelConstructors.set_regime_val!(m[:α], 2, 0.0292)
+
+draw = vec(rand(m.parameters, 1, regime_switching = true))
+ModelConstructors.update(m.parameters, draw)
+σ_g_ind = findfirst(x->x.key==:σ_g, m.parameters)
+σ_b_ind = findfirst(x->x.key==:σ_b, m.parameters)
+α_ind = findfirst(x->x.key==:α, m.parameters)
+@testset "Test regime switching with two regimes" begin
+    @test draw[α_ind] == m.parameters[α_ind].regimes[:value][1]
+    @test draw[σ_g_ind] ==  m.parameters[σ_g_ind].regimes[:value][1]
+    @test draw[σ_b_ind] ==  m.parameters[σ_b_ind].regimes[:value][1]
+    @test draw[end-2] ==  m.parameters[α_ind].regimes[:value][2]
+    @test draw[end-1] ==  m.parameters[σ_g_ind].regimes[:value][2]
+    @test draw[end] ==  m.parameters[σ_b_ind].regimes[:value][2]
+end
+
+m = Model1002()
+m <= Setting(:regime_switching, true)
+m <= Setting(:n_regimes, 2)
+m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
+                                            2 => Date(2012, 3, 31),
+                                            3 => Date(2015, 3, 31)))
+
+ModelConstructors.set_regime_val!(m[:σ_g], 1, 2.523)
+ModelConstructors.set_regime_val!(m[:σ_g], 2, 0.; override_bounds = true)
+ModelConstructors.set_regime_val!(m[:σ_g], 3, 2.523)
+
+draw = vec(rand(m.parameters, 1, regime_switching = true))
+ModelConstructors.update(m.parameters, draw)
+
+@testset "Test regime switching with two regimes" begin
+    @test draw[σ_g_ind] ==  m.parameters[σ_g_ind].regimes[:value][1]
+    @test draw[end-1] ==  m.parameters[σ_g_ind].regimes[:value][2]
+    @test draw[end] ==  m.parameters[σ_g_ind].regimes[:value][3]
 end
 
 m = AnSchorfheide()
@@ -117,5 +102,31 @@ sstest(m)
     @test m[:ϵ_p].fixed==false
 end
 
-nothing
-=#
+m = AnSchorfheide()
+let lastparam = parameter(:p, 0.0)
+    for θ in m.parameters
+        isa(θ, Parameter) && (lastparam = θ)
+    end
+    @testset "Check AnSchorfheide last parameter" begin
+        @test isa(lastparam, Parameter)
+        @test lastparam.value == 0.20*2.237937
+    end
+end
+
+# transform_to_real_line and transform_to_model_space, acting on the entire parameter vector. they should be inverses!
+pvec = m.parameters
+vals = transform_to_real_line(pvec)
+transform_to_model_space!(m, vals)
+@testset "Check parameter transformations for optimization part 2" begin
+    @test pvec == m.parameters
+end
+
+# all fixed parameters should be unchanged by both transform_to_real_line and transform_to_model_space
+@testset "Check fixed parameters are unchanged by optimization transformations" begin
+    for θ in m.parameters
+        if θ.fixed
+            @test θ.value == transform_to_real_line(θ)
+            @test θ.value == transform_to_model_space(θ, θ.value)
+        end
+    end
+end

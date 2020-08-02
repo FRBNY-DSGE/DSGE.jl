@@ -167,9 +167,9 @@ function test_matrix_eq2(expect::AbstractArray,
                          ϵ_abs::Float64 = 1e-6,
                          ϵ_rel::Float64 = 1e-2) where {T<:AbstractFloat}
     if length(expect) ≠ length(actual)
-        error("lengths of ", expstr, " and ", actstr, " do not match: ",
+        error("") #="lengths of ", expstr, " and ", actstr, " do not match: ",
               "\n  ", expstr, " (length $(length(expect))) = ", expect,
-              "\n  ", actstr, " (length $(length(actual))) = ", actual)
+              "\n  ", actstr, " (length $(length(actual))) = ", actual)=#
     end
 
     # Absolute difference filter

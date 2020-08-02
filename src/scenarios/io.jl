@@ -232,7 +232,8 @@ function read_scenario_output(m::AbstractDSGEModel, scen::SingleScenario, class:
     end
 end
 
-function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg::ScenarioAggregate, class::Symbol,
+function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, m_cov::AbstractDSGEModel,
+                              agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
@@ -254,15 +255,20 @@ function read_scenario_output(m::AbstractDSGEModel, m904::AbstractDSGEModel, agg
 
     for (i, scen) in enumerate(agg.scenarios)
         if in(:scenarios, fieldnames(typeof(scen))) #length(scen.scenarios)>1
-            scen_draws, transform, scen_dates = read_scenario_output(m, m904, scen, class, product, var_name)
+            scen_draws, transform, scen_dates = read_scenario_output(m, m904, m_cov, scen, class, product, var_name)
         else
             if scen.key==:bor8 || scen.key==:bor9 || scen.key==:bor8_02 || scen.key==:bor9_02
                 if var_name==:obs_corepce
                     var_name = :obs_gdpdeflator
                 end
                 # Recursively read in scenario draws
+                @show m904
                 scen_draws, transform, scen_dates = read_scenario_output(m904, scen, class, product, var_name)
+            elseif scen.key==:bor10 || scen.key == :bor11
+                @show m_cov
+                scen_draws, transform, scen_dates = read_scenario_output(m_cov, scen, class, product, var_name)
             else
+                @show m
                 # Recursively read in scenario draws
                 scen_draws, transform, scen_dates = read_scenario_output(m, scen, class, product, var_name)
             end

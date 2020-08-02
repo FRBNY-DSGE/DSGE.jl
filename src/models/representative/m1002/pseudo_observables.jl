@@ -4,8 +4,9 @@ function init_pseudo_observable_mappings!(m::Model1002)
                     :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t,
                     :Expected10YearRateGap, :NominalFFR, :Expected10YearRate,
                     :Expected10YearNaturalRate,
-                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth,
-                    :u_t]
+                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth, :u_t]
+                    # :i_f_t, :R_t, :c_f_t, :qk_f_t, :k_f_t, :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :rktil_f_t, :n_f_t, :c_t,
+                    # :b_t, :r_f_t]
 
     if subspec(m) == "ss12"
         to_add = [:g_t, :b_t, :μ_t, :λ_f_t, :λ_w_t, :rm_t, :σ_ω_t, :μ_e_t,
@@ -17,6 +18,100 @@ function init_pseudo_observable_mappings!(m::Model1002)
         push!(pseudo_names, :Sinf_t, :Sinf_w_coef_t, :ι_p, :πtil_t, :πtil_t1, :e_tfp_t)
         if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
             push!(pseudo_names, :e_tfp_t1)
+        end
+    end
+
+    # if subspec(m) in ["ss59", "ss60", "ss61"]
+    #     push!(pseudo_names, :ziid, :varphiiid, :biidc)
+    # end
+
+    if haskey(m.settings, :add_NominalWageGrowth)
+        if get_setting(m, :add_NominalWageGrowth)
+            push!(pseudo_names, :NominalWageGrowth)
+        end
+    end
+    if haskey(m.settings, :add_ztil)
+        if get_setting(m, :add_ztil)
+            push!(pseudo_names, :ztil)
+        end
+    end
+    if haskey(m.settings, :add_zp)
+        if get_setting(m, :add_zp)
+            push!(pseudo_names, :zp)
+        end
+    end
+    if haskey(m.settings, :add_pgap)
+        if get_setting(m, :add_pgap)
+            push!(pseudo_names, :pgap)
+        end
+    end
+    if haskey(m.settings, :add_ygap)
+        if get_setting(m, :add_ygap)
+            push!(pseudo_names, :ygap)
+        end
+    end
+
+    if haskey(m.settings, :add_urhat)
+        if get_setting(m, :add_urhat)
+            push!(pseudo_names, :urhat)
+        end
+    end
+
+    if haskey(m.settings, :add_rw)
+        if get_setting(m, :add_rw)
+            push!(pseudo_names, :rw)
+            push!(pseudo_names, :Rref)
+        end
+    end
+
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            push!(pseudo_names, :laborshare_t)
+        end
+    end
+
+    if haskey(m.settings, :add_laborproductivity_measurement)
+        if get_setting(m, :add_laborproductivity_measurement)
+            push!(pseudo_names, :laborproductivity)
+        end
+    end
+
+    if haskey(m.settings, :add_nominalgdp_level)
+        if get_setting(m, :add_nominalgdp_level)
+            push!(pseudo_names, :NominalGDPLevel)
+        end
+    end
+
+    if haskey(m.settings, :add_nominalgdp_growth)
+        if get_setting(m, :add_nominalgdp_growth)
+            push!(pseudo_names, :NominalGDPGrowth)
+        end
+    end
+
+    if haskey(m.settings, :add_flexible_price_growth)
+        if get_setting(m, :add_flexible_price_growth)
+            push!(pseudo_names, :FlexibleGDPGrowth, :FlexibleConsumptionGrowth, :FlexibleInvestmentGrowth)
+        end
+    end
+
+    if haskey(m.settings, :add_cumulative)
+        if get_setting(m, :add_cumulative)
+            push!(pseudo_names, :AccumOutputGap, :GDPLevel,
+                  :TechnologyLevel, :FlexibleGDPLevel, :ConsumptionLevel,
+                  :FlexibleConsumptionLevel, :InvestmentLevel,
+                  :FlexibleInvestmentLevel)
+        end
+    end
+
+    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+        if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
+            push!(pseudo_names, :LaborProductivityGrowthNoME)
+        end
+    end
+
+    if haskey(m.settings, :add_Epi_t_measurement)
+        if get_setting(m, :add_Epi_t_measurement)
+            push!(pseudo_names, :Epi_t)
         end
     end
 
@@ -101,6 +196,49 @@ function init_pseudo_observable_mappings!(m::Model1002)
     pseudo[:u_t].name     = "u_t"
     pseudo[:u_t].longname = "u_t"
 
+    # pseudo[:i_f_t].name     = "i_f_t"
+    # pseudo[:i_f_t].longname = "i_f_t"
+
+    # pseudo[:R_t].name     = "R_t"
+    # pseudo[:R_t].longname = "R_t"
+
+    # pseudo[:c_f_t].name     = "c_f_t"
+    # pseudo[:c_f_t].longname = "c_f_t"
+
+    # pseudo[:r_f_t].name     = "r_f_t"
+    # pseudo[:r_f_t].longname = "r_f_t"
+
+    # pseudo[:qk_f_t].name     = "qk_f_t"
+    # pseudo[:qk_f_t].longname = "qk_f_t"
+
+    # pseudo[:k_f_t].name     = "k_f_t"
+    # pseudo[:k_f_t].longname = "k_f_t"
+
+    # pseudo[:kbar_f_t].name     = "kbar_f_t"
+    # pseudo[:kbar_f_t].longname = "kbar_f_t"
+
+    # pseudo[:u_f_t].name     = "u_f_t"
+    # pseudo[:u_f_t].longname = "u_f_t"
+
+    # pseudo[:rk_f_t].name     = "rk_f_t"
+    # pseudo[:rk_f_t].longname = "rk_f_t"
+
+    # pseudo[:w_f_t].name     = "w_f_t"
+    # pseudo[:w_f_t].longname = "w_f_t"
+
+    # pseudo[:L_f_t].name     = "L_f_t"
+    # pseudo[:L_f_t].longname = "L_f_t"
+
+
+    # pseudo[:rktil_f_t].name     = "rktil_f_t"
+    # pseudo[:rktil_f_t].longname = "rktil_f_t"
+
+    # pseudo[:b_t].name     = "b_t"
+    # pseudo[:b_t].longname = "b_t"
+
+    # pseudo[:n_f_t].name     = "n_f_t"
+    # pseudo[:n_f_t].longname = "n_f_t"
+
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         pseudo[:Sinf_t].name     = "Sinf_t"
         pseudo[:Sinf_t].longname = "Sinf_t, PDV of Emc_t"
@@ -123,8 +261,139 @@ function init_pseudo_observable_mappings!(m::Model1002)
     # Other exogenous processes
     if subspec(m) == "ss12"
         for i in to_add
-            pseudo[i].name = DSGE.detexify(i)
-            pseudo[i].longname = DSGE.detexify(i)
+            pseudo[i].name = string(DSGE.detexify(i))
+            pseudo[i].longname = string(DSGE.detexify(i))
+        end
+    end
+
+    if haskey(m.settings, :add_NominalWageGrowth)
+        if get_setting(m, :add_NominalWageGrowth)
+            pseudo[:NominalWageGrowth].name = "Nominal Wage Growth"
+            pseudo[:NominalWageGrowth].longname = "Nominal Wage Growth"
+        end
+    end
+
+    if haskey(m.settings, :add_laborshare_measurement)
+        if get_setting(m, :add_laborshare_measurement)
+            pseudo[:laborshare_t].name     = "Log Labor Share"
+            pseudo[:laborshare_t].longname = "Log Labor Share"
+        end
+    end
+
+    if haskey(m.settings, :add_nominalgdp_level)
+        if get_setting(m, :add_nominalgdp_level)
+            pseudo[:NominalGDPLevel].name     = "Nominal GDP Level"
+            pseudo[:NominalGDPLevel].longname = "Nominal GDP Level"
+        end
+    end
+
+    if haskey(m.settings, :add_nominalgdp_growth)
+        if get_setting(m, :add_nominalgdp_growth)
+            pseudo[:NominalGDPGrowth].name     = "Nominal GDP Growth"
+            pseudo[:NominalGDPGrowth].longname = "Nominal GDP Growth"
+        end
+    end
+
+    if haskey(m.settings, :add_cumulative)
+        if get_setting(m, :add_cumulative)
+            pseudo[:AccumOutputGap].name     = "Accumulated Output Gap"
+            pseudo[:AccumOutputGap].longname = "Accumulated Output Gap"
+            pseudo[:GDPLevel].name     = "GDP Level"
+            pseudo[:GDPLevel].longname = "GDP Level"
+            pseudo[:TechnologyLevel].name     = "Technology (z) Level"
+            pseudo[:TechnologyLevel].longname = "Technology (z) Level"
+            pseudo[:FlexibleGDPLevel].name     = "Flexible GDP Level"
+            pseudo[:FlexibleGDPLevel].longname = "Flexible GDP Level"
+            pseudo[:ConsumptionLevel].name     = "Consumption Level"
+            pseudo[:ConsumptionLevel].longname = "Consumption Level"
+            pseudo[:FlexibleConsumptionLevel].name     = "Flexible Consumption Level"
+            pseudo[:FlexibleConsumptionLevel].longname = "Flexible Consumption Level"
+            pseudo[:InvestmentLevel].name     = "Investment Level"
+            pseudo[:InvestmentLevel].longname = "Investment Level"
+            pseudo[:FlexibleInvestmentLevel].name     = "Flexible Investment Level"
+            pseudo[:FlexibleInvestmentLevel].longname = "Flexible Investment Level"
+        end
+    end
+
+    if haskey(m.settings, :add_flexible_price_growth)
+        if get_setting(m, :add_flexible_price_growth)
+            pseudo[:FlexibleGDPGrowth].name     = "Flexible GDP Level"
+            pseudo[:FlexibleGDPGrowth].longname = "Flexible GDP Growth"
+            pseudo[:FlexibleConsumptionGrowth].name     = "Flexible Consumption Growth"
+            pseudo[:FlexibleConsumptionGrowth].longname = "Flexible Consumption Growth"
+            pseudo[:FlexibleInvestmentGrowth].name     = "Flexible Investment Growth"
+            pseudo[:FlexibleInvestmentGrowth].longname = "Flexible Investment Growth"
+        end
+    end
+
+    if haskey(m.settings, :add_ztil)
+        if get_setting(m, :add_ztil)
+            pseudo[:ztil].name     = "ztil"
+            pseudo[:ztil].longname = "ztil"
+        end
+    end
+    if haskey(m.settings, :add_zp)
+        if get_setting(m, :add_zp)
+            pseudo[:zp].name     = "zp"
+            pseudo[:zp].longname = "zp"
+        end
+    end
+    if haskey(m.settings, :add_pgap)
+        if get_setting(m, :add_pgap)
+            pseudo[:pgap].name     = "pgap"
+            pseudo[:pgap].longname = "pgap"
+        end
+    end
+    if haskey(m.settings, :add_ygap)
+        if get_setting(m, :add_ygap)
+            pseudo[:ygap].name     = "ygap"
+            pseudo[:ygap].longname = "ygap"
+        end
+    end
+
+    if haskey(m.settings, :add_urhat)
+        if get_setting(m, :add_urhat)
+            pseudo[:urhat].name     = "urhat"
+            pseudo[:urhat].longname = "urhat"
+        end
+    end
+
+    if haskey(m.settings, :add_rw)
+        if get_setting(m, :add_rw)
+            pseudo[:rw].name     = "rw"
+            pseudo[:rw].longname = "rw"
+            pseudo[:Rref].name     = "Rref"
+            pseudo[:Rref].longname = "Rref"
+        end
+    end
+
+    # if subspec(m) in ["ss59", "ss60", "ss61"]
+    #     pseudo[:ziid].name     = "ziid"
+    #     pseudo[:ziid].longname = "ziid"
+    #     pseudo[:biidc].name     = "biidc"
+    #     pseudo[:biidc].longname = "biidc"
+    #     pseudo[:varphiiid].name     = "varphiiid"
+    #     pseudo[:varphiiid].longname = "varphiiid"
+    # end
+
+    if haskey(m.settings, :add_laborproductivity_measurement)
+        if get_setting(m, :add_laborproductivity_measurement)
+            pseudo[:laborproductivity].name     = "Log Labor Productivity"
+            pseudo[:laborproductivity].longname = "Log Labor Productivity"
+        end
+    end
+
+    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+        if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
+            pseudo[:LaborProductivityGrowthNoME].name     = "Labor Productivity Growth (No ME)"
+            pseudo[:LaborProductivityGrowthNoME].longname = "Labor Productivity Growth (No ME)"
+        end
+    end
+
+    if haskey(m.settings, :add_Epi_t_measurement)
+        if get_setting(m, :add_Epi_t_measurement)
+            pseudo[:Epi_t].name     = "Short-term Inflation Expectations"
+            pseudo[:Epi_t].longname = "Short-term Inflation Expectations"
         end
     end
 

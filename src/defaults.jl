@@ -48,7 +48,7 @@ function default_settings!(m::AbstractDSGEModel)
     settings[:date_mainsample_start] = Setting(:date_mainsample_start, quartertodate("1960-Q1"),
         "Start date of main sample")
     settings[:date_zlb_start] = Setting(:date_zlb_start, quartertodate("2008-Q4"),
-        "Start date of zero lower bound regime")
+        "Start date of first zero lower bound regime")
     settings[:date_forecast_start] = Setting(:date_forecast_start,
                                              Dates.lastdayofquarter(Dates.today()),
         "Start date of forecast period")
@@ -57,9 +57,9 @@ function default_settings!(m::AbstractDSGEModel)
         "End date of conditional data period")
 
     # Anticipated shocks
-    settings[:n_anticipated_shocks] = Setting(:n_anticipated_shocks, 0,
+    settings[:n_mon_anticipated_shocks] = Setting(:n_mon_anticipated_shocks, 0,
         "Number of anticipated policy shocks")
-    settings[:n_anticipated_shocks_padding] = Setting(:n_anticipated_shocks_padding, 20,
+    settings[:n_mon_anticipated_shocks_padding] = Setting(:n_mon_anticipated_shocks_padding, 20,
         "Padding for anticipated policy shocks")
 
     # General computation
@@ -194,6 +194,8 @@ function default_settings!(m::AbstractDSGEModel)
     # Temporary setting to save different output files
     settings[:adaptive_tempering_target_smc] = Setting(:adaptive_tempering_target_smc, 0.97, false,
          "adpt", "Either the adaptive tempering target or 0.0 if using fixed schedule")
+    settings[:tempered_update_prior_weight] = Setting(:tempered_update_prior_weight, 0.0, false,
+         "prior_weight", "When bridging from old estimation, how much weight to put on prior.")
     settings[:smc_iteration] = Setting(:smc_iteration, 1, false, "iter",
         "The iteration index for the number of times smc has been run on the same data vintage. " *
         "Primarily for numerical accuracy/testing purposes.")

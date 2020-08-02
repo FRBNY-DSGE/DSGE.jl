@@ -1,4 +1,4 @@
-# Advanced Usage
+# [Advanced Usage](@id advanced-usage)
 
 ```@meta
 CurrentModule = DSGE
@@ -36,7 +36,7 @@ so a user will need to manually set the data vintage to the desired date.
 
 Below, we describe several important settings for package usage.
 
-For more details on implementation and usage of settings, see [Model Settings](@ref).
+For more details on implementation and usage of settings, see [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
 See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults.jl) for the complete description of default settings.
 
@@ -44,7 +44,20 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 
 - `saveroot::String`: The root directory for model output.
 - `use_parallel_workers::Bool`: Use available parallel workers in computations.
-- `n_anticipated_shocks`: Number of anticipated policy shocks.
+- `n_mon_anticipated_shocks::Int`: Number of anticipated policy shocks.
+- `antshocks::Dict{Symbol, Int}`: a dictionary mapping the name of an anticipated shock
+  to the number of periods of anticipation, e.g. `:b => 2` adds anticipated `b` shocks up to
+  two periods ahead.
+- `ant_eq_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's exogenous process, e.g. `:b => :b`
+  maps an anticipated `b` shock to the equation `eq_b`.
+- `ant_eq_E_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's one-period ahead expectation
+  e.g. `:b => :Eb`  maps an anticipated `b` shock to the equation `eq_Eb`, where `Eb` is ``E_t[b_{t + 1}]``.
+- `proportional_antshocks::Vector{Symbol}`: a vector of the names of one-period ahead anticipated shocks which are specified
+  as directly proportional to the realizations of the current period's unanticipated shocks. For a shock `b`,
+  the automatically generated parameter `σ_b_prop` defines the proportionality to the current period shock, e.g.
+  a value of 1 indicates an anticipated shock in the next period of the same size as the current period's unanticipated shock.
 
 #### Data and I/O
 
@@ -140,6 +153,9 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
   [Forecasting](@ref).
 - `forecast_horizons::Int`: Number of periods to forecast.
 - `impulse_response_horizons::Int`: Number of periods for which to calculate IRFs.
+- `n_periods_no_shocks::Int`: Number of periods for which no shocks are drawn (e.g.
+  a full-distribution forecast draws shocks, but if `n_periods_no_shocks = 3`, then for
+  3 periods in the forecast horizon, no shocks will be drawn)
 
 #### Alternative Policy
 
@@ -184,6 +200,135 @@ object's `settings` field. However, with the additional keyword argument
 m = Model990(custom_settings = custom_settings, testing = true)
 ```
 
+## [Regime-Switching Forecasts](@id regime-switch-forecast)
+
+Forecasts can involve state-space systems with exogenous and unanticipated regime-switching
+in the history periods and forecast horizon. Anticipated temporary alternative policies
+can also occur in the forecast horizon. Historical
+regime switching may occur to reflect structural breaks or
+to allow a DSGE to handle special circumstances, such as the COVID-19 pandemic.
+Regime switches in the forecast horizon may occur because of
+temporary alternative policies. In a rational expectations equilibrium,
+agents will behave differently if they know a forecasted policy is temporary
+rather than permanent. Using exogenous regime-switching along with a modified
+`gensys` solution algorithm is one way of implementing this expectation.
+
+In this section, we will go over the interface for running
+regime-switching forecasts and discuss some details of the implementation.
+It is useful to also look at the posted
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl) for regime-switching.
+To understand how to implement your own regime-switching model, we recommend
+examining the implementation of [regime-switching
+equilibrium conditions](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
+for `Model1002` and how it is integrated with our [solvers](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/solve/solve.jl).
+For a guide to running temporary alternative policies, please see [Alternative Policies](@ref).
+
+### Preparing a Model's Settings for Regime-Switching
+
+Suppose we wanted to run a regime-switching forecast, where
+where the regimes are 1959:Q3-1989:Q4, 1990:Q1-2019:Q3, and 2019:Q4 to the
+end of the forecast horizon. The following lines are required:
+
+```
+m <= Setting(:regime_switching, true)
+m <= Setting(:regime_dates, Dict{Int, Date}(1 => Date(1959, 9, 30), 2 => Date(1990, 3, 31),
+                                            3 => Date(2019, 12, 31))
+```
+
+The first setting turns on regime switching. Internally, functions like `forecast_one`
+will decide whether to use regime switching or not depending
+on whether `get_setting(m, :regime_switching)` is true and whether
+there are actually multiple regimes specified by `:regime_dates`.
+The second setting is a `Dict` mapping
+the regime number to the first date (inclusive) of that regime.
+
+Before running a forecast, we must also run
+
+```
+setup_regime_switching_inds!(m)
+```
+
+which will automatically compute the (required) settings
+
+- `:reg_forecast_start`: Regime of the first forecast start period
+- `:reg_post_conditional_end`: Regime of the period after the last conditional forecast period
+- `:n_regimes`: Number of total regimes. If this is 1, then regime switching will not occur.
+- `:n_hist_regimes`: Number of regimes in the history
+- `:n_fcast_regimes`: Number of regimes in the forecast horizon (including the conditional forecast)
+- `:n_cond_regimes`: Number of regimes in the conditional forecast
+
+Finally, to run a full-distribution forecast with regime-switching
+using `forecast_one` or `usual_model_forecast`, it is necessary to manually
+construct the matrix of parameter draws and pass them as an input with the keyword `params`.
+Currently, we have not fully implemented loading parameters from a saved estimation file.
+For an example about how to do this, see this
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl).
+
+
+### Available Types of Regime Switching
+
+There are two cases involving regime switching that are implemented in DSGE.jl
+
+- Regime switching parameters
+- Temporary alternative policies
+
+To implement regime-switching parameters, see the
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl) for a regime-switching forecast.
+For further details, see
+the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl),
+which implements regime-switching parameters.
+
+Once the regime-switching settings are properly created, the syntax for running a forecast
+is the same as when there is no regime-switching. See [Forecasting](@ref).
+
+### Handling of the Zero Lower Bound (ZLB)
+
+Technically speaking, the New York Fed DSGE model handles the ZLB as a separate regime
+in which anticipated monetary policy shocks become "alive" and have positive
+standard deviations. However, the ZLB is not implemented
+as a separate regime. The reason is the only difference in the "pre-ZLB" and "post-ZLB"
+regimes is whether or not anticipated monetary policy shocks are non-zero. For an example, see
+the [smoothing code](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/forecast/smooth.jl)
+as well as the auxiliary functions `zlb_regime_matrices` and `zlb_regime_indices`
+in this [file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/estimate/kalman.jl).
+
+
+This approach saves computational time. Rather than creating redundant matrices,
+we directly zero/un-zero the appropriate entries in the pre- and post-ZLB `QQ` matrices.
+This approach also economizes on unnecessary switching,
+For instance, during the calculation of shock decompositions and trends, it is unnecessary
+to distinguish between the pre- and post-ZLB regimes.
+
+## Automatically Generating Anticipated Shocks
+
+We have implemented some functionality for automatically adding anticipated shocks
+for `Model1002`. To add these shocks, the user must pass custom settings
+into the constructor using the `custom_settings` keyword. The available settings
+for defining these shocks are:
+
+- `antshocks::Dict{Symbol, Int}`: a dictionary mapping the name of an anticipated shock
+  to the number of periods of anticipation, e.g. `:b => 2` adds anticipated `b` shocks up to
+  two periods ahead.
+- `ant_eq_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's exogenous process, e.g. `:b => :b`
+  maps an anticipated `b` shock to the equation `eq_b`.
+- `ant_eq_E_mapping::Dict{Symbol, Symbol}`: a dictionary mapping the name of an anticipated shock
+  to the name of the state variable in the equation defining the shock's one-period ahead expectation
+  e.g. `:b => :Eb`  maps an anticipated `b` shock to the equation `eq_Eb`, where `Eb` is ``E_t[b_{t + 1}]``.
+- `proportional_antshocks::Vector{Symbol}`: a vector of the names of one-period ahead anticipated shocks which are specified
+  as directly proportional to the realizations of the current period's unanticipated shocks. For a shock `b`,
+  the automatically generated parameter `σ_b_prop` defines the proportionality to the current period shock, e.g.
+  a value of 1 indicates an anticipated shock in the next period of the same size as the current period's unanticipated shock.
+
+As an example, the following code
+creates an instance of `Model1002` with anticipation of `b` shocks up to two periods ahead.
+
+```
+custom_settings = Dict{Symbol, Setting}(:antshocks => Setting(:antshocks, Dict{Symbol, Int}(:b => 2)),
+                :ant_eq_mapping => Setting(:ant_eq_mapping, Dict{Symbol, Symbol}(:b => :b)))
+m = Model1002("ss10"; custom_settings = custom_settings)
+```
+
 ## [Editing or Extending a Model](@id editing-extending-model)
 
 Users may want to extend or edit `Model990` in a number of different ways.  The most common
@@ -211,8 +356,6 @@ model-level (as opposed to code-level) version control. Second, it avoids potent
 filename collisions, preventing the user from overwriting output from previous estimations
 with the original parameters. The protocol for defining new sub-specifications is described
 in [Model sub-specifications](@ref model-sub-specifications-msubspec).
-
-Overriding default settings is described in the [Model Settings](@ref) section.
 
 ### [Model specification (`m.spec`)](@id model-specification-mspec)
 
@@ -275,3 +418,12 @@ for `Model990` with `ss1` as an argument. For example,
 ```julia
 m = Model990("ss1")
 ```
+
+## Additional Tips
+* The file `abstractdsgemodel.jl` defines numerous auxiliary functions, which allow the
+  user to more easily call standard settings or count the number of dimensions for
+  important variables. For example, `data_vintage(m)` returns the vintage of the data
+  specified by the model object `m`. Additionally see `abstractmodel.jl` in
+  [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl)
+  for more functions like `n_observables(m)`, which returns
+  the number of observables in `m`.

@@ -4,7 +4,7 @@
 
 The `DSGE.jl` package implements the New York Fed dynamic stochastic general equilibrium (DSGE) model and provides general code to estimate many user-specified DSGE models. The package is introduced in the Liberty Street Economics blog post
 [The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
-(We previously referred to our model as the "FRBNY DSGE Model".)
+(We previously referred to our model as the "FRBNY DSGE Model.")
 
 This Julia-language implementation mirrors the MATLAB code included in the
 Liberty Street Economics blog post
@@ -25,13 +25,33 @@ Further extensions of the DSGE model code may be released at the discretion of t
 pkg> add DSGE
 ```
 
+*Note we do not test our code in Windows OS, so we cannot guarantee the code works properly in Windows.*
+
 ## Versioning
 
-`DSGE.jl` is currently compatible with Julia `v1.0` and `v1.1`.
+`DSGE.jl` is currently compatible with Julia `v1.x` (as of `v1.1.6`).
 
 To use `DSGE.jl` with Julia `v0.7`, please check out tag `0.8.1`. To do this, click on the drop-down menu that reads `branch:master` on the left-hand side of the page. Select `tags`, then `v0.8.1`.  If you've already cloned the repo, you can simply run `git checkout v0.8.1`.
 
 To use `DSGE.jl` with Julia `v0.6`, please check out tag `0.4.1`.
+
+*In Windows OS, installing `DSGE.jl` in Julia `v1.1` appears to trigger the error `AssertionError: length(dirs) == 1` according to several users. Because we do not test the package in Windows OS, unfortunately we do not know the source of this error.*
+
+## Precompilation
+
+The `DSGE.jl` package is not precompiled by default because when running code in parallel, we want to re-compile
+the copy of `DSGE.jl` on each processor to guarantee the right version of the code is being used. If users do not
+anticipate using parallelism, then users ought to change the first line of `src/DSGE.jl` from
+
+```
+isdefined(Base, :__precompile__) && __precompile__(false)
+```
+
+to
+
+```
+isdefined(Base, :__precompile__) && __precompile__(true)
+```
 
 Disclaimer
 ------

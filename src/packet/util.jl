@@ -104,7 +104,7 @@ month_label(m)
 
 Create the correct month labels for a forecast.
 """
-function month_label(m::AbstractModel)
+function month_label(m::AbstractDSGEModel)
     date =
     # If within the same year
     if (Dates.year(date_forecast_start(m)) - 2000) == Meta.parse(data_vintage(m)[1:2])

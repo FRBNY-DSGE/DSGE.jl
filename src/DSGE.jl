@@ -23,8 +23,9 @@ module DSGE
                               n_states, n_states_augmented, n_shocks_exogenous,
                               n_shocks_expectational, n_observables, n_pseudo_observables,
                               n_equilibrium_conditions, n_parameters, n_parameters_steady_state,
-                              n_parameters_free, SteadyStateParameterGrid
-    import SMC: get_vals
+                              n_parameters_free, SteadyStateParameterGrid, get_setting, prior,
+                              savepath, filestring_base, data_vintage
+    import SMC: get_vals, get_logpost
     import Calculus, Missings, Nullables
     import StateSpaceRoutines: KalmanFilter
     import SparseArrays: sparse, spdiagm, spzeros
@@ -36,6 +37,7 @@ module DSGE
         # abstractdsgemodel.jl
         AbstractDSGEModel, AbstractRepModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
+        n_mon_anticipated_shocks, n_mon_anticipated_shocks_padding,
         date_presample_start, date_mainsample_start, date_zlb_start,
         date_presample_end, date_prezlb_end, date_mainsample_end, date_conditional_end,
         index_presample_start, index_mainsample_start, index_zlb_start, index_forecast_start,
@@ -63,10 +65,14 @@ module DSGE
         load_parameters_from_file, specify_mode!, specify_hessian!,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
-        ShockGroup, alternative_policy,
+        ShockGroup, alternative_policy, setup_regime_switching_inds!,
+
+        # abstractvarmodel.jl
+        AbstractVARModel, AbstractDSGEVARModel, AbstractDSGEVECMModel,
 
         # statespace.jl
-        Transition, Measurement, PseudoMeasurement, System, compute_system,
+        Transition, Measurement, PseudoMeasurement, System, RegimeSwitchingSystem, compute_system, var_approx_state_space,
+        n_regimes,
 
         # benchmark/
         print_all_benchmarks, construct_trial_group, write_ref_trial, write_ref_trial_group,
@@ -97,7 +103,7 @@ module DSGE
         initial_draw!, ParticleCloud, Particle, estimate_bma,
 
         # backwards_compatibility.jl
-        smc2, old_to_new_cloud,# TO REMOVE
+        smc2, old_to_new_cloud, # TO REMOVE
 
         # forecast/
         load_draws, forecast_one,
@@ -122,11 +128,11 @@ module DSGE
         # decomp/
         decompose_forecast, decomposition_means,
 
-        # decomp/
-        decompose_forecast, decomposition_means,
-
         # altpolicy/
-        AltPolicy, taylor93, taylor99,
+        AltPolicy, taylor93, taylor99, alt_inflation,
+        ait, ait_replace_eq_entries, ait_solve, ait_eqcond,
+        ngdp, ngdp_replace_eq_entries, ngdp_solve, ngdp_eqcond,
+        zero_rate,  zero_rate_replace_eq_entries, zero_rate_solve, zero_rate_eqcond,
 
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
@@ -140,8 +146,8 @@ module DSGE
         count_scenario_draws,
 
         # packet/
-        usual_settings!, usual_forecast, write_forecast_centric_packet,
-        write_standard_packet, plot_standard_packet,
+        usual_model_settings!, usual_model_forecast, write_forecast_centric_model_packet,
+        write_standard_model_packet, plot_standard_model_packet,
 
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
@@ -152,9 +158,9 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
         init_pseudo_observable_mappings!,
-        Model990, Model1002, Model1010, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
+        Model990, Model1002, Model1010, Model805, Model904, SmetsWouters, SmetsWoutersOrig, AnSchorfheide,
         PoolModel, eqcond, measurement, pseudo_measurement,
-        shock_groupings, transition,
+        shock_groupings, transition, DSGEVAR, DSGEVECM,
 
         # models/heterogeneous/
         KrusellSmith, BondLabor, RealBond, RealBondMkup, HetDSGE, HetDSGEGovDebt,
@@ -187,6 +193,7 @@ module DSGE
     const DSGE_SHOCKDEC_DELIM = "__"
 
     include("abstractdsgemodel.jl")
+    include("abstractvarmodel.jl")
     include("defaults.jl")
     include("models/poolmodel/poolmodel.jl")
     include("statespace.jl")
@@ -207,6 +214,9 @@ module DSGE
 
 
     include("solve/gensys.jl")
+    include("solve/gensys2.jl")
+    # include("solve/gensys_uncertain_altpol.jl") # Included after altpolicy code b/c this file uses the AltPolicy type
+    include("solve/gensys_uncertain_zlb.jl")
     include("solve/solve.jl")
     include("solve/klein.jl")
 
@@ -230,12 +240,12 @@ module DSGE
     include("estimate/metropolis_hastings.jl")
 
     include("estimate/smc/particle.jl")
-    include("estimate/smc/initialization.jl")
-    include("estimate/smc/helpers.jl")
-    include("estimate/smc/util.jl")
-    include("estimate/smc/mutation.jl")
-    include("estimate/smc/resample.jl")
-    include("estimate/smc/smc.jl")
+    #include("estimate/smc/initialization.jl")
+    #include("estimate/smc/helpers.jl")
+    #include("estimate/smc/util.jl")
+    #include("estimate/smc/mutation.jl")
+    #include("estimate/smc/resample.jl")
+    #include("estimate/smc/smc.jl")
 
     include("estimate/smc.jl")
     include("estimate/backwards_compatibility.jl")
@@ -247,6 +257,10 @@ module DSGE
     include("estimate/ct_filters/ct_kalman_filter.jl")
     include("estimate/ct_filters/block_kalman_filter.jl")
     # include("estimate/ct_filters/ct_block_kalman_filter.jl")
+
+    # VAR code
+    include("estimate/var/dsgevar_likelihood.jl")
+    include("estimate/var/dsgevecm_likelihood.jl")
 
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
@@ -264,6 +278,15 @@ module DSGE
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
+    include("altpolicy/alt_inflation.jl")
+    include("altpolicy/ait.jl")
+    include("altpolicy/ngdp_target.jl")
+    include("altpolicy/smooth_ait_gdp.jl")
+    include("altpolicy/smooth_ait_gdp_alt.jl")
+    include("altpolicy/zero_rate.jl")
+    include("altpolicy/rw.jl")
+    include("altpolicy/rw_zero_rate.jl")
+    include("solve/gensys_uncertain_altpol.jl")
 
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")
@@ -319,6 +342,22 @@ module DSGE
     include("models/representative/m1010/pseudo_observables.jl")
     include("models/representative/m1010/pseudo_measurement.jl")
     include("models/representative/m1010/augment_states.jl")
+
+    include("models/representative/m805/m805.jl")
+    include("models/representative/m805/subspecs.jl")
+    include("models/representative/m805/eqcond.jl")
+    include("models/representative/m805/observables.jl")
+    include("models/representative/m805/measurement.jl")
+    include("models/representative/m805/augment_states.jl")
+
+    include("models/representative/m904/m904.jl")
+    include("models/representative/m904/subspecs.jl")
+    include("models/representative/m904/eqcond.jl")
+    include("models/representative/m904/observables.jl")
+    include("models/representative/m904/measurement.jl")
+    include("models/representative/m904/pseudo_observables.jl")
+    include("models/representative/m904/pseudo_measurement.jl")
+    include("models/representative/m904/augment_states.jl")
 
     include("models/representative/smets_wouters/smets_wouters.jl")
     include("models/representative/smets_wouters/subspecs.jl")
@@ -450,11 +489,39 @@ module DSGE
     include("models/heterogeneous/two_asset_hank/helpers.jl")
     include("models/heterogeneous/two_asset_hank/interp.jl")
 
+    # VAR models
+    include("models/var/util.jl")
+
+    # DSGEVAR
+    include("models/var/dsgevar/dsgevar.jl") # defined aboved
+    include("models/var/dsgevar/measurement_error.jl")
+    include("models/var/dsgevar/subspecs.jl")
+
+    # DSGEVECM
+    include("models/var/dsgevecm/dsgevecm.jl") # defined aboved
+    include("models/var/dsgevecm/measurement_error.jl")
+    include("models/var/dsgevecm/subspecs.jl")
+
     include("forecast/util.jl")
     include("forecast/io.jl")
     include("forecast/smooth.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
     include("forecast/impulse_responses.jl")
+    include("forecast/wrappers_impulse_responses/var_approx_dsge_impulse_responses.jl")
+    include("forecast/wrappers_impulse_responses/dsgevar_lambda_impulse_responses.jl")
+    include("forecast/wrappers_impulse_responses/observables_identified_dsge_impulse_responses.jl")
+    include("forecast/var/impulse_responses.jl")
+    include("forecast/var/dsgevar/impulse_responses.jl")
+    include("forecast/var/dsgevecm/impulse_responses.jl")
     include("forecast/drivers.jl")
+
+    # include("dsgevar/dsgevar.jl")
+    # include("dsgevar/dsgevar_likelihood.jl")
+    # include("dsgevar/impulse_responses.jl")
+    # include("dsgevar/util.jl")
+
+    if (VERSION >= v"1.0") && (VERSION <= v"1.1")
+        isnothing(x::Any) = x === nothing ? true : false
+    end
 end

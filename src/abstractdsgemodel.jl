@@ -10,20 +10,30 @@ abstract type AbstractDSGEModel{T} <: ModelConstructors.AbstractModel{T} end
 function Base.show(io::IO, m::AbstractDSGEModel)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "no. states:             %i\n" n_states(m)
-    @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
+    @printf io "no. anticipated policy shocks: %i\n" n_mon_anticipated_shocks(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
     @printf io "description:\n %s\n"          description(m)
 end
 
+
+# Retrieve model type
+model_type(m::AbstractDSGEModel{T}) where T = T
+
 # Number of anticipated policy shocks
-n_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_anticipated_shocks)
-n_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_anticipated_shocks_padding)
+n_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks)
+n_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks_padding)
+n_mon_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks)
+n_mon_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks_padding)
+n_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_mon_anticipated_shocks_padding)
+n_z_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :n_z_anticipated_shocks)
+n_z_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :n_z_anticipated_shocks_padding)
+
 
 # Dates, indices, number of periods for each regime
 date_presample_start(m::AbstractDSGEModel) = get_setting(m, :date_presample_start)
 date_mainsample_start(m::AbstractDSGEModel) = get_setting(m, :date_mainsample_start)
 date_zlb_start(m::AbstractDSGEModel) = get_setting(m, :date_zlb_start)
-
+date_zlb_end(m::AbstractDSGEModel) = get_setting(m, :date_zlb_end)
 date_presample_end(m::AbstractDSGEModel) = Dates.lastdayofquarter(get_setting(m, :date_mainsample_start) - Dates.Month(3))
 date_prezlb_end(m::AbstractDSGEModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
 date_mainsample_end(m::AbstractDSGEModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
@@ -164,9 +174,9 @@ end
 # From an augmented state space with anticipated policy shocks, get indices
 # corresponding to pre-ZLB states, shocks, and observables
 function inds_states_no_ant(m::AbstractDSGEModel)
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         ind_ant1 = m.endogenous_states[:rm_tl1]
-        ind_antn = m.endogenous_states[Symbol("rm_tl$(n_anticipated_shocks(m))")]
+        ind_antn = m.endogenous_states[Symbol("rm_tl$(n_mon_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_states_augmented(m)]
     else
         return collect(1:n_states_augmented(m))
@@ -174,9 +184,9 @@ function inds_states_no_ant(m::AbstractDSGEModel)
 end
 
 function inds_shocks_no_ant(m::AbstractDSGEModel)
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         ind_ant1 = m.exogenous_shocks[:rm_shl1]
-        ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_anticipated_shocks(m))")]
+        ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_mon_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_shocks_exogenous(m)]
     else
         return collect(1:n_shocks_exogenous(m))
@@ -184,14 +194,40 @@ function inds_shocks_no_ant(m::AbstractDSGEModel)
 end
 
 function inds_obs_no_ant(m::AbstractDSGEModel)
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         ind_ant1 = m.observables[:obs_nominalrate1]
-        ind_antn = m.observables[Symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
+        ind_antn = m.observables[Symbol("obs_nominalrate$(n_mon_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_observables(m)]
     else
         return collect(1:n_observables(m))
     end
 end
+
+# From an augmented state space with integrated series (e.g. unit root),
+# get indices corresponding to stationary states
+function inds_states_no_integ_series(m::AbstractDSGEModel)
+    if haskey(m.settings, :integrated_series)
+        inds = map(i -> m.endogenous_states_augmented[i],
+                   get_setting(m, :integrated_series))
+        return setdiff(1:n_states_augmented(m), inds)
+    else
+        return collect(1:n_states_augmented(m))
+    end
+end
+
+# Interface for accessing parameters
+get_parameters(m::AbstractDSGEModel) = m.parameters
+
+# Interface for accessing rng
+get_rng(m::AbstractDSGEModel) = m.rng
+
+# Interface for accessing settings dictionary
+get_settings(m::AbstractDSGEModel) = m.settings
+
+# Interface for accessing observables dictionary
+get_observables(m::AbstractDSGEModel) = m.observables
+get_pseudo_observables(m::AbstractDSGEModel) = m.pseudo_observables
+get_exogenous_shocks(m::AbstractDSGEModel) = m.exogenous_shocks
 
 # Interface for data
 cond_vintage(m::AbstractDSGEModel)    = get_setting(m, :cond_vintage)
@@ -377,22 +413,48 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function update!(m::AbstractDSGEModel, values::Vector{T}) where T<:AbstractFloat
+function update!(m::AbstractDSGEModel, values::Vector{T}) where {T <: Real}
     ModelConstructors.update!(m.parameters, values)
     steadystate!(m)
 end
 
 """
 ```
-update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
+update!(m::AbstractDSGEModel, values::ParameterVector{T}; regime_switching::Bool = false) where T
 ```
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
-### Arguments:
+
+### Arguments
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
+
+### Keywords
+- `regime_switching`:: true if `values` is augmented with regime-switching parameters. Then
+    `update!` assumes the `value` field of each parameter in values` holds
+    the parameter value in the first regime, and then we update the field
+    `regimes` for each parameter
 """
-function update!(m::AbstractDSGEModel, values::ParameterVector{T}) where T
-    ModelConstructors.update!(m.parameters, [θ.value for θ in values])
+function update!(m::AbstractDSGEModel, values::ParameterVector{T};
+                 regime_switching::Bool = false) where {T <: Real}
+
+    ModelConstructors.update!(m.parameters, [θ.value for θ in values]) # Update first-regime values
+
+    # Update regime-switching
+    if regime_switching
+        for para in m.parameters
+            if !isempty(para.regimes)
+                for (ind, val) in para.regimes[:value]
+                    if ind == 1
+                        ModelConstructors.set_regime_val!(para, 1, para.value)
+                    else
+                        ModelConstructors.set_regime_val!(para, ind,
+                                                          values[findfirst(x->x.key==para.key, values)].regimes[:value][ind])
+                    end
+                end
+            end
+        end
+    end
+
     steadystate!(m)
 end
 
@@ -428,3 +490,56 @@ mutable struct SteadyStateConvergenceError <: Exception
 end
 SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't converge")
 Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
+
+
+function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none)
+
+    n_hist_regimes = 0
+    n_cond_regimes = 0
+    n_regimes = length(get_setting(m, :regime_dates))
+    post_cond_end = iterate_quarters(date_conditional_end(m), 1) # Period after conditional forecasting ends
+    set_reg_forecast_start   = false # These flags are needed to tell whether or not we actually set these regimes.
+    set_post_conditional_end = false # W/out these flags, if m already has reg_forecast_start, then it won't be properly set
+    reg_forecast_start_str = "Regime in which the forecast starts."
+    reg_post_conditional_end_str = "Regime one period after the conditional forecast ends."
+    for (key, val) in get_setting(m, :regime_dates)
+        if val == date_forecast_start(m)
+            m <= Setting(:reg_forecast_start, key, reg_forecast_start_str)
+            set_reg_forecast_start = true
+        end
+        if val == post_cond_end
+            m <= Setting(:reg_post_conditional_end, key, reg_post_conditional_end_str)
+            set_post_conditional_end = true
+        end
+        if val < date_forecast_start(m)
+            n_hist_regimes += 1
+        end
+        if date_forecast_start(m) <= val <= date_conditional_end(m)
+            n_cond_regimes += 1
+        end
+    end
+    if !set_reg_forecast_start
+        # Then the forecast begins in the middle of a regime
+        m <= Setting(:reg_forecast_start, findlast(sort!(collect(values(get_setting(m, :regime_dates)))) .< date_forecast_start(m)),
+                     reg_forecast_start_str)
+    end
+    if !set_post_conditional_end
+        # Then the conditional forecast ends in the middle of a regime
+        m <= Setting(:reg_post_conditional_end,
+                     findlast(sort!(collect(values(get_setting(m, :regime_dates)))) .<= date_conditional_end(m)),
+                     reg_post_conditional_end_str) # or .< post_cond_end
+    end
+
+    # Infer number of regimes in the forecast horizon from reg_forecast_start
+    n_fcast_regimes = n_regimes - get_setting(m, :reg_forecast_start) + 1
+
+    m <= Setting(:n_regimes, n_regimes, "Total number of regimes")
+    m <= Setting(:n_hist_regimes, n_hist_regimes, "Number of regimes in the history")
+    m <= Setting(:n_fcast_regimes, n_fcast_regimes, "Number of regimes in the forecast horizon")
+    m <= Setting(:n_cond_regimes, n_cond_regimes, "Number of regime switches during the conditional forecast horizon")
+    # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
+    m <= Setting(:n_rule_periods, (cond_type == :none) ? n_regimes - (get_setting(m, :n_hist_regimes) + 1) :
+                 n_regimes - (get_setting(m, :n_hist_regimes) + 1 + get_setting(m, :n_cond_regimes)) ,
+                 "Number of periods during which the (temporary) alternative policy applies.")
+    return m
+end

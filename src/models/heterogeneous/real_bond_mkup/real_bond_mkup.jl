@@ -392,8 +392,8 @@ function model_settings!(m::RealBondMkup)
     vint = Dates.format(now(), DSGE_DATE_FORMAT)
     m <= Setting(:data_vintage, vint, true, "vint", "Data vintage")
 
-    saveroot = normpath(joinpath(dirname(@__FILE__), "../../../","save"))
-    datapath = normpath(joinpath(dirname(@__FILE__), "../../../","save","input_data"))
+    saveroot = normpath(joinpath(dirname(@__FILE__), "../../../../","save"))
+    datapath = normpath(joinpath(dirname(@__FILE__), "../../../../","save","input_data"))
 
     m <= Setting(:saveroot, saveroot, "Root of data directory structure")
     m <= Setting(:dataroot, datapath, "Input data directory path")

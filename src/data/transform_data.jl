@@ -44,7 +44,11 @@ function transform_data(m::AbstractDSGEModel, levels::DataFrame;
                                                        verbose = verbose,
                                                        use_hpfilter = hpfilter_population(m))
 
-        levels = join(levels, population_data, on = :date, kind = :left)
+        levels = if isdefined(DataFrames, :leftjoin) # left joins using `join` is deprecated in DataFrames v0.21 (and higher)
+            leftjoin(levels, population_data, on = :date)
+        else
+            join(levels, population_data, on = :date, kind = :left)
+        end
         name_maps = [s => t for (s,t) = zip([:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
                 [:filtered_population, :filtered_population_growth, :unfiltered_population_growth])]
         rename!(levels, name_maps)

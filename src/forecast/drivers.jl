@@ -32,11 +32,13 @@ necessary.
 function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-    check_empty_columns::Bool = true,
+    check_empty_columns::Bool = true, bdd_fcast::Bool = true,
     verbose::Symbol = :none) where {S<:AbstractFloat}
 
+    @assert cond_type in [:none, :semi, :full] "cond_type must be one of :none, :semi, or :full"
+
     # Compute everything that will be needed to plot original output_vars
-    output_vars = add_requisite_output_vars(output_vars)
+    output_vars = add_requisite_output_vars(output_vars, bdd_fcast = bdd_fcast)
     if input_type == :prior
         output_vars = setdiff(output_vars, [:bddforecastobs])
     end
@@ -70,6 +72,18 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         else
             @assert df[1, :date] == date_presample_start(m)
             @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
+        end
+    end
+
+    # If regime switching, check settings are consistent
+    if haskey(m.settings, :regime_switching)
+        if get_setting(m, :regime_switching)
+            @assert get_setting(m, :n_regimes) == length(get_setting(m, :regime_dates)) "The number" *
+                " in Setting :n_regimes ($(string(get_setting(m, :n_regimes))))" *
+                " does not match the length of Setting :regime_dates ($(string(length(get_setting(m, :regime_dates)))))."
+            @assert get_setting(m, :regime_dates)[1] == date_presample_start(m) "The first regime" *
+                " date ($(string(get_setting(m, :regime_dates)[1]))) must match the presample start date " *
+                "($(string(date_presample_start(m))))."
         end
     end
 
@@ -107,11 +121,15 @@ Load and return parameter draws from Metropolis-Hastings or SMC.
   `Vector{Float64}`. Second method returns a `Vector{Vector{Float64}}` of
   parameter draws for this block.
 """
-function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
-                    verbose::Symbol = :low,
-                    filestring_addl::Vector{String} = Vector{String}(undef, 0))
+function load_draws(m::AbstractDSGEModel, input_type::Symbol;
+                    subset_inds::AbstractRange{Int64} = 1:0,
+                    verbose::Symbol = :low, filestring_addl::Vector{String} =
+                    Vector{String}(undef, 0), use_highest_posterior_value::Bool = false,
+                    input_file_name::String = "")
 
-    input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    end
     println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
@@ -124,9 +142,25 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
                 if :mode in collect(keys(forecast_input_file_overrides(m)))
                     params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                     # If not, load it from the cloud
+                elseif (occursin("smc_paramsmode", input_file_name) &&
+                        !use_highest_posterior_value && input_type == :mode)
+                    params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                 else
-                    cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "paramsmode" => "smc_cloud"), "cloud")
-                    params = cloud.particles[argmax(get_logpost(cloud))].value
+                    # Check that input_file_name is correct. Note that if
+                    # it already has smc_cloud, then the following code block does not do anything.
+                    if occursin("smc_paramsmode", input_file_name) || occursin(".h5", input_file_name)
+                        input_file_name = replace(replace(input_file_name,
+                                                          "smc_paramsmode" => "smc_cloud"),
+                                                  ".h5" => ".jld2")
+                        println(verbose, :low, "Switching estimation file of draws to $input_file_name")
+                    end
+
+                    cloud = load(input_file_name, "cloud")
+                    params = if typeof(cloud) <: Union{DSGE.Cloud,SMC.Cloud}
+                        SMC.get_likeliest_particle_value(SMC.Cloud(cloud))
+                    else
+                        cloud.particles[argmax(get_logpost(cloud))].value
+                    end
                 end
             else
                 error("SMC mean not implemented yet")
@@ -145,7 +179,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
             # Re-sample SMC draws according to their weights
             W = load(replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2"), "W")
             weights = W[:, end]
-            inds = resample(weights)
+            inds = SMC.resample(weights)
 
             params = Matrix{Float64}(params_unweighted[:, inds]')
         else
@@ -168,8 +202,9 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
         end
     elseif input_type == :prior
         params = rand(m.parameters, n_forecast_draws(m, :prior))
-    # Return initial parameters of model object
+
     elseif input_type == :init || input_type == :init_draw_shocks
+        # Return initial parameters of model object
 
 #=        if m.spec == "het_dsge"
             init_parameters!(m, testing_gamma = false)
@@ -185,9 +220,13 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol; subset_inds::Abstr
 end
 
 function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::AbstractRange{Int64};
-                    verbose::Symbol = :low, filestring_addl::Vector{String} = Vector{String}(undef, 0))
+                    verbose::Symbol = :low,
+                    filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    input_file_name::String = "")
 
-    input_file_name = get_forecast_input_file(m, input_type)
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
+    end
     println(verbose, :low, "Loading draws from $input_file_name")
 
     if input_type in [:full, :subset]
@@ -215,7 +254,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
                 # Re-sample SMC draws according to their weights
                 @load replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2") W
                 weights = W[:, end][block_inds]
-                inds = resample(weights)
+                inds = SMC.resample(weights)
 
                 params = params_unweighted[inds]
             end
@@ -253,10 +292,27 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
     end
 end
 
+function load_draws(m::AbstractDSGEVARModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
+                    verbose::Symbol = :low,
+                    filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                    use_highest_posterior_value::Bool = false,
+                    input_file_name::String = "")
+
+    if isempty(input_file_name)
+        input_file_name = get_forecast_input_file(m, input_type;
+                                                  filestring_addl = filestring_addl)
+    end
+
+    return load_draws(get_dsge(m), input_type; subset_inds = subset_inds, verbose = verbose,
+                      filestring_addl = filestring_addl, use_highest_posterior_value =
+                      use_highest_posterior_value,
+                      input_file_name = input_file_name)
+end
+
 """
 ```
 forecast_one(m, input_type, cond_type, output_vars; df = DataFrame(),
-    subset_inds = 1:0, forecast_string = "", verbose = :low)
+    subset_inds = 1:0, forecast_string = "", verbose = :low, ...)
 ```
 
 Compute and save `output_vars` for input draws given by `input_type` and
@@ -303,6 +359,26 @@ conditional data case given by `cond_type`.
   `forecast_string` is empty, an error is thrown.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`.
+- `check_empty_columns::Bool = true`: check empty columns or not when loading data (if `df` is empty)
+- `zlb_method::Symbol`: method for enforcing the zero lower bound. Defaults to `:shock`,
+    meaning we use a monetary policy shock to enforce the ZLB.
+
+  Other available methods:
+  1. `:temporary_altpolicy` -> use a temporary alternative policy to enforce the ZLB.
+
+- `set_regime_vals_altpolicy::Function`: Function that adds new regimes to parameters when
+    using temporary alternative policies (if needed). Defaults to identity (which does nothing)
+    This function should take as inputs the model object `m` and the total number of regimes
+     (after adding the required temporary regimes). It should then
+     set up regime-switching parameters for these new additional regimes.
+- `temporary_altpolicy_max_iter::Int`: Maximum number of iterations when enforcing
+    the ZLB as a temporary alternative policy.
+- `pegFFR::Bool = false`: peg the nominal FFR at the value specified by `FFRpeg`
+- `FFRpeg::Float64 = -0.25/4`: value of the FFR peg
+- `H::Int = 4`: number of horizons for which the FFR is pegged
+- `bdd_fcast::Bool = true`: are we computing the bounded forecasts or not?
+- `params::AbstractArray{Float64} = Vector{Float64}(undef, 0)`: parameter draws for the forecast.
+     If empty, then we load draws from estimation files implied by the settings in `m`.
 
 ### Outputs
 
@@ -312,21 +388,22 @@ None. Output is saved to files returned by
 function forecast_one(m::AbstractDSGEModel{Float64},
                       input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                       df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-                      forecast_string::String = "", verbose::Symbol = :low,
+                      forecast_string::String = "",
                       use_filtered_shocks_in_shockdec::Bool = false,
-                      shock_name::Symbol = :none,
-                      shock_var_name::Symbol = :none,
-                      shock_var_value::Float64 = 0.0,
-                      check_empty_columns = true,
-                      pegFFR::Bool = false,
-                      FFRpeg::Float64 = -0.25/4,
-                      H::Int = 4)
+                      shock_name::Symbol = :none, shock_var_name::Symbol = :none,
+                      shock_var_value::Float64 = 0.0, check_empty_columns = true,
+                      zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
+                      temporary_altpolicy_max_iter::Int = 10,
+                      pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
+                      params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
+                      show_failed_percent::Bool = false,
+                      verbose::Symbol = :low)
 
     ### Common Setup
 
     # Add necessary output_vars and load data
     output_vars, df = prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
-                                               df = df, verbose = verbose,
+                                               df = df, verbose = verbose, bdd_fcast = bdd_fcast,
                                                subset_inds = subset_inds,
                                                check_empty_columns = check_empty_columns)
 
@@ -335,6 +412,12 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     forecast_output_files = get_forecast_output_files(m, input_type, cond_type, output_vars;
                                                       forecast_string = forecast_string)
     output_dir = rawpath(m, "forecast")
+
+    # Determine if we are regime_switching
+    regime_switching = haskey(get_settings(m), :regime_switching) ?
+        get_setting(m, :regime_switching) : false
+    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+        get_setting(m, :n_regimes) : 1
 
     # Print
     info_print(verbose, :low, "Forecasting input_type = $input_type, cond_type = $cond_type...")
@@ -347,15 +430,19 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     if input_type in [:mode, :mean, :init]
 
         elapsed_time = @elapsed let
-            params = load_draws(m, input_type; verbose = verbose)
+            if isempty(params)
+                params = load_draws(m, input_type; verbose = verbose)
+            end
             forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
                                                 params, df, verbose = verbose,
                                                 shock_name = shock_name,
                                                 shock_var_name = shock_var_name,
                                                 shock_var_value = shock_var_value,
-                                                pegFFR = pegFFR,
-                                                FFRpeg = FFRpeg,
-                                                H = H)
+                                                regime_switching = regime_switching,
+                                                n_regimes = n_regimes, zlb_method = zlb_method,
+                                                set_regime_vals_altpolicy = set_regime_vals_altpolicy,
+                                                temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
+                                                pegFFR = pegFFR, FFRpeg = FFRpeg, H = H)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -396,6 +483,15 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                 end
             end
         end
+
+        if !isempty(params) & isa(params, AbstractMatrix)
+            m <= Setting(:regime_switching_ndraws, size(params, 1))
+        elseif !isempty(params) & (input_type == :mode_draw_shocks) & (!haskey(get_settings(m), :regime_switching_ndraws))
+            error("If using :mode_draw_shocks with a user-defined matrix of parameter draws, " *
+                  "then the user must manually add the Setting :regime_switching_ndraws " *
+                  "to indicate the number of times shocks will be drawn.")
+        end
+
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
@@ -411,7 +507,16 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             begin_time = time_ns()
 
             # Get to work!
-            params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+            if isempty(params)
+                params_for_map = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+            elseif input_type == :mode_draw_shocks
+                ndraws = length(block_inds[block])
+                @assert isa(params, Vector) "To use mode_draw_shocks with params passed in as a keyword, params must be a Vector."
+                params_for_map = Vector{Float64}[params for i in block_inds[block]]
+            else
+                params_for_map = Vector{Float64}[params[i, :] for i in block_inds[block]]
+            end
+
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                  param, df, verbose = verbose,
@@ -419,12 +524,17 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  use_filtered_shocks_in_shockdec,
                                                                  shock_name = shock_name,
                                                                  shock_var_name = shock_var_name,
-                                                                 shock_var_value = shock_var_value),
-                                      params)
+                                                                 shock_var_value = shock_var_value,
+                                                                 regime_switching = regime_switching,
+                                                                 n_regimes = n_regimes, zlb_method = zlb_method,
+                                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
+                                                                 temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
+                                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H),
+                                      params_for_map)
 
             # Assemble outputs from this block and write to file
             forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-            forecast_output = assemble_block_outputs(forecast_outputs)
+            forecast_output = assemble_block_outputs(forecast_outputs; show_failed_percent = show_failed_percent)
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable(block),
                                    verbose = block_verbose, block_inds = block_inds_thin[block],
@@ -510,13 +620,14 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, cond_type::Symbol,
                            output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low,
                            use_filtered_shocks_in_shockdec::Bool = false,
-                           shock_name::Symbol = :none,
-                           shock_var_name::Symbol = :none,
-                           shock_var_value::Float64 = 0.0,
-                           pegFFR::Bool = false,
-                           FFRpeg::Float64 = -0.25/4,
-                           H::Int = 4)
-
+                           shock_name::Symbol = :none, shock_var_name::Symbol = :none,
+                           shock_var_value::Float64 = 0.0, zlb_method::Symbol = :shock,
+                           set_regime_vals_altpolicy::Function = identity,
+                           temporary_altpolicy_max_iter::Int = 10,
+                           pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
+                           param_key::Symbol = :nothing, param_value::Float64 = 0.0,
+                           param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
+                           regime_switching::Bool = false, n_regimes::Int = 1)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -530,7 +641,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     irfs_only = all(x -> x == :irf, output_prods)
 
     # Compute state space
-    update!(m, params)
+    update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
     system = compute_system(m)
 
     # Initialize output dictionary
@@ -560,7 +671,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
     run_smoother = !isempty(hists_to_compute) ||
         (cond_type in [:semi, :full] && !irfs_only)
-
     if run_smoother
         # Call smoother
         histstates, histshocks, histpseudo, initial_states =
@@ -581,7 +691,19 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
         # Standardize shocks if desired
         if :histstdshocks in output_vars
-            forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
+            if regime_switching
+                start_date = max(date_mainsample_start(m), df[1, :date]) # use mainsample b/c shocks only includes mainsample, no presample
+                end_date   = prev_quarter(date_forecast_start(m))
+                regime_inds = regime_indices(m, start_date, end_date)
+                if regime_inds[1][1] < 1
+                    regime_inds[1] = 1:regime_inds[1][end]
+                end
+                forecast_output[:histstdshocks] =
+                    standardize_shocks(forecast_output[:histshocks],
+                                       Matrix{eltype(system[1, :QQ])}[system[i, :QQ] for i in 1:n_regimes], regime_inds)
+            else
+                forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
+            end
         end
     end
 
@@ -594,11 +716,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
     if !isempty(forecasts_to_compute)
         # Get initial forecast state vector s_T
-        s_T = if run_smoother
+        s_T = if run_smoother # ONLY THIS BRANCH WORKS FOR REGIME SWITCHING
             # The last smoothed state is either s_{T|T} (if !uncertainty) or
             # drawn from N(s_{T|T}, P_{T|T}) (if uncertainty)
             histstates[:, end]
-        else
+        else # THIS BRANCH HAS NOT BEEN EXTENDED YET FOR REGIME SWITCHING
             kal = Kalman(Vector{Float64}(undef,0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0))
             try
                 kal = filter(m, df, system; cond_type = cond_type)
@@ -621,9 +743,57 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
         end
 
+        if param_key!=:nothing
+            m[param_key] = param_value
+            steadystate!(m)
+            system = compute_system(m)
+        end
+        if param_key2!=:nothing
+            m[param_key2] = param_value2
+            steadystate!(m)
+            system = compute_system(m)
+        end
+
         # Re-solve model with alternative policy rule, if applicable
-        if alternative_policy(m).solve != identity
+        if alternative_policy(m).solve != solve
             system = compute_system(m; apply_altpolicy = true)
+        end
+
+        # Adjust the initial state vector for pgap and ygap
+        if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
+            if get_setting(m, :pgap_type) == :ngdp
+                _, s_T = ngdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            elseif get_setting(m, :pgap_type) == :ait
+                _, s_T = ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            end
+            histstates[:, end] = s_T
+            ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+            DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+            histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
+        end
+
+        if haskey(m.settings, :ygap_type) && haskey(get_settings(m), :ygap_value) &&
+            haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
+            if get_setting(m, :ygap_type) == :smooth_ait_gdp && get_setting(m, :pgap_type) == :smooth_ait_gdp
+                _, s_T = smooth_ait_gdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            elseif get_setting(m, :ygap_type) == :smooth_ait_gdp_alt && get_setting(m, :pgap_type) == :smooth_ait_gdp_alt
+                _, s_T = smooth_ait_gdp_alt_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            end
+            histstates[:, end] = s_T
+            ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+            DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+            histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
+        end
+
+        if haskey(m.settings, :Rref_type)
+            if get_setting(m, :ygap_type) == :rw && get_setting(m, :pgap_type) == :rw &&
+                get_setting(m, :Rref_type) == :rw
+                _, s_T = rw_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+            end
+            histstates[:, end] = s_T
+            ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+            DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+            histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
         end
 
         # 2A. Unbounded forecasts
@@ -645,19 +815,24 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 monshocks = MH\bb
                 etpeg = zeros(nshocks, forecast_horizons(m))
                 etpeg[vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")]), 1] = monshocks
-                forecaststates, forecastobs, forecastpseudo, forecastshocks = forecast(system, s_T, etpeg)
-                @show forecastobs[m.observables[:obs_nominalrate], :]
+                forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                    forecast(system, s_T, etpeg; cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
+                println("The forecasted interest rate path is $(forecastobs[m.observables[:obs_nominalrate], :])")
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                    forecast(m, system, s_T,
+                    forecast(m, system, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
             end
+
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
                 forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
-                forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, system, T)
+                # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN THE SYSTEM
+                forecast_output[:forecastobs]    =
+                    transplant_forecast_observables(histstates, forecastobs,
+                                                    isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
             else
                 forecast_output[:forecaststates] = forecaststates
                 forecast_output[:forecastshocks] = forecastshocks
@@ -667,7 +842,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
             # Standardize shocks if desired
             if :forecaststdshocks in output_vars
-                forecast_output[:forecaststdshocks] = standardize_shocks(forecast_output[:forecastshocks], system[:QQ])
+                forecast_output[:forecaststdshocks] =
+                    standardize_shocks(forecast_output[:forecastshocks],
+                                       regime_switching ? system[n_regimes, :QQ] : system[:QQ])
             end
         end
 
@@ -696,17 +873,38 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecaststates, forecastobs, forecastpseudo, forecastshocks = forecast(system, s_T, etpeg)
                 @show forecaststates[m.endogenous_states[:R_t], :]
                 @show forecastobs[m.observables[:obs_nominalrate], :]
+            elseif zlb_method == :temporary_altpolicy
+                altpolicy = get_setting(m, :alternative_policy).key
+                @assert altpolicy in [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] "altpolicy must be permanent " *
+                    "and among [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] for this method of enforcing the ZLB."
+
+                # Run the unbounded forecast if they haven't already been computed
+                if isempty(intersect(output_vars, unbddforecast_vars))
+                    forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                        forecast(m, system, s_T;
+                                 cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
+                end
+
+                # Now run the ZLB enforcing forecast
+                forecaststates, forecastobs, forecastpseudo =
+                    forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks; cond_type = cond_type,
+                             temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
+                             set_zlb_regime_vals = set_regime_vals_altpolicy)
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
-                             cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty) #enforce_zlb = true, draw_shocks = uncertainty)
+                             cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
             end
+
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
                 forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
-                forecast_output[:bddforecastobs]    = transplant_forecast_observables(histstates, forecastobs, system, T)
+                # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN TEH SYSTEM
+                forecast_output[:bddforecastobs]    =
+                    transplant_forecast_observables(histstates, forecastobs,
+                                                    isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
             else
                 forecast_output[:bddforecaststates] = forecaststates
                 forecast_output[:bddforecastshocks] = forecastshocks
@@ -716,7 +914,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
             # Standardize shocks if desired
             if :bddforecaststdshocks in output_vars
-                forecast_output[:bddforecaststdshocks] = standardize_shocks(forecast_output[:bddforecastshocks], system[:QQ])
+                forecast_output[:bddforecaststdshocks] =
+                    standardize_shocks(forecast_output[:bddforecastshocks],
+                                       regime_switching ? system[n_regimes, :QQ] : system[:QQ])
             end
         end
     end
@@ -727,14 +927,21 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
 
     if !isempty(shockdecs_to_compute)
-
         histshocks_shockdec = if use_filtered_shocks_in_shockdec
             filter_shocks(m, df, system, cond_type = cond_type)
         else
             histshocks
         end
 
-        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, histshocks_shockdec)
+        start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
+        end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
+            max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+        else
+            prev_quarter(date_forecast_start(m)) # this is the end date of history period
+        end
+        shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
+            shock_decompositions(m, system, histshocks_shockdec, start_date, end_date) :
+            shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
@@ -761,7 +968,17 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
 
     if !isempty(dettrends_to_compute)
-        dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
+        if isa(system, RegimeSwitchingSystem)
+            start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
+            end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
+                max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+            else
+                prev_quarter(date_forecast_start(m)) # this is the end date of history period
+            end
+            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, end_date)
+        else
+            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
+        end
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs
@@ -787,7 +1004,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:irfobs] = irfobs
         forecast_output[:irfpseudo] = irfpseudo
     end
-
 
     ### Return only desired output_vars
 

@@ -13,12 +13,30 @@ You can run these models using the description provided here. If you
 were to implement another model using DSGE.jl, these procedures can also be used to
 estimate those models.
 
+Please see
+[examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples) on the GitHub
+or the equivalent folder inside your Julia packages directory for example scripts we have created.
+
+For getting started, see these two scripts.
+- `run_default.jl`: a simple example of the standard workflow with DSGE.jl
+- `make_packet.jl`: auto-generate a packet of plots and figures which
+  help the user analyze estimation, forecast, and impulse response results. This script
+  also provides an example of how we recommend structuring "master" files that launch
+  a forecast and generate results with one "click."
+
+For more advanced usage, see
+- `test_smc.jl`: use SMC to estimate DSGE models.
+- `decompose_forecast.jl`: understand why a forecast has changed by running a forecast decomposition
+- `regime_switching.jl`: set up a forecast with regime-switching in the history and forecast horizon
+- `run_dsgevar.jl`: estimate and analyze impulse responses for a `DSGEVAR`.
+- `run_dsgevecm.jl`: analyze impulse response for DSGE-VECMs.
+
 ## Running with Default Settings
 
 To estimate and forecast in Julia, simply create an instance of the model object
 and call `estimate` and `forecast_all`. A minimal
-[example](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/run_default.jl)
-is reproduced below:
+[example](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples/run_default.jl)
+is reproduced below.
 
 ```julia
 # estimate as of 2015-Q3 using the default data vintage from 2015 Nov 27
@@ -46,7 +64,7 @@ rmprocs(my_procs)
 ```
 
 For more details on changing the model's default settings, parameters, equilibrium
-conditions, etc., see [Advanced Usage](@ref).
+conditions, etc., see [Advanced Usage](@ref advanced-usage).
 
 By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
 vector, computes the Hessian at the mode, and conducts full posterior parameter sampling
@@ -66,7 +84,7 @@ existing or user-defined model, see [Forecasting](@ref forecast-step).
 
 ## Input/Output Directory Structure
 
-The *DSGE.jl* estimation uses data files as input and produces large data files
+The DSGE.jl estimation uses data files as input and produces large data files
 as outputs. One estimation saves several GB of parameter draws and
 related outputs. It is useful to understand how these files are loaded/saved
 and how to control this behavior.
@@ -85,13 +103,13 @@ Depth = 5
 
 ### Directory Paths
 
-By default, input/output directories are located in the *DSGE.jl* package, along
+By default, input/output directories are located in the DSGE.jl package, along
 with the source code. Default values of the input/output directory roots:
 
 - `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`
 - `dataroot(m)`: `"$(Pkg.dir())/DSGE/save/input_data"`
 
-Note these locations can be overridden as desired. See [Model Settings](@ref) for more
+Note these locations can be overridden as desired. See [Advanced Usage](@ref advanced-usage) for more
 details.
 
 ```julia
@@ -109,28 +127,4 @@ DSGE.logpath
 DSGE.workpath
 DSGE.tablespath
 DSGE.figurespath
-```
-
-## The `PoolModel` Type
-Unlike the other models contained in DSGE, the `PoolModel` type is not a proper DSGE model.
-It is a wrapper object for different methods to average two different models,
-which do not have to be
-DSGE models. For example, a user could average two different vector auto-regressions.
-Generally, a user only needs to provide the predictive density scores
-of the two models that the user wants to average. The reason is that we
-treat the predictive density scores as non-FRED observables. This approach
-makes interfacing with the rest of the machinery provided by DSGE.jl very simple.
-
-```@docs
-PoolModel
-```
-
-See [Del Negro et al. (2016)](https://www.sciencedirect.com/science/article/pii/S0304407616300094#f000005) for theoretical details on the model averaging methods listed in the documentation.
-
-To facilitate analysis with the `PoolModel` type, we also provide the following functions.
-```@docs
-estimate_bma
-sample_λ
-propagate_λ
-compute_Eλ
 ```

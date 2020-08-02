@@ -8,7 +8,8 @@ os:
     #- osx
     - linux
 julia:
-    - 1.0
+    # Test 1.1 explicitly to ensure deprecations b/n 1.1 and 1.4 are handled properly
+    - 1
     - 1.1
 notifications:
     email: false
@@ -18,8 +19,10 @@ addons:
     - hdf5-tools
     - libnlopt0
 script:
-#     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia --color=yes -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
+    - julia --color=yes -e 'using Pkg; Pkg.build()'
+    - julia --check-bounds=yes --color=yes -e 'using Pkg; Pkg.test(coverage=true)'
+    # - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    # - julia --color=yes -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
 branches:
   only:
     - master
@@ -29,13 +32,13 @@ after_success:
 - julia -e 'cd(Pkg.dir("DSGE")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
 - julia -e 'cd(Pkg.dir("DSGE")); include(joinpath("docs", "make.jl"))'
 
-jobs:
-  include:
-    - stage: "Documentation"
-      julia: 1.1
-      os: linux
-      script:
-        - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd()));
-                                               Pkg.instantiate()'
-        - julia --project=docs/ docs/make.jl
-      after_success: skip
+# jobs:
+#   include:
+#     - stage: "Documentation"
+#       julia: 1
+#       os: linux
+#       script:
+#         - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd()));
+#                                                Pkg.instantiate()'
+#         - julia --project=docs/ docs/make.jl
+#       after_success: skip

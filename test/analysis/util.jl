@@ -1,7 +1,8 @@
 using DSGE, Test, ModelConstructors
 
 m = AnSchorfheide()
-if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+homedirpath = Sys.iswindows() ? joinpath(homedir(),".freddatarc") : joinpath(ENV["HOME"],".freddatarc")
+if haskey(ENV, "FRED_API_KEY") || isfile(homedirpath)
     load_data(m)
 
     @testset "Test util functions" begin
@@ -31,6 +32,8 @@ if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
         m <= Setting(:use_population_forecast, true)
         @test_throws ErrorException DSGE.load_population_growth(m)
 
+        m <= Setting(:date_forecast_start, DSGE.quartertodate("2019-Q4"))
+        m <= Setting(:date_presample_start, DSGE.quartertodate("1959-Q3"))
         @test DSGE.get_y0_index(m, :forecast) == 241
         @test DSGE.get_y0_index(m, :forecast4q) == 238
         @test DSGE.get_y0_index(m, :shockdec) == 2
@@ -47,7 +50,7 @@ if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
 
     end
 else
-        @warn "Skipping fred_data test because FRED_API_KEY not present"
+    @warn "Skipping fred_data test because FRED_API_KEY not present"
 end
 
 @testset "Test prior_table works" begin
@@ -65,6 +68,6 @@ end
     @test find_density_bands(ones(1, 100), 0.95) == ones(2, 100)
     @test find_density_bands(ones(100, 100), 0.95, minimize = true) == ones(2, 100)
     dens = find_density_bands(ones(100, 100), [.8, .9])
-    @test names(dens) == [Symbol("80.0% UB"), Symbol("80.0% LB"), Symbol("90.0% UB"), Symbol("90.0% LB")]
+    @test propertynames(dens) == [Symbol("80.0% UB"), Symbol("80.0% LB"), Symbol("90.0% UB"), Symbol("90.0% LB")]
     @test Matrix(dens) == ones(100,4)
 end

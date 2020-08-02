@@ -40,7 +40,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
     if try_disk && has_saved_data(m; cond_type=cond_type)
         filename = get_data_filename(m, cond_type)
         print(verbose, :low, "Reading dataset $(filename) from disk...")
-        df = read_data(m; cond_type = cond_type)
+        df = read_data(m; cond_type = cond_type, check_empty_columns = check_empty_columns)
         if isvalid_data(m, df; cond_type = cond_type, check_empty_columns = check_empty_columns)
             println(verbose, :low, "dataset from disk valid")
         else
@@ -62,6 +62,17 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             levels = vcat(levels, cond_levels)
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
+
+        if :obs_nominalrate1 in cond_semi_names(m) || :obs_nominalrate1 in cond_full_names(m)
+            ois_data = VERSION >= v"1.3" ? DataFrame(CSV.File(inpath(m, "raw", "ois_$(data_vintage(m)).csv"))) :
+                CSV.read(inpath(m, "raw", "ois_$(data_vintage(m)).csv"), copycols = true)
+            dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
+            n_cond = length(dates)
+
+            ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[!, :date] .<= date_conditional_end(m), [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6]]
+
+            df[date_mainsample_end(m) .< df[!, :date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6]] .= Matrix{Float64}(ois_data_want)
+        end
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
@@ -85,12 +96,14 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
 
         # print summary statistics
         if summary_statistics == :low || summary_statistics == :high
-            str_nondate_names = [string(name) for name in names(df[:,2:end])]
+            str_nondate_names = [string(name) for name in propertynames(df[:,2:end])]
             freq_nan_empty = zeros(size(df,2) - 1)
-            for (colnum, name) in enumerate(names(df[:,2:end]))
+            for (colnum, name) in enumerate(propertynames(df[:,2:end]))
                 is_missing_in_col = ismissing.(df[!,name])
                 is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
-                freq_nan_empty[colnum] = mean(vcat(is_missing_in_col, is_nan_in_col))
+                n_miss = count(is_missing_in_col)
+                n_nan  = count(is_nan_in_col)
+                freq_nan_empty[colnum] = (n_nan + n_miss) / length(is_missing_in_col)
                 println("$(name), Frequency of missing/NaNs: $(freq_nan_empty[colnum])")
                 if summary_statistics == :high
                     colmean = mean(df[!,name][.!is_missing_in_col][.!is_nan_in_col])
@@ -142,13 +155,25 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
 
     # Set ois series to load
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
         if get_setting(m, :rate_expectations_source) == :ois
-            data_series[:OIS] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+            data_series[:OIS] = [Symbol("ant$i") for i in 1:n_mon_anticipated_shocks(m)]
         elseif get_setting(m, :rate_expectations_source) == :bluechip
-            data_series[:bluechip] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+            data_series[:bluechip] = [Symbol("ant$i") for i in 1:n_mon_anticipated_shocks(m)]
         end
     end
+    try
+        if n_z_anticipated_shocks(m) > 0
+            data_series[:Z] = [Symbol("z$i") for i in 1:n_z_anticipated_shocks(m)]
+        end
+    catch err
+        if isa(err, KeyError)
+            nothing
+        else
+            rethrow(err)
+        end
+    end
+
 
     # For each additional source, search for the file with the proper name. Open
     # it, read it in, and merge it with fred_series
@@ -177,7 +202,8 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             println(verbose, :low, "Reading data from $file...")
 
             # Read in dataset and check that the file contains data for the proper dates
-            addl_data = CSV.read(file, copycols=true)
+            addl_data = VERSION >= v"1.3" ? DataFrame(CSV.File(file)) :
+                CSV.read(file, copycols = true)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
@@ -192,7 +218,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
 
             # Make sure each mnemonic that was specified is present
             for series in mnemonics
-                if !in(series, names(addl_data))
+                if !in(series, propertynames(addl_data))
                     error("$(string(series)) is missing from $file.")
                 end
             end
@@ -203,7 +229,11 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             rows = start_date .<= addl_data[!,:date] .<= end_date
 
             addl_data = addl_data[rows, cols]
-            df = join(df, addl_data, on=:date, kind=:outer)
+            if isdefined(DataFrames, :outerjoin)
+                df = outerjoin(df, addl_data, on=:date)
+            else
+                df = join(df, addl_data, on=:date, kind = :outer)
+            end
         else
             # If series not found, use all missings
             addl_data = DataFrame(fill(missing, (size(df,1), length(mnemonics))))
@@ -223,7 +253,6 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             CSV.write(filename, df[!,[:date, get(mnemonic)]])
         end
     end
-
     return df
 end
 
@@ -254,7 +283,7 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         println(verbose, :low, "Reading conditional data from $file...")
 
         # Read data
-        cond_df = CSV.read(file, copycols=true)
+        cond_df = VERSION >= v"1.3" ? DataFrame(CSV.File(file)) : CSV.read(file, copycols = true)
         format_dates!(:date, cond_df)
 
         date_cond_end = cond_df[end, :date]
@@ -262,17 +291,24 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         # Use population forecast as population data
         population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
         if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
-            pop_forecast = CSV.read(population_forecast_file, copycols=true)
+            pop_forecast = VERSION >= v"1.3" ? DataFrame(CSV.File(population_forecast_file)) :
+                CSV.read(population_forecast_file, copycols = true)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
-            #DSGE.na2nan!(pop_forecast)
-            DSGE.format_dates!(:date, pop_forecast)
+            # na2nan!(pop_forecast) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
+            format_dates!(:date, pop_forecast)
 
-            cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
+            cond_df = if isdefined(DataFrames, :leftjoin) # left joins using `join` is deprecated in DataFrames v0.21 (and higher)
+                leftjoin(cond_df, pop_forecast, on = :date)
+            else
+                join(cond_df, pop_forecast, on = :date, kind = :left)
+            end
 
             # Turn NAs into NaNs
-            #na2nan!(cond_df)
+            # na2nan!(cond_df) # Removed b/c DataFrames uses missing instead of NA, and missings are already handled
+
+            # Make sure the data is ordered by the date
             sort!(cond_df, :date)
 
             return cond_df
@@ -317,14 +353,15 @@ read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
 
 Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
-function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none)
+function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none, check_empty_columns::Bool = true)
     filename = get_data_filename(m, cond_type)
-    df       = CSV.read(filename, copycols=true)
+    df       = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
+        CSV.read(filename, copycols = true)
 
     # Convert date column from string to Date
     df[!,:date] = map(Date, df[!,:date])
 
-    missing_cond_vars!(m, df; cond_type = cond_type)
+    missing_cond_vars!(m, df; cond_type = cond_type, check_empty_columns = check_empty_columns)
 
     return df
 end
@@ -337,7 +374,7 @@ isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none,
 
 Return if dataset is valid for this model, ensuring that all observables are contained and
 that all quarters between the beginning of the presample and the end of the mainsample are
-contained. Also checks to make sure that expected interest rate data is available if `n_anticipated_shocks(m) > 0`.
+contained. Also checks to make sure that expected interest rate data is available if `n_mon_anticipated_shocks(m) > 0`.
 """
 function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none,
                       check_empty_columns::Bool = true)
@@ -345,7 +382,7 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
 
     # Ensure that every series in m_series is present in df_series
     m_series = collect(keys(m.observable_mappings))
-    df_series = names(df)
+    df_series = propertynames(df)
     coldiff = setdiff(m_series, df_series)
     valid = valid && isempty(coldiff)
     if !isempty(coldiff)
@@ -374,10 +411,10 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     # Ensure that no series is all missing or NaNs
     if check_empty_columns
         empty_cols = Vector{String}(undef,0)
-        for name in names(df)[names(df) .!= :date]
-            is_missing_in_col = ismissing.(df[!,name])
-            is_nan_in_col = isnan.(df[!,name][.!is_missing_in_col])
-            if sum(vcat(is_missing_in_col, is_nan_in_col)) == length(df[!,name])
+        for name in setdiff(propertynames(df), [:date])
+            is_missing_in_col = ismissing.(df[!, name])
+            is_nan_in_col = isnan.(df[!, name][.!is_missing_in_col])
+            if sum(vcat(is_missing_in_col, is_nan_in_col)) == length(df[!, name])
                 push!(empty_cols, string(name) * ", ")
             end
         end
@@ -386,9 +423,14 @@ function isvalid_data(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
             error("Column(s) $(as_str[1:end-2]) have only NaNs and/or missings.")
         end
     else
-        for col in setdiff(names(df), [:date])
-            if all(ismissing.(df[!,col])) || all(isnan.(df[!,col]))
+        for col in setdiff(propertynames(df), [:date])
+            if all(ismissing.(df[!,col]))
                 @warn "df[$col] is all missing."
+            else
+                not_missing_inds = .!(ismissing.(df[!, col]))
+                if all(isnan.(df[not_missing_inds, col]))
+                    @warn "df[$col] is entirely NaNs and/or missings."
+                end
             end
         end
     end
@@ -412,7 +454,7 @@ function is suitable for direct use in `estimate`, `posterior`, etc.
 - `in_sample::Bool`: indicates whether or not to discard rows that are out of sample. Set this flag to false in
 the case that you are calling filter_shocks! in the scenarios codebase.
 """
-function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
+function df_to_matrix(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
     # Sort rows by date
     df1 = sort(df, :date)
 
@@ -431,8 +473,8 @@ function df_to_matrix(m::AbstractDSGEModel, df::DataFrame; cond_type::Symbol = :
     end
 
     # Discard columns not used
-    cols = collect(keys(m.observables))
-    sort!(cols, by = x -> m.observables[x])
+    cols = collect(keys(get_observables(m)))
+    sort!(cols, by = x -> get_observables(m)[x])
     df1 = df1[!,cols]
 
     return permutedims(Float64.(collect(Missings.replace(convert(Matrix{Union{Missing, Float64}}, df1), NaN))))
@@ -516,7 +558,8 @@ end
 function read_population_data(filename::String; verbose::Symbol = :low)
     println(verbose, :low, "Reading population data from $filename...")
 
-    df = CSV.read(filename, copycols=true)
+    df = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
+        CSV.read(filename, copycols = true)
     DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
@@ -551,7 +594,8 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
     if isfile(filename)
         println(verbose, :low, "Loading population forecast from $filename...")
 
-        df = CSV.read(filename, copycols=true)
+        df = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
+            CSV.read(filename, copycols = true)
         rename!(df, :POPULATION => population_mnemonic)
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
@@ -594,7 +638,7 @@ function load_reference_forecast(m::AbstractModel, year::Int, quarter::Int, file
 
     df = DataFrame(date = dates)
 
-    series = CSV.read(file)
+    series = VERSION >= v"1.3" ? DataFrame!(CSV.File(file)) : CSV.read(file)
 
     datestr = reference_forecast_vintage(year, quarter, :bluechip)
     date_index = something(findfirst(isequal(datestr), series[:date]), 0)

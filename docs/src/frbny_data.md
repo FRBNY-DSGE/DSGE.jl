@@ -81,6 +81,12 @@ trained on data that includes six quarters of interest rate expectations. The us
 responsible for procuring interest rate expectations and appending it to the provided sample
 data set, as discussed in this documentation.
 
+To use anticipated policy shocks during a forecast, a conditional forecast has to be run, and
+interest rate expectations must be added as conditional observables to the setting `:cond_full_names` for
+full-conditional forecasts and `:cond_semi_names` for semi-conditional forecasts. The reason is that if the forecast is
+unconditional, only data up to the last period before the first forecast period will be used. Since the current quarter
+is typically part of the forecast horizon (e.g. current quarter GDP is not known yet), interest rate expectations
+in the current quarter have to be treated as conditional data.
 
 ### Implementation
 
@@ -170,26 +176,26 @@ Thanks to [Matthew Cocci](https://github.com/MattCocci) for the *Discussion*.
 
 ## Disclaimer
 
-The sample input data provided with *DSGE.jl* is made available for purposes of
+The sample input data provided with DSGE.jl is made available for purposes of
 demonstrating the function of the model only. By using the data you acknowledge
 and agree to the following terms and conditions. If you do not agree to these
 terms and conditions, do not use the data provided with the model.
 
-Some data provided with *DSGE.jl* may be copyrighted by its owner, and
+Some data provided with DSGE.jl may be copyrighted by its owner, and
 permission to use such copyrighted materials other than to demonstrate the
-functioning of *DSGE.jl* for your personal use must be obtained from the owner.
+functioning of DSGE.jl for your personal use must be obtained from the owner.
 The Federal Reserve Bank of New York cannot provide permission to use the data
 other than as permitted in this agreement.
 
 You may not use the name of the Federal Reserve Bank of New York to endorse or
-promote products derived from the use of the data provided with *DSGE.jl*, nor
+promote products derived from the use of the data provided with DSGE.jl, nor
 for any other commercial purpose.
 
 The Federal Reserve Bank of New York does not guarantee the completeness or
 accuracy of the data and does not provide updates or corrections to the data
 provided with the model. By downloading and using the data, you acknowledge
 and agree that your use of the data is at your own risk and that none of the
-parties involved in creating, producing or delivering *DSGE.jl* is liable
+parties involved in creating, producing or delivering DSGE.jl is liable
 for any loss, injury, claim, liability or damage of any kind resulting in any
 way from: (a) any errors in or omissions from the data; (b) your use of the
 data or any conclusions you draw from it, regardless of whether you received
@@ -218,4 +224,3 @@ Reserve Bank of New York.
 
 Company and product names mentioned in connection with the data remain the
 trademark and property of their respective owners.
-

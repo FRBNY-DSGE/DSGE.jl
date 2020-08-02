@@ -1,4 +1,4 @@
-save_output = true
+save_output = false
 
 using DSGE, ModelConstructors, Test, JLD2, FileIO, OrderedCollections, CSV
 path = dirname(@__FILE__)
@@ -68,7 +68,8 @@ saved_fore_4q = load("$path/../reference/df_to_table_out.jld2", "fore_4q")
     @test Matrix(fore_4q) == Matrix(saved_fore_4q)
     @test_throws AssertionError construct_fcast_and_hist_dfs(m, :none, [:obs_gdp], save_to_table = true)
     # Test that saving to tex table functionality runs
-    construct_fcast_and_hist_dfs(m, :none, [:obs_gdp], save_to_table = true, table_caption = "Test Caption", filename = "test.tex", savedir = "$path")
+    construct_fcast_and_hist_dfs(m, :none, [:obs_gdp], save_to_table = true, table_caption = "Test Caption",
+                                 filename = "test.tex", savedir = "$path")
 end
 
 @testset "Test auxiliary methods" begin
@@ -116,11 +117,21 @@ end
     m <= Setting(:n_parts, 20)
     m <= Setting(:n_Φ, 10)
     m <= Setting(:adaptive_tempering_target_smc, false)
-    DSGE.estimate(m, verbose = :none)
+    data = df_to_matrix(m, load_data(m))
+    DSGE.smc2(m, data, verbose = :none, run_csminwel = false)
     load_posterior_moments(m)
 
 end
 
 @testset "Test meansbands_to_matrix works" begin
     meansbands_to_matrix(m, :full, :none, [:histobs])
+end
+
+
+fp = dirname(@__FILE__)
+if isfile(joinpath(fp, "test.tex_forecast.tex"))
+    rm(joinpath(fp, "test.tex_forecast.tex"))
+end
+if isfile(joinpath(fp, "test.tex_history.tex"))
+    rm(joinpath(fp, "test.tex_history.tex"))
 end

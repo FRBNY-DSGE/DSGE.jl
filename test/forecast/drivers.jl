@@ -12,7 +12,7 @@ m = AnSchorfheide()
     # Go back to normal policy rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
     # Test with df passed in
-    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(), ".freddatarc"))
         df_in = load_data(m)
         global output_vars, df_out = DSGE.prepare_forecast_inputs!(m, :mode, :none, [:histobs, :forecastobs], df = df_in)
         @test output_vars == [:histobs, :forecastobs, :bddforecastobs]
@@ -61,10 +61,10 @@ end
     m <= Setting(:sampling_method, :SMC)
     global overrides[:full] = "$path/../reference/smcsave_.h5"
     # load draws without blocks
-    @test typeof(load_draws(m, :mode, verbose = :none)) == Vector{Float64}
+    @test typeof(load_draws(m, :mode, verbose = :none, use_highest_posterior_value = true)) == Vector{Float64}
     @test typeof(load_draws(m, :mode_draw_shocks, verbose = :none)) == Vector{Float64}
     @test typeof(load_draws(m, :full, verbose = :none)) == Matrix{Float64}
-    @test typeof(load_draws(m, :subset, subset_inds = 1:10, verbose = :none)) == Matrix{Float64}
+    @test typeof(load_draws(m, :subset, subset_inds = 1:10, verbose = :none, use_highest_posterior_value = true)) == Matrix{Float64}
 
     # load draws with blocks
     @test typeof(load_draws(m, :full, 1:1, verbose = :none))==Vector{Vector{Float64}}
@@ -75,5 +75,37 @@ end
     m <= Setting(:sampling_method, :marco)
     @test_throws ErrorException load_draws(m, :mode, verbose = :none)
 
-    m <= Setting(:forecast_block_size, 100)
+    # Test it can load the csminwel mode when using SMC
+    delete!(overrides, :mode) # make sure no modal override
+    m <= Setting(:sampling_method, :SMC)
+    m <= Setting(:saveroot, joinpath(dirname(@__FILE__), "../reference"))
+    m <= Setting(:data_vintage, "")
+    @test typeof(load_draws(m, :mode, verbose = :none,
+                            use_highest_posterior_value = true)) == Vector{Float64}
+    @test typeof(load_draws(m, :mode, verbose = :none,
+                            use_highest_posterior_value = false)) == Vector{Float64}
+    m <= Setting(:fix, "true", true, "fix", "") # Add tail to estimation file name
+    out_err = [false]
+    try
+        load_draws(m, :mode, verbose = :none, # Check no such smc_cloud file
+                          use_highest_posterior_value = false)
+    catch e
+        if isa(e, SystemError) || isa(e, ArgumentError) # seems to be different depending on the Julia version
+            out_err[1] = true
+        else
+            rethrow(e)
+        end
+    end
+    @test out_err[1]
+    try
+        load_draws(m, :mode, verbose = :none, # Check no such smc_cloud file
+                          use_highest_posterior_value = true)
+    catch e
+        if isa(e, SystemError) || isa(e, ArgumentError) # seems to be different depending on the Julia version
+            out_err[1] = true
+        else
+            rethrow(e)
+        end
+    end
+    @test out_err[1]
 end

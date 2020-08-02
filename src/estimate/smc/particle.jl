@@ -66,6 +66,7 @@ end
 """
 ```
 function ParticleCloud(m::AbstractDSGEModel, n_parts::Int)
+function ParticleCloud(m::AbstractDSGEVARModel, n_parts::Int)
 ```
 Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
 """
@@ -74,6 +75,11 @@ function ParticleCloud(m::AbstractDSGEModel, n_parts::Int)
                          zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
                          zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
 end
+
+function ParticleCloud(m::AbstractDSGEVARModel, n_parts::Int)
+    return ParticleCloud(m.dsge, n_parts)
+end
+
 
 """
 ```
@@ -180,7 +186,7 @@ end
 @inline function get_weights(c::Matrix{Float64})
     return c[:, ind_weight(size(c,2))]
 end
-@inline function get_weights(c::Cloud)
+@inline function get_weights(c::Union{DSGE.Cloud, SMC.Cloud})
     return c.particles[:, ind_weight(size(c.particles,2))]
 end
 

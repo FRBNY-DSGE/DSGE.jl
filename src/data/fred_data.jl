@@ -41,7 +41,7 @@ function load_fred_data(m::AbstractDSGEModel;
     if isfile(datafile)
 
         # Read in dataset and check that the file contains data for the proper dates
-        data = CSV.read(datafile)
+        data = VERSION >= v"1.3" ? DataFrame!(CSV.File(datafile)) : CSV.read(datafile)
 
         # Convert dates from strings to dates for date arithmetic
         format_dates!(:date, data)
@@ -57,7 +57,7 @@ function load_fred_data(m::AbstractDSGEModel;
             # If we have the right dates but the series isn't in the file, add it to
             # missing_series
             for series in mnemonics
-                if !in(series, names(data))
+                if !in(series, propertynames(data))
                     push!(missing_series,series)
                 end
             end
@@ -113,13 +113,15 @@ function load_fred_data(m::AbstractDSGEModel;
         end
 
         # Extract dataframe from each series and merge on date
+        has_oj = isdefined(DataFrames, :outerjoin)
         for i = 1:length(fredseries)
             if isassigned(fredseries, i)
                 series = fredseries[i]
                 series_id = Symbol(series.id)
                 rename!(series.df, :value => series_id)
                 map!(x->lastdayofquarter(x), series.df[!, :date], series.df[!, :date])
-                data = join(data, series.df[!, [:date, series_id]], on=:date, kind=:outer)
+                data = has_oj ? outerjoin(data, series.df[!, [:date, series_id]], on = :date) :
+                    join(data, series.df[!, [:date, series_id]], on = :date, kind = :outer)
             end
         end
 

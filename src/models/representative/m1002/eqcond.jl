@@ -16,6 +16,10 @@ specified in their proper positions.
 * `Π`  (`n_states` x `n_states_expectational`) holds coefficients of expectational states.
 """
 function eqcond(m::Model1002)
+    return eqcond(m, 1)
+end
+
+function eqcond(m::Model1002, reg::Int)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -26,6 +30,12 @@ function eqcond(m::Model1002)
     C  = zeros(n_states(m))
     Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
     Π  = zeros(n_states(m), n_shocks_expectational(m))
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, reg)
+        end
+    end
 
     ### ENDOGENOUS STATES ###
 
@@ -43,6 +53,11 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_euler], endo[:EL_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ1[eq[:eq_euler], endo[:c_t]]  = (m[:h]*exp(-m[:z_star]))/(1 + m[:h]*exp(-m[:z_star]))
 
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        Γ0[eq[:eq_euler], endo[:φ_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+        Γ0[eq[:eq_euler], endo[:Eφ_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+    end
+
     # Flexible prices and wages
     Γ0[eq[:eq_euler_f], endo[:c_f_t]]  = 1.
     Γ0[eq[:eq_euler_f], endo[:r_f_t]]  = (1 - m[:h]*exp(-m[:z_star]))/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
@@ -53,6 +68,11 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_euler_f], endo[:L_f_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ0[eq[:eq_euler_f], endo[:EL_f_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ1[eq[:eq_euler_f], endo[:c_f_t]]  = (m[:h]*exp(-m[:z_star]))/(1 + m[:h]*exp(-m[:z_star]))
+
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        Γ0[eq[:eq_euler_f], endo[:φ_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+        Γ0[eq[:eq_euler_f], endo[:Eφ_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
+    end
 
     ### 2. Investment Euler Equation
 
@@ -86,7 +106,7 @@ function eqcond(m::Model1002)
 
     # Spreads
     # Sticky prices and wages
-    Γ0[eq[:eq_spread], endo[:ERtil_k_t]] = 1.
+    Γ0[eq[:eq_spread], endo[:ERktil_t]] = 1.
     Γ0[eq[:eq_spread], endo[:R_t]]       = -1.
     Γ0[eq[:eq_spread], endo[:b_t]]       = (m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))/(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_spread], endo[:qk_t]]      = -m[:ζ_spb]
@@ -123,7 +143,7 @@ function eqcond(m::Model1002)
     # Flexible prices and wages
     Γ0[eq[:eq_nevol_f], endo[:n_f_t]]      = 1.
     Γ0[eq[:eq_nevol_f], endo[:z_t]]      = m[:γ_star]*m[:vstar]/m[:nstar]
-    Γ0[eq[:eq_nevol_f], endo[:rktil_f_t]] = -m[:ζ_nRk]
+    Γ0[eq[:eq_nevol_f], endo[:Rktil_f_t]] = -m[:ζ_nRk]
     Γ1[eq[:eq_nevol_f], endo[:σ_ω_t]]    = -m[:ζ_nσ_ω]/m[:ζ_spσ_ω]
     Γ1[eq[:eq_nevol_f], endo[:μ_e_t]]    = -m[:ζ_nμ_e]/m[:ζ_spμ_e]
     Γ1[eq[:eq_nevol_f], endo[:qk_f_t]]     = m[:ζ_nqk]
@@ -133,7 +153,7 @@ function eqcond(m::Model1002)
     Γ1[eq[:eq_nevol_f], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1.0+m[:h]*exp(-m[:z_star])))/(1.0-m[:h]*exp(-m[:z_star])))
 
     # Flexible prices and wages - ASSUME NO FINANCIAL FRICTIONS
-    Γ0[eq[:eq_capval_f], endo[:rktil_f_t]] = 1.
+    Γ0[eq[:eq_capval_f], endo[:Rktil_f_t]] = 1.
     Γ0[eq[:eq_capval_f], endo[:rk_f_t]]     = -m[:r_k_star]/(m[:r_k_star]+1-m[:δ])
     Γ0[eq[:eq_capval_f], endo[:qk_f_t]]     = -(1-m[:δ])/(m[:r_k_star]+1-m[:δ])
     Γ1[eq[:eq_capval_f], endo[:qk_f_t]]     = -1.
@@ -214,8 +234,7 @@ function eqcond(m::Model1002)
         exp((1 - m[:σ_c])*m[:z_star]))
 
     # Comment out for counterfactual with no price mark up shock
-    Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))/
-        (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+    Γ0[eq[:eq_phlps], endo[:λ_f_t]] = -1.
 
     # Flexible prices and wages not necessary
 
@@ -243,12 +262,20 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_msub], endo[:z_t]]   = m[:h]*exp(-m[:z_star]) /(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_msub], endo[:w_t]]   = -1.
 
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        Γ0[eq[:eq_msub], endo[:φ_t]] = m[:ν_l]
+    end
+
     # Flexible prices and wages
     Γ0[eq[:eq_msub_f], endo[:w_f_t]] = -1.
     Γ0[eq[:eq_msub_f], endo[:L_f_t]] = m[:ν_l]
     Γ0[eq[:eq_msub_f], endo[:c_f_t]] = 1/(1 - m[:h]*exp(-m[:z_star]))
     Γ1[eq[:eq_msub_f], endo[:c_f_t]] = m[:h]*exp(-m[:z_star])/(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_msub_f], endo[:z_t]]   = m[:h]*exp(-m[:z_star])/(1 - m[:h]*exp(-m[:z_star]))
+
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        Γ0[eq[:eq_msub_f], endo[:φ_t]] = m[:ν_l]
+    end
 
     ### 12. Evolution of Wages
 
@@ -268,7 +295,6 @@ function eqcond(m::Model1002)
     # Flexible prices and wages not necessary
 
     ### 13. Monetary Policy Rule
-
     # Sticky prices and wages
     Γ0[eq[:eq_mp], endo[:R_t]]      = 1.
     Γ1[eq[:eq_mp], endo[:R_t]]      = m[:ρ]
@@ -325,6 +351,12 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_Ez], endo[:ztil_t]] = -(m[:ρ_ztil]-1)/(1-m[:α])
     Γ0[eq[:eq_Ez], endo[:zp_t]]   = -m[:ρ_z_p]
 
+    # Eφ_t
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        Γ0[eq[:eq_Eφ], endo[:Eφ_t]] = 1.
+        Γ0[eq[:eq_Eφ], endo[:φ_t]]  = -m[:ρ_φ]
+    end
+
     ### EXOGENOUS SHOCKS ###
 
     # Neutral technology
@@ -336,6 +368,20 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_ztil], endo[:ztil_t]] = 1.
     Γ1[eq[:eq_ztil], endo[:ztil_t]] = m[:ρ_ztil]
     Ψ[eq[:eq_ztil], exo[:ztil_sh]]     = 1.
+
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        # Ez_t
+        Γ0[eq[:eq_Ez], endo[:ziid_t]] = -(m[:ρ_ziid]-1)/(1-m[:α])
+
+        # Neutral technology
+        Γ0[eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
+        Γ1[eq[:eq_z], endo[:ziid_t]]  = -1 / (1 - m[:α])
+
+        # AR(1) for ziid
+        Γ0[eq[:eq_ziid], endo[:ziid_t]] = 1.
+        Γ1[eq[:eq_ziid], endo[:ziid_t]] = m[:ρ_ziid]
+        Ψ[eq[:eq_ziid], exo[:ziid_sh]]  = 1.
+    end
 
     # Long-run changes to productivity
     Γ0[eq[:eq_zp], endo[:zp_t]] = 1.
@@ -352,6 +398,16 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_b], endo[:b_t]] = 1.
     Γ1[eq[:eq_b], endo[:b_t]] = m[:ρ_b]
     Ψ[eq[:eq_b], exo[:b_sh]]  = 1.
+
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        # iid shock to Euler equation
+        Γ0[eq[:eq_biidc], endo[:biidc_t]] = 1.
+        Γ1[eq[:eq_biidc], endo[:biidc_t]] = m[:ρ_biidc] # c b/c will only affect consumption
+        Ψ[eq[:eq_biidc], exo[:biidc_sh]]  = 1.
+
+        Γ0[eq[:eq_euler], endo[:biidc_t]]   = -1.
+        Γ0[eq[:eq_euler_f], endo[:biidc_t]] = -1.
+    end
 
     # Investment-specific technology
     Γ0[eq[:eq_μ], endo[:μ_t]] = 1.
@@ -381,6 +437,17 @@ function eqcond(m::Model1002)
     Γ1[eq[:eq_rm], endo[:rm_t]] = m[:ρ_rm]
     Ψ[eq[:eq_rm], exo[:rm_sh]]  = 1.
 
+    # Labor preference shock
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        # Eφ_t
+        Γ0[eq[:eq_Eφ], endo[:φ_t]] = -m[:ρ_φ]
+
+        # AR(1) process
+        Γ0[eq[:eq_φ], endo[:φ_t]] = 1.
+        Γ1[eq[:eq_φ], endo[:φ_t]] = m[:ρ_φ]
+        Ψ[eq[:eq_φ], exo[:φ_sh]]  = 1.
+    end
+
     ### Financial frictions
 
     # Standard deviation of capital shock to entrepreneurs
@@ -404,7 +471,7 @@ function eqcond(m::Model1002)
     Ψ[eq[:eq_π_star], exo[:π_star_sh]]  = 1.
 
     # Anticipated policy shocks
-    if n_anticipated_shocks(m) > 0
+    if n_mon_anticipated_shocks(m) > 0
 
         # This section adds the anticipated shocks. There is one state for all the
         # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
@@ -416,11 +483,54 @@ function eqcond(m::Model1002)
         Γ0[eq[:eq_rml1], endo[:rm_tl1]] = 1.
         Ψ[eq[:eq_rml1], exo[:rm_shl1]]  = 1.
 
-        if n_anticipated_shocks(m) > 1
-            for i = 2:n_anticipated_shocks(m)
+        if n_mon_anticipated_shocks(m) > 1
+            for i = 2:n_mon_anticipated_shocks(m)
                 Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = 1.
                 Γ0[eq[Symbol("eq_rml$i")], endo[Symbol("rm_tl$i")]]     = 1.
                 Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
+            end
+        end
+    end
+
+    for (key, val) in get_setting(m, :antshocks)
+        ant_eq_mapping   = get_setting(m, :ant_eq_mapping)         # maps antshock key to state variable name
+        ant_eq_E_mapping = get_setting(m, :ant_eq_E_mapping)       # maps antshock key to state variable name
+        ant_proportion   = get_setting(m, :proportional_antshocks) # is the antshock proportional to a contemporaneous shock?
+        if val > 0
+            # This section adds the anticipated shocks. There is one state for all the
+            # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
+            # will hit in two periods), and the equations are set up so that rm_tl2 last period
+            # will feed into rm_tl1 this period (and so on for other numbers), and last period's
+            # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
+
+            Γ1[eq[Symbol("eq_", ant_eq_mapping[key])], endo[Symbol(key, "_tl1")]]   = 1.
+            Γ0[eq[Symbol("eq_", key, "l1")], endo[Symbol(key, "_tl1")]] = 1.
+            Ψ[eq[Symbol("eq_", key, "l1")], exo[Symbol(key, "_shl1")]]  = 1.
+
+            if key in ant_proportion
+                Ψ[eq[Symbol("eq_", key, "l1")], exo[Symbol(key, "_shl1")]] = 0.
+                Ψ[eq[Symbol("eq_", key, "l1")], exo[Symbol(key, "_sh")]]   = m[Symbol(:σ_, key, :_prop)]
+            end
+
+            if val > 1
+                for i = 2:val
+                    Γ1[eq[Symbol("eq_", key, "l$(i-1)")], endo[Symbol(key, "_tl$i")]] = 1.
+                    Γ0[eq[Symbol("eq_", key, "l$i")], endo[Symbol(key, "_tl$i")]]     = 1.
+                    Ψ[eq[Symbol("eq_", key, "l$i")], exo[Symbol(key, "_shl$i")]]      = 1.
+
+                    if haskey(ant_proportion, key)
+                        Ψ[eq[Symbol("eq_", key, "l$i")], exo[Symbol(key, "_shl$i")]] = 0.
+                        Ψ[eq[Symbol("eq_", key, "l$i")], exo[Symbol(key, "_sh")]]    = m[Symbol(:σ_,key, :_prop, i)]
+                    end
+                end
+            end
+
+            if key in [:z, :ziid] # Handle separately b/c coefficient is not -1.0
+                # Ez_t
+                Γ0[eq[:eq_Ez], endo[Symbol(key, "_tl1")]] = -1 / (1 - m[:α]) # note z_tl1 = sum of all shocks that will hit next period.
+                # so this is the only required line
+            elseif haskey(ant_eq_E_mapping, key) # Account for other expected anticipated shocks
+                Γ0[eq[Symbol("eq_", ant_eq_E_mapping[key])], endo[Symbol(key, "_tl1")]] = -1.
             end
         end
     end
@@ -490,9 +600,9 @@ function eqcond(m::Model1002)
     Π[eq[:eq_Erk], ex[:Erk_sh]]   = 1.
 
     # Flexible prices and wages
-    Γ0[eq[:eq_Erktil_f], endo[:rktil_f_t]]  = 1.
-    Γ1[eq[:eq_Erktil_f], endo[:ERktil_f_t]] = 1.
-    Π[eq[:eq_Erktil_f], ex[:Erktil_f_sh]]   = 1.
+    Γ0[eq[:eq_ERktil_f], endo[:Rktil_f_t]]  = 1.
+    Γ1[eq[:eq_ERktil_f], endo[:ERktil_f_t]] = 1.
+    Π[eq[:eq_ERktil_f], ex[:ERktil_f_sh]]   = 1.
 
     ### E(w)
 
@@ -505,8 +615,177 @@ function eqcond(m::Model1002)
 
     # Sticky prices and wages
     Γ0[eq[:eq_ERktil], endo[:Rktil_t]]  = 1.
-    Γ1[eq[:eq_ERktil], endo[:ERtil_k_t]] = 1.
+    Γ1[eq[:eq_ERktil], endo[:ERktil_t]] = 1.
     Π[eq[:eq_ERktil], ex[:ERktil_sh]]    = 1.
+
+   # We additionally need to directly add the equation(s) for pgap, ygap, etc. here rather than just
+   # in the altpolicy files b/c
+   # (1) Regime-switching won't work otherwise
+   # (2) we may want to define the their values at the beginning of the forecast period
+   #     rather than just when we start using the alt rule.
+   if haskey(m.settings, :add_pgap) ? get_setting(m, :add_pgap) : false
+       Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               haskey(m.settings, :pgap_type)
+               if get_setting(m, :pgap_type) == :ngdp
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] =  1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] =  1.
+
+                   Γ0[eq[:eq_pgap], endo[:y_t]]    = -1.
+                   Γ0[eq[:eq_pgap], endo[:z_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:y_t]]    = -1.
+               elseif get_setting(m, :pgap_type) == :ait
+                   Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_ait = exp(log(0.5) / Thalf)
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_ait
+               elseif get_setting(m, :pgap_type) == :smooth_ait
+                   Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_pgap = exp(log(0.5) / Thalf)
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
+               elseif get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
+                   Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_pgap = exp(log(0.5) / Thalf)
+                   Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+                   Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
+               end
+           end
+       end
+   end
+
+   if haskey(m.settings, :add_ygap) ? get_setting(m, :add_ygap) : false
+       Γ0[eq[:eq_ygap], endo[:ygap_t]]  =  1.
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               haskey(m.settings, :ygap_type)
+               if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
+                   Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+                   ρ_ygap = exp(log(0.5) / Thalf)
+
+                   Γ0[eq[:eq_ygap], endo[:ygap_t]] = 1.
+                   # Γ0[eq[:eq_ygap], endo[:π_t]]    = -1.
+                   Γ1[eq[:eq_ygap], endo[:ygap_t]] = ρ_ygap
+
+                   Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
+                   Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
+                   Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
+               end
+           end
+       end
+   end
+
+   if haskey(m.settings, :add_rw) ? get_setting(m, :add_rw) : false
+       Γ0[eq[:eq_rw], endo[:rw_t]]     =  1.
+       Γ0[eq[:eq_Rref], endo[:Rref_t]] =  1.
+
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+               haskey(m.settings, :Rref_type)
+
+               ρ_rw = haskey(get_settings(m), :ρ_rw) ? get_setting(m, :ρ_rw) : 0.93
+               Γ0[eq[:eq_rw], endo[:rw_t]]   = 1.
+               Γ1[eq[:eq_rw], endo[:rw_t]]   = ρ_rw
+
+               if get_setting(m, :Rref_type) in [:ait]
+                   Thalf  = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   ρ_pgap = exp(log(0.5) / Thalf)
+                   φ      = haskey(get_settings(m), :ait_φ) ? get_setting(m, :ait_φ) : 0.25
+
+                   Γ0[eq[:eq_Rref], endo[:Rref_t]] = 1.
+                   Γ0[eq[:eq_Rref], endo[:pgap_t]] = -φ * (1/(1 - ρ_pgap))
+                   Γ1[eq[:eq_Rref], endo[:Rref_t]] = 0.
+                   C[eq[:eq_Rref]]                 = 0.
+                   Γ0[eq[:eq_Rref], endo[:rw_t]]   = -1.
+
+               elseif get_setting(m, :Rref_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
+
+                   ait_Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
+                   gdp_Thalf = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+                   ρ_pgap    = exp(log(0.5) / ait_Thalf)
+                   ρ_ygap    = exp(log(0.5) / gdp_Thalf)
+                   ρ_smooth  = haskey(get_settings(m), :rw_ρ_smooth) ? get_setting(m, :rw_ρ_smooth) : 0.656
+                   φ_π       = haskey(get_settings(m), :rw_φ_π) ? get_setting(m, :rw_φ_π) : 11.13
+                   φ_y       = haskey(get_settings(m), :rw_φ_y) ? get_setting(m, :rw_φ_y) : 11.13
+
+                   Γ0[eq[:eq_Rref], endo[:Rref_t]] = 1.
+                   Γ1[eq[:eq_Rref], endo[:Rref_t]] = ρ_smooth
+                   C[eq[:eq_Rref]]                 = 0.
+
+                   Γ0[eq[:eq_Rref], endo[:pgap_t]]   = -φ_π * (1. - ρ_pgap) * (1. - ρ_smooth) # This is the AIT part
+                   Γ0[eq[:eq_Rref], endo[:ygap_t]]   = -φ_y * (1. - ρ_ygap) * (1. - ρ_smooth) # This is the GDP part
+               end
+           end
+       end
+   end
+
+   if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
+               Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
+           end
+       end
+   end
+
+   if haskey(m.settings, :track_pgap)
+       if get_setting(m, :track_pgap)
+           if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt]
+               Thalf = haskey(m.settings, :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10
+               ρ_pgap = exp(log(0.5) / Thalf)
+               Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
+               Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
+               Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
+           end
+       end
+   end
+
+   if haskey(m.settings, :track_ygap)
+       if get_setting(m, :track_ygap)
+           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt]
+               Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+               ρ_ygap = exp(log(0.5) / Thalf)
+
+               Γ0[eq[:eq_ygap], endo[:ygap_t]] = 1.
+               # Γ0[eq[:eq_ygap], endo[:π_t]]    = -1.
+               Γ1[eq[:eq_ygap], endo[:ygap_t]] = ρ_ygap
+
+               Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
+               Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
+               Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
+           end
+       end
+   end
+
+   if haskey(m.settings, :track_ygap)
+       if get_setting(m, :track_ygap)
+           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait]
+               Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
+               ρ_ygap = exp(log(0.5) / Thalf)
+
+               Γ0[eq[:eq_ygap], endo[:ygap_t]] = 1.
+               # Γ0[eq[:eq_ygap], endo[:π_t]]    = -1.
+               Γ1[eq[:eq_ygap], endo[:ygap_t]] = ρ_ygap
+
+               Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
+               Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
+               Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
+           end
+       end
+   end
+
+   for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
+    end
 
     return Γ0, Γ1, C, Ψ, Π
 end

@@ -1,10 +1,12 @@
-using DSGE, ModelConstructors
+using DSGE, ModelConstructors, Distributed
 using Nullables, DataFrames, OrderedCollections, Dates
 
 #############################
 # To use:
 # Just run in the Julia REPL
 # include("run_default.jl")
+# Note that the estimation
+# step will take 2-3 hours.
 #############################
 
 ##############
@@ -33,11 +35,16 @@ m <= Setting(:forecast_block_size, 5) # adjust block size to run on small number
 # parameter sampling.
 #
 # Note some columns will have missing data because not all our data
-# is publicly available. Warnings will be thrown after calling load_data as a result.
-# However, estimate will still run when data is missing.
-df = load_data(m, try_disk = false, check_empty_columns = false, summary_statistics = :none)
-data = df_to_matrix(m, df)
-estimate(m, data)
+# is publicly available. By default, `load_data` will error
+# if any of the columns in the loaded DataFrame is empty,
+# but we turn this feature off by setting the keyword `check_empty_columns = false`.
+# Warnings will be still thrown after calling load_data indicating which columns
+# are empty. However, estimate will still run when data is missing.
+@time begin
+    df = load_data(m, try_disk = false, check_empty_columns = false, summary_statistics = :none)
+    data = df_to_matrix(m, df)
+    estimate(m, data)
+end
 
 # produce LaTeX tables of parameter moments
 moment_tables(m)

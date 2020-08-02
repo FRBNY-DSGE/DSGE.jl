@@ -31,7 +31,16 @@ function get_forecast_input_file(m, input_type;
     end
 
     if input_type == :mode || input_type == :mode_draw_shocks
-        return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
+        if get_setting(m, :sampling_method) == :MH
+            return rawpath(m,"estimate","paramsmode.h5", filestring_addl)
+        else
+            smc_mode_file = rawpath(m,"estimate","paramsmode.jld2", filestring_addl)
+            if isfile(smc_mode_file)
+                return smc_mode_file
+            else
+                return rawpath(m, "estimate", "smc_cloud.jld2", filestring_addl)
+            end
+        end
     elseif input_type == :mean
         return workpath(m,"estimate","paramsmean.h5", filestring_addl)
     elseif input_type == :init || input_type == :init_draw_shocks
@@ -80,6 +89,8 @@ function get_forecast_filename(m::AbstractDSGEModel, input_type::Symbol,
     # First, we need to make sure we get all of the settings that have been printed to this filestring
     directory = pathfcn(m, "forecast")
     base      = filestring_base(m)
+
+    # FOR IRFS AND OTHER OUTPUT VAR, MAY NEED TO UPDATE SO THAT OUTPUT HAS A REGIME TAG
 
     # Now we can find the filestring we are looking for
     get_forecast_filename(directory, base, input_type, cond_type, output_var;
@@ -195,7 +206,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
 
     for var in output_vars
         prod = get_product(var)
-        if prod in [:histut, :hist4q, :forecastut, :bddforecastut, :forecast4q, :bddforecast4q]
+        if prod in [:histut, :hist4q, :forecastut, :bddforecastut, :forecast4q, :bddforecast4q]#, :histlvl, :forecastlvl, :bddforecastlvl]
             # These are computed and saved in means and bands, not
             # during the forecast itself
             continue
@@ -224,7 +235,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
                     # all draws
                     if !isnull(block_number) && get(block_number) == 1
                         # Determine forecast output size
-                        dims  = get_forecast_output_dims(m, input_type, var; subset_inds = subset_inds)
+                        dims = get_forecast_output_dims(m, input_type, var; subset_inds = subset_inds)
                         block_size = forecast_block_size(m)
                         chunk_dims = collect(dims)
                         chunk_dims[1] = block_size
@@ -291,6 +302,13 @@ function write_forecast_metadata(m::AbstractDSGEModel, file::JLD2.JLDFile, var::
 
         date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(dates))
         write(file, "date_indices", date_indices)
+    end
+
+    # Write regimes, if applicable
+    if haskey(m.settings, :regime_switching)
+        if get_setting(m, :regime_switching)
+            write(file, "regime_dates", get_setting(m, :regime_dates)) # Can retrieve regime_indices using date_indices
+        end
     end
 
     # Write state names
@@ -366,8 +384,12 @@ function combine_raw_forecast_output_and_metadata(m::AbstractDSGEModel,
     for jld_file_path in values(forecast_output_files)
         h5_file_path = replace(jld_file_path, "jld2" => "h5")
         arr = h5read(h5_file_path, "arr")
-        JLD2.jldopen(jld_file_path, "r+") do file
+        metadata = load(jld_file_path)
+        JLD2.jldopen(jld_file_path, true, true, true, IOStream) do file
             write(file, "arr", arr)
+            for (k, v) in metadata
+                write(file, k, v)
+            end
         end
         # Remove the h5 containing the raw forecast output when the data has been transferred.
         rm(h5_file_path)
@@ -427,31 +449,94 @@ function read_forecast_output(m::AbstractDSGEModel, input_type::Symbol, cond_typ
     var_ind = indices[var_name]
 
     # Read forecast output
-    fcast_series = if isnull(shock_name)
-        read_forecast_series(filename, product, var_ind)
+    reg_switch = if haskey(m.settings, :regime_switching)
+        get_setting(m, :regime_switching)
     else
-        # Get indices corresponding to shock_name
-        shock_name = get(shock_name)
-        shock_indices = FileIO.load(filename, "shock_indices")
-        shock_ind = shock_indices[shock_name]
+        false
+    end
 
-        read_forecast_series(filename, var_ind, shock_ind)
+    if reg_switch && product == :trend
+        fcast_series = read_regime_switching_trend(filename, var_ind)
+    else
+        fcast_series = if isnull(shock_name)
+            read_forecast_series(filename, product, var_ind)
+        else
+            # Get indices corresponding to shock_name
+            shock_name = get(shock_name)
+            shock_indices = FileIO.load(filename, "shock_indices")
+            shock_ind = shock_indices[shock_name]
+
+            read_forecast_series(filename, var_ind, shock_ind)
+        end
     end
 
     JLD2.jldopen(filename, "r") do file
-        # The `fcast_output` for trends only is of size `ndraws` x `nvars`. We
+        # The `fcast_output` for trends only is of size `ndraws`. We
         # need to use `repeat` below because population adjustments will be
-        # different in each period. Now we have something of size `ndraws` x
-        # `nvars` x `nperiods`
+        # different in each period. Now we have something of size `ndraws` x `nperiods`
+        #
+        # If regime switching was used, then `fcast_output` is
+        # `ndraws` x `n_regimes`, so we still need to use `repeat`.
         if product == :trend
-            nperiods = length(read(file, "date_indices"))
-            fcast_series = repeat(fcast_series, outer = (1, nperiods))
+            if reg_switch
+                regime_dates = read(file, "regime_dates")
+                date_indices = read(file, "date_indices")
+                n_regs       = length(regime_dates)
+                nperiods     = length(date_indices)
+
+                fcast_series_out = Array{eltype(fcast_series)}(undef, size(fcast_series, 1), nperiods)
+
+                # Figure out to which regimes the dates in date_indices belong
+                regime_inds = Vector{UnitRange{Int}}(undef, length(regime_dates))
+                trend_dates = sort(collect(keys(date_indices)))
+                for reg in 1:n_regs
+                    regime_ind = reg == n_regs ? findall(trend_dates .>= regime_dates[reg]) :
+                        findall(regime_dates[reg + 1] .> trend_dates .>= regime_dates[reg])
+                    if isnothing(regime_ind) # may be none! so just default to a dummy range
+                        regime_inds[reg] = 0:0
+                    else
+                        regime_inds[reg] = date_indices[trend_dates[regime_ind][1]]:date_indices[trend_dates[regime_ind][end]]
+                    end
+                end
+
+                for (reg, reg_inds) in enumerate(regime_inds)
+                    if reg_inds != 0:0
+                        fcast_series_out[:, reg_inds] = repeat(fcast_series[:, reg], outer = (1, length(reg_inds)))
+                    end
+                end
+                fcast_series = fcast_series_out
+            else
+                nperiods = length(read(file, "date_indices"))
+                fcast_series = repeat(fcast_series, outer = (1, nperiods))
+            end
         end
 
         # Parse transform
         class_long = get_class_longname(class)
         transforms = read(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
+
+        # # Handle case when series needs to be accumulated, NEED TO FIX INFLATION B/C FCAST_SERIES MAY BE A MATRIX SOMETIMES, ADD IT INSTEAD AS AN ADDITIONAL DIMENSION -> 3D ARRAY, AND THEN AFTERWARD WE NEED TO ADJUST THE NOMINAL REVERSE TRANSFORMS FOR THIS SYNTAX.
+        # if product in [:histlvl, :forecastlvl, :bddforecastlvl]
+        #     # Check if inflation is required for accumulation
+        #     nominal_accumulation = haskey(get_setting(m, :nominal_accumulated_series), var_name)
+        #     if nominal_accumulation
+        #         requisite_vars = get_setting(m, var_name) # Must have info on the real series first, then info on the inflation series second
+        #         fcast_series = Matrix{eltype(fcast_series)}(undef, length(fcast_series), length(requisite_vars))
+        #         for (i, var_info) in enumerate(requisite_vars)
+        #             # Get index corresponding to var name
+        #             req_var_name, req_var_class = var_info
+        #             req_class_long = get_class_longname(req_var_class)
+        #             req_indices = FileIO.load(filename, "$(req_class_long)_indices")
+
+        #             # Read forecast series
+        #             fcast_series[:, i] = read_forecast_series(filename, product, req_var_ind)
+        #         end
+        #     end
+
+        #     # Infer appropriate transform for accumulation
+        #     transform = get_transformlvl(transform; nominal_transform = nominal_accumulation)
+        # end
 
         fcast_series, transform
     end
@@ -460,6 +545,7 @@ end
 """
 ```
 read_forecast_series(filepath, product, var_ind)
+read_forecast_series(filepath, var_ind, shock_ind)
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
@@ -479,13 +565,14 @@ function read_forecast_series(filepath::String, product::Symbol, var_ind::Int)
             arr = reshape(arr, (1, 1))
         elseif ndims == 2 # many draws
             arr = whole[Colon(), var_ind]
-            arr = reshape(arr, (length(arr),1))
+            arr = reshape(arr, (length(arr), 1))
         end
 
     # Other products are ndraws x nvars x nperiods
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
                        :decompdata, :decompnews, :decomppara, :decompdettrend, :decomptotal]
+                       #:forecastlvl, :histlvl, :bddforecastlvl]
         inds_to_read = if ndims == 2 # one draw
             whole = FileIO.load(filepath, "arr")
             arr = whole[var_ind, Colon()]
@@ -515,5 +602,24 @@ function read_forecast_series(filepath::String, var_ind::Int, shock_ind::Int)
         arr = whole[:, var_ind, :, shock_ind]
     end
 
+    return arr
+end
+
+"""
+```
+read_regime_switching_trend(filepath, var_ind)
+```
+
+Read only the trend output for a particular variable (e.g. for a particular
+observable). Result should be a matrix of size `ndraws` × `nvars` × `n_regimes`.
+"""
+function read_regime_switching_trend(filepath::String, var_ind::Int)
+    whole = FileIO.load(filepath, "arr")
+    if ndims(whole) == 2 # one draw
+        arr = whole[var_ind, Colon()]
+        arr = reshape(arr, (1, length(arr)))
+    elseif ndims(whole) == 3 # many draws
+        arr = whole[Colon(), var_ind, Colon()]
+    end
     return arr
 end

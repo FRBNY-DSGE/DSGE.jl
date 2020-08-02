@@ -41,7 +41,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
+function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}; regime_switching::Bool = false, reg::Int = 1) where {T<:AbstractFloat}
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
@@ -54,10 +54,17 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
 
     # Initialize augmented matrices
     n_states_add = length(endo_new)
+
     TTT_aug = zeros(n_endo + n_states_add, n_endo + n_states_add)
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(n_states_add, n_exo)]
     CCC_aug = [CCC; zeros(n_states_add)]
+
+    for p in m.parameters
+        if !isempty(p.regimes)
+            p = ModelConstructors.toggle_regime!(p, reg)
+        end
+    end
 
     ### TTT modifications
 
@@ -73,6 +80,109 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:e_gdi_t1], endo_new[:e_gdi_t]] = 1.0
     if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
         TTT_aug[endo_new[:e_tfp_t1], endo_new[:e_tfp_t]] = 1.0
+    end
+
+    if get_setting(m, :add_laborproductivity_measurement)
+        TTT_aug[endo_new[:cum_z_t],  endo[:z_t]]         = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo_new[:cum_z_t]] = 1.0
+        CCC_aug[endo_new[:cum_z_t]]                      = 100. * (exp(m[:z_star]) - 1.)
+    end
+
+    if get_setting(m, :add_nominalgdp_level)
+        TTT_aug[endo_new[:cum_y_t],  endo[:y_t]]         = 1.0
+        TTT_aug[endo_new[:cum_y_t],  endo_new[:y_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_y_t],  endo_new[:cum_y_t]] = 1.0
+
+        TTT_aug[endo_new[:cum_z_t],  endo[:z_t]]         = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo_new[:cum_z_t]] = 1.0
+        CCC_aug[endo_new[:cum_z_t]]                      = 100. * (exp(m[:z_star]) - 1.)
+
+        TTT_aug[endo_new[:cum_π_t],  endo[:π_t]]         = 1.0
+        TTT_aug[endo_new[:cum_π_t],  endo_new[:cum_π_t]] = 1.0
+        CCC_aug[endo_new[:cum_π_t]]                      = 100. * (m[:π_star] - 1.)
+
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:e_gdp_t]]     = 1.0
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:e_gdp_t1]]    = -m[:me_level]
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:cum_e_gdp_t]] = 1.0
+
+        # Consumption
+        TTT_aug[endo_new[:cum_c_t],  endo[:c_t]]         = 1.0
+        TTT_aug[endo_new[:cum_c_t],  endo_new[:c_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_c_t],  endo_new[:cum_c_t]] = 1.0
+
+        # Flexible Consumption
+        TTT_aug[endo_new[:cum_c_f_t],  endo[:c_f_t]]         = 1.0
+        TTT_aug[endo_new[:cum_c_f_t],  endo_new[:c_f_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_c_f_t],  endo_new[:cum_c_f_t]] = 1.0
+        TTT_aug[endo_new[:c_f_t1],     endo[:c_f_t]]         = 1.0
+
+        # Investment
+        TTT_aug[endo_new[:cum_i_t],  endo[:i_t]]         = 1.0
+        TTT_aug[endo_new[:cum_i_t],  endo_new[:i_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_i_t],  endo_new[:cum_i_t]] = 1.0
+
+        # Flexible Investment
+        TTT_aug[endo_new[:cum_i_f_t],  endo[:i_f_t]]         = 1.0
+        TTT_aug[endo_new[:cum_i_f_t],  endo_new[:i_f_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_i_f_t],  endo_new[:cum_i_f_t]] = 1.0
+        TTT_aug[endo_new[:i_f_t1],     endo[:i_f_t]]         = 1.0
+    end
+
+    if get_setting(m, :add_flexible_price_growth)
+        # Track additional lags
+        TTT_aug[endo_new[:y_f_t1],     endo[:y_f_t]]         = 1.0
+        TTT_aug[endo_new[:c_f_t1],     endo[:c_f_t]]         = 1.0
+        TTT_aug[endo_new[:i_f_t1],     endo[:i_f_t]]         = 1.0
+    end
+
+    if get_setting(m, :add_cumulative)
+        # Output Gap
+        TTT_aug[endo_new[:cum_y_t],  endo[:y_t]]         = 1.0
+        TTT_aug[endo_new[:cum_y_t],  endo_new[:y_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_y_t],  endo_new[:cum_y_t]] = 1.0
+
+        TTT_aug[endo_new[:cum_y_f_t],  endo[:y_f_t]]         = 1.0
+        TTT_aug[endo_new[:cum_y_f_t],  endo_new[:y_f_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_y_f_t],  endo_new[:cum_y_f_t]] = 1.0
+        TTT_aug[endo_new[:y_f_t1],     endo[:y_f_t]]         = 1.0
+
+        # Remaining accumulations for GDP, Flexible GDP, Technology
+        TTT_aug[endo_new[:cum_z_t],  endo[:z_t]]         = 1.0
+        TTT_aug[endo_new[:cum_z_t],  endo_new[:cum_z_t]] = 1.0
+        CCC_aug[endo_new[:cum_z_t]]                      = 100. * (exp(m[:z_star]) - 1.)
+
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:e_gdp_t]]     = 1.0
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:e_gdp_t1]]    = -m[:me_level]
+        TTT_aug[endo_new[:cum_e_gdp_t],  endo_new[:cum_e_gdp_t]] = 1.0
+
+        # Consumption
+        TTT_aug[endo_new[:cum_c_t],  endo[:c_t]]         = 1.0
+        TTT_aug[endo_new[:cum_c_t],  endo_new[:c_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_c_t],  endo_new[:cum_c_t]] = 1.0
+
+        # Flexible Consumption
+        TTT_aug[endo_new[:cum_c_f_t],  endo[:c_f_t]]         = 1.0
+        TTT_aug[endo_new[:cum_c_f_t],  endo_new[:c_f_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_c_f_t],  endo_new[:cum_c_f_t]] = 1.0
+        TTT_aug[endo_new[:c_f_t1],     endo[:c_f_t]]         = 1.0
+
+        # Investment
+        TTT_aug[endo_new[:cum_i_t],  endo[:i_t]]         = 1.0
+        TTT_aug[endo_new[:cum_i_t],  endo_new[:i_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_i_t],  endo_new[:cum_i_t]] = 1.0
+
+        # Flexible Investment
+        TTT_aug[endo_new[:cum_i_f_t],  endo[:i_f_t]]         = 1.0
+        TTT_aug[endo_new[:cum_i_f_t],  endo_new[:i_f_t1]]    = -1.0
+        TTT_aug[endo_new[:cum_i_f_t],  endo_new[:cum_i_f_t]] = 1.0
+        TTT_aug[endo_new[:i_f_t1],     endo[:i_f_t]]         = 1.0
+    end
+
+    if get_setting(m, :add_flexible_price_growth)
+        # Track additional lags
+        TTT_aug[endo_new[:y_f_t1],     endo[:y_f_t]]         = 1.0
+        TTT_aug[endo_new[:c_f_t1],     endo[:c_f_t]]         = 1.0
+        TTT_aug[endo_new[:i_f_t1],     endo[:i_f_t]]         = 1.0
     end
 
     # Expected inflation
@@ -129,7 +239,13 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     ### CCC Modifications
 
     # Expected inflation
-    CCC_aug[endo_new[:Et_π_t]] = (CCC + TTT*CCC)[endo[:π_t]]
+    CCC_aug[endo_new[:Et_π_t]] = (CCC + TTT*CCC)[endo[:π_t]] # note that currently this term is not used anywhere
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
+    end
 
     return TTT_aug, RRR_aug, CCC_aug
 end

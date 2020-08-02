@@ -55,7 +55,7 @@ output_vars = [:histstates, :histobs, :histpseudo, :histshocks,
     @test get_forecast_output_files(m, :mode, :none, output_vars) == dict
 
     # write_forecast_outputs
-    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
+    if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
         global df = load_data(m, verbose = :none)
         overrides = forecast_input_file_overrides(m)
         overrides[:full] = "$(path)/../reference/smcsave_.h5"

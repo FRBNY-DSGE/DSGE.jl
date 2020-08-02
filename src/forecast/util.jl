@@ -38,7 +38,7 @@ function n_forecast_draws(m::AbstractDSGEModel, input_type::Symbol)
             size(dataset)[1]
         end
         return draws
-    elseif input_type == :prior
+    elseif input_type == :prior || input_type == :mode_draw_shocks
         return 5000
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
@@ -55,20 +55,34 @@ each of length equal to the number of forecast blocks. `block_inds[i]` is the
 range of indices for block `i` before thinning by `jstep` and
 `block_inds_thin[i]` is the range after thinning.
 """
-function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
+function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0, params::Vector{Float64} = Vector{Float64}(undef, 0))
 
-    if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
-        ndraws    = n_forecast_draws(m, :full)
+    if !isempty(params)
+        ndraws    = 1000
         jstep     = get_jstep(m, ndraws)
         start_ind = 1
         end_ind   = ndraws
-    elseif input_type == :subset
-        ndraws    = length(subset_inds)
-        jstep     = get_jstep(m, ndraws)
-        start_ind = first(subset_inds)
-        end_ind   = last(subset_inds)
     else
-        throw(ArgumentError("Cannot call forecast_block_inds with input_type = $input_type."))
+        if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
+            regime_switching = (haskey(m.settings, :regime_switching) && haskey(m.settings, :regime_switching_ndraws)) ?
+                get_setting(m, :regime_switching) : false
+            set_ndraw = haskey(m.settings, :forecast_ndraws) ? get_setting(m, :forecast_ndraws) : 0
+            if set_ndraw > 0
+                ndraws = set_ndraw
+            else
+                ndraws = regime_switching ? get_setting(m, :regime_switching_ndraws) : n_forecast_draws(m, :full)
+            end
+            jstep     = get_jstep(m, ndraws)
+            start_ind = 1
+            end_ind   = ndraws
+        elseif input_type == :subset
+            ndraws    = length(subset_inds)
+            jstep     = get_jstep(m, ndraws)
+            start_ind = first(subset_inds)
+            end_ind   = last(subset_inds)
+        else
+            throw(ArgumentError("Cannot call forecast_block_inds with input_type = $input_type."))
+        end
     end
     all_inds = start_ind:jstep:end_ind
     end_ind_thin = convert(Int64, floor(end_ind / jstep))
@@ -107,7 +121,7 @@ end
 
 """
 ```
-add_requisite_output_vars(output_vars::Vector{Symbol})
+add_requisite_output_vars(output_vars::Vector{Symbol}; bdd_fcast = true)
 ```
 
 Based on the given `output_vars`, this function determines which
@@ -128,12 +142,15 @@ order to compute a shock decomposition for a state variable, but need
 not be saved to produce plots later on. Therefore, `histstates` is not
 added to `output_vars` when calling
 `add_requisite_output_vars([shockdecstates])`.
+
+The option `bdd_fcast` can allow us to avoid adding `bdd` forecast output vars
+if these are not wanted by the user.
 """
-function add_requisite_output_vars(output_vars::Vector{Symbol})
+function add_requisite_output_vars(output_vars::Vector{Symbol}; bdd_fcast::Bool = true)
     # Add :bddforecast<class> if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q],
+    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q, :forecastlvl],
                                    output_vars)
-    if !isempty(forecast_outputs)
+    if !isempty(forecast_outputs) && bdd_fcast
         bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
     end
@@ -159,7 +176,8 @@ function remove_meansbands_only_output_vars(output_vars::Vector{Symbol})
     # All the <product>ut<class> and <product>4q<class> variables are computed
     # during compute_meansbands
     meansbands_only_products = [:histut, :hist4q, :forecastut, :forecast4q,
-                                :bddforecastut, :bddforecast4q]
+                                :bddforecastut, :bddforecast4q, :histlvl, :forecastlvl,
+                                :bddforecastlvl]
 
     Base.filter(var -> !(get_product(var) in meansbands_only_products), output_vars)
 end
@@ -236,11 +254,31 @@ standardize_shocks(shocks, QQ)
 Normalize shocks by their standard deviations. Shocks with zero standard
 deviation will be set to zero.
 """
-function standardize_shocks(shocks::Matrix{T}, QQ::Matrix{T}) where {T<:AbstractFloat}
+function standardize_shocks(shocks::AbstractMatrix{T}, QQ::AbstractMatrix{T}) where {T<:AbstractFloat}
     stdshocks = shocks ./ sqrt.(diag(QQ))
 
     zeroed_shocks = findall(diag(QQ) .== 0)
     stdshocks[zeroed_shocks, :] .= 0
+
+    return stdshocks
+end
+
+"""
+```
+standardize_shocks(shocks, QQs, start_date, end_date)
+```
+
+Normalize shocks by their standard deviations when there is regime switching.
+Shocks with zero standard deviation will be set to zero.
+"""
+function standardize_shocks(shocks::Matrix{T}, QQs::Vector{Matrix{T}},
+                            regime_inds::Vector{UnitRange{Int}}) where {T<:AbstractFloat}
+
+    stdshocks = similar(shocks)
+    for(QQ, inds) in zip(QQs, regime_inds)
+        inshocks = @view shocks[:, inds]
+        stdshocks[:, inds] = standardize_shocks(inshocks, QQ)
+    end
 
     return stdshocks
 end
@@ -254,15 +292,60 @@ Given a vector `dicts` of forecast output dictionaries, concatenate each output
 along the draw dimension and return a new dictionary of the concatenated
 outputs.
 """
-function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
+function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}}; show_failed_percent::Bool = false)
     out = Dict{Symbol, Array{Float64}}()
     if !isempty(dicts)
+        _populate_empty_dictionaries!(dicts; show_failed_percent = show_failed_percent)
         for var in keys(dicts[1])
             outputs  = map(dict -> reshape(dict[var], (1, size(dict[var])...)), dicts)
             out[var] = cat(outputs..., dims=1)
         end
     end
     return out
+end
+
+"""
+```
+_populate_empty_dictionaries!(dicts)
+```
+
+helps `assemble_block_outputs` handle empty dictionaries by populating
+them with NaNs.
+"""
+function _populate_empty_dictionaries!(dicts::Vector{Dict{Symbol, Array{Float64}}}; show_failed_percent::Bool = false)
+    check = isempty.(dicts)
+    if any(check)
+        empty_dicts  = findall(check)
+        if length(empty_dicts) == length(dicts)
+            error("All dictionaries in dicts are empty. No valid forecast output was computed by forecast_one_draw")
+        else
+            ref_dict = dicts[findfirst(.!check)]
+            for i in empty_dicts
+                for (k, v) in ref_dict
+                    dicts[i][k] = fill(NaN, size(v))
+                end
+            end
+            if show_failed_percent
+                nan_percent = round(100. * count(check) / length(dicts), digits = 2)
+                println("The percentage of failed forecasts is $(nan_percent)%")
+            end
+        end
+    end
+
+    ct = 0
+    for dict in dicts
+        for (k, v) in dict
+            if any(isnan.(v))
+                ct += 1
+                break
+            end
+        end
+    end
+    if show_failed_percent
+        nan_percent = round(100. * ct / length(dicts), digits = 2)
+        println("The percentage of failed forecasts is $(nan_percent)%")
+    end
+
 end
 
 """
@@ -306,7 +389,12 @@ function get_forecast_output_dims(m::AbstractDSGEModel, input_type::Symbol, outp
     end
 
     if prod == :trend
-        return (ndraws, nvars)
+        regime_switching = haskey(m.settings, :regime_switching) ? get_setting(m, :regime_switching) : false
+        if regime_switching
+            return (ndraws, nvars, get_setting(m, :n_regimes))
+        else
+            return (ndraws, nvars)
+        end
     elseif prod in [:hist, :forecast, :bddforecast, :dettrend]
         return (ndraws, nvars, nperiods)
     elseif prod in [:shockdec, :irf]

@@ -42,12 +42,55 @@ m = AnSchorfheide()
 compute_meansbands(m, :mode, :none, [:forecaststates, forecastobs])
 ```
 
+## Weighted Averages of Full-Distribution Forecasts
+
+Sometimes a forecaster may want to combine several
+different "scenarios" to construct a forecast. For example,
+there may be uncertainty about the right model to use.
+Rather than pick just one model, a forecaster would instead
+want to somehow combine the forecasts from all the models.
+As another example, a forecaster may not be sure
+what policies will be implemented in the future, so
+it may be easier to forecast the future by constructing
+different plausible scenarios.
+
+We implement forecast combination as a weighted average
+of forecast paths drawn from different forecasts.
+A full-distribution forecast is just a matrix of different
+possible forecast paths, which approximate the true distribution
+of forecast paths. To construct a weighted average
+of forecasts from different scenarios, we just need to draw randomly from
+each scenario's distribution of forecast paths.
+
+For example, suppose `m1`, `m2`, `m3` are three different models
+with unconditional forecasts identified by `forecast_string1`, `forecast_string2`,
+and `forecast_string3`. Then an equal weighted average of these forecasts
+identified by the tag `combo_forecast_string` can be
+calculated by running
+
+```
+input_types = [:full, :full, :full]
+cond_types = [:none, :none, :none]
+compute_meansbands([m1, m2, m3], input_types, cond_types, output_vars;
+                        weights = [1/3, 1/3, 1/3],
+                        forecast_strings = [forecast_string1, forecast_string2, forecast_string3],
+                        combo_forecast_string = combo_forecast_string)
+```
+
+The results are saved using the file paths implied by the first model in the vector of models
+passed as the first input argument (`m1`). To get the resulting `MeansBands`, run
+
+```
+mb = read_mb(m1, :full, :none, output_var; forecast_string = combo_forecast_string)
+```
+
+## Functions for Calculating Means and Bands
+
 ```@docs
 compute_meansbands
 ```
 
-
-## The `MeansBands` Type
+## The `MeansBands` type
 
 ``` @docs
 MeansBands

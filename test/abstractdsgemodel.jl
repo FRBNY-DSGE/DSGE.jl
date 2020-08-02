@@ -1,12 +1,22 @@
-using DSGE, ModelConstructors, Dates, Optim, Test, Nullables, HDF5
+using DSGE, ModelConstructors, Dates, Test, Nullables, HDF5, Optim
 path = dirname(@__FILE__)
 m = AnSchorfheide()
 m <= Setting(:date_zlb_end, get_setting(m, :date_zlb_start))
 m <= Setting(:hessian_path, "")
+
 # Dates, indices, number of periods for each regime
+@testset "Test field access functions for AbstractDSGEModel objects" begin
+    @test DSGE.get_parameters(m) == m.parameters
+    @test DSGE.get_rng(m) == m.rng
+    @test DSGE.get_settings(m) == m.settings
+    @test DSGE.get_observables(m) == m.observables
+    @test DSGE.get_pseudo_observables(m) == m.pseudo_observables
+    @test DSGE.get_exogenous_shocks(m) == m.exogenous_shocks
+end
+
 @testset "Test setting access functions for AbstractDSGEModel objects" begin
-    n_anticipated_shocks(m) == get_setting(m, :n_anticipated_shocks)
-    n_anticipated_shocks_padding(m) == get_setting(m, :n_anticipated_shocks_padding)
+    n_mon_anticipated_shocks(m) == get_setting(m, :n_mon_anticipated_shocks)
+    n_mon_anticipated_shocks_padding(m) == get_setting(m, :n_mon_anticipated_shocks_padding)
 
     @test DSGE.date_presample_start(m) == get_setting(m, :date_presample_start)
     @test DSGE.date_mainsample_start(m) == get_setting(m, :date_mainsample_start)
@@ -78,6 +88,112 @@ m <= Setting(:hessian_path, "")
     @test DSGE.alternative_policy(m) == get_setting(m, :alternative_policy)
 end
 
+@testset "Check automatic calculation of settings for regime switching forecasts" begin
+    rss = Vector{Dict{Int, Date}}(undef, 0)
+    fss = Vector{Date}(undef, 0)
+    ces = Vector{Date}(undef, 0)
+    nreg = Vector{Int}(undef, 0)
+    nhistreg = Vector{Int}(undef, 0)
+    nfcastreg = Vector{Int}(undef, 0)
+    ncondreg = Vector{Int}(undef, 0)
+    nruleper = Vector{Int}(undef, 0)
+    regfcaststart = Vector{Int}(undef, 0)
+    regpostcond = Vector{Int}(undef, 0)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 6, 30))
+    push!(nreg, 4)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 2)
+    push!(ncondreg, 1)
+    push!(nruleper, 1)
+    push!(regfcaststart, 3)
+    push!(regpostcond, 4)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 6, 30)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 6, 30))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 1)
+    push!(ncondreg, 1)
+    push!(nruleper, 0)
+    push!(regfcaststart, 3)
+    push!(regpostcond, 3)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2019, 12, 31), 3 => Date(2020, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 3, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 2)
+    push!(ncondreg, 0)
+    push!(nruleper, 0)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 2)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2015, 3, 31), 3 => Date(2019, 6, 30)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 3, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 3)
+    push!(nfcastreg, 1)
+    push!(ncondreg, 0)
+    push!(nruleper, -1)
+    push!(regfcaststart, 3)
+    push!(regpostcond, 3)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2020, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 2)
+    push!(ncondreg, 1)
+    push!(nruleper, 0)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 3)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2021, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 2)
+    push!(nfcastreg, 2)
+    push!(ncondreg, 0)
+    push!(nruleper, 0)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 2)
+
+    push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 6, 30), 3 => Date(2021, 12, 31)))
+    push!(fss, Date(2020, 6, 30))
+    push!(ces, Date(2020, 12, 31))
+    push!(nreg, 3)
+    push!(nhistreg, 1)
+    push!(nfcastreg, 2)
+    push!(ncondreg, 1)
+    push!(nruleper, 1)
+    push!(regfcaststart, 2)
+    push!(regpostcond, 2)
+
+    for (rs, fs, ce, nr, nhr, nfr, ncr, nrp, rfs, rpc) in zip(rss, fss, ces, nreg, nhistreg,
+                                                              nfcastreg, ncondreg, nruleper, regfcaststart, regpostcond)
+        m <= Setting(:regime_dates, rs)
+        m <= Setting(:date_forecast_start, fs)
+        m <= Setting(:date_conditional_end, ce)
+        setup_regime_switching_inds!(m)
+        for (set, setans) in zip([:n_regimes, :n_hist_regimes, :n_fcast_regimes, :n_cond_regimes, :n_rule_periods,
+                                  :reg_forecast_start, :reg_post_conditional_end], [nr, nhr, nfr, ncr, nrp, rfs, rpc])
+            @test get_setting(m, set) == setans
+        end
+        setup_regime_switching_inds!(m; cond_type = :full)
+        @test get_setting(m, :n_rule_periods) == (nrp - ncr)
+        setup_regime_switching_inds!(m; cond_type = :semi)
+        @test get_setting(m, :n_rule_periods) == (nrp - ncr)
+    end
+end
+
 @testset "Test other auxiliary setting functions for AbstractDSGEModel objects" begin
     m <= Setting(:population_mnemonic, :test)
     @test get(DSGE.parse_population_mnemonic(m)[1]) == :test
@@ -91,7 +207,6 @@ end
     @test @test_matrix_approx_eq inds_shocks_no_ant(m1) collect(1:18)
     @test @test_matrix_approx_eq inds_obs_no_ant(m) collect(1:3)
     @test @test_matrix_approx_eq inds_obs_no_ant(m1) collect(1:13)
-
 
     m <= Setting(:date_forecast_start, DSGE.quartertodate("2019-Q3"))
     m <= Setting(:forecast_horizons, 10)
@@ -124,7 +239,7 @@ end
 
     specify_hessian!(m, "reference/hessian.h5")
     @test get_setting(m, :calculate_hessian) == false
-    @test get_setting(m, :hessian_path) == "$path/reference/hessian.h5"
+    @test get_setting(m, :hessian_path) == joinpath(dirname("$path"), "test", "reference", "hessian.h5")
 
     para = deepcopy(map(x -> x.value, m.parameters))
     m.parameters[1].value = 1.

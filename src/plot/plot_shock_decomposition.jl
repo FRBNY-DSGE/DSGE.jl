@@ -146,6 +146,7 @@ shockdec
                    tick_size = 5,
                    vert_line = quartertodate("0000-Q1"),
                    vert_line2 = quartertodate("0000-Q1"))
+
     # Error checking
     if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
         typeof(sd.args[2]) != MeansBands || typeof(sd.args[3]) != MeansBands ||
@@ -159,9 +160,9 @@ shockdec
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
     df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
-                                      mb_hist = hist, mb_forecast = forecast,
-                                      detexify_shocks = false,
-                                      groups = groups)
+                                           mb_hist = hist, mb_forecast = forecast,
+                                           detexify_shocks = false,
+                                           groups = groups)
 
     dates = df[!, :date]
     xnums = (1:length(dates)) .- 0.5
@@ -174,8 +175,7 @@ shockdec
 
     # Set date axis limits
     x0 = xnums[findfirst(dates .== start_date)]
-    x1 = xnums[findfirst(dates .== end_date)]
-    xlims := (x0, x1)
+    x1 = xnums[findfirst(dates .== lastdayofquarter(end_date))] # weird bug has been occuring sometimes where end_date is one day off
 
     # Shock contributions
     @series begin
@@ -184,11 +184,16 @@ shockdec
         colors    = map(x -> x.color, groups)
         ngroups   = length(groups)
 
-        labels     --> reshape(labels, 1, ngroups)
-        color      --> reshape(colors, 1, ngroups)
-        linealpha  --> 0
-        bar_width  --> 1
-        legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
+        if VERSION >= v"1.3"
+            label       --> reshape(labels, 1, ngroups)
+            seriescolor --> reshape(colors, 1, ngroups)
+        else
+            labels      --> reshape(labels, 1, ngroups)
+            color       --> reshape(colors, 1, ngroups)
+        end
+        linealpha       --> 0
+        bar_width       --> 1
+        legendfont      --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
         inds = findall(start_date .<= dates .<= end_date)
         x = xnums[inds]
@@ -219,8 +224,6 @@ shockdec
             xnums[ind]
         end
     end
-
-
 
     seriestype := :line
     linewidth  := 2

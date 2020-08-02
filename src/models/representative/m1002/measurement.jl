@@ -1,7 +1,7 @@
 """
 ```
 measurement(m::Model1002{T}, TTT::Matrix{T}, RRR::Matrix{T},
-            CCC::Vector{T}) where {T<:AbstractFloat}
+    CCC::Vector{T}; reg::Int = 1) where {T<:AbstractFloat}
 ```
 
 Assign measurement equation
@@ -21,7 +21,8 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::Model1002{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}) where {T<:AbstractFloat}
+                     CCC::Vector{T}; reg::Int = 1) where {T<:AbstractFloat}
+
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
@@ -35,6 +36,33 @@ function measurement(m::Model1002{T},
     DD = zeros(_n_observables)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, reg)
+        end
+    end
+
+    no_integ_inds = inds_states_no_integ_series(m)
+    if haskey(m.endogenous_states, :pgap_t)
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
+    end
+    if haskey(m.endogenous_states, :ygap_t)
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:ygap_t]])
+    end
+    if haskey(m.endogenous_states, :rw_t)
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:rw_t]])
+    end
+    if haskey(m.endogenous_states, :Rref_t)
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:Rref_t]])
+    end
+    if (get_setting(m, :add_laborproductivity_measurement) || get_setting(m, :add_nominalgdp_level) ||
+        get_setting(m, :add_cumulative)) || (haskey(m.endogenous_states, :pgap_t)) || (haskey(m.endogenous_states, :ygap_t)) ||
+        (haskey(m.endogenous_states, :rw_t)) || (haskey(m.endogenous_states, :Rref_t))
+        # Remove integrated states (e.g. states w/unit roots)
+        TTT = @view TTT[no_integ_inds, no_integ_inds]
+        CCC = @view CCC[no_integ_inds]
+    end
 
     ## GDP growth - Quarterly!
     ZZ[obs[:obs_gdp], endo[:y_t]]          = 1.0
@@ -69,6 +97,7 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_wages], endo[:z_t]]      = 1.0
         DD[obs[:obs_wages]]                  = 100*(exp(m[:z_star])-1)
     end
+
     ## Inflation (GDP Deflator)
     ZZ[obs[:obs_gdpdeflator], endo[:π_t]]            = m[:Γ_gdpdef]
     ZZ[obs[:obs_gdpdeflator], endo_new[:e_gdpdef_t]] = 1.0
@@ -96,24 +125,24 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_investment]]                  = 100*(exp(m[:z_star])-1)
 
     ## Spreads
-    ZZ[obs[:obs_spread], endo[:ERtil_k_t]] = 1.0
+    ZZ[obs[:obs_spread], endo[:ERktil_t]] = 1.0
     ZZ[obs[:obs_spread], endo[:R_t]]       = -1.0
     DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
     ## 10 yrs infl exp
 
-    TTT10                          = (1/40)*((Matrix{Float64}(I, size(TTT, 1), size(TTT,1))
-                                              - TTT)\(TTT - TTT^41))
-    ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
-    DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
+    TTT10                                      = (1/40) * ((Matrix{Float64}(I, size(TTT, 1), size(TTT,1))
+                                                            - TTT) \ (TTT - TTT^41))
+    ZZ[obs[:obs_longinflation], no_integ_inds] = TTT10[endo[:π_t], :]
+    DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]' * TTT10
+    ZZ[obs[:obs_longrate], no_integ_inds]     = ZZ[6, no_integ_inds]' * TTT10
     ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
-    DD[obs[:obs_longrate]]                  = m[:Rstarn]
+    DD[obs[:obs_longrate]]                    = m[:Rstarn]
 
     ## TFP
-    ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
+    ZZ[obs[:obs_tfp], endo[:z_t]] = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
     if subspec(m) in ["ss14", "ss15", "ss16", "ss18", "ss19"]
         ZZ[obs[:obs_tfp], endo_new[:e_tfp_t]]  = 1.0
         ZZ[obs[:obs_tfp], endo_new[:e_tfp_t1]] = -m[:me_level]
@@ -123,6 +152,12 @@ function measurement(m::Model1002{T},
     if !(subspec(m) in ["ss15", "ss16"])
         ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
+    end
+
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
+        QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
+        QQ[exo[:φ_sh], exo[:φ_sh]] = m[:σ_φ]^2
     end
 
     QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
@@ -145,19 +180,68 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
 
     # These lines set the standard deviations for the anticipated shocks
-    for i = 1:n_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+    for i = 1:n_mon_anticipated_shocks(m)
+        ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
         if subspec(m) == "ss11"
-            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_anticipated_shocks(m)
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
         else
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
         end
     end
 
+#= # We do not want anticipated shocks to automatically be part of the measurement equation
+    for (k, v) in get_setting(m, :antshocks)
+        if k == :z # z is a sum of a transient and persistent component, so we model this differently
+            for i = 1:v
+                ZZ[obs[Symbol("obs_z$i")], no_integ_inds] = ZZ[obs[:obs_z], no_integ_inds]' * (TTT^i)
+                if subspec(m) == "ss11"
+                    QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_ztil]^2 / v
+                else
+                    QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$i")]^2
+                end
+            end
+        else
+            for i = 1:v
+                ZZ[obs[Symbol("obs_", k, "$i")], no_integ_inds] = ZZ[obs[Symbol(:obs_, k)], no_integ_inds]' * (TTT^i)
+                if subspec(m) == "ss11"
+                    QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol(:σ_, k)]^2 / v
+                else
+                    QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol("σ_", k, "$i")]^2
+                end
+            end
+        end
+    end
+=#
+
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(CCC .!= 0)
-        DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+    if any(CCC .!= 0.)
+        # Are we using the zero rate alternative policy or not?
+        is_zero_rate_rule = (haskey(get_settings(m), :replace_eqcond_func_dict) ?
+                             (!isempty(get_setting(m, :replace_eqcond_func_dict)) && get_setting(m, :replace_eqcond)) : false) ||
+                             get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond
+
+        # If we are using the zero rate rule, then we don't adjust DD. If we run the code block below,
+        # then the zero rate rule will cause CCC to be nonzero in multiple places, leading to the
+        # wrong steady state measurement vector DD.
+        #
+        # The current coding of is_zero_rate_rule assumes that, when using a zero_rate rule (perhaps with gensys2 and temp alt policies)
+        # any regimes in which the zero rate rule does not apply also will not have to update DD to reflect nonzero CCC.
+        # This is typically the case for m1002.
+        #
+        # Currently it looks like we modify CCC in augment_states to track expected inflation,
+        # but it doesn't look like we use this variable anywhere anyway. So ignoring this code block is fine on that front.
+        # However, all the observables and pseudo-observables were not thoroughly checked, so it is possible
+        # that the measurement equation is flawed in some way given how this has been coded.
+        if !is_zero_rate_rule
+            DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT) \ CCC)
+        end
+    end
+
+    for para in m.parameters
+        if !isempty(para.regimes)
+            ModelConstructors.toggle_regime!(para, 1)
+        end
     end
 
     return Measurement(ZZ, DD, QQ, EE)
