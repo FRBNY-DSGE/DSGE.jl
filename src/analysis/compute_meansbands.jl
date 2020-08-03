@@ -328,6 +328,7 @@ function compute_meansbands(models::Vector,
                             population_forecast::DataFrame = DataFrame(),
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             shock_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                            skipnan::Bool = false,
                             verbose::Symbol = :none,
                             kwargs...)
 
@@ -439,7 +440,7 @@ function compute_meansbands(models::Vector,
                             pop_growth::AbstractVector{Float64} = Float64[],
                             shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
-                            minimize::Bool = false,
+                            minimize::Bool = false, skipnan::Bool = false,
                             compute_shockdec_bands::Bool = false)
 
     # Return only one set of bands if we read in only one draw
