@@ -8,10 +8,8 @@ os:
     #- osx
     - linux
 julia:
-    # Test 1.1 explicitly to ensure deprecations b/n 1.1 and 1.4 are handled properly
     - 1
-    - 1.1
-    - 1.4
+    - 1.1 # Test 1.1 b/c some branches for new features still use 1.1
 notifications:
     email: false
 addons:
