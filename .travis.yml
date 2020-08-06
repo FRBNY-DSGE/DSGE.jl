@@ -11,6 +11,7 @@ julia:
     # Test 1.1 explicitly to ensure deprecations b/n 1.1 and 1.4 are handled properly
     - 1
     - 1.1
+    - 1.4
 notifications:
     email: false
 addons:
