@@ -35,6 +35,7 @@ my_tests = [
             "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
+            "estimate/poolmodel_tpf",
             "estimate/filter_poolmodel",
             "estimate/posterior_poolmodel",
             "estimate/estimate_bma",
