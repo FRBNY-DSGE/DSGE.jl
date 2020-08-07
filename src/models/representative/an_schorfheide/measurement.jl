@@ -51,9 +51,9 @@ function measurement(m::AnSchorfheide{T},
     DD[obs[:obs_nominalrate]]             = m[:π_star] + m[:rA] + 4.0*m[:γ_Q]
 
     # Measurement error
-    EE[obs[:obs_gdp], endo[:y_t]]         = m[:e_y]^2
-    EE[obs[:obs_cpi], endo[:π_t]]         = m[:e_π]^2
-    EE[obs[:obs_nominalrate], endo[:R_t]] = m[:e_R]^2
+    EE[obs[:obs_gdp], obs[:obs_gdp]]                 = m[:e_y]^2
+    EE[obs[:obs_cpi], obs[:obs_cpi]]                 = m[:e_π]^2
+    EE[obs[:obs_nominalrate], obs[:obs_nominalrate]] = m[:e_R]^2
 
     # Variance of innovations
     QQ[exo[:z_sh],exo[:z_sh]]   = (m[:σ_z])^2
