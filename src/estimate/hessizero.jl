@@ -23,12 +23,12 @@ function hessizero(fcn::Function,
 
     # Compute diagonal elements first
     if distr && nworkers() > 1
-        diag_elements = @sync @distributed (hcat) for i = 1:n_para
+        diag_elements = @sync @distributed (vcat) for i = 1:n_para
             hess_diag_element(fcn, x, i; check_neg_diag = check_neg_diag, verbose = verbose)
         end
-        hessian = diagm(0 => diag_elements)
+        hessian = diagm(diag_elements)
     else
-        for i=1:n_para
+        for i = 1:n_para
             hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag = check_neg_diag,
                                              verbose = verbose)
         end

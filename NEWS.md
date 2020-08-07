@@ -1,3 +1,8 @@
+# DSGE.jl 1.1.7 (in development)
+
+## Bug fixes and cleanup
++ Fix error in calculating the diagonal of the Hessian with parallel workers
+
 # DSGE.jl 1.1.6
 ## Version Restrictions
 + Raise Julia compatibility to all v1.x.
