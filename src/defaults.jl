@@ -62,6 +62,13 @@ function default_settings!(m::AbstractDSGEModel)
     settings[:n_mon_anticipated_shocks_padding] = Setting(:n_mon_anticipated_shocks_padding, 20,
         "Padding for anticipated policy shocks")
 
+    # Monetary policy shock name and observable
+    settings[:monetary_policy_shock] = Setting(:monetary_policy_shock, :rm_sh,
+                                               "Name of the monetary policy shock in field `exogenous_shocks` " *
+                                               "of a concrete subtype of AbstractDSGEModel")
+    settings[:nominal_rate_observable] = Setting(:nominal_rate_observable, :obs_nominalrate,
+                                                 "Name of the observable for monetary policy's nominal interest rate.")
+
     # General computation
     settings[:use_parallel_workers] = Setting(:use_parallel_workers, true,
         "Use available parallel workers in computations")

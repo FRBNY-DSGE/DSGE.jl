@@ -44,6 +44,9 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 
 - `saveroot::String`: The root directory for model output.
 - `use_parallel_workers::Bool`: Use available parallel workers in computations.
+- `nominal_rate_observable`: Name (as a `Symbol`) of the observable used to measure the nominal interest rate
+  used to implement monetary policy.
+- `monetary_policy_shock`: Name (as a `Symbol`) of the exogenous monetary policy shock in a concrete subtype of `AbstractDSGEModel`.
 - `n_mon_anticipated_shocks::Int`: Number of anticipated policy shocks.
 - `antshocks::Dict{Symbol, Int}`: a dictionary mapping the name of an anticipated shock
   to the number of periods of anticipation, e.g. `:b => 2` adds anticipated `b` shocks up to
@@ -90,6 +93,7 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 - `date_conditional_end::Date`: Last date for which we have conditional
   data. This is typically the same as `date_forecast_start` when we condition on
   nowcasts and current quarter financial data.
+
 
 #### Estimation
 

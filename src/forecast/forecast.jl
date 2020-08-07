@@ -132,8 +132,8 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
 
             # Forecast without anticipated shocks
             if n_mon_anticipated_shocks(m) > 0
-                ind_ant1 = m.exogenous_shocks[:rm_shl1]
-                ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_mon_anticipated_shocks(m))")]
+                ind_ant1 = m.exogenous_shocks[Symbol(get_setting(m, :monetary_policy_shock), :l1)]
+                ind_antn = m.exogenous_shocks[Symbol(get_setting(m, :monetary_policy_shock), "l$(n_mon_anticipated_shocks(m))")]
                 ant_shock_inds = ind_ant1:ind_antn
                 shocks[ant_shock_inds, :] .= 0
             end
@@ -188,8 +188,8 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
 =#
 
     # Get variables necessary to enforce the zero lower bound in the forecast
-    ind_r = m.observables[:obs_nominalrate]
-    ind_r_sh = m.exogenous_shocks[:rm_sh]
+    ind_r = m.observables[get_setting(m, :nominal_rate_observable)]
+    ind_r_sh = m.exogenous_shocks[get_setting(m, :monetary_policy_shock)]
     zlb_value = forecast_zlb_value(m)
 
     if isa(system, RegimeSwitchingSystem)
