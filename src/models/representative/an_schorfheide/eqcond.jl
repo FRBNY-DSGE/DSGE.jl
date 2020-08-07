@@ -74,7 +74,7 @@ function eqcond(m::AnSchorfheide)
     ### 7. Expected output
 
     Γ0[eq[:eq_Ey], endo[:y_t]] = 1
-    Γ1[eq[:eq_Ey], endo[:Ey_t1]] = 1
+    Γ1[eq[:eq_Ey], endo[:Ey_t]] = 1
     Π[eq[:eq_Ey], ex[:Ey_sh]] = 1
 
     ### 8. Expected inflation
