@@ -136,4 +136,6 @@ if haskey(ENV, "FRED_API_KEY")
     plot_forecast_sequence([m,m], [:full, :full], [:none, :none], m, :full, :none, :pseudo, :y_t,
                            plotroot = tmp_saveroot, start_date = DSGE.quartertodate("1960-Q1"),
                            end_date = DSGE.quartertodate("1961-Q1"))
+
+    rm(joinpath(dirname(@__FILE__), "../reference/output_data/an_schorfheide/ss0/forecast"), recursive = true)
 end
