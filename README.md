@@ -25,6 +25,10 @@ Further extensions of the DSGE model code may be released at the discretion of t
 pkg> add DSGE
 ```
 
+If you are using Windows OS and you encounter an error like `AssertionError: length(dirs) == 1`, please see this [issue](https://github.com/JuliaLang/Pkg.jl/issues/1943). Additionally, please do not run the `plot.jl` test if you are using Windows OS
+because the generated output will violate the default filename length restriction on Windows. If you want to run this test, then
+you need to enable [long paths](https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#enable-long-paths-in-windows-10-version-1607-and-later).
+
 *Note we do not test our code in Windows OS, so we cannot guarantee the code works properly in Windows.*
 
 ## Versioning
@@ -34,8 +38,6 @@ pkg> add DSGE
 To use `DSGE.jl` with Julia `v0.7`, please check out tag `0.8.1`. To do this, click on the drop-down menu that reads `branch:master` on the left-hand side of the page. Select `tags`, then `v0.8.1`.  If you've already cloned the repo, you can simply run `git checkout v0.8.1`.
 
 To use `DSGE.jl` with Julia `v0.6`, please check out tag `0.4.1`.
-
-*In Windows OS, installing `DSGE.jl` in Julia `v1.1` and above appears to trigger the error `AssertionError: length(dirs) == 1` according to several users. A fix has been found by this [issue](https://github.com/FRBNY-DSGE/DSGE.jl/issues/100), at least for Julia `v1.5`.*
 
 ## Precompilation
 
