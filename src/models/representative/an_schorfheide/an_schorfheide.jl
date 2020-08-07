@@ -120,7 +120,7 @@ Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 function init_model_indices!(m::AnSchorfheide)
     # Endogenous states
     endogenous_states = collect([
-        :y_t, :π_t, :R_t, :y_t1, :g_t, :z_t, :Ey_t1, :Eπ_t1])
+        :y_t, :π_t, :R_t, :y_t1, :g_t, :z_t, :Ey_t, :Eπ_t])
 
     # Exogenous shocks
     exogenous_shocks = collect([

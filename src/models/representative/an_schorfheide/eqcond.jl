@@ -35,15 +35,15 @@ function eqcond(m::AnSchorfheide)
     Γ0[eq[:eq_euler], endo[:R_t]] = 1/m[:τ]
     Γ0[eq[:eq_euler], endo[:g_t]] = -(1-m[:ρ_g])
     Γ0[eq[:eq_euler], endo[:z_t]] = -m[:ρ_z]/m[:τ]
-    Γ0[eq[:eq_euler], endo[:Ey_t1]] = -1
-    Γ0[eq[:eq_euler], endo[:Eπ_t1]] = -1/m[:τ]
+    Γ0[eq[:eq_euler], endo[:Ey_t]] = -1
+    Γ0[eq[:eq_euler], endo[:Eπ_t]] = -1/m[:τ]
 
     ### 2. NK Phillips Curve
 
     Γ0[eq[:eq_phillips], endo[:y_t]] = -m[:κ]
     Γ0[eq[:eq_phillips], endo[:π_t]] = 1
     Γ0[eq[:eq_phillips], endo[:g_t]] = m[:κ]
-    Γ0[eq[:eq_phillips], endo[:Eπ_t1]] = -1/(1+m[:rA]/400)
+    Γ0[eq[:eq_phillips], endo[:Eπ_t]] = -1/(1+m[:rA]/400)
 
     ### 3. Monetary Policy Rule
 
@@ -80,7 +80,7 @@ function eqcond(m::AnSchorfheide)
     ### 8. Expected inflation
 
     Γ0[eq[:eq_Eπ], endo[:π_t]] = 1
-    Γ1[eq[:eq_Eπ], endo[:Eπ_t1]] = 1
+    Γ1[eq[:eq_Eπ], endo[:Eπ_t]] = 1
     Π[eq[:eq_Eπ], ex[:Eπ_sh]] = 1
 
     return Γ0, Γ1, C, Ψ, Π
