@@ -10,6 +10,7 @@ os:
 julia:
     - 1
     - 1.1 # Test 1.1 b/c some branches for new features still use 1.1
+    - 1.4 # Ensure tests pass on the second to most recent version of Julia
 notifications:
     email: false
 addons:
