@@ -12,43 +12,45 @@ fp = dirname(@__FILE__)
 
     @test ŷ ≈ matdata["yypred"]
 
-    Random.seed!(1793) # drawing shocks, so this shouldn't be the same
-    ŷ1 = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
-                                vec(matdata["DD"]), matdata["MM"],
-                                matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
-                                Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
-                                matdata["cointvec"],
-                                Int(matdata["qahead"]), vec(matdata["XXpred"]); draw_shocks = true)
-    Random.seed!(1793) # test re-seeding works
-    ŷ2 = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
-                                vec(matdata["DD"]), matdata["MM"],
-                                matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
-                                Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
-                                matdata["cointvec"],
-                                Int(matdata["qahead"]), vec(matdata["XXpred"]); draw_shocks = true)
-    Random.seed!(1793) # flipping shocks should yield the same thing
-    @info "The following warning is expected."
-    ŷ3 = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
-                                vec(matdata["DD"]), matdata["MM"],
-                                matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
-                                Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
-                                matdata["cointvec"],
-                                Int(matdata["qahead"]), vec(matdata["XXpred"]); draw_shocks = true,
-                                flip_shocks = true)
+    if VERSION < v"1.5"
+        Random.seed!(1793) # drawing shocks, so this shouldn't be the same
+        ŷ1 = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
+                                    vec(matdata["DD"]), matdata["MM"],
+                                    matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
+                                    Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
+                                    matdata["cointvec"],
+                                    Int(matdata["qahead"]), vec(matdata["XXpred"]); draw_shocks = true)
+        Random.seed!(1793) # test re-seeding works
+        ŷ2 = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
+                                    vec(matdata["DD"]), matdata["MM"],
+                                    matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
+                                    Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
+                                    matdata["cointvec"],
+                                    Int(matdata["qahead"]), vec(matdata["XXpred"]); draw_shocks = true)
+        Random.seed!(1793) # flipping shocks should yield the same thing
+        @info "The following warning is expected."
+        ŷ3 = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
+                                    vec(matdata["DD"]), matdata["MM"],
+                                    matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
+                                    Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
+                                    matdata["cointvec"],
+                                    Int(matdata["qahead"]), vec(matdata["XXpred"]); draw_shocks = true,
+                                    flip_shocks = true)
 
-    @test !(ŷ1 ≈ matdata["yypred"])
-    @test ŷ1 ≈ ŷ2
-    @test ŷ1 ≈ ŷ3
+        @test !(ŷ1 ≈ matdata["yypred"])
+        @test ŷ1 ≈ ŷ2
+        @test ŷ1 ≈ ŷ3
 
-    # Test drawing shocks
-    Random.seed!(1793)
-    ŷ = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
-                               vec(matdata["DD"]), matdata["MM"],
-                               matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
-                               Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
-                               matdata["cointvec"], 5, vec(matdata["XXpred"]);
-                               draw_shocks = true)
-    @test @test_matrix_approx_eq ŷ matdata["ypred_drawshocks"]
+        # Test drawing shocks
+        Random.seed!(1793)
+        ŷ = DSGE.impulse_responses(matdata["TTT"], matdata["RRR"], matdata["ZZ"],
+                                   vec(matdata["DD"]), matdata["MM"],
+                                   matdata["QQ"], Int(matdata["k"]), Int(matdata["nvar"]),
+                                   Int(matdata["coint"]), matdata["cct_sim"], matdata["sig_sim"],
+                                   matdata["cointvec"], 5, vec(matdata["XXpred"]);
+                                   draw_shocks = true)
+        @test @test_matrix_approx_eq ŷ matdata["ypred_drawshocks"]
+    end
 
     # Now try passing in X̂ = zeros(...)
     test_shocks = matdata["Shocks"]
