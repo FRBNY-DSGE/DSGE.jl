@@ -42,114 +42,115 @@ fp = dirname(@__FILE__)
     end
 end
 
-@testset "Impulse responses to structural shocks identified by a DSGE-VAR" begin
-    matdata1 = load(joinpath(fp, "../../../reference/test_irfdsge.jld2"))
-    matdata2 = load(joinpath(fp, "../../../reference/test_rotations.jld2"))
-    ŷ = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
-                               zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
-                               matdata1["impact"].^2, Int(matdata2["k"]),
-                               convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                               matdata2["sig_sim"], Int(matdata2["qahead"]),
-                               vec(matdata2["XXpred"]); normalize_rotation = false,
-                               test_shocks =
-                               convert(Matrix{Float64}, matdata2["Shocks"]'))
+if VERSION < v"1.5"
+    @testset "Impulse responses to structural shocks identified by a DSGE-VAR" begin
+        matdata1 = load(joinpath(fp, "../../../reference/test_irfdsge.jld2"))
+        matdata2 = load(joinpath(fp, "../../../reference/test_rotations.jld2"))
+        ŷ = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
+                                   zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
+                                   matdata1["impact"].^2, Int(matdata2["k"]),
+                                   convert(Matrix{Float64}, matdata2["cct_sim"]'),
+                                   matdata2["sig_sim"], Int(matdata2["qahead"]),
+                                   vec(matdata2["XXpred"]); normalize_rotation = false,
+                                   test_shocks =
+                                   convert(Matrix{Float64}, matdata2["Shocks"]'))
 
-    @test ŷ ≈ matdata2["yypred"]'
+        @test ŷ ≈ matdata2["yypred"]'
 
-    Random.seed!(1793) # drawing shocks, so this shouldn't be the same
-    ŷ1 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
-                                zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
-                                matdata1["impact"].^2, Int(matdata2["k"]),
-                                convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                                matdata2["sig_sim"], Int(matdata2["qahead"]),
-                                vec(matdata2["XXpred"]), draw_shocks = true,
-                                normalize_rotation = false)
-    Random.seed!(1793) # re-seeding should work
-    ŷ2 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
-                                zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
-                                matdata1["impact"].^2, Int(matdata2["k"]),
-                                convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                                matdata2["sig_sim"], Int(matdata2["qahead"]),
-                                vec(matdata2["XXpred"]), draw_shocks = true,
-                                normalize_rotation = false)
-    Random.seed!(1793) # flipping shocks shouldn't yield anything different
-    @info "The following warning is expected."
-    ŷ3 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
-                                zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
-                                matdata1["impact"].^2, Int(matdata2["k"]),
-                                convert(Matrix{Float64}, matdata2["cct_sim"]'),
-                                matdata2["sig_sim"], Int(matdata2["qahead"]),
-                                vec(matdata2["XXpred"]), draw_shocks = true,
-                                flip_shocks = true, normalize_rotation = false)
-    @test !(ŷ1 ≈ matdata2["yypred"]')
-    @test ŷ1 ≈ ŷ2
-    @test ŷ1 ≈ ŷ3
-end
-
-@testset "Impulse responses of a VAR using a DSGE as a prior" begin
-    jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs.jld2"))
-    m = Model1002("ss10", custom_settings =
-                  Dict{Symbol,Setting}(:add_laborshare_measurement =>
-                                       Setting(:add_laborshare_measurement, true),
-                                       :add_NominalWageGrowth =>
-                                       Setting(:add_NominalWageGrowth, true)))
-    m <= Setting(:impulse_response_horizons, 10)
-    dsgevar = DSGEVAR(m, collect(keys(m.exogenous_shocks)), "ss11")
-    DSGE.update!(dsgevar, λ = 1.)
-    DSGE.update!(dsgevar, jlddata["modal_param"])
-
-    Random.seed!(1793)
-    out = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1)
-    out_lr = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1)
-    out_maxbc = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1)
-
-    Random.seed!(1793)
-    _ = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1)
-    out_lr2 = impulse_responses(dsgevar, jlddata["data"], :cholesky_long_run, 1)
-    out_maxbc2 = impulse_responses(dsgevar, jlddata["data"], :maximum_business_cycle_variance,
-                                   1)
-
-    Random.seed!(1793)
-    out_flip = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1,
-                                 flip_shocks = true,)
-    out_lr_flip = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1,
-                                    flip_shocks = true)
-    out_maxbc_flip = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1,
-                                       flip_shocks = true)
-
-    Random.seed!(1793)
-    out_h = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1,
-                              horizon = impulse_response_horizons(dsgevar))
-    out_lr_h = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1,
-                              horizon = impulse_response_horizons(dsgevar))
-    out_maxbc_h = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1,
-                              horizon = impulse_response_horizons(dsgevar))
-
-    @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out
-    @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr
-
-    @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr2
-
-    @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] -out_flip
-    @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] -out_lr_flip
-
-    @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out_h
-    @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr_h
-
-    # Test maxBC separately b/c these have a slightly different error bound that leads to errors on Julia 1.0 but not Julia 1.1
-
-    if VERSION >= v"1.1"
-        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc
-        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc2
-        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc_h
-        @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] -out_maxbc_flip
-    else
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc)) < 6e-6
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc2)) < 6e-6
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc_h)) < 6e-6
-        @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] + out_maxbc_flip)) < 6e-6
+        Random.seed!(1793) # drawing shocks, so this shouldn't be the same
+        ŷ1 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
+                                    zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
+                                    matdata1["impact"].^2, Int(matdata2["k"]),
+                                    convert(Matrix{Float64}, matdata2["cct_sim"]'),
+                                    matdata2["sig_sim"], Int(matdata2["qahead"]),
+                                    vec(matdata2["XXpred"]), draw_shocks = true,
+                                    normalize_rotation = false)
+        Random.seed!(1793) # re-seeding should work
+        ŷ2 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
+                                    zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
+                                    matdata1["impact"].^2, Int(matdata2["k"]),
+                                    convert(Matrix{Float64}, matdata2["cct_sim"]'),
+                                    matdata2["sig_sim"], Int(matdata2["qahead"]),
+                                    vec(matdata2["XXpred"]), draw_shocks = true,
+                                    normalize_rotation = false)
+        Random.seed!(1793) # flipping shocks shouldn't yield anything different
+        @info "The following warning is expected."
+        ŷ3 = DSGE.impulse_responses(matdata1["TTT"], matdata1["RRR"], matdata1["zz"],
+                                    zeros(size(matdata1["zz"], 1)), matdata1["mmm"],
+                                    matdata1["impact"].^2, Int(matdata2["k"]),
+                                    convert(Matrix{Float64}, matdata2["cct_sim"]'),
+                                    matdata2["sig_sim"], Int(matdata2["qahead"]),
+                                    vec(matdata2["XXpred"]), draw_shocks = true,
+                                    flip_shocks = true, normalize_rotation = false)
+        @test !(ŷ1 ≈ matdata2["yypred"]')
+        @test ŷ1 ≈ ŷ2
+        @test ŷ1 ≈ ŷ3
     end
-end
+
+    @testset "Impulse responses of a VAR using a DSGE as a prior" begin
+        jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs.jld2"))
+        m = Model1002("ss10", custom_settings =
+                      Dict{Symbol,Setting}(:add_laborshare_measurement =>
+                                           Setting(:add_laborshare_measurement, true),
+                                           :add_NominalWageGrowth =>
+                                           Setting(:add_NominalWageGrowth, true)))
+        m <= Setting(:impulse_response_horizons, 10)
+        dsgevar = DSGEVAR(m, collect(keys(m.exogenous_shocks)), "ss11")
+        DSGE.update!(dsgevar, λ = 1.)
+        DSGE.update!(dsgevar, jlddata["modal_param"])
+
+        Random.seed!(1793)
+        out = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1)
+        out_lr = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1)
+        out_maxbc = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1)
+
+        Random.seed!(1793)
+        _ = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1)
+        out_lr2 = impulse_responses(dsgevar, jlddata["data"], :cholesky_long_run, 1)
+        out_maxbc2 = impulse_responses(dsgevar, jlddata["data"], :maximum_business_cycle_variance,
+                                       1)
+
+        Random.seed!(1793)
+        out_flip = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1,
+                                     flip_shocks = true,)
+        out_lr_flip = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1,
+                                        flip_shocks = true)
+        out_maxbc_flip = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1,
+                                           flip_shocks = true)
+
+        Random.seed!(1793)
+        out_h = impulse_responses(dsgevar, jlddata["data"], :cholesky, 1,
+                                  horizon = impulse_response_horizons(dsgevar))
+        out_lr_h = impulse_responses(dsgevar, jlddata["data"], :choleskyLR, 1,
+                                     horizon = impulse_response_horizons(dsgevar))
+        out_maxbc_h = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1,
+                                        horizon = impulse_response_horizons(dsgevar))
+
+        @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out
+        @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr
+
+        @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr2
+
+        @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] -out_flip
+        @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] -out_lr_flip
+
+        @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out_h
+        @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr_h
+
+        # Test maxBC separately b/c these have a slightly different error bound that leads to errors on Julia 1.0 but not Julia 1.1
+
+        if VERSION >= v"1.1"
+            @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc
+            @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc2
+            @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] out_maxbc_h
+            @test @test_matrix_approx_eq jlddata["exp_modal_maxBC_irf"] -out_maxbc_flip
+        else
+            @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc)) < 6e-6
+            @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc2)) < 6e-6
+            @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] - out_maxbc_h)) < 6e-6
+            @test maximum(abs.(jlddata["exp_modal_maxBC_irf"] + out_maxbc_flip)) < 6e-6
+        end
+    end
 
 @testset "Impulse responses of VAR by using a DSGE as prior and to identify the rotation matrix" begin
     jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs.jld2"))
@@ -261,4 +262,5 @@ end
     @test @test_matrix_approx_eq jlddata["exp_maxBC_int"][:, :, 1] -out14
 end
 
+end
 nothing

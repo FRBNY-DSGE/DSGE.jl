@@ -202,14 +202,14 @@ end
 
     # Check when λ is finite
     DSGE.update!(dsgevar, λ = 1.)
-Random.seed!(1793) # need to seed for this
+    Random.seed!(1793) # need to seed for this
     yyyyd, xxyyd, xxxxd = compute_system(dsgevar, data; get_population_moments = true)
     β, Σ = compute_system(dsgevar, data)
 
-    @show maximum(abs.(jlddata["exp_data_beta"] - β))
-    @show maximum(abs.(jlddata["exp_data_sigma"] - Σ))
-#     @test @test_matrix_approx_eq jlddata["exp_data_beta"] β
-#     @test @test_matrix_approx_eq jlddata["exp_data_sigma"] Σ
+    if VERSION < v"1.5"
+        @test @test_matrix_approx_eq jlddata["exp_data_beta"] β
+        @test @test_matrix_approx_eq jlddata["exp_data_sigma"] Σ
+    end
 end
 
 @testset "VECM approximation of state space" begin

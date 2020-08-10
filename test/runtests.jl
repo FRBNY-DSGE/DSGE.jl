@@ -113,12 +113,11 @@ my_tests = [
 
 if VERSION >= v"1.3"
     my_tests = vcat([
-            "statespace",
+            "estimate/var/dsgevar_likelihood",
+            "estimate/var/dsgevecm_likelihood",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",
             "forecast/var/dsgevecm/impulse_responses",
-            "estimate/var/dsgevar_likelihood",
-            "estimate/var/dsgevecm_likelihood",
                      "packet/packet", # These two tests generate segmentation fault errors
                      "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1
                     ],
