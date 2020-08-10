@@ -214,8 +214,8 @@ end
     β, Σ = compute_system(dsgevar, data)
 
     if writing_output
-        jldopen("reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2", 
-            true, true, true, IOStream) do file 
+        jldopen("reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2",
+            true, true, true, IOStream) do file
             write(file, "exp_data_beta", β)
             write(file, "exp_data_sigma", Σ)
         end
@@ -277,7 +277,7 @@ end
     @test @test_matrix_approx_eq βc expβc
     @test @test_matrix_approx_eq Σc expΣc
 
-    # Check DSGEVECM automates this properly
+    # Check DSGEVECM automates this properly. Need a proper model before being able to do this though.
     # m = Model1002()
     # dsgevecm = DSGEVECM(m)
     # DSGE.update!(dsgevecm, shocks = collect(keys(m.exogenous_shocks)),
