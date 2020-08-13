@@ -247,6 +247,49 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
     return means, bands
 end
 
+"""
+```
+compute_meansbands(models, input_types, cond_types, output_vars; forecast_strings = [],
+    verbose = :low, kwargs...)
+
+compute_meansbands(models, input_types, cond_types, output_vars, df; forecast_strings = [],
+    population_data = DataFrame(), population_forecast = DataFrame(),
+    verbose = :none, kwargs...)
+
+compute_meansbands(models, input_types, cond_types, output_var, var_name, df;
+    forecast_strings = [], population_data = DataFrame(),
+    population_forecast = DataFrame(), verbose = :low,
+    kwargs...)
+```
+
+Compute means and bands for pseudo-observables, observables, and shocks from multiple forecasts, and write
+the results to a file. Other methods are for one `output_var` and one `var_name` respectively.
+
+### Keyword Arguments
+
+- `forecast_strings::Vector{String} = []`: forecast identifier strings for each forecast (the value
+  \"fcid=value\" in the forecast output filename for individual forecasts). Required when
+  `input_type == :subset`
+
+- `density_bands::Vector{Float64} = [.5, .6, .7, .8 .9]`: a vector of percent values (between 0 and 1) for
+  which to compute density bands.
+
+- `minimize::Bool = false`: if `true`, choose shortest interval, otherwise just chop off
+  lowest and highest (percent/2)
+
+- `verbose::Symbol = :low`: level of error messages to be printed to screen. One of `:none`,
+  `:low`, `:high`
+
+- `bdd_fcast::Bool = true`: if true, calculate bounded forecasts
+
+- `skipnan::Bool = false`: if true, remove any NaNs found in the raw forecast output series
+
+- `df::DataFrame = DataFrame()`: if an empty DataFrame, then the function will attempt to
+    load the data using `load_data`.
+
+- `check_empty_columns::Bool = true`: if true, throw an error if
+    calling load_data yields an empty column.
+"""
 function compute_meansbands(models::Vector,
                             input_types::Vector{Symbol},
                             cond_types::Vector{Symbol},
