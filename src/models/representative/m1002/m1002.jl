@@ -930,10 +930,11 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 function shock_groupings(m::Model1002)
     if subspec(m) in ["ss59", "ss60", "ss61"]
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
-        bet = ShockGroup("b", [:b_sh, :biidc_sh], RGB(0.3, 0.3, 1.0))
+        bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
         fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
-        tfp = ShockGroup("z", [:ztil_sh, :ziid_sh], RGB(1.0, 0.55, 0.0)) # darkorange
-        pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+        # tfp = ShockGroup("tfp", [:ztil_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+        tfp = ShockGroup("tfp", [:ztil_sh, :zp_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+        pmu = ShockGroup("mkp", [:λ_f_sh, :λ_w_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
         wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
         phi = ShockGroup("phi", [:φ_sh], RGB(0.5, 0.5, 0.))
         pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_mon_anticipated_shocks(m)]),
@@ -943,8 +944,18 @@ function shock_groupings(m::Model1002)
         mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
         zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
         det = ShockGroup("dt", [:dettrend], :gray40)
+        oth = ShockGroup("other", [:dettrend, :g_sh, :π_star_sh, :μ_sh], :gray40)
 
-        return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
+        # COVID-19 Shocks
+        betcovid = ShockGroup("biidc", haskey(m.exogenous_shocks, :biidc_shl1) ? [:biidc_sh, :biidc_shl1] : [:biidc_sh],
+                              RGB(0.70, 0.13, 0.13))
+        zcovid   = ShockGroup("ziid", [:ziid_sh], RGB(0., 0.5, 0.5))
+        φcovid   = ShockGroup("phi", [:φ_sh], RGB(0.5, 0.5, 0.))
+        ocovid   = ShockGroup("Other COVID", [:ziid_sh, :φ_sh], RGB(0., 0.5, 0.5))
+
+        # return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
+        # return [betcovid, zcovid, φcovid, bet, fin, tfp, pmu, pol, mea, oth]
+       return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth]
     elseif subspec(m) != "ss12"
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
         bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
