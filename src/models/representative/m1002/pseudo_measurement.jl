@@ -308,6 +308,14 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
+    if haskey(m.settings, :add_covid_pseudoobs)
+        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61"]
+            ZZ_pseudo[pseudo[:ziid], endo[:ziid_t]] = 1.
+            ZZ_pseudo[pseudo[:varphiiid], endo[:φ_t]] = 1.
+            ZZ_pseudo[pseudo[:biidc], endo[:biidc_t]] = 1.
+        end
+    end
+
     if haskey(m.settings, :add_ztil)
         if get_setting(m, :add_ztil)
             ZZ_pseudo[pseudo[:ztil], endo[:ztil_t]] = 1.
@@ -636,6 +644,13 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
 
+        if haskey(m.settings, :add_covid_pseudoobs)
+            if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61"]
+                ZZ_pseudos[reg][pseudo[:ziid], endo[:ziid_t]] = 1.
+                ZZ_pseudos[reg][pseudo[:varphiiid], endo[:φ_t]] = 1.
+                ZZ_pseudos[reg][pseudo[:biidc], endo[:biidc_t]] = 1.
+            end
+        end
         if haskey(m.settings, :add_ztil)
             if get_setting(m, :add_ztil)
                 ZZ_pseudos[reg][pseudo[:ztil], endo[:ztil_t]] = 1.

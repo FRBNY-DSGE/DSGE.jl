@@ -21,9 +21,11 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    # if subspec(m) in ["ss59", "ss60", "ss61"]
-    #     push!(pseudo_names, :ziid, :varphiiid, :biidc)
-    # end
+    if haskey(m.settings, :add_covid_pseudoobs)
+        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61"]
+            push!(pseudo_names, :ziid, :varphiiid, :biidc)
+        end
+    end
 
     if haskey(m.settings, :add_NominalWageGrowth)
         if get_setting(m, :add_NominalWageGrowth)
@@ -367,14 +369,16 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    # if subspec(m) in ["ss59", "ss60", "ss61"]
-    #     pseudo[:ziid].name     = "ziid"
-    #     pseudo[:ziid].longname = "ziid"
-    #     pseudo[:biidc].name     = "biidc"
-    #     pseudo[:biidc].longname = "biidc"
-    #     pseudo[:varphiiid].name     = "varphiiid"
-    #     pseudo[:varphiiid].longname = "varphiiid"
-    # end
+    if haskey(m.settings, :add_covid_pseudoobs)
+        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61"]
+            pseudo[:ziid].name     = "ziid"
+            pseudo[:ziid].longname = "ziid"
+            pseudo[:biidc].name     = "biidc"
+            pseudo[:biidc].longname = "biidc"
+            pseudo[:varphiiid].name     = "varphiiid"
+            pseudo[:varphiiid].longname = "varphiiid"
+        end
+    end
 
     if haskey(m.settings, :add_laborproductivity_measurement)
         if get_setting(m, :add_laborproductivity_measurement)
