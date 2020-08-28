@@ -25,6 +25,8 @@ Further extensions of the DSGE model code may be released at the discretion of t
 pkg> add DSGE
 ```
 
+If you use any code that loads data (e.g. the example script `run_default.jl` and `make_packet.jl`), then you need make sure you have a FRED API key by following these [instructions for the FredData.jl package](https://github.com/micahjsmith/FredData.jl).
+
 If you are using Windows OS and you encounter the error `AssertionError: length(dirs) == 1`, please see this [issue](https://github.com/JuliaLang/Pkg.jl/issues/1943). Additionally, please do not run the `plot.jl` test if you are using Windows OS
 because the generated output will violate the default filename length restriction on Windows. If you want to run this test, then
 you need to enable [long paths](https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#enable-long-paths-in-windows-10-version-1607-and-later).
