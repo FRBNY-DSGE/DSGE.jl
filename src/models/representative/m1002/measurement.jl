@@ -204,7 +204,10 @@ function measurement(m::Model1002{T},
     if haskey(get_settings(m), :add_anticipated_obs_gdp)
         if get_setting(m, :add_anticipated_obs_gdp)
             for i = 1:get_setting(m, :n_anticipated_obs_gdp)
-                ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ[obs[:obs_gdp], no_integ_inds]' * (TTT^i)
+                ZZ_obs_gdp = ZZ[obs[:obs_gdp], :]
+                ZZ_obs_gdp[endo_new[:e_gdp_t]]  = 0. # Ignore measurement error for anticipated GDP growth
+                ZZ_obs_gdp[endo_new[:e_gdp_t1]] = 0.
+                ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ_obs_gdp[no_integ_inds]' * (TTT^i)
                 DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.)
             end
         end

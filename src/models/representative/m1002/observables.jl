@@ -397,7 +397,8 @@ function init_observable_mappings!(m::Model1002)
     ############################################################################
     if haskey(get_settings(m), :add_anticipated_obs_gdp)
         if get_setting(m, :add_anticipated_obs_gdp)
-            antgdp_name = haskey(get_settings(m), :filename_anticipated_obs_gdp) ? get_setting(m, :filename_anticipated_obs_gdp) : "ANTGDP"
+            antgdp_name = haskey(get_settings(m), :filename_anticipated_obs_gdp) ?
+                get_setting(m, :filename_anticipated_obs_gdp) : "ANTGDP"
             for i = 1:get_setting(m, :n_anticipated_obs_gdp)
                 # FROM: Some source for expectations off i-period ahead GDP growth
                 # TO:   Same
