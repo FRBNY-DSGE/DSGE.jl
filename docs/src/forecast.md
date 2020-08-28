@@ -10,7 +10,9 @@ In the forecast step, we compute smoothed histories, forecast, compute shock
 decompositions, and compute impulse response functions (IRFs) for states,
 observables, shocks, and pseudo-observables. To run a forecast on one
 combination of input parameter type (e.g. modal parameters or full-distribution)
-and conditional type, call `forecast_one`.
+and conditional type, call `forecast_one`. The forecast output
+is written to the saveroot specified by the model object and can be loaded
+with the function `read_forecast_output`.
 
 **Main Steps:**
 
@@ -176,6 +178,20 @@ Note that `load_draws` expects an HDF5 dataset called either `params` (for
 
 ## Computing Forecast Outputs
 
+For each draw of parameters, the forecast calculations are run by 
+the lower-level function `forecast_one_draw`. 
+
+This function is also useful on its own
+when the user wants to run a single-draw forecast without writing the output to data.
+A common use case is running experiments with different forecast specifications and/or alternative policy rules.
+Given the appropriate inputs, `forecast_one_draw` will return a `Dict` whose keys are the names of 
+output variables (e.g. `:forecastobs`) and values are the corresponding matrices.
+This function does not perform transformations, so the units of the output are all model units,
+which are typically at the quarterly frequency, such as quarterly per-capita GDP growth.
+
+
+The computations that `forecast_one_draw` can run are:
+
 **Smoothing:**
 
 Smoothing is necessary if either:
@@ -259,3 +275,10 @@ forecast outputs, include:
 - `write_forecast_metadata`
 - `read_forecast_metadata`
 - `read_forecast_output`
+
+## Forecasting Functions
+```@autodocs
+Modules = [DSGE]
+Pages   = ["drivers.jl", "forecast.jl", "smooth.jl", "shock_decompositions.jl", "io.jl"]
+Order   = [:function]
+```
