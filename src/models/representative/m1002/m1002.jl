@@ -613,7 +613,7 @@ function init_parameters!(m::Model1002)
 
     for (sh, ant_num) in get_setting(m, :antshocks)
         for i in 1:ant_num
-            m <= parameter(Symbol("σ_$(sh)$i"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+            m <= parameter(Symbol("σ_$(sh)$i"), 0., (0., 1e3), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_$(sh)$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
@@ -833,6 +833,8 @@ function model_settings!(m::Model1002)
                  " one-period ahead expectation of exogenous process affected by the shock") # This mapping is intended only for anticipated shocks that are not scaled by a constant, i.e. the coefficient in the Γ0 eqcond matrix is -1.0
     m <= Setting(:proportional_antshocks, Vector{Symbol}(undef, 0),
                  "Vector of anticipated shocks that are proportional to the contemporaneous shock")
+    m <= Setting(:contemporaneous_and_proportional_antshocks, Vector{Symbol}(undef, 0),
+                 "Vector of anticipated shocks which are both contemporaneous and shocks proportional to contemporaneous shocks")
     m <= Setting(:antshocks, Dict{Symbol, Int}(),
                  "Dictionary mapping name of anticipated shock to the number of periods of anticipation.")
 

@@ -154,12 +154,7 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end
 
-    if subspec(m) in ["ss59", "ss60", "ss61"]
-        QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
-        QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
-        QQ[exo[:φ_sh], exo[:φ_sh]] = m[:σ_φ]^2
-    end
-
+    ## Set up structural shocks covariance matrix
     QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
     QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
@@ -179,7 +174,22 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
 
-    # These lines set the standard deviations for the anticipated shocks
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
+        QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
+        QQ[exo[:φ_sh], exo[:φ_sh]] = m[:σ_φ]^2
+    end
+
+    # Automated addition of anticipated shocks to QQ
+    for (k, v) in get_setting(m, :antshocks)
+        for i = 1:v
+            QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol("σ_", k, "$i")]^2
+        end
+    end
+
+    ## Anticipated observables
+
+    # Anticipated monetary policy shocks
     for i = 1:n_mon_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
@@ -190,29 +200,15 @@ function measurement(m::Model1002{T},
         end
     end
 
-#= # We do not want anticipated shocks to automatically be part of the measurement equation
-    for (k, v) in get_setting(m, :antshocks)
-        if k == :z # z is a sum of a transient and persistent component, so we model this differently
-            for i = 1:v
-                ZZ[obs[Symbol("obs_z$i")], no_integ_inds] = ZZ[obs[:obs_z], no_integ_inds]' * (TTT^i)
-                if subspec(m) == "ss11"
-                    QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_ztil]^2 / v
-                else
-                    QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$i")]^2
-                end
-            end
-        else
-            for i = 1:v
-                ZZ[obs[Symbol("obs_", k, "$i")], no_integ_inds] = ZZ[obs[Symbol(:obs_, k)], no_integ_inds]' * (TTT^i)
-                if subspec(m) == "ss11"
-                    QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol(:σ_, k)]^2 / v
-                else
-                    QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol("σ_", k, "$i")]^2
-                end
+    # Anticipated GDP growth
+    if haskey(get_settings(m), :add_anticipated_obs_gdp)
+        if get_setting(m, :add_anticipated_obs_gdp)
+            for i = 1:get_setting(m, :n_anticipated_obs_gdp)
+                ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ[obs[:obs_gdp], no_integ_inds]' * (TTT^i)
+                DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.)
             end
         end
     end
-=#
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0.)

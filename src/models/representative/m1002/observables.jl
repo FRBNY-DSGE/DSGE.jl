@@ -351,6 +351,7 @@ function init_observable_mappings!(m::Model1002)
                                            "Total Factor Productivity Growth (Fernald)",
                                            "Fernald's TFP, adjusted by Fernald's estimated alpha")
     end
+
     ############################################################################
     # 13. GDI
     ############################################################################
@@ -392,132 +393,28 @@ function init_observable_mappings!(m::Model1002)
     end
 
     ############################################################################
-    # Automatic addition of anticipated shocks
+    # Other anticipated data
     ############################################################################
-    # Currently this code is unused b/c other shocks aren't observable, generally
-#=    for (k, v) in get_setting(m, :antshocks)
-        if k == :z
-            for i = 1:v
-                # FROM: fake data of z expectations
+    if haskey(get_settings(m), :add_anticipated_obs_gdp)
+        if get_setting(m, :add_anticipated_obs_gdp)
+            antgdp_name = haskey(get_settings(m), :filename_anticipated_obs_gdp) ? get_setting(m, :filename_anticipated_obs_gdp) : "ANTGDP"
+            for i = 1:get_setting(m, :n_anticipated_obs_gdp)
+                # FROM: Some source for expectations off i-period ahead GDP growth
                 # TO:   Same
 
                 ant_fwd_transform = function (levels)
-                    levels[:, Symbol("z$i")]
+                    levels[:, Symbol("antgdp$i")]
                 end
 
-                ant_rev_transform = quartertoannual
+                ant_rev_transform = loggrowthtopct_annualized_percapita
 
-                observables[Symbol("obs_z$i")] = Observable(Symbol("obs_z$i"), [Symbol("z$(i)__Z")],
-                                                            ant_fwd_transform, ant_rev_transform,
-                                                            "Anticipated Shock $i",
-                                                            "$i-period ahead anticipated z shock")
-            end
-        else
-            for i = 1:v
-                # FROM: fake data of expectations of exogenous shocks
-                # TO:   Same
-
-                ant_fwd_transform = function (levels)
-                    levels[:, Symbol(k, "$i")]
-                end
-
-                ant_rev_transform = quartertoannual
-
-                observables[Symbol("obs_", k, "$i")] = Observable(Symbol("obs_", k, "$i"), [Symbol(k, "$(i)__", uppercase(string(k)))],
-                                                            ant_fwd_transform, ant_rev_transform,
-                                                            "Anticipated Shock $i",
-                                                            "$i-period ahead anticipated $(string(k)) shock")
+                observables[Symbol("obs_gdp$i")] = Observable(Symbol("obs_antgdp$i"), [Symbol("antgdp$(i)__$(antgdp_name)")],
+                                                                      ant_fwd_transform, ant_rev_transform,
+                                                                      "Anticipated GDP Growth $i",
+                                                                      "$i-period ahead anticipated GDP growth")
             end
         end
     end
-=#
-
-    # if subspec(m) in ["ss59", "ss60", "ss61"]
-    #     ztil_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     ztil_rev_transform = DSGE.identity
-    #     observables[:obs_ztil] = Observable(:obs_ztil, [:WAGEMKP__DLX],
-    #                                         ztil_fwd_transform, ztil_rev_transform,
-    #                                         "ztil", "ztil")
-    #     z_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     z_rev_transform = DSGE.identity
-    #     observables[:obs_z] = Observable(:obs_z, [:WAGEMKP__DLX],
-    #                                      z_fwd_transform, z_rev_transform,
-    #                                      "z", "z")
-    #     zp_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     zp_rev_transform = DSGE.identity
-    #     observables[:obs_zp] = Observable(:obs_zp, [:WAGEMKP__DLX],
-    #                                       zp_fwd_transform, zp_rev_transform,
-    #                                       "zp", "zp")
-    #     ziid_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     ziid_rev_transform = DSGE.identity
-    #     observables[:obs_ziid] = Observable(:obs_ziid, [:WAGEMKP__DLX],
-    #                                         ziid_fwd_transform, ziid_rev_transform,
-    #                                         "ziid", "ziid")
-    #     biid_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     biid_rev_transform = DSGE.identity
-    #     observables[:obs_biid] = Observable(:obs_biid, [:WAGEMKP__DLX],
-    #                                         biid_fwd_transform, biid_rev_transform,
-    #                                         "biid", "biid")
-    #     biidc_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     biidc_rev_transform = DSGE.identity
-    #     observables[:obs_biidc] = Observable(:obs_biidc, [:WAGEMKP__DLX],
-    #                                          biidc_fwd_transform, biidc_rev_transform,
-    #                                          "biidc", "biidc")
-    #     varphi_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     varphi_rev_transform = DSGE.identity
-    #     observables[:obs_φ] = Observable(:obs_φ, [:WAGEMKP__DLX],
-    #                                      varphi_fwd_transform, varphi_rev_transform,
-    #                                      "varphi", "varphi")
-    #     sigma_omegaiid_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     sigma_omegaiid_rev_transform = DSGE.identity
-    #     observables[:obs_sigma_omegaiid] = Observable(:obs_sigma_omegaiid, [:WAGEMKP__DLX],
-    #                                                   sigma_omegaiid_fwd_transform, sigma_omegaiid_rev_transform,
-    #                                                   "sigma_omegaiid", "sigma_omegaiid")
-    #     b_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     b_rev_transform = DSGE.identity
-    #     observables[:obs_b] = Observable(:obs_b, [:WAGEMKP__DLX],
-    #                                      b_fwd_transform, b_rev_transform,
-    #                                      "b", "b")
-    #     sigma_omega_fwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     sigma_omega_rev_transform = DSGE.identity
-    #     observables[:obs_sigma_omega] = Observable(:obs_sigma_omega, [:WAGEMKP__DLX],
-    #                                                sigma_omega_fwd_transform, sigma_omega_rev_transform,
-    #                                                "sigma_omega", "sigma_omega")
-    #     lambda_wfwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     lambda_wrev_transform = DSGE.identity
-    #     observables[:obs_lambda_w] = Observable(:obs_lambda_w, [:WAGEMKP__DLX],
-    #                                             lambda_wfwd_transform, lambda_wrev_transform,
-    #                                             "lambda_w", "lambda_w")
-    #     lambda_wiidfwd_transform = function (levels)
-    #         levels[:, Symbol("WAGEMKP")]
-    #     end
-    #     lambda_wiidrev_transform = DSGE.identity
-    #     observables[:obs_lambda_wiid] = Observable(:obs_lambda_wiid, [:WAGEMKP__DLX],
-    #                                                lambda_wiidfwd_transform, lambda_wiidrev_transform,
-    #                                                "lambda_wiid", "lambda_wiid")
-    # end
 
     if haskey(m.settings, :first_observable)
         new_observables = OrderedDict{Symbol,Observable}()
