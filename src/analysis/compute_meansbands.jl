@@ -284,13 +284,15 @@ the results to a file. Other methods are for one `output_var` and one `var_name`
 
 - `skipnan::Bool = false`: if true, remove any NaNs found in the raw forecast output series
 
+- `ndraws::Int = 20000`: number of draws from the underlying scenarios
+
 - `df::DataFrame = DataFrame()`: if an empty DataFrame, then the function will attempt to
     load the data using `load_data`.
 
 - `check_empty_columns::Bool = true`: if true, throw an error if
     calling load_data yields an empty column.
 """
-function compute_meansbands(models::Vector,
+function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                             input_types::Vector{Symbol},
                             cond_types::Vector{Symbol},
                             output_vars::Vector{Symbol};
@@ -301,7 +303,7 @@ function compute_meansbands(models::Vector,
                             check_empty_columns::Bool = true,
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             shock_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                            skipnan::Bool = false,
+                            skipnan::Bool = false, ndraws::Int = 20000,
                             verbose::Symbol = :low,
                             kwargs...)
 
@@ -345,7 +347,7 @@ function compute_meansbands(models::Vector,
                                     population_forecast = population_forecast,
                                     variable_names = variable_names,
                                     shock_names = shock_names,
-                                    skipnan = skipnan,
+                                    skipnan = skipnan, ndraws = ndraws,
                                     verbose = verbose,
                                     kwargs...)
             GC.gc()
@@ -360,7 +362,7 @@ function compute_meansbands(models::Vector,
     end
 end
 
-function compute_meansbands(models::Vector,
+function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                             input_types::Vector{Symbol},
                             cond_types::Vector{Symbol},
                             output_var::Symbol, df::DataFrame;
@@ -371,7 +373,7 @@ function compute_meansbands(models::Vector,
                             population_forecast::DataFrame = DataFrame(),
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             shock_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                            skipnan::Bool = false,
+                            skipnan::Bool = false, ndraws::Int = 20000,
                             verbose::Symbol = :none,
                             kwargs...)
 
@@ -402,13 +404,13 @@ function compute_meansbands(models::Vector,
                                                variable_names[i], df; pop_growth = pop_growth,
                                                forecast_strings = forecast_strings,
                                                weights = weights, skipnan = skipnan,
-                                               kwargs...)
+                                               ndraws = ndraws, kwargs...)
             end
         else
             mb_vec = pmap(var_name -> compute_meansbands(models, input_types, cond_types, output_var, var_name, df;
                                                          pop_growth = pop_growth,
                                                          forecast_strings = forecast_strings, weights = weights,
-                                                         skipnan = skipnan, kwargs...),
+                                                         skipnan = skipnan, ndraws = ndraws, kwargs...),
                           variable_names)
         end
 
@@ -438,7 +440,7 @@ function compute_meansbands(models::Vector,
                                                          var_name, df; pop_growth = pop_growth,
                                                          forecast_strings = forecast_strings,
                                                          weights = weights, shock_name = Nullables.Nullable(shock_name),
-                                                         skipnan = skipnan,
+                                                         skipnan = skipnan, ndraws = ndraws,
                                            kwargs...),
                              variable_names)
 
@@ -484,7 +486,8 @@ function compute_meansbands(models::Vector,
                             shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false, skipnan::Bool = false,
-                            compute_shockdec_bands::Bool = false)
+                            compute_shockdec_bands::Bool = false,
+                            ndraws::Int = 20000)
 
     # Return only one set of bands if we read in only one draw
     if input_types[1] in [:init, :mode, :mean]
@@ -512,7 +515,7 @@ function compute_meansbands(models::Vector,
     fcast_series = Matrix{Float64}(undef, 0, size(fcast_seriess[1], 2))
     if all(map(x->size(x, 1) > 1, fcast_seriess))
         for i in 1:length(models)
-            sampled = sample(1:size(fcast_seriess[i], 1), Int(20000*weights[i]))
+            sampled = sample(1:size(fcast_seriess[i], 1), Int(ndraws * weights[i]))
             fcast_series = vcat(fcast_series, fcast_seriess[i][sampled, :])
         end
     else
