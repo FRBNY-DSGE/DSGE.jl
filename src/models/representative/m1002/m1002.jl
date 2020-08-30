@@ -227,6 +227,18 @@ function init_model_indices!(m::Model1002)
         push!(exogenous_shocks, :φ_sh)
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        push!(endogenous_states_augmented, :e_condgdp_t)
+        push!(exogenous_shocks, :condgdp_sh)
+    end
+
+    if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+        push!(endogenous_states_augmented, :e_gdpexp_t)
+        push!(exogenous_shocks, :gdpexp_sh)
+    end
+
     # Observables
     observables = keys(m.observable_mappings)
 
@@ -311,7 +323,8 @@ function init_parameters!(m::Model1002)
                    tex_label="\\zeta_p")
 
     m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
-                   description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attributed to steady-state inflation.",
+                   description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attri
+buted to steady-state inflation.",
                    tex_label="\\iota_p")
 
     m <= parameter(:δ, 0.025, fixed=true,
@@ -589,6 +602,26 @@ function init_parameters!(m::Model1002)
                        RootInverseGamma(2 * (400.0)^2 ./ 1., sqrt(1. + (400.0)^2)), fixed=false,
                        description="σ_φ: The standard deviation of the process describing the labor supply preference.",
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
+    end
+
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        m <= parameter(:ρ_condgdp, 0., (-0.999, 0.999), (-0.999, 0.999),
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{cond gdp}")
+        m <= parameter(:σ_condgdp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{cond gdp}")
+    end
+
+    if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+        m <= parameter(:ρ_gdpexp, 0., (-0.999, 0.999), (-0.999, 0.999),
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{gdpexp}")
+        m <= parameter(:σ_gdpexp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{gdpexp}")
     end
 
     for key in get_setting(m, :proportional_antshocks)
@@ -941,7 +974,17 @@ function shock_groupings(m::Model1002)
                          RGB(1.0, 0.84, 0.0)) # gold
         pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
         mei = ShockGroup("mu", [:μ_sh], :cyan)
-        mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+        if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+            get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :condgdp_sh],
+                             RGB(0.0, 0.8, 0.0))
+        elseif haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+            get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :gdpexp_sh],
+                             RGB(0.0, 0.8, 0.0))
+        else
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+        end
         zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
         det = ShockGroup("dt", [:dettrend], :gray40)
         oth = ShockGroup("other", [:dettrend, :g_sh, :π_star_sh, :μ_sh], :gray40)

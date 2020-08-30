@@ -191,12 +191,22 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     # The 8th column of the addition to TTT corresponds to "v_lr" which is set equal to
     # e_lr – measurement errors for the two real wage observables built in
     # as exogenous structural shocks.
-    TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_t]]               = m[:ρ_lr]
-    TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_t]]             = m[:ρ_tfp]
+    TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_t]]           = m[:ρ_lr]
+    TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_t]]         = m[:ρ_tfp]
     TTT_aug[endo_new[:e_gdpdef_t], endo_new[:e_gdpdef_t]]   = m[:ρ_gdpdef]
     TTT_aug[endo_new[:e_corepce_t], endo_new[:e_corepce_t]] = m[:ρ_corepce]
     TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_t]]         = m[:ρ_gdp]
     TTT_aug[endo_new[:e_gdi_t], endo_new[:e_gdi_t]]         = m[:ρ_gdi]
+
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        TTT_aug[endo_new[:e_condgdp_t], endo_new[:e_condgdp_t]] = m[:ρ_condgdp]
+    end
+
+    if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+        TTT_aug[endo_new[:e_gdpexp_t], endo_new[:e_gdpexp_t]] = m[:ρ_gdpexp]
+    end
 
     # Fundamental inflation
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
@@ -235,6 +245,16 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     RRR_aug[endo_new[:e_gdp_t], exo[:gdi_sh]] = m[:ρ_gdpvar] * m[:σ_gdp] ^ 2
 
     RRR_aug[endo_new[:e_gdi_t], exo[:gdi_sh]] = 1.0
+
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        RRR_aug[endo_new[:e_condgdp_t], exo[:condgdp_sh]] = 1.0
+    end
+
+    if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+        RRR_aug[endo_new[:e_gdpexp_t], exo[:gdpexp_sh]] = 1.0
+    end
 
     ### CCC Modifications
 
