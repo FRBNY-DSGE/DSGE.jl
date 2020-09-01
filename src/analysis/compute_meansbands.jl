@@ -304,6 +304,9 @@ the results to a file. Other methods are for one `output_var` and one `var_name`
 
 - `check_empty_columns::Bool = true`: if true, throw an error if
     calling load_data yields an empty column.
+
+- `pseudo2data::AbstractDict{Symbol, Symbol} = Dict()`: Maps the names of pseudo-observables
+    which require historical data during transformation to the name of the required historical series.
 """
 function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                             input_types::Vector{Symbol},
@@ -551,7 +554,7 @@ function compute_meansbands(models::Vector,
 
     transformed_series = mb_reverse_transform(fcast_series, transforms[1], product, class,
                                               y0_index = y0_index, data = data,
-                                              pop_growth = pop_growth)
+                                              pop_growth = pop_growth,  use_data = haskey(pseudo2data, var_name))
 
     # Handle NaNs
     if skipnan && output_var != :histobs && any(isnan.(transformed_series))
