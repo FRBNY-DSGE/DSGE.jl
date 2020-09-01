@@ -40,6 +40,9 @@ the results to a file. Other methods are for one `output_var` and one `var_name`
 
 - `check_empty_columns::Bool = true`: if true, throw an error if
     calling load_data yields an empty column.
+
+- `pseudo2data::AbstractDict{Symbol, Symbol} = Dict()`: Maps the names of pseudo-observables
+    which require historical data during transformation to the name of the required historical series.
 """
 function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                             cond_type::Symbol, output_vars::Vector{Symbol};
@@ -47,6 +50,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
                             check_empty_columns::Bool = true,
                             bdd_fcast::Bool = true, skipnan::Bool = false,
+                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -85,7 +89,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                                     forecast_string = forecast_string,
                                     population_data = population_data,
                                     population_forecast = population_forecast,
-                                    skipnan = skipnan,
+                                    skipnan = skipnan, pseudo2data = pseudo2data,
                                     verbose = verbose,
                                     kwargs...)
             GC.gc()
@@ -106,6 +110,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                             population_data::DataFrame = DataFrame(),
                             population_forecast::DataFrame = DataFrame(),
                             skipnan::Bool = false,
+                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             verbose::Symbol = :none,
                             kwargs...)
 
@@ -132,12 +137,13 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                 mb_vec[i] = compute_meansbands(m, input_type, cond_type, output_var,
                                                variable_names[i], df; pop_growth = pop_growth,
                                                forecast_string = forecast_string,
-                                               skipnan = skipnan,
+                                               skipnan = skipnan, pseudo2data = pseudo2data,
                                                kwargs...)
             end
         else
             mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                                          pop_growth = pop_growth, forecast_string = forecast_string,
+                                                         pseudo2data = pseudo2data,
                                                          skipnan = skipnan, kwargs...),
                           variable_names)
         end
@@ -163,8 +169,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
             mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullables.Nullable(shock_name),
                                                          forecast_string = forecast_string,
-                                                         skipnan = skipnan,
-                                                         kwargs...),
+                                                         skipnan = skipnan, pseudo2data = pseudo2data, kwargs...),
                           variable_names)
 
             # Re-assemble pmap outputs
@@ -206,6 +211,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                             shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false,
+                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             compute_shockdec_bands::Bool = false)
 
     # Return only one set of bands if we read in only one draw
@@ -224,11 +230,18 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
 
     # Reverse transform
     y0_index = get_y0_index(m, product) # this should be index_forecast_start(m) - 4, so 4 quarters before forecast
-    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
+    data = if haskey(pseudo2data, var_name) && product != :irf
+        Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,pseudo2data[var_name]]), NaN)))
+    elseif class == :obs && product != :irf
+        Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN)))
+    else
+        fill(NaN, size(df, 1))
+    end
+
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
-                                              pop_growth = pop_growth)
+                                              pop_growth = pop_growth, use_data = haskey(pseudo2data, var_name))
 
     # Handle NaNs
     if skipnan && output_var != :histobs && any(isnan.(transformed_series))
@@ -304,6 +317,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             shock_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             skipnan::Bool = false, ndraws::Int = 20000,
+                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             verbose::Symbol = :low,
                             kwargs...)
 
@@ -348,6 +362,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                                     variable_names = variable_names,
                                     shock_names = shock_names,
                                     skipnan = skipnan, ndraws = ndraws,
+                                    pseudo2data = pseudo2data,
                                     verbose = verbose,
                                     kwargs...)
             GC.gc()
@@ -374,6 +389,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             shock_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             skipnan::Bool = false, ndraws::Int = 20000,
+                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             verbose::Symbol = :none,
                             kwargs...)
 
@@ -404,13 +420,15 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                                                variable_names[i], df; pop_growth = pop_growth,
                                                forecast_strings = forecast_strings,
                                                weights = weights, skipnan = skipnan,
+                                               pseudo2data = pseudo2data,
                                                ndraws = ndraws, kwargs...)
             end
         else
             mb_vec = pmap(var_name -> compute_meansbands(models, input_types, cond_types, output_var, var_name, df;
                                                          pop_growth = pop_growth,
                                                          forecast_strings = forecast_strings, weights = weights,
-                                                         skipnan = skipnan, ndraws = ndraws, kwargs...),
+                                                         skipnan = skipnan, ndraws = ndraws,
+                                                         pseudo2data = pseudo2data, kwargs...),
                           variable_names)
         end
 
@@ -441,7 +459,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                                                          forecast_strings = forecast_strings,
                                                          weights = weights, shock_name = Nullables.Nullable(shock_name),
                                                          skipnan = skipnan, ndraws = ndraws,
-                                           kwargs...),
+                                                         pseudo2data = pseudo2data, kwargs...),
                              variable_names)
 
             # Re-assemble pmap outputs
@@ -486,8 +504,8 @@ function compute_meansbands(models::Vector,
                             shock_name::Nullable{Symbol} = Nullables.Nullable{Symbol}(),
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false, skipnan::Bool = false,
-                            compute_shockdec_bands::Bool = false,
-                            ndraws::Int = 20000)
+                            compute_shockdec_bands::Bool = false, ndraws::Int = 20000,
+                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}())
 
     # Return only one set of bands if we read in only one draw
     if input_types[1] in [:init, :mode, :mean]
@@ -509,7 +527,13 @@ function compute_meansbands(models::Vector,
 
     # Reverse transform
     y0_index = get_y0_index(models[1], product)
-    data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN))) : fill(NaN, size(df, 1))
+    data = if haskey(pseudo2data, var_name) && product != :irf
+        Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,pseudo2data[var_name]]), NaN)))
+    elseif class == :obs && product != :irf
+        Float64.(collect(Missings.replace(Vector{Union{Missing, Float64}}(df[!,var_name]), NaN)))
+    else
+        fill(NaN, size(df, 1))
+    end
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
 
     fcast_series = Matrix{Float64}(undef, 0, size(fcast_seriess[1], 2))
@@ -550,7 +574,8 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                               product::Symbol, class::Symbol;
                               y0_index::Int = -1,
                               data::AbstractVector{Float64} = Float64[],
-                              pop_growth::AbstractVector{Float64} = Float64[])
+                              pop_growth::AbstractVector{Float64} = Float64[],
+                              use_data::Bool = false)
                               # inflation_series::AbstractArray = Float64[])
     # No transformation
     if product in [:histut, :forecastut, :bddforecastut]
@@ -559,7 +584,7 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
 
     if product in [:hist4q, :forecast4q, :bddforecast4q]
         transform4q = get_transform4q(transform)
-        use_data = class == :obs && product != :hist4q
+        use_data = use_data ? true : (class == :obs && product != :hist4q)
 
         y0s = if use_data && transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
