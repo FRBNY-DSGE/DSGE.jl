@@ -179,7 +179,7 @@ end
 
 """
 ```
-missing_cond_vars!(m, df; cond_type = :none)
+missing_cond_vars!(m, df; cond_type = :none, check_empty_columns = true)
 ```
 
 Make conditional period variables not in `cond_semi_names(m)` or
