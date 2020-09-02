@@ -226,8 +226,8 @@ function measurement(m::Model1002{T},
                 ZZ_obs_gdp[endo_new[:e_gdp_t1]] = -meas_err * m[:me_level]
                 ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ_obs_gdp[no_integ_inds]' * (TTT^i)
                 DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.)
-                if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
-                    get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+                if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+                    get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
                     ZZ[obs[Symbol("obs_gdp$i")], endo_new[:e_gdpexp_t]] = 1.
                 end
             end
