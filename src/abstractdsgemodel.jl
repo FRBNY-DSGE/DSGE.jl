@@ -270,8 +270,12 @@ n_shockdec_periods(m::AbstractDSGEModel)    = index_shockdec_end(m) - index_shoc
 alternative_policy(m::AbstractDSGEModel) = get_setting(m, :alternative_policy)
 
 function date_forecast_end(m::AbstractDSGEModel)
-    date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
-    return Dates.lastdayofquarter(date)
+    if haskey(get_settings(m), :date_forecast_end)
+        return get_setting(m, :date_forecast_end)
+    else
+        date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
+        return Dates.lastdayofquarter(date)
+    end
 end
 
 function forecast_horizons(m::AbstractDSGEModel; cond_type::Symbol = :none)
