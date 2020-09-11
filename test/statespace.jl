@@ -1,3 +1,10 @@
+writing_output = false # Write output for tests which use random values
+if VERSION < v"1.5"
+    ver = "111"
+else
+    ver = "150"
+end
+
 m = AnSchorfheide()
 system = compute_system(m)
 Φ, Ψ, F_ϵ, F_u = DSGE.compute_system_function(system)
@@ -202,12 +209,25 @@ end
 
     # Check when λ is finite
     DSGE.update!(dsgevar, λ = 1.)
-Random.seed!(1793) # need to seed for this
+    Random.seed!(1793) # need to seed for this
     yyyyd, xxyyd, xxxxd = compute_system(dsgevar, data; get_population_moments = true)
     β, Σ = compute_system(dsgevar, data)
 
-    @test @test_matrix_approx_eq jlddata["exp_data_beta"] β
-    @test @test_matrix_approx_eq jlddata["exp_data_sigma"] Σ
+    if writing_output
+        jldopen("reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2", 
+            true, true, true, IOStream) do file 
+            write(file, "exp_data_beta", β)
+            write(file, "exp_data_sigma", Σ)
+        end
+    end
+
+    file = jldopen("reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2", "r")
+    saved_β = read(file, "exp_data_beta")
+    saved_Σ = read(file, "exp_data_sigma")
+    close(file)
+
+    @test @test_matrix_approx_eq saved_β β
+    @test @test_matrix_approx_eq saved_Σ Σ
 end
 
 @testset "VECM approximation of state space" begin

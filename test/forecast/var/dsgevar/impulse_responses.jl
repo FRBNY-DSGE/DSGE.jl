@@ -1,3 +1,10 @@
+writing_output = false
+if VERSION < v"1.5"
+    ver = "111"
+else 
+    ver = "150"
+end
+
 fp = dirname(@__FILE__)
 @testset "DSGE impulse responses to a pre-specified impact matrix" begin
     matdata = load(joinpath(fp, "../../../reference/test_irfdsge.jld2"))
@@ -125,6 +132,16 @@ end
     out_maxbc_h = impulse_responses(dsgevar, jlddata["data"], :maxBC, 1,
                               horizon = impulse_response_horizons(dsgevar))
 
+    if writing_output 
+        jldopen(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs_output_version=" * ver * ".jld2"),
+                true, true, true, IOStream) do file
+            write(file, "exp_modal_cholesky_irf", out)
+            write(file, "exp_modal_choleskyLR_irf", out_lr)
+            write(file, "exp_modal_maxBC_irf", out_maxbc)
+        end
+    end 
+    jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs_output_version=" * ver * ".jld2"))
+
     @test @test_matrix_approx_eq jlddata["exp_modal_cholesky_irf"] out
     @test @test_matrix_approx_eq jlddata["exp_modal_choleskyLR_irf"] out_lr
 
@@ -194,6 +211,19 @@ end
     out_dev_draw = impulse_responses(dsgevar, jlddata["data"], deviations = true,
                                      draw_shocks = true, normalize_rotation = false)
 
+    if writing_output
+        jldopen(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs_output_rotation_version=" * ver * ".jld2"),
+                true, true, true, IOStream) do file 
+            write(file, "rotation_irf_by_shock", out)
+            write(file, "flip_rotation_irf_by_shock", out_flip)
+            write(file, "rotation_irf_draw_shock", out_draw)
+            write(file, "deviations_rotation_irf_by_shock", out_dev)
+            write(file, "deviations_rotation_irf_draw_shock", out_dev_draw)
+        end
+    end
+
+    jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs_output_rotation_version=" * ver * ".jld2"))
+
     @test @test_matrix_approx_eq jlddata["rotation_irf_by_shock"] out
     @test @test_matrix_approx_eq jlddata["flip_rotation_irf_by_shock"] out_flip
     @test @test_matrix_approx_eq out out_MM1
@@ -213,7 +243,6 @@ end
 
     shocks = collect(keys(m.exogenous_shocks))
     fp = dirname(@__FILE__)
-    jlddata = load(joinpath(fp, "../../../reference/var_approx_dsge_irfs.jld2"))
     dsgevar = DSGEVAR(m, shocks, "ss0")
     DSGE.update!(dsgevar, lags = 4, observables = observables, λ = 1.)
 
@@ -242,7 +271,8 @@ end
                               use_intercept = true, flip_shocks = true)
     out14 = impulse_responses(dsgevar, :maxBC, 1,
                               use_intercept = true, flip_shocks = true)
-
+    
+    jlddata = load(joinpath(fp, "../../../reference/var_approx_dsge_irfs.jld2"))
 
     @test @test_matrix_approx_eq jlddata["exp_cholesky"][:, :, 1] out1
     @test @test_matrix_approx_eq jlddata["exp_choleskyLR"][:, :, 1] out2

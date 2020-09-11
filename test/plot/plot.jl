@@ -7,7 +7,7 @@ GR.inline("pdf")
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
-m <= Setting(:saveroot, tempdir())
+m <= Setting(:saveroot, joinpath(dirname(@__FILE__), "..", "reference"))#tempdir())
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)

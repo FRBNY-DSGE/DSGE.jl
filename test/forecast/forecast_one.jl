@@ -1,6 +1,12 @@
 using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates, HDF5
 path = dirname(@__FILE__)
 
+if VERSION < v"1.5"
+    ver = "111"
+else 
+    ver = "150"
+end
+
 generate_regime_switch_tests = false # Set to true if you want to regenerate the jld2 files for testing
 
 # Initialize model object
@@ -39,11 +45,11 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
 # Check error handling for input_type = :subset
 @testset "Ensure properly error handling for input_type = :subset" begin
     @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
-                                    subset_inds = 1:10, forecast_string = "",
-                                    verbose = :none)
+                                             subset_inds = 1:10, forecast_string = "",
+                                             verbose = :none)
     @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
-                                    forecast_string = "test",
-                                    verbose = :none)
+                                             forecast_string = "test",
+                                             verbose = :none)
 end
 
 # Run modal forecasts
@@ -141,14 +147,14 @@ end
 ## Now check for regime switching
 # TODO: ADD TEST WHEN USING OVERRIDES W/REGIME-SWITCHING MODEL, also two more TODO below
 custom_settings = Dict{Symbol, Setting}(
-    :data_vintage             => Setting(:data_vintage, "160812"),
-    :cond_vintage             => Setting(:cond_vintage, "160812"),
-    :cond_id                  => Setting(:cond_id, 0),
-    :use_population_forecast  => Setting(:use_population_forecast, true),
-    :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
-    :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
-    :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
-    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
+                                        :data_vintage             => Setting(:data_vintage, "160812"),
+                                        :cond_vintage             => Setting(:cond_vintage, "160812"),
+                                        :cond_id                  => Setting(:cond_id, 0),
+                                        :use_population_forecast  => Setting(:use_population_forecast, true),
+                                        :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
+                                        :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
+                                        :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
+                                        :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
 
 # Now check that regime switching works for different types of possible regimes
 regime_dates_dicts = [Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
@@ -180,9 +186,14 @@ dfs[:none] = load("$path/../reference/regime_switch_data.jld2", "none")
 dfs[:semi] = load("$path/../reference/regime_switch_data.jld2", "semi")
 dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
 
+
+
 if generate_regime_switch_tests
     exp_out_dict_new = exp_out_dict # We won't be testing, but we want to have the same structure as the existing one dict
 end
+
+
+
 
 @testset "Test modal and full distribution forecasts with regime switching for all major output_vars" begin
     # Loop over different times at which the regime switches, e.g. does the regime before or after ZLB
@@ -381,7 +392,7 @@ end
 
         # Read expected output
         if k == 1
-            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", "r") do file
+            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs2_version=" * ver * ".jld2", "r") do file
                 read(file, "exp_out_regime_switch"), read(file, "exp_out_true_regime_switch")
             end
         else
@@ -491,10 +502,10 @@ end
             out_rs2 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
             out_rs3 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
 
-            exp_out = JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", "r") do file
+            exp_out = JLD2.jldopen("$path/../reference/forecast_one_out_rs2_version=" * ver * ".jld2", "r") do file
                 read(file, "exp_out_regime_switch_full")
             end
-            exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs3.jld2", "r") do file
+            exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs3_version=" * ver * ".jld2", "r") do file
                 read(file, "exp_out_true_regime_switch_full")
             end
 
@@ -559,14 +570,14 @@ end
                 exp_out_regime_switch_full_new = out_rs1
                 exp_out_true_regime_switch_full_new = out_rs3
 
-                JLD2.jldopen("$path/../reference/forecast_one_out_rs2.jld2", true, true, true, IOStream) do file
+                JLD2.jldopen("$path/../reference/forecast_one_out_rs2_version=" * ver * ".jld2", true, true, true, IOStream) do file
                     # Now for the new additions
                     write(file, "exp_out_regime_switch", exp_out_regime_switch_new)
                     write(file, "exp_out_true_regime_switch", exp_out_true_regime_switch_new)
                     write(file, "exp_out_regime_switch_full", exp_out_regime_switch_full_new)
                 end
 
-                JLD2.jldopen("$path/../reference/forecast_one_out_rs3.jld2", true, true, true, IOStream) do file
+                JLD2.jldopen("$path/../reference/forecast_one_out_rs3_version=" * ver * ".jld2", true, true, true, IOStream) do file
                     write(file, "exp_out_true_regime_switch_full", exp_out_true_regime_switch_full_new)
                 end
             else
@@ -607,15 +618,16 @@ end
             end
         end
     end
-end
 
-# Add the other cases where we don't calculate shockdecobs
-if generate_regime_switch_tests
-    JLD2.jldopen("$path/../reference/forecast_one_out_rs1.jld2", true, true, true, IOStream) do file
+    if generate_regime_switch_tests
+        JLD2.jldopen("$path/../reference/forecast_one_out_rs1_version=" * ver * ".jld2", true, true, true, IOStream) do file
 
-        # Now for the new additions
-        write(file, "exp_out_regime_switch_cases", exp_out_dict_new)
+            # Now for the new additions
+            write(file, "exp_out_regime_switch_cases", exp_out_dict_new)
+        end
     end
+
 end
+
 
 nothing
