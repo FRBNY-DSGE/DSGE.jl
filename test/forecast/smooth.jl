@@ -1,7 +1,9 @@
-writing_output = false 
+using DSGE, ModelConstructors, JLD2, FileIO, Test, Dates, Random
+
+writing_output = false
 if VERSION < v"1.5"
     ver = "111"
-else 
+else
     ver = "150"
 end
 
@@ -163,7 +165,7 @@ states_sv = Matrix{Float64}[]
 shocks_sv = Matrix{Float64}[]
 pseudo_sv = Matrix{Float64}[]
 
-
+@info "The following warnings about smoothers being called with draw_states = true are expected."
 @testset "Smoothing with regime switching" begin
     system = compute_system(m)
     system_rs1 = compute_system(m_rs1)
@@ -210,13 +212,13 @@ pseudo_sv = Matrix{Float64}[]
             @test @test_matrix_approx_eq states_rs3[smoother] exp_states_regime_switch
             @test @test_matrix_approx_eq shocks_rs3[smoother] exp_shocks_regime_switch
             @test @test_matrix_approx_eq pseudo_rs3[smoother] exp_pseudo_regime_switch[1:21, :] # extra rows b/c used more pseudo-obs when generating the test file
-        else
-            @test maximum(abs.(states_rs3[smoother] - exp_states_regime_switch))  < 5e-1
+        else # the other smoothers should generate similar output, but may not be the exact same thing
+            @test maximum(abs.(states_rs3[smoother] - exp_states_regime_switch))  < 6e-1
             @test maximum(abs.(shocks_rs3[smoother] - exp_shocks_regime_switch))  < 2e-1
             @test maximum(abs.(pseudo_rs3[smoother] - exp_pseudo_regime_switch[1:21, :])) < 3e-1
         end
     end
-    
+
     @info "The following warnings about calling smoothers with draw_states = true are expected."
     for smoother in [:durbin_koopman, :hamilton, :koopman, :carter_kohn]
         m <= Setting(:forecast_smoother, smoother)
@@ -273,8 +275,8 @@ pseudo_sv = Matrix{Float64}[]
             file["exp_states"] = exp_states
             file["exp_shocks"] = exp_shocks
             file["exp_pseudo"] = exp_pseudo
-        end 
-    end 
+        end
+    end
 end
 
 nothing
