@@ -1,6 +1,6 @@
 save_output = false
 
-using DSGE, ModelConstructors, Test, JLD2, FileIO, OrderedCollections, CSV
+using DSGE, ModelConstructors, Test, JLD2, FileIO, OrderedCollections, CSV, Random, DataFrames
 path = dirname(@__FILE__)
 
 m = AnSchorfheide()
@@ -31,7 +31,8 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
                                          :irfstates, :irfpseudo, :irfobs])
 
 Random.seed!(47)
-df = CSV.read("$path/../reference/input_data/data/data_dsid=00_vint=REF.csv")
+df = VERSION >= v"1.3" ? CSV.read("$path/../reference/input_data/data/data_dsid=00_vint=REF.csv", DataFrame) :
+    CSV.read("$path/../reference/input_data/data/data_dsid=00_vint=REF.csv")
 forecast_one(m, :full, :none, output_vars, df = df, verbose = :none)
 compute_meansbands(m, :full, :none, [:histobs, :forecastobs, :histpseudo, :forecastpseudo,
                                      :hist4qobs, :forecast4qobs, :hist4qpseudo, :forecast4qpseudo, :shockdecobs, :irfobs], df = df, verbose = :none)
@@ -42,7 +43,8 @@ hist_4q, fore_4q = construct_fcast_and_hist_dfs(m, :none, [:obs_gdp, :obs_cpi, :
 
 
 if save_output
-    jldopen("$path/../reference/df_to_table_out.jld2", "w") do file
+    fn = VERSION >= v"1.5" ? "$path/../reference/df_to_table_out_v1p5.jld2" : "$path/../reference/df_to_table_out.jld2"
+    jldopen(fn, true, true, true, IOStream) do file
         file["hist"] = hist
         file["hist_noT"] = hist_noT
         file["hist_4q"] = hist_4q
@@ -52,12 +54,14 @@ if save_output
     end
 end
 
-saved_hist = load("$path/../reference/df_to_table_out.jld2", "hist")
-saved_hist_noT = load("$path/../reference/df_to_table_out.jld2", "hist_noT")
-saved_hist_4q = load("$path/../reference/df_to_table_out.jld2", "hist_4q")
-saved_fore = load("$path/../reference/df_to_table_out.jld2", "fore")
-saved_fore_noT = load("$path/../reference/df_to_table_out.jld2", "fore_noT")
-saved_fore_4q = load("$path/../reference/df_to_table_out.jld2", "fore_4q")
+
+fn = VERSION >= v"1.5" ? "$path/../reference/df_to_table_out_v1p5.jld2" : "$path/../reference/df_to_table_out.jld2"
+saved_hist = load(fn, "hist")
+saved_hist_noT = load(fn, "hist_noT")
+saved_hist_4q = load(fn, "hist_4q")
+saved_fore = load(fn, "fore")
+saved_fore_noT = load(fn, "fore_noT")
+saved_fore_4q = load(fn, "fore_4q")
 
 @testset "Test df_to_table" begin
     @test Matrix(hist) == Matrix(saved_hist)
