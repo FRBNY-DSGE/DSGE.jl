@@ -5,7 +5,7 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
-my_tests = [ #=
+my_tests = [
             "abstractdsgemodel",
             "abstractvarmodel",
             "defaults",
@@ -40,9 +40,9 @@ my_tests = [ #=
             "estimate/filter_poolmodel",
             "estimate/posterior_poolmodel",
             "estimate/estimate_bma",
-            "estimate/hessian",=#
-            # "estimate/util",
-      #=      "estimate/csminwel",
+            "estimate/hessian",
+            "estimate/util",
+            "estimate/csminwel",
             "estimate/optimize",
             "estimate/var/dsgevar_likelihood",
             "estimate/var/dsgevecm_likelihood",
@@ -56,13 +56,13 @@ my_tests = [ #=
             "estimate/smc/smc",
 
             "forecast/drivers",
-       #     "forecast/smooth", # TODO FIX the weird < .5 issue
+       #     "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
-     #       "forecast/automatic_tempalt_zlb", # TODO FIX unable to enforce ZLB
+     #       "forecast/automatic_tempalt_zlb",
             "forecast/regime_switching",
             "forecast/util",
             "forecast/var/impulse_responses",
@@ -70,7 +70,7 @@ my_tests = [ #=
             "forecast/var/dsgevecm/impulse_responses",
 
             "analysis/compute_meansbands",
-          #  "analysis/df_to_table",  # TODO THIS ONE
+          #  "analysis/df_to_table",
             "analysis/io",
             "analysis/meansbands",
             "analysis/moments",
@@ -99,8 +99,8 @@ my_tests = [ #=
             "models/var/dsgevecm/dsgevecm",
             "models/var/util",
 
-        #    "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell" #TODO killed because of mem limit
-            #"models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt",
+            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell" #TODO killed because of mem limit
+            # "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt"
             #"models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
             #"models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
             #"models/heterogeneous/het_dsge/het_dsge",
@@ -114,7 +114,7 @@ my_tests = [ #=
             #"models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
-          =#  ]
+            ]
 #=
 if VERSION >= v"1.3"
     my_tests = vcat([
