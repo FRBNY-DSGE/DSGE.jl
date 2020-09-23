@@ -115,7 +115,7 @@ my_tests = [
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
             ]
-#=
+
 if VERSION >= v"1.3"
     my_tests = vcat([
                      "packet/packet", # These two tests generate segmentation fault errors
@@ -123,7 +123,7 @@ if VERSION >= v"1.3"
                     ],
                     my_tests)
 end
-=#
+
 
 for test in my_tests
     test_file = string("$test.jl")
