@@ -5,12 +5,12 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
-my_tests = [ #= 
+my_tests = [ #=
             "abstractdsgemodel",
             "abstractvarmodel",
             "defaults",
             "parameters",
-            "util", 
+            "util",
             "statespace",
 
             "data/fred_data",
@@ -40,9 +40,9 @@ my_tests = [ #=
             "estimate/filter_poolmodel",
             "estimate/posterior_poolmodel",
             "estimate/estimate_bma",
-            "estimate/hessian",
-      #      "estimate/util",  # TODO errors in both 
-            "estimate/csminwel",
+            "estimate/hessian",=#
+            # "estimate/util",
+      #=      "estimate/csminwel",
             "estimate/optimize",
             "estimate/var/dsgevar_likelihood",
             "estimate/var/dsgevecm_likelihood",
@@ -65,12 +65,12 @@ my_tests = [ #=
      #       "forecast/automatic_tempalt_zlb", # TODO FIX unable to enforce ZLB
             "forecast/regime_switching",
             "forecast/util",
-            "forecast/var/impulse_responses", 
-            "forecast/var/dsgevar/impulse_responses", 
+            "forecast/var/impulse_responses",
+            "forecast/var/dsgevar/impulse_responses",
             "forecast/var/dsgevecm/impulse_responses",
 
             "analysis/compute_meansbands",
-          #  "analysis/df_to_table",  # TODO THIS ONE 
+          #  "analysis/df_to_table",  # TODO THIS ONE
             "analysis/io",
             "analysis/meansbands",
             "analysis/moments",
@@ -115,11 +115,11 @@ my_tests = [ #=
             #"models/heterogeneous/one_asset_hank/one_asset_hank",
             #"models/heterogeneous/one_asset_hank/interns",
           =#  ]
-#= #TODO these two 
+#=
 if VERSION >= v"1.3"
     my_tests = vcat([
                      "packet/packet", # These two tests generate segmentation fault errors
-                     "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1
+                     "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1)
                     ],
                     my_tests)
 end
