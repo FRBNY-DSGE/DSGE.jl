@@ -31,7 +31,7 @@ output_vars = [:forecastobs, :bddforecastobs]
 
 para = repeat(Matrix(map(x -> x.value, m.parameters)'), 3, 1)
 out = Dict()
-Random.seed!(1793 * 5)
+Random.seed!(1793 * 1000)
 for cond_type in [:full, :none]
     out[cond_type] = Dict()
     forecast_one(m, :mode, cond_type, output_vars, verbose = :none, params = para[1, :], df = dfs[cond_type],
@@ -62,7 +62,7 @@ end
 # Initialize model objects
 Random.seed!(1793)
 m = Model1002("ss60")
-if VERSION >= v"1.3"
+if (VERSION >= v"1.3")
     df_full = DataFrame!(CSV.File(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
 else
     df_full = DataFrame(CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
@@ -138,13 +138,23 @@ forecast_one(m, :full, :full, output_vars, verbose = :none, params = mparas, df 
 output_files = get_forecast_output_files(m, :full, :full, output_vars)
 if regenerate_output
     using JLD2, FileIO
-    JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"), true, true, true, IOStream) do file
-        for (k, v) in output_files
-            write(file, string(k), load(v, "arr"))
+    if (VERSION >= v"1.5")
+        JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist_v1p5.jld2"), true, true, true, IOStream) do file
+            for (k, v) in output_files
+                write(file, string(k), load(v, "arr"))
+            end
+        end
+    else
+        JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"), true, true, true, IOStream) do file
+            for (k, v) in output_files
+                write(file, string(k), load(v, "arr"))
+            end
         end
     end
 else
-    refdata = load(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"))
+    refdata = (VERSION >= v"1.5") ?
+        load(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist_v1p5.jld2")) :
+        load(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"))
     @testset "Automatic enforcement of ZLB as a temporary alternative policy during full-distribution forecast" begin
         for (k, v) in output_files
             @test @test_matrix_approx_eq refdata[string(k)] load(v, "arr")
