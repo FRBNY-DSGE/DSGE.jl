@@ -633,7 +633,7 @@ buted to steady-state inflation.",
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_mon_anticipated_shocks_padding(m)
-        if i < 13
+        if i < 6
             m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
