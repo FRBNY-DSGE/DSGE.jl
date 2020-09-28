@@ -33,7 +33,9 @@ usual_model_settings!(m, "181115"; cdvt = "181115", fcast_date = quartertodate("
 m <= Setting(:use_population_forecast, false) # We do not make this data available
 m <= Setting(:saveroot, "$(fn)/../../save/") # set save root
 m <= Setting(:dataroot, "$(fn)/../../save/input_data/") # set data root
-m <= Setting(:date_forecast_end, quartertodate("2030-Q1")) # When to stop forecast
+m <= Setting(:date_forecast_end, quartertodate("2030-Q1")) # when to stop forecast
+m <= Setting(:forecast_horizons,                           # number of quarters in forecast horizon; must match
+             DSGE.subtract_quarters(date_forecast_end(m), date_forecast_start(m)) + 1) # date_forecast_end to run successfully
 forecast_string = "" # to identify different forecasts from each other
 m <= Setting(:forecast_block_size, 40) # this depends on the number of samples from estimations
 # and thinning during forecast (determined by

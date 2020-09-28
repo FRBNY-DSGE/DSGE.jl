@@ -37,6 +37,13 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
 
     @assert cond_type in [:none, :semi, :full] "cond_type must be one of :none, :semi, or :full"
 
+    implied_horizons = subtract_quarters(date_forecast_end(m), date_forecast_start(m)) + 1
+    if implied_horizons != get_setting(m, :forecast_horizons)
+        @warn "Setting :forecast_horizons does not match the number of periods implied by Settings :date_forecast_end" *
+            " and :date_forecast_start. Updating :forecast_horizons to match"
+        m <= Setting(:forecast_horizons, implied_horizons, "Number of periods to forecast ahead")
+    end
+
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars, bdd_fcast = bdd_fcast)
     if input_type == :prior
