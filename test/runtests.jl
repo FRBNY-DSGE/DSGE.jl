@@ -56,13 +56,13 @@ my_tests = [
             "estimate/smc/smc",
 
             "forecast/drivers",
-       #     "forecast/smooth",
+            "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
-     #       "forecast/automatic_tempalt_zlb",
+            "forecast/automatic_tempalt_zlb",
             "forecast/regime_switching",
             "forecast/util",
             "forecast/var/impulse_responses",
@@ -70,7 +70,7 @@ my_tests = [
             "forecast/var/dsgevecm/impulse_responses",
 
             "analysis/compute_meansbands",
-          #  "analysis/df_to_table",
+            "analysis/df_to_table",
             "analysis/io",
             "analysis/meansbands",
             "analysis/moments",
@@ -98,37 +98,30 @@ my_tests = [
             "models/var/dsgevar/dsgevar",
             "models/var/dsgevecm/dsgevecm",
             "models/var/util",
-
-            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell" #TODO killed because of mem limit
+            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell"
             # "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt"
-            #"models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
-            #"models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
-            #"models/heterogeneous/het_dsge/het_dsge",
-            #"models/heterogeneous/het_dsge_lag/het_dsge_lag",
-            #"models/heterogeneous/het_dsge/het_dsge",
+            # "models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
+            # "models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
+            # "models/heterogeneous/het_dsge/het_dsge",
+            # "models/heterogeneous/het_dsge_lag/het_dsge_lag",
+            # "models/heterogeneous/het_dsge/het_dsge",
 
-            #"models/heterogeneous/krusell_smith/krusell_smith",
-            #"models/heterogeneous/bond_labor/bond_labor",
-            #"models/heterogeneous/real_bond/real_bond",
-            #"models/heterogeneous/real_bond_mkup/real_bond_mkup",
-            #"models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
-            #"models/heterogeneous/one_asset_hank/one_asset_hank",
-            #"models/heterogeneous/one_asset_hank/interns",
+            # "models/heterogeneous/krusell_smith/krusell_smith",
+            # "models/heterogeneous/bond_labor/bond_labor",
+            # "models/heterogeneous/real_bond/real_bond",
+            # "models/heterogeneous/real_bond_mkup/real_bond_mkup",
+            # "models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
+            # "models/heterogeneous/one_asset_hank/one_asset_hank",
+            # "models/heterogeneous/one_asset_hank/interns",
             ]
 
 if VERSION >= v"1.3"
     my_tests = vcat([
-            "estimate/var/dsgevar_likelihood",
-            "estimate/var/dsgevecm_likelihood",
-            "forecast/var/impulse_responses",
-            "forecast/var/dsgevar/impulse_responses",
-            "forecast/var/dsgevecm/impulse_responses",
                      "packet/packet", # These two tests generate segmentation fault errors
                      "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1)
                     ],
                     my_tests)
 end
-
 
 for test in my_tests
     test_file = string("$test.jl")
