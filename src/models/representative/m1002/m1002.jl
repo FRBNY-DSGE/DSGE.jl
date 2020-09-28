@@ -256,7 +256,7 @@ function init_model_indices!(m::Model1002)
 end
 
 function Model1002(subspec::String = "ss10";
-                   custom_settings = Dict{Symbol, Setting}(),
+                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
     # Model-specific specifications
