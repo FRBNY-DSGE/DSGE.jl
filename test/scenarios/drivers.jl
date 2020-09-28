@@ -4,8 +4,7 @@ using OrderedCollections
 m = AnSchorfheide(testing = true)
 m <= Setting(:forecast_horizons, 12)
 
-# estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
-estroot = normpath("reference")
+estroot = joinpath(dirname(@__FILE__), "..", "reference")
 overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 
@@ -170,5 +169,17 @@ end
 @testset "Test scenario aggregation, drawing with replacement" begin
     @test expect ≈ actual
 end
+
+# Delete outputted files
+raw_fn_root  = "../reference/output_data/an_schorfheide/ss0/scenarios/raw/"
+work_fn_root = "../reference/output_data/an_schorfheide/ss0/scenarios/work/"
+rm(joinpath(dirname(@__FILE__), raw_fn_root, "forecastobs_scen=altscen_svin=REF_test.jld2"))
+rm(joinpath(dirname(@__FILE__), raw_fn_root, "forecastpseudo_scen=altscen_svin=REF_test.jld2"))
+rm(joinpath(dirname(@__FILE__), work_fn_root, "mbforecast4qobs_scen=altscen_svin=REF_test.jld2"))
+rm(joinpath(dirname(@__FILE__), work_fn_root, "mbforecast4qpseudo_scen=altscen_svin=REF_test.jld2"))
+rm(joinpath(dirname(@__FILE__), work_fn_root, "mbforecastobs_scen=altscen_svin=REF_test.jld2"))
+rm(joinpath(dirname(@__FILE__), work_fn_root, "mbforecastpseudo_scen=altscen_svin=REF_test.jld2"))
+rm(joinpath(dirname(@__FILE__), work_fn_root, "mbforecastutobs_scen=altscen_svin=REF_test.jld2"))
+rm(joinpath(dirname(@__FILE__), work_fn_root, "mbforecastutpseudo_scen=altscen_svin=REF_test.jld2"))
 
 nothing

@@ -2,6 +2,11 @@ using DSGE, ModelConstructors, HDF5, Random, JLD2, FileIO, SMC, Test
 
 path = dirname(@__FILE__)
 writing_output = false
+if VERSION < v"1.5"
+    ver = "111"
+else
+    ver = "150"
+end
 
 m = AnSchorfheide()
 
@@ -38,14 +43,15 @@ test_w      = test_file["w"]
 test_W      = test_file["W"]
 
 if writing_output
-    jldopen(joinpath(path, "reference/smc_cloud_fix=true.jld2"), true, true, true, IOStream) do file
+    jldopen(joinpath(path, "reference/smc_cloud_fix=true_version=" * ver * ".jld2"), 
+            true, true, true, IOStream) do file
         write(file, "cloud", test_cloud)
         write(file, "w", test_w)
         write(file, "W", test_W)
     end
 end
 
-saved_file  = load(joinpath(path, "reference/smc_cloud_fix=true.jld2"))
+saved_file  = load(joinpath(path, "reference/smc_cloud_fix=true_version=" * ver * ".jld2"))
 saved_cloud = saved_file["cloud"]
 saved_w     = saved_file["w"]
 saved_W     = saved_file["W"]

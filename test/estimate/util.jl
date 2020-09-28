@@ -46,5 +46,6 @@ exp_hessian = h5read(file, "hessian")
 @testset "Check optimize minimizers are the same [csminwel]" begin
     @test minimizer ≈ modal_out.minimizer atol=5e-4
     @test @test_matrix_approx_eq H_expected modal_H
-    @test_broken @test_matrix_approx_eq exp_hessian modal_hessian # this works when ran in REPL but gives a different result in Test mode
+    # this works when ran in REPL but breaks in Test mode in Julia 1.1, 1.3, and 1.5
+    @test_broken @test_matrix_approx_eq exp_hessian modal_hessian
 end

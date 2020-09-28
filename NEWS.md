@@ -2,6 +2,8 @@
 
 ## Bug fixes and cleanup
 + Fix error in calculating the diagonal of the Hessian with parallel workers
++ Update tests to handle seed changes in Julia 1.5
++ Convert missing values to NaNs when calculating means and bands
 
 # DSGE.jl 1.1.6
 ## Version Restrictions

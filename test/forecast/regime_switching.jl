@@ -1,6 +1,11 @@
 using Test, ModelConstructors, DSGE, Dates, FileIO, Random
 
 generate_fulldist_forecast_data = false
+if VERSION < v"1.5"
+    ver = "111"
+else 
+    ver = "150"
+end
 
 Random.seed!(1793)
 
@@ -362,7 +367,7 @@ end
     dfs[:none] = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_none")
 
     if !generate_fulldist_forecast_data
-        check_results = load(joinpath(fp, "../reference/regime_switching_fulldist_forecast.jld2"), "fcast_out")
+        check_results = load(joinpath(fp, "../reference/regime_switching_fulldist_forecast_version=" * ver * ".jld2"), "fcast_out")
     end
 
     for (i, rs, fs, ce) in zip(1:length(rss), rss, fss, ces)
@@ -439,7 +444,7 @@ end
 
     if generate_fulldist_forecast_data
         fp = dirname(@__FILE__)
-        JLD2.jldopen(joinpath(fp, "../reference/regime_switching_fulldist_forecast.jld2"), true, true, true, IOStream) do file
+        JLD2.jldopen(joinpath(fp, "../reference/regime_switching_fulldist_forecast_version=" * ver * ".jld2"), true, true, true, IOStream) do file
             write(file, "fcast_out", fcast_out)
         end
     end

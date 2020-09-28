@@ -95,7 +95,6 @@ function meansbands_to_matrix(mb::MeansBands)
     if prod in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                 :bddforecast, :bddforecastut, :bddforecast4q,
                 :dettrend, :trend]
-
         # construct means and bands arrays
         means = Array{T,2}(undef, nvars, nperiods)
         bands = Array{T}(undef, nbands, nvars, nperiods)
@@ -103,9 +102,15 @@ function meansbands_to_matrix(mb::MeansBands)
         # extract each series and place in arrays
         for series in setdiff(propertynames(mb.means), [:date])
             ind = inds[series]
-            means[ind,:] = convert(Array{T},mb.means[!, series])
+            if any(ismissing.(mb.means[!, series]))
+                mb.means[!, series] .= missing2nan(Array(mb.means[!, series]))
+            end
+            means[ind,:] = convert(Array{T}, mb.means[!, series])
 
             for (i,band) in enumerate(bands_list)  # these are ordered properly already
+                if any(ismissing.(mb.bands[series][!, Symbol(band)]))
+                    mb.bands[series][!, Symbol(band)] = missing2nan(Array(mb.bands[series][!, Symbol(band)]))
+                end
                 bands[i,ind,:] = convert(Array{T},mb.bands[series][!, Symbol(band)])
             end
         end
@@ -125,9 +130,15 @@ function meansbands_to_matrix(mb::MeansBands)
             ind = inds[var]
 
             shock_ind = shock_inds[shock]
+            if any(ismissing.(mb.means[!, series]))
+                mb.means[!, series] .= missing2nan(Array(mb.means[!, series]))
+            end
             means[ind,:,shock_ind] = convert(Array{T}, mb.means[!, series])
 
             for (band_ind, band) in enumerate(bands_list)
+                if any(ismissing.(mb.bands[series][!, Symbol(band)]))
+                    mb.bands[series][!, Symbol(band)] .= missing2nan(Array(mb.bands[series][!, Symbol(band)]))
+                end
                 bands[band_ind, ind, :, shock_ind] =
                     convert(Array{T}, mb.bands[series][!, Symbol(band)])
             end

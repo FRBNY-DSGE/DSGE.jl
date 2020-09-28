@@ -767,8 +767,13 @@ function find_density_bands(draws::AbstractArray, percent::T;
 
         high = low + n_in_band - 1
 
-        band[2,i] = draw_variable_i[low]
-        band[1,i] = draw_variable_i[high]
+        if any(ismissing.(draw_variable_i))
+            band[2,i] = NaN
+            band[1,i] = NaN
+        else
+            band[2,i] = draw_variable_i[low]
+            band[1,i] = draw_variable_i[high]
+        end
     end
     return band
 end

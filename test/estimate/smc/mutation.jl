@@ -1,4 +1,9 @@
 write_test_output = false
+if VERSION < v"1.5"
+    ver = "111"
+else 
+    ver = "150"
+end
 
 path = dirname(@__FILE__)
 
@@ -53,12 +58,12 @@ new_particles = [SMC.mutation(my_likelihood, m.parameters, data,
                               c = c, α = α, old_data = old_data) for j = 1:n_parts]
 
 if write_test_output
-    JLD2.jldopen(joinpath(path, "reference/mutation_outputs.jld2"), "w") do file
+    JLD2.jldopen(joinpath(path, "reference/mutation_outputs_version=" * ver * ".jld2"), "w") do file
         write(file, "particles", new_particles)
     end
 end
 
-saved_particles = load(joinpath(path, "reference/mutation_outputs.jld2"), "particles")
+saved_particles = load(joinpath(path, "reference/mutation_outputs_version=" * ver * ".jld2"), "particles")
 
 @testset "Test mutation outputs, particle by particle" begin
     for i = 1:length(saved_particles)

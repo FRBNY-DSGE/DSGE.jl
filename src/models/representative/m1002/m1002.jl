@@ -227,6 +227,18 @@ function init_model_indices!(m::Model1002)
         push!(exogenous_shocks, :φ_sh)
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        push!(endogenous_states_augmented, :e_condgdp_t)
+        push!(exogenous_shocks, :condgdp_sh)
+    end
+
+    if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+        push!(endogenous_states_augmented, :e_gdpexp_t)
+        push!(exogenous_shocks, :gdpexp_sh)
+    end
+
     # Observables
     observables = keys(m.observable_mappings)
 
@@ -311,7 +323,8 @@ function init_parameters!(m::Model1002)
                    tex_label="\\zeta_p")
 
     m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
-                   description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attributed to steady-state inflation.",
+                   description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attri
+buted to steady-state inflation.",
                    tex_label="\\iota_p")
 
     m <= parameter(:δ, 0.025, fixed=true,
@@ -591,6 +604,26 @@ function init_parameters!(m::Model1002)
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        m <= parameter(:ρ_condgdp, 0., (-0.999, 0.999), (-0.999, 0.999),
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{cond gdp}")
+        m <= parameter(:σ_condgdp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{cond gdp}")
+    end
+
+    if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+        m <= parameter(:ρ_gdpexp, 0., (-0.999, 0.999), (-0.999, 0.999),
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{gdpexp}")
+        m <= parameter(:σ_gdpexp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{gdpexp}")
+    end
+
     for key in get_setting(m, :proportional_antshocks)
         m <= parameter(Symbol(:σ_, key, :_prop), 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 1.), fixed=false,
@@ -613,7 +646,7 @@ function init_parameters!(m::Model1002)
 
     for (sh, ant_num) in get_setting(m, :antshocks)
         for i in 1:ant_num
-            m <= parameter(Symbol("σ_$(sh)$i"), .2, (0., 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+            m <= parameter(Symbol("σ_$(sh)$i"), 0., (0., 1e3), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
                            description="σ_$(sh)$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
@@ -833,6 +866,8 @@ function model_settings!(m::Model1002)
                  " one-period ahead expectation of exogenous process affected by the shock") # This mapping is intended only for anticipated shocks that are not scaled by a constant, i.e. the coefficient in the Γ0 eqcond matrix is -1.0
     m <= Setting(:proportional_antshocks, Vector{Symbol}(undef, 0),
                  "Vector of anticipated shocks that are proportional to the contemporaneous shock")
+    m <= Setting(:contemporaneous_and_proportional_antshocks, Vector{Symbol}(undef, 0),
+                 "Vector of anticipated shocks which are both contemporaneous and shocks proportional to contemporaneous shocks")
     m <= Setting(:antshocks, Dict{Symbol, Int}(),
                  "Dictionary mapping name of anticipated shock to the number of periods of anticipation.")
 
@@ -928,21 +963,42 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 function shock_groupings(m::Model1002)
     if subspec(m) in ["ss59", "ss60", "ss61"]
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
-        bet = ShockGroup("b", [:b_sh, :biidc_sh], RGB(0.3, 0.3, 1.0))
+        bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
         fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
-        tfp = ShockGroup("z", [:ztil_sh, :ziid_sh], RGB(1.0, 0.55, 0.0)) # darkorange
-        pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+        # tfp = ShockGroup("tfp", [:ztil_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+        tfp = ShockGroup("tfp", [:ztil_sh, :zp_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+        pmu = ShockGroup("mkp", [:λ_f_sh, :λ_w_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
         wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
         phi = ShockGroup("phi", [:φ_sh], RGB(0.5, 0.5, 0.))
         pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_mon_anticipated_shocks(m)]),
                          RGB(1.0, 0.84, 0.0)) # gold
         pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
         mei = ShockGroup("mu", [:μ_sh], :cyan)
-        mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+        if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+            get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :condgdp_sh],
+                             RGB(0.0, 0.8, 0.0))
+        elseif haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+            get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :gdpexp_sh],
+                             RGB(0.0, 0.8, 0.0))
+        else
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+        end
         zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
         det = ShockGroup("dt", [:dettrend], :gray40)
+        oth = ShockGroup("other", [:dettrend, :g_sh, :π_star_sh, :μ_sh], :gray40)
 
-        return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
+        # COVID-19 Shocks
+        betcovid = ShockGroup("biidc", haskey(m.exogenous_shocks, :biidc_shl1) ? [:biidc_sh, :biidc_shl1] : [:biidc_sh],
+                              RGB(0.70, 0.13, 0.13))
+        zcovid   = ShockGroup("ziid", [:ziid_sh], RGB(0., 0.5, 0.5))
+        φcovid   = ShockGroup("phi", [:φ_sh], RGB(0.5, 0.5, 0.))
+        ocovid   = ShockGroup("Other COVID", [:ziid_sh, :φ_sh], RGB(0., 0.5, 0.5))
+
+        # return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
+        # return [betcovid, zcovid, φcovid, bet, fin, tfp, pmu, pol, mea, oth]
+       return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth]
     elseif subspec(m) != "ss12"
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
         bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))

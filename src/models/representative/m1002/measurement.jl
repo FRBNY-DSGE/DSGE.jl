@@ -72,6 +72,11 @@ function measurement(m::Model1002{T},
     ZZ[obs[:obs_gdp], endo_new[:e_gdp_t1]] = -m[:me_level]
     DD[obs[:obs_gdp]]                      = 100*(exp(m[:z_star])-1)
 
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        ZZ[obs[:obs_gdp], endo_new[:e_condgdp_t]] = 1.
+    end
+
     ## GDI growth- Quarterly!
     ZZ[obs[:obs_gdi], endo[:y_t]]          = m[:γ_gdi]
     ZZ[obs[:obs_gdi], endo_new[:y_t1]]     = -m[:γ_gdi]
@@ -154,32 +159,52 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end
 
+    ## Set up structural shocks covariance matrix
+    QQ[exo[:g_sh], exo[:g_sh]]             = m[:σ_g]^2
+    QQ[exo[:b_sh], exo[:b_sh]]             = m[:σ_b]^2
+    QQ[exo[:μ_sh], exo[:μ_sh]]             = m[:σ_μ]^2
+    QQ[exo[:ztil_sh], exo[:ztil_sh]]       = m[:σ_ztil]^2
+    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]         = m[:σ_λ_f]^2
+    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]         = m[:σ_λ_w]^2
+    QQ[exo[:rm_sh], exo[:rm_sh]]           = m[:σ_r_m]^2
+    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]         = m[:σ_σ_ω]^2
+    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]         = m[:σ_μ_e]^2
+    QQ[exo[:γ_sh], exo[:γ_sh]]             = m[:σ_γ]^2
+    QQ[exo[:π_star_sh], exo[:π_star_sh]]   = m[:σ_π_star]^2
+    QQ[exo[:lr_sh], exo[:lr_sh]]           = m[:σ_lr]^2
+    QQ[exo[:zp_sh], exo[:zp_sh]]           = m[:σ_z_p]^2
+    QQ[exo[:tfp_sh], exo[:tfp_sh]]         = m[:σ_tfp]^2
+    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]   = m[:σ_gdpdef]^2
+    QQ[exo[:corepce_sh], exo[:corepce_sh]] = m[:σ_corepce]^2
+    QQ[exo[:gdp_sh], exo[:gdp_sh]]         = m[:σ_gdp]^2
+    QQ[exo[:gdi_sh], exo[:gdi_sh]]         = m[:σ_gdi]^2
+
     if subspec(m) in ["ss59", "ss60", "ss61"]
-        QQ[exo[:ziid_sh], exo[:ziid_sh]] = m[:σ_ziid]^2
+        QQ[exo[:ziid_sh], exo[:ziid_sh]]   = m[:σ_ziid]^2
         QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
-        QQ[exo[:φ_sh], exo[:φ_sh]] = m[:σ_φ]^2
+        QQ[exo[:φ_sh], exo[:φ_sh]]         = m[:σ_φ]^2
     end
 
-    QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
-    QQ[exo[:b_sh], exo[:b_sh]]            = m[:σ_b]^2
-    QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
-    QQ[exo[:ztil_sh], exo[:ztil_sh]]      = m[:σ_ztil]^2
-    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
-    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
-    QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2
-    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω]^2
-    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e]^2
-    QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ]^2
-    QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star]^2
-    QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr]^2
-    QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p]^2
-    QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp]^2
-    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef]^2
-    QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce]^2
-    QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
-    QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        QQ[exo[:condgdp_sh], exo[:condgdp_sh]] = m[:σ_condgdp] ^ 2
+    end
 
-    # These lines set the standard deviations for the anticipated shocks
+    if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+        QQ[exo[:gdpexp_sh], exo[:gdpexp_sh]] = m[:σ_gdpexp] ^ 2
+    end
+
+    # Automated addition of anticipated shocks to QQ
+    for (k, v) in get_setting(m, :antshocks)
+        for i = 1:v
+            QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol("σ_", k, "$i")]^2
+        end
+    end
+
+    ## Anticipated observables
+
+    # Anticipated monetary policy shocks
     for i = 1:n_mon_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
@@ -190,29 +215,24 @@ function measurement(m::Model1002{T},
         end
     end
 
-#= # We do not want anticipated shocks to automatically be part of the measurement equation
-    for (k, v) in get_setting(m, :antshocks)
-        if k == :z # z is a sum of a transient and persistent component, so we model this differently
-            for i = 1:v
-                ZZ[obs[Symbol("obs_z$i")], no_integ_inds] = ZZ[obs[:obs_z], no_integ_inds]' * (TTT^i)
-                if subspec(m) == "ss11"
-                    QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[:σ_ztil]^2 / v
-                else
-                    QQ[exo[Symbol("z_shl$i")], exo[Symbol("z_shl$i")]] = m[Symbol("σ_z$i")]^2
-                end
-            end
-        else
-            for i = 1:v
-                ZZ[obs[Symbol("obs_", k, "$i")], no_integ_inds] = ZZ[obs[Symbol(:obs_, k)], no_integ_inds]' * (TTT^i)
-                if subspec(m) == "ss11"
-                    QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol(:σ_, k)]^2 / v
-                else
-                    QQ[exo[Symbol(k, "_shl$i")], exo[Symbol(k, "_shl$i")]] = m[Symbol("σ_", k, "$i")]^2
+    # Anticipated GDP growth
+    if haskey(get_settings(m), :add_anticipated_obs_gdp)
+        if get_setting(m, :add_anticipated_obs_gdp)
+            for i = 1:get_setting(m, :n_anticipated_obs_gdp)
+                ZZ_obs_gdp = ZZ[obs[:obs_gdp], :]
+                meas_err = haskey(get_settings(m), :meas_err_anticipated_obs_gdp) ?
+                    get_setting(m, :meas_err_anticipated_obs_gdp) : 0. # Ignore measurement error for anticipated GDP growth
+                ZZ_obs_gdp[endo_new[:e_gdp_t]]  = meas_err
+                ZZ_obs_gdp[endo_new[:e_gdp_t1]] = -meas_err * m[:me_level]
+                ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ_obs_gdp[no_integ_inds]' * (TTT^i)
+                DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.)
+                if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
+                    get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
+                    ZZ[obs[Symbol("obs_gdp$i")], endo_new[:e_gdpexp_t]] = 1.
                 end
             end
         end
     end
-=#
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0.)

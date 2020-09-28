@@ -131,6 +131,18 @@ function pseudo_measurement(m::Model1002{T},
     ## Flexible Output
     ZZ_pseudo[pseudo[:y_f_t],endo[:y_f_t]] = 1.
 
+    ## Pseudo GDP Growth
+    if haskey(m.settings, :add_pseudo_gdp)
+        if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61"]
+            ZZ_pseudo[pseudo[:PseudoGDP], endo[:y_t]]          = 1.0
+            ZZ_pseudo[pseudo[:PseudoGDP], endo_addl[:y_t1]]     = -1.0
+            ZZ_pseudo[pseudo[:PseudoGDP], endo[:z_t]]          = 1.0
+            ZZ_pseudo[pseudo[:PseudoGDP], endo_addl[:e_gdp_t]]  = 1.0
+            ZZ_pseudo[pseudo[:PseudoGDP], endo_addl[:e_gdp_t1]] = -m[:me_level]
+            DD_pseudo[pseudo[:PseudoGDP]]                      = 100*(exp(m[:z_star])-1)
+        end
+    end
+
     ## Natural Rate
     ZZ_pseudo[pseudo[:NaturalRate],endo[:r_f_t]] = 1.
     DD_pseudo[pseudo[:NaturalRate]]              = 100.0*(m[:rstar]-1.0)
@@ -308,6 +320,14 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
+    if haskey(m.settings, :add_covid_pseudoobs)
+        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61"]
+            ZZ_pseudo[pseudo[:ziid], endo[:ziid_t]] = 1.
+            ZZ_pseudo[pseudo[:varphiiid], endo[:φ_t]] = 1.
+            ZZ_pseudo[pseudo[:biidc], endo[:biidc_t]] = 1.
+        end
+    end
+
     if haskey(m.settings, :add_ztil)
         if get_setting(m, :add_ztil)
             ZZ_pseudo[pseudo[:ztil], endo[:ztil_t]] = 1.
@@ -480,6 +500,17 @@ function pseudo_measurement(m::Model1002{T},
         ## Flexible Output
         ZZ_pseudos[reg][pseudo[:y_f_t],endo[:y_f_t]] = 1.
 
+        ## Pseudo GDP Growth
+        if haskey(m.settings, :add_pseudo_gdp)
+            if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61"]
+                ZZ_pseudos[reg][pseudo[:PseudoGDP], endo[:y_t]]          = 1.0
+                ZZ_pseudos[reg][pseudo[:PseudoGDP], endo_addl[:y_t1]]     = -1.0
+                ZZ_pseudos[reg][pseudo[:PseudoGDP], endo[:z_t]]          = 1.0
+                ZZ_pseudos[reg][pseudo[:PseudoGDP], endo_addl[:e_gdp_t]]  = 1.0
+                ZZ_pseudos[reg][pseudo[:PseudoGDP], endo_addl[:e_gdp_t1]] = -m[:me_level]
+                DD_pseudos[reg][pseudo[:PseudoGDP]]                      = 100*(exp(m[:z_star])-1)
+            end
+        end
         ## Natural Rate
         ZZ_pseudos[reg][pseudo[:NaturalRate],endo[:r_f_t]] = 1.
         DD_pseudos[reg][pseudo[:NaturalRate]]              = 100.0*(m[:rstar]-1.0)
@@ -571,48 +602,48 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
 
-    # ## i_f_t
-    # ZZ_pseudos[reg][pseudo[:i_f_t], endo[:i_f_t]] = 1.
+        # ## i_f_t
+        # ZZ_pseudos[reg][pseudo[:i_f_t], endo[:i_f_t]] = 1.
 
-    # ## R_t
-    # ZZ_pseudos[reg][pseudo[:R_t], endo[:R_t]] = 1.
-    # DD_pseudos[reg][pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
+        # ## R_t
+        # ZZ_pseudos[reg][pseudo[:R_t], endo[:R_t]] = 1.
+        # DD_pseudos[reg][pseudo[:R_t]] = 100.0*(m[:rstar]-1.0)
 
-    # ## c_f_t
-    # ZZ_pseudos[reg][pseudo[:c_f_t], endo[:c_f_t]] = 1.
+        # ## c_f_t
+        # ZZ_pseudos[reg][pseudo[:c_f_t], endo[:c_f_t]] = 1.
 
-    # ## c_t
-    # ZZ_pseudos[reg][pseudo[:c_t], endo[:c_t]] = 1.
+        # ## c_t
+        # ZZ_pseudos[reg][pseudo[:c_t], endo[:c_t]] = 1.
 
-    # ## r_f_t
-    # ZZ_pseudos[reg][pseudo[:r_f_t], endo[:r_f_t]] = 1.
+        # ## r_f_t
+        # ZZ_pseudos[reg][pseudo[:r_f_t], endo[:r_f_t]] = 1.
 
-    # ## qk_f_t
-    # ZZ_pseudos[reg][pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
+        # ## qk_f_t
+        # ZZ_pseudos[reg][pseudo[:qk_f_t], endo[:qk_f_t]] = 1.
 
-    # ## k_f_t
-    # ZZ_pseudos[reg][pseudo[:k_f_t], endo[:k_f_t]] = 1.
+        # ## k_f_t
+        # ZZ_pseudos[reg][pseudo[:k_f_t], endo[:k_f_t]] = 1.
 
-    # ## kbar_f_t
-    # ZZ_pseudos[reg][pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
+        # ## kbar_f_t
+        # ZZ_pseudos[reg][pseudo[:kbar_f_t], endo[:kbar_f_t]] = 1.
 
-    # ## u_f_t
-    # ZZ_pseudos[reg][pseudo[:u_f_t], endo[:u_f_t]] = 1.
+        # ## u_f_t
+        # ZZ_pseudos[reg][pseudo[:u_f_t], endo[:u_f_t]] = 1.
 
-    # ## rk_f_t
-    # ZZ_pseudos[reg][pseudo[:rk_f_t], endo[:rk_f_t]] = 1.
+        # ## rk_f_t
+        # ZZ_pseudos[reg][pseudo[:rk_f_t], endo[:rk_f_t]] = 1.
 
-    # ## w_f_t
-    # ZZ_pseudos[reg][pseudo[:w_f_t], endo[:w_f_t]] = 1.
+        # ## w_f_t
+        # ZZ_pseudos[reg][pseudo[:w_f_t], endo[:w_f_t]] = 1.
 
-    # ## L_f_t
-    # ZZ_pseudos[reg][pseudo[:L_f_t], endo[:L_f_t]] = 1.
+        # ## L_f_t
+        # ZZ_pseudos[reg][pseudo[:L_f_t], endo[:L_f_t]] = 1.
 
-    # ## rktil_f_t
-    # ZZ_pseudos[reg][pseudo[:rktil_f_t], endo[:rktil_f_t]] = 1.
+        # ## rktil_f_t
+        # ZZ_pseudos[reg][pseudo[:rktil_f_t], endo[:rktil_f_t]] = 1.
 
-    # ## n_f_t
-    # ZZ_pseudos[reg][pseudo[:n_f_t], endo[:n_f_t]] = 1.
+        # ## n_f_t
+        # ZZ_pseudos[reg][pseudo[:n_f_t], endo[:n_f_t]] = 1.
 
         ## labor share
         if haskey(m.settings, :add_laborshare_measurement)
@@ -636,6 +667,13 @@ function pseudo_measurement(m::Model1002{T},
             end
         end
 
+        if haskey(m.settings, :add_covid_pseudoobs)
+            if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61"]
+                ZZ_pseudos[reg][pseudo[:ziid], endo[:ziid_t]] = 1.
+                ZZ_pseudos[reg][pseudo[:varphiiid], endo[:φ_t]] = 1.
+                ZZ_pseudos[reg][pseudo[:biidc], endo[:biidc_t]] = 1.
+            end
+        end
         if haskey(m.settings, :add_ztil)
             if get_setting(m, :add_ztil)
                 ZZ_pseudos[reg][pseudo[:ztil], endo[:ztil_t]] = 1.
@@ -693,7 +731,7 @@ function pseudo_measurement(m::Model1002{T},
 
         ## Fundameantal inflation related pseudo-obs
         if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19", "ss20"] #,
-                          # "ss21", "ss22", "ss23","ss24", "ss25", "ss26"]
+            # "ss21", "ss22", "ss23","ss24", "ss25", "ss26"]
             # Compute coefficient on Sinf
             betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
             κ = ((1 - m[:ζ_p]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*

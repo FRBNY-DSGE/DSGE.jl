@@ -1,3 +1,12 @@
+using DSGE, ModelConstructors, JLD2, FileIO, Test, Dates, Random
+
+writing_output = false
+if VERSION < v"1.5"
+    ver = "111"
+else
+    ver = "150"
+end
+
 path = dirname(@__FILE__())
 
 # Set up arguments
@@ -9,7 +18,7 @@ df = forecast_args["df"]
 system = forecast_args["system"]
 
 # Read expected output
-smooth_out = load("$path/../reference/smooth_out.jld2")
+smooth_out = load("$path/../reference/smooth_out_version=" * ver * ".jld2")
 exp_states = smooth_out["exp_states"]
 exp_shocks = smooth_out["exp_shocks"]
 exp_pseudo = smooth_out["exp_pseudo"]
@@ -24,7 +33,7 @@ pseudo = Dict{Symbol, Matrix{Float64}}()
         m <= Setting(:forecast_smoother, smoother)
 
         states[smoother], shocks[smoother], pseudo[smoother] =
-            smooth(m, df, system; draw_states = false)
+        smooth(m, df, system; draw_states = false)
 
         @test @test_matrix_approx_eq exp_states states[smoother]
         @test @test_matrix_approx_eq exp_shocks shocks[smoother]
@@ -41,14 +50,14 @@ end
 
 # Now check for regime switching
 custom_settings = Dict{Symbol, Setting}(
-    :data_vintage             => Setting(:data_vintage, "160812"),
-    :cond_vintage             => Setting(:cond_vintage, "160812"),
-    :cond_id                  => Setting(:cond_id, 0),
-    :use_population_forecast  => Setting(:use_population_forecast, true),
-    :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
-    :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
-    :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
-    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
+                                        :data_vintage             => Setting(:data_vintage, "160812"),
+                                        :cond_vintage             => Setting(:cond_vintage, "160812"),
+                                        :cond_id                  => Setting(:cond_id, 0),
+                                        :use_population_forecast  => Setting(:use_population_forecast, true),
+                                        :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
+                                        :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
+                                        :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
+                                        :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
 
 m = Model1002("ss10", custom_settings = custom_settings, testing = true)
 m <= Setting(:rate_expectations_source, :ois)
@@ -151,32 +160,30 @@ states_rs3 = Dict{Symbol, Matrix{Float64}}()
 shocks_rs3 = Dict{Symbol, Matrix{Float64}}()
 pseudo_rs3 = Dict{Symbol, Matrix{Float64}}()
 
-# Read expected output
-exp_states_regime_switch = load("$path/../reference/smooth_out.jld2", "exp_states_regime_switch")
-exp_shocks_regime_switch = load("$path/../reference/smooth_out.jld2", "exp_shocks_regime_switch")
-exp_pseudo_regime_switch = load("$path/../reference/smooth_out.jld2", "exp_pseudo_regime_switch")
-exp_states_regime_switch_draw = load("$path/../reference/smooth_out.jld2", "exp_states_regime_switch_draw") # these are specifically for
-exp_shocks_regime_switch_draw = load("$path/../reference/smooth_out.jld2", "exp_shocks_regime_switch_draw") # the Durbin-Koopman smoother
-exp_pseudo_regime_switch_draw = load("$path/../reference/smooth_out.jld2", "exp_pseudo_regime_switch_draw")
 
+states_sv = Matrix{Float64}[]
+shocks_sv = Matrix{Float64}[]
+pseudo_sv = Matrix{Float64}[]
+
+@info "The following warnings about smoothers being called with draw_states = true are expected."
 @testset "Smoothing with regime switching" begin
     system = compute_system(m)
     system_rs1 = compute_system(m_rs1)
     system_rs2 = compute_system(m_rs2)
     system_rs3 = compute_system(m_rs3)
-    for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
+    for smoother in [:durbin_koopman, :hamilton, :koopman, :carter_kohn#=, :durbin_koopman=#]
         m <= Setting(:forecast_smoother, smoother)
         m_rs1 <= Setting(:forecast_smoother, smoother)
         m_rs2 <= Setting(:forecast_smoother, smoother)
         m_rs3 <= Setting(:forecast_smoother, smoother)
         states[smoother], shocks[smoother], pseudo[smoother] =
-            smooth(m, df, system; draw_states = false)
+        smooth(m, df, system; draw_states = false)
         states_rs1[smoother], shocks_rs1[smoother], pseudo_rs1[smoother] =
-            smooth(m_rs1, df, system_rs1; draw_states = false)
+        smooth(m_rs1, df, system_rs1; draw_states = false)
         states_rs2[smoother], shocks_rs2[smoother], pseudo_rs2[smoother] =
-            smooth(m_rs2, df, system_rs2; draw_states = false)
+        smooth(m_rs2, df, system_rs2; draw_states = false)
         states_rs3[smoother], shocks_rs3[smoother], pseudo_rs3[smoother] =
-            smooth(m_rs3, df, system_rs3; draw_states = false)
+        smooth(m_rs3, df, system_rs3; draw_states = false)
 
         @test @test_matrix_approx_eq states_rs1[smoother] states[smoother]
         @test @test_matrix_approx_eq shocks_rs1[smoother] shocks[smoother]
@@ -187,19 +194,33 @@ exp_pseudo_regime_switch_draw = load("$path/../reference/smooth_out.jld2", "exp_
         @test !(states_rs3[smoother] ≈ states_rs2[smoother])
         @test !(shocks_rs3[smoother] ≈ shocks_rs2[smoother])
         @test !(pseudo_rs3[smoother] ≈ pseudo_rs2[smoother])
+
+        if writing_output && smoother == :durbin_koopman
+            jldopen("$path/../reference/smooth_out_draw_states=false_version="
+                    * ver * ".jld2", "w") do file
+                write(file, "exp_states_regime_switch", states_rs3[:durbin_koopman])
+                write(file, "exp_shocks_regime_switch", shocks_rs3[:durbin_koopman])
+                write(file, "exp_pseudo_regime_switch", pseudo_rs3[:durbin_koopman])
+            end
+        end
+
+        exp_states_regime_switch = load("$path/../reference/smooth_out_draw_states=false_version=" * ver * ".jld2", "exp_states_regime_switch")
+        exp_shocks_regime_switch = load("$path/../reference/smooth_out_draw_states=false_version=" * ver * ".jld2", "exp_shocks_regime_switch")
+        exp_pseudo_regime_switch = load("$path/../reference/smooth_out_draw_states=false_version=" * ver * ".jld2", "exp_pseudo_regime_switch")
+
         if smoother == :durbin_koopman
             @test @test_matrix_approx_eq states_rs3[smoother] exp_states_regime_switch
             @test @test_matrix_approx_eq shocks_rs3[smoother] exp_shocks_regime_switch
             @test @test_matrix_approx_eq pseudo_rs3[smoother] exp_pseudo_regime_switch[1:21, :] # extra rows b/c used more pseudo-obs when generating the test file
-        else
-            @test maximum(abs.(states_rs3[smoother] - exp_states_regime_switch))  < 5e-1
+        else # the other smoothers should generate similar output, but may not be the exact same thing
+            @test maximum(abs.(states_rs3[smoother] - exp_states_regime_switch))  < 6e-1
             @test maximum(abs.(shocks_rs3[smoother] - exp_shocks_regime_switch))  < 2e-1
             @test maximum(abs.(pseudo_rs3[smoother] - exp_pseudo_regime_switch[1:21, :])) < 3e-1
         end
     end
 
     @info "The following warnings about calling smoothers with draw_states = true are expected."
-    for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
+    for smoother in [:durbin_koopman, :hamilton, :koopman, :carter_kohn]
         m <= Setting(:forecast_smoother, smoother)
         m_rs1 <= Setting(:forecast_smoother, smoother)
         m_rs2 <= Setting(:forecast_smoother, smoother)
@@ -207,16 +228,16 @@ exp_pseudo_regime_switch_draw = load("$path/../reference/smooth_out.jld2", "exp_
 
         Random.seed!(1793)
         states[smoother], shocks[smoother], pseudo[smoother] =
-            smooth(m, df, system; draw_states = true)
+        smooth(m, df, system; draw_states = true)
         Random.seed!(1793)
         states_rs1[smoother], shocks_rs1[smoother], pseudo_rs1[smoother] =
-            smooth(m_rs1, df, system_rs1; draw_states = true)
+        smooth(m_rs1, df, system_rs1; draw_states = true)
         Random.seed!(1793)
         states_rs2[smoother], shocks_rs2[smoother], pseudo_rs2[smoother] =
-            smooth(m_rs2, df, system_rs2; draw_states = true)
+        smooth(m_rs2, df, system_rs2; draw_states = true)
         Random.seed!(1793)
         states_rs3[smoother], shocks_rs3[smoother], pseudo_rs3[smoother] =
-            smooth(m_rs3, df, system_rs3; draw_states = true)
+        smooth(m_rs3, df, system_rs3; draw_states = true)
 
         @test @test_matrix_approx_eq states_rs1[smoother] states[smoother]
         @test @test_matrix_approx_eq shocks_rs1[smoother] shocks[smoother]
@@ -228,25 +249,34 @@ exp_pseudo_regime_switch_draw = load("$path/../reference/smooth_out.jld2", "exp_
         @test !(shocks_rs3[smoother] ≈ shocks_rs2[smoother])
         @test !(pseudo_rs3[smoother] ≈ pseudo_rs2[smoother])
 
+        if writing_output && smoother == :durbin_koopman
+            jldopen("$path/../reference/smooth_out_draw_states=true_version="
+                    * ver * ".jld2", "w") do file
+                write(file, "exp_states_regime_switch_draw", states_rs3[:durbin_koopman])
+                write(file, "exp_shocks_regime_switch_draw", shocks_rs3[:durbin_koopman])
+                write(file, "exp_pseudo_regime_switch_draw", pseudo_rs3[:durbin_koopman])
+            end
+        end
+
+        exp_states_regime_switch_draw = load("$path/../reference/smooth_out_draw_states=true_version=" * ver * ".jld2", "exp_states_regime_switch_draw")
+        exp_shocks_regime_switch_draw = load("$path/../reference/smooth_out_draw_states=true_version=" * ver * ".jld2", "exp_shocks_regime_switch_draw")
+        exp_pseudo_regime_switch_draw = load("$path/../reference/smooth_out_draw_states=true_version=" * ver * ".jld2", "exp_pseudo_regime_switch_draw")
+
         if smoother == :durbin_koopman
             @test maximum(abs.(states_rs3[smoother] - exp_states_regime_switch_draw)) < 3e-5
             # @test @test_matrix_approx_eq states_rs3[smoother] exp_states_regime_switch_draw
             @test @test_matrix_approx_eq shocks_rs3[smoother] exp_shocks_regime_switch_draw
-        #    @test @test_matrix_approx_eq pseudo_rs3[smoother] exp_pseudo_regime_switch_draw
+            #    @test @test_matrix_approx_eq pseudo_rs3[smoother] exp_pseudo_regime_switch_draw
         end
     end
-end
 
-#=        jldopen("$path/../reference/smooth_out.jld2", "w") do file
-            file["exp_pseudo_regime_switch"] = pseudo_rs3[:durbin_koopman]
-            file["exp_states_regime_switch"] = states_rs3[:durbin_koopman]
-            file["exp_shocks_regime_switch"] = shocks_rs3[:durbin_koopman]
+    if writing_output
+        jldopen("$path/../reference/smooth_out_version=" * ver * ".jld2", "w") do file
             file["exp_states"] = exp_states
             file["exp_shocks"] = exp_shocks
             file["exp_pseudo"] = exp_pseudo
-            file["exp_pseudo_regime_switch_draw"] = exp_pseudo_regime_switch_draw
-            file["exp_states_regime_switch_draw"] = exp_states_regime_switch_draw
-            file["exp_shocks_regime_switch_draw"] = exp_shocks_regime_switch_draw
-        end =#
+        end
+    end
+end
 
 nothing
