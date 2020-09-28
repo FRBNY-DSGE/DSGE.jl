@@ -319,10 +319,25 @@ function csminwel(fcn::Function,
 
         @csminwelltrace
     end
+    try
+        # Optim v1.x adds an additional field to the MultivariateOptimizationResults type
+        return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
+                                               iteration, iteration==iterations, x_converged, xtol, xtol, x_resid, x_resid,
+                                               f_converged, ftol, ftol, f_resid, f_resid,
+                                               gr_converged, grtol, gr_resid, false, tr, f_calls, g_calls, 0,
+                                               false, NaN, NaN, nothing), H  # also return H
+    catch e
+        if isa(e, MethodError) # Then likely using an older version of Optim
+            return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
+                                                   iteration, iteration==iterations, x_converged, xtol, xtol, x_resid, x_resid,
+                                                   f_converged, ftol, ftol, f_resid, f_resid,
+                                                   gr_converged, grtol, gr_resid, false, tr, f_calls, g_calls, 0,
+                                                   false, NaN, NaN), H  # also return H
+        else
+            rethrow(e)
+        end
+    end
 
-    return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
-        iteration, iteration==iterations, x_converged, xtol, xtol, x_resid, x_resid, f_converged, ftol, ftol, f_resid, f_resid,
-        gr_converged, grtol, gr_resid, false, tr, f_calls, g_calls, 0, false, NaN, NaN), H  # also return H
 # the NaNs are for time and timelimit--apparently if they're NaN, there is no time limit
 # the last false if ls_success=false...not quite sure?
     #=return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
