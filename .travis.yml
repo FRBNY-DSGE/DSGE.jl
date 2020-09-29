@@ -30,7 +30,7 @@ branches:
 after_success:
 - julia -e 'using Pkg; cd(Pkg.dir("DSGE")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
 - julia -e 'using Pkg; Pkg.add("Documenter")'
-- julia -e 'using PKg; cd(Pkg.dir("DSGE")); include(joinpath("docs", "make.jl"))'
+- julia -e 'using Pkg; cd(Pkg.dir("DSGE")); include(joinpath("docs", "make.jl"))'
 
 # jobs:
 #   include:
