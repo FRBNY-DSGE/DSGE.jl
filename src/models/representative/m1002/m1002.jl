@@ -631,6 +631,16 @@ buted to steady-state inflation.",
                        tex_label="\\sigma_{\\$(DSGE.detexify(key))}^{prop}")
     end
 
+    # Add AIT switching post-2020Q3
+    if get_setting(m, :switch_ait_2020Q3)
+        # m <= Setting(:alternative_policy, ait())
+        m <= Setting(:add_pgap, true)
+        m <= Setting(:pgap_type, :ait)
+        m <= Setting(:pgap_value, 0.)
+
+        #get_setting(m, :regime_dates)
+    end
+
     # standard deviations of the anticipated policy shocks
     for i = 1:n_mon_anticipated_shocks_padding(m)
         if i <= n_mon_anticipated_shocks(m)
@@ -908,6 +918,9 @@ function model_settings!(m::Model1002)
         m <= Setting(:ant_eq_E_mapping, Dict{Symbol, Symbol}(:φ => :Eφ))
         m <= Setting(:proportional_antshocks, Symbol[:biidc, :φ, :ziid])
     end
+
+    # Add AIT for 2020-Q3 on
+    m <= Setting(:switch_ait_2020Q3, true)
 
     nothing
 end
