@@ -632,13 +632,18 @@ buted to steady-state inflation.",
     end
 
     # Add AIT switching post-2020Q3
-    if get_setting(m, :switch_ait_2020Q3)
-        # m <= Setting(:alternative_policy, ait())
+    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+        m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                    3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
         m <= Setting(:add_pgap, true)
-        m <= Setting(:pgap_type, :ait)
+        m <= Setting(:pgap_type, :smooth_ait_gdp_alt)
         m <= Setting(:pgap_value, 0.)
 
-        #get_setting(m, :regime_dates)
+        m <= Setting(:ait_Thalf, 10.)
+        m <= Setting(:gdp_Thalf, 10.)
+        m <= Setting(:smooth_ait_gdp_alt_ρ_smooth, 0.656)
+        m <= Setting(:smooth_ait_gdp_alt_φ_π, 11.13)
+        m <= Setting(:smooth_ait_gdp_alt_φ_y, 11.13)
     end
 
     # standard deviations of the anticipated policy shocks
@@ -920,7 +925,7 @@ function model_settings!(m::Model1002)
     end
 
     # Add AIT for 2020-Q3 on
-    m <= Setting(:switch_ait_2020Q3, true)
+    m <= Setting(:flexible_ait_2020Q3_policy_change, true)
 
     nothing
 end
