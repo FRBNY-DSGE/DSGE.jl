@@ -790,6 +790,7 @@ function eqcond(m::Model1002, reg::Int)
    if haskey(m.settings, :flexible_ait_2020Q3_change_policy) && get_setting(m, :flexible_ait_2020Q3_policy_change)
        if get_setting(m, :regime_dates)[reg] >= DSGE.quartertodate("2020-Q3")
            Γ0, Γ1, C, Ψ, Π = smooth_ait_gdp_alt_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
+           Γ0[eq[:eq_mp], endo[:rm_t]] = -1.
        end
    end
 
