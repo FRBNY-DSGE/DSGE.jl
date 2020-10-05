@@ -654,7 +654,7 @@ function eqcond(m::Model1002, reg::Int)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
-               elseif get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
+               elseif get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :flexible_ait, :rw]
                    Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
                    ρ_pgap = exp(log(0.5) / Thalf)
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
@@ -671,7 +671,7 @@ function eqcond(m::Model1002, reg::Int)
            if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
                haskey(m.settings, :ygap_type)
-               if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
+               if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :flexible_ait, :rw]
                    Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
                    ρ_ygap = exp(log(0.5) / Thalf)
 
@@ -711,7 +711,7 @@ function eqcond(m::Model1002, reg::Int)
                    C[eq[:eq_Rref]]                 = 0.
                    Γ0[eq[:eq_Rref], endo[:rw_t]]   = -1.
 
-               elseif get_setting(m, :Rref_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :rw]
+               elseif get_setting(m, :Rref_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :flexible_ait, :rw]
 
                    ait_Thalf = haskey(get_settings(m), :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10.
                    gdp_Thalf = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
@@ -742,7 +742,7 @@ function eqcond(m::Model1002, reg::Int)
 
    if haskey(m.settings, :track_pgap)
        if get_setting(m, :track_pgap)
-           if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt]
+           if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt, :flexible_ait]
                Thalf = haskey(m.settings, :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10
                ρ_pgap = exp(log(0.5) / Thalf)
                Γ0[eq[:eq_pgap], endo[:pgap_t]] = 1.
@@ -754,7 +754,7 @@ function eqcond(m::Model1002, reg::Int)
 
    if haskey(m.settings, :track_ygap)
        if get_setting(m, :track_ygap)
-           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt]
+           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt, :flexible_ait]
                Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
                ρ_ygap = exp(log(0.5) / Thalf)
 
@@ -789,8 +789,7 @@ function eqcond(m::Model1002, reg::Int)
    # Switch to Flexible AIT in 2020-Q3 and beyond
    if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
        if get_setting(m, :regime_dates)[reg] >= DSGE.quartertodate("2020-Q3")
-           Γ0, Γ1, C, Ψ, Π = smooth_ait_gdp_alt_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
-           Γ0[eq[:eq_mp], endo[:rm_t]] = -1.
+           Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
        end
    end
 

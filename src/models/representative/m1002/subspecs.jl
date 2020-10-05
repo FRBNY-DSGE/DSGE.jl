@@ -693,20 +693,21 @@ function ss30!(m::Model1002)
     ss10!(m)
 
     # Default regime dates
-    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
-                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 9, 30)))
+    setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    m <= Setting(:pgap_type, :smooth_ait_gdp_alt)
+    m <= Setting(:pgap_type, :flexible_ait)
     m <= Setting(:pgap_value, 0.)
-    m <= Setting(:ygap_type, :smooth_ait_gdp_alt)
+    m <= Setting(:ygap_type, :flexible_ait)
     m <= Setting(:ygap_value, 12.)
 
     m <= Setting(:ait_Thalf, 10.)
     m <= Setting(:gdp_Thalf, 10.)
-    m <= Setting(:smooth_ait_gdp_alt_ρ_smooth, 0.)
-    m <= Setting(:smooth_ait_gdp_alt_φ_π, 6.)
-    m <= Setting(:smooth_ait_gdp_alt_φ_y, 6.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
 end
 
 """
