@@ -126,8 +126,11 @@ my <= Setting(:alternative_policy, DSGE.smooth_ait_gdp())
 
 # Repeat for smooth_ait_gdp_alt
 my <= Setting(:alternative_policy, DSGE.smooth_ait_gdp_alt())
-
 Γ0_alt_smooth_alt,  Γ1_alt_smooth_alt,  ~ = alternative_policy(my).eqcond(my)
+
+# Repeat for flexible_ait
+my <= Setting(:alternative_policy, DSGE.flexible_ait())
+Γ0_alt_flex_ait,  Γ1_alt_flex_ait,  ~ = alternative_policy(my).eqcond(my)
 
 # Repeat for ait
 my <= Setting(:alternative_policy, DSGE.ait())
@@ -173,6 +176,11 @@ my <= Setting(:pgap_value, 12.)
     @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_smooth_alt[eq_othery, eq_otherymp]
     @test !(Γ0_histy[eq_mp, eq_other]  ≈ Γ0_alt_smooth_alt[eq_mp, eq_other])
     @test !(Γ1_histy[eq_mp, eq_other]  ≈ Γ1_alt_smooth_alt[eq_mp, eq_other])
+
+    @test Γ0_histy[eq_othery, eq_otherymp] ≈ Γ0_alt_flex_ait[eq_othery, eq_otherymp]
+    @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_flex_ait[eq_othery, eq_otherymp]
+    @test !(Γ0_histy[eq_mp, eq_other]  ≈ Γ0_alt_flex_ait[eq_mp, eq_other])
+    @test !(Γ1_histy[eq_mp, eq_other]  ≈ Γ1_alt_flex_ait[eq_mp, eq_other])
 
     @test Γ0_histy[eq_othery, eq_otherymp] ≈ Γ0_alt_ait[eq_othery, eq_otherymp]
     @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_ait[eq_othery, eq_otherymp]

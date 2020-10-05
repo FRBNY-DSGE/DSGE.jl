@@ -283,6 +283,7 @@ module DSGE
     include("altpolicy/ngdp_target.jl")
     include("altpolicy/smooth_ait_gdp.jl")
     include("altpolicy/smooth_ait_gdp_alt.jl")
+    include("altpolicy/flexible_ait.jl")
     include("altpolicy/zero_rate.jl")
     include("altpolicy/rw.jl")
     include("altpolicy/rw_zero_rate.jl")
