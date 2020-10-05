@@ -29,7 +29,7 @@ function sstest(m::AnSchorfheide)
 end
 
 # Test update! with regime switching
-m = Model1002()
+m = Model1002("ss10")
 m <= Setting(:regime_switching, true)
 m <= Setting(:n_regimes, 2)
 m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -56,7 +56,7 @@ ModelConstructors.update(m.parameters, draw)
     @test draw[end] ==  m.parameters[σ_b_ind].regimes[:value][2]
 end
 
-m = Model1002()
+m = Model1002("ss10")
 m <= Setting(:regime_switching, true)
 m <= Setting(:n_regimes, 2)
 m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),

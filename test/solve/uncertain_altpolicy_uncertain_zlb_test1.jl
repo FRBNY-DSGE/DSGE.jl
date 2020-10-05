@@ -4,7 +4,10 @@ using ModelConstructors, Nullables, Dates, OrderedCollections
 prob_vecs = [[1., 0.], [.5, .5], [0., 1.]]
 Hbar_vec = [14, 10, 6]
 
-m = Model1002("ss59")
+m = Model1002("ss59"; custom_settings = Dict{Symbol, Setting}(:flexible_ait_2020Q3_policy_change =>
+                                                              Setting(:flexible_ait_2020Q3_policy_change,
+                                                                      false))) # Set to false unless you want to re-generate any saved output
+m <= Setting(:flexible_ait_2020Q3_policy_change, false) # Set to false unless you want to re-generate any saved output
 m <= Setting(:date_forecast_start, Date(2020, 6, 30))
 m <= Setting(:date_conditional_end, Date(2020, 6, 30))
 m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, # Have to add anticipated rates to conditional data

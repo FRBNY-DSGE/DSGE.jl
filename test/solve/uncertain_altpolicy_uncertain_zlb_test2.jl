@@ -11,7 +11,10 @@ newThalf = 10
 # Set model up
 m = Model1002("ss59"; custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true),
                                                               :add_ygap => Setting(:add_ygap, true),
-                                                              :add_urhat => Setting(:add_urhat, true)))
+                                                              :add_urhat => Setting(:add_urhat, true),
+                                                              :flexible_ait_2020Q3_policy_change =>
+                                                              Setting(:flexible_ait_2020Q3_policy_change,
+                                                                      false))) # Set to false unless you want to re-generate any saved output
 m <= Setting(:date_forecast_start, Date(2020, 6, 30))
 m <= Setting(:date_conditional_end, Date(2020, 6, 30))
 m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, # Have to add anticipated rates to conditional data

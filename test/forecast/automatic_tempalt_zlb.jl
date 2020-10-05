@@ -61,7 +61,9 @@ end
 ## Regime switching and full-distriution
 # Initialize model objects
 Random.seed!(1793)
-m = Model1002("ss60")
+m = Model1002("ss60"; custom_settings = Dict{Symbol, Setting}(:flexible_ait_2020Q3_policy_change =>
+                                                              Setting(:flexible_ait_2020Q3_policy_change,
+                                                                      false))) # Set to false unless you want to re-generate any saved output
 if (VERSION >= v"1.3")
     df_full = DataFrame!(CSV.File(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
 else

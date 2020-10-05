@@ -278,7 +278,7 @@ end
     @test @test_matrix_approx_eq Σc expΣc
 
     # Check DSGEVECM automates this properly. Need a proper model before being able to do this though.
-    # m = Model1002()
+    # m = Model1002("ss10")
     # dsgevecm = DSGEVECM(m)
     # DSGE.update!(dsgevecm, shocks = collect(keys(m.exogenous_shocks)),
     #              observables = [:obs_hours, :obs_gdpdeflator, :laborshare_t, :NominalWageGrowth],

@@ -1,4 +1,4 @@
-dsge = Model1002()
+dsge = Model1002("ss10")
 
 @testset "Constructing a DSGE-VECM" begin
 

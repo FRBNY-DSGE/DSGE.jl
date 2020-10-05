@@ -53,7 +53,7 @@ equilibrium conditions.
   filepath computation.
 
 * `subspec::String`: The model subspecification number, indicating that
-  some parameters from the original model spec (\"ss10\") are initialized
+  some parameters from the original model spec (\"ss30\") are initialized
   differently. Cached here for filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
@@ -141,7 +141,6 @@ function init_model_indices!(m::Model1002)
         exogenous_shocks = vcat(exogenous_shocks, [Symbol(key, "_shl$i") for i = 1:val])
     end
 
-
     # Expectations shocks
     expected_shocks = [
         :Ec_sh, :Eqk_sh, :Ei_sh, :Eπ_sh, :EL_sh, :Erk_sh, :Ew_sh, :ERktil_sh, :Ec_f_sh,
@@ -161,7 +160,6 @@ function init_model_indices!(m::Model1002)
         equilibrium_conditions = vcat(equilibrium_conditions, [Symbol("eq_", key, "l$i") for i = 1:val])
     end
 
-
     # Additional states added after solving model
     # Lagged states and observables measurement error
     endogenous_states_augmented = [
@@ -174,6 +172,22 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states_augmented, :e_tfp_t1)
     end
 
+    # COVID-19 states, shocks, and equations
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        push!(endogenous_states, :ziid_t)
+        push!(equilibrium_conditions, :eq_ziid)
+        push!(exogenous_shocks, :ziid_sh)
+        push!(endogenous_states, :biidc_t)
+        push!(equilibrium_conditions, :eq_biidc)
+        push!(exogenous_shocks, :biidc_sh)
+        push!(endogenous_states, :φ_t)
+        push!(endogenous_states, :Eφ_t)
+        push!(equilibrium_conditions, :eq_φ)
+        push!(equilibrium_conditions, :eq_Eφ)
+        push!(exogenous_shocks, :φ_sh)
+    end
+
+    # Add various pseudo-observables
     if get_setting(m, :add_laborproductivity_measurement)
         push!(endogenous_states_augmented, :cum_z_t)
         m <= Setting(:integrated_series, [:cum_z_t])
@@ -213,20 +227,6 @@ function init_model_indices!(m::Model1002)
         push!(equilibrium_conditions, setdiff([:eq_rw, :eq_Rref], equilibrium_conditions)...)
     end
 
-    if subspec(m) in ["ss59", "ss60", "ss61"]
-        push!(endogenous_states, :ziid_t)
-        push!(equilibrium_conditions, :eq_ziid)
-        push!(exogenous_shocks, :ziid_sh)
-        push!(endogenous_states, :biidc_t)
-        push!(equilibrium_conditions, :eq_biidc)
-        push!(exogenous_shocks, :biidc_sh)
-        push!(endogenous_states, :φ_t)
-        push!(endogenous_states, :Eφ_t)
-        push!(equilibrium_conditions, :eq_φ)
-        push!(equilibrium_conditions, :eq_Eφ)
-        push!(exogenous_shocks, :φ_sh)
-    end
-
     if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
         push!(endogenous_states_augmented, :e_condgdp_t)
@@ -255,7 +255,7 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(pseudo_observables);          m.pseudo_observables[k]          = i end
 end
 
-function Model1002(subspec::String = "ss10";
+function Model1002(subspec::String = "ss30";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
@@ -631,21 +631,6 @@ buted to steady-state inflation.",
                        tex_label="\\sigma_{\\$(DSGE.detexify(key))}^{prop}")
     end
 
-    # Add AIT switching post-2020Q3
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
-        m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
-                                                    3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
-        m <= Setting(:add_pgap, true)
-        m <= Setting(:pgap_type, :smooth_ait_gdp_alt)
-        m <= Setting(:pgap_value, 0.)
-
-        m <= Setting(:ait_Thalf, 10.)
-        m <= Setting(:gdp_Thalf, 10.)
-        m <= Setting(:smooth_ait_gdp_alt_ρ_smooth, 0.656)
-        m <= Setting(:smooth_ait_gdp_alt_φ_π, 11.13)
-        m <= Setting(:smooth_ait_gdp_alt_φ_y, 11.13)
-    end
-
     # standard deviations of the anticipated policy shocks
     for i = 1:n_mon_anticipated_shocks_padding(m)
         if i <= n_mon_anticipated_shocks(m)
@@ -908,14 +893,6 @@ function model_settings!(m::Model1002)
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
                  "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
 
-    # Additional pseudo-observables and integrated series
-    m <= Setting(:add_laborshare_measurement, false)
-    m <= Setting(:add_laborproductivity_measurement, false)
-    m <= Setting(:add_nominalgdp_level, false)
-    m <= Setting(:add_nominalgdp_growth, false)
-    m <= Setting(:add_cumulative, false)
-    m <= Setting(:add_flexible_price_growth, false)
-
     # COVID-19 settings
     if subspec(m) in ["ss59", "ss60", "ss61"]
         m <= Setting(:antshocks, Dict{Symbol, Int}(:biidc => 1, :φ => 1, :ziid => 1))
@@ -925,7 +902,23 @@ function model_settings!(m::Model1002)
     end
 
     # Add AIT for 2020-Q3 on
-    m <= Setting(:flexible_ait_2020Q3_policy_change, true)
+    if subspec(m) in ["ss30", "ss59", "ss60", "ss61"]
+        m <= Setting(:flexible_ait_2020Q3_policy_change, true, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
+        m <= Setting(:add_pgap, true)
+        m <= Setting(:add_ygap, true)
+    else
+        m <= Setting(:flexible_ait_2020Q3_policy_change, false, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
+        m <= Setting(:add_pgap, false)
+        m <= Setting(:add_ygap, false)
+    end
+
+    # Additional pseudo-observables and integrated series
+    m <= Setting(:add_laborshare_measurement, false)
+    m <= Setting(:add_laborproductivity_measurement, false)
+    m <= Setting(:add_nominalgdp_level, false)
+    m <= Setting(:add_nominalgdp_growth, false)
+    m <= Setting(:add_cumulative, false)
+    m <= Setting(:add_flexible_price_growth, false)
 
     nothing
 end
