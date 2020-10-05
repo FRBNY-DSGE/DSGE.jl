@@ -5,7 +5,7 @@ if haskey(ENV, "FRED_API_KEY")
     GR.inline("pdf")
     GR.inline("png")
 
-    m = Model1002()
+    m = Model1002("ss10")
 
     usual_model_settings!(m, "191010")
     m <= Setting(:use_population_forecast, false)

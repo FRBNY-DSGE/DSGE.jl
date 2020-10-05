@@ -18,7 +18,7 @@ TTT, RRR, CCC = solve(m)
     @test @test_matrix_approx_eq CCC_expected CCC
 end
 
-m = Model1002()
+m = Model1002("ss10")
 m <= Setting(:alternative_policy, taylor93())
 TTT_alt93, RRR_alt93, CCC_alt93 = solve(m, apply_altpolicy = true)
 file = "$path/../reference/solve_alt.h5"
@@ -32,7 +32,7 @@ RRR_alt_expected93 = h5read(file, "RRR_alt93")
     @test @test_matrix_approx_eq CCC_alt_expected93 CCC_alt93
 end
 
-m = Model1002()
+m = Model1002("ss10")
 m <= Setting(:alternative_policy, taylor99())
 TTT_alt99, RRR_alt99, CCC_alt99 = solve(m, apply_altpolicy = true)
 file = "$path/../reference/solve_alt.h5"

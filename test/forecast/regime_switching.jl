@@ -3,7 +3,7 @@ using Test, ModelConstructors, DSGE, Dates, FileIO, Random
 generate_fulldist_forecast_data = false
 if VERSION < v"1.5"
     ver = "111"
-else 
+else
     ver = "150"
 end
 
@@ -74,7 +74,7 @@ end
 
 @testset "Test regime switching IRFs match Forward Guidance method IRFs" begin
     horizon = 60
-    m = Model1002()
+    m = Model1002("ss10")
     m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
     m <= Setting(:replace_eqcond, false)
@@ -119,7 +119,7 @@ end
     etpeg[vcat(shocks[:rm_sh], shocks[:rm_shl1]:shocks[Symbol("rm_shl$H")]),1] = monshocks
     states[:, :], obs[:, :], pseudo[:, :] = forecast(system, s_0, etpeg, enforce_zlb = false)
 
-    m = Model1002()
+    m = Model1002("ss10")
     m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:gensys2, true)
     m <= Setting(:replace_eqcond, true)

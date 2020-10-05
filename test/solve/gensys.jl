@@ -27,7 +27,7 @@ end
 G1, C, impact, eu = gensys(Γ0, Γ1, C, Ψ, Π)
 
 # trigger indeterminacy error
-m = Model1002()
+m = Model1002("ss10")
 Γ0, Γ1, C, Ψ, Π = eqcond(m)
 Γ1[m.equilibrium_conditions[:eq_z], m.endogenous_states[:y_t]] = 1.
 Γ1[m.equilibrium_conditions[:eq_z], m.endogenous_states[:y_f_t]] = 1.
@@ -37,7 +37,7 @@ m = Model1002()
 end
 
 # trigger coincident zeros
-m = Model1002()
+m = Model1002("ss10")
 Γ0, Γ1, C, Ψ, Π = eqcond(m)
 Γ1[1,:] .= 0.
 Γ0[1,:] .= 0.

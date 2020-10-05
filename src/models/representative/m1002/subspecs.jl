@@ -37,6 +37,8 @@ function init_subspec!(m::Model1002)
         return ss19!(m)
     elseif subspec(m) == "ss20"
         return ss20!(m)
+    elseif subspec(m) == "ss30"
+        return ss30!(m)
     elseif subspec(m) == "ss51v"
         return ss51v!(m)
     elseif subspec(m) == "ss59"
@@ -676,6 +678,35 @@ but the coefficient on markup shocks in the price Phillips curve is re-scaled.
 """
 function ss20!(m::Model1002)
     ss10!(m)
+end
+
+"""
+```
+ss30!(m::Model1002)
+```
+
+Initializes subspec 30 of `Model1002`. This subspecification is the same as ss10,
+except the monetary policy rule incorporates the Federal Reserve's policy change
+to flexible average inflation targeting in 2020-Q3.
+"""
+function ss30!(m::Model1002)
+    ss10!(m)
+
+    # Default regime dates
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+
+    # Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :smooth_ait_gdp_alt)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :smooth_ait_gdp_alt)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:smooth_ait_gdp_alt_ρ_smooth, 0.)
+    m <= Setting(:smooth_ait_gdp_alt_φ_π, 6.)
+    m <= Setting(:smooth_ait_gdp_alt_φ_y, 6.)
 end
 
 """

@@ -1,7 +1,7 @@
 using DSGE, ModelConstructors, Dates, Test
 
 @testset "sys1: rule-switch (1st forecast quarter), no parameter-switch. sys2: rule-switch (1st forecast quarter), no parameter-switch (parameter switch with same values)" begin
-    m = Model1002()
+    m = Model1002("ss10")
 
     # Use gensys2 for anticipated policy rule change
     m <= Setting(:gensys2, true)
@@ -37,7 +37,7 @@ end
 
 
 @testset "sys1: no rule-swtich, sys2 rule-switch in 1st forecast quarter (so system 3 should be different)" begin
-    m = Model1002()
+    m = Model1002("ss10")
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
     # Number of regimes OVERALL
@@ -73,7 +73,7 @@ end
 
 
 @testset "sys1: no rule-switch, no parameter-switch. sys2: rule- and parameter-switch in 1st forecast quarter (so system 3 should be different)" begin
-    m = Model1002()
+    m = Model1002("ss10")
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
     # Number of regimes OVERALL
@@ -109,7 +109,7 @@ end
 end
 
 @testset "sys1: no rule-switch, no parameter-switch. sys2: rule-switch in 1st forecast quarter, parameter-switch in 2nd forecastquarter" begin
-    m = Model1002()
+    m = Model1002("ss10")
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
     # Number of regimes OVERALL
@@ -146,7 +146,7 @@ end
 
 
 @testset "sys1: no rule-switch, no parameter-swtich. sys2: no rule-switch, yes parameter-switch (in 1st forecast quarter)" begin
-    m = Model1002()
+    m = Model1002("ss10")
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
     # Number of regimes OVERALL
@@ -178,7 +178,7 @@ end
 
 ### Now with QQ
 @testset "sys1: rule-switch (1st forecast quarter), no parameter-switch. sys2: rule-switch (1st forecast quarter), no parameter-switch (parameter switch with same values)" begin
-    m = Model1002()
+    m = Model1002("ss10")
 
     # Use gensys2 for anticipated policy rule change
     m <= Setting(:gensys2, true)
@@ -214,7 +214,7 @@ end
 
 @testset "sys1: no rule-swtich, sys2 rule-switch in 1st forecast quarter (so system 3 should be different)" begin
     # rule switching doesn't affect QQ here
-    m = Model1002()
+    m = Model1002("ss10")
 
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
@@ -252,7 +252,7 @@ end
 
 
 @testset "sys1: no rule-switch, no parameter-switch. sys2: rule- and parameter-switch in 1st forecast quarter (so system 3 should be different)" begin
-    m = Model1002()
+    m = Model1002("ss10")
 
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
@@ -290,7 +290,7 @@ end
 
 @testset "sys1: no rule-switch, no parameter-switch. sys2: rule-switch in 1st forecast quarter, parameter-switch in 2nd forecastquarter" begin
     # rule switching doesn't affect QQ here
-    m = Model1002()
+    m = Model1002("ss10")
 
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
@@ -329,7 +329,7 @@ end
 
 
 @testset "sys1: no rule-switch, no parameter-swtich. sys2: no rule-switch, yes parameter-switch (in 1st forecast quarter)" begin
-    m = Model1002()
+    m = Model1002("ss10")
     # Always need regime switching on, even if you're not switching parameters
     m <= Setting(:regime_switching, true)
     # Number of regimes OVERALL
