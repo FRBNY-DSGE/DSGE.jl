@@ -36,3 +36,60 @@ sys30[1, :TTT] ≈ sys10_noalt[1, :TTT]
 !(sys30[2, :TTT] ≈ sys10_noalt[2, :TTT])
 sys30[1, :TTT] ≈ sys10_alt[1, :TTT]
 sys30[2, :TTT] ≈ sys10_alt[2, :TTT]
+
+
+function param_test(m30, m10; pgap_value = 0.0, ygap_value = 12.0, ait_Thalf = 10.0, gdp_Thalf = 10.0,
+                        flexible_ait_ρ_smooth = 0.0, flexible_ait_φ_π = 6.0, flexible_ait_φ_y = 6.0)
+
+    m10 <= Setting(:pgap_value, pgap_value)
+    #m10 <= Setting(:ygap_type, :flexible_ait)
+    m10 <= Setting(:ygap_value, ygap_value)
+    m10 <= Setting(:ait_Thalf, ait_Thalf)
+    m10 <= Setting(:gdp_Thalf, gdp_Thalf)
+    m10 <= Setting(:flexible_ait_ρ_smooth, flexible_ait_ρ_smooth)
+    m10 <= Setting(:flexible_ait_φ_π, flexible_ait_φ_π)
+    m10 <= Setting(:flexible_ait_φ_y, flexible_ait_φ_y)
+    sys10_noalt = compute_system(m10; apply_altpolicy = false)
+    sys10_alt = compute_system(m10; apply_altpolicy = true)
+
+    # ss30
+    m30 <= Setting(:pgap_value, pgap_value)
+    #m30 <= Setting(:ygap_type, :flexible_ait)
+    m30 <= Setting(:ygap_value, ygap_value)
+    m30 <= Setting(:ait_Thalf, ait_Thalf)
+    m30 <= Setting(:gdp_Thalf, gdp_Thalf)
+    m30 <= Setting(:flexible_ait_ρ_smooth, flexible_ait_ρ_smooth)
+    m30 <= Setting(:flexible_ait_φ_π, flexible_ait_φ_π)
+    m30 <= Setting(:flexible_ait_φ_y, flexible_ait_φ_y)
+    sys30 = compute_system(m30)
+
+    @test sys30[1, :TTT] ≈ sys10_noalt[1, :TTT]
+    @test !(sys30[2, :TTT] ≈ sys10_noalt[2, :TTT])
+    @test sys30[1, :TTT] ≈ sys10_alt[1, :TTT]
+    @test sys30[2, :TTT] ≈ sys10_alt[2, :TTT]
+
+    return nothing
+end
+
+test_pgap = 0.0:1.0:2.0
+test_ygap = 4.0:6.0:16.0
+test_ait_Thalf = 5.0:2.5:15.0
+test_smooth = 0.0:0.2:0.9
+test_φ_π = 5.0:2.0:13.0
+test_φ_y = 5.0:2.0:13.0
+
+
+@simd for pgap in test_pgap
+    for ygap in test_ygap
+        for ait in test_ait_Thalf
+                for smooth in test_smooth
+                    for pi in test_φ_π
+                        for y in test_φ_y
+                            param_test(m30, m10; pgap_value = pgap, ygap_value = ygap, ait_Thalf = ait, gdp_Thalf = ait,
+                                       flexible_ait_ρ_smooth = smooth, flexible_ait_φ_π = pi, flexible_ait_φ_y = y)
+                        end
+                    end
+                end
+        end
+    end
+end
