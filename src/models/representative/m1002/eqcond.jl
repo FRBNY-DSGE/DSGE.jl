@@ -788,7 +788,7 @@ function eqcond(m::Model1002, reg::Int)
 
    # Switch to Flexible AIT in 2020-Q3 and beyond
    if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
-       if get_setting(m, :regime_dates)[reg] >= DSGE.quartertodate("2020-Q3")
+       if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
            Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
        end
    end
