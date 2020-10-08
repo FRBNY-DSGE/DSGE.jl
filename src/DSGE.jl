@@ -278,6 +278,7 @@ module DSGE
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
+    include("altpolicy/taylor_rule.jl")
     include("altpolicy/alt_inflation.jl")
     include("altpolicy/ait.jl")
     include("altpolicy/ngdp_target.jl")
@@ -287,7 +288,6 @@ module DSGE
     include("altpolicy/zero_rate.jl")
     include("altpolicy/rw.jl")
     include("altpolicy/rw_zero_rate.jl")
-    include("altpolicy/taylor_rule.jl")
     include("solve/gensys_uncertain_altpol.jl")
 
     include("scenarios/scenario.jl")
