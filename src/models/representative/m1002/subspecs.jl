@@ -708,6 +708,7 @@ function ss30!(m::Model1002)
     m <= Setting(:flexible_ait_ρ_smooth, 0.)
     m <= Setting(:flexible_ait_φ_π, 6.)
     m <= Setting(:flexible_ait_φ_y, 6.)
+
 end
 
 """
