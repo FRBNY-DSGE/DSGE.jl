@@ -346,8 +346,8 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
-    if haskey(m.settings, :add_ygap)
-        if get_setting(m, :add_ygap)
+    if haskey(m.settings, :add_altpolicy_ygap)
+        if get_setting(m, :add_altpolicy_ygap)
             ZZ_pseudo[pseudo[:ygap], endo[:ygap_t]] = 1.
         end
     end
@@ -708,8 +708,8 @@ function pseudo_measurement(m::Model1002{T},
                 ZZ_pseudos[reg][pseudo[:pgap], endo[:pgap_t]] = 1.
             end
         end
-        if haskey(m.settings, :add_ygap)
-            if get_setting(m, :add_ygap)
+        if haskey(m.settings, :add_altpolicy_ygap)
+            if get_setting(m, :add_altpolicy_ygap)
                 ZZ_pseudos[reg][pseudo[:ygap], endo[:ygap_t]] = 1.
             end
         end

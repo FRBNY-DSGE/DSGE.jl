@@ -87,7 +87,7 @@ end
 
 m = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
 my = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
-                                                                         :add_ygap => Setting(:add_ygap, true)))
+                                                                         :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true)))
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
 my <= Setting(:date_forecast_start, quartertodate("2015-Q4"))

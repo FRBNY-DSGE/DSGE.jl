@@ -15,7 +15,7 @@ sys30 = compute_system(m30)
 
 # Now check m10 generates same results when using flexible AIT policy as an alternative policy
 m10 = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
-                                                                :add_ygap => Setting(:add_ygap, true)))
+                                                                :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true)))
 m10 <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m10), 2 => Date(2020, 9, 30)))
 m10 <= Setting(:regime_switching, true)
 DSGE.setup_regime_switching_inds!(m10)

@@ -53,8 +53,8 @@ function init_pseudo_observable_mappings!(m::Model1002)
             push!(pseudo_names, :pgap)
         end
     end
-    if haskey(m.settings, :add_ygap)
-        if get_setting(m, :add_ygap)
+    if haskey(m.settings, :add_altpolicy_ygap)
+        if get_setting(m, :add_altpolicy_ygap)
             push!(pseudo_names, :ygap)
         end
     end
@@ -355,8 +355,8 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_ygap)
-        if get_setting(m, :add_ygap)
+    if haskey(m.settings, :add_altpolicy_ygap)
+        if get_setting(m, :add_altpolicy_ygap)
             pseudo[:ygap].name     = "ygap"
             pseudo[:ygap].longname = "ygap"
         end

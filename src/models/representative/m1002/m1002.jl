@@ -218,7 +218,7 @@ function init_model_indices!(m::Model1002)
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
     end
-    if haskey(get_settings(m), :add_ygap) ? get_setting(m, :add_ygap) : false
+    if haskey(get_settings(m), :add_altpolicy_ygap) ? get_setting(m, :add_altpolicy_ygap) : false
         push!(endogenous_states, setdiff([:ygap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_ygap], equilibrium_conditions)...)
     end
@@ -905,12 +905,12 @@ function model_settings!(m::Model1002)
     if subspec(m) in ["ss30", "ss59", "ss60", "ss61"]
         m <= Setting(:flexible_ait_2020Q3_policy_change, true, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_altpolicy_pgap, true)
-        m <= Setting(:add_ygap, true)
+        m <= Setting(:add_altpolicy_ygap, true)
 
     else
         m <= Setting(:flexible_ait_2020Q3_policy_change, false, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_altpolicy_pgap, false)
-        m <= Setting(:add_ygap, false)
+        m <= Setting(:add_altpolicy_ygap, false)
     end
 
     # Additional pseudo-observables and integrated series
