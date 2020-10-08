@@ -223,7 +223,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                                                                                   1+1e-6, verbose = verbose)
                 # Check for LAPACK exception, existence and uniqueness
                 if eu[1] != 1 || eu[2] != 1
-                    throw(GensysError("Error in Gensys, Regime $reg"))
+                    throw(GensysError("Error in Gensys, Regime $(get_setting(m, :n_regimes))"))
                 end
             else
                 # If alternative rule

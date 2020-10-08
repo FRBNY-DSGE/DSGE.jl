@@ -214,6 +214,14 @@ function init_model_indices!(m::Model1002)
     if get_setting(m, :add_flexible_price_growth)
         push!(endogenous_states_augmented, setdiff([:y_f_t1, :c_f_t1, :i_f_t1], endogenous_states_augmented)...)
     end
+    if haskey(get_settings(m), :add_pgap) ? get_setting(m, :add_pgap) : false
+        push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
+        push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
+    end
+    if haskey(get_settings(m), :add_ygap) ? get_setting(m, :add_ygap) : false
+        push!(endogenous_states, setdiff([:ygap_t], endogenous_states)...)
+        push!(equilibrium_conditions, setdiff([:eq_ygap], equilibrium_conditions)...)
+    end
     if haskey(get_settings(m), :add_altpolicy_pgap) ? get_setting(m, :add_altpolicy_pgap) : false
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
