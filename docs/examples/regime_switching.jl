@@ -28,7 +28,7 @@ add_workers       = false # Run in parallel
 n_workers         = 10
 
 # Initialize model objects and desired settings
-custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true))
+custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true))
 m = Model1002("ss10"; custom_settings = custom_settings)   # We will directly construct the matrix of parameter draws
 m10 = Model1002("ss10") # b/c loading from a saved estimation file has not been fully implemented
 

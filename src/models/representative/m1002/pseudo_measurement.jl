@@ -340,8 +340,8 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
-    if haskey(m.settings, :add_pgap)
-        if get_setting(m, :add_pgap)
+    if haskey(m.settings, :add_altpolicy_pgap)
+        if get_setting(m, :add_altpolicy_pgap)
             ZZ_pseudo[pseudo[:pgap], endo[:pgap_t]] = 1.
         end
     end
@@ -703,8 +703,8 @@ function pseudo_measurement(m::Model1002{T},
                 DD_pseudos[reg][pseudo[:Epi_t]]                    = 100. * (m[:π_star] - 1.)
             end
         end
-        if haskey(m.settings, :add_pgap)
-            if get_setting(m, :add_pgap)
+        if haskey(m.settings, :add_altpolicy_pgap)
+            if get_setting(m, :add_altpolicy_pgap)
                 ZZ_pseudos[reg][pseudo[:pgap], endo[:pgap_t]] = 1.
             end
         end
