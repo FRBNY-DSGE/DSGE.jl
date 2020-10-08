@@ -10,7 +10,7 @@ newThalf = 10
 
 # Set model up
 m = Model1002("ss59"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
-                                                              :add_ygap => Setting(:add_ygap, true),
+                                                              :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true),
                                                               :add_urhat => Setting(:add_urhat, true),
                                                               :flexible_ait_2020Q3_policy_change =>
                                                               Setting(:flexible_ait_2020Q3_policy_change,

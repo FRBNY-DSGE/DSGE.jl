@@ -665,7 +665,7 @@ function eqcond(m::Model1002, reg::Int)
        end
    end
 
-   if haskey(m.settings, :add_ygap) ? get_setting(m, :add_ygap) : false
+   if haskey(m.settings, :add_altpolicy_ygap) ? get_setting(m, :add_altpolicy_ygap) : false
        Γ0[eq[:eq_ygap], endo[:ygap_t]]  =  1.
        if haskey(m.settings, :replace_eqcond_func_dict)
            if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
@@ -752,8 +752,8 @@ function eqcond(m::Model1002, reg::Int)
        end
    end
 
-   if haskey(m.settings, :track_ygap)
-       if get_setting(m, :track_ygap)
+   if haskey(m.settings, :add_ygap)
+       if get_setting(m, :add_ygap)
            if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt, :flexible_ait]
                Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
                ρ_ygap = exp(log(0.5) / Thalf)
