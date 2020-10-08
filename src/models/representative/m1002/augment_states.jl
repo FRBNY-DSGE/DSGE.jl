@@ -41,7 +41,8 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}; regime_switching::Bool = false, reg::Int = 1) where {T<:AbstractFloat}
+function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T};
+                        regime_switching::Bool = false, reg::Int = 1) where {T<:AbstractFloat}
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
@@ -268,15 +269,15 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     end
 
     # Adding pgap and ygap for 2020Q3 AIT switching
-    if haskey(m.settings, :flexible_ait_2020Q3_policy_change) && get_setting(m, :flexible_ait_2020Q3_policy_change) &&
-        get_setting(m, :regime_dates)[reg] <= Date(2020, 6, 30)
-        TTT_aug[endo[:pgap_t], :] .= 0.0
-        RRR_aug[endo[:pgap_t], :] .= 0.0
-        CCC_aug[endo[:pgap_t]] = get_setting(m, :pgap_value)
+    if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) && haskey(m.settings, :regime_dates)) ?
+        (get_setting(m, :flexible_ait_2020Q3_policy_change) && get_setting(m, :regime_dates)[reg] <= Date(2020, 6, 30)) : false
+        TTT_aug[endo[:pgap_t], :] .= 0.
+        RRR_aug[endo[:pgap_t], :] .= 0.
+        CCC_aug[endo[:pgap_t]] = -get_setting(m, :pgap_value)
 
-        TTT_aug[endo[:ygap_t], :] .= 0.0
-        RRR_aug[endo[:ygap_t], :] .= 0.0
-        CCC_aug[endo[:ygap_t]] = get_setting(m, :ygap_value)
+        TTT_aug[endo[:ygap_t], :] .= 0.
+        RRR_aug[endo[:ygap_t], :] .= 0.
+        CCC_aug[endo[:ygap_t]] = -get_setting(m, :ygap_value)
     end
 
     return TTT_aug, RRR_aug, CCC_aug
