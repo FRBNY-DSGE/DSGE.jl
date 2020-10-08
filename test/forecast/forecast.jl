@@ -71,7 +71,7 @@ end
 
 @testset "Enforce ZLB as a temporary alternative policy" begin
     # Set up model for forecast and permanent NGDP
-    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true)))
+    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
     m <= Setting(:date_forecast_start,  Date(2020, 6, 30))
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -156,7 +156,7 @@ end
 
 #= # Currently, we get an indeterminacy error when we run this code, and the reason has not been determined yet.
     # Now without regime-switching model
-    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true)))
+    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
     m <= Setting(:regime_switching, false)
     m <= Setting(:date_forecast_start,  Date(2020, 6, 30))
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))

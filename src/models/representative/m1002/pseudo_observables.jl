@@ -48,8 +48,8 @@ function init_pseudo_observable_mappings!(m::Model1002)
             push!(pseudo_names, :zp)
         end
     end
-    if haskey(m.settings, :add_pgap)
-        if get_setting(m, :add_pgap)
+    if haskey(m.settings, :add_altpolicy_pgap)
+        if get_setting(m, :add_altpolicy_pgap)
             push!(pseudo_names, :pgap)
         end
     end
@@ -340,21 +340,21 @@ function init_pseudo_observable_mappings!(m::Model1002)
             pseudo[:ztil].longname = "ztil"
         end
     end
-    
+
     if haskey(m.settings, :add_zp)
         if get_setting(m, :add_zp)
             pseudo[:zp].name     = "zp"
             pseudo[:zp].longname = "zp"
         end
     end
-    
-    if haskey(m.settings, :add_pgap)
-        if get_setting(m, :add_pgap)
+
+    if haskey(m.settings, :add_altpolicy_pgap)
+        if get_setting(m, :add_altpolicy_pgap)
             pseudo[:pgap].name     = "pgap"
             pseudo[:pgap].longname = "pgap"
         end
     end
-    
+
     if haskey(m.settings, :add_ygap)
         if get_setting(m, :add_ygap)
             pseudo[:ygap].name     = "ygap"
@@ -388,7 +388,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
             pseudo[:varphiiid].longname = "varphiiid"
         end
     end
-    
+
     if haskey(m.settings, :add_pseudo_gdp)
         if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61"]
             pseudo[:PseudoGDP].name     = "GDP Growth Pseudo-observable"

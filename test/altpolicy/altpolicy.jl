@@ -85,8 +85,8 @@ end
 # New Policy Rules #
 ####################
 
-m = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true)))
-my = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true),
+m = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
+my = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
                                                                          :add_ygap => Setting(:add_ygap, true)))
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)

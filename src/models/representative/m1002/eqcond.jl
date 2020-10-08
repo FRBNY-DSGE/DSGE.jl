@@ -628,7 +628,7 @@ function eqcond(m::Model1002, reg::Int)
    # (1) Regime-switching won't work otherwise
    # (2) we may want to define the their values at the beginning of the forecast period
    #     rather than just when we start using the alt rule.
-   if haskey(m.settings, :add_pgap) ? get_setting(m, :add_pgap) : false
+   if haskey(m.settings, :add_altpolicy_pgap) ? get_setting(m, :add_altpolicy_pgap) : false
        Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
        if haskey(m.settings, :replace_eqcond_func_dict)
            if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
@@ -740,8 +740,8 @@ function eqcond(m::Model1002, reg::Int)
        end
    end
 
-   if haskey(m.settings, :track_pgap)
-       if get_setting(m, :track_pgap)
+   if haskey(m.settings, :add_pgap)
+       if get_setting(m, :add_pgap)
            if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt, :flexible_ait]
                Thalf = haskey(m.settings, :ait_Thalf) ? get_setting(m, :ait_Thalf) : 10
                ρ_pgap = exp(log(0.5) / Thalf)

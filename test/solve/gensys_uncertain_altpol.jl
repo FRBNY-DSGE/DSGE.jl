@@ -3,7 +3,7 @@ using DSGE, HDF5, ModelConstructors, Test
 regen = false
 
 
-m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true)))
+m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
 hist_rule = get_setting(m, :alternative_policy)
 m <= Setting(:alternative_policy, DSGE.ngdp())
 m <= Setting(:pgap_type, :ngdp)
