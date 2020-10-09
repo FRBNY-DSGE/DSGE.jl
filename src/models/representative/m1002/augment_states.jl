@@ -262,22 +262,12 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     # Expected inflation
     CCC_aug[endo_new[:Et_π_t]] = (CCC + TTT*CCC)[endo[:π_t]] # note that currently this term is not used anywhere
 
+
+    ### Ensure parameter values are in regime 1
     for para in m.parameters
         if !isempty(para.regimes)
             ModelConstructors.toggle_regime!(para, 1)
         end
-    end
-
-    # Adding pgap and ygap for 2020Q3 AIT switching
-    if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) && haskey(m.settings, :regime_dates)) ?
-        (get_setting(m, :flexible_ait_2020Q3_policy_change) && get_setting(m, :regime_dates)[reg] <= Date(2020, 6, 30)) : false
-        TTT_aug[endo[:pgap_t], :] .= 0.
-        RRR_aug[endo[:pgap_t], :] .= 0.
-        CCC_aug[endo[:pgap_t]] = -get_setting(m, :pgap_value)
-
-        TTT_aug[endo[:ygap_t], :] .= 0.
-        RRR_aug[endo[:ygap_t], :] .= 0.
-        CCC_aug[endo[:ygap_t]] = -get_setting(m, :ygap_value)
     end
 
     return TTT_aug, RRR_aug, CCC_aug
