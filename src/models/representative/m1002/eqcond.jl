@@ -754,7 +754,7 @@ function eqcond(m::Model1002, reg::Int)
 
    if haskey(m.settings, :add_ygap)
        if get_setting(m, :add_ygap)
-           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt, :flexible_ait]
+           if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :flexible_ait]
                Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
                ρ_ygap = exp(log(0.5) / Thalf)
 
@@ -772,7 +772,6 @@ function eqcond(m::Model1002, reg::Int)
    # Switch to Flexible AIT in 2020-Q3 and beyond
    if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
        if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
-           # Γ0, Γ1, C, Ψ, Π = taylor_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
            Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
        end
    end
