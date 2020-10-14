@@ -159,6 +159,12 @@ function measurement(m::Model1002{T},
         ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
     end
 
+    # ygap and pgap for Flexible AIT rule
+    if (haskey(get_settings(m), :add_initialize_ygap_pgap_pseudoobs) ? get_setting(m, :add_initialize_ygap_pgap_pseudoobs) : false)
+        ZZ[obs[:obs_pgap], endo[:pgap_t]] = 1.
+        ZZ[obs[:obs_ygap], endo[:ygap_t]] = 1.
+    end
+
     ## Set up structural shocks covariance matrix
     QQ[exo[:g_sh], exo[:g_sh]]             = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]             = m[:σ_b]^2
