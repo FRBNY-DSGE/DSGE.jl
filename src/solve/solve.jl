@@ -74,7 +74,6 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                 # Augment states
                 TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
             end
-
         elseif get_setting(m, :solution_method) == :klein
             TTT_jump, TTT_state = klein(m)
 
@@ -215,43 +214,55 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
             solve_histregimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs;
                                hist_regimes = hist_regimes, verbose = verbose)
 
-            # Get the last state space matrices one period after the alternative policy ends (if there is one)
-            if altpolicy_solve == solve || !apply_altpolicy
-                # If normal rule
-                TTT_gensys_final, CCC_gensys_final, RRR_gensys_final, eu = gensys(Γ0s[end], Γ1s[end], Cs[end],
-                                                                                  Ψs[end], Πs[end],
-                                                                                  1+1e-6, verbose = verbose)
-                # Check for LAPACK exception, existence and uniqueness
-                if eu[1] != 1 || eu[2] != 1
-                    throw(GensysError("Error in Gensys, Regime $(get_setting(m, :n_regimes))"))
-                end
-            else
-                # If alternative rule
-                n_endo = length(keys(m.endogenous_states))
-                TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = altpolicy_solve(m; regime_switching = true,
-                                                                                       regimes = Int[get_setting(m, :n_regimes)])
-                TTT_gensys_final = TTT_gensys_final[1:n_endo, 1:n_endo] # make sure the non-augmented version
-                RRR_gensys_final = RRR_gensys_final[1:n_endo, :]        # is returned
-                CCC_gensys_final = CCC_gensys_final[1:n_endo]
-            end
-
-            if uncertain_altpolicy && apply_altpolicy
-                weights = get_setting(m, :alternative_policy_weights)
-                altpols = get_setting(m, :alternative_policies)
-
-                TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
-                    gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
-                                            TTT = TTT_gensys_final)
-            end
-
-            TTT_gensys_final = real(TTT_gensys_final)
-            RRR_gensys_final = real(RRR_gensys_final)
-            CCC_gensys_final = real(CCC_gensys_final)
-
             # Are there temporary policies in the forecast that had been unanticipated in the history?
             if gensys2
-                # TODO: generalize this policy beyond assuming the final regime HAS to be the final regime-switch
+                # TODO: generalize gensys2 beyond assuming the final regime HAS to be the final regime-switch in forecast horizon
                 # and that the final regime is the policy after the temporary alternative policy finishes
+
+                # Get the last state space matrices one period after the alternative policy ends (if there is one)
+                if altpolicy_solve == solve || !apply_altpolicy
+                    # If normal rule
+                    TTT_gensys_final, CCC_gensys_final, RRR_gensys_final, eu = gensys(Γ0s[end], Γ1s[end], Cs[end],
+                                                                                      Ψs[end], Πs[end],
+                                                                                      1+1e-6, verbose = verbose)
+
+                    if (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false) &&
+                        get_setting(m, :regime_dates)[get_setting(m, :n_regimes)] >= Date(2020, 9, 30)
+                        weights = get_setting(m, :imperfect_credibility_weights)
+                        histpol = get_setting(m, :imperfect_credibility_historical_policy)
+                        TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
+                            gensys_uncertain_altpol(m, get_setting(m, :imperfect_credibility_weights),
+                                                    AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)];
+                                                    apply_altpolicy = apply_altpolicy, TTT = TTT_gensys_final)
+                    end
+
+                    # Check for LAPACK exception, existence and uniqueness
+                    if eu[1] != 1 || eu[2] != 1
+                        throw(GensysError("Error in Gensys, Regime $(get_setting(m, :n_regimes))"))
+                    end
+                else
+                    # If alternative rule
+                    n_endo = length(keys(m.endogenous_states))
+                    TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = altpolicy_solve(m; regime_switching = true,
+                                                                                           regimes = Int[get_setting(m, :n_regimes)])
+                    TTT_gensys_final = TTT_gensys_final[1:n_endo, 1:n_endo] # make sure the non-augmented version
+                    RRR_gensys_final = RRR_gensys_final[1:n_endo, :]        # is returned
+                    CCC_gensys_final = CCC_gensys_final[1:n_endo]
+                end
+
+                if uncertain_altpolicy && apply_altpolicy
+                    weights = get_setting(m, :alternative_policy_weights)
+                    altpols = get_setting(m, :alternative_policies)
+
+                    TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
+                        gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
+                                                TTT = TTT_gensys_final)
+                end
+
+                TTT_gensys_final = real(TTT_gensys_final)
+                RRR_gensys_final = real(RRR_gensys_final)
+                CCC_gensys_final = real(CCC_gensys_final)
+
                 solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTT_gensys_final, RRR_gensys_final, CCC_gensys_final,
                                TTTs, RRRs, CCCs; fcast_regimes = fcast_regimes, uncertain_zlb = uncertain_zlb,
                                verbose = verbose)
@@ -289,6 +300,14 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
             throw(GensysError())
         end
 
+        if (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false) &&
+            get_setting(m, :regime_dates)[regime] >= Date(2020, 9, 30)
+            TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, get_setting(m, :imperfect_credibility_weights),
+                                                                         AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)];
+                                                                         apply_altpolicy = apply_altpolicy, TTT = TTT_gensys,
+                                                                         regime_switching = true, regimes = Int[regime])
+        end
+
         TTT_gensys = real(TTT_gensys)
         RRR_gensys = real(RRR_gensys)
         CCC_gensys = real(CCC_gensys)
@@ -296,7 +315,6 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
         # Augment states
         TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = true,
                                        reg = regime)
-
     else
         TTT, RRR, CCC = altpolicy_solve(m; regime_switching = true, regimes = Int[regime])
     end
@@ -321,6 +339,14 @@ function solve_histregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s:
                             Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                             TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                             hist_regimes::Vector{Int} = Int[1], verbose::Symbol = :high) where {S <: Real}
+
+    flex_ait_pol_change = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
+        get_setting(m, :flexible_ait_2020Q3_policy_change) : false
+    if flex_ait_pol_change
+        weights = get_setting(m, :imperfect_credibility_weights)
+        histpol = AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)]
+    end
+
     for hist_reg in hist_regimes
         TTT_gensys, CCC_gensys, RRR_gensys, eu =
             gensys(Γ0s[hist_reg], Γ1s[hist_reg], Cs[hist_reg], Ψs[hist_reg], Πs[hist_reg],
@@ -330,11 +356,18 @@ function solve_histregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s:
         if eu[1] != 1 || eu[2] != 1
             throw(GensysError("Error in Gensys, Regime $hist_reg"))
         end
+
+        if flex_ait_pol_change && get_setting(m, :regime_dates)[hist_reg] >= Date(2020, 9, 30)
+            TTT_gensys, RRR_gensys, CCC_gensys =
+                gensys_uncertain_altpol(m, weights, histpol; TTT = TTT_gensys,
+                                        regime_switching = true, regimes = Int[hist_reg])
+        end
+
         TTT_gensys = real(TTT_gensys)
         RRR_gensys = real(RRR_gensys)
         CCC_gensys = real(CCC_gensys)
 
-        # Put the usual system in for the history (smoothing)
+        # Populate the TTTs, etc., for regime `hist_reg`
         TTTs[hist_reg], RRRs[hist_reg], CCCs[hist_reg] =
             augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
     end
@@ -348,6 +381,13 @@ function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s
                              fcast_regimes::Vector{Int} = Int[1], apply_altpolicy::Bool = false,
                              verbose::Symbol = :high, altpolicy_solve = nothing) where {S <: Real}
 
+    flex_ait_pol_change = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
+        get_setting(m, :flexible_ait_2020Q3_policy_change) : false
+    if flex_ait_pol_change
+        weights = get_setting(m, :imperfect_credibility_weights)
+        histpol = AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)]
+    end
+
     for fcast_reg in fcast_regimes
         if altpolicy_solve == solve || !apply_altpolicy
             TTT_gensys, CCC_gensys, RRR_gensys, eu =
@@ -359,10 +399,17 @@ function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s
                 throw(GensysError("Error in Gensys, Regime $fcast_reg"))
             end
 
+            if flex_ait_pol_change && get_setting(m, :regime_dates)[fcast_reg] >= Date(2020, 9, 30)
+                TTT_gensys, RRR_gensys, CCC_gensys =
+                    gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = apply_altpolicy,
+                                            TTT = TTT_gensys, regime_switching = true, regimes = Int[fcast_reg])
+            end
+
             TTT_gensys = real(TTT_gensys)
             RRR_gensys = real(RRR_gensys)
             CCC_gensys = real(CCC_gensys)
 
+            # Populate the TTTs, etc., for regime `fcast_reg`
             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
                 augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
         else

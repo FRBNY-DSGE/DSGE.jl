@@ -278,7 +278,6 @@ module DSGE
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
-    include("altpolicy/taylor_rule.jl")
     include("altpolicy/alt_inflation.jl")
     include("altpolicy/ait.jl")
     include("altpolicy/ngdp_target.jl")
@@ -335,6 +334,7 @@ module DSGE
     include("models/representative/m1002/pseudo_observables.jl")
     include("models/representative/m1002/pseudo_measurement.jl")
     include("models/representative/m1002/augment_states.jl")
+    include("models/representative/m1002/taylor_rule.jl")
 
     include("models/representative/m1010/m1010.jl")
     include("models/representative/m1010/subspecs.jl")
