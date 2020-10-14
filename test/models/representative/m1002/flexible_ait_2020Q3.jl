@@ -9,9 +9,9 @@ m30 <= Setting(:date_forecast_start, Date(2020, 9, 30))
 m30 <= Setting(:date_conditional_end, Date(2020, 9, 30))
 df = load_data(m30; check_empty_columns = false)
 sys30 = compute_system(m30)
-
-# Compute as is
-
+m30 <= Setting(:imperfect_credibility_weights, [.5, .5])
+sys30_imperf_cred = compute_system(m30)
+m30 <= Setting(:imperfect_credibility_weights, [1., 0.])
 
 # Now check m10 generates same results when using flexible AIT policy as an alternative policy
 m10 = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
@@ -36,7 +36,6 @@ sys30[1, :TTT] ≈ sys10_noalt[1, :TTT]
 !(sys30[2, :TTT] ≈ sys10_noalt[2, :TTT])
 sys30[1, :TTT] ≈ sys10_alt[1, :TTT]
 sys30[2, :TTT] ≈ sys10_alt[2, :TTT]
-
 
 function param_test(m30, m10; pgap_value = 0.0, ygap_value = 12.0, ait_Thalf = 10.0, gdp_Thalf = 10.0,
                         flexible_ait_ρ_smooth = 0.0, flexible_ait_φ_π = 6.0, flexible_ait_φ_y = 6.0)
@@ -71,17 +70,17 @@ function param_test(m30, m10; pgap_value = 0.0, ygap_value = 12.0, ait_Thalf = 1
     return nothing
 end
 
-test_pgap = 0.0:1.0:2.0
-test_ygap = 4.0:6.0:16.0
-test_ait_Thalf = 5.0:2.5:15.0
-test_smooth = 0.0:0.2:0.9
-test_φ_π = 5.0:2.0:13.0
-test_φ_y = 5.0:2.0:13.0
+test_pgap = [0., 2.]
+test_ygap = [4., 12.]
+test_ait_Thalf = [10.]
+test_smooth = [0., 0.5]
+test_φ_π = [6., 8.]
+test_φ_y = [6., 8.]
 
-
-@simd for pgap in test_pgap
-    for ygap in test_ygap
-        for ait in test_ait_Thalf
+@testset "Flexible AIT Policy Change in 2020-Q3" begin
+    @simd for pgap in test_pgap
+        for ygap in test_ygap
+            for ait in test_ait_Thalf
                 for smooth in test_smooth
                     for pi in test_φ_π
                         for y in test_φ_y
@@ -90,6 +89,9 @@ test_φ_y = 5.0:2.0:13.0
                         end
                     end
                 end
+            end
         end
     end
+
+    @test !(sys30_imperf_cred[2, :TTT] ≈ sys30[2, :TTT])
 end

@@ -709,6 +709,9 @@ function ss30!(m::Model1002)
     m <= Setting(:flexible_ait_φ_π, 6.)
     m <= Setting(:flexible_ait_φ_y, 6.)
 
+    # Set up imperfect credibility of flexible AIT rule
+    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
 end
 
 """
@@ -771,6 +774,10 @@ function ss59!(m::Model1002)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
     setup_regime_switching_inds!(m)
+
+    # Set up imperfect credibility of flexible AIT rule
+    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
@@ -937,6 +944,10 @@ function ss60!(m::Model1002)
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
     setup_regime_switching_inds!(m)
 
+    # Set up imperfect credibility of flexible AIT rule
+    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+
     # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
@@ -1097,6 +1108,10 @@ function ss61!(m::Model1002)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
     setup_regime_switching_inds!(m)
+
+    # Set up imperfect credibility of flexible AIT rule
+    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
