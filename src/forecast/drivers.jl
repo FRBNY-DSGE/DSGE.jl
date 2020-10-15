@@ -634,7 +634,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            param_key::Symbol = :nothing, param_value::Float64 = 0.0,
                            param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
-                           regime_switching::Bool = false, n_regimes::Int = 1, only_filter = false)
+                           regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -727,7 +727,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             # The last smoothed state is either s_{T|T} (if !uncertainty) or
             # drawn from N(s_{T|T}, P_{T|T}) (if uncertainty)
             histstates[:, end]
-        else # THIS BRANCH HAS NOT BEEN EXTENDED YET FOR REGIME SWITCHING
+        else
             kal = Kalman(Vector{Float64}(undef,0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0))
             try
                 kal = filter(m, df, system; cond_type = cond_type)
