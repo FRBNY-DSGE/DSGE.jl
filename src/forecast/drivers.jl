@@ -21,6 +21,8 @@ necessary.
    final row of `df` should be the period containing conditional data. If not
    provided, then `df` will be loaded using `load_data` with the appropriate
    `cond_type`
+- `only_filter::Bool`: do not run the smoother and only run the filter. This limits the number of
+  output variables which can be calculated.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 
@@ -32,10 +34,16 @@ necessary.
 function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
-    check_empty_columns::Bool = true, bdd_fcast::Bool = true,
+    check_empty_columns::Bool = true, bdd_fcast::Bool = true, only_filter::Bool = false,
     verbose::Symbol = :none) where {S<:AbstractFloat}
 
     @assert cond_type in [:none, :semi, :full] "cond_type must be one of :none, :semi, or :full"
+
+    if only_filter
+        smooth_vars = [:histstates, :histpseudo, :histshocks, :histstdshocks, :forecastshocks, :forecaststdshocks,
+                       :shockdecstates, :shockdecpseudo, :shockdecobs, :dettrendstates, :dettrendpseudo, :dettrendobs]
+        @assert isempty(intersect(output_vars, smooth_vars)) "Some output variables requested cannot be use with keyword only_filter"
+    end
 
     implied_horizons = subtract_quarters(date_forecast_end(m), date_forecast_start(m)) + 1
     if implied_horizons != get_setting(m, :forecast_horizons)
@@ -364,6 +372,8 @@ conditional data case given by `cond_type`.
 - `forecast_string::String`: short string identifying the subset to be
   appended to the output filenames. If `input_type = :subset` and
   `forecast_string` is empty, an error is thrown.
+- `only_filter::Bool`: do not run the smoother and only run the filter. This limits the number of
+  output variables which can be calculated.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`.
 - `check_empty_columns::Bool = true`: check empty columns or not when loading data (if `df` is empty)
@@ -376,10 +386,12 @@ conditional data case given by `cond_type`.
 - `set_regime_vals_altpolicy::Function`: Function that adds new regimes to parameters when
     using temporary alternative policies (if needed). Defaults to identity (which does nothing)
     This function should take as inputs the model object `m` and the total number of regimes
-     (after adding the required temporary regimes). It should then
-     set up regime-switching parameters for these new additional regimes.
+    (after adding the required temporary regimes). It should then
+    set up regime-switching parameters for these new additional regimes.
 - `temporary_altpolicy_max_iter::Int`: Maximum number of iterations when enforcing
     the ZLB as a temporary alternative policy.
+- `show_failed_percent::Bool = false`: prints out the number of failed forecasts, which are returned as NaNs.
+    These may occur when the ZLB is not enforced, for example.
 - `pegFFR::Bool = false`: peg the nominal FFR at the value specified by `FFRpeg`
 - `FFRpeg::Float64 = -0.25/4`: value of the FFR peg
 - `H::Int = 4`: number of horizons for which the FFR is pegged
@@ -403,7 +415,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       temporary_altpolicy_max_iter::Int = 10,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
                       params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
-                      show_failed_percent::Bool = false,
+                      show_failed_percent::Bool = false, only_filter::Bool = false,
                       verbose::Symbol = :low)
 
     ### Common Setup
@@ -412,7 +424,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
     output_vars, df = prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
                                                df = df, verbose = verbose, bdd_fcast = bdd_fcast,
                                                subset_inds = subset_inds,
-                                               check_empty_columns = check_empty_columns)
+                                               check_empty_columns = check_empty_columns, only_filter = only_filter)
 
     # Get output file names
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -449,7 +461,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 n_regimes = n_regimes, zlb_method = zlb_method,
                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                 temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
-                                                pegFFR = pegFFR, FFRpeg = FFRpeg, H = H)
+                                                pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -536,7 +548,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  n_regimes = n_regimes, zlb_method = zlb_method,
                                                                  set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                                  temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
-                                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H),
+                                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter),
                                       params_for_map)
 
             # Assemble outputs from this block and write to file
@@ -849,6 +861,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+            # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN THE SYSTEM
             if cond_type in [:full, :semi] && !only_filter
                 forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
@@ -858,11 +871,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     transplant_forecast_observables(histstates, forecastobs,
                                                     isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
             elseif cond_type in [:full, :semi] && only_filter
-                forecast_output[:forecaststates] = hcat(s_T,forecaststates)
-                # forecast_output[:forecastshocks] = hcat(s_T,forecastshocks)
-                # forecast_output[:forecastpseudo] = hcat(s_T,forecastpseudo)
-                cond_var                         = system[n_regimes][:ZZ]*s_T .+ system[n_regimes][:DD]
-                forecast_output[:forecastobs]    = hcat(cond_var,forecastobs)
+                cond_obs                         = system[1, :ZZ] * s_T + system[1, :DD]
+                cond_pseudo                      = system[1, :ZZ_pseudo] * s_T + system[1, :DD_pseudo]
+                forecast_output[:forecaststates] = hcat(s_T,         forecaststates)
+                forecast_output[:forecastobs]    = hcat(cond_obs,    forecastobs)
+                forecast_output[:forecastpseudo] = hcat(cond_pseudo, forecastpseudo)
+                # forecastshocks cannot be calculated w/out smoother
             else
                 forecast_output[:forecaststates] = forecaststates
                 forecast_output[:forecastshocks] = forecastshocks
