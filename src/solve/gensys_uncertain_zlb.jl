@@ -1,3 +1,23 @@
+"""
+```
+gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::AbstractMatrix{S}, Ch::AbstractVector{S},
+                     Tzlbs::Vector{Matrix{S}}, Rzlbs::Vector{Matrix{S}}, Czlbs::Vector{Vector{S}},
+                     Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
+                     C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
+```
+
+calculates the transition matrices when there is uncertainty about whether a ZLB occurs. In particular,
+- the `Th` and `Ch` are the "historical" matrices associated with policy the central bank
+  no longer wants to use (but agents believe may still be occurring);
+- the `til` matrices are the predictable form of the gensys matrices under the
+  policy the central bank claims to implement;
+- `Tzlbs`, `Rzlbs`, and `Czlbs` are the gensys2 matrices with a temporary ZLB imposed over
+  a pre-specified horizon with the belief that the claimed policy actually occurs after the ZLB ends.
+
+As an example, the Federal Reserve in 2020-Q3 switched to flexible AIT. The "historical" policy is
+a Taylor-style rule, and the `til` matrices correspond to the predictable form of flexible AIT.
+The `Tzlbs`, `Rzlbs`, and `Czlbs` include temporary switches to a ZLB specified by the `replace_eqcond_func_dict`.
+"""
 function gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::AbstractMatrix{S}, Ch::AbstractVector{S},
                               Tzlbs::Vector{Matrix{S}}, Rzlbs::Vector{Matrix{S}}, Czlbs::Vector{Vector{S}},
                               Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
