@@ -634,7 +634,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            param_key::Symbol = :nothing, param_value::Float64 = 0.0,
                            param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
-                           regime_switching::Bool = false, n_regimes::Int = 1)
+                           regime_switching::Bool = false, n_regimes::Int = 1, only_filter = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -676,8 +676,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
     hists_to_compute = intersect(output_vars, smooth_vars)
 
-    run_smoother = !isempty(hists_to_compute) ||
-        (cond_type in [:semi, :full] && !irfs_only)
+    run_smoother = (!isempty(hists_to_compute) ||
+        (cond_type in [:semi, :full] && !irfs_only)) && !only_filter
     if run_smoother
         # Call smoother
         histstates, histshocks, histpseudo, initial_states =
@@ -849,7 +849,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-            if cond_type in [:full, :semi]
+            if cond_type in [:full, :semi] && !only_filter
                 forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
@@ -857,6 +857,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecast_output[:forecastobs]    =
                     transplant_forecast_observables(histstates, forecastobs,
                                                     isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
+            elseif cond_type in [:full, :semi] && only_filter
+                forecast_output[:forecaststates] = hcat(s_T,forecaststates)
+                # forecast_output[:forecastshocks] = hcat(s_T,forecastshocks)
+                # forecast_output[:forecastpseudo] = hcat(s_T,forecastpseudo)
+                cond_var                         = system[n_regimes][:ZZ]*s_T .+ system[n_regimes][:DD]
+                forecast_output[:forecastobs]    = hcat(cond_var,forecastobs)
             else
                 forecast_output[:forecaststates] = forecaststates
                 forecast_output[:forecastshocks] = forecastshocks
@@ -921,7 +927,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-            if cond_type in [:full, :semi]
+            if cond_type in [:full, :semi] && !only_filter
                 forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
@@ -929,6 +935,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecast_output[:bddforecastobs]    =
                     transplant_forecast_observables(histstates, forecastobs,
                                                     isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
+            elseif cond_type in [:full, :semi] && only_filter
+                forecast_output[:bddforecaststates] = hcat(s_T,forecaststates)
+                #forecast_output[:bddforecastshocks] = hcat(s_T,forecastshocks)
+                #forecast_output[:bddforecastpseudo] = hcat(s_T,forecastpseudo)
+                cond_var = system[n_regimes][:ZZ]*s_T .+ system[n_regimes][:DD]
+                forecast_output[:bddforecastobs]    = hcat(cond_var,forecastobs)
             else
                 forecast_output[:bddforecaststates] = forecaststates
                 forecast_output[:bddforecastshocks] = forecastshocks
