@@ -420,7 +420,7 @@ function init_observable_mappings!(m::Model1002)
     ############################################################################
     # Pseudo-data to implement Flexible AIT
     ############################################################################
-    if (haskey(m.settings, :add_initialize_ygap_pgap_pseudoobs) ? get_setting(m, :add_initialize_ygap_pgap_pseudoobs) : false)
+    if (haskey(m.settings, :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
         pgap_fwd_transform = function (levels)
             levels[:, :pgap]
         end

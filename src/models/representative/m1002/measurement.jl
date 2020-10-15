@@ -160,7 +160,7 @@ function measurement(m::Model1002{T},
     end
 
     # ygap and pgap for Flexible AIT rule
-    if (haskey(get_settings(m), :add_initialize_ygap_pgap_pseudoobs) ? get_setting(m, :add_initialize_ygap_pgap_pseudoobs) : false)
+    if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
         ZZ[obs[:obs_pgap], endo[:pgap_t]] = 1.
         ZZ[obs[:obs_ygap], endo[:ygap_t]] = 1.
     end
