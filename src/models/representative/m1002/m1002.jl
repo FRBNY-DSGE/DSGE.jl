@@ -917,7 +917,6 @@ function model_settings!(m::Model1002)
 
         m <= Setting(:add_altpolicy_pgap, true)
         m <= Setting(:add_altpolicy_ygap, true)
-
     else
         m <= Setting(:flexible_ait_2020Q3_policy_change, false, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, false)
