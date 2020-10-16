@@ -732,14 +732,6 @@ function eqcond(m::Model1002, reg::Int)
        end
    end
 
-   if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
-       if haskey(m.settings, :replace_eqcond_func_dict)
-           if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
-               Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
-           end
-       end
-   end
-
    if haskey(m.settings, :add_pgap)
        if get_setting(m, :add_pgap)
            if get_setting(m, :pgap_type) in [:smooth_ait_gdp, :smooth_ait, :ait, :smooth_ait_gdp_alt, :flexible_ait]
@@ -773,6 +765,16 @@ function eqcond(m::Model1002, reg::Int)
    if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
        if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
            Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
+       end
+   end
+
+   # If running temporary alterantive policies, we update the gensys matrices here.
+   # This step MUST be the last block of code prior to switching parameter values back to the first regime.
+   if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+       if haskey(m.settings, :replace_eqcond_func_dict)
+           if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
+               Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
+           end
        end
    end
 
