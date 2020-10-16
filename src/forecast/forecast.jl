@@ -382,10 +382,12 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     has_reg_dates = haskey(get_settings(m), :regime_dates) # calculate dates of first & last regimes we need to add for the alt policy
     if has_reg_dates && length(get_setting(m, :regime_dates)) > 1
-        start_altpol_date = get_setting(m, :regime_dates)[2]
-        end_altpol_date   = get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] +
-            Dates.Month(3) * (forecast_horizons(m; cond_type = cond_type) + 1)
+        start_altpol_reg  = get_setting(m, :reg_forecast_start)
+        start_altpol_date = get_setting(m, :regime_dates)[start_altpol_reg]
+        end_altpol_date   = iterate_quarters(get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)],
+                                            forecast_horizons(m; cond_type = cond_type) + 1)
     else
+        start_altpol_reg  = n_hist_regimes + 1
         start_altpol_date = date_forecast_start(m)
         end_altpol_date   = iterate_quarters(start_altpol_date, forecast_horizons(m; cond_type = cond_type) + 1)
     end
@@ -428,8 +430,13 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
-            for (regind, date) in zip(2:n_total_regimes, # We want to have enough regimes to fill up altpol_regime_dates properly
-                                      start_altpol_date:Dates.Month(3):end_altpol_date)
+            if is_regime_switch # Add historical regimes
+                for regind in 2:n_hist_regimes
+                    altpol_regime_dates[regind] = orig_regime_dates[regind]
+                end
+            end
+            for (regind, date) in zip(start_altpol_reg:n_total_regimes, # We want to have enough regimes to fill up
+                                      quarter_range(start_altpol_date, end_altpol_date))      # altpol_regime_dates properly
                 altpol_regime_dates[regind] = date
             end
             m <= Setting(:regime_dates, altpol_regime_dates)
@@ -479,13 +486,12 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
                 # Restore the original number of regimes and regime dates
-                m <= Setting(:n_regimes, orig_regimes)
                 if isempty(orig_regime_dates)
                     delete!(get_settings(m), :regime_dates)
+                    delete!(get_settings(m), :n_regimes)
                 else
                     m <= Setting(:regime_dates, orig_regime_dates)
                     setup_regime_switching_inds!(m; cond_type = cond_type)
-                    n_reg_p1 = get_setting(m, :n_regimes) + 1
                 end
                 break
             end
@@ -497,6 +503,10 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         states .= fill(NaN, size(states))
         obs    .= fill(NaN, size(obs))
         pseudo .= fill(NaN, size(pseudo))
+        if !isnothing(first_zlb_regime)
+            m <= Setting(:regime_dates, orig_regime_dates)
+            setup_regime_switching_inds!(m; cond_type = cond_type)
+        end
     end
 
     # Restore original settings
