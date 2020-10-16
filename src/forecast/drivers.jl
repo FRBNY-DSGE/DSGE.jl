@@ -583,7 +583,7 @@ end
 """
 ```
 forecast_one_draw(m, input_type, cond_type, output_vars; params, df;
-    verbose = :low)
+    verbose = :low, only_filter = false)
 ```
 
 Compute `output_vars` for a single parameter draw, `params`. Called by
@@ -600,6 +600,8 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 - `df::DataFrame`: historical data.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`.
+- `only_filter::Bool`: Set to true if no smoothing should be done and only filter
+  should be used to get forecasts.
 
 ### Output
 
