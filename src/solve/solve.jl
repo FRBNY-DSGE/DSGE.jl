@@ -462,10 +462,15 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     if uncertain_zlb
         # Setup
         ffreg = first(fcast_regimes) + n_no_alt_reg
-        altpols = get_setting(m, :alternative_policies)
-        weights = get_setting(m, :alternative_policy_weights)
+        altpols, weights = if haskey(get_settings(m), :alternative_policies) && haskey(get_settings(m), :alternative_weights)
+            get_setting(m, :alternative_policies), get_setting(m, :alternative_policy_weights)
+        elseif (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
+            [get_setting(m, :imperfect_credibility_historical_policy)], get_setting(m, :imperfect_credibility_weights)
+        else
+            error("Neither alternative policies were specified nor does the model switch to Flexible AIT.")
+        end
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
-        Talt, Ralt, Calt = altpols[1].solve(m)
+        Talt, _, Calt = altpols[1].solve(m)
 
         # Calculate the desired lift-off policy
         altpolicy_solve = get_setting(m, :alternative_policy).solve
