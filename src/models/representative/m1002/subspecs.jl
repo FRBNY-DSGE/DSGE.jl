@@ -698,20 +698,25 @@ function ss30!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    m <= Setting(:pgap_type, :flexible_ait)
-    m <= Setting(:pgap_value, 0.)
-    m <= Setting(:ygap_type, :flexible_ait)
-    m <= Setting(:ygap_value, 12.)
+    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+        m <= Setting(:add_pgap, true)
+        m <= Setting(:add_ygap, true)
 
-    m <= Setting(:ait_Thalf, 10.)
-    m <= Setting(:gdp_Thalf, 10.)
-    m <= Setting(:flexible_ait_ρ_smooth, 0.)
-    m <= Setting(:flexible_ait_φ_π, 6.)
-    m <= Setting(:flexible_ait_φ_y, 6.)
+        m <= Setting(:pgap_type, :flexible_ait)
+        m <= Setting(:pgap_value, 0.)
+        m <= Setting(:ygap_type, :flexible_ait)
+        m <= Setting(:ygap_value, 12.)
 
-    # Set up imperfect credibility of flexible AIT rule
-    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        m <= Setting(:ait_Thalf, 10.)
+        m <= Setting(:gdp_Thalf, 10.)
+        m <= Setting(:flexible_ait_ρ_smooth, 0.)
+        m <= Setting(:flexible_ait_φ_π, 6.)
+        m <= Setting(:flexible_ait_φ_y, 6.)
+
+        # Set up imperfect credibility of flexible AIT rule
+        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+    end
 end
 
 """
@@ -776,20 +781,25 @@ function ss59!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    m <= Setting(:pgap_type, :flexible_ait)
-    m <= Setting(:pgap_value, 0.)
-    m <= Setting(:ygap_type, :flexible_ait)
-    m <= Setting(:ygap_value, 12.)
+    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+        m <= Setting(:add_pgap, true)
+        m <= Setting(:add_ygap, true)
 
-    m <= Setting(:ait_Thalf, 10.)
-    m <= Setting(:gdp_Thalf, 10.)
-    m <= Setting(:flexible_ait_ρ_smooth, 0.)
-    m <= Setting(:flexible_ait_φ_π, 6.)
-    m <= Setting(:flexible_ait_φ_y, 6.)
+        m <= Setting(:pgap_type, :flexible_ait)
+        m <= Setting(:pgap_value, 0.)
+        m <= Setting(:ygap_type, :flexible_ait)
+        m <= Setting(:ygap_value, 12.)
 
-    # Set up imperfect credibility of flexible AIT rule
-    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        m <= Setting(:ait_Thalf, 10.)
+        m <= Setting(:gdp_Thalf, 10.)
+        m <= Setting(:flexible_ait_ρ_smooth, 0.)
+        m <= Setting(:flexible_ait_φ_π, 6.)
+        m <= Setting(:flexible_ait_φ_y, 6.)
+
+        # Set up imperfect credibility of flexible AIT rule
+        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+    end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
@@ -957,20 +967,25 @@ function ss60!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    m <= Setting(:pgap_type, :flexible_ait)
-    m <= Setting(:pgap_value, 0.)
-    m <= Setting(:ygap_type, :flexible_ait)
-    m <= Setting(:ygap_value, 12.)
+    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+        m <= Setting(:add_pgap, true)
+        m <= Setting(:add_ygap, true)
 
-    m <= Setting(:ait_Thalf, 10.)
-    m <= Setting(:gdp_Thalf, 10.)
-    m <= Setting(:flexible_ait_ρ_smooth, 0.)
-    m <= Setting(:flexible_ait_φ_π, 6.)
-    m <= Setting(:flexible_ait_φ_y, 6.)
+        m <= Setting(:pgap_type, :flexible_ait)
+        m <= Setting(:pgap_value, 0.)
+        m <= Setting(:ygap_type, :flexible_ait)
+        m <= Setting(:ygap_value, 12.)
 
-    # Set up imperfect credibility of flexible AIT rule
-    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        m <= Setting(:ait_Thalf, 10.)
+        m <= Setting(:gdp_Thalf, 10.)
+        m <= Setting(:flexible_ait_ρ_smooth, 0.)
+        m <= Setting(:flexible_ait_φ_π, 6.)
+        m <= Setting(:flexible_ait_φ_y, 6.)
+
+        # Set up imperfect credibility of flexible AIT rule
+        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+    end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
@@ -1134,20 +1149,25 @@ function ss61!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    m <= Setting(:pgap_type, :flexible_ait)
-    m <= Setting(:pgap_value, 0.)
-    m <= Setting(:ygap_type, :flexible_ait)
-    m <= Setting(:ygap_value, 12.)
+    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+        m <= Setting(:add_pgap, true)
+        m <= Setting(:add_ygap, true)
 
-    m <= Setting(:ait_Thalf, 10.)
-    m <= Setting(:gdp_Thalf, 10.)
-    m <= Setting(:flexible_ait_ρ_smooth, 0.)
-    m <= Setting(:flexible_ait_φ_π, 6.)
-    m <= Setting(:flexible_ait_φ_y, 6.)
+        m <= Setting(:pgap_type, :flexible_ait)
+        m <= Setting(:pgap_value, 0.)
+        m <= Setting(:ygap_type, :flexible_ait)
+        m <= Setting(:ygap_value, 12.)
 
-    # Set up imperfect credibility of flexible AIT rule
-    m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-    m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        m <= Setting(:ait_Thalf, 10.)
+        m <= Setting(:gdp_Thalf, 10.)
+        m <= Setting(:flexible_ait_ρ_smooth, 0.)
+        m <= Setting(:flexible_ait_φ_π, 6.)
+        m <= Setting(:flexible_ait_φ_y, 6.)
+
+        # Set up imperfect credibility of flexible AIT rule
+        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+    end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
     m <= parameter(:σ_g, 2.5230, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
