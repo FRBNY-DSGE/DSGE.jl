@@ -343,7 +343,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                                              measurement_equations,
                                              pseudo_measurement_equations)
             elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
-                pseudo_measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
+                pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
                 for reg in 1:n_regimes
                     pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
                                                                            reg = reg)
