@@ -352,17 +352,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 return RegimeSwitchingSystem(transition_equations, measurement_equations, pseudo_measurement_equations)
             end
         else
-            TTT_jump, TTT_state, eu = klein(m)
+            error("Regime switching with the Klein solution algorithm has not been implemented.")
         end
-        if eu==-1
-            throw(KleinError())
-        end
-
-        TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
-        CCC = zeros(n_model_states(m))
-
-        # Solve measurement equation
-        measurement_equation = measurement(m, TTT, RRR, CCC)
     else
         if solution_method == :gensys
 
