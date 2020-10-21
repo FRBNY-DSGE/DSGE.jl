@@ -44,9 +44,6 @@ function filter(m::AbstractDSGEModel, df::DataFrame, system::Union{System{S}, Re
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
                 tol::Float64 = 0.0, set_pgap_ygap::Tuple{Bool,Int,Int} = (false, 70, 71)) where {S<:AbstractFloat}
 
-    @show m.endogenous_states[:pgap_t]
-    @show m.endogenous_states[:ygap_t]
-
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
     filter(m, data, system, s_0, P_0; start_date = start_date,
