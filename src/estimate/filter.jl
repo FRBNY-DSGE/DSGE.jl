@@ -42,12 +42,13 @@ function filter(m::AbstractDSGEModel, df::DataFrame, system::Union{System{S}, Re
                 cond_type::Symbol = :none, include_presample::Bool = true,
                 in_sample::Bool = true,
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
-                tol::Float64 = 0.0) where {S<:AbstractFloat}
+                tol::Float64 = 0.0, set_pgap_ygap::Bool = false) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
     filter(m, data, system, s_0, P_0; start_date = start_date,
-           include_presample = include_presample, outputs = outputs, tol = tol)
+           include_presample = include_presample, outputs = outputs, tol = tol,
+           set_pgap_ygap = set_pgap_ygap)
 end
 
 function filter(m::AbstractDSGEModel, data::AbstractArray, system::System{S},
@@ -56,7 +57,8 @@ function filter(m::AbstractDSGEModel, data::AbstractArray, system::System{S},
                 start_date::Date = date_presample_start(m),
                 include_presample::Bool = true,
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
-                tol::Float64 = 0.0) where {S<:AbstractFloat}
+                tol::Float64 = 0.0,
+                set_pgap_ygap::Bool = false) where {S<:AbstractFloat}
 
     T = size(data, 2)
 
@@ -92,7 +94,7 @@ function filter(m::AbstractDSGEModel, data::AbstractArray, system::RegimeSwitchi
                 start_date::Date = date_presample_start(m),
                 include_presample::Bool = true,
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
-                tol::Float64 = 0.0) where {S<:AbstractFloat}
+                tol::Float64 = 0.0, set_pgap_ygap::Bool = false) where {S<:AbstractFloat}
 
     T = size(data, 2)
 
@@ -120,7 +122,7 @@ function filter(m::AbstractDSGEModel, data::AbstractArray, system::RegimeSwitchi
     # Run Kalman filter, construct Kalman object, and return
     out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs, QQs,
                         ZZs, DDs, EEs, s_0, P_0; outputs = outputs,
-                        Nt0 = Nt0, tol = tol)
+                        Nt0 = Nt0, tol = tol, set_pgap_ygap = set_pgap_ygap)
     return Kalman(out...)
 end
 

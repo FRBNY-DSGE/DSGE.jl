@@ -648,7 +648,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            param_key::Symbol = :nothing, param_value::Float64 = 0.0,
                            param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
-                           regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false)
+                           regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
+                           set_pgap_ygap::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -744,7 +745,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         else
             kal = Kalman(Vector{Float64}(undef,0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0))
             try
-                kal = filter(m, df, system; cond_type = cond_type)
+                kal = filter(m, df, system; cond_type = cond_type, set_pgap_ygap = set_pgap_ygap)
             catch err
                 if isa(err, DomainError)
                     return Dict{Symbol, Array{Float64}}()
@@ -863,18 +864,19 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-            # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN THE SYSTEM
+            # NOTE: ZZ REGIME SWITCHING NOT FULLY SUPPORTED, SO JUST TAKE THE LAST ZZ IN THE SYSTEM
+            #       OR THE ZZ SPECIFIED BY THE FOLLOWING SETTING
+            cond_ZZ_regime = (regime_switching && haskey(get_settings(m), :cond_ZZ_regime)) ? get_setting(m, :cond_ZZ_regime) : n_regimes
             if cond_type in [:full, :semi] && !only_filter
                 forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
-                # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN THE SYSTEM
                 forecast_output[:forecastobs]    =
                     transplant_forecast_observables(histstates, forecastobs,
-                                                    isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
+                                                    regime_switching ? system[cond_ZZ_regime] : system, T)
             elseif cond_type in [:full, :semi] && only_filter
-                cond_obs                         = system[1, :ZZ] * s_T + system[1, :DD]
-                cond_pseudo                      = system[1, :ZZ_pseudo] * s_T + system[1, :DD_pseudo]
+                cond_obs                         = system[cond_ZZ_regime, :ZZ] * s_T + system[cond_ZZ_regime, :DD]
+                cond_pseudo                      = system[cond_ZZ_regime, :ZZ_pseudo] * s_T + system[cond_ZZ_regime, :DD_pseudo]
                 forecast_output[:forecaststates] = hcat(s_T,         forecaststates)
                 forecast_output[:forecastobs]    = hcat(cond_obs,    forecastobs)
                 forecast_output[:forecastpseudo] = hcat(cond_pseudo, forecastpseudo)
@@ -890,7 +892,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             if :forecaststdshocks in output_vars
                 forecast_output[:forecaststdshocks] =
                     standardize_shocks(forecast_output[:forecastshocks],
-                                       regime_switching ? system[n_regimes, :QQ] : system[:QQ])
+                                       regime_switching ? system[cond_ZZ_regimes, :QQ] : system[:QQ])
             end
         end
 
@@ -943,19 +945,21 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+            # NOTE: ZZ REGIME SWITCHING NOT FULLY SUPPORTED, SO JUST TAKE THE LAST ZZ IN THE SYSTEM
+            #       OR THE ZZ SPECIFIED BY THE FOLLOWING SETTING
+            cond_ZZ_regime = (regime_switching && haskey(get_settings(m), :cond_ZZ_regime)) ? get_setting(m, :cond_ZZ_regime) : n_regimes
             if cond_type in [:full, :semi] && !only_filter
                 forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
                 forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
-                # NOTE: ZZ REGIME SWITCHING NOT SUPPORTED, SO JUST TAKE THE FIRST ZZ IN TEH SYSTEM
                 forecast_output[:bddforecastobs]    =
                     transplant_forecast_observables(histstates, forecastobs,
-                                                    isa(system, RegimeSwitchingSystem) ? system[1] : system, T)
+                                                    regime_switching ? system[cond_ZZ_regime] : system, T)
             elseif cond_type in [:full, :semi] && only_filter
                 forecast_output[:bddforecaststates] = hcat(s_T,forecaststates)
                 #forecast_output[:bddforecastshocks] = hcat(s_T,forecastshocks)
                 #forecast_output[:bddforecastpseudo] = hcat(s_T,forecastpseudo)
-                cond_var = system[n_regimes][:ZZ]*s_T .+ system[n_regimes][:DD]
+                cond_var = system[cond_ZZ_regime][:ZZ]*s_T .+ system[cond_ZZ_regime][:DD]
                 forecast_output[:bddforecastobs]    = hcat(cond_var,forecastobs)
             else
                 forecast_output[:bddforecaststates] = forecaststates
@@ -968,11 +972,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             if :bddforecaststdshocks in output_vars
                 forecast_output[:bddforecaststdshocks] =
                     standardize_shocks(forecast_output[:bddforecastshocks],
-                                       regime_switching ? system[n_regimes, :QQ] : system[:QQ])
+                                       regime_switching ? system[cond_ZZ_regime, :QQ] : system[:QQ])
             end
         end
     end
-
 
     ### 3. Shock Decompositions
 
