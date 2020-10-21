@@ -513,6 +513,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     m <= Setting(:regime_switching, is_regime_switch)
     m <= Setting(:replace_eqcond,   is_replace_eqcond)
     m <= Setting(:gensys2,          is_gensys2)
+    if !is_replace_eqcond
+        delete!(get_settings(m), :replace_eqcond_func_dict)
+    end
 
     return states, obs, pseudo
 end
