@@ -69,9 +69,9 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
             dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
             n_cond = length(dates)
 
-            ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[!, :date] .<= date_conditional_end(m), [:ant1, :ant2, :ant3, :ant4, :ant5, :ant6, :ant7, :ant8, :ant9, :ant10, :ant11, :ant12, :ant13]]
+            ois_data_want = ois_data[date_mainsample_end(m) .< ois_data[!, :date] .<= date_conditional_end(m), [Symbol("ant$i") for i in 1:n_mon_anticipated_shocks(m)]]
 
-            df[date_mainsample_end(m) .< df[!, :date] .<= date_conditional_end(m), [:obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3, :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6, :obs_nominalrate7, :obs_nominalrate8, :obs_nominalrate9, :obs_nominalrate10, :obs_nominalrate11, :obs_nominalrate12, :obs_nominalrate13]] .= Matrix{Float64}(ois_data_want)
+            df[date_mainsample_end(m) .< df[!, :date] .<= date_conditional_end(m), [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]] .= Matrix{Float64}(ois_data_want)
         end
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
