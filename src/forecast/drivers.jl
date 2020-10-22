@@ -742,6 +742,13 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             kal = Kalman(Vector{Float64}(undef,0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0))
             try
                 kal = filter(m, df, system; cond_type = cond_type, set_pgap_ygap = set_pgap_ygap)
+                if set_pgap_ygap[1] && cond_type == :none
+                    kal[:s_T][set_pgap_ygap[2]] = set_pgap_ygap[4]
+                    kal[:s_T][set_pgap_ygap[3]] = set_pgap_ygap[5]
+                elseif set_pgap_ygap[1]
+                    kal[:s_filt][set_pgap_ygap[2], end-1] = set_pgap_ygap[4]
+                    kal[:s_filt][set_pgap_ygap[3], end-1] = set_pgap_ygap[5]
+                end
             catch err
                 if isa(err, DomainError)
                     return Dict{Symbol, Array{Float64}}()
