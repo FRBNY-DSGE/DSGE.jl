@@ -388,8 +388,6 @@ conditional data case given by `cond_type`.
     This function should take as inputs the model object `m` and the total number of regimes
     (after adding the required temporary regimes). It should then
     set up regime-switching parameters for these new additional regimes.
-- `temporary_altpolicy_max_iter::Int`: Maximum number of iterations when enforcing
-    the ZLB as a temporary alternative policy.
 - `show_failed_percent::Bool = false`: prints out the number of failed forecasts, which are returned as NaNs.
     These may occur when the ZLB is not enforced, for example.
 - `pegFFR::Bool = false`: peg the nominal FFR at the value specified by `FFRpeg`
@@ -412,7 +410,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       shock_name::Symbol = :none, shock_var_name::Symbol = :none,
                       shock_var_value::Float64 = 0.0, check_empty_columns = true,
                       zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
-                      temporary_altpolicy_max_iter::Int = 10,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
                       params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       show_failed_percent::Bool = false, only_filter::Bool = false,
@@ -460,7 +457,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 regime_switching = regime_switching,
                                                 n_regimes = n_regimes, zlb_method = zlb_method,
                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
-                                                temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
@@ -547,7 +543,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  regime_switching = regime_switching,
                                                                  n_regimes = n_regimes, zlb_method = zlb_method,
                                                                  set_regime_vals_altpolicy = set_regime_vals_altpolicy,
-                                                                 temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
                                                                  pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter),
                                       params_for_map)
 
@@ -644,7 +639,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            shock_name::Symbol = :none, shock_var_name::Symbol = :none,
                            shock_var_value::Float64 = 0.0, zlb_method::Symbol = :shock,
                            set_regime_vals_altpolicy::Function = identity,
-                           temporary_altpolicy_max_iter::Int = 10,
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            param_key::Symbol = :nothing, param_value::Float64 = 0.0,
                            param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
@@ -936,7 +930,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 # Now run the ZLB enforcing forecast
                 forecaststates, forecastobs, forecastpseudo =
                     forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks; cond_type = cond_type,
-                             temporary_altpolicy_max_iter = temporary_altpolicy_max_iter,
                              set_zlb_regime_vals = set_regime_vals_altpolicy)
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
