@@ -694,7 +694,7 @@ function ss30!(m::Model1002)
 
     # Default regime dates
     m <= Setting(:regime_switching, true)
-    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 12, 31)))
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 9, 30)))
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
@@ -774,7 +774,7 @@ function ss59!(m::Model1002)
     # Set up regime-switching
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
-                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30), 5 => Date(2020, 12, 31)))
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
@@ -957,7 +957,7 @@ function ss60!(m::Model1002)
     # Set up regime-switching
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
-                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30), 5 => Date(2020, 12, 31))
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
@@ -1136,7 +1136,7 @@ function ss61!(m::Model1002)
     # Set up regime-switching
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
-                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30), 5 => Date(2020, 12, 31)))
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
