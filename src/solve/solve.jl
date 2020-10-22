@@ -227,7 +227,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                                                                                       1+1e-6, verbose = verbose)
 
                     if (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false) &&
-                        get_setting(m, :regime_dates)[get_setting(m, :n_regimes)] >= Date(2020, 12, 31)
+                        get_setting(m, :regime_dates)[get_setting(m, :n_regimes)] >= Date(2020, 9, 30)
                         weights = get_setting(m, :imperfect_credibility_weights)
                         histpol = get_setting(m, :imperfect_credibility_historical_policy)
                         TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
@@ -301,7 +301,7 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
         end
 
         if (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false) &&
-            get_setting(m, :regime_dates)[regime] >= Date(2020, 12, 31)
+            get_setting(m, :regime_dates)[regime] >= Date(2020, 9, 30)
             TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, get_setting(m, :imperfect_credibility_weights),
                                                                          AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)];
                                                                          apply_altpolicy = apply_altpolicy, TTT = TTT_gensys,
@@ -357,7 +357,7 @@ function solve_histregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s:
             throw(GensysError("Error in Gensys, Regime $hist_reg"))
         end
 
-        if flex_ait_pol_change && get_setting(m, :regime_dates)[hist_reg] >= Date(2020, 12, 31)
+        if flex_ait_pol_change && get_setting(m, :regime_dates)[hist_reg] >= Date(2020, 9, 30)
             TTT_gensys, RRR_gensys, CCC_gensys =
                 gensys_uncertain_altpol(m, weights, histpol; TTT = TTT_gensys,
                                         regime_switching = true, regimes = Int[hist_reg])
@@ -399,7 +399,7 @@ function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s
                 throw(GensysError("Error in Gensys, Regime $fcast_reg"))
             end
 
-            if flex_ait_pol_change && get_setting(m, :regime_dates)[fcast_reg] >= Date(2020, 12, 31)
+            if flex_ait_pol_change && get_setting(m, :regime_dates)[fcast_reg] >= Date(2020, 9, 30)
                 TTT_gensys, RRR_gensys, CCC_gensys =
                     gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = apply_altpolicy,
                                             TTT = TTT_gensys, regime_switching = true, regimes = Int[fcast_reg])
