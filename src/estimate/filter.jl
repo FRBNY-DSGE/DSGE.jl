@@ -42,7 +42,7 @@ function filter(m::AbstractDSGEModel, df::DataFrame, system::Union{System{S}, Re
                 cond_type::Symbol = :none, include_presample::Bool = true,
                 in_sample::Bool = true,
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
-                tol::Float64 = 0.0, set_pgap_ygap::Tuple{Bool,Int,Int} = (false, 70, 71)) where {S<:AbstractFloat}
+                tol::Float64 = 0.0, set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.)) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
@@ -58,7 +58,7 @@ function filter(m::AbstractDSGEModel, data::AbstractArray, system::System{S},
                 include_presample::Bool = true,
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
                 tol::Float64 = 0.0,
-                set_pgap_ygap::Tuple{Bool,Int,Int} = (false, 70, 71)) where {S<:AbstractFloat}
+                set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.)) where {S<:AbstractFloat}
 
     T = size(data, 2)
 
@@ -94,7 +94,8 @@ function filter(m::AbstractDSGEModel, data::AbstractArray, system::RegimeSwitchi
                 start_date::Date = date_presample_start(m),
                 include_presample::Bool = true,
                 outputs::Vector{Symbol} = [:loglh, :pred, :filt],
-                tol::Float64 = 0.0, set_pgap_ygap::Tuple{Bool,Int,Int} = (false, 70, 71)) where {S<:AbstractFloat}
+                tol::Float64 = 0.0,
+                set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.)) where {S<:AbstractFloat}
 
     T = size(data, 2)
 
