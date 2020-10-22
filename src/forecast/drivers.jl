@@ -413,6 +413,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
                       params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       show_failed_percent::Bool = false, only_filter::Bool = false,
+                      set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
                       verbose::Symbol = :low)
 
     ### Common Setup
@@ -690,7 +691,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     if run_smoother
         # Call smoother
         histstates, histshocks, histpseudo, initial_states =
-            smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty)
+            smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
+                   set_pgap_ygap = set_pgap_ygap)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
