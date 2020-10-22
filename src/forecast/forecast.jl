@@ -412,12 +412,12 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     altpol_reg_qtrrange   = quarter_range(start_altpol_date, end_altpol_date)
     n_altpol_reg_qtrrange = length(altpol_reg_qtrrange)
 
-    # first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
-    #                              get_setting(m, :forecast_zlb_value))
+    first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
+                                 get_setting(m, :forecast_zlb_value))
 
     # Start imposing ZLB instead at the quarter before liftoff quarter
-    first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .>
-                                 get_setting(m, :forecast_zlb_value))
+    # first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .>
+    #                              get_setting(m, :forecast_zlb_value))
     @show first_zlb_regime
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
         first_zlb_regime += n_hist_regimes
