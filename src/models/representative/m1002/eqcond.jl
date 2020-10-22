@@ -478,7 +478,6 @@ function eqcond(m::Model1002, reg::Int)
         # will hit in two periods), and the equations are set up so that rm_tl2 last period
         # will feed into rm_tl1 this period (and so on for other numbers), and last period's
         # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
-
         Γ1[eq[:eq_rm], endo[:rm_tl1]]   = 1.
         Γ0[eq[:eq_rml1], endo[:rm_tl1]] = 1.
         Ψ[eq[:eq_rml1], exo[:rm_shl1]]  = 1.
@@ -488,6 +487,14 @@ function eqcond(m::Model1002, reg::Int)
                 Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = 1.
                 Γ0[eq[Symbol("eq_rml$i")], endo[Symbol("rm_tl$i")]]     = 1.
                 Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
+            end
+
+            if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
+                if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
+                    Γ1[eq[:eq_rml1], endo[:rm_tl2]] = 0.
+                    Γ0[eq[:eq_rml2], endo[:rm_tl2]] = 1.
+                    Ψ[eq[:eq_rml2],  exo[:rm_shl2]] = 1.
+                end
             end
         end
     end
