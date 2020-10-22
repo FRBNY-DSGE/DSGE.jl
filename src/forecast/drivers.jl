@@ -643,7 +643,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            param_key::Symbol = :nothing, param_value::Float64 = 0.0,
                            param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
-                           set_pgap_ygap::Tuple{Bool,Int,Int} = (false, 70, 71))
+                           set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.))
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
