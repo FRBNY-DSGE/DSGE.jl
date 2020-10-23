@@ -301,6 +301,8 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     horizon = size(shocks, 2)
 
     # Define our iteration function
+    check_zero_rate = get_setting(m, :gensys2) &&
+        (zero_rate_replace_eq_entries in collect(values(get_setting(m, :replace_eqcond_func_dict))))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
@@ -308,20 +310,36 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         if enforce_zlb
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
-                # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
-                ϵ_t[ind_r_sh] = 0. # get forecast when MP shock
-                z_t = C + T*z_t1 + R*ϵ_t # is zeroed out
-                z_t_old = C + T*z_t1 + R*ϵ_t
-                ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
+                continue_enforce = check_zero_rate ? abs.(Z[ind_r, :]' * R[:, ind_r_sh]) > 1e-4 : true
 
-                # Forecast again with new shocks
-                z_t = C + T*z_t1 + R*ϵ_t
+                if continue_enforce
+                    # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
+                    ϵ_t[ind_r_sh] = 0. # get forecast when MP shock
+                    z_t = C + T*z_t1 + R*ϵ_t # is zeroed out
+                    z_t_old = C + T*z_t1 + R*ϵ_t
+                    ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
 
-                # Confirm procedure worked
-                interest_rate_forecast = getindex(D + Z*z_t, ind_r)
+                    # Forecast again with new shocks
+                    z_t = C + T*z_t1 + R*ϵ_t
 
-                # Subtract a small number to deal with numerical imprecision
-                @assert interest_rate_forecast >= zlb_value - 0.01 "interest_rate_forecast = $interest_rate_forecast must be >= zlb_value - 0.01 = $(zlb_value - 0.01)."
+                    # Confirm procedure worked
+                    interest_rate_forecast = getindex(D + Z*z_t, ind_r)
+                    if isnan(interest_rate_forecast)
+                        @show ind_r_sh
+                        ϵ_t[ind_r_sh] = 0. # get forecast when MP shock
+                        z_t = C + T*z_t1 + R*ϵ_t # is zeroed out
+                        z_t_old = C + T*z_t1 + R*ϵ_t
+                        ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
+                        @show z_t[m.endogenous_states[:R_t]], z_t_old[m.endogenous_states[:R_t]]
+                        @show ϵ_t[ind_r_sh]
+                        @show Z[ind_r, :]' * R[:, ind_r_sh]
+                        @show Z[ind_r_sh, :]
+                        @show R[:, ind_r_sh]
+                    end
+
+                    # Subtract a small number to deal with numerical imprecision
+                    @assert interest_rate_forecast >= zlb_value - 0.01 "interest_rate_forecast = $interest_rate_forecast must be >= zlb_value - 0.01 = $(zlb_value - 0.01)."
+                end
             end
         end
         return z_t, ϵ_t
@@ -349,25 +367,11 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
                 end
             end
 
-#            try
             for t in ts
                 states[:, t], shocks[:, t] = iterate(states[:, t - 1], shocks[:, t], Ts[i], Rs[i], Cs[i], Qs[i], Zs[i], Ds[i])
                 obs[:, t] = Ds[i] .+ Zs[i] * states[:, t]
                 pseudo[:, t] = D_pseudos[i] .+ Z_pseudos[i] * states[:, t]
             end
-#=            catch e
-                if isa(e, BoundsError)
-                    @show regime_inds, horizon, cond_type
-                    @show get_setting(m, :reg_forecast_start)
-                    @show get_setting(m, :reg_post_conditional_end)
-                    @show reg_fcast_cond_start
-                    @show get_setting(m, :regime_dates)
-                    @show get_setting(m, :n_regimes)
-                    break
-                else
-                    rethrow(e)
-                end=#
-
         end
     else
         for t in 2:horizon
