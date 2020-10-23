@@ -15,15 +15,17 @@ Reformat `MeansBands` object into matrices, and save to individual files.
 
 - `forecast_string::String`: identifies the forecast (if
   desired). Required if `input_type == :subset`
+- `bdd_fcast::Bool`: calculate matrices for bounded forecast output variables
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
 function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
                               cond_type::Symbol, output_vars::Vector{Symbol};
-                              forecast_string::String = "", verbose::Symbol = :low)
+                              forecast_string::String = "", bdd_fcast::Bool = true,
+                              verbose::Symbol = :low)
 
     # Determine full set of output_vars necessary for plotting desired results
-    output_vars = add_requisite_output_vars(output_vars)
+    output_vars = add_requisite_output_vars(output_vars, bdd_fcast = bdd_fcast)
     output_dir  = workpath(m, "forecast")
 
     println(verbose, :low, )
@@ -33,7 +35,8 @@ function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
 
     for output_var in output_vars
         meansbands_to_matrix(m, input_type, cond_type, output_var;
-                             forecast_string = forecast_string, verbose = verbose)
+                             forecast_string = forecast_string, bdd_fcast = bdd_fcast,
+                             verbose = verbose)
     end
 
     println(verbose, :low, "\nConversion of means and bands complete: $(now())")
@@ -41,7 +44,8 @@ end
 
 function meansbands_to_matrix(m::AbstractDSGEModel, input_type::Symbol,
                               cond_type::Symbol, output_var::Symbol;
-                              forecast_string::String = "", verbose::Symbol = :low)
+                              forecast_string::String = "", bdd_fcast::Bool = false,
+                              verbose::Symbol = :low)
 
     mb = read_mb(m, input_type, cond_type, output_var,
                  forecast_string = forecast_string)
