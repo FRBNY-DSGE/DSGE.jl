@@ -301,7 +301,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     horizon = size(shocks, 2)
 
     # Define our iteration function
-    check_zero_rate = get_setting(m, :gensys2) &&
+    check_zero_rate = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
         (zero_rate_replace_eq_entries in collect(values(get_setting(m, :replace_eqcond_func_dict))))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
