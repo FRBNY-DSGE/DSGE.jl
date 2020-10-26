@@ -644,7 +644,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            param_key::Symbol = :nothing, param_value::Float64 = 0.0,
                            param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
-                           set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.))
+                           set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
+                           filter_smooth::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -690,9 +691,17 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         (cond_type in [:semi, :full] && !irfs_only)) && !only_filter
     if run_smoother
         # Call smoother
-        histstates, histshocks, histpseudo, initial_states =
-            smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                   set_pgap_ygap = set_pgap_ygap)
+        if filter_smooth && get_setting(m, :forecast_smoother) == :carter_kohn
+            _, stil_pred, Ptil_pred, stil_filt, Ptil_filt, _, _, _, _ = filter(m, df, system; cond_type = cond_type, set_pgap_ygap = set_pgap_ygap)
+
+            histstates, histshocks, histpseudo, initial_states =
+                smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
+                       set_pgap_ygap = set_pgap_ygap)
+        else
+            histstates, histshocks, histpseudo, initial_states =
+                smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
+                       set_pgap_ygap = set_pgap_ygap)
+        end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
