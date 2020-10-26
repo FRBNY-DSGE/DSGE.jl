@@ -696,7 +696,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       set_pgap_ygap = set_pgap_ygap)
+                       set_pgap_ygap = set_pgap_ygap, stil_pred = stil_pred, Ptil_pred = Ptil_pred, stil_filt = stil_filt, Ptil_filt = Ptil_filt)
         else
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
