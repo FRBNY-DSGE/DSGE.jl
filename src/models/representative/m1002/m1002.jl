@@ -217,10 +217,16 @@ function init_model_indices!(m::Model1002)
     if haskey(get_settings(m), :add_pgap) ? get_setting(m, :add_pgap) : false
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
+        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+            push!(exogenous_shocks, setdiff([:pgap_sh], exogenous_shocks)...)
+        end
     end
     if haskey(get_settings(m), :add_ygap) ? get_setting(m, :add_ygap) : false
         push!(endogenous_states, setdiff([:ygap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_ygap], equilibrium_conditions)...)
+        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+            push!(exogenous_shocks, setdiff([:ygap_sh], exogenous_shocks)...)i
+        end
     end
     if haskey(get_settings(m), :add_altpolicy_pgap) ? get_setting(m, :add_altpolicy_pgap) : false
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
@@ -603,6 +609,12 @@ buted to steady-state inflation.",
                        RootInverseGamma(2. * (4.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=false, # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2), with mode M given by ν (τ² - M²) = 2 * M²
                        description="σ_biidc: The standard deviation of the process describing the iid component of preferences.",
                        tex_label="\\sigma_{z, iid}")
+        m <= parameter(:σ_ygap, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=false,
+                       tex_label="\\sigma_{ygap}")
+        m <= parameter(:σ_pgap, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=false,
+                       tex_label="\\sigma_{pgap}")
         m <= parameter(:ρ_φ, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_φ: AR(1) coefficient in the labor supply preference process.",
                        tex_label="\\rho_{\\varphi}")

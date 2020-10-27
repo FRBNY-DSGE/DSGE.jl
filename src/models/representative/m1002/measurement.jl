@@ -191,6 +191,14 @@ function measurement(m::Model1002{T},
         QQ[exo[:φ_sh], exo[:φ_sh]]         = m[:σ_φ]^2
     end
 
+    # ygap and pgap shocks
+    if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+        QQ[exo[:pgap_sh], exo[:pgap_sh]]   = m[:σ_pgap]^2
+        QQ[exo[:ygap_sh], exo[:ygap_sh]] = m[:σ_ygap]^2
+    end
+
+
+
     if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
         QQ[exo[:condgdp_sh], exo[:condgdp_sh]] = m[:σ_condgdp] ^ 2
