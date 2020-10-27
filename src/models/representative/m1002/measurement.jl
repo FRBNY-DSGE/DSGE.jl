@@ -193,7 +193,7 @@ function measurement(m::Model1002{T},
 
     # ygap and pgap shocks
     if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
-        QQ[exo[:pgap_sh], exo[:pgap_sh]]   = m[:σ_pgap]^2
+        QQ[exo[:pgap_sh], exo[:pgap_sh]] = m[:σ_pgap]^2
         QQ[exo[:ygap_sh], exo[:ygap_sh]] = m[:σ_ygap]^2
     end
 
