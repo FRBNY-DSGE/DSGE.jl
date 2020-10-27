@@ -691,12 +691,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         (cond_type in [:semi, :full] && !irfs_only)) && !only_filter
     if run_smoother
         # Call smoother
-        if filter_smooth && get_setting(m, :forecast_smoother) == :carter_kohn
-            _, stil_pred, Ptil_pred, stil_filt, Ptil_filt, _, _, _, _ = filter(m, df, system; cond_type = cond_type, set_pgap_ygap = set_pgap_ygap)
-
+        if filter_smooth && (get_setting(m, :forecast_smoother) == :carter_kohn)
+            kal = filter(m, df, system; cond_type = cond_type, set_pgap_ygap = set_pgap_ygap)
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       set_pgap_ygap = set_pgap_ygap, stil_pred = stil_pred, Ptil_pred = Ptil_pred, stil_filt = stil_filt, Ptil_filt = Ptil_filt)
+                       set_pgap_ygap = set_pgap_ygap,
+                       s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt])
         else
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
