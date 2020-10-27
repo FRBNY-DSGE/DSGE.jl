@@ -1,6 +1,6 @@
 # New York Fed DSGE Model (Version 1002)
 [![Build Status](https://travis-ci.org/FRBNY-DSGE/DSGE.jl.svg)](https://travis-ci.org/FRBNY-DSGE/DSGE.jl)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://frbny-dsge.github.io/DSGE.jl/latest)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://frbny-dsge.github.io/DSGE.jl/dev)
 [![Coverage Status](https://coveralls.io/repos/github/FRBNY-DSGE/DSGE.jl/badge.svg?branch=master)](https://coveralls.io/github/FRBNY-DSGE/DSGE.jl?branch=master)
 
 The `DSGE.jl` package implements the New York Fed dynamic stochastic general equilibrium (DSGE) model and provides general code to estimate many user-specified DSGE models. The package is introduced in the Liberty Street Economics blog post
