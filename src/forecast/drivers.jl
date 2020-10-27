@@ -904,7 +904,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             if :forecaststdshocks in output_vars
                 forecast_output[:forecaststdshocks] =
                     standardize_shocks(forecast_output[:forecastshocks],
-                                       regime_switching ? system[cond_ZZ_regimes, :QQ] : system[:QQ])
+                                       regime_switching ? system[cond_ZZ_regime, :QQ] : system[:QQ])
             end
         end
 
