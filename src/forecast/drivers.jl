@@ -935,7 +935,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             elseif zlb_method == :temporary_altpolicy
                 altpolicy = get_setting(m, :alternative_policy).key
-                @assert altpolicy in [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] "altpolicy must be permanent " *
+                @assert altpolicy in [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt,
+                                      :flexible_ait] "altpolicy must be permanent " *
                     "and among [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] for this method of enforcing the ZLB."
 
                 # Run the unbounded forecast if they haven't already been computed
