@@ -472,6 +472,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 smooth_ait_gdp_replace_eq_entries # Add permanent smooth AIT-GDP regime
             elseif altpolicy == :smooth_ait_gdp_alt
                 smooth_ait_gdp_alt_replace_eq_entries # Add permanent smooth AIT-GDP (alternative specification) regime
+            elseif altpolicy == :flexible_ait
+                flexible_ait_replace_eq_entries # Add Flexible AIT
             else # Default to historical policy
                 eqcond
             end
