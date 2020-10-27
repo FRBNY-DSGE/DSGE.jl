@@ -435,9 +435,16 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     # Calculate the matrices for the temporary alternative policies
     gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
 
-    # Are there periods between the first forecast period and first period with temporary alt policies?
-    # For example, are there conditional periods?
-    n_no_alt_reg = get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1
+    # If using an alternative policy,
+    # are there periods between the first forecast period and first period with temporary alt policies?
+    # For example, are there conditional periods? We don't want to use gensys2 on the conditional periods then
+    # since gensys2 should be applied just to the alternative policies.
+    # If not using an alternative policy, then we do not want to treat the conditional periods separately unless
+    # explicitly instructed by :gensys2_separate_cond_regimes.
+    separate_cond_periods = (get_setting(m, :alternative_policy).key != :historical) ||
+        (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false)
+    n_no_alt_reg = separate_cond_periods ?
+        (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
     if n_no_alt_reg > 0
         # Get the T, R, C matrices between the first forecast period & first rule period
         for fcast_reg in first(fcast_regimes):(first(fcast_regimes) + n_no_alt_reg - 1)
@@ -501,7 +508,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         # Calculate gensys2 matrices under belief that the desired lift-off policy will occur
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                        TTT_liftoff, RRR_liftoff, CCC_liftoff)
+                                        TTT_liftoff, RRR_liftoff, CCC_liftoff,
+                                        T_switch = (separate_cond_periods ?
+                                        get_setting(m, :n_rule_periods) + 1 : get_setting(m, :n_fcast_regimes)))
         Tcal[end] = TTT_liftoff
         Rcal[end] = RRR_liftoff
         Ccal[end] = CCC_liftoff
@@ -517,14 +526,15 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal[end] = TTT_gensys_final
         Rcal[end] = RRR_gensys_final
         Ccal[end] = CCC_gensys_final
-
         for (i, reg) in enumerate(populate_reg)
             TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
         end
     else
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                        TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
+                                        TTT_gensys_final, RRR_gensys_final, CCC_gensys_final;
+                                        T_switch = (separate_cond_periods ?
+                                        get_setting(m, :n_rule_periods) + 1 : get_setting(m, :n_fcast_regimes)))
         Tcal[end] = TTT_gensys_final
         Rcal[end] = RRR_gensys_final
         Ccal[end] = CCC_gensys_final
