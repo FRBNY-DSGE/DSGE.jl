@@ -64,9 +64,6 @@ where `S<:AbstractFloat`.
 
 **Method 2 only:**
 
-- `temporary_altpolicy_max_iter::Int`: maximum number of iterations for which the
-    function attempts to enforce the ZLB as a temporary alternative policy. Defaults to 10.
-
 - `set_zlb_regime_vals::Function`: user-provided function that adds additional regimes to
     regime-switching parameters if not enough regimes exist to impose the ZLB
     as a temporary alternative policy. Defaults to `identity`, and nothing will happen
@@ -325,16 +322,10 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
                     # Confirm procedure worked
                     interest_rate_forecast = getindex(D + Z*z_t, ind_r)
                     if isnan(interest_rate_forecast)
-                        @show ind_r_sh
                         ϵ_t[ind_r_sh] = 0. # get forecast when MP shock
                         z_t = C + T*z_t1 + R*ϵ_t # is zeroed out
                         z_t_old = C + T*z_t1 + R*ϵ_t
                         ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
-                        @show z_t[m.endogenous_states[:R_t]], z_t_old[m.endogenous_states[:R_t]]
-                        @show ϵ_t[ind_r_sh]
-                        @show Z[ind_r, :]' * R[:, ind_r_sh]
-                        @show Z[ind_r_sh, :]
-                        @show R[:, ind_r_sh]
                     end
 
                     # Subtract a small number to deal with numerical imprecision
@@ -388,8 +379,7 @@ end
 # Automatic enforcing of the ZLB as a temporary alternative policy
 function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states::AbstractMatrix{S},
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
-                  cond_type::Symbol = :none, uncertain_altpolicy::Bool = false,
-                  temporary_altpolicy_max_iter::Int = 10, set_zlb_regime_vals::Function = identity,
+                  cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                   tol::S = -1e-14) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
@@ -418,7 +408,6 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     # Start imposing ZLB instead at the quarter before liftoff quarter
     # first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .>
     #                              get_setting(m, :forecast_zlb_value))
-    @show first_zlb_regime
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
         first_zlb_regime += n_hist_regimes
         if cond_type != :none
