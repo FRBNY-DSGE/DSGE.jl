@@ -90,14 +90,9 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
         smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                  s_0, P_0, kal[:s_pred], kal[:P_pred])
     elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
-        if set_pgap_ygap[1]
-            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states,
-                     set_pgap_ygap = set_pgap_ygap)
-        else
-            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states)
-        end
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                 s_0, P_0; draw_states = draw_states,
+                 set_pgap_ygap = set_pgap_ygap)
     else
         error("Invalid smoother: $(forecast_smoother(m))")
     end
