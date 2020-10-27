@@ -72,6 +72,7 @@ Random.seed!(1793)
     end
 end
 
+
 @testset "Test regime switching IRFs match Forward Guidance method IRFs" begin
     horizon = 60
     m = Model1002("ss10")
@@ -448,6 +449,60 @@ end
             write(file, "fcast_out", fcast_out)
         end
     end
+end
+
+@testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering" begin
+    n_reg_temp = 8
+
+    m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
+    m <= Setting(:date_forecast_start, Date(2020, 3, 31))
+    m <= Setting(:date_conditional_end, Date(2020, 3, 31))
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
+                                                  2 => Date(2019, 12, 31),
+                                                  3 => Date(2020, 3, 31)))
+    m = setup_regime_switching_inds!(m)
+
+    t_s, r_s, c_s = solve(m, regimes = Int[3])
+
+    regime_dates = Dict{Int, Date}()
+    regime_dates[1] = date_presample_start(m)
+    for (i, date) in zip(2:n_reg_temp, Date(2019,12,31):Dates.Month(3):Date(3000,3,31))
+        regime_dates[i] = date
+    end
+    m <= Setting(:regime_dates, regime_dates)
+
+    m <= Setting(:regime_switching, true)
+
+    m = setup_regime_switching_inds!(m)
+
+    # Use gensy2 for temporary rule
+    m <= Setting(:gensys2, true)
+    # Replace eqcond with temp rule
+    m <= Setting(:replace_eqcond, true)
+    # Which rule to replace with inn nwhich periods
+    replace_eqcond = Dict{Int, Function}()
+    for i in 4:n_reg_temp-1
+       replace_eqcond[i] = DSGE.zero_rate_replace_eq_entries
+   end
+    replace_eqcond[n_reg_temp] = eqcond
+
+    m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+
+    m <= Setting(:pgap_value, 12.0 : 0.0)
+    m <= Setting(:pgap_type, :ngdp)
+    m = setup_regime_switching_inds!(m; cond_type = :full)
+
+    sys = compute_system(m)
+    df = load(joinpath(dirname(@__FILE__), "../reference/regime_switch_data.jld2"), "regime_switch_df_none")
+    df[end, :obs_hours] = NaN
+    df[end, :obs_wages] = NaN
+    df[end, :obs_consumption] = NaN
+    m <= Setting(:forecast_smoother, :koopman)
+    histstates, _, _, _ = smooth(m, df, sys; cond_type = :full, draw_states = false)
+    kal = DSGE.filter(m, df, sys; cond_type = :full)
+    @test histstates[:, end] ≈ kal[:s_T]
+
 end
 
 nothing
