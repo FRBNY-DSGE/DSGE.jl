@@ -229,6 +229,7 @@ end
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:pgap_value, 12.0)
     m <= Setting(:gensys2, true)
+    m <= Setting(:gensys2_separate_cond_regimes, true) # separate the conditional regimes from remaining forecast regimes
 
     # Check zero rate rule causes an error if specified in a conditional period
     @test_throws DSGE.GensysError DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
@@ -498,11 +499,10 @@ end
     df[end, :obs_hours] = NaN
     df[end, :obs_wages] = NaN
     df[end, :obs_consumption] = NaN
-    m <= Setting(:forecast_smoother, :koopman)
+    m <= Setting(:forecast_smoother, :hamilton)
     histstates, _, _, _ = smooth(m, df, sys; cond_type = :full, draw_states = false)
     kal = DSGE.filter(m, df, sys; cond_type = :full)
     @test histstates[:, end] ≈ kal[:s_T]
-
 end
 
 nothing
