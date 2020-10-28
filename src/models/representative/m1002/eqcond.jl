@@ -489,13 +489,13 @@ function eqcond(m::Model1002, reg::Int)
                 Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
             end
 
-            if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
+            #=if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
                 if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
                     Γ1[eq[:eq_rml1], endo[:rm_tl2]] = 0.
                     Γ0[eq[:eq_rml2], endo[:rm_tl2]] = 1.
                     Ψ[eq[:eq_rml2],  exo[:rm_shl2]] = 1.
                 end
-            end
+            end=#
         end
     end
 
