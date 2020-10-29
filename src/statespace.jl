@@ -1365,3 +1365,129 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
         end
     end
 end
+
+"""
+```
+k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, t, k, permanent_t = length(TTTs))
+```
+
+calculates the matrices associated with the sum of the expected states between periods
+`t + 1` and  `t + k`. This function should NOT be used with
+linear state space system matrices with any unit roots.
+
+The `TTT` and `CCC` inputs are the transition matrix and constant vector associated with
+the current period `t`, while the `TTTs` and `CCCs` are vectors containing the time-varying
+transition matrices and constant vectors, such that `TTTs[t]` retrieves the time-varying
+transition matrix associated with period `t` and `TTTs[t + k]` retrieves the time-varying
+transition matrix associated with period `t + k`. The optional argument `permanent_t`
+indicates the period for which the matrices/vectors are no longer time-varying, i.e.
+if `t >= permanent_t`, then `TTTs[permanent_t]` is the transition matrix.
+
+The formula implemented by this function is
+```
+∑ⱼ₌₁ᵏ 𝔼ₜ[sₜ₊ⱼ] = ∑ⱼ₌₁ᵏ(∏ⱼ=₁ᵏ Tₜ₊ⱼ) sₜ + ∑ᵣ₌₁ᵏ⁻¹(I + ∑ⱼ₌ᵣ₊₁ᵏ (∏ₘ₌ᵣ₊₁ʲ Tₜ₊ₘ))Cₜ₊ᵣ + Cₜ₊ₖ.
+```
+Additional simplifications are made if it is known that `t + k > permanent_t`
+since this implies some matrices are the same. This recognition reduces
+unnecessary computations.
+"""
+function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
+                                       TTTs::Vector{<: AbstractMatrix}, CCCs::Vector{<: AbstractVector},
+                                       t::Int, k::Int, permanent_t::Int = length(TTTs))
+
+    if isempty(TTTs) || isempty(CCCs)
+        Tᵏsum = (I - TTT) \ (TTT - TTT^(k + 1))
+        if all(CCC .≈ 0.)
+            return Tᵏsum, CCC
+        else
+            TTTʲmemo = Vector{typeof(TTT)}(undef, k)
+            TTTʲmemo[1] = TTT
+            for q in 2:k
+                TTTʲmemo[q] = TTTʲmemo[q - 1] * TTT
+            end
+            return Tᵏsum, (I + sum([(I - TTT) \ (I - TTTʲmemo[k - q + 1]) for q in 1:(k - 1)])) * CCC
+        end
+    else
+        if t + k <= permanent_t
+            # Cannot save computation speed by not calculating further times b/c always time-varying
+            total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
+            total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
+
+            for i in 1:k
+                tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t)
+                total_Tsum .+= tmp1
+                total_Csum .+= tmp2
+            end
+
+            return total_Tsum, total_Csum
+        elseif t == permanent_t
+            # None of the matrices are time-varying anymore
+            Tᵏsum = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t]^(k + 1))
+            if all(CCC .≈ 0.)
+                return Tᵏsum, CCCs[permanent_t]
+            else
+                TTTʲmemo = Vector{eltype(TTTs)}(undef, k)
+                TTTʲmemo[1] = TTTs[permanent_t]
+                for q in 2:k
+                    TTTʲmemo[q] = TTTʲmemo[q - 1] * TTTs[permanent_t]
+                end
+                return Tᵏsum, (I + sum([(I - TTTs[permanent_t]) \ (I - TTTʲmemo[k - q + 1]) for q in 1:(k - 1)])) * CCCs[permanent_t]
+            end
+        else
+            # Computation time can be saved by realizing some matrices are not time-varying
+            T_accum = Vector{eltype(TTTs)}(undef, k)
+            C_accum = Vector{eltype(CCCs)}(undef, k)
+            for i in 1:k
+                T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i)
+            end
+            return sum(T_accum), sum(C_accum)
+#=            h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
+
+            Tₜ₊ₕ₊₁_memo = Vector{eltype(TTTs)}(undef, k - h)
+            Tₜ₊ₕ₊₁_memo[1] = TTTs[permanent_t] # maps j to Tₜ₊ₕ₊₁ʲ⁻ʰ for j in (h + 1):k or Tₜ₊ₕ₊₁ʲ for j in 1:(k-h)
+            for j in 2:(k - h)
+                Tₜ₊ₕ₊₁_memo[j] = TTTs[permanent_t] * Tₜ₊ₕ₊₁_memo[j - 1]
+            end
+
+            Tₜ₊ₕ₊₁ʲsum = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t] ^ (k - h + 1)) # ∑ⱼ₌₁ᵏ⁻ʰ Tₜ₊ₕ₊₁ʲ
+
+            TC_memo = Vector{eltype(TTTs)}(undef, h) # matrices to be used for both accumulated TTT and CCC
+            TC_memo[h] = TTTs[t + h] # maps i to ∏ⱼ₌ᵢʰ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ, T_memo[h-1] = Tₜ₊ₕ * Tₜ₊ₕ₋₁, ...
+            for i in (h-1):-1:1
+                TC_memo[i] = TC_memo[i + 1] * TTTs[t + i]
+            end
+
+            T1_term = Vector{eltype(TTTs)}(undef, h) # first part of the accumulated TTT matrix
+            T1_term[1] = TTTs[t + 1] # maps i to ∏ⱼ₌₁ⁱ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ * ⋯  * Tₜ₊₁
+            for i in 2:(h - 1)
+                T1_term[i] = TTTs[t + i] * T1_term[i - 1]
+            end
+            T1_term[h] = TC_memo[1] # This one was calculated already
+
+            # second part of the accumulated TTT matrix
+            # maps j to Tₜ₊ₕ₊₁ʲ ∏ᵣ₌₁ʰ Tₜ₊ᵣ, so T_memo[h] = Tₜ₊ₕ * ⋯  * Tₜ₊₁
+            T2_term = [Tₜ₊ₕ₊₁_memo[j] * T1_term[h] for j in 1:(k - h)]
+
+            T_accum = sum(T1_term) + sum(T2_term) # calculated accumulated matrix
+
+            # Calculate final portions of accumulated CCC vector first
+            I₊Tʲ = (I + Tₜ₊ₕ₊₁ʲsum)
+            C_accum   = I₊Tʲ * CCCs[t + h]
+            if any(.!(CCCs[permanent_t] .≈ 0.))
+                C_accum .+= (I + (k - h - 1) .* I₊Tʲ) * CCCs[permanent_t]
+            end
+            if h > 1
+                C1_term = Vector{eltype(TTTs)}(undef, h - 1)
+                C2_term = Vector{eltype(TTTs)}(undef, h - 1)
+
+                for q in 1:(h - 1)
+                    C1_term[q] = sum([prod([TTTs[t + m] for m in (q + 1):j]) for j in (q + 1):h])
+                    C2_term[q] = sum([Tₜ₊ₕ₊₁_memo[j] * TC_memo[q + 1] for j in 1:(k - h)])
+                end
+                C_accum .+= sum([(I + C1_term[q] + C2_term[q]) * CCCs[t + q] for q in 1:(h - 1)])
+            end=#
+
+            return T_accum, C_accum
+        end
+    end
+end
