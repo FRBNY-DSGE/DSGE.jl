@@ -6,7 +6,96 @@ else
     ver = "150"
 end
 
+    m = Model1002("ss10")
+    sys_constant = compute_system(m)
+    m <= Setting(:date_forecast_start, Date(2020, 9, 30))
+    m <= Setting(:date_conditional_end, Date(2020, 9, 30))
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 9, 30),
+                                                3 => Date(2020, 12, 31), 4 => Date(2021, 3, 31),
+                                                5 => Date(2021, 6, 30), 6 => Date(2021, 9, 30), 7 => Date(2021, 12, 31)))
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:gensys2, true)
+    m <= Setting(:regime_switching, true)
+    replace_eqcond_func_dict = Dict()
+    replace_eqcond_func_dict[2] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[3] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[4] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[5] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[6] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[7] = eqcond
+    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    setup_regime_switching_inds!(m)
+    sys = compute_system(m)
 
+    T_acc1, C_acc1 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
+                                                        typeof(sys_constant[:CCC])[], 1, 3)
+    T_acc2, C_acc2 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
+                                                        typeof(sys_constant[:CCC])[], 1, 3, 3)
+    T_accum = Vector{typeof(sys_constant[:TTT])}(undef, 3)
+    C_accum = Vector{typeof(sys_constant[:CCC])}(undef, 3)
+    for i in 1:3
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
+                                                                   typeof(sys_constant[:CCC])[], 1, i)
+    end
+    T_accum = sum(T_accum)
+    C_accum = sum(C_accum)
+    @test T_acc1 ≈ T_accum
+    @test T_acc2 ≈ T_accum
+    @test C_acc1 ≈ C_accum
+    @test C_acc2 ≈ C_accum
+
+    T_acc3, C_acc3 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC] .+ .1, typeof(sys_constant[:TTT])[],
+                                                        typeof(sys_constant[:CCC])[], 1, 3)
+    C_accum = Vector{typeof(sys_constant[:CCC])}(undef, 3)
+    for i in 1:3
+        _, C_accum[i] = DSGE.k_periods_ahead_expectations(sys_constant[:TTT], sys_constant[:CCC] .+ .1, typeof(sys_constant[:TTT])[],
+                                                                   typeof(sys_constant[:CCC])[], 1, i)
+    end
+    @test T_acc3 ≈ T_accum
+    @test C_acc3 ≈ sum(C_accum)
+
+    TTTs = [sys[i, :TTT] for i in 1:7]
+    CCCs = [sys[i, :CCC] for i in 1:7]
+    T_acc1, C_acc1 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3)
+    T_acc2, C_acc2 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7)
+    T_acc3, C_acc3 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 5)
+    T_acc4, C_acc4 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7)
+    T_acc5, C_acc5 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3)
+
+    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 3)
+    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 3)
+    for i in 1:3
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
+    end
+    @test T_acc1 ≈ sum(T_accum)
+    @test T_acc2 ≈ sum(T_accum)
+    @test C_acc1 ≈ sum(C_accum)
+    @test C_acc2 ≈ sum(C_accum)
+
+    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 5)
+    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 5)
+    for i in 1:5
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
+    end
+    @test T_acc3 ≈ sum(T_accum)
+    @test C_acc3 ≈ sum(C_accum)
+
+    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 7)
+    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 7)
+    for i in 1:7
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
+    end
+    @test T_acc4 ≈ sum(T_accum)
+    @test C_acc4 ≈ sum(C_accum)
+
+    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 3)
+    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 3)
+    for i in 1:3
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, i)
+    end
+    @test T_acc5 ≈ sum(T_accum)
+    @test C_acc5 ≈ sum(C_accum)
+#=
 m = AnSchorfheide()
 system = compute_system(m)
 Φ, Ψ, F_ϵ, F_u = DSGE.compute_system_function(system)
@@ -427,7 +516,7 @@ end
     end
 end
 
-@testset "Calculating transition matrices/vectors for k-periods ahead expectations" begin
+@testset "Calculating transition matrices/vectors for k-periods ahead expectations and expected sums" begin
     m = Model1002("ss10")
     sys_constant = compute_system(m)
     m <= Setting(:date_forecast_start, Date(2020, 9, 30))
@@ -484,7 +573,8 @@ end
     @test C_acc3 ≈ sys[7, :CCC] + sys[7, :TTT] * sys[6, :CCC] + sys[7, :TTT] * sys[6, :TTT] * sys[5, :CCC] +
         sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :CCC] + sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * sys[3, :CCC]
     @test C_acc4 ≈ sys[7, :TTT]^2 * (sys[7, :CCC] + sys[7, :TTT] * sys[6, :CCC] + sys[7, :TTT] * sys[6, :TTT] * sys[5, :CCC] +
-                                     sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :CCC] + sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * sys[3, :CCC])
+                                     sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :CCC] +
+                                     sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * sys[3, :CCC])
     @test all(C_acc5 .≈ 0.)
 
     CCCs = [sys[i, :CCC] .+ .1 for i in 1:7]
@@ -501,11 +591,103 @@ end
     @test T_acc5 ≈ sys[7, :TTT] ^ 3
     @test C_acc1 ≈ CCCs[5] + sys[5, :TTT] * CCCs[4] + sys[5, :TTT] * sys[4, :TTT] * CCCs[3]
     @test C_acc2 ≈ CCCs[5] + sys[5, :TTT] * CCCs[4] + sys[5, :TTT] * sys[4, :TTT] * CCCs[3]
-@test C_acc3 ≈ CCCs[7] + sys[7, :TTT] * CCCs[6] + sys[7, :TTT] * sys[6, :TTT] * CCCs[5] +
-    sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * CCCs[4] + sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * CCCs[3]
-@test C_acc4 ≈ (I + sys[7, :TTT]) * CCCs[7] + sys[7, :TTT]^2 * (CCCs[7] + sys[7, :TTT] * CCCs[6] + sys[7, :TTT] * sys[6, :TTT] * CCCs[5] +
-                                                                sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * CCCs[4] + sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * CCCs[3])
-@test !all(C_acc5 .≈ 0.)
+    @test C_acc3 ≈ CCCs[7] + sys[7, :TTT] * CCCs[6] + sys[7, :TTT] * sys[6, :TTT] * CCCs[5] +
+        sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * CCCs[4] + sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * CCCs[3]
+    @test C_acc4 ≈ (I + sys[7, :TTT]) * CCCs[7] + sys[7, :TTT]^2 * (CCCs[7] + sys[7, :TTT] * CCCs[6] + sys[7, :TTT] * sys[6, :TTT] * CCCs[5] +
+                                                                    sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * CCCs[4] +
+                                                                    sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * CCCs[3])
+    @test !all(C_acc5 .≈ 0.)
+
+    m = Model1002("ss10")
+    sys_constant = compute_system(m)
+    m <= Setting(:date_forecast_start, Date(2020, 9, 30))
+    m <= Setting(:date_conditional_end, Date(2020, 9, 30))
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 9, 30),
+                                                3 => Date(2020, 12, 31), 4 => Date(2021, 3, 31),
+                                                5 => Date(2021, 6, 30), 6 => Date(2021, 9, 30), 7 => Date(2021, 12, 31)))
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:gensys2, true)
+    m <= Setting(:regime_switching, true)
+    replace_eqcond_func_dict = Dict()
+    replace_eqcond_func_dict[2] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[3] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[4] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[5] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[6] = DSGE.zero_rate_replace_eq_entries
+    replace_eqcond_func_dict[7] = eqcond
+    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    setup_regime_switching_inds!(m)
+    sys = compute_system(m)
+
+    T_acc1, C_acc1 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
+                                                        typeof(sys_constant[:CCC])[], 1, 3)
+    T_acc2, C_acc2 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
+                                                        typeof(sys_constant[:CCC])[], 1, 3, 3)
+    T_accum = Vector{typeof(sys_constant[:TTT])}(undef, 3)
+    C_accum = Vector{typeof(sys_constant[:CCC])}(undef, 3)
+    for i in 1:3
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
+                                                                   typeof(sys_constant[:CCC])[], 1, i)
+    end
+    T_accum = sum(T_accum)
+    C_accum = sum(C_accum)
+    @test T_acc1 ≈ T_accum
+    @test T_acc2 ≈ T_accum
+    @test C_acc1 ≈ C_accum
+    @test C_acc2 ≈ C_accum
+
+    T_acc3, C_acc3 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC] .+ .1, typeof(sys_constant[:TTT])[],
+                                                        typeof(sys_constant[:CCC])[], 1, 3)
+    C_accum = Vector{typeof(sys_constant[:CCC])}(undef, 3)
+    for i in 1:3
+        _, C_accum[i] = DSGE.k_periods_ahead_expectations(sys_constant[:TTT], sys_constant[:CCC] .+ .1, typeof(sys_constant[:TTT])[],
+                                                                   typeof(sys_constant[:CCC])[], 1, i)
+    end
+    @test T_acc3 ≈ T_accum
+    @test C_acc3 ≈ sum(C_accum)
+
+    TTTs = [sys[i, :TTT] for i in 1:7]
+    CCCs = [sys[i, :CCC] for i in 1:7]
+    T_acc1, C_acc1 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3)
+    T_acc2, C_acc2 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7)
+    T_acc3, C_acc3 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 5)
+    T_acc4, C_acc4 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7)
+    T_acc5, C_acc5 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3)
+
+    T_accum = Vector{typeof(sys[:TTT])}(undef, 3)
+    C_accum = Vector{typeof(sys[:CCC])}(undef, 3)
+    for i in 1:3
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
+    end
+    @test T_acc1 ≈ sum(T_accum)
+    @test T_acc2 ≈ sum(T_accum)
+    @test C_acc1 ≈ sum(C_accum)
+    @test C_acc2 ≈ sum(C_accum)
+
+    T_accum = Vector{typeof(sys[:TTT])}(undef, 5)
+    C_accum = Vector{typeof(sys[:CCC])}(undef, 5)
+    for i in 1:5
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
+    end
+    @test T_acc3 ≈ sum(T_accum)
+    @test C_acc3 ≈ sum(C_accum)
+
+    T_accum = Vector{typeof(sys[:TTT])}(undef, 7)
+    C_accum = Vector{typeof(sys[:CCC])}(undef, 7)
+    for i in 1:7
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
+    end
+    @test T_acc4 ≈ sum(T_accum)
+    @test C_acc4 ≈ sum(C_accum)
+
+    T_accum = Vector{typeof(sys[:TTT])}(undef, 3)
+    C_accum = Vector{typeof(sys[:CCC])}(undef, 3)
+    for i in 1:3
+        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, i)
+    end
+    @test T_acc5 ≈ sum(T_accum)
+    @test C_acc5 ≈ sum(C_accum)
 end
 
 nothing
+=#
