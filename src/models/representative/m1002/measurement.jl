@@ -21,7 +21,9 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::Model1002{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}; reg::Int = 1) where {T<:AbstractFloat}
+                     CCC::Vector{T}; reg::Int = 1,
+                     TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
+                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[]) where {T <: AbstractFloat}
 
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
@@ -44,22 +46,25 @@ function measurement(m::Model1002{T},
     end
 
     no_integ_inds = inds_states_no_integ_series(m)
-    if haskey(m.endogenous_states, :pgap_t)
+    if ((haskey(get_settings(m), :add_altpolicy_pgap) && haskey(get_settings(m), :pgap_type)) ?
+        (get_setting(m, :add_altpolicy_pgap) && get_setting(m, :add_pgap == :ngdp)) : false) ||
+        (haskey(get_settings(m), :ait_Thalf) ? (exp(log(0.5) / get_setting(m, :ait_Thalf)) ≈ 0.) : false)
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
     end
-    if haskey(m.endogenous_states, :ygap_t)
+    if (haskey(get_settings(m), :gdp_Thalf) ? (exp(log(0.5) / get_setting(m, :gdp_Thalf)) ≈ 0.) : false)
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:ygap_t]])
     end
-    if haskey(m.endogenous_states, :rw_t)
+    if haskey(get_settings(m), :ρ_rw) ? (get_setting(m, :ρ_rw) ≈ 1.) : false
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:rw_t]])
     end
-    if haskey(m.endogenous_states, :Rref_t)
+    if haskey(get_settings(m), :rw_ρ_smooth) ? (get_setting(m, :rw_ρ_smooth) ≈ 1.) : false
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:Rref_t]])
     end
+
+    # Remove integrated states (e.g. states w/unit roots)
     if (get_setting(m, :add_laborproductivity_measurement) || get_setting(m, :add_nominalgdp_level) ||
         get_setting(m, :add_cumulative)) || (haskey(m.endogenous_states, :pgap_t)) || (haskey(m.endogenous_states, :ygap_t)) ||
         (haskey(m.endogenous_states, :rw_t)) || (haskey(m.endogenous_states, :Rref_t))
-        # Remove integrated states (e.g. states w/unit roots)
         TTT = @view TTT[no_integ_inds, no_integ_inds]
         CCC = @view CCC[no_integ_inds]
     end
@@ -135,9 +140,7 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
     ## 10 yrs infl exp
-
-    TTT10                                      = (1/40) * ((Matrix{Float64}(I, size(TTT, 1), size(TTT,1))
-                                                            - TTT) \ (TTT - TTT^41))
+    TTT10                                      = (1/40) * k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40)
     ZZ[obs[:obs_longinflation], no_integ_inds] = TTT10[endo[:π_t], :]
     DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1)
 
@@ -197,8 +200,7 @@ function measurement(m::Model1002{T},
         QQ[exo[:ygap_sh], exo[:ygap_sh]] = m[:σ_ygap]^2
     end
 
-
-
+    # measurement errors for "conditional" observations of GDP
     if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
         QQ[exo[:condgdp_sh], exo[:condgdp_sh]] = m[:σ_condgdp] ^ 2
@@ -217,11 +219,16 @@ function measurement(m::Model1002{T},
     end
 
     ## Anticipated observables
+    use_current_regime = haskey(get_settings(m), :measurement_use_current_regime_matrices) ?
+        get_setting(m, :measurement_use_current_regime_matrices) : true
 
     # Anticipated monetary policy shocks
+    ZZ_obs_nomrate = ZZ[obs[:obs_nominalrate], no_integ_inds]'
     for i = 1:n_mon_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ[obs[:obs_nominalrate], no_integ_inds]' * (TTT^i)
-        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
+        TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i)
+
+        ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ_obs_nomrate * TTT_accum[no_integ_inds, no_integ_inds]
+        DD[obs[Symbol("obs_nominalrate$i")]]                = m[:Rstarn] + ZZ_obs_nomrate * CCC_accum[no_integ_inds]
         if subspec(m) == "ss11"
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
         else
@@ -232,14 +239,17 @@ function measurement(m::Model1002{T},
     # Anticipated GDP growth
     if haskey(get_settings(m), :add_anticipated_obs_gdp)
         if get_setting(m, :add_anticipated_obs_gdp)
+            ZZ_obs_gdp = ZZ[obs[:obs_gdp], :]
+            meas_err = haskey(get_settings(m), :meas_err_anticipated_obs_gdp) ?
+                get_setting(m, :meas_err_anticipated_obs_gdp) : 0. # Ignore measurement error for anticipated GDP growth
+            ZZ_obs_gdp[endo_new[:e_gdp_t]]  = meas_err
+            ZZ_obs_gdp[endo_new[:e_gdp_t1]] = -meas_err * m[:me_level]
+            ZZ_obs_gdp                      = ZZ_obs_gdp[no_integ_inds]'
+
             for i = 1:get_setting(m, :n_anticipated_obs_gdp)
-                ZZ_obs_gdp = ZZ[obs[:obs_gdp], :]
-                meas_err = haskey(get_settings(m), :meas_err_anticipated_obs_gdp) ?
-                    get_setting(m, :meas_err_anticipated_obs_gdp) : 0. # Ignore measurement error for anticipated GDP growth
-                ZZ_obs_gdp[endo_new[:e_gdp_t]]  = meas_err
-                ZZ_obs_gdp[endo_new[:e_gdp_t1]] = -meas_err * m[:me_level]
-                ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ_obs_gdp[no_integ_inds]' * (TTT^i)
-                DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.)
+                TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i)
+                ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ_obs_gdp * TTT_accum[no_integ_inds, no_integ_inds]
+                DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.) + ZZ_obs_gdp * CCC_accum[no_integ_inds]
                 if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
                     get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
                     ZZ[obs[Symbol("obs_gdp$i")], endo_new[:e_gdpexp_t]] = 1.
@@ -279,4 +289,59 @@ function measurement(m::Model1002{T},
     end
 
     return Measurement(ZZ, DD, QQ, EE)
+end
+
+function anticipated_nominal_rates_CCC_accum(TTTs, CCCs, ZZ, i, reg, n_regimes, obsind, stateinds)
+    if reg < 4
+        return 0.
+    else
+        if reg + i <= n_regimes
+            CCC_accum = _anticipated_nominal_rates_CCC_accum_helper(TTTs, CCCs, i, reg, stateinds)
+            return ZZ[obsind, stateinds]' * CCC_accum
+        elseif reg == n_regimes
+            return 0.
+        else
+            accum_i = n_regimes - reg
+            CCC_accum = _anticipated_nominal_rates_CCC_accum_helper(TTTs, CCCs, accum_i, reg, stateinds)
+            CCC_accum = TTTs[end][stateinds, stateinds]^(i - accum_i) * CCC_accum
+            return ZZ[obsind, stateinds]' * CCC_accum
+        end
+    end
+end
+
+function _anticipated_nominal_rates_CCC_accum_helper(TTTs, CCCs, i, reg, stateinds)
+
+    if i == 1
+        return CCCs[reg + i][stateinds]
+    elseif i == 2
+        return (TTTs[reg + i][stateinds, stateinds] * CCCs[reg + i - 1][stateinds] + CCCs[reg + i][stateinds])
+    elseif i == 3
+        return  (TTTs[reg + i][stateinds, stateinds] * TTTs[reg + i - 1][stateinds, stateinds] * CCCs[reg + i - 2][stateinds] +
+                 TTTs[reg + i][stateinds, stateinds] * CCCs[reg + i - 1][stateinds] + CCCs[reg + i][stateinds])
+    elseif i == 4
+        return  (TTTs[reg + i][stateinds, stateinds] * (TTTs[reg + i - 1][stateinds, stateinds] *
+                                                        TTTs[reg + i - 2][stateinds, stateinds] * CCCs[reg + i - 3][stateinds] +
+                                                        TTTs[reg + i - 1][stateinds, stateinds] * CCCs[reg + i - 2][stateinds] +
+                                                        CCCs[reg + i - 1][stateinds]) + CCCs[reg + i][stateinds])
+    elseif i == 5
+        return (TTTs[reg + i][stateinds, stateinds] * (TTTs[reg + i - 1][stateinds, stateinds] *
+                                                       TTTs[reg + i - 2][stateinds, stateinds] *
+                                                       TTTs[reg + i - 3][stateinds, stateinds] * CCCs[reg + i - 4][stateinds] +
+                                                       TTTs[reg + i - 1][stateinds, stateinds] *
+                                                       TTTs[reg + i - 2][stateinds, stateinds] * CCCs[reg + i - 3][stateinds] +
+                                                       TTTs[reg + i - 1][stateinds, stateinds] * CCCs[reg + i - 2][stateinds] +
+                                                       CCCs[reg + i - 1][stateinds]) + CCCs[reg + i][stateinds])
+    elseif i == 6
+        return (TTTs[reg + i][stateinds, stateinds] * (TTTs[reg + i - 1][stateinds, stateinds] *
+                                                       TTTs[reg + i - 2][stateinds, stateinds] *
+                                                       TTTs[reg + i - 3][stateinds, stateinds] *
+                                                       TTTs[reg + i - 4][stateinds, stateinds] * CCCs[reg + i - 5][stateinds] +
+                                                       TTTs[reg + i - 1][stateinds, stateinds] *
+                                                       TTTs[reg + i - 2][stateinds, stateinds] *
+                                                       TTTs[reg + i - 3][stateinds, stateinds] * CCCs[reg + i - 4][stateinds] +
+                                                       TTTs[reg + i - 1][stateinds, stateinds] *
+                                                       TTTs[reg + i - 2][stateinds, stateinds] * CCCs[reg + i - 3][stateinds] +
+                                                       TTTs[reg + i - 1][stateinds, stateinds] * CCCs[reg + i - 2][stateinds] +
+                                                       CCCs[reg + i - 1][stateinds]) + CCCs[reg + i][stateinds])
+    end
 end
