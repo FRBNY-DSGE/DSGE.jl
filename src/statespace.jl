@@ -328,12 +328,13 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
             if hasmethod(measurement, type_tuple)
-                measurement_equations = measurement(m, TTTs, RRRs, CCCs)
+                measurement_equations = measurement(m, TTTs, RRRs, CCCs; TTTs = TTTs, CCCs = CCCs)
             else
                 measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
                 for reg in 1:n_regimes
                     measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                             reg = reg)
+                                                             reg = reg, TTTs = TTTs,
+                                                             CCCs = CCCs)
                 end
             end
 
@@ -1272,5 +1273,95 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
         β = XXXXd \ XXyyd
         Σ = yyyyd - XXyyd' * β
         return β, Σ
+    end
+end
+
+"""
+```
+k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, k, permanent_t = length(TTTs))
+```
+
+calculates the matrices associated with the expected state `k` periods ahead from `t`.
+This function should NOT be used with linear state space system matrices with any unit roots.
+
+The `TTT` and `CCC` inputs are the transition matrix and constant vector associated with
+the current period `t`, while the `TTTs` and `CCCs` are vectors containing the time-varying
+transition matrices and constant vectors, such that `TTTs[t]` retrieves the time-varying
+transition matrix associated with period `t` and `TTTs[t + k]` retrieves the time-varying
+transition matrix associated with period `t + k`. The optional argument `permanent_t`
+indicates the period for which the matrices/vectors are no longer time-varying, i.e.
+if `t >= permanent_t`, then `TTTs[permanent_t]` is the transition matrix.
+
+The formula implemented by this function is
+```
+𝔼ₜ[sₜ₊ₖ] = (∏ⱼ=₁ᵏ Tₜ₊ⱼ) sₜ + (∑ₘ₌₁ᵏ⁻¹ (∏ⱼ₌ₘ₊₁ᵏ Tₜ₊ⱼ) Cₜ₊ₘ) + Cₜ₊ₖ.
+```
+Additional simplifications are made if it is known that `t + k > permanent_t`
+since this implies some matrices are the same. This recognition reduces
+unnecessary computations.
+"""
+function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
+                                      TTTs::Vector{<: AbstractMatrix}, CCCs::Vector{<: AbstractVector},
+                                      t::Int, k::Int, permanent_t::Int = length(TTTs))
+
+    if isempty(TTTs) || isempty(CCCs)
+        Tᵏ = TTT^k
+        if all(CCC .≈ 0.)
+            return Tᵏ, CCC
+        else
+            Tᵏsum = (I - TTT) \ (I - Tᵏ)
+            return Tᵏ, Tᵏsum * CCC
+        end
+    else
+        if t + k <= permanent_t
+            # Cannot save computation speed by not calculating further times b/c always time-varying
+            T_memo = Dict{Int, eltype(TTTs)}()
+            T_memo[k] = TTTs[t + k]
+            for i in (k-1):-1:1
+                T_memo[i] = T_memo[i + 1] * TTTs[t + i]
+            end
+
+            C_accum = deepcopy(CCCs[t + k])
+            for i in 1:(k - 1)
+                C_accum .+= T_memo[i + 1] * CCCs[t + i]
+            end
+
+            return T_memo[1], C_accum
+        elseif t == permanent_t
+            # None of the matrices are time-varying anymore
+            if all(CCCs[permanent_t] .≈ 0.)
+                return TTTs[permanent_t]^k, CCCs[permanent_t]
+            else
+                Tᵏₜ₊₁ = TTTs[permanent_t]^k
+                Tᵏsum = (I - TTTs[permanent_t]) \ (I - Tᵏₜ₊₁)
+
+                return Tᵏₜ₊₁, Tᵏsum * CCCs[permanent_t]
+            end
+        else
+            # Computation time can be saved by realizing some matrices are not time-varying
+            h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
+            Tᵏ⁻ʰₜ₊ₕ₊₁ = TTTs[permanent_t]^(k - h)
+
+            T_memo = Dict{Int, eltype(TTTs)}()
+            T_memo[h] = TTTs[t + h] # maps i to ∏ⱼ₌ᵢʰ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ, T_memo[h-1] = Tₜ₊ₕ * Tₜ₊ₕ₋₁, ...
+            for i in (h-1):-1:1
+                T_memo[i] = T_memo[i + 1] * TTTs[t + i]
+            end
+            T_accum = Tᵏ⁻ʰₜ₊ₕ₊₁ * T_memo[1]
+
+            C_accum = deepcopy(CCCs[t + h])
+            for i in 1:(h - 1)
+                C_accum .+= T_memo[i + 1] * CCCs[t + i]
+            end
+            C_accum .= Tᵏ⁻ʰₜ₊ₕ₊₁ * C_accum
+
+            if all(CCCs[permanent_t] .≈ 0.)
+                return T_accum, C_accum
+            else
+                Tᵏ⁻ᵐsum   = (I - TTTs[permanent_t]) \ (I - Tᵏ⁻ʰₜ₊ₕ₊₁)
+                C_accum .+= Tᵏ⁻ᵐsum * CCCs[permanent_t]
+                return T_accum, C_accum
+            end
+        end
     end
 end
