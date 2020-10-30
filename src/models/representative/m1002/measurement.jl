@@ -23,7 +23,8 @@ function measurement(m::Model1002{T},
                      RRR::Matrix{T},
                      CCC::Vector{T}; reg::Int = 1,
                      TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
-                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[]) where {T <: AbstractFloat}
+                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
+                     apply_altpolicy::Bool = false) where {T <: AbstractFloat}
 
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
@@ -49,19 +50,16 @@ function measurement(m::Model1002{T},
     permanent_t = length(TTTs)
     flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
         get_setting(m, :flexible_ait_2020Q3_policy_change) : false
+    temp_alt_pol = haskey(get_settings(m), :temporary_altpolicy) ?
+        get_setting(m, :temporary_altpolicy) : false
 
-    # If alternative policies are being used, then unless explicitly instructed,
-    # forward expectations will be calculated as if there is no regime switching
-    # in the horizon
-    # Cases. Let T_f be the final conditional forecast period.
-    # 1. No regime-switching: TTTs & CCCs are always empty, and there is no problem
-    # 2. Regime-switching ends before or equal to T_f: :reg_post_conditional_end equals last regime, so no problem again
-    # 3. Regime-switching ends after T_f: :reg_post_conditional_end is the regime in first quarter after
-    #                                     the conditional forecast ends. However, it is possible
-    #                                     that :reg_post_conditional_end is the same regime as in the
-    #                                     conditional forecast. If reg < reg_post_conditional_end and this is true, then
-    #                                     whenever reg = reg_post_conditional_end, calculations will include the future forecast horizon.
-    #
+    # If temporary alternative policies are being used and apply_altpolicy is not true,
+    # then we ignore all regimes after the conditional forecast ends.
+    # Thus, we calculate the number of regimes that occur during the history
+    # and conditional forecast horizon
+    if !apply_altpolicy && temp_alt_pol
+        permanent_t = get_setting(m, :n_hist_regimes) + n_cond_regimes
+    end
 
     # With flexible_ait_2020Q3_policy_change: there is a regime-break in 2020:Q3, so before 2020:Q2,
     # the final regime should be considered to be the regime corresponding to 2020:Q2, namely for regimes
@@ -81,17 +79,8 @@ function measurement(m::Model1002{T},
             reg_2020Q3 = 4
         end
 
-        permanent_t = reg < reg_2020Q3 ? reg_2020Q3 - 1 : length(TTTs)
+        permanent_t = reg < reg_2020Q3 ? reg_2020Q3 - 1 : permanent_t
     end
-
-#=    if !isempty(TTTs) || !isempty(CCCs) # Only need to handle case where TTTs and CCCs information has been provided
-        permanent_t = if get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] <= date_conditional_end(m)
-            # The regime after the conditional period ends is the same, so we may treat :reg_post_conditional_end
-            get_setting(m, :reg_post_conditional_end) # as the permanent regime
-        else
-            get_setting(m, :reg_post_conditional_end) - 1
-        end
-    end=#
 
     # Remove integrated states (e.g. states w/unit roots)
     no_integ_inds = inds_states_no_integ_series(m)
