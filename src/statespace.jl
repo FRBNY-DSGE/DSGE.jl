@@ -328,13 +328,14 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
             if hasmethod(measurement, type_tuple)
-                measurement_equations = measurement(m, TTTs, RRRs, CCCs; TTTs = TTTs, CCCs = CCCs)
+                measurement_equations = measurement(m, TTTs, RRRs, CCCs; TTTs = TTTs, CCCs = CCCs,
+                                                    apply_altpolicy = apply_altpolicy)
             else
                 measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
                 for reg in 1:n_regimes
                     measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
                                                              reg = reg, TTTs = TTTs,
-                                                             CCCs = CCCs)
+                                                             CCCs = CCCs, apply_altpolicy = apply_altpolicy)
                 end
             end
 
@@ -1343,11 +1344,15 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
             Tᵏ⁻ʰₜ₊ₕ₊₁ = TTTs[permanent_t]^(k - h)
 
             T_memo = Dict{Int, eltype(TTTs)}()
-            T_memo[h] = TTTs[t + h] # maps i to ∏ⱼ₌ᵢʰ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ, T_memo[h-1] = Tₜ₊ₕ * Tₜ₊ₕ₋₁, ...
-            for i in (h-1):-1:1
-                T_memo[i] = T_memo[i + 1] * TTTs[t + i]
+            if h > 0
+                T_memo[h] = TTTs[t + h] # maps i to ∏ⱼ₌ᵢʰ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ, T_memo[h-1] = Tₜ₊ₕ * Tₜ₊ₕ₋₁, ...
+                for i in (h-1):-1:1
+                    T_memo[i] = T_memo[i + 1] * TTTs[t + i]
+                end
+                T_accum = Tᵏ⁻ʰₜ₊ₕ₊₁ * T_memo[1]
+            else
+                T_accum = Tᵏ⁻ʰₜ₊ₕ₊₁
             end
-            T_accum = Tᵏ⁻ʰₜ₊ₕ₊₁ * T_memo[1]
 
             C_accum = deepcopy(CCCs[t + h])
             for i in 1:(h - 1)
