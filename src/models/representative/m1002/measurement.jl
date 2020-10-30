@@ -47,7 +47,7 @@ function measurement(m::Model1002{T},
     end
 
     # Set up for calculating k-periods ahead expectations and expected sums
-    permanent_t = length(TTTs)
+    permanent_t = (subspec(m) in ["ss30", "ss59", "ss60", "ss61"]) ? length(TTTs) : reg
     flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
         get_setting(m, :flexible_ait_2020Q3_policy_change) : false
     temp_alt_pol = haskey(get_settings(m), :temporary_altpolicy) ?
