@@ -45,6 +45,55 @@ function measurement(m::Model1002{T},
         end
     end
 
+    # Set up for calculating k-periods ahead expectations and expected sums
+    permanent_t = length(TTTs)
+    flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
+        get_setting(m, :flexible_ait_2020Q3_policy_change) : false
+
+    # If alternative policies are being used, then unless explicitly instructed,
+    # forward expectations will be calculated as if there is no regime switching
+    # in the horizon
+    # Cases. Let T_f be the final conditional forecast period.
+    # 1. No regime-switching: TTTs & CCCs are always empty, and there is no problem
+    # 2. Regime-switching ends before or equal to T_f: :reg_post_conditional_end equals last regime, so no problem again
+    # 3. Regime-switching ends after T_f: :reg_post_conditional_end is the regime in first quarter after
+    #                                     the conditional forecast ends. However, it is possible
+    #                                     that :reg_post_conditional_end is the same regime as in the
+    #                                     conditional forecast. If reg < reg_post_conditional_end and this is true, then
+    #                                     whenever reg = reg_post_conditional_end, calculations will include the future forecast horizon.
+    #
+
+    # With flexible_ait_2020Q3_policy_change: there is a regime-break in 2020:Q3, so before 2020:Q2,
+    # the final regime should be considered to be the regime corresponding to 2020:Q2, namely for regimes
+    # before 2020:Q3, the measurement equation should reflect the belief that the "permanent" regime is the
+    # regime before 2020:Q3 starts.
+    if flex_ait_2020Q3
+        if get_setting(m, :regime_dates)[4] != Date(2020, 9, 30)
+            reg_2020Q3 = 0
+            for i in 1:get_setting(m, :n_regimes)
+                if get_setting(m, :regime_dates)[i] == Date(2020, 9, 30)
+                    reg_2020Q2 = i
+                    break
+                end
+            end
+            @assert reg_2020Q2 != 0 "The setting :regime_dates does not contain the date 2020:Q3, which is required if the setting :flexible_ait_2020Q3_policy_change is true."
+        else
+            reg_2020Q3 = 4
+        end
+
+        permanent_t = reg < reg_2020Q3 ? reg_2020Q3 - 1 : length(TTTs)
+    end
+
+#=    if !isempty(TTTs) || !isempty(CCCs) # Only need to handle case where TTTs and CCCs information has been provided
+        permanent_t = if get_setting(m, :regime_dates)[get_setting(m, :reg_post_conditional_end)] <= date_conditional_end(m)
+            # The regime after the conditional period ends is the same, so we may treat :reg_post_conditional_end
+            get_setting(m, :reg_post_conditional_end) # as the permanent regime
+        else
+            get_setting(m, :reg_post_conditional_end) - 1
+        end
+    end=#
+
+    # Remove integrated states (e.g. states w/unit roots)
     no_integ_inds = inds_states_no_integ_series(m)
     if ((haskey(get_settings(m), :add_altpolicy_pgap) && haskey(get_settings(m), :pgap_type)) ?
         (get_setting(m, :add_altpolicy_pgap) && get_setting(m, :add_pgap == :ngdp)) : false) ||
@@ -61,10 +110,7 @@ function measurement(m::Model1002{T},
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:Rref_t]])
     end
 
-    # Remove integrated states (e.g. states w/unit roots)
-    if (get_setting(m, :add_laborproductivity_measurement) || get_setting(m, :add_nominalgdp_level) ||
-        get_setting(m, :add_cumulative)) || (haskey(m.endogenous_states, :pgap_t)) || (haskey(m.endogenous_states, :ygap_t)) ||
-        (haskey(m.endogenous_states, :rw_t)) || (haskey(m.endogenous_states, :Rref_t))
+    if length(no_integ_inds) != n_states_augmented(m)
         TTT = @view TTT[no_integ_inds, no_integ_inds]
         CCC = @view CCC[no_integ_inds]
     end
@@ -140,14 +186,17 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
     ## 10 yrs infl exp
-    TTT10                                      = (1/40) * k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40)
+    TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t)
+    TTT10        = TTT10[no_integ_inds, no_integ_inds] ./ 40. # divide by 40 to average across 10 years
+    CCC10        = CCC10[no_integ_inds] ./ 40.
     ZZ[obs[:obs_longinflation], no_integ_inds] = TTT10[endo[:π_t], :]
-    DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1)
+    DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1) + CCC10[endo[:π_t]]
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], no_integ_inds]     = ZZ[6, no_integ_inds]' * TTT10
+    ZZ_long_rate = ZZ[6, no_integ_inds]'
+    ZZ[obs[:obs_longrate], no_integ_inds]     = ZZ_long_rate * TTT10
     ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
-    DD[obs[:obs_longrate]]                    = m[:Rstarn]
+    DD[obs[:obs_longrate]]                    = m[:Rstarn] + ZZ_long_rate * CCC10
 
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]] = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
@@ -225,7 +274,7 @@ function measurement(m::Model1002{T},
     # Anticipated monetary policy shocks
     ZZ_obs_nomrate = ZZ[obs[:obs_nominalrate], no_integ_inds]'
     for i = 1:n_mon_anticipated_shocks(m)
-        TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i)
+        TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t)
 
         ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ_obs_nomrate * TTT_accum[no_integ_inds, no_integ_inds]
         DD[obs[Symbol("obs_nominalrate$i")]]                = m[:Rstarn] + ZZ_obs_nomrate * CCC_accum[no_integ_inds]
@@ -247,7 +296,7 @@ function measurement(m::Model1002{T},
             ZZ_obs_gdp                      = ZZ_obs_gdp[no_integ_inds]'
 
             for i = 1:get_setting(m, :n_anticipated_obs_gdp)
-                TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i)
+                TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t)
                 ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ_obs_gdp * TTT_accum[no_integ_inds, no_integ_inds]
                 DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.) + ZZ_obs_gdp * CCC_accum[no_integ_inds]
                 if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
