@@ -167,6 +167,7 @@ for j in 1:length(prob_vecs)
                                             fcast_regimes =
                                             collect((get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)),
                                             regimes = collect(1:get_setting(m, :n_regimes)))
+    auto_sys       = compute_system(m; apply_altpolicy = true)
     auto_fcasts[j] = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params,
                                                                                 df_full; regime_switching = true, n_regimes =
                                                                                 get_setting(m, :n_regimes))
@@ -195,6 +196,12 @@ for j in 1:length(prob_vecs)
     Ccal[end] = CCC_gensys_final
 
     Th, Rh, Ch = hist_rule.solve(m)
+    TTTs_uzlb[1] = Th
+    TTTs_uzlb[2] = Th
+    TTTs_uzlb[3] = Th
+    CCCs_uzlb[1] = Ch
+    CCCs_uzlb[2] = Ch
+    CCCs_uzlb[3] = Ch
 
     # Prep for calculation of new transition matrices
     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = DSGE.gensys_to_predictable_form(Γ0s[4], Γ1s[4], Cs[4], Ψs[4], Πs[4])
@@ -220,28 +227,6 @@ for j in 1:length(prob_vecs)
     manTs[j] = TTTs_uzlb
     manRs[j] = RRRs_uzlb
     manCs[j] = CCCs_uzlb
-
-    meass = map(x -> measurement(m, TTTs_uzlb[x], RRRs_uzlb[x], CCCs_uzlb[x]), 4:length(TTTs_uzlb))
-    store_pseus[j] = map(x -> pseudo_measurement(m, TTTs_uzlb[x], RRRs_uzlb[x], CCCs_uzlb[x];
-                                                 reg = x), 4:length(TTTs_uzlb))
-    pseus = store_pseus[j]
-
-    for (lj, tempZLB_reg) in enumerate(tempZLB_regimes[j])
-        mreg = tempZLB_reg - 2 # first conditional period is already counted
-
-        s₁ = TTTs_uzlb[tempZLB_reg] * s₀ + CCCs_uzlb[tempZLB_reg]
-        fcasts[j][:forecastobs][:, mreg] = meass[lj][:ZZ] * s₁ + meass[lj][:DD]
-        fcasts[j][:forecastpseudo][:, mreg] = pseus[lj][:ZZ_pseudo] * s₁ + pseus[lj][:DD_pseudo]
-        s₀ .= s₁
-    end
-
-    # After the first period post the conditional forecast, we now assume we use the uncertain SMOOTH_AIT_GDP_ALT rule
-    for t in (maximum(tempZLB_regimes[j]) - 2 + 1):(1 + forecast_horizons(m, cond_type = :full))
-        s₁ = TTTs_uzlb[end] * s₀ + CCCs_uzlb[end]
-        fcasts[j][:forecastobs][:, t] = meass[end][:ZZ] * s₁ + meass[end][:DD]
-        fcasts[j][:forecastpseudo][:, t] = pseus[end][:ZZ_pseudo] * s₁ + pseus[end][:DD_pseudo]
-        s₀ .= s₁
-    end
 end
 
 @testset "Check automatic calculation of uncertain ZLB with an uncertain alternative policy." begin
@@ -249,10 +234,5 @@ end
         for li in 4:length(manTs[j])
             @test @test_matrix_approx_eq autoTs[j][li] manTs[j][li]
         end
-
-        @test @test_matrix_approx_eq fcasts[j][:forecastobs] auto_fcasts[j][:forecastobs]
-        @test @test_matrix_approx_eq fcasts[j][:histpseudo] auto_fcasts[j][:histpseudo]
-        @test @test_matrix_approx_eq fcasts[j][:forecastpseudo][1:13, :] auto_fcasts[j][:forecastpseudo][1:13, :]
-        @test @test_matrix_approx_eq fcasts[j][:forecastpseudo][15:end, :] auto_fcasts[j][:forecastpseudo][15:end, :]
     end
 end
