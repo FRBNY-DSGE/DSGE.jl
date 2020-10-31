@@ -2,7 +2,7 @@ path = dirname(@__FILE__)
 
 m = AnSchorfheide()
 
-
+@info "The following three error statements are expected (and will not break the tests)."
 @testset "Test prepare forecast inputs" begin
     # Throw error if input_type=:subset but no subset_inds provided
     @test_throws ErrorException DSGE.prepare_forecast_inputs!(m, :subset, :none, [:histobs, :forecastobs])

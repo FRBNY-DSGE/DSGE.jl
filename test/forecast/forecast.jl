@@ -69,6 +69,7 @@ end
     @test typeof(forecast(m, system, z0; draw_shocks = true)) == NTuple{4, Array{Float64, 2}}
 end
 
+@info "The following series of warnings about integrated series"
 @testset "Enforce ZLB as a temporary alternative policy" begin
     # Set up model for forecast and permanent NGDP
     m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
