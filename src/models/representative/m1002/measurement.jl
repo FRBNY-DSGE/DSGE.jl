@@ -58,7 +58,7 @@ function measurement(m::Model1002{T},
     # Thus, we calculate the number of regimes that occur during the history
     # and conditional forecast horizon
     if !apply_altpolicy && temp_alt_pol
-        permanent_t = get_setting(m, :n_hist_regimes) + n_cond_regimes
+        permanent_t = get_setting(m, :n_hist_regimes) + get_setting(m, :n_cond_regimes)
     end
 
     # With flexible_ait_2020Q3_policy_change: there is a regime-break in 2020:Q3, so before 2020:Q2,
@@ -85,7 +85,7 @@ function measurement(m::Model1002{T},
     # Remove integrated states (e.g. states w/unit roots)
     no_integ_inds = inds_states_no_integ_series(m)
     if ((haskey(get_settings(m), :add_altpolicy_pgap) && haskey(get_settings(m), :pgap_type)) ?
-        (get_setting(m, :add_altpolicy_pgap) && get_setting(m, :add_pgap == :ngdp)) : false) ||
+        (get_setting(m, :add_altpolicy_pgap) && get_setting(m, :pgap_type) == :ngdp) : false) ||
         (haskey(get_settings(m), :ait_Thalf) ? (exp(log(0.5) / get_setting(m, :ait_Thalf)) ≈ 0.) : false)
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
     end
@@ -99,7 +99,8 @@ function measurement(m::Model1002{T},
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:Rref_t]])
     end
 
-    if length(no_integ_inds) != n_states_augmented(m)
+    integ_series = length(no_integ_inds) != n_states_augmented(m)
+    if integ_series
         TTT = @view TTT[no_integ_inds, no_integ_inds]
         CCC = @view CCC[no_integ_inds]
     end
@@ -175,9 +176,15 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
     ## 10 yrs infl exp
-    TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t)
-    TTT10        = TTT10[no_integ_inds, no_integ_inds] ./ 40. # divide by 40 to average across 10 years
-    CCC10        = CCC10[no_integ_inds] ./ 40.
+    if integ_series
+        @warn "There are integrated states (e.g. unit roots). We assume CCC is zero."
+        TTT10        = ((I - TTT) \ (TTT - TTT^41)) ./ 40.
+        CCC10        = CCC
+    else
+        TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t)
+        TTT10        = TTT10./ 40. # divide by 40 to average across 10 years
+        CCC10        = CCC10 ./ 40.
+    end
     ZZ[obs[:obs_longinflation], no_integ_inds] = TTT10[endo[:π_t], :]
     DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1) + CCC10[endo[:π_t]]
 
