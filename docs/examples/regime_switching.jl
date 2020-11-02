@@ -184,6 +184,7 @@ if perm_alt
 
     m <= Setting(:alternative_policy, AltPolicy(policy, policy_eqcond, policy_solve,
                                                 forecast_init = policy_forecast_init)) # Set up permanent alternative policy
+    @info "Warnings about assuming CCC is zero are expected and are satisfied for the alternative policy requested."
     fcast_permalt = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                            df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
@@ -234,6 +235,7 @@ if temp_alt
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
+    m <= Setting(:temporary_altpolicy, true) # The new regimes to be added should be treated as temporary alternative policies
     replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
     for i in 4:(temp_n_regimes - 1)
         replace_eqcond[i] = replace_policy # Use the alternative policy for these regimes!
@@ -243,6 +245,7 @@ if temp_alt
     m <= Setting(:pgap_value, 12.0)  # parametrizing the NGDP rule
     m <= Setting(:pgap_type, policy)
 
+    @info "Warnings about assuming CCC is zero are expected and are satisfied for the temporary alternative policies requested."
     fcast_tempalt = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                          df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
