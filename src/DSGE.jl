@@ -196,7 +196,8 @@ module DSGE
     include("abstractvarmodel.jl")
     include("defaults.jl")
     include("models/poolmodel/poolmodel.jl")
-    include("statespace.jl")
+    include("statespace_types.jl")
+    include("statespace_functions.jl")
     include("util.jl")
     include("grids.jl")
 
