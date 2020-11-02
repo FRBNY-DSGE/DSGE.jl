@@ -213,7 +213,7 @@ pseudo_sv = Matrix{Float64}[]
             @test @test_matrix_approx_eq shocks_rs3[smoother] exp_shocks_regime_switch
             @test @test_matrix_approx_eq pseudo_rs3[smoother] exp_pseudo_regime_switch[1:21, :] # extra rows b/c used more pseudo-obs when generating the test file
         else # the other smoothers should generate similar output, but may not be the exact same thing
-            @test maximum(abs.(states_rs3[smoother] - exp_states_regime_switch))  < 7e-1
+            @test maximum(abs.(states_rs3[smoother] - exp_states_regime_switch))  < 9e-1
             @test maximum(abs.(shocks_rs3[smoother] - exp_shocks_regime_switch))  < 2e-1
             @test maximum(abs.(pseudo_rs3[smoother] - exp_pseudo_regime_switch[1:21, :])) < 3e-1
         end
