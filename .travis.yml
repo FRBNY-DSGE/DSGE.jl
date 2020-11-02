@@ -26,7 +26,8 @@ script:
 branches:
   only:
     - master
-    - gh-pages
+    - /^release-.*$/
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 after_success:
 - julia -e 'Pkg.add("Documenter")'
 - julia -e 'cd(Pkg.dir("DSGE")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
