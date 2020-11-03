@@ -428,6 +428,9 @@ end
 
 @testset "Calculating transition matrices/vectors for k-periods ahead expectations and expected sums" begin
     # Test k-periods ahead expectations
+    # TODO: add a tvis = true keyword to compute_system and to call compute_tvis_system internally w/in compute_system
+    # if the keyword is true, and then, using the info in the resulting TVISSystem, calculate the appropriate
+    # RegimeSwitchingSystem that is associated with the TVISSystem.
     m = Model1002("ss10")
     sys_constant = compute_system(m)
     m <= Setting(:date_forecast_start, Date(2020, 9, 30))
@@ -447,6 +450,9 @@ end
     replace_eqcond_func_dict[7] = eqcond
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
     setup_regime_switching_inds!(m)
+    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict])
+    m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
+    m <= Setting(:tvis_select_system, ones(Int, 7))
     sys = compute_system(m)
 
     T_acc1, C_acc1 = DSGE.k_periods_ahead_expectations(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
@@ -510,7 +516,8 @@ end
     @test !all(C_acc5 .≈ 0.)
 
     m = Model1002("ss10")
-    sys_constant = compute_system(m)
+    m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
+    sys_constant = compute_system(m; tvis = true)
     m <= Setting(:date_forecast_start, Date(2020, 9, 30))
     m <= Setting(:date_conditional_end, Date(2020, 9, 30))
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 9, 30),
@@ -716,20 +723,16 @@ end
     replace_eqcond_func_dict2[5] = DSGE.zero_rate_replace_eq_entries
     replace_eqcond_func_dict2[6] = DSGE.zero_rate_replace_eq_entries
     m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1, replace_eqcond_func_dict2])
-    m <= Setting(:tvis_information_sets, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
+    m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, ones(Int, 7))
     sys1 = DSGE.compute_tvis_system(m)
     m <= Setting(:tvis_select_system, fill(2, 7))
     sys2 = DSGE.compute_tvis_system(m)
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict1)
-    sys3 = compute_system(m)
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict2)
-    sys4 = compute_system(m)
 
     @test isa(sys1[:transitions], Vector{Vector{Transition{Float64}}})
     @test isa(sys1[:measurements], Vector{Measurement{Float64}})
     @test isa(sys1[:pseudo_measurements], Vector{PseudoMeasurement{Float64}})
-    @test sys1[:information_sets] == sys2.information_sets
+    @test sys1[:information_set] == sys2.information_set
     @test all(sys1[:select] .!= sys2.select)
     @test sys1[1, :measurement][:ZZ] == sys1.measurements[1][:ZZ]
     @test sys1[1, :pseudo_measurement][:ZZ_pseudo] == sys1.pseudo_measurements[1][:ZZ_pseudo]
@@ -746,23 +749,51 @@ end
 
     delete!(replace_eqcond_func_dict2, 6)
     m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1, replace_eqcond_func_dict2])
-    m <= Setting(:tvis_information_sets, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7]) # ALSO ADD INFORMATION SETS TO THE MEASUREMENT EQUATION IN GENERAL
+    m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, [1, 1, 1, 1, 2, 2, 2])
     sys1 = DSGE.compute_tvis_system(m)
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict1)
-    sys2 = compute_system(m)
+    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1])
+    m <= Setting(:tvis_select_system, ones(Int, 7))
+    sys2 = compute_system(m; tvis = true)
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict2)
-    sys3 = compute_system(m)
+    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict2])
+    m <= Setting(:tvis_select_system, ones(Int, 7)) # ones here b/c there's only one system for the TVIS to use
+    sys3 = compute_system(m; tvis = true)
     for reg in 1:4
-        @test sys1[reg, :ZZ] == sys2[reg, :ZZ]
+        @test sys1[reg, :ZZ] ≈ sys2[reg, :ZZ]
     end
     for reg in 5:7
-        @test sys1[reg, :ZZ] == sys3[reg, :ZZ]
+        @test sys1[reg, :ZZ] ≈ sys3[reg, :ZZ]
     end
-    for reg in 2:6
+    for reg in 2:5
         @test sys2[reg, :ZZ] != sys3[reg, :ZZ]
     end
-    @test sys2[7, :ZZ] == sys3[7, :ZZ]
+    for reg in 6:7 # same for 6 and 7 b/c in both cases, next period expectation does not use zero rate rule
+        @test sys2[reg, :ZZ] == sys3[reg, :ZZ]
+    end
+
+    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1, replace_eqcond_func_dict2])
+    m <= Setting(:tvis_select_system, [1, 1, 1, 1, 2, 2, 2])
+    sys4 = compute_system(m; tvis = true)
+    for reg in 1:4
+        @test sys4[reg, :ZZ] == sys1[reg, :ZZ]
+        @test sys4[reg, :ZZ] == sys2[reg, :ZZ]
+        @test sys4[reg, :TTT] == sys1[1, reg, :TTT]
+        @test sys4[reg, :TTT] == sys2[reg, :TTT]
+    end
+    for reg in 5:7
+        @test sys4[reg, :ZZ] == sys1[reg, :ZZ]
+        @test sys4[reg, :ZZ] == sys3[reg, :ZZ]
+        @test sys4[reg, :TTT] == sys1[2, reg, :TTT]
+        @test sys4[reg, :TTT] == sys3[reg, :TTT]
+    end
+    for reg in 2:4
+        @test sys4[reg, :ZZ] != sys3[reg, :ZZ]
+    end
+    for reg in 5:5 # only to 5 b/c the difference in info sets about ZLB length
+        @test sys4[reg, :ZZ] != sys2[reg, :ZZ]
+    end
 end
 
 nothing
