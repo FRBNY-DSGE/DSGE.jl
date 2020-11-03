@@ -88,12 +88,7 @@ function measurement(m::Model1002{T},
     if haskey(get_settings(m), :rw_ρ_smooth) ? (get_setting(m, :rw_ρ_smooth) ≈ 1.) : false
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:Rref_t]])
     end
-
-    integ_series = length(no_integ_inds) != n_states_augmented(m)
-    if integ_series
-        TTT = @view TTT[no_integ_inds, no_integ_inds]
-        CCC = @view CCC[no_integ_inds]
-    end
+    integ_series = length(no_integ_inds) != n_states_augmented(m) # Are the series integrated?
 
     ## GDP growth - Quarterly!
     ZZ[obs[:obs_gdp], endo[:y_t]]          = 1.0
@@ -166,21 +161,16 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
     ## 10 yrs infl exp
-    if integ_series
-        @warn "There are integrated states (e.g. unit roots). We assume CCC is zero."
-        TTT10        = ((I - TTT) \ (TTT - TTT^41)) ./ 40.
-        CCC10        = CCC
-    else
-        TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t)
-        TTT10        = TTT10./ 40. # divide by 40 to average across 10 years
-        CCC10        = CCC10 ./ 40.
-    end
-    ZZ[obs[:obs_longinflation], no_integ_inds] = TTT10[endo[:π_t], :]
-    DD[obs[:obs_longinflation]]                = 100*(m[:π_star]-1) + CCC10[endo[:π_t]]
+    TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t;
+                                                 integ_series = integ_series)
+    TTT10        = TTT10./ 40. # divide by 40 to average across 10 years
+    CCC10        = CCC10 ./ 40.
+    ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
+    DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1) + CCC10[endo[:π_t]]
 
     ## Long Rate
-    ZZ_long_rate = ZZ[6, no_integ_inds]'
-    ZZ[obs[:obs_longrate], no_integ_inds]     = ZZ_long_rate * TTT10
+    ZZ_long_rate = ZZ[6, :]'
+    ZZ[obs[:obs_longrate], :]                 = ZZ_long_rate * TTT10
     ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
     DD[obs[:obs_longrate]]                    = m[:Rstarn] + ZZ_long_rate * CCC10
 
@@ -258,12 +248,12 @@ function measurement(m::Model1002{T},
         get_setting(m, :measurement_use_current_regime_matrices) : true
 
     # Anticipated monetary policy shocks
-    ZZ_obs_nomrate = ZZ[obs[:obs_nominalrate], no_integ_inds]'
+    ZZ_obs_nomrate = ZZ[obs[:obs_nominalrate], :]'
     for i = 1:n_mon_anticipated_shocks(m)
-        TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t)
+        TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t; integ_series = integ_series)
 
-        ZZ[obs[Symbol("obs_nominalrate$i")], no_integ_inds] = ZZ_obs_nomrate * TTT_accum[no_integ_inds, no_integ_inds]
-        DD[obs[Symbol("obs_nominalrate$i")]]                = m[:Rstarn] + ZZ_obs_nomrate * CCC_accum[no_integ_inds]
+        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ_obs_nomrate * TTT_accum
+        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn] + ZZ_obs_nomrate * CCC_accum
         if subspec(m) == "ss11"
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
         else
@@ -279,12 +269,11 @@ function measurement(m::Model1002{T},
                 get_setting(m, :meas_err_anticipated_obs_gdp) : 0. # Ignore measurement error for anticipated GDP growth
             ZZ_obs_gdp[endo_new[:e_gdp_t]]  = meas_err
             ZZ_obs_gdp[endo_new[:e_gdp_t1]] = -meas_err * m[:me_level]
-            ZZ_obs_gdp                      = ZZ_obs_gdp[no_integ_inds]'
 
             for i = 1:get_setting(m, :n_anticipated_obs_gdp)
-                TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t)
-                ZZ[obs[Symbol("obs_gdp$i")], no_integ_inds] = ZZ_obs_gdp * TTT_accum[no_integ_inds, no_integ_inds]
-                DD[obs[Symbol("obs_gdp$i")]]                = 100. * (exp(m[:z_star]) - 1.) + ZZ_obs_gdp * CCC_accum[no_integ_inds]
+                TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t; integ_series = integ_series)
+                ZZ[obs[Symbol("obs_gdp$i")], :] = ZZ_obs_gdp * TTT_accum
+                DD[obs[Symbol("obs_gdp$i")]]    = 100. * (exp(m[:z_star]) - 1.) + ZZ_obs_gdp * CCC_accum
                 if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
                     get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
                     ZZ[obs[Symbol("obs_gdp$i")], endo_new[:e_gdpexp_t]] = 1.
@@ -313,7 +302,7 @@ function measurement(m::Model1002{T},
         # However, all the observables and pseudo-observables were not thoroughly checked, so it is possible
         # that the measurement equation is flawed in some way given how this has been coded.
         if !is_zero_rate_rule
-            DD += ZZ[:, no_integ_inds]*((UniformScaling(1) - TTT) \ CCC)
+            DD += ZZ * ((UniformScaling(1) - TTT) \ CCC)
         end
     end
 

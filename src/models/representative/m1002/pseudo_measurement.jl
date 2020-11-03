@@ -40,20 +40,28 @@ function pseudo_measurement(m::Model1002{T},
     # Handle integrated series
     no_integ_inds = inds_states_no_integ_series(m)
 
-    if haskey(m.endogenous_states, :pgap_t)
+    no_integ_inds = inds_states_no_integ_series(m)
+    if ((haskey(get_settings(m), :add_altpolicy_pgap) && haskey(get_settings(m), :pgap_type)) ?
+        (get_setting(m, :add_altpolicy_pgap) && get_setting(m, :pgap_type) == :ngdp) : false) ||
+        (haskey(get_settings(m), :ait_Thalf) ? (exp(log(0.5) / get_setting(m, :ait_Thalf)) ≈ 0.) : false)
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:pgap_t]])
     end
-    if haskey(m.endogenous_states, :ygap_t)
+    if (haskey(get_settings(m), :gdp_Thalf) ? (exp(log(0.5) / get_setting(m, :gdp_Thalf)) ≈ 0.) : false)
         no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:ygap_t]])
     end
-
-    if haskey(get_settings(m), :integrated_series) || haskey(m.endogenous_states, :pgap_t) ||
-        haskey(m.endogenous_states, :ygap_t)
-        TTT = @view TTT[no_integ_inds, no_integ_inds]
+    if haskey(get_settings(m), :ρ_rw) ? (get_setting(m, :ρ_rw) ≈ 1.) : false
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:rw_t]])
     end
+    if haskey(get_settings(m), :rw_ρ_smooth) ? (get_setting(m, :rw_ρ_smooth) ≈ 1.) : false
+        no_integ_inds = setdiff(no_integ_inds, [m.endogenous_states[:Rref_t]])
+    end
+    integ_series = length(no_integ_inds) != n_states_augmented(m) # Are the series integrated?
 
     # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
-    TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(TTT - TTT^41))
+    TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t;
+                                                 integ_series = integ_series)
+    TTT10        = TTT10./ 40. # divide by 40 to average across 10 years
+    CCC10        = CCC10 ./ 40.
 
     if get_setting(m, :add_laborproductivity_measurement)
         # Construct pseudo-obs from integrated states first
@@ -189,19 +197,20 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:z_t], endo[:z_t]] = 1.
 
     ## Expected 10-Year Rate Gap
-    ZZ_pseudo[pseudo[:Expected10YearRateGap], no_integ_inds] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearRateGap], :] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
+    DD_pseudo[pseudo[:Expected10YearRateGap]]    = CCC10[endo[:R_t]] - CCC10[endo[:r_f_t]] - CCC10[endo[:Eπ_t]]
 
     ## Nominal FFR
     ZZ_pseudo[pseudo[:NominalFFR], endo[:R_t]] = 1.
     DD_pseudo[pseudo[:NominalFFR]] = m[:Rstarn]
 
     ## Expected 10-Year Interest Rate
-    ZZ_pseudo[pseudo[:Expected10YearRate], no_integ_inds] = TTT10[endo[:R_t], :]
-    DD_pseudo[pseudo[:Expected10YearRate]]    = m[:Rstarn]
+    ZZ_pseudo[pseudo[:Expected10YearRate], :] = TTT10[endo[:R_t], :]
+    DD_pseudo[pseudo[:Expected10YearRate]]    = m[:Rstarn] + CCC10[endo[:R_t]]
 
     ## Expected 10-Year Natural Rate
-    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], no_integ_inds] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
-    DD_pseudo[pseudo[:Expected10YearNaturalRate]]    = m[:Rstarn]
+    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], :] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
+    DD_pseudo[pseudo[:Expected10YearNaturalRate]]    = m[:Rstarn] + CCC10[endo[:r_f_t]] + CCC10[endo[:Eπ_t]]
 
     ## Expected Nominal Natural Rate
     ZZ_pseudo[pseudo[:ExpectedNominalNaturalRate], endo[:r_f_t]] = 1.
