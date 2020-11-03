@@ -41,7 +41,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
             if hasmethod(measurement, type_tuple)
-                measurement_equations = measurement(m, TTTs, RRRs, CCCs; TTTs = TTTs, CCCs = CCCs,
+                measurement_equations = measurement(m, TTTs, RRRs, CCCs;
                                                     apply_altpolicy = apply_altpolicy)
             else
                 measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
@@ -1208,4 +1208,71 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             return T_accum, C_accum
         end
     end
+end
+
+"""
+```
+compute_tvis_system(m; apply_altpolicy = false, verbose = :high)
+```
+
+Given the current model parameters, compute the state-space system
+corresponding to model `m`.
+"""
+function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
+                             verbose::Symbol = :high) where {T <: Real}
+
+    @assert get_setting(m, :solution_method) ==
+        :gensys "Currently, the solution method must be :gensys to calculate a state-space system with time-varying information sets"
+
+    @assert get_setting(m, :replace_eqcond) "The setting :replace_eqcond must be true to calculate a state-space system with time-varying information sets"
+
+    # :regime_dates should have the same number of possible regimes. Any differences in eqcond
+    # should be specified by tvis_replace_eqcond_func_dict
+    tvis_replace_eqcond_func_dict = get_setting(m, :tvis_replace_eqcond_func_dict)
+    tvis_select                   = get_setting(m, :tvis_select_system)
+    tvis_infosets                 = get_setting(m, :tvis_information_sets)
+    regime_switching              = get_setting(m, :regime_switching)
+
+    n_tvis           = length(tvis_replace_eqcond_func_dict)
+    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+        get_setting(m, :n_regimes) : 1
+    n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
+        get_setting(m, :n_hist_regimes) : 1
+    if haskey(get_settings(m), :reg_forecast_start)
+        fcast_regimes = collect(get_setting(m, :reg_forecast_start):n_regimes)
+    else
+        fcast_regimes = collect(n_hist_regimes + 1:n_regimes)
+    end
+
+    # Solve model
+    transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
+    TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+    RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+    CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
+    for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict)
+        m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+        TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
+                                                      regimes = collect(1:n_regimes), hist_regimes = collect(1:n_hist_regimes),
+                                                      fcast_regimes = fcast_regimes, verbose = verbose)
+        transitions[i] = Vector{Transition{T}}(undef, n_regimes)
+        for j in 1:n_regimes
+            transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
+        end
+    end
+
+    # Infer which measurement and pseudo-measurement equations to use
+    measurement_eqns        = Vector{Measurement{T}}(undef,       n_regimes)
+    pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+    for (reg, i) in enumerate(tvis_select)
+        measurement_eqns[reg] = measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg],
+                                            reg = reg, TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
+                                            information_set = tvis_infosets[reg], apply_altpolicy = apply_altpolicy)
+
+        pseudo_measurement_eqns[reg] = pseudo_measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg], reg = reg,
+                                                          TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
+                                                          information_set = tvis_infosets[reg], apply_altpolicy = apply_altpolicy)
+    end
+
+    return TimeVaryingInformationSetSystem(transitions, measurement_eqns, pseudo_measurement_eqns,
+                                           tvis_infosets, tvis_select)
 end
