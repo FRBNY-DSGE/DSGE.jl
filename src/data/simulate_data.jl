@@ -83,7 +83,7 @@ function simulate_observables(m::AbstractDSGEModel;
                               s_0::Vector{Float64} = Vector{Float64}(undef, 0),
                               P_0::Matrix{Float64} = Matrix{Float64}(undef, 0, 0),
                               meas_error::Float64 = 1e-3)
-    system = compute_system(m)
+    system = compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
 
     n_states = size(system[:TTT], 1)
     n_obs    = length(system[:DD])

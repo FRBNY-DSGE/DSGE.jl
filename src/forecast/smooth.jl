@@ -135,7 +135,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         (haskey(m.settings, :gensys2) ? get_setting(m, :gensys2) : false)
         m <= Setting(:gensys2, false)
         m <= Setting(:replace_eqcond, false)
-        system = compute_system(m)
+        system = compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
         m <= Setting(:gensys2, true)
         m <= Setting(:replace_eqcond, true)
     end

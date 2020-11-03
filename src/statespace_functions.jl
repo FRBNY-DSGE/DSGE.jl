@@ -5,6 +5,9 @@ compute_system(m; apply_altpolicy = false, tvis::Bool = false, verbose = :high)
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
+The keyword `apply_altpolicy` indicates whether the state-space system
+should reflect an alternative policy, and the keyword `tvis` indicates
+whether the state-space system involves time-varying information sets.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
@@ -170,11 +173,11 @@ end
 compute_system(m; apply_altpolicy = false,
                check_system = false, get_system = false,
                get_population_moments = false, use_intercept = false,
-               verbose = :high)
+               tvis::Bool = false, verbose = :high)
 compute_system(m, data; apply_altpolicy = false,
                check_system = false, get_system = false,
                get_population_moments = false,
-               verbose = :high)
+               tvis::Bool = false, verbose = :high)
 ```
 Given the current model parameters, compute the DSGE-VAR or DSGE-VECM system
 corresponding to model `m`. If a matrix `data` is also passed, then
@@ -187,6 +190,7 @@ with weight λ.
 * `get_system::Bool`: see Outputs
 * `get_population_moments::Bool`: see Outputs
 * `use_intercept::Bool`: use an intercept term when computing the OLS estimate of the VAR system.
+* `tvis::Bool` indicates whether the state-space system involves time-varying information sets.
 
 ### Outputs
 * If `get_system = true`:
@@ -207,7 +211,7 @@ with weight λ.
 function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false, use_intercept::Bool = false,
-                        verbose::Symbol = :high) where {T <: Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
     regime_switching = haskey(get_settings(m), :regime_switching) ?
         get_setting(m, :regime_switching) : false
@@ -261,7 +265,7 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                         apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false,
-                        verbose::Symbol = :high) where {T<:Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
 
     if get_λ(m) == Inf
         # Then we just want the VAR approximation of the DSGE
@@ -314,7 +318,7 @@ end
 function compute_system(m::AbstractDSGEVECMModel{T}; apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false, use_intercept::Bool = false,
-                        verbose::Symbol = :high) where {T<:Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
 
     dsge = get_dsge(m)
     system = compute_system(dsge; verbose = verbose)
@@ -345,7 +349,7 @@ function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
                         apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false,
-                        verbose::Symbol = :high) where {T<:Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
 
     if get_λ(m) == Inf
         # Then we just want the VECM approximation of the DSGE
@@ -414,7 +418,7 @@ F_ϵ: structural shock distribution
 F_u: likelihood function measurement error distribution
 F_λ: initial distribution of λ for state transition function
 """
-function compute_system(m::PoolModel{T}; verbose::Symbol = :high) where T<:AbstractFloat
+function compute_system(m::PoolModel{T}; verbose::Symbol = :high) where {T <: Real}
     Φ, F_ϵ, F_λ = transition(m)
     Ψ, F_u = measurement(m)
     return Φ, Ψ, F_ϵ, F_u, F_λ
