@@ -1059,14 +1059,24 @@ unnecessary computations.
 """
 function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
                                       TTTs::Vector{<: AbstractMatrix}, CCCs::Vector{<: AbstractVector},
-                                      t::Int, k::Int, permanent_t::Int = length(TTTs))
+                                      t::Int, k::Int, permanent_t::Int = length(TTTs);
+                                      integ_series::Bool = false)
 
     if isempty(TTTs) || isempty(CCCs)
         Tᵏ = TTT^k
         if all(CCC .≈ 0.)
             return Tᵏ, CCC
         else
-            Tᵏsum = (I - TTT) \ (I - Tᵏ)
+            if integ_series
+                T_memo = Dict{Int, typeof(TTT)}()
+                T_memo[1] = TTT
+                for i in 2:k
+                    T_memo[i] = T_memo[i - 1] * TTT
+                end
+                Tᵏsum = sum([T_memo[j] for j in 1:k])
+            else
+                Tᵏsum = (I - TTT) \ (I - Tᵏ)
+            end
             return Tᵏ, Tᵏsum * CCC
         end
     else
@@ -1090,8 +1100,16 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
                 return TTTs[permanent_t]^k, CCCs[permanent_t]
             else
                 Tᵏₜ₊₁ = TTTs[permanent_t]^k
-                Tᵏsum = (I - TTTs[permanent_t]) \ (I - Tᵏₜ₊₁)
-
+                if integ_series
+                    T_memo = Dict{Int, eltype(TTTs)}()
+                    T_memo[1] = TTTs[permanent_t]
+                    for i in 2:k
+                        T_memo[i] = T_memo[i - 1] * TTTs[permanent_t]
+                    end
+                    Tᵏsum = sum([T_memo[j] for j in 1:k])
+                else
+                    Tᵏsum = (I - TTTs[permanent_t]) \ (I - Tᵏₜ₊₁)
+                end
                 return Tᵏₜ₊₁, Tᵏsum * CCCs[permanent_t]
             end
         else
@@ -1119,7 +1137,16 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
             if all(CCCs[permanent_t] .≈ 0.)
                 return T_accum, C_accum
             else
-                Tᵏ⁻ᵐsum   = (I - TTTs[permanent_t]) \ (I - Tᵏ⁻ʰₜ₊ₕ₊₁)
+                if integ_series
+                    T_memo = Dict{Int, eltype(TTTs)}()
+                    T_memo[1] = TTTs[permanent_t]
+                    for i in 2:(k - h - 1)
+                        T_memo[i] = T_memo[i - 1] * TTTs[permanent_t]
+                    end
+                    Tᵏ⁻ᵐsum = sum([T_memo[j] for j in 1:(k - h - 1)]) + I
+                else
+                    Tᵏ⁻ᵐsum = (I - TTTs[permanent_t]) \ (I - Tᵏ⁻ʰₜ₊ₕ₊₁)
+                end
                 C_accum .+= Tᵏ⁻ᵐsum * CCCs[permanent_t]
                 return T_accum, C_accum
             end
@@ -1154,7 +1181,18 @@ unnecessary computations.
 """
 function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                                        TTTs::Vector{<: AbstractMatrix}, CCCs::Vector{<: AbstractVector},
-                                       t::Int, k::Int, permanent_t::Int = length(TTTs))
+                                       t::Int, k::Int, permanent_t::Int = length(TTTs);
+                                       integ_series::Bool = false)
+
+    if integ_series # Do this by directly summing the k-periods ahead expectations. Not fully efficient but also not the typical case
+        T_accum = Vector{eltype(TTTs)}(undef, k)
+        C_accum = Vector{eltype(CCCs)}(undef, k)
+        for i in 1:k
+            T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
+                                                                  integ_series = integ_series)
+        end
+        return sum(T_accum), sum(C_accum)
+    end
 
     if isempty(TTTs) || isempty(CCCs)
         Tᵏsum = (I - TTT) \ (TTT - TTT^(k + 1))
@@ -1175,7 +1213,8 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
 
             for i in 1:k
-                tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t)
+                tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
+                                                          integ_series = integ_series)
                 total_Tsum .+= tmp1
                 total_Csum .+= tmp2
             end
@@ -1199,7 +1238,8 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             T_accum = Vector{eltype(TTTs)}(undef, k)
             C_accum = Vector{eltype(CCCs)}(undef, k)
             for i in 1:k
-                T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i)
+                T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
+                                                                      integ_series = integ_series)
             end
             return sum(T_accum), sum(C_accum)
 #=            h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
