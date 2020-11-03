@@ -17,7 +17,7 @@ function pseudo_measurement(m::Model1002{T},
                             reg::Int = 1,
                             TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                             CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                            information_set::UnitRange = 1:1) where {T<:AbstractFloat}
+                            information_set::UnitRange = reg:reg) where {T<:AbstractFloat}
 
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
@@ -36,6 +36,9 @@ function pseudo_measurement(m::Model1002{T},
             ModelConstructors.toggle_regime!(para, reg)
         end
     end
+
+    # Set up for calculating k-periods ahead expectations and expected sums
+    permanent_t = length(information_set[findfirst(information_set .== reg):end]) - 1 + reg
 
     # Handle integrated series
     no_integ_inds = inds_states_no_integ_series(m)
