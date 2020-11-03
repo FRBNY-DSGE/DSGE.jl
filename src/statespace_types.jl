@@ -1,5 +1,5 @@
 """
-`Transition{T<:AbstractFloat}`
+`Transition{T<:Real}`
 
 The transition equation of the state-space model takes the form
 
@@ -7,16 +7,16 @@ The transition equation of the state-space model takes the form
 
 The `Transition` type stores the coefficient `Matrix{T}`s (`TTT`, `RRR`) and constant `Vector{T} CCC`.
 """
-mutable struct Transition{T<:AbstractFloat}
+mutable struct Transition{T<:Real}
     TTT::Matrix{T}
     RRR::Matrix{T}
     CCC::Vector{T}
 end
-function Transition(TTT::Matrix{T}, RRR::Matrix{T}) where T<:AbstractFloat
+function Transition(TTT::Matrix{T}, RRR::Matrix{T}) where T<:Real
     CCC = zeros(eltype(TTT), size(TTT, 1))
     Transition{T}(TTT, RRR, CCC)
 end
-function Transition(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where T<:AbstractFloat
+function Transition(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where T<:Real
     Transition{T}(TTT, RRR, collect(CCC))
 end
 function Base.getindex(eq::Transition, d::Symbol)
@@ -28,7 +28,7 @@ function Base.getindex(eq::Transition, d::Symbol)
 end
 
 """
-`Measurement{T<:AbstractFloat}`
+`Measurement{T<:Real}`
 
 The measurement equation of the state-space model takes the form
 
@@ -47,7 +47,7 @@ observables `y_t`, and `Ne` is the number of shocks `ϵ_t`:
 - `QQ`: the `Ne` x `Ne` covariance matrix for the shocks `ϵ_t`
 - `EE`: the `Ny` x `Ny` covariance matrix for the measurement error `η_t`
 """
-mutable struct Measurement{T<:AbstractFloat}
+mutable struct Measurement{T<:Real}
     ZZ::Matrix{T}
     DD::Vector{T}
     QQ::Matrix{T}
@@ -71,7 +71,7 @@ end
 
 """
 ```
-PseudoMeasurement{T<:AbstractFloat}
+PseudoMeasurement{T<:Real}
 ```
 
 The pseudo-measurement equation of the state-space model takes the form
@@ -86,7 +86,7 @@ pseudo-observables `x_t`:
 - `ZZ_pseudo`: the `Nx` x `Ns` pseudo-measurement matrix
 - `DD_pseudo`: the `Nx` x 1 constant vector
 """
-mutable struct PseudoMeasurement{T<:AbstractFloat}
+mutable struct PseudoMeasurement{T<:Real}
     ZZ_pseudo::Matrix{T}
     DD_pseudo::Vector{T}
 end
@@ -99,20 +99,22 @@ function Base.getindex(M::PseudoMeasurement, d::Symbol)
     end
 end
 
+abstract type AbstractSystem{T} end
+
 """
-`System{T<:AbstractFloat}`
+`System{T <: Real}`
 
 A mutable struct containing the transition and measurement equations for a
 state-space model. The matrices may be directly indexed: `sys[:TTT]`
 returns `sys.transition.TTT`, `sys[:ZZ]` returns `sys.measurement.ZZ`, etc.
 """
-mutable struct System{T<:AbstractFloat}
+mutable struct System{T <: Real} <: AbstractSystem{T}
     transition::Transition{T}
     measurement::Measurement{T}
     pseudo_measurement::PseudoMeasurement{T}
 end
 
-function System(transition::Transition{T}, measurement::Measurement{T}) where T<:AbstractFloat
+function System(transition::Transition{T}, measurement::Measurement{T}) where T<:Real
     # Initialize empty pseudo-measurement equation
     _n_states = size(transition.TTT, 1)
     _n_pseudo = 0
@@ -145,14 +147,14 @@ function Base.copy(system::System)
 end
 
 """
-`RegimeSwitchingSystem{N<:Int,T<:AbstractFloat}`
+`RegimeSwitchingSystem{T <: Real}`
 
 A mutable struct containing the transition and measurement equations for a
 state-space model with regime-switching.
 The matrices may be directly indexed: `sys[1, :TTT]`
 returns `sys.regime[1].transition.TTT`, etc.
 """
-mutable struct RegimeSwitchingSystem{T <: Real}
+mutable struct RegimeSwitchingSystem{T <: Real} <: AbstractSystem{T}
     transitions::Vector{Transition{T}}
     measurements::Vector{Measurement{T}}
     pseudo_measurements::Vector{PseudoMeasurement{T}}
@@ -168,7 +170,7 @@ RegimeSwitchingSystem(transitions::Vector{Transition{T}}, measurements::Vector{M
                           RegimeSwitchingSystem{T}(transitions, measurements, pseudo_measurements)
 
 function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
-                               measurements::Vector{Measurement{T}}) where {T<:AbstractFloat}
+                               measurements::Vector{Measurement{T}}) where {T<:Real}
 
     # Initialize empty pseudo-measurement equation
     _n_states = size(transitions[1].TTT, 1)
@@ -203,7 +205,7 @@ end
 
 # Get fields of the RegimeSwitchingSystem
 function Base.getindex(system::RegimeSwitchingSystem{T},
-                       d::Symbol) where {T<:AbstractFloat}
+                       d::Symbol) where {T<:Real}
     if d in (:transitions, :measurements, :pseudo_measurements)
         return getfield(system, d)
     elseif d == :regimes
@@ -215,7 +217,7 @@ end
 
 # Get a specific regime
 function Base.getindex(system::RegimeSwitchingSystem{T},
-                       d::Int) where {T<:AbstractFloat}
+                       d::Int) where {T<:Real}
     if d < 1 || d > length(system.transitions)
         throw(BoundsError(system.transitions,d))
     else
@@ -243,11 +245,11 @@ function Base.getindex(system::RegimeSwitchingSystem{T},
     end
 end
 
-function n_regimes(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
+function n_regimes(system::RegimeSwitchingSystem{T}) where {T<:Real}
     return length(system.transitions)
 end
 
-function Base.copy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
+function Base.copy(system::RegimeSwitchingSystem{T}) where {T<:Real}
     n_reg = n_regimes(system)
     transitions         = Vector{Transition{T}}(undef, n_reg)
     measurements        = Vector{Measurement{T}}(undef, n_reg)
@@ -266,7 +268,7 @@ function Base.copy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
     return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
 end
 
-function Base.deepcopy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
+function Base.deepcopy(system::RegimeSwitchingSystem{T}) where {T<:Real}
     n_reg = n_regimes(system)
     transitions         = Vector{Transition{T}}(undef, n_reg)
     measurements        = Vector{Measurement{T}}(undef, n_reg)
@@ -283,4 +285,100 @@ function Base.deepcopy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat
         pseudo_measurements[i] = pseudo_meas
     end
     return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
+end
+
+"""
+`TimeVaryingInformationSetSystem`
+
+"""
+mutable struct TimeVaryingInformationSetSystem{T <: Real} <: AbstractSystem{T}
+    transitions::Vector{Vector{Transition{T}}}
+    measurements::Vector{Measurement{T}}
+    pseudo_measurements::Vector{PseudoMeasurement{T}}
+    information_sets::Vector{UnitRange{Int}}
+    select::Vector{Int}
+end
+
+function TimeVaryingInformationSetSystem(transitions::AbstractVector{<: AbstractVector{<: Transition{T}}},
+                                         measurements::AbstractVector{<: Measurement{T}},
+                                         information_sets::Vector{UnitRange{Int}},
+                                         select::Vector{Int}) where {T <: Real}
+
+    # Initialize empty pseudo-measurement equation
+    _n_states = size(transitions[select[1]][1].TTT, 1)
+    _n_pseudo = 0
+    ZZ_pseudo = zeros(_n_pseudo, _n_states)
+    DD_pseudo = zeros(_n_pseudo)
+    pseudo_measurement = PseudoMeasurement(ZZ_pseudo, DD_pseudo)
+    pseudo_measurements = [pseudo_measurement for i in 1:length(measurements)]
+
+    return TimeVaryingInformationSetSystem(transitions, measurements, pseudo_measurements, information_sets, select)
+end
+
+function TimeVaryingInformationSetSystem(transitions::AbstractVector{<: AbstractVector{<: Transition{T}}},
+                                         measurements::AbstractVector{<: Measurement{T}},
+                                         pseudo_measurements::AbstractVector{<: PseudoMeasurement{T}},
+                                         information_sets::Vector{UnitRange{Int}},
+                                         select::Vector{Int}) where {T <: Real}
+
+    # Initialize empty pseudo-measurement equation
+    return TimeVaryingInformationSetSystem{T}(transitions, measurements, pseudo_measurements, information_sets, select)
+end
+
+
+function System(system::TimeVaryingInformationSetSystem, select::Int, regime::Int)
+    return System(system.transitions[select][regime],
+                  system.measurements[regime],
+                  system.pseudo_measurements[regime])
+end
+
+function Base.getindex(system::TimeVaryingInformationSetSystem, d::Symbol)
+    if d in (:transitions, :measurements, :pseudo_measurements, :information_sets, :select)
+        return getfield(system, d)
+    elseif d == :regimes
+        return 1:length(system.measurements)
+    else
+        throw(KeyError(d))
+    end
+end
+
+function Base.getindex(system::TimeVaryingInformationSetSystem, regime::Int,
+                       d::Symbol)
+    if d == :measurement
+        system.measurements[regime]
+    elseif d == :pseudo_measurement
+        system.pseudo_measurements[regime]
+    elseif d in (:ZZ, :DD, :QQ, :EE)
+        system.measurements[regime][d]
+    elseif d in (:ZZ_pseudo, :DD_pseudo)
+        system.pseudo_measurements[regime][d]
+    else
+        throw(KeyError(d))
+    end
+end
+
+# Get a specific regime
+function Base.getindex(system::TimeVaryingInformationSetSystem{T},
+                       select::Int, d::Int) where {T <: Real}
+    if d < 1 || d > length(system.measurements)
+        throw(BoundsError(system.measurements, d))
+    else
+        return System(system, select, d)
+    end
+end
+
+# Get specific matrix or type from specific regime
+function Base.getindex(system::TimeVaryingInformationSetSystem{T},
+                       select::Int, regime::Int, d::Symbol) where {T <: Real}
+    if d == :transition
+        system.transitions[select][regime]
+    elseif d in (:TTT, :RRR, :CCC)
+        system.transitions[select][regime][d]
+    else
+        throw(KeyError(d))
+    end
+end
+
+function n_regimes(system::TimeVaryingInformationSetSystem)
+    return length(system.measurements)
 end
