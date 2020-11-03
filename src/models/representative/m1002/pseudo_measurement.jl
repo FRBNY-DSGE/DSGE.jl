@@ -17,8 +17,7 @@ function pseudo_measurement(m::Model1002{T},
                             reg::Int = 1,
                             TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                             CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                            information_set::UnitRange = 1:1,
-                            apply_altpolicy::Bool = false) where {T<:AbstractFloat}
+                            information_set::UnitRange = 1:1) where {T<:AbstractFloat}
 
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
