@@ -162,7 +162,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
 
     # Compute state-space system
     system = try
-        compute_system(m, verbose = verbose)
+        compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set), verbose = verbose)
     catch err
         if catch_errors && (isa(err, GensysError) || isa(err, KleinError))
             return -Inf

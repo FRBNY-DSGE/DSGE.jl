@@ -641,8 +641,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            shock_var_value::Float64 = 0.0, zlb_method::Symbol = :shock,
                            set_regime_vals_altpolicy::Function = identity,
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
-                           param_key::Symbol = :nothing, param_value::Float64 = 0.0,
-                           param_key2::Symbol = :nothing, param_value2::Float64 = 0.0,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
                            filter_smooth::Bool = false)
@@ -654,13 +652,16 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         init_model_indices!(m)
     end
 
+    # Time-Varying Information Set?
+    tvis = haskey(get_settings(m), :tvis_information_set)
+
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)
     irfs_only = all(x -> x == :irf, output_prods)
 
     # Compute state space
     update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
-    system = compute_system(m)
+    system = compute_system(m; tvis = tvis)
 
     # Initialize output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -777,21 +778,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
         end
 
-        if param_key!=:nothing
-            m[param_key] = param_value
-            steadystate!(m)
-            system = compute_system(m)
-        end
-        if param_key2!=:nothing
-            m[param_key2] = param_value2
-            steadystate!(m)
-            system = compute_system(m)
-        end
-
         # Re-solve model with alternative policy rule, if applicable
         apply_altpolicy = alternative_policy(m).solve != solve
         if apply_altpolicy
-            system = compute_system(m; apply_altpolicy = true)
+            system = compute_system(m; apply_altpolicy = true, tvis = tvis)
 
             # Adjust the initial state vector for pgap and ygap
             if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)

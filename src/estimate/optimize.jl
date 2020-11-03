@@ -152,7 +152,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 # check that model can be solved
                 try
                     DSGE.update!(m, x_proposal_all)
-                    compute_system(m)
+                    compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
                     x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
                     success = true
                 catch ex
@@ -205,7 +205,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 # check that model can be solved
                 try
                     DSGE.update!(m, x_proposal_all)
-                    compute_system(m)
+                    compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
                     x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
                     success = true
                 catch ex
