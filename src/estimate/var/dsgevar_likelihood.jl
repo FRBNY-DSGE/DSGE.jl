@@ -29,7 +29,7 @@ function dsgevar_likelihood(m::AbstractDSGEVARModel{S}, data::Matrix{S};
         xxyyd = Vector{Matrix{S}}(undef, n_regimes)
         xxxxd = Vector{Matrix{S}}(undef, n_regimes)
 
-        out = compute_system(m; applya_altpolicy = apply_altpolicy,
+        out = compute_system(m; apply_altpolicy = apply_altpolicy,
                              get_population_moments = true, use_intercept = use_intercept)
         for reg = 1:n_regimes
             yyyyd[reg], xxyyd[reg], xxxxd[reg] = out[reg]
