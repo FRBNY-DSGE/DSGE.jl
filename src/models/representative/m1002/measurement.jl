@@ -24,7 +24,7 @@ function measurement(m::Model1002{T},
                      CCC::Vector{T}; reg::Int = 1,
                      TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                      CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                     apply_altpolicy::Bool = false) where {T <: AbstractFloat}
+                     information_set::UnitRange = reg:reg) where {T <: AbstractFloat}
 
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
@@ -47,19 +47,9 @@ function measurement(m::Model1002{T},
     end
 
     # Set up for calculating k-periods ahead expectations and expected sums
-    permanent_t = (subspec(m) in ["ss30", "ss59", "ss60", "ss61"]) ? length(TTTs) : reg
+    permanent_t = length(information_set[findfirst(information_set .== reg):end]) - 1 + reg
     flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
         get_setting(m, :flexible_ait_2020Q3_policy_change) : false
-    temp_alt_pol = haskey(get_settings(m), :temporary_altpolicy) ?
-        get_setting(m, :temporary_altpolicy) : false
-
-    # If temporary alternative policies are being used and apply_altpolicy is not true,
-    # then we ignore all regimes after the conditional forecast ends.
-    # Thus, we calculate the number of regimes that occur during the history
-    # and conditional forecast horizon
-    if !apply_altpolicy && temp_alt_pol
-        permanent_t = get_setting(m, :n_hist_regimes) + get_setting(m, :n_cond_regimes)
-    end
 
     # With flexible_ait_2020Q3_policy_change: there is a regime-break in 2020:Q3, so before 2020:Q2,
     # the final regime should be considered to be the regime corresponding to 2020:Q2, namely for regimes
