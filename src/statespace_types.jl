@@ -295,13 +295,13 @@ mutable struct TimeVaryingInformationSetSystem{T <: Real} <: AbstractSystem{T}
     transitions::Vector{Vector{Transition{T}}}
     measurements::Vector{Measurement{T}}
     pseudo_measurements::Vector{PseudoMeasurement{T}}
-    information_sets::Vector{UnitRange{Int}}
+    information_set::Vector{UnitRange{Int}}
     select::Vector{Int}
 end
 
-function TimeVaryingInformationSetSystem(transitions::AbstractVector{<: AbstractVector{<: Transition{T}}},
-                                         measurements::AbstractVector{<: Measurement{T}},
-                                         information_sets::Vector{UnitRange{Int}},
+function TimeVaryingInformationSetSystem(transitions::Vector{Vector{Transition{T}}},
+                                         measurements::Vector{Measurement{T}},
+                                         information_set::Vector{UnitRange{Int}},
                                          select::Vector{Int}) where {T <: Real}
 
     # Initialize empty pseudo-measurement equation
@@ -312,17 +312,17 @@ function TimeVaryingInformationSetSystem(transitions::AbstractVector{<: Abstract
     pseudo_measurement = PseudoMeasurement(ZZ_pseudo, DD_pseudo)
     pseudo_measurements = [pseudo_measurement for i in 1:length(measurements)]
 
-    return TimeVaryingInformationSetSystem(transitions, measurements, pseudo_measurements, information_sets, select)
+    return TimeVaryingInformationSetSystem(transitions, measurements, pseudo_measurements, information_set, select)
 end
 
-function TimeVaryingInformationSetSystem(transitions::AbstractVector{<: AbstractVector{<: Transition{T}}},
-                                         measurements::AbstractVector{<: Measurement{T}},
-                                         pseudo_measurements::AbstractVector{<: PseudoMeasurement{T}},
-                                         information_sets::Vector{UnitRange{Int}},
+function TimeVaryingInformationSetSystem(transitions::Vector{Vector{Transition{T}}},
+                                         measurements::Vector{Measurement{T}},
+                                         pseudo_measurements::Vector{PseudoMeasurement{T}},
+                                         information_set::Vector{UnitRange{Int}},
                                          select::Vector{Int}) where {T <: Real}
 
     # Initialize empty pseudo-measurement equation
-    return TimeVaryingInformationSetSystem{T}(transitions, measurements, pseudo_measurements, information_sets, select)
+    return TimeVaryingInformationSetSystem{T}(transitions, measurements, pseudo_measurements, information_set, select)
 end
 
 
@@ -333,7 +333,7 @@ function System(system::TimeVaryingInformationSetSystem, select::Int, regime::In
 end
 
 function Base.getindex(system::TimeVaryingInformationSetSystem, d::Symbol)
-    if d in (:transitions, :measurements, :pseudo_measurements, :information_sets, :select)
+    if d in (:transitions, :measurements, :pseudo_measurements, :information_set, :select)
         return getfield(system, d)
     elseif d == :regimes
         return 1:length(system.measurements)

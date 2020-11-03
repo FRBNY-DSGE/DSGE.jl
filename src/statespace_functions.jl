@@ -1,13 +1,25 @@
 """
 ```
-compute_system(m; apply_altpolicy = false, verbose = :high)
+compute_system(m; apply_altpolicy = false, tvis::Bool = false, verbose = :high)
 ```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                        verbose::Symbol = :high) where {T <: Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
+
+    if tvis
+        @assert haskey(get_settings(m), :tvis_information_set) "The setting :tvis_information_set is not defined"
+        n_tvis = haskey(get_settings(m), :tvis_replace_eqcond_func_dict) ? length(get_setting(m, :tvis_replace_eqcond_func_dict)) : 1
+
+        if n_tvis > 1 # case of n_tvis = 1 handled below to avoid constructing redundant TimeVaryingInformationSetSystem
+            @assert haskey(get_settings(m), :tvis_select_system) "The setting :tvis_select_system is not defined"
+            tvis_sys = compute_tvis_system(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+            transition_eqns = Transition{T}[tvis_sys[select, reg, :transition] for (reg, select) in enumerate(tvis_sys[:select])]
+            return RegimeSwitchingSystem(transition_eqns, tvis_sys[:measurements], tvis_sys[:pseudo_measurements])
+        end
+    end
 
     solution_method = get_setting(m, :solution_method)
 
@@ -40,31 +52,58 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
-            if hasmethod(measurement, type_tuple)
-                measurement_equations = measurement(m, TTTs, RRRs, CCCs;
-                                                    apply_altpolicy = apply_altpolicy)
+            has_pseudo = true
+            if tvis
+                if hasmethod(measurement, type_tuple)
+                    measurement_equations = measurement(m, TTTs, RRRs, CCCs;
+                                                        information_set = get_setting(m, :tvis_information_set))
+                else
+                    measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
+                                                                 TTTs = TTTs, CCCs = CCCs,
+                                                                 information_set = get_setting(m, :tvis_information_set)[reg])
+                    end
+                end
+
+                if hasmethod(pseudo_measurement, type_tuple)
+                    pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+                elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+                    pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
+                                                                               reg = reg, TTTs = TTTs, CCCs = CCCs,
+                                                                               information_set = get_setting(m, :tvis_information_set)[reg])
+                    end
+                else
+                    has_pseudo = false
+                end
             else
-                measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
-                for reg in 1:n_regimes
-                    measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                             reg = reg, TTTs = TTTs,
-                                                             CCCs = CCCs, apply_altpolicy = apply_altpolicy)
+                if hasmethod(measurement, type_tuple)
+                    measurement_equations = measurement(m, TTTs, RRRs, CCCs)
+                else
+                    measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg)
+                    end
+                end
+
+                if hasmethod(pseudo_measurement, type_tuple)
+                    pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+                elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+                    pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg)
+                    end
+                else
+                    has_pseudo = false
                 end
             end
 
-            if hasmethod(pseudo_measurement, type_tuple)
-                pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
-                return RegimeSwitchingSystem(transition_equations,
-                                             measurement_equations,
-                                             pseudo_measurement_equations)
-            elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
-                pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
-                for reg in 1:n_regimes
-                    pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                                           reg = reg)
-                end
-
+            if has_pseudo
                 return RegimeSwitchingSystem(transition_equations, measurement_equations, pseudo_measurement_equations)
+            else
+                return RegimeSwitchingSystem(transition_equations, measurement_equations)
             end
         else
             error("Regime switching with the Klein solution algorithm has not been implemented.")
@@ -114,15 +153,15 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         else
             throw("solution_method provided does not exist.")
         end
-    end
 
-    type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
-    if hasmethod(pseudo_measurement, type_tuple)
-        # Solve pseudo-measurement equation
-        pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
-        return System(transition_equation, measurement_equation, pseudo_measurement_equation)
-    else
-        return System(transition_equation, measurement_equation)
+        type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
+        if hasmethod(pseudo_measurement, type_tuple)
+            # Solve pseudo-measurement equation
+            pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
+            return System(transition_equation, measurement_equation, pseudo_measurement_equation)
+        else
+            return System(transition_equation, measurement_equation)
+        end
     end
 end
 
@@ -277,7 +316,7 @@ function compute_system(m::AbstractDSGEVECMModel{T}; apply_altpolicy::Bool = fal
                         get_population_moments::Bool = false, use_intercept::Bool = false,
                         verbose::Symbol = :high) where {T<:Real}
 
-dsge = get_dsge(m)
+    dsge = get_dsge(m)
     system = compute_system(dsge; verbose = verbose)
 
     # Use wrapper compute_system for AbstractDSGEVECMModel types
@@ -1230,7 +1269,7 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     # should be specified by tvis_replace_eqcond_func_dict
     tvis_replace_eqcond_func_dict = get_setting(m, :tvis_replace_eqcond_func_dict)
     tvis_select                   = get_setting(m, :tvis_select_system)
-    tvis_infosets                 = get_setting(m, :tvis_information_sets)
+    tvis_infoset                  = get_setting(m, :tvis_information_set)
     regime_switching              = get_setting(m, :regime_switching)
 
     n_tvis           = length(tvis_replace_eqcond_func_dict)
@@ -1261,18 +1300,23 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     end
 
     # Infer which measurement and pseudo-measurement equations to use
-    measurement_eqns        = Vector{Measurement{T}}(undef,       n_regimes)
-    pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+    measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
+    has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+    if has_pseudo
+        pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+    end
     for (reg, i) in enumerate(tvis_select)
         measurement_eqns[reg] = measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg],
                                             reg = reg, TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
-                                            information_set = tvis_infosets[reg], apply_altpolicy = apply_altpolicy)
+                                            information_set = tvis_infoset[reg])
 
-        pseudo_measurement_eqns[reg] = pseudo_measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg], reg = reg,
-                                                          TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
-                                                          information_set = tvis_infosets[reg], apply_altpolicy = apply_altpolicy)
+        if has_pseudo
+            pseudo_measurement_eqns[reg] = pseudo_measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg], reg = reg,
+                                                              TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
+                                                              information_set = tvis_infoset[reg])
+        end
     end
 
     return TimeVaryingInformationSetSystem(transitions, measurement_eqns, pseudo_measurement_eqns,
-                                           tvis_infosets, tvis_select)
+                                           tvis_infoset, tvis_select)
 end
