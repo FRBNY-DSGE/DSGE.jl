@@ -21,9 +21,9 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         if n_tvis == 1 && haskey(get_settings(m), :tvis_replace_eqcond_func_dict)
             if haskey(get_settings(m), :replace_eqcond_func_dict)
                 if get_setting(m, :tvis_replace_eqcond_func_dict)[1] != get_setting(m, :replace_eqcond_func_dict)
-                    warn_str = "The dictionary of functions in the Setting :replace_eqcond_func_dict does not match the one specified "
-                        * "by the length-one Setting :tvis_replace_eqcond_func_dict. Replacing :replace_eqcond_func_dict with the dictionary "
-                        * "of functions contained in :tvis_replace_eqcond_func_dict."
+                    warn_str = "The dictionary of functions in the Setting :replace_eqcond_func_dict does not match the one specified " *
+                        "by the length-one Setting :tvis_replace_eqcond_func_dict. Replacing :replace_eqcond_func_dict with the dictionary " *
+                        "of functions contained in :tvis_replace_eqcond_func_dict."
                     @warn warn_str
                     m <= Setting(:replace_eqcond_func_dict, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
                 end
