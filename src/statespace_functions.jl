@@ -8,6 +8,9 @@ corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object
 The keyword `apply_altpolicy` indicates whether the state-space system
 should reflect an alternative policy, and the keyword `tvis` indicates
 whether the state-space system involves time-varying information sets.
+To use `tvis = true`, at least the setting `:tvis_information_set` must
+exist. See `?DSGE.compute_tvis_system` for more information about
+computing state-space systems with time-varying information sets.
 """
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
@@ -1298,8 +1301,22 @@ end
 compute_tvis_system(m; apply_altpolicy = false, verbose = :high)
 ```
 
-Given the current model parameters, compute the state-space system
-corresponding to model `m`.
+Given the current model parameters, compute the regime-switching
+state-space system corresponding to model `m` with time-varying
+information sets.
+
+Aside from settings required for regime-switching,
+additional required settings that must exist in `m` are:
+- `:tvis_information_set`: Vector of `UnitRange{Int}` specifying
+    which regimes should be included in the information set
+    corresponding each regime.
+- `:tvis_replace_eqcond_func_dict`: Vector of `replace_eqcond_func_dict`
+    to specify different sets of equilibrium conditions, which
+    generate different state space systems (usually).
+- `:tvis_select_system`: Vector of `Int` to specify which
+    state space system to use when calculating the measurement
+    and pseudo measurement equations. These state space systems
+    correspond to different sets of equilibrium conditions (usually).
 """
 function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                              verbose::Symbol = :high) where {T <: Real}
@@ -1311,9 +1328,9 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
 
     # :regime_dates should have the same number of possible regimes. Any differences in eqcond
     # should be specified by tvis_replace_eqcond_func_dict
+    tvis_infoset                  = get_setting(m, :tvis_information_set)
     tvis_replace_eqcond_func_dict = get_setting(m, :tvis_replace_eqcond_func_dict)
     tvis_select                   = get_setting(m, :tvis_select_system)
-    tvis_infoset                  = get_setting(m, :tvis_information_set)
     regime_switching              = get_setting(m, :regime_switching)
 
     n_tvis           = length(tvis_replace_eqcond_func_dict)
@@ -1332,13 +1349,13 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
     RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
     CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
-    for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict)
-        m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
+        m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
         TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
                                                       regimes = collect(1:n_regimes), hist_regimes = collect(1:n_hist_regimes),
                                                       fcast_regimes = fcast_regimes, verbose = verbose)
         transitions[i] = Vector{Transition{T}}(undef, n_regimes)
-        for j in 1:n_regimes
+        for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
             transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
         end
     end
@@ -1346,7 +1363,7 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     # Infer which measurement and pseudo-measurement equations to use
     measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
     has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
-    if has_pseudo
+    if has_pseudo # Only calculate PseudoMeasurement equation if the method exists
         pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
     end
     for (reg, i) in enumerate(tvis_select)
@@ -1361,6 +1378,10 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
         end
     end
 
-    return TimeVaryingInformationSetSystem(transitions, measurement_eqns, pseudo_measurement_eqns,
-                                           tvis_infoset, tvis_select)
+    if has_pseudo
+        return TimeVaryingInformationSetSystem(transitions, measurement_eqns, pseudo_measurement_eqns,
+                                               tvis_infoset, tvis_select)
+    else
+        return TimeVaryingInformationSetSystem(transitions, measurement_eqns, tvis_infoset, tvis_select)
+    end
 end
