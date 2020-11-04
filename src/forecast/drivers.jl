@@ -868,7 +868,18 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             # NOTE: ZZ REGIME SWITCHING NOT FULLY SUPPORTED, SO JUST TAKE THE LAST ZZ IN THE SYSTEM
             #       OR THE ZZ SPECIFIED BY THE FOLLOWING SETTING
-            cond_ZZ_regime = (regime_switching && haskey(get_settings(m), :cond_ZZ_regime)) ? get_setting(m, :cond_ZZ_regime) : n_regimes
+            cond_ZZ_regime = if regime_switching
+                if haskey(get_settings(m), :cond_ZZ_regime)
+                    get_setting(m, :cond_ZZ_regime)
+                else # an educated guess at the correct conditional regime
+                    if only_filter
+                        @warn "The setting :cond_ZZ_regime is not specified. Making an educated guess..."
+                    end
+                    get_setting(m, :reg_forecast_start) + get_setting(m, :n_cond_regimes) - 1
+                end
+            else
+                1
+            end
             if cond_type in [:full, :semi] && !only_filter
                 forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
@@ -877,12 +888,20 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     transplant_forecast_observables(histstates, forecastobs,
                                                     regime_switching ? system[cond_ZZ_regime] : system, T)
             elseif cond_type in [:full, :semi] && only_filter
-                cond_obs                         = system[cond_ZZ_regime, :ZZ] * s_T + system[cond_ZZ_regime, :DD]
-                cond_pseudo                      = system[cond_ZZ_regime, :ZZ_pseudo] * s_T + system[cond_ZZ_regime, :DD_pseudo]
-                forecast_output[:forecaststates] = hcat(s_T,         forecaststates)
-                forecast_output[:forecastobs]    = hcat(cond_obs,    forecastobs)
-                forecast_output[:forecastpseudo] = hcat(cond_pseudo, forecastpseudo)
-                # forecastshocks cannot be calculated w/out smoother
+                if regime_switching
+                    cond_obs                         = system[cond_ZZ_regime, :ZZ] * s_T + system[cond_ZZ_regime, :DD]
+                    cond_pseudo                      = system[cond_ZZ_regime, :ZZ_pseudo] * s_T + system[cond_ZZ_regime, :DD_pseudo]
+                    forecast_output[:forecaststates] = hcat(s_T,         forecaststates)
+                    forecast_output[:forecastobs]    = hcat(cond_obs,    forecastobs)
+                    forecast_output[:forecastpseudo] = hcat(cond_pseudo, forecastpseudo)
+                else
+                    cond_obs                         = system[:ZZ] * s_T + system[:DD]
+                    cond_pseudo                      = system[:ZZ_pseudo] * s_T + system[:DD_pseudo]
+                    forecast_output[:forecaststates] = hcat(s_T,         forecaststates)
+                    forecast_output[:forecastobs]    = hcat(cond_obs,    forecastobs)
+                    forecast_output[:forecastpseudo] = hcat(cond_pseudo, forecastpseudo)
+                    # forecastshocks cannot be calculated w/out smoother
+                end
             else
                 forecast_output[:forecaststates] = forecaststates
                 forecast_output[:forecastshocks] = forecastshocks
@@ -949,7 +968,18 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             # NOTE: ZZ REGIME SWITCHING NOT FULLY SUPPORTED, SO JUST TAKE THE LAST ZZ IN THE SYSTEM
             #       OR THE ZZ SPECIFIED BY THE FOLLOWING SETTING
-            cond_ZZ_regime = (regime_switching && haskey(get_settings(m), :cond_ZZ_regime)) ? get_setting(m, :cond_ZZ_regime) : n_regimes
+            cond_ZZ_regime = if regime_switching
+                if haskey(get_settings(m), :cond_ZZ_regime)
+                    get_setting(m, :cond_ZZ_regime)
+                else # an educated guess at the correct conditional regime
+                    if only_filter
+                        @warn "The setting :cond_ZZ_regime is not specified. Making an educated guess..."
+                    end
+                    get_setting(m, :reg_forecast_start) + get_setting(m, :n_cond_regimes) - 1
+                end
+            else
+                1
+            end
             if cond_type in [:full, :semi] && !only_filter
                 forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
                 forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
