@@ -498,6 +498,11 @@ Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 
 function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none)
 
+    if haskey(get_settings(m), :regime_switching) ? !get_setting(m, :regime_switching) : true
+        @warn "The setting :regime_switching is either false or is not defined yet. Updating the setting to be true."
+        m <= Setting(:regime_switching, true)
+    end
+
     n_hist_regimes = 0
     n_cond_regimes = 0
     n_regimes = length(get_setting(m, :regime_dates))
