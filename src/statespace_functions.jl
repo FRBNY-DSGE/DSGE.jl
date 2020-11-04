@@ -18,6 +18,19 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     if tvis
         @assert haskey(get_settings(m), :tvis_information_set) "The setting :tvis_information_set is not defined"
         n_tvis = haskey(get_settings(m), :tvis_replace_eqcond_func_dict) ? length(get_setting(m, :tvis_replace_eqcond_func_dict)) : 1
+        if n_tvis == 1 && haskey(get_settings(m), :tvis_replace_eqcond_func_dict)
+            if haskey(get_settings(m), :replace_eqcond_func_dict)
+                if get_setting(m, :tvis_replace_eqcond_func_dict)[1] != get_setting(m, :replace_eqcond_func_dict)
+                    warn_str = "The dictionary of functions in the Setting :replace_eqcond_func_dict does not match the one specified "
+                        * "by the length-one Setting :tvis_replace_eqcond_func_dict. Replacing :replace_eqcond_func_dict with the dictionary "
+                        * "of functions contained in :tvis_replace_eqcond_func_dict."
+                    @warn warn_str
+                    m <= Setting(:replace_eqcond_func_dict, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
+                end
+            else
+                m <= Setting(:replace_eqcond_func_dict, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
+            end
+        end
 
         if n_tvis > 1 # case of n_tvis = 1 handled below to avoid constructing redundant TimeVaryingInformationSetSystem
             @assert haskey(get_settings(m), :tvis_select_system) "The setting :tvis_select_system is not defined"
