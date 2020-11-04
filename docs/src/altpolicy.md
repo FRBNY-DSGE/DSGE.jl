@@ -67,7 +67,7 @@ The user also needs to complete the following steps.
   the user only needs to populate regimes in which the `eqcond` function differs from the standard one.
 
 To see an example of using temporary alternative policies, see the
-[example script for regime-switching](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl).
+[example script for regime-switching](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
 
 In contrast, the permanent version of Nominal GDP targeting would be
 

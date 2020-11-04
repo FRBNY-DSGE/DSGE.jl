@@ -31,8 +31,8 @@ m = Model1002("ss10")
 m <= Setting(:sampling_method, :MH)
 usual_model_settings!(m, "181115"; cdvt = "181115", fcast_date = quartertodate("2018-Q4"))
 m <= Setting(:use_population_forecast, false) # We do not make this data available
-m <= Setting(:saveroot, "$(fn)/../../save/") # set save root
-m <= Setting(:dataroot, "$(fn)/../../save/input_data/") # set data root
+m <= Setting(:saveroot, "$(fn)/../save/") # set save root
+m <= Setting(:dataroot, "$(fn)/../save/input_data/") # set data root
 m <= Setting(:date_forecast_end, quartertodate("2030-Q1")) # when to stop forecast
 m <= Setting(:forecast_horizons,                           # number of quarters in forecast horizon; must match
              DSGE.subtract_quarters(date_forecast_end(m), date_forecast_start(m)) + 1) # date_forecast_end to run successfully
@@ -52,7 +52,7 @@ df = load_data(m; check_empty_columns = false)
 
 # Use overrides to give the correct file path for saved estimation output
 overrides = forecast_input_file_overrides(m)
-overrides[:full] = "$(fn)/../../test/reference/mhsave_vint=181115.h5"
+overrides[:full] = "$(fn)/../test/reference/mhsave_vint=181115.h5"
 
 # Full-distribution forecast
 if run_full_forecast

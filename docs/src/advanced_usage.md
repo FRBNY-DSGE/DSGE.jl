@@ -220,7 +220,7 @@ rather than permanent. Using exogenous regime-switching along with a modified
 In this section, we will go over the interface for running
 regime-switching forecasts and discuss some details of the implementation.
 It is useful to also look at the posted
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl) for regime-switching.
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl) for regime-switching.
 To understand how to implement your own regime-switching model, we recommend
 examining the implementation of [regime-switching
 equilibrium conditions](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
@@ -266,7 +266,7 @@ using `forecast_one` or `usual_model_forecast`, it is necessary to manually
 construct the matrix of parameter draws and pass them as an input with the keyword `params`.
 Currently, we have not fully implemented loading parameters from a saved estimation file.
 For an example about how to do this, see this
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl).
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
 
 
 ### Available Types of Regime Switching
@@ -277,7 +277,7 @@ There are two cases involving regime switching that are implemented in DSGE.jl
 - Temporary alternative policies
 
 To implement regime-switching parameters, see the
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl) for a regime-switching forecast.
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl) for a regime-switching forecast.
 For further details, see
 the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl),
 which implements regime-switching parameters.

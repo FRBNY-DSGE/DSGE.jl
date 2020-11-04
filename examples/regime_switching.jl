@@ -37,8 +37,8 @@ for models in [m, m10]
     m <= Setting(:sampling_method, :MH)
     usual_model_settings!(m, "181115"; cdvt = "181115", fcast_date = quartertodate("2018-Q4"))
     m <= Setting(:use_population_forecast, false)
-    m <= Setting(:saveroot, joinpath("$(fn)", "..", "..", "save"))
-    m <= Setting(:dataroot, joinpath("$(fn)", "..", "..", "save", "input_data"))
+    m <= Setting(:saveroot, joinpath("$(fn)", "..", "save"))
+    m <= Setting(:dataroot, joinpath("$(fn)", "..", "save", "input_data"))
     m <= Setting(:date_forecast_end, quartertodate("2030-Q1"))
     m <= Setting(:forecast_block_size, 40)
     if get_setting(m, :sampling_method) == :SMC
@@ -74,7 +74,7 @@ end
 # See the full forecast code block for the construction
 # of the matrix of parameter draws
 overrides = forecast_input_file_overrides(m10)
-overrides[:full] = "$(fn)/../../test/reference/mhsave_vint=181115.h5"
+overrides[:full] = "$(fn)/../test/reference/mhsave_vint=181115.h5"
 modal_params = map(x -> x.value, m10.parameters) # The default parameters will be our "modal" parameters for this exercise
 θ10 = load_draws(m10, :full)
 
