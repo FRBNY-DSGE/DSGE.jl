@@ -19,7 +19,7 @@ using Plots.PlotMeasures
 # IRF is different, but after 5-10 quarters, the impulse responses are almost identical.
 fp = dirname(@__FILE__)
 
-matdata     = load(joinpath(fp, "../../test/reference/dsgevecm_lambda_irfs.jld2"))
+matdata     = load(joinpath(fp, "../test/reference/dsgevecm_lambda_irfs.jld2"))
 horizon     = 20
 nshocks     = size(matdata["RRR"], 2)
 obs_dict    = Dict{Symbol, Int}(:output_growth => 1, :consumption_growth => 2,
