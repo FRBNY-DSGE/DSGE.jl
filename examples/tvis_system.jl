@@ -111,12 +111,12 @@ if calculate_system
         @assert system_shortzlb[i, :ZZ] != system_shortlong_zlb[i, :ZZ]
         @assert system_shortzlb[i, :TTT] != system_shortlong_zlb[i, :TTT]
     end
-@assert system_shortzlb[get_setting(m, :n_regimes) - 1, :ZZ] ≈ # b/c transition equation matters only for
-    system_shortlong_zlb[get_setting(m, :n_regimes) - 1, :ZZ]  # forward expectations in measurement equation
-@assert system_shortzlb[get_setting(m, :n_regimes), :ZZ] ==
-    system_shortlong_zlb[get_setting(m, :n_regimes), :ZZ]
-@assert system_shortzlb[get_setting(m, :n_regimes), :TTT] ==
-    system_shortlong_zlb[get_setting(m, :n_regimes), :TTT]
+    @assert system_shortzlb[get_setting(m, :n_regimes) - 1, :ZZ] ≈ # b/c transition equation matters only for
+        system_shortlong_zlb[get_setting(m, :n_regimes) - 1, :ZZ]  # forward expectations in measurement equation
+    @assert system_shortzlb[get_setting(m, :n_regimes), :ZZ] ==
+        system_shortlong_zlb[get_setting(m, :n_regimes), :ZZ]
+    @assert system_shortzlb[get_setting(m, :n_regimes), :TTT] ==
+        system_shortlong_zlb[get_setting(m, :n_regimes), :TTT]
 end
 
 if modal_forecast
