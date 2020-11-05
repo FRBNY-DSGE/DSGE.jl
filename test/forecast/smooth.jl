@@ -279,4 +279,65 @@ pseudo_sv = Matrix{Float64}[]
     end
 end
 
+@testset "Smoothing with time-varying information sets" begin
+    custom_settings = Dict{Symbol, Setting}(
+        :data_vintage             => Setting(:data_vintage, "160812"),
+        :cond_vintage             => Setting(:cond_vintage, "160812"),
+        :cond_id                  => Setting(:cond_id, 0),
+        :use_population_forecast  => Setting(:use_population_forecast, true),
+        :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
+        :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
+        :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
+        :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6),
+        :cond_full_names          => Setting(:cond_full_names, [:obs_gdp, :obs_longrate, :obs_longinflation,
+                                                                :obs_nominalrate, :obs_nominalrate1,
+                                                                :obs_corepce]))
+    df = load("$path/../reference/regime_switch_data.jld2", "full")
+    df[end, :obs_longrate] = .44
+    df[end, :obs_longinflation] = .42
+    df[end, :obs_nominalrate1] = .1
+
+    m = Model1002("ss10", custom_settings = custom_settings)
+    m <= Setting(:rate_expectations_source, :ois)
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:gensys2, true)
+    replace_eqcond_func_dict_shortzlb = Dict()
+    for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 1)
+        replace_eqcond_func_dict_shortzlb[i] = DSGE.zero_rate_replace_eq_entries
+    end
+    replace_eqcond_func_dict_longzlb = Dict()
+    for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 1)
+        replace_eqcond_func_dict_longzlb[i] = DSGE.zero_rate_replace_eq_entries
+    end
+
+    regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
+    for (i, d) in enumerate(DSGE.quarter_range(Date(2016, 9, 30), Date(2021, 3, 31)))
+        regime_dates[i + 1] = d
+    end
+    m <= Setting(:regime_dates, regime_dates)
+    m <= Setting(:regime_switching, true)
+    setup_regime_switching_inds!(m; cond_type = :full)
+    reg_2020Q1 = get_setting(m, :n_regimes) - 4
+    reg_2018Q1 = DSGE.subtract_quarters(Date(2018, 3, 31), Date(2016, 9, 30)) + 2
+    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb, replace_eqcond_func_dict_longzlb])
+    m <= Setting(:tvis_select_system, vcat(ones(Int, reg_2018Q1), fill(2, get_setting(m, :n_regimes) - reg_2018Q1)))
+    m <= Setting(:tvis_information_set, vcat([1:1], [i:reg_2020Q1 for i in 2:reg_2018Q1],
+                                             [i:get_setting(m, :n_regimes) for i in (reg_2018Q1 + 1):get_setting(m, :n_regimes)]))
+    m <= Setting(:forecast_smoother, :carter_kohn)
+    system = compute_system(m; tvis = true)
+    histstates, _, _, _ = smooth(m, df, system; cond_type = :full)
+    obs = zeros(n_observables(m), size(histstates, 2))
+    obs[:, 1:end - 1] = system[1, :ZZ] * histstates[:, 1:end - 1] .+ system[1, :DD]
+    obs[:, end] = system[2, :ZZ] * histstates[:, end] + system[2, :DD]
+    fcast = system[3, :ZZ] * (system[3, :TTT] * histstates[:, end] + system[3, :CCC]) + system[3, :DD]
+    truedata = df_to_matrix(m, df; cond_type = :full)
+    @test (isapprox(obs[vcat(1:9, 11:13), 47:end - 2], truedata[vcat(1:9, 11:13), (47 + 2):end - 2], atol=2e-4))
+    @test obs[vcat(1:9, 11), end - 1] ≈ truedata[vcat(1:9, 11), end - 1]
+    for k in get_setting(m, :cond_full_names)
+        @test obs[m.observables[k], end] ≈ truedata[m.observables[k], end]
+    end
+    @test fcast[m.observables[:obs_nominalrate]] ≈ obs[m.observables[:obs_nominalrate1], end]
+    @test fcast[m.observables[:obs_nominalrate2]] ≈ 0. # ZLB now binds
+end
+
 nothing
