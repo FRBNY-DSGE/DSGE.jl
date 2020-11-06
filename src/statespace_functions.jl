@@ -1258,6 +1258,10 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                                                                       integ_series = integ_series)
             end
             return sum(T_accum), sum(C_accum)
+
+            # This code seems to work (match directly adding each k_period_ahead_expectations)
+            # but sometimes causes mild numerical differences,
+            # so we calculate the expected sum by adding each k_period_ahead_expectations.
 #=            h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
 
             Tₜ₊ₕ₊₁_memo = Vector{eltype(TTTs)}(undef, k - h)
