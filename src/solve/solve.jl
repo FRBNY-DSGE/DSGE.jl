@@ -390,6 +390,7 @@ function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s
         weights = get_setting(m, :imperfect_credibility_weights)
         histpol = AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)]
     end
+    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
 
     for fcast_reg in fcast_regimes
         if altpolicy_solve == solve || !apply_altpolicy
@@ -407,6 +408,31 @@ function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s
                     gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = apply_altpolicy,
                                             TTT = TTT_gensys, regime_switching = true, regimes = Int[fcast_reg])
             end
+
+            TTT_gensys = real(TTT_gensys)
+            RRR_gensys = real(RRR_gensys)
+            CCC_gensys = real(CCC_gensys)
+
+            # Populate the TTTs, etc., for regime `fcast_reg`
+            TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
+                augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+        elseif uncertain_altpolicy
+            weights = get_setting(m, :alternative_policy_weights)
+            altpols = get_setting(m, :alternative_policies)
+
+            @show "Fcast_uncertain"
+            @show uncertain_altpolicy
+
+            n_endo = length(keys(m.endogenous_states))
+            TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = altpolicy_solve(m; regime_switching = true,
+                                                                                   regimes = Int[get_setting(m, :n_regimes)])
+            TTT_gensys_final = TTT_gensys_final[1:n_endo, 1:n_endo] # make sure the non-augmented version
+            RRR_gensys_final = RRR_gensys_final[1:n_endo, :]        # is returned
+            CCC_gensys_final = CCC_gensys_final[1:n_endo]
+
+            TTT_gensys, RRR_gensys, CCC_gensys =
+                gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
+                                        TTT = TTT_gensys_final)
 
             TTT_gensys = real(TTT_gensys)
             RRR_gensys = real(RRR_gensys)
@@ -445,6 +471,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false)
     n_no_alt_reg = separate_cond_periods ?
         (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
+
     if n_no_alt_reg > 0
         # Get the T, R, C matrices between the first forecast period & first rule period
         for fcast_reg in first(fcast_regimes):(first(fcast_regimes) + n_no_alt_reg - 1)
@@ -493,10 +520,12 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             error("Neither alternative policies were specified nor does the model switch to Flexible AIT.")
         end
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
-        Talt, _, Calt = altpols[1].solve(m)
+        #Talt, _, Calt = altpols[1].solve(m)
+        Talt, Ralt, Calt = altpols[1].solve(m)
 
         # Calculate the desired lift-off policy
         altpolicy_solve = get_setting(m, :alternative_policy).solve
+        @show altpolicy_solve
         TTT_liftoff, RRR_liftoff, CCC_liftoff = altpolicy_solve(m; regime_switching = true,
                                                                 regimes = Int[get_setting(m, :n_regimes)])
 
@@ -504,6 +533,12 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         TTT_liftoff = TTT_liftoff[1:n_endo, 1:n_endo] # make sure the non-augmented version
         RRR_liftoff = RRR_liftoff[1:n_endo, :]        # is returned
         CCC_liftoff = CCC_liftoff[1:n_endo]
+
+        @show "Liftoff"
+        Hbar_str = ""
+        if haskey(get_settings(m), :Hnew)
+            Hbar_str = "Hbar" * string(get_setting(m, :Hnew))
+        end
 
         # Calculate gensys2 matrices under belief that the desired lift-off policy will occur
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
@@ -515,20 +550,45 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Rcal[end] = RRR_liftoff
         Ccal[end] = CCC_liftoff
 
-        # Now calculate transition matrices under an uncertain ZLB
+        # For Taylor Rule
+        Talts, Ralts, Calts = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
+                                        Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
+                                        Talt[1:n_endo, 1:n_endo], Ralt[1:n_endo, :], Calt[1:n_endo],
+                                        T_switch = (separate_cond_periods ?
+                                        get_setting(m, :n_rule_periods) + 1 : get_setting(m, :n_fcast_regimes)))
+        Talts[end] = Talt[1:n_endo, 1:n_endo]
+        Ralts[end] = Ralt[1:n_endo, :]
+        Calts[end] = Calt[1:n_endo]
+
+        #save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str).jld2", Dict("Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal))
+
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
-
+#=
         Tcal, Rcal, Ccal =
             gensys_uncertain_zlb(weights, Talt[1:n_endo, 1:n_endo], Calt[1:n_endo], Tcal[2:end], Rcal[2:end], Ccal[2:end],
+                                 Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+=#
+        Tcal, Rcal, Ccal =
+            gensys_uncertain_zlb(weights, Talts[2:end], Calts[2:end], Tcal[2:end], Rcal[2:end], Ccal[2:end],
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
         Tcal[end] = TTT_gensys_final
         Rcal[end] = RRR_gensys_final
         Ccal[end] = CCC_gensys_final
+
         for (i, reg) in enumerate(populate_reg)
             TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i])
         end
+
+#        @show get_setting(m, :alternative_policy_weights)[1]
+#        save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str)_last.jld2", Dict("TTTs" => TTTs, "RRRs" => RRRs, "CCCs" => CCCs))#,
+#=         "Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal, "Gam0_til" => Γ0_til, "Gam1_til" => Γ1_til,
+         "Gam2_til" => Γ2_til, "C_til" => C_til, "Psi_til" => Ψ_til, "TTT_liftoff" => TTT_liftoff,
+         "RRR_liftoff" => RRR_liftoff, "CCC_liftoff" => CCC_liftoff, "TTT_gensys_final" => TTT_gensys_final,
+         "RRR_gensys_final" => RRR_gensys_final, "CCC_gensys_final" => CCC_gensys_final,
+         "gensys2_regimes" => gensys2_regimes, "populate_reg" => populate_reg, "Talt" => Talt, "Calt" => Calt))=#
+
     else
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
