@@ -873,6 +873,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
                              cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
+                # filepathed = "/data/dsge_data_dir/dsgejl/william/policy/one_off/covid_exercises/System_2020_Q3/flexible_ait_2020Q3/save/everything_$(get_setting(m, :alternative_policy_weights)"
+                # save(filepathed * "/drivers.jld2", Dict("forecaststates" => forecaststates, "forecastobs" => forecastobs))
             end
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
