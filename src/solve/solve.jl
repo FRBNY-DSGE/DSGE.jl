@@ -272,6 +272,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
             else
                 solve_fcastregimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs;
                                     fcast_regimes = fcast_regimes, apply_altpolicy = apply_altpolicy,
+                                    uncertain_altpolicy = uncertain_altpolicy,
                                     altpolicy_solve = altpolicy_solve, verbose = verbose)
             end
 
@@ -381,7 +382,8 @@ end
 function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
                              Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                              TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
-                             fcast_regimes::Vector{Int} = Int[1], apply_altpolicy::Bool = false,
+                             fcast_regimes::Vector{Int} = Int[1],
+                             uncertain_altpolicy::Bool = false, apply_altpolicy::Bool = false,
                              verbose::Symbol = :high, altpolicy_solve = nothing) where {S <: Real}
 
     flex_ait_pol_change = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
@@ -444,6 +446,26 @@ function solve_fcastregimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s
         else
             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
                 altpolicy_solve(m; regime_switching = true, regimes = Int[fcast_reg])
+
+            if uncertain_altpolicy
+                inds = 1:n_states(m)
+                if !flex_ait_pol_change || get_setting(m, :regime_dates)[fcast_reg] < Date(2020, 9, 30)
+                    weights = get_setting(m, :alternative_policy_weights)
+                    histpol = get_setting(m, :alternative_policies)
+                end
+                TTT_gensys, RRR_gensys, CCC_gensys =
+                    gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = apply_altpolicy,
+                                            TTT = TTTs[fcast_reg][inds, inds],
+                                            regime_switching = true, regimes = Int[fcast_reg])
+
+                TTT_gensys = real(TTT_gensys)
+                RRR_gensys = real(RRR_gensys)
+                CCC_gensys = real(CCC_gensys)
+
+                # Populate the TTTs, etc., for regime `fcast_reg`
+                TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] =
+                    augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+            end
         end
     end
 
