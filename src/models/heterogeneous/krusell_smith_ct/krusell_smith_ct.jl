@@ -302,10 +302,10 @@ function init_parameters!(m::KrusellSmithCT)
                    tex_label="\\tau")
 
     # Steady state parameters
-    m <= SteadyStateParameterArray(:V_ss, Vector{Float64}(undef, 0); description =
-                                   "Stacked steady-state value function")
-    m <= SteadyStateParameterArray(:gg_ss, Vector{Float64}(undef, 0); description =
-                                   "Stacked steady-state distribution across state space")
+    m <= SteadyStateParameterGrid(:V_ss, Vector{Float64}(undef, 0); description =
+                                  "Stacked steady-state value function")
+    m <= SteadyStateParameterGrid(:gg_ss, Vector{Float64}(undef, 0); description =
+                                  "Stacked steady-state distribution across state space")
     m <= SteadyStateParameter(:log_aggregate_tfp_ss, NaN, description =
                               "Steady-state level of aggregate shocks")
     m <= SteadyStateParameter(:K_ss, NaN, description = "Steady-state capital level")
@@ -314,12 +314,12 @@ function init_parameters!(m::KrusellSmithCT)
     m <= SteadyStateParameter(:Y_ss, NaN, description = "Steady-state output level")
     m <= SteadyStateParameter(:C_ss, NaN, description = "Steady-state consumption level")
     m <= SteadyStateParameter(:I_ss, NaN, description = "Steady-state investment level")
-    m <= SteadyStateParameterArray(:If_ss, Matrix{Float64}(undef, 0, 0); description =
+    m <= SteadyStateParameterGrid(:If_ss, Matrix{Float64}(undef, 0, 0); description =
                                    "Steady-state forward difference upwind scheme")
-    m <= SteadyStateParameterArray(:Ib_ss, Matrix{Float64}(undef, 0, 0); description =
-                                   "Steady-state backward difference upwind scheme")
-    m <= SteadyStateParameterArray(:I0_ss, Matrix{Float64}(undef, 0, 0); description =
-                                   "Steady-state no drift upwind scheme")
+    m <= SteadyStateParameterGrid(:Ib_ss, Matrix{Float64}(undef, 0, 0); description =
+                                  "Steady-state backward difference upwind scheme")
+    m <= SteadyStateParameterGrid(:I0_ss, Matrix{Float64}(undef, 0, 0); description =
+                                  "Steady-state no drift upwind scheme")
 end
 
  """
