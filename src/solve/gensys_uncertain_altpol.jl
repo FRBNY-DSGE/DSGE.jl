@@ -51,7 +51,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
             return Tcal, Rcal, Ccal
         else
-            error("Regime switching has not been completed for gensys_uncertain_altpol")
+            error("Regime switching for multiple regimes has not been completed for gensys_uncertain_altpol")
             if isempty(Γ0s) || isempty(Γ1s) || isempty(Cs) || isempty(Ψs) || isempty(Πs)
                 # If any of these are empty, we recompute the relevant matrices
                 for fcast_reg in regimes

@@ -1,10 +1,11 @@
-using DSGE, HDF5, ModelConstructors, Test
+using DSGE, HDF5, ModelConstructors, Test, Dates
 
 regen = false
 
 
 m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
 hist_rule = get_setting(m, :alternative_policy)
+m <= Setting(:alternative_policies, AltPolicy[hist_rule])
 m <= Setting(:alternative_policy, DSGE.ngdp())
 m <= Setting(:pgap_type, :ngdp)
 m <= Setting(:pgap_value, 12.)
@@ -15,8 +16,17 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
 @testset "Gensys when alternative policies are not credible" begin
     for (i, prob_vec) in enumerate([[1., 0.], [.5, .5], [.999, .001]])
         T_prs, R_prs, C_prs = DSGE.gensys_uncertain_altpol(m, prob_vec, DSGE.AltPolicy[hist_rule],
-                                                             apply_altpolicy = true)
+                                                           apply_altpolicy = true)
         T_prs, R_prs, C_prs = DSGE.augment_states(m, T_prs, R_prs, C_prs)
+
+        m <= Setting(:alternative_policy_weights, prob_vec)
+        m <= Setting(:uncertain_altpolicy, true)
+        TTT, RRR, CCC = solve(m; apply_altpolicy = true) # check automatic calculation
+        m <= Setting(:uncertain_altpolicy, false) # to make DSGE.gensys_uncertain_altpol above work
+
+        @test TTT ≈ T_prs
+        @test RRR ≈ R_prs
+        @test CCC ≈ C_prs
 
         if regen && i == 2
             h5open(joinpath(rp, "gensys_uncertain_altpol.h5"), "w") do file
@@ -46,5 +56,38 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
             @test maximum(abs.(R_prs - R_ngdp)) < 2e-2
             @test C_prs ≈ C_ngdp    # these should be all zeros
         end
+    end
+
+    m <= Setting(:regime_dates, Dict(1 => date_presample_start(m), 2 => Date(2020, 9, 30), 3 => Date(2020, 12, 31),
+                                     4 => Date(2021, 3, 31), 5 => Date(2021, 6, 30)))
+    m <= Setting(:date_forecast_start, Date(2020, 9, 30))
+    m <= Setting(:regime_switching, true)
+    setup_regime_switching_inds!(m)
+
+    m <= Setting(:alternative_policies, AltPolicy[hist_rule])
+    m <= Setting(:alternative_policy_weights, [.5, .5])
+    m <= Setting(:uncertain_altpolicy, true)
+    @test !haskey(DSGE.get_settings(m), :gensys2)
+    TTTs, RRRs, CCCs = solve(m; apply_altpolicy = true, regime_switching = true,
+                             hist_regimes = collect(1:1), fcast_regimes = collect(2:5),
+                             regimes = collect(1:5))
+
+    @test !(TTTs[2] ≈ T_ngdp)
+    for i in 3:5
+        @test TTTs[i] == TTTs[2]
+        @test RRRs[i] == RRRs[2]
+        @test CCCs[i] == CCCs[2]
+    end
+
+    m <= Setting(:alternative_policy_weights, [1., 0.])
+    TTTs2, RRRs2, CCCs2 = solve(m; apply_altpolicy = true, regime_switching = true,
+                                hist_regimes = collect(1:1), fcast_regimes = collect(2:5),
+                                regimes = collect(1:5))
+
+    @test !(TTTs2[2] ≈ TTTs[2])
+    for i in 3:5
+        @test TTTs2[i] ≈ T_ngdp
+        @test RRRs2[i] ≈ R_ngdp
+        @test CCCs2[i] ≈ C_ngdp
     end
 end
