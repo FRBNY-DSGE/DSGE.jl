@@ -52,7 +52,9 @@ Developers of this package at the
 
 * [Michael Cai](https://github.com/caimichael)
 * [William Chen](https://github.com/chenwilliam77)
+* [Shlok Goyal](https://github.com/ShlokG)
 * [Abhi Gupta](https://github.com/abhig94)
+* [Alissa Johnson](https://github.com/alissarjohnson)
 * [Pearl Li](https://github.com/pearlzli)
 * [Ethan Matlin](https://github.com/ethanmatlin)
 * [Erica Moszkowski](https://github.com/emoszkowski)
