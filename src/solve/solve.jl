@@ -551,6 +551,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Ccal[end] = CCC_liftoff
 
         # For Taylor Rule
+#=
         Talts, Ralts, Calts = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         Talt[1:n_endo, 1:n_endo], Ralt[1:n_endo, :], Calt[1:n_endo],
@@ -559,7 +560,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Talts[end] = Talt[1:n_endo, 1:n_endo]
         Ralts[end] = Ralt[1:n_endo, :]
         Calts[end] = Calt[1:n_endo]
-
+=#
         #save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str).jld2", Dict("Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal))
 
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
@@ -570,7 +571,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 =#
         Tcal, Rcal, Ccal =
-            gensys_uncertain_zlb(weights, Talts[2:end], Calts[2:end], Tcal[2:end], Rcal[2:end], Ccal[2:end],
+            gensys_uncertain_zlb(weights, Talt, Calt,#Talts[2:end], Calts[2:end],
+                                 Tcal[2:end], Rcal[2:end], Ccal[2:end],
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
         Tcal[end] = TTT_gensys_final
