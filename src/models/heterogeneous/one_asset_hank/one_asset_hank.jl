@@ -334,20 +334,20 @@ function init_parameters!(m::OneAssetHANK)
                    description="Rate of mean reversion in monetary policy shocks",
                    tex_label="θ_MP")
 
-    m <= SteadyStateParameterArray(:V_ss, Vector{Float64}(),
-                                   description = "Stacked steady-state value function")
+    m <= SteadyStateParameterGrid(:V_ss, Vector{Float64}(),
+                                  description = "Stacked steady-state value function")
 
     m <= SteadyStateParameter(:inflation_ss, NaN, description = "Steady-state rate of inflation")
-    m <= SteadyStateParameterArray(:g_ss, Vector{Float64}(),
-                                   description = "Stacked steady-state distribution")
+    m <= SteadyStateParameterGrid(:g_ss, Vector{Float64}(),
+                                  description = "Stacked steady-state distribution")
     m <= SteadyStateParameter(:r_ss, NaN, description = "Steady-state real interest rate")
-    m <= SteadyStateParameterArray(:u_ss, Vector{Float64}(), description = "Steady-state flow utility")
-    m <= SteadyStateParameterArray(:c_ss, Vector{Float64}(),
-                                   description = "Steady-state individual consumption rate")
-    m <= SteadyStateParameterArray(:h_ss, Vector{Float64}(),
-                                   description = "Steady-state individual labor hours")
-    m <= SteadyStateParameterArray(:s_ss, Vector{Float64}(),
-                                   description = "Steady-state individual savings rate")
+    m <= SteadyStateParameterGrid(:u_ss, Vector{Float64}(), description = "Steady-state flow utility")
+    m <= SteadyStateParameterGrid(:c_ss, Vector{Float64}(),
+                                  description = "Steady-state individual consumption rate")
+    m <= SteadyStateParameterGrid(:h_ss, Vector{Float64}(),
+                                  description = "Steady-state individual labor hours")
+    m <= SteadyStateParameterGrid(:s_ss, Vector{Float64}(),
+                                  description = "Steady-state individual savings rate")
     m <= SteadyStateParameter(:rnom_ss, NaN, description = "Steady-state nominal interest rate")
     m <= SteadyStateParameter(:B_ss, NaN, description = "Steady-state bond supply")
     m <= SteadyStateParameter(:N_ss, NaN, description = "Steady-state labor supply")
