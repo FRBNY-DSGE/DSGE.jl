@@ -565,14 +565,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
-#=
+
         Tcal, Rcal, Ccal =
             gensys_uncertain_zlb(weights, Talt[1:n_endo, 1:n_endo], Calt[1:n_endo], Tcal[2:end], Rcal[2:end], Ccal[2:end],
-                                 Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
-=#
-        Tcal, Rcal, Ccal =
-            gensys_uncertain_zlb(weights, Talt, Calt,#Talts[2:end], Calts[2:end],
-                                 Tcal[2:end], Rcal[2:end], Ccal[2:end],
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
         Tcal[end] = TTT_gensys_final
