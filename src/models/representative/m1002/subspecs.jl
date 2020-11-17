@@ -711,8 +711,12 @@ function ss30!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 end
 
@@ -791,8 +795,12 @@ function ss59!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
@@ -974,8 +982,12 @@ function ss60!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
@@ -1153,8 +1165,12 @@ function ss61!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
