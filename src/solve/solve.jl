@@ -520,8 +520,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             error("Neither alternative policies were specified nor does the model switch to Flexible AIT.")
         end
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
-        #Talt, _, Calt = altpols[1].solve(m)
-        Talt, Ralt, Calt = altpols[1].solve(m)
+        Talt, _, Calt = altpols[1].solve(m)
 
         # Calculate the desired lift-off policy
         altpolicy_solve = get_setting(m, :alternative_policy).solve
@@ -579,7 +578,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         end
 
 #        @show get_setting(m, :alternative_policy_weights)[1]
-#        save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str)_last.jld2", Dict("TTTs" => TTTs, "RRRs" => RRRs, "CCCs" => CCCs))#,
+#         save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str)_last.jld2", Dict("TTTs" => TTTs, "RRRs" => RRRs, "CCCs" => CCCs))#,
 #=         "Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal, "Gam0_til" => Γ0_til, "Gam1_til" => Γ1_til,
          "Gam2_til" => Γ2_til, "C_til" => C_til, "Psi_til" => Ψ_til, "TTT_liftoff" => TTT_liftoff,
          "RRR_liftoff" => RRR_liftoff, "CCC_liftoff" => CCC_liftoff, "TTT_gensys_final" => TTT_gensys_final,
