@@ -812,7 +812,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 elseif _ygap_type == _pgap_type == :smooth_ait_gdp_alt
                     _, s_T = smooth_ait_gdp_alt_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
                 elseif (_ygap_type == _pgap_type == :flexible_ait) &&
-                    (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? !get_setting(m, :flexible_ait_2020Q3_policy_change) : true)
+                    (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? !get_setting(m, :flexible_ait_2020Q3_policy_change) : true) && (!haskey(m.settings, :initialize_pgap_ygap) || get_setting(m, :initialize_pgap_ygap))
                     _, s_T = flexible_ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
                 else
                     update_hist = false
