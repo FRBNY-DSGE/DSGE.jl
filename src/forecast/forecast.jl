@@ -380,12 +380,14 @@ end
 function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states::AbstractMatrix{S},
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
+                  set_info_sets_altpolicy::Function = identity,
                   tol::S = -1e-14) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
+    original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : false
 
     # Grab some information about the forecast
     n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
@@ -487,6 +489,10 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             if set_zlb_regime_vals != identity
                 set_zlb_regime_vals(m, n_total_regimes)
             end
+            # set up the information sets
+            if set_info_sets_altpolicy != identity
+                set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
+            end
 
             # Recompute to account for new regimes
             system = compute_system(m; apply_altpolicy = true)
@@ -506,6 +512,10 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                         end
                     end
                 end
+            end
+            # restore original info set
+            if haskey(get_settings(m), :tvis_information_set)
+                m <= Setting(:tvis_information_set, original_info_set)
             end
 
             if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
