@@ -380,7 +380,7 @@ end
 function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states::AbstractMatrix{S},
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
-                  set_info_sets_altpolicy::Function = identity,
+                  set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
                   tol::S = -1e-14) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
@@ -491,10 +491,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             if set_zlb_regime_vals != identity
                 set_zlb_regime_vals(m, n_total_regimes)
             end
+
             # set up the information sets
-            if set_info_sets_altpolicy != identity
-                set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
-            end
+            set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
 
             # Recompute to account for new regimes
             system = compute_system(m; apply_altpolicy = true)
@@ -515,6 +514,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                     end
                 end
             end
+
             # restore original info set
             if haskey(get_settings(m), :tvis_information_set)
                 m <= Setting(:tvis_information_set, original_info_set)
@@ -577,4 +577,16 @@ function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Sy
     regime_inds = push!(regime_inds, last_ind:horizon) # Covers case where final hist regime is also first (and only) forecast regime.
 
     return regime_inds
+end
+
+function auto_temp_altpolicy_info_set(m::AbstractDSGEModel, n_regimes::Int, first_zlb_regime::Int)
+    tvis_infoset = UnitRange{Int}[]
+    for r in 1:n_regimes
+        if r < first_zlb_regime
+            push!(tvis_infoset, r:r)
+        else
+            push!(tvis_infoset, r:n_regimes)
+        end
+    end
+    m <= Setting(:tvis_information_set, tvis_infoset)
 end
