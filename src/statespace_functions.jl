@@ -63,8 +63,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
-                                     hist_regimes = collect(1:n_hist_regimes),
-                                     fcast_regimes = fcast_regimes,
+                                     pre_gensys2_regimes = collect(1:n_hist_regimes),
+                                     fcast_gensys2_regimes = fcast_regimes,
                                      verbose = verbose)
 
             transition_equations = Vector{Transition{T}}(undef, n_regimes)
@@ -1358,7 +1358,10 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
         get_setting(m, :n_regimes) : 1
     n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
         get_setting(m, :n_hist_regimes) : 1
-    if haskey(get_settings(m), :reg_forecast_start)
+    if haskey(get_settings(m), :gensys2_first_regime)
+        fcast_regimes = collect(get_setting(m, :gensys2_first_regime):n_regimes)
+        n_hist_regimes = get_setting(m, :gensys2_first_regime) - 1
+    elseif haskey(get_settings(m), :reg_forecast_start)
         fcast_regimes = collect(get_setting(m, :reg_forecast_start):n_regimes)
     else
         fcast_regimes = collect(n_hist_regimes + 1:n_regimes)
@@ -1372,8 +1375,9 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
         m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
         TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
-                                                      regimes = collect(1:n_regimes), hist_regimes = collect(1:n_hist_regimes),
-                                                      fcast_regimes = fcast_regimes, verbose = verbose)
+                                                      regimes = collect(1:n_regimes),
+                                                      pre_gensys2_regimes = collect(1:n_hist_regimes),
+                                                      fcast_gensys2_regimes = fcast_regimes, verbose = verbose)
         transitions[i] = Vector{Transition{T}}(undef, n_regimes)
         for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
             transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
