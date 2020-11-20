@@ -410,7 +410,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       shock_name::Symbol = :none, shock_var_name::Symbol = :none,
                       shock_var_value::Float64 = 0.0, check_empty_columns = true,
                       zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
-                      set_info_sets_altpolicy::Function = identity,
+                      set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
                       params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       show_failed_percent::Bool = false, only_filter::Bool = false,
@@ -643,7 +643,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            shock_name::Symbol = :none, shock_var_name::Symbol = :none,
                            shock_var_value::Float64 = 0.0, zlb_method::Symbol = :shock,
                            set_regime_vals_altpolicy::Function = identity,
-                           set_info_sets_altpolicy::Function = identity,
+                           set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
@@ -657,7 +657,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     end
 
     # Time-Varying Information Set?
-    tvis = haskey(get_settings(m), :tvis_information_set)
+    tvis = haskey(get_settings(m), :tvis_information_set) ? !isempty(get_setting(m, :tvis_information_set)) : false
 
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)
