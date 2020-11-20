@@ -148,8 +148,8 @@ for j in 1:length(prob_vecs)
     m <= Setting(:uncertain_altpolicy, true)
     m <= Setting(:uncertain_zlb, true)
     autoTs[j], autoRs[j], autoCs[j] = solve(m; apply_altpolicy = true, regime_switching = true,
-                                            hist_regimes = collect(1:get_setting(m, :n_hist_regimes)),
-                                            fcast_regimes =
+                                            pre_gensys2_regimes = collect(1:get_setting(m, :n_hist_regimes)),
+                                            fcast_gensys2_regimes =
                                             collect((get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)),
                                             regimes = collect(1:get_setting(m, :n_regimes)))
     auto_fcasts[j] = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params,
