@@ -150,16 +150,6 @@ end
 KleinError() = KleinError("Error in Klein")
 Base.showerror(io::IO, ex::KleinError) = print(io, ex.msg)
 
-# TODO: refactor solve_regime_switching to no longer use the 1:n_hist_regimes
-# and (n_hist_regimes + 1):n_regimes dichotomy for solving the regimes
-# since technically "unnecessary". Or at least rename them.
-#
-# More generally, need to update handling of gensys2_regimes to allow the possibility
-# of using gensys2 for a couple years, returning to a normal rule, and then
-# going back to using gensys2 again without solving every single regime
-# during the normal rule (otherwise, the number of TTT matrices
-# will get huge). Solution may be adding a Dictionary which specifies
-# which regimes are gensys2 regimes.
 """
 ```
 solve_regime_switching(m::AbstractDSGEModel; apply_altpolicy = false)
