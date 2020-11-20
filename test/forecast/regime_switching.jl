@@ -53,8 +53,8 @@ Random.seed!(1793)
     m <= Setting(:pgap_type, :ngdp)
     m = setup_regime_switching_inds!(m)
 
-    sys_temp = solve(m, regime_switching = true, regimes = collect(1:n_reg_temp), hist_regimes = [1, 2],
-                     fcast_regimes = collect(3:n_reg_temp), apply_altpolicy = true)
+    sys_temp = solve(m, regime_switching = true, regimes = collect(1:n_reg_temp), pre_gensys2_regimes = [1, 2],
+                     fcast_gensys2_regimes = collect(3:n_reg_temp), apply_altpolicy = true)
     Γ0s = Vector{Matrix{Float64}}(undef, n_reg_temp-2)
     Γ1s = Vector{Matrix{Float64}}(undef, n_reg_temp-2)
     Cs = Vector{Vector{Float64}}(undef,  n_reg_temp-2)

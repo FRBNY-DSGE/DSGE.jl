@@ -69,7 +69,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     m <= Setting(:uncertain_altpolicy, true)
     @test !haskey(DSGE.get_settings(m), :gensys2)
     TTTs, RRRs, CCCs = solve(m; apply_altpolicy = true, regime_switching = true,
-                             hist_regimes = collect(1:1), fcast_regimes = collect(2:5),
+                             pre_gensys2_regimes = collect(1:1), fcast_gensys2_regimes = collect(2:5),
                              regimes = collect(1:5))
 
     @test !(TTTs[2] ≈ T_ngdp)
@@ -81,7 +81,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
 
     m <= Setting(:alternative_policy_weights, [1., 0.])
     TTTs2, RRRs2, CCCs2 = solve(m; apply_altpolicy = true, regime_switching = true,
-                                hist_regimes = collect(1:1), fcast_regimes = collect(2:5),
+                                pre_gensys2_regimes = collect(1:1), fcast_gensys2_regimes = collect(2:5),
                                 regimes = collect(1:5))
 
     @test !(TTTs2[2] ≈ TTTs[2])
