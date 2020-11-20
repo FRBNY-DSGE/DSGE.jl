@@ -387,9 +387,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
-    original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : false
-    original_eqcond_dict = haskey(get_settings(m), :replace_eqcond_func_dict) ? get_setting(m, :replace_eqcond_func_dict) : false
-
+    original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : UnitRange{Int64}[]
+    original_eqcond_dict = haskey(get_settings(m), :replace_eqcond_func_dict) ? get_setting(m, :replace_eqcond_func_dict) :
+        Dict{Int, Function}()
 
     # Grab some information about the forecast
     n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
@@ -463,7 +463,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # Set up replace_eqcond entries
             m <= Setting(:replace_eqcond, true)
             m <= Setting(:gensys2, true)
-            replace_eqcond = deepcopy(original_eqcond_dict) #Dict{Int, Function}()     # Which rule to replace with in which periods
+            replace_eqcond = deepcopy(original_eqcond_dict) # Which rule to replace with in which periods
             for regind in first_zlb_regime:(n_total_regimes - 1)
                 replace_eqcond[regind] = zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
             end
