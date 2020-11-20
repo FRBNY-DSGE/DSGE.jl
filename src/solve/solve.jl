@@ -150,6 +150,9 @@ end
 KleinError() = KleinError("Error in Klein")
 Base.showerror(io::IO, ex::KleinError) = print(io, ex.msg)
 
+# TODO: refactor solve_regime_switching to no longer use the 1:n_hist_regimes
+# and (n_hist_regimes + 1):n_regimes dichotomy for solving the regimes
+# since technically "unnecessary". Or at least rename them
 """
 ```
 solve_regime_switching(m::AbstractDSGEModel; apply_altpolicy = false)
@@ -190,7 +193,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
     altpolicy_solve = alternative_policy(m).solve
     gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
     uncertain_zlb = haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false
-
     if get_setting(m, :solution_method) == :gensys
         if length(regimes) == 1 # Calculate the solution to a specific regime
             return solve_one_regime(m; apply_altpolicy = apply_altpolicy, regime = regimes[1],
@@ -531,8 +533,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         TTT_liftoff, RRR_liftoff, CCC_liftoff,
-                                        T_switch = (separate_cond_periods ?
-                                        get_setting(m, :n_rule_periods) + 1 : get_setting(m, :n_fcast_regimes)))
+                                        T_switch = separate_cond_periods ?
+                                        get_setting(m, :n_rule_periods) + 1 : length(fcast_regimes))
         Tcal[end] = TTT_liftoff
         Rcal[end] = RRR_liftoff
         Ccal[end] = CCC_liftoff
@@ -555,8 +557,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         TTT_gensys_final, RRR_gensys_final, CCC_gensys_final;
-                                        T_switch = (separate_cond_periods ?
-                                        get_setting(m, :n_rule_periods) + 1 : get_setting(m, :n_fcast_regimes)))
+                                        T_switch = separate_cond_periods ?
+                                        get_setting(m, :n_rule_periods) + 1 : length(fcast_regimes))
+
         Tcal[end] = TTT_gensys_final
         Rcal[end] = RRR_gensys_final
         Ccal[end] = CCC_gensys_final

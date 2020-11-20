@@ -52,7 +52,10 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # Solve model
     if regime_switching
         if solution_method == :gensys
-            if haskey(get_settings(m), :reg_forecast_start)
+            if haskey(get_settings(m), :gensys2_first_regime)
+                fcast_regimes = collect(get_setting(m, :gensys2_first_regime):n_regimes)
+                n_hist_regimes = get_setting(m, :gensys2_first_regime) - 1
+            elseif haskey(get_settings(m), :reg_forecast_start)
                 fcast_regimes = collect(get_setting(m, :reg_forecast_start):n_regimes)
             else
                 fcast_regimes = collect(n_hist_regimes + 1:n_regimes)

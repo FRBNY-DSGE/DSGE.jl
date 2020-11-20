@@ -796,4 +796,74 @@ end
     end
 end
 
+@info "Two indeterminacy errors are expected in the following test."
+@testset "Using gensys2 in historical regimes" begin
+    function set_regime_vals_fnct!(m, n)
+        if n > 4
+            for p in m.parameters
+                if !isempty(p.regimes) && haskey(p.regimes, :value)
+                    for i in 5:n
+                        ModelConstructors.set_regime_val!(p, i, ModelConstructors.regime_val(p, 4))
+                    end
+                end
+            end
+        end
+    end
+
+    imperfect_cred_new = 1.
+    imperfect_cred_old = 1. - imperfect_cred_new
+    custom_set = Dict{Symbol,Setting}(:n_mon_anticipated_shocks =>
+                                      Setting(:n_mon_anticipated_shocks, 6, "Number of anticipated policy shocks"),
+                                      :imperfect_credibility_weights => Setting(:imperfect_credibility_weights,
+                                                                                [imperfect_cred_new, imperfect_cred_old]),
+                                      :flexible_ait_2020Q3_policy_change => Setting(:flexible_ait_2020Q3_policy_change, true))
+
+    m = Model1002("ss59", custom_settings = custom_set)
+    usual_model_settings!(m, "201117", fcast_date = Date(2020, 9, 30))
+
+    set_regime_vals_fnct!(m, 4 + 4)
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:gensys2, true)
+    reg_dates = deepcopy(get_setting(m, :regime_dates))
+    replace_eqcond_func_dict = Dict{Int, Function}()
+    for (regind, date) in zip(4:(4 + 4), # 4 + 1 b/c zero for 4 periods and liftoff, add 3 to make correct regime
+                              DSGE.quarter_range(reg_dates[4], DSGE.iterate_quarters(reg_dates[4], 4)))
+        reg_dates[regind] = date
+        if regind != 4 + 4
+            replace_eqcond_func_dict[regind] = zero_rate_replace_eq_entries
+        end
+    end
+    m <= Setting(:regime_dates, reg_dates)
+    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    setup_regime_switching_inds!(m; cond_type = :full)
+    m <= Setting(:gensys2_first_regime, 4)
+    m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
+
+    sys_true = compute_system(m; tvis = true)
+    m <= Setting(:uncertain_zlb, true)
+    sys_true_unc = compute_system(m; tvis = true)
+    m <= Setting(:uncertain_zlb, false)
+
+    m <= Setting(:date_forecast_start, Date(2020, 12, 31))
+    m <= Setting(:date_conditional_end, Date(2020, 12, 31))
+    setup_regime_switching_inds!(m; cond_type = :full)
+    sys = compute_system(m; tvis = true)
+    for i in 1:get_setting(m, :n_regimes)
+        @test sys_true[i, :TTT] ≈ sys[i, :TTT]
+        @test sys_true[i, :ZZ] ≈ sys[i, :ZZ]
+    end
+    m <= Setting(:gensys2_first_regime, 5)
+    @test_throws DSGE.GensysError compute_system(m; tvis = true)
+
+    m <= Setting(:gensys2_first_regime, 4)
+    m <= Setting(:uncertain_zlb, true)
+    sys = compute_system(m; tvis = true)
+    for i in 1:get_setting(m, :n_regimes)
+        @test sys_true_unc[i, :TTT] ≈ sys[i, :TTT]
+        @test sys_true_unc[i, :ZZ] ≈ sys[i, :ZZ]
+    end
+    m <= Setting(:gensys2_first_regime, 5)
+    @test_throws DSGE.GensysError compute_system(m; tvis = true)
+end
+
 nothing
