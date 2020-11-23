@@ -580,12 +580,12 @@ function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Sy
 end
 
 function auto_temp_altpolicy_info_set(m::AbstractDSGEModel, n_regimes::Int, first_zlb_regime::Int)
-    tvis_infoset = UnitRange{Int}[]
+    tvis_infoset = Vector{UnitRange{Int}}(undef, n_regimes)
     for r in 1:n_regimes
         if r < first_zlb_regime
-            push!(tvis_infoset, r:r)
+            tvis_infoset[r] = r:r
         else
-            push!(tvis_infoset, r:n_regimes)
+            tvis_infoset[r] = r:n_regimes
         end
     end
     m <= Setting(:tvis_information_set, tvis_infoset)
