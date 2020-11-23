@@ -468,7 +468,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 replace_eqcond[regind] = zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
             end
 
-            replace_eqcond[n_total_regimes] = if altpolicy == :ait
+            final_eqcond = if altpolicy == :ait
                 ait_replace_eq_entries # Add permanent AIT regime
             elseif altpolicy == :ngdp
                 ngdp_replace_eq_entries # Add permanent NGDP regime
@@ -478,8 +478,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 smooth_ait_gdp_alt_replace_eq_entries # Add permanent smooth AIT-GDP (alternative specification) regime
             elseif altpolicy == :flexible_ait
                 flexible_ait_replace_eq_entries # Add Flexible AIT
-            else # Default to historical policy
-                eqcond
+            end # If none of these conditions apply, then the plain eqcond is used
+            if !isnothing(final_eqcond)
+                replace_eqcond[n_total_regimes] = final_eqcond
             end
             m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
 
