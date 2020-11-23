@@ -94,11 +94,18 @@ function metropolis_hastings(proposal_dist::Distribution,
         end
     end
 
-    # New feature: Parameter Blocking
+    # Parameter Blocking
     free_para_inds = findall([!θ.fixed for θ in parameters])
-    n_free_para    = length(free_para_inds)
     n_params       = length(parameters)
-    blocks_all     = SMC.generate_param_blocks(n_free_para, n_param_blocks)
+    if n_param_blocks == 1
+        blocks_free = Vector{Int}[free_para_inds]
+    else
+        n_free_para = length(free_para_inds)
+        blocks_free = SMC.generate_free_blocks(n_free_para, n_param_blocks)
+        for block_f in blocks_free
+            sort!(block_f)
+        end
+    end
 
     # Report number of blocks that will be used
     println(verbose, :low, "Blocks: $n_blocks")
@@ -129,7 +136,7 @@ function metropolis_hastings(proposal_dist::Distribution,
 
         for j = 1:(n_sim * mhthin)
 
-            for (k, block_a) in enumerate(blocks_all)
+            for (k, block_a) in enumerate(blocks_free)
 
                 # Draw para_new from the proposal distribution
                 para_subset = para_old[block_a]
