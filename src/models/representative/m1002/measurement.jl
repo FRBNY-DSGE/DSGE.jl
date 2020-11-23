@@ -264,7 +264,7 @@ function measurement(m::Model1002{T},
     # Anticipated GDP growth
     if haskey(get_settings(m), :add_anticipated_obs_gdp)
         if get_setting(m, :add_anticipated_obs_gdp)
-            ZZ_obs_gdp = ZZ[obs[:obs_gdp], :]
+            ZZ_obs_gdp = ZZ[obs[:obs_gdp], :]'
             meas_err = haskey(get_settings(m), :meas_err_anticipated_obs_gdp) ?
                 get_setting(m, :meas_err_anticipated_obs_gdp) : 0. # Ignore measurement error for anticipated GDP growth
             ZZ_obs_gdp[endo_new[:e_gdp_t]]  = meas_err
