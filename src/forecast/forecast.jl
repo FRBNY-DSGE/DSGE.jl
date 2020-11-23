@@ -381,7 +381,12 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                   set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                  tol::S = -1e-14) where {S <: Real}
+                  tol::S = -1e-14, rerun_smoother::Bool = false,
+                  df = nothing, draw_states::Bool = false,
+                  histstates::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
+                  histshocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
+                  histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
+                  initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
@@ -412,6 +417,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     # Start imposing ZLB instead at the quarter before liftoff quarter
     # first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .>
     #                              get_setting(m, :forecast_zlb_value))
+
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
         first_zlb_regime += n_hist_regimes
         if cond_type != :none
@@ -495,9 +501,16 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             # set up the information sets
             set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
+            tvis = haskey(get_settings(m), :tvis_information_set) ? !isempty(get_setting(m, :tvis_information_set)) : false
 
             # Recompute to account for new regimes
-            system = compute_system(m; apply_altpolicy = true)
+            system = compute_system(m; tvis = tvis, apply_altpolicy = true)
+
+            if rerun_smoother
+                histstates, histshocks, histpseudo, initial_states =
+                    smooth(m, df, system; cond_type = cond_type, draw_states = draw_states)
+                z0 = histstates[:, end]
+            end
 
             # Forecast!
             states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
@@ -554,7 +567,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         delete!(get_settings(m), :replace_eqcond_func_dict)
     end
 
-    return states, obs, pseudo
+    if rerun_smoother
+        return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
+    else
+        return states, obs, pseudo
+    end
 end
 
 function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Symbol)

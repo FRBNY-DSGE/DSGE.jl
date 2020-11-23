@@ -377,25 +377,29 @@ conditional data case given by `cond_type`.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`.
 - `check_empty_columns::Bool = true`: check empty columns or not when loading data (if `df` is empty)
+- `bdd_fcast::Bool = true`: are we computing the bounded forecasts or not?
+- `params::AbstractArray{Float64} = Vector{Float64}(undef, 0)`: parameter draws for the forecast.
+     If empty, then we load draws from estimation files implied by the settings in `m`.
 - `zlb_method::Symbol`: method for enforcing the zero lower bound. Defaults to `:shock`,
     meaning we use a monetary policy shock to enforce the ZLB.
 
   Other available methods:
   1. `:temporary_altpolicy` -> use a temporary alternative policy to enforce the ZLB.
 
-- `set_regime_vals_altpolicy::Function`: Function that adds new regimes to parameters when
+- `rerun_smoother::Bool = false`: if true, rerun the conditional forecast when automatically enforcing
+    the ZLB as a temporary alternative policy.
+- `set_regime_vals_altpolicy::Function`: `Function` that adds new regimes to parameters when
     using temporary alternative policies (if needed). Defaults to identity (which does nothing)
     This function should take as inputs the model object `m` and the total number of regimes
     (after adding the required temporary regimes). It should then
     set up regime-switching parameters for these new additional regimes.
+- `set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set`: `Function` that automatically updates
+    the `tvis_information_set`, e.g. when `zlb_method = :temporary_altpolicy`.
 - `show_failed_percent::Bool = false`: prints out the number of failed forecasts, which are returned as NaNs.
     These may occur when the ZLB is not enforced, for example.
 - `pegFFR::Bool = false`: peg the nominal FFR at the value specified by `FFRpeg`
 - `FFRpeg::Float64 = -0.25/4`: value of the FFR peg
 - `H::Int = 4`: number of horizons for which the FFR is pegged
-- `bdd_fcast::Bool = true`: are we computing the bounded forecasts or not?
-- `params::AbstractArray{Float64} = Vector{Float64}(undef, 0)`: parameter draws for the forecast.
-     If empty, then we load draws from estimation files implied by the settings in `m`.
 
 ### Outputs
 
@@ -409,10 +413,11 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       use_filtered_shocks_in_shockdec::Bool = false,
                       shock_name::Symbol = :none, shock_var_name::Symbol = :none,
                       shock_var_value::Float64 = 0.0, check_empty_columns = true,
+                      bdd_fcast::Bool = true, params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
                       set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                      pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4, bdd_fcast::Bool = true,
-                      params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
+                      rerun_smoother::Bool = false,
+                      pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                       show_failed_percent::Bool = false, only_filter::Bool = false,
                       set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
                       verbose::Symbol = :low)
@@ -460,7 +465,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 n_regimes = n_regimes, zlb_method = zlb_method,
                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
-                                                pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter)
+                                                pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
+                                                rerun_smoother = rerun_smoother)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -547,7 +553,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  n_regimes = n_regimes, zlb_method = zlb_method,
                                                                  set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                                  set_info_sets_altpolicy = set_info_sets_altpolicy,
-                                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter),
+                                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
+                                                                 rerun_smoother = rerun_smoother),
                                       params_for_map)
 
             # Assemble outputs from this block and write to file
@@ -599,8 +606,6 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 - `df::DataFrame`: historical data.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`.
-- `only_filter::Bool`: Set to true if no smoothing should be done and only filter
-  should be used to get forecasts.
 
 ### Output
 
@@ -647,7 +652,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
-                           filter_smooth::Bool = false)
+                           filter_smooth::Bool = false, rerun_smoother::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -665,6 +670,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
     # Compute state space
     update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
+
     system = compute_system(m; tvis = tvis)
 
     # Initialize output dictionary
@@ -681,7 +687,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     else
         get(uncertainty_override)
     end
-
 
     ### 1. Smoothed Histories
 
@@ -960,10 +965,54 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 end
 
                 # Now run the ZLB enforcing forecast
-                forecaststates, forecastobs, forecastpseudo =
-                    forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks; cond_type = cond_type,
-                             set_zlb_regime_vals = set_regime_vals_altpolicy,
-                             set_info_sets_altpolicy = set_info_sets_altpolicy)
+                if rerun_smoother
+                    zlb_enforced_output =
+                        forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks;
+                                 cond_type = cond_type,
+                                 set_zlb_regime_vals = set_regime_vals_altpolicy,
+                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
+                                 rerun_smoother = rerun_smoother, df = df,
+                                 draw_states = uncertainty,
+                                 histstates = histstates, histshocks = histshocks, histpseudo = histpseudo,
+                                 initial_states = initial_states)
+                    forecaststates, forecastobs, forecastpseudo, histstates, histshocks, histpseudo, initial_states =
+                        zlb_enforced_output
+
+                    if cond_type in [:full, :semi]
+                        T = n_mainsample_periods(m)
+
+                        forecast_output[:histstates] = transplant_history(histstates, T)
+                        forecast_output[:histshocks] = transplant_history(histshocks, T)
+                        forecast_output[:histpseudo] = transplant_history(histpseudo, T)
+                    else
+                        forecast_output[:histstates] = histstates
+                        forecast_output[:histshocks] = histshocks
+                        forecast_output[:histpseudo] = histpseudo
+                    end
+
+                    # Standardize shocks if desired
+                    if :histstdshocks in output_vars
+                        if regime_switching
+                            start_date = max(date_mainsample_start(m), df[1, :date]) # use mainsample b/c shocks only includes mainsample, no presample
+                            end_date   = prev_quarter(date_forecast_start(m))
+                            regime_inds = regime_indices(m, start_date, end_date)
+                            if regime_inds[1][1] < 1
+                                regime_inds[1] = 1:regime_inds[1][end]
+                            end
+                            forecast_output[:histstdshocks] =
+                                standardize_shocks(forecast_output[:histshocks],
+                                                   Matrix{eltype(system[1, :QQ])}[system[i, :QQ] for i in 1:n_regimes], regime_inds)
+                        else
+                            forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
+                        end
+                    end
+                else
+                    forecaststates, forecastobs, forecastpseudo =
+                        forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks;
+                                 cond_type = cond_type,
+                                 set_zlb_regime_vals = set_regime_vals_altpolicy,
+                                 set_info_sets_altpolicy = set_info_sets_altpolicy)
+                end
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =
                     forecast(m, system, s_T;
