@@ -509,10 +509,10 @@ function forecast_one(m::AbstractDSGEModel{Float64},
         end
 
         if !isempty(params) & isa(params, AbstractMatrix)
-            m <= Setting(:regime_switching_ndraws, size(params, 1))
-        elseif !isempty(params) & (input_type == :mode_draw_shocks) & (!haskey(get_settings(m), :regime_switching_ndraws))
+            m <= Setting(:forecast_ndraws, size(params, 1))
+        elseif !isempty(params) & (input_type == :mode_draw_shocks) & (!haskey(get_settings(m), :forecast_ndraws))
             error("If using :mode_draw_shocks with a user-defined matrix of parameter draws, " *
-                  "then the user must manually add the Setting :regime_switching_ndraws " *
+                  "then the user must manually add the Setting :forecast_ndraws " *
                   "to indicate the number of times shocks will be drawn.")
         end
 
