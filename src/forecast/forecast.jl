@@ -381,7 +381,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                   set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                  tol::S = -1e-14, rerun_smoother::Bool = false,
+                  tol::S = -1e-8, rerun_smoother::Bool = false,
                   df = nothing, draw_states::Bool = false,
                   histstates::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   histshocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
