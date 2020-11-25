@@ -416,7 +416,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       bdd_fcast::Bool = true, params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
                       set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                      rerun_smoother::Bool = false,
+                      rerun_smoother::Bool = false, catch_smoother_lapack::Bool = false,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                       show_failed_percent::Bool = false, only_filter::Bool = false,
                       set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
@@ -466,7 +466,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
-                                                rerun_smoother = rerun_smoother)
+                                                rerun_smoother = rerun_smoother, catch_smoother_lapack = catch_smoother_lapack)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -554,7 +554,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                                  set_info_sets_altpolicy = set_info_sets_altpolicy,
                                                                  pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
-                                                                 rerun_smoother = rerun_smoother),
+                                                                 rerun_smoother = rerun_smoother,
+                                                                 catch_smoother_lapack = catch_smoother_lapack),
                                       params_for_map)
 
             # Assemble outputs from this block and write to file
@@ -652,7 +653,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
-                           filter_smooth::Bool = false, rerun_smoother::Bool = false)
+                           filter_smooth::Bool = false, rerun_smoother::Bool = false,
+                           catch_smoother_lapack::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -706,11 +708,12 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
                        set_pgap_ygap = set_pgap_ygap,
-                       s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt])
+                       s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt],
+                       catch_smoother_lapack = catch_smoother_lapack)
         else
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       set_pgap_ygap = set_pgap_ygap)
+                       set_pgap_ygap = set_pgap_ygap, catch_smoother_lapack = catch_smoother_lapack)
         end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast

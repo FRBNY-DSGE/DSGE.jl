@@ -58,7 +58,8 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                 s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                 cond_type::Symbol = :none, draw_states::Bool = false,
                 include_presample::Bool = false, in_sample::Bool = true,
-                set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false,70,71,0.,12.)) where {S<:AbstractFloat}
+                set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false,70,71,0.,12.),
+                catch_smoother_lapack::Bool = false) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
 
@@ -82,26 +83,36 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
         @warn "$smoother called with draw_states = true"
     end
 
-    states, shocks = if smoother == hamilton_smoother
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-            s_0, P_0, set_pgap_ygap = set_pgap_ygap)
-    elseif smoother == koopman_smoother
-        kal = filter(m, data, system; set_pgap_ygap = set_pgap_ygap)
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                 s_0, P_0, kal[:s_pred], kal[:P_pred])
-    elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                 s_0, P_0; draw_states = draw_states,
-                 set_pgap_ygap = set_pgap_ygap)
-    else
-        error("Invalid smoother: $(forecast_smoother(m))")
+    states, shocks = try
+        if smoother == hamilton_smoother
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0, set_pgap_ygap = set_pgap_ygap)
+        elseif smoother == koopman_smoother
+            kal = filter(m, data, system; set_pgap_ygap = set_pgap_ygap)
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0, kal[:s_pred], kal[:P_pred])
+        elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0; draw_states = draw_states,
+                     set_pgap_ygap = set_pgap_ygap)
+        else
+            error("Invalid smoother: $(forecast_smoother(m))")
+        end
+    catch e
+        if catch_smoother_lapack && isa(e, LAPACKException)
+            fill(NaN, length(s_0), regime_inds[end][end]), fill(NaN, size(QQs[1], 1), regime_inds[end][end])
+        else
+            rethrow(e)
+        end
     end
+
+    lapack_caught = catch_smoother_lapack ? any(isnan.(@view states[:, end])) : false
 
     # Index out last presample period, used to compute the deterministic trend
     t0 = n_presample_periods(m)
     t1 = index_mainsample_start(m)
     if include_presample
-        initial_states = s_0
+        initial_states = lapack_caught ? fill(NaN, length(s_0)) : s_0
     else
         initial_states = states[:, t0]
         states = states[:, t1:end]
@@ -109,7 +120,11 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
     end
 
     # Map smoothed states to pseudo-observables
-    pseudo = system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
+    pseudo = if lapack_caught
+        fill(NaN, size(system[:ZZ_pseudo], 1), size(states, 2))
+    else
+        system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
+    end
 
     return states, shocks, pseudo, initial_states
 end
@@ -119,6 +134,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
                 cond_type::Symbol = :none, draw_states::Bool = false,
                 include_presample::Bool = false, in_sample::Bool = true,
                 set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false,70,71,0.,12.),
+                catch_smoother_lapack::Bool = false,
                 filter_smooth::Bool = false, s_pred::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                 P_pred::AbstractArray{S,3} = Array{S, 3}(undef, 0, 0, 0),
                 s_filt::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
@@ -158,37 +174,51 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         @warn "$smoother called with draw_states = true"
     end
 
-    states, shocks = if smoother == hamilton_smoother
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-            s_0, P_0, set_pgap_ygap = set_pgap_ygap)
-    elseif smoother == koopman_smoother
-        kal = filter(m, data, system; set_pgap_ygap = set_pgap_ygap)
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                 s_0, P_0, kal[:s_pred], kal[:P_pred])
-    elseif smoother == carter_kohn_smoother && filter_smooth
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                 s_0, P_0; draw_states = draw_states,
-                 set_pgap_ygap = set_pgap_ygap)
-    elseif filter_smooth
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                 s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states,
-                 set_pgap_ygap = set_pgap_ygap)
-    elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
-        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                 s_0, P_0; draw_states = draw_states, set_pgap_ygap = set_pgap_ygap)
-    else
-        error("Invalid smoother: $(forecast_smoother(m))")
+    states, shocks = try
+        if smoother == hamilton_smoother
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0, set_pgap_ygap = set_pgap_ygap)
+        elseif smoother == koopman_smoother
+            kal = filter(m, data, system; set_pgap_ygap = set_pgap_ygap)
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0, kal[:s_pred], kal[:P_pred])
+        elseif smoother == carter_kohn_smoother && filter_smooth
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0; draw_states = draw_states,
+                     set_pgap_ygap = set_pgap_ygap)
+        elseif filter_smooth
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states,
+                     set_pgap_ygap = set_pgap_ygap)
+        elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0; draw_states = draw_states, set_pgap_ygap = set_pgap_ygap)
+        else
+            error("Invalid smoother: $(forecast_smoother(m))")
+        end
+    catch e
+        if catch_smoother_lapack && isa(e, LAPACKException)
+            fill(NaN, length(s_0), regime_inds[end][end]), fill(NaN, size(QQs[1], 1), regime_inds[end][end])
+        else
+            rethrow(e)
+        end
     end
+
+    lapack_caught = catch_smoother_lapack ? any(isnan.(@view states[:, end])) : false
 
     # Map smoothed states to pseudo-observables
     pseudo = Matrix{eltype(states)}(undef, length(system[1, :DD_pseudo]), size(states, 2))
-    for (i, inds) in enumerate(regime_inds)
-        if i > i_zlb_start && splice_zlb_regime # if spliced ZLB and i is past the start date, then a repeat in regimes has occurred => minus 1
-            pseudo[:, inds] = system[i - 1, :ZZ_pseudo] * states[:, inds] .+ system[i - 1, :DD_pseudo]
-        elseif i >= n_regimes(system) && splice_zlb_regime # ZLB starts in middle of the last regime
-            pseudo[:, inds] = system[i - 1, :ZZ_pseudo] * states[:, inds] .+ system[i - 1, :DD_pseudo]
-        else # if preZLB or no splicing, then don't need to subtract 1
-            pseudo[:, inds] = system[i, :ZZ_pseudo] * states[:, inds] .+ system[i, :DD_pseudo]
+    if lapack_caught
+        pseudo .= NaN
+    else
+        for (i, inds) in enumerate(regime_inds)
+            if i > i_zlb_start && splice_zlb_regime # if spliced ZLB and i is past the start date, then a repeat in regimes has occurred => minus 1
+                pseudo[:, inds] = system[i - 1, :ZZ_pseudo] * states[:, inds] .+ system[i - 1, :DD_pseudo]
+            elseif i >= n_regimes(system) && splice_zlb_regime # ZLB starts in middle of the last regime
+                pseudo[:, inds] = system[i - 1, :ZZ_pseudo] * states[:, inds] .+ system[i - 1, :DD_pseudo]
+            else # if preZLB or no splicing, then don't need to subtract 1
+                pseudo[:, inds] = system[i, :ZZ_pseudo] * states[:, inds] .+ system[i, :DD_pseudo]
+            end
         end
     end
 
@@ -196,7 +226,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     t0 = n_presample_periods(m)
     t1 = index_mainsample_start(m)
     if include_presample
-        initial_states = s_0
+        initial_states = lapack_caught ? fill(NaN, length(s_0)) : s_0
     else
         initial_states = states[:, t0]
         states = states[:, t1:end]
