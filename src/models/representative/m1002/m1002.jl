@@ -217,17 +217,10 @@ function init_model_indices!(m::Model1002)
     if haskey(get_settings(m), :add_pgap) ? get_setting(m, :add_pgap) : false
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
-        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
-            push!(exogenous_shocks, setdiff([:pgap_sh], exogenous_shocks)...)
-        end
     end
     if haskey(get_settings(m), :add_ygap) ? get_setting(m, :add_ygap) : false
         push!(endogenous_states, setdiff([:ygap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_ygap], equilibrium_conditions)...)
-        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
-            get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
-            push!(exogenous_shocks, setdiff([:ygap_sh], exogenous_shocks)...)
-        end
     end
     if haskey(get_settings(m), :add_altpolicy_pgap) ? get_setting(m, :add_altpolicy_pgap) : false
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
@@ -236,6 +229,9 @@ function init_model_indices!(m::Model1002)
     if haskey(get_settings(m), :add_altpolicy_ygap) ? get_setting(m, :add_altpolicy_ygap) : false
         push!(endogenous_states, setdiff([:ygap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_ygap], equilibrium_conditions)...)
+    end
+    if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+        push!(exogenous_shocks, setdiff([:pgap_sh, :ygap_sh], exogenous_shocks)...)
     end
     if haskey(get_settings(m), :add_rw) ? get_setting(m, :add_rw) : false
         push!(endogenous_states, setdiff([:rw_t, :Rref_t], endogenous_states)...)

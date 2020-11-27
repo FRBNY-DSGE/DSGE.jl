@@ -668,6 +668,10 @@ function eqcond(m::Model1002, reg::Int)
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
                end
+               if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+                   get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+                   Ψ[eq[:eq_pgap], exo[:pgap_sh]] = 1.
+               end
            end
        end
    end
@@ -689,6 +693,10 @@ function eqcond(m::Model1002, reg::Int)
                    Γ0[eq[:eq_ygap], endo[:y_t]]    = -1.
                    Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
                    Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
+               end
+               if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+                   get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+                   Ψ[eq[:eq_ygap], exo[:ygap_sh]] = 1.
                end
            end
        end
