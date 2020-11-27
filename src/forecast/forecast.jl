@@ -161,7 +161,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
 
     # TODO: check that these handling of the altpolicy cases work properly
     if (alt_policy.solve != identity &&
-        alt_policy.forecast_init != identity)
+        alt_policy.forecast_init != identity && (!haskey(m.settings, :initialize_pgap_ygap) || get_setting(m, :initialize_pgap_ygap)))
         shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
     end
 
@@ -372,6 +372,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         end
     end
 
+    save("Tmats.jld2", Dict("Ts" => Ts, "Rs" => Rs, "Cs" => Cs, "Qs" => Qs, "Zs" => Zs, "Ds" => Ds))
     # Return forecasts
     return states, obs, pseudo, shocks
 end
