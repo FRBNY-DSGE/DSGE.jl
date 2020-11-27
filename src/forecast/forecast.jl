@@ -157,13 +157,13 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
 
     # Populate shocks matrix under alternative policy, if
     # user has specified a function to do so
-    alt_policy = alternative_policy(m)
+#=    alt_policy = alternative_policy(m)
 
     # TODO: check that these handling of the altpolicy cases work properly
     if (alt_policy.solve != identity &&
         alt_policy.forecast_init != identity && (!haskey(m.settings, :initialize_pgap_ygap) || get_setting(m, :initialize_pgap_ygap)))
         shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
-    end
+    end=#
 
 #=
     # This code block has been moved to forecast_one_draw in drivers.jl
