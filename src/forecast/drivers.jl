@@ -795,56 +795,58 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         if apply_altpolicy
             system = compute_system(m; apply_altpolicy = true, tvis = tvis)
 
-            # Adjust the initial state vector for pgap and ygap
-            if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
-                update_hist = true
-                _pgap_type = get_setting(m, :pgap_type)
-                if _pgap_type == :ngdp
-                    _, s_T = ngdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
-                elseif _pgap_type == :ait
-                    _, s_T = ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
-                else
-                    update_hist = false
+            if haskey(get_settings(m), :skip_altpolicy_setup) ? !get_setting(m, :skip_altpolicy_setup) : true
+                # Adjust the initial state vector for pgap and ygap
+                if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
+                    update_hist = true
+                    _pgap_type = get_setting(m, :pgap_type)
+                    if _pgap_type == :ngdp
+                        _, s_T = ngdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+                    elseif _pgap_type == :ait
+                        _, s_T = ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+                    else
+                        update_hist = false
+                    end
+                    if update_hist # Don't do this computation unless pgap_type in [:ngdp, :ait]
+                        histstates[:, end] = s_T
+                        ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+                        DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+                        histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
+                    end
                 end
-                if update_hist # Don't do this computation unless pgap_type in [:ngdp, :ait]
-                    histstates[:, end] = s_T
-                    ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
-                    DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
-                    histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
-                end
-            end
 
-            if haskey(m.settings, :ygap_type) && haskey(get_settings(m), :ygap_value) &&
-                haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
-                update_hist = true
-                _ygap_type = get_setting(m, :ygap_type)
-                _pgap_type = get_setting(m, :pgap_type)
-                if _ygap_type == _pgap_type == :smooth_ait_gdp
-                    _, s_T = smooth_ait_gdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
-                elseif _ygap_type == _pgap_type == :smooth_ait_gdp_alt
-                    _, s_T = smooth_ait_gdp_alt_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
-                elseif (_ygap_type == _pgap_type == :flexible_ait) &&
-                    (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? !get_setting(m, :flexible_ait_2020Q3_policy_change) : true)
-                    _, s_T = flexible_ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
-                else
-                    update_hist = false
+                if haskey(m.settings, :ygap_type) && haskey(get_settings(m), :ygap_value) &&
+                    haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
+                    update_hist = true
+                    _ygap_type = get_setting(m, :ygap_type)
+                    _pgap_type = get_setting(m, :pgap_type)
+                    if _ygap_type == _pgap_type == :smooth_ait_gdp
+                        _, s_T = smooth_ait_gdp_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+                    elseif _ygap_type == _pgap_type == :smooth_ait_gdp_alt
+                        _, s_T = smooth_ait_gdp_alt_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+                    elseif (_ygap_type == _pgap_type == :flexible_ait) &&
+                        (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? !get_setting(m, :flexible_ait_2020Q3_policy_change) : true)
+                        _, s_T = flexible_ait_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+                    else
+                        update_hist = false
+                    end
+                    if update_hist # Don't do this computation unless pgap_type and ygap_type are okay
+                        histstates[:, end] = s_T
+                        ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+                        DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+                        histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
+                    end
                 end
-                if update_hist # Don't do this computation unless pgap_type and ygap_type are okay
-                    histstates[:, end] = s_T
-                    ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
-                    DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
-                    histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
-                end
-            end
 
-            if haskey(m.settings, :Rref_type)
-                if get_setting(m, :ygap_type) == :rw && get_setting(m, :pgap_type) == :rw &&
-                    get_setting(m, :Rref_type) == :rw
-                    _, s_T = rw_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
-                    histstates[:, end] = s_T
-                    ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
-                    DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
-                    histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
+                if haskey(m.settings, :Rref_type)
+                    if get_setting(m, :ygap_type) == :rw && get_setting(m, :pgap_type) == :rw &&
+                        get_setting(m, :Rref_type) == :rw
+                        _, s_T = rw_forecast_init(m, zeros(0, 0), s_T, cond_type = cond_type)
+                        histstates[:, end] = s_T
+                        ZZ_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :ZZ_pseudo] : system[:ZZ_pseudo] # currently assumes these are
+                        DD_pseudo = isa(system, RegimeSwitchingSystem) ? system[1, :DD_pseudo] : system[:DD_pseudo] # the same across regimes
+                        histpseudo[:, end] = ZZ_pseudo * s_T + DD_pseudo
+                    end
                 end
             end
         end
