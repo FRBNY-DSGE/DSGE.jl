@@ -372,6 +372,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         end
     end
 
+    save("Tmats.jld2", Dict("Ts" => Ts, "Rs" => Rs, "Cs" => Cs, "Qs" => Qs, "Zs" => Zs, "Ds" => Ds))
     # Return forecasts
     return states, obs, pseudo, shocks
 end
