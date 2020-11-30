@@ -437,7 +437,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
         orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
+        @show "Before loop"
+        @show get_setting(m, :tvis_information_set)
         for iter in 0:(size(obs, 2) - 3)
+            @show "Iteration start"
+            @show get_setting(m, :tvis_information_set)
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
@@ -503,10 +507,13 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             end
 
             # set up the information sets
-            set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
-            if haskey(get_settings(m), :cred_vary_until) get_setting(m, :cred_vary_until) >= n_total_regimes
+            if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
                 set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, first_zlb_regime)
+            else
+                set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
             end
+            @show "Iteration later"
+            @show get_setting(m, :tvis_information_set)
             tvis = haskey(get_settings(m), :tvis_information_set) ? !isempty(get_setting(m, :tvis_information_set)) : false
 
             # Recompute to account for new regimes
