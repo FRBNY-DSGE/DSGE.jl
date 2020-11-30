@@ -795,7 +795,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         if apply_altpolicy
             system = compute_system(m; apply_altpolicy = true, tvis = tvis)
 
-            if haskey(get_settings(m), :skip_altpolicy_setup) ? !get_setting(m, :skip_altpolicy_setup) : true
+            if haskey(get_settings(m), :skip_altpolicy_state_init) ? !get_setting(m, :skip_altpolicy_state_init) : true
                 # Adjust the initial state vector for pgap and ygap
                 if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
                     update_hist = true
