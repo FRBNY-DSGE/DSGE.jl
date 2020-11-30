@@ -487,6 +487,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             end # If none of these conditions apply, then the plain eqcond is used
             if !isnothing(final_eqcond)
                 replace_eqcond[n_total_regimes] = final_eqcond
+                if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
+                    replace_eqcond[n_total_regimes:(get_setting(m, :cred_vary_until) + 1)] = final_eqcond
+                end
             end
             m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
 
@@ -501,6 +504,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             # set up the information sets
             set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
+            if haskey(get_settings(m), :cred_vary_until) get_setting(m, :cred_vary_until) >= n_total_regimes
+                set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, first_zlb_regime)
+            end
             tvis = haskey(get_settings(m), :tvis_information_set) ? !isempty(get_setting(m, :tvis_information_set)) : false
 
             # Recompute to account for new regimes
