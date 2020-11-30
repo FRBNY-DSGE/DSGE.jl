@@ -552,3 +552,9 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = 
                  "Number of periods during which the (temporary) alternative policy applies.")
     return m
 end
+
+# Dummy function for eqcond, relevant when using gensys2
+function eqcond(m::AbstractDSGEModel, Γ0::AbstractMatrix{S}, Γ1::AbstractMatrix{S},
+                C::AbstractVector{S}, Ψ::AbstractMatrix{S}, Π::AbstractMatrix{S}) where {S <: Real}
+    return Γ0, Γ1, C, Ψ, Π
+end
