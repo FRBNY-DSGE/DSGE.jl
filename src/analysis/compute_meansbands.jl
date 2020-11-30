@@ -252,7 +252,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
     # Handle NaNs
     if skipnan && !(output_var in [:histobs, :hist4qobs, :histutpseudo]) && any(isnan.(transformed_series))
         # Remove rows with NaNs
-        nanrows = vec(mapslices(x -> any(isnan.(x)), transformed_series, dims = Int[2]))
+        nanrows = vec(mapslices(x -> all(isnan.(x)), transformed_series, dims = Int[2]))
         transformed_series = transformed_series[.!nanrows, :]
     end
 
