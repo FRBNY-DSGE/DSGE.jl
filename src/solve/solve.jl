@@ -589,18 +589,19 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
 
-        ng2  = length(Tcal) - 1 # number of gensys2 regimes, plus liftoff
+        ng2  = length(Tcal) - 2 # number of gensys2 regimes
         nzlb = haskey(get_settings(m), :temporary_zlb_length) ? get_setting(m, :temporary_zlb_length) : ng2
 
+        # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
+        # Then, if nzlb = 1, Tcal should have length 2, and you only need the lift-off matrix
         Tcal[1:(1 + nzlb)], Rcal[1:(1 + nzlb)], Ccal[1:(1 + nzlb)] =
             gensys_uncertain_zlb(weights, Talt[1:n_endo, 1:n_endo], Calt[1:n_endo],
-                                 Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)], # from 2 b/c use t + 1 matrix, not t
+                                 Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
         @show nzlb
         @show ng2
         if nzlb != ng2
-            Th = Talt[1:n_endo, 1:n_endo]
 
             # TODO: generalize this code block
             # It is currently assumed that ffreg is the first regime w/ZLB (and cannot be another temporary altpolicy),
@@ -625,7 +626,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
                     if haskey(get_settings(m), :imperfect_credibility_varying_weights)
                         imperfect_wt = get_setting(m, :imperfect_credibility_varying_weights)
-                        weights = [imperfect_wt[i][fcast_reg - ffreg +1] for i in 1:length(imperfect_wt)]
+                        weights = [imperfect_wt[i][fcast_reg - ffreg + 1] for i in 1:length(imperfect_wt)]
                         append!(weights, 1.0 - sum(weights))
                     else
                         weights = get_setting(m, :imperfect_credibility_weights)
@@ -649,7 +650,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                     altpols = get_setting(m, :alternative_policies)
 
                     TTT_gensys, RRR_gensys, CCC_gensys =
-                        gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true, TTT = Th,
+                        gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true, TTT = TTT_gensys,
                                                 regime_switching = true, regimes = Int[fcast_reg])
                 end
 
