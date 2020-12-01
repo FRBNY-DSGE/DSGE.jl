@@ -444,6 +444,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # that this is necessary anyway but not always, especially depending on the drawn shocks
             n_total_regimes = first_zlb_regime + iter + 1 # plus 1 for lift off
 
+            m <= Setting(:temporary_zlb_length, iter + 1)
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
             if is_regime_switch # Add historical regimes
@@ -452,6 +453,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 end
             end
 
+            @show get_setting(m, :temporary_zlb_length)
+            @show n_total_regimes
             # Ensure we don't accidentally tell the code to forecast beyond the forecast horizon
             altpol_reg_range = start_altpol_reg:n_total_regimes
             if length(altpol_reg_range) > n_altpol_reg_qtrrange
@@ -494,11 +497,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             if !isnothing(final_eqcond)
                 replace_eqcond[n_total_regimes] = final_eqcond
-                if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
+                #=if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
                     for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
                         replace_eqcond[z] = final_eqcond
                     end
-                end
+                end=#
             end
             m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
 
