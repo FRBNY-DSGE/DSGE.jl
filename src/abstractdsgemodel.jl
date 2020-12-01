@@ -496,7 +496,21 @@ SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't 
 Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 
 
-function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none)
+"""
+```
+setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none,
+    temp_altpolicy_in_cond_regimes::Bool = false)
+```
+
+calculates the indices needed to solve and forecast a model with regime-switching.
+
+### Keywords
+- `cond_type`: the correct regime indices for forecasting depend on whether the forecast is conditional or not
+- `temp_altpolicy_in_cond_regimes`: If true, then temporary alternative policies can occur
+    during the conditional forecast horizon, and regime indices (namely `n_rule_periods`) will be calculated accordingly.
+"""
+function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none,
+                                      temp_altpolicy_in_cond_regimes::Bool = false)
 
     if haskey(get_settings(m), :regime_switching) ? !get_setting(m, :regime_switching) : true
         @warn "The setting :regime_switching is either false or is not defined yet. Updating the setting to be true."
@@ -546,10 +560,22 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = 
     m <= Setting(:n_hist_regimes, n_hist_regimes, "Number of regimes in the history")
     m <= Setting(:n_fcast_regimes, n_fcast_regimes, "Number of regimes in the forecast horizon")
     m <= Setting(:n_cond_regimes, n_cond_regimes, "Number of regime switches during the conditional forecast horizon")
-    # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
+
+    # Number of periods that the rule is in place is (normally)
+    # n_regimes - n_hist_regimes - 1 (-1 b/c in last regime, go back to normal rule)
+    # If conditional forecasting occurs and the rule occurs afterward, we need to subtract n_cond_regimes.
+    # If rule occurs during the conditional forecast horizon or before, then we need to add
+    # extra periods to n_rule_periods
+    cond_adj = if temp_altpolicy_in_cond_regimes
+        haskey(get_settings(m), :gensys2_first_regime) ?
+            (get_setting(m, :gensys2_first_regime) - get_setting(m, :n_hist_regimes) - 1) : 0
+    else
+        get_setting(m, :n_cond_regimes)
+    end
     m <= Setting(:n_rule_periods, (cond_type == :none) ? n_regimes - (get_setting(m, :n_hist_regimes) + 1) :
-                 n_regimes - (get_setting(m, :n_hist_regimes) + 1 + get_setting(m, :n_cond_regimes)) ,
-                 "Number of periods during which the (temporary) alternative policy applies.")
+                 n_regimes - (get_setting(m, :n_hist_regimes) + 1 + cond_adj),
+                 "Number of periods during which the (temporary) alternative policy applies, assuming the policy "
+                 * "does not occur during the conditional forecast horizon.")
     return m
 end
 
