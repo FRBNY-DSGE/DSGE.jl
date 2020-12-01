@@ -970,7 +970,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                                  cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
                 end
 
-
                 # Now run the ZLB enforcing forecast
                 if rerun_smoother
                     zlb_enforced_output =

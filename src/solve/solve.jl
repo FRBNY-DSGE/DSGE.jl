@@ -227,13 +227,15 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                         get_setting(m, :flexible_ait_2020Q3_policy_change) : false) &&
                         get_setting(m, :regime_dates)[get_setting(m, :n_regimes)] >= Date(2020, 9, 30)
 
+                        # If time-varying credibility: get the weights on each policy at regime i
+                        ## Note regimes start at the first period of temporary altpolicy
                         if haskey(get_settings(m), :imperfect_credibility_varying_weights)
                             weights = [get_setting(m, :imperfect_credibility_varying_weights)[i][end] for i in 1:length(get_setting(m, :imperfect_credibility_varying_weights))]
                             append!(weights, 1.0 - sum(weights))
                         else
                             weights = get_setting(m, :imperfect_credibility_weights)
                         end
-                        # weights = get_setting(m, :imperfect_credibility_weights)
+
                         histpol = get_setting(m, :imperfect_credibility_historical_policy)
                         TTT_gensys_final, RRR_gensys_final, CCC_gensys_final =
                             gensys_uncertain_altpol(m, weights,
@@ -256,6 +258,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                 end
 
                 if uncertain_altpolicy && apply_altpolicy
+                    # If time-varying credibility: get the alternative_policy weights on each policy at regime i
                     if haskey(get_settings(m), :alternative_policy_varying_weights)
                             weights = [get_setting(m, :alternative_policy_varying_weights)[i][end] for i in 1:length(get_setting(m, :alternative_policy_varying_weights))]
                             append!(weights, 1.0 - sum(weights))
@@ -312,6 +315,7 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
             throw(GensysError())
         end
 
+        # Since we only have one regime in solve_one_regime, no time-varying credibility
         if (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
             get_setting(m, :flexible_ait_2020Q3_policy_change) : false) &&
             get_setting(m, :regime_dates)[regime] >= Date(2020, 9, 30)
@@ -334,6 +338,7 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
     end
 
     if uncertain_altpolicy && apply_altpolicy
+        # Since we only have one regime in solve_one_regime, no time-varying credibility
         weights = get_setting(m, :alternative_policy_weights)
         altpols = get_setting(m, :alternative_policies)
 
@@ -365,8 +370,9 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
     end
 
     for reg in regimes
+        # Time-varying credibility weights for the regime reg
         if haskey(get_settings(m), :imperfect_credibility_varying_weights)
-            weights = [get_setting(m, :imperfect_credibility_varying_weights)[i][end] for i in 1:length(get_setting(m, :imperfect_credibility_varying_weights))]
+            weights = [get_setting(m, :imperfect_credibility_varying_weights)[i][reg-get_setting(m, :reg_forecast_start)+1] for i in 1:length(get_setting(m, :imperfect_credibility_varying_weights))]
             append!(weights, 1.0 - sum(weights))
         end
 
@@ -381,7 +387,6 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
             end
 
             if flex_ait_pol_change && get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
-
                 TTT_gensys, RRR_gensys, CCC_gensys =
                     gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = apply_altpolicy,
                                             TTT = TTT_gensys, regime_switching = true, regimes = Int[reg])
@@ -401,6 +406,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
             if uncertain_altpolicy
                 inds = 1:n_states(m)
                 if !flex_ait_pol_change || get_setting(m, :regime_dates)[reg] < Date(2020, 9, 30)
+                    # Time-varying credibility weights for the regime reg for alternative_policy
                     if haskey(get_settings(m), :alternative_policy_varying_weights)
                         weights = [get_setting(m, :alternative_policy_varying_weights)[i][reg-get_setting(m, :reg_forecast_start)+1] for i in 1:length(get_setting(m, :alternative_policy_varying_weights))]
                         weights = append!(weights, 1.0-sum(weights))
@@ -461,6 +467,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                 get_setting(m, :flexible_ait_2020Q3_policy_change) : false &&
                 get_setting(m, :regime_dates)[fcast_reg] >= Date(2020, 9, 30)
 
+                # Time-varying credibility weights (note temp altpolicy assumed to start
+                ## in the period after first forecast regime)
                 if haskey(get_settings(m), :imperfect_credibility_varying_weights)
                     imperfect_wt = get_setting(m, :imperfect_credibility_varying_weights)
                     weights = [imperfect_wt[i][fcast_reg-first(fcast_gensys2_regimes)+1] for i in 1:length(imperfect_wt)]
@@ -494,6 +502,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     if uncertain_zlb
         # Setup
         ffreg = first(fcast_gensys2_regimes) + n_no_alt_reg
+        # Time-varying credibility weights if applicable
         altpols, weights = if haskey(get_settings(m), :alternative_policy_varying_weights) && haskey(get_settings(m), :alternative_policies)
             get_setting(m, :alternative_policies), get_setting(m, :alternative_policy_varying_weights)
         elseif haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) && get_setting(m, :flexible_ait_2020Q3_policy_change) && haskey(get_settings(m), :imperfect_credibility_varying_weights)

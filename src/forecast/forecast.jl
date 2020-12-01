@@ -491,6 +491,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             elseif altpolicy == :flexible_ait
                 flexible_ait_replace_eq_entries # Add Flexible AIT
             end # If none of these conditions apply, then the plain eqcond is used
+
             if !isnothing(final_eqcond)
                 replace_eqcond[n_total_regimes] = final_eqcond
                 if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
@@ -506,7 +507,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # User needs to provide a function which takes in the model object `m`
             # and the total number of regimes (after adding the required temporary regimes),
             # and sets up regime-switching parameters for these new additional regimes.
-            if set_zlb_regime_vals != identity
+            if set_zlb_regime_vals != identity# && (!haskey(get_settings(m), :cred_vary_until) || n_total_regimes > get_setting(m, :cred_vary_until))
                 set_zlb_regime_vals(m, n_total_regimes)
             end
 
