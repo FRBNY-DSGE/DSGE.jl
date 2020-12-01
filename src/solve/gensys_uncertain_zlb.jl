@@ -43,7 +43,7 @@ function gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::Matrix{S}, Ch::Ve
     end
     #save("/data/dsge_data_dir/dsgejl/william/policy/one_off/covid_exercises/System_2020_Q3/flexible_ait_2020Q3/save/uncertain_cond.jld2", Dict("cond_vec" => cond_vec))
 
-    # Add boundary condition
+    # Add terminal condition
     Tout[end] = Tzlbs[end]
     Rout[end] = Rzlbs[end]
     Cout[end] = Czlbs[end]
@@ -73,7 +73,7 @@ function gensys_uncertain_zlb(prob_vec::Vector{Vector{S}}, Th::AbstractMatrix{S}
         Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
     end
 
-    # Add boundary condition
+    # Add terminal condition
     Tout[end] = Tzlbs[end]
     Rout[end] = Rzlbs[end]
     Cout[end] = Czlbs[end]
