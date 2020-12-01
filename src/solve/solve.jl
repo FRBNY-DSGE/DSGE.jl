@@ -590,7 +590,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
                     if haskey(get_settings(m), :imperfect_credibility_varying_weights)
                         imperfect_wt = get_setting(m, :imperfect_credibility_varying_weights)
-                        weights = [imperfect_wt[i][fcast_reg-first(fcast_gensys2_regimes)+1] for i in 1:length(imperfect_wt)]
+                        weights = [imperfect_wt[i][fcast_reg - ffreg +1] for i in 1:length(imperfect_wt)]
                         append!(weights, 1.0 - sum(weights))
                     else
                         weights = get_setting(m, :imperfect_credibility_weights)
@@ -604,7 +604,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                     # HORIZON ENDS AND THAT THE ALTERNATIVE POLICY VARYING WEIGHTS VECTOR SPECIFIES WEIGHTS
                     # STARTING IN THAT SAME PERIOD (i.e. alternative_policy_varying_weights[i][1] is the first ZLB period)
                     if haskey(get_settings(m), :alternative_policy_varying_weights)
-                        weights = [get_setting(m, :alternative_policy_varying_weights)[i][fcast_reg-first(fcast_gensys2_regimes)+1]
+                        weights = [get_setting(m, :alternative_policy_varying_weights)[i][fcast_reg - ffreg + 1]
                                    for i in 1:length(get_setting(m, :alternative_policy_varying_weights))]
                         append!(weights, 1.0 - sum(weights))
                     else
