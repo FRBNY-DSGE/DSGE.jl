@@ -797,7 +797,7 @@ end
 end
 
 @info "Two indeterminacy errors are expected in the following test."
-@testset "Using gensys2 in historical regimes" begin
+#@testset "Using gensys2 in historical regimes" begin
     function set_regime_vals_fnct!(m, n)
         if n > 4
             for p in m.parameters
@@ -835,7 +835,7 @@ end
     end
     m <= Setting(:regime_dates, reg_dates)
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
-    setup_regime_switching_inds!(m; cond_type = :full)
+    setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
     m <= Setting(:gensys2_first_regime, 4)
     m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
 
@@ -846,7 +846,7 @@ end
 
     m <= Setting(:date_forecast_start, Date(2020, 12, 31))
     m <= Setting(:date_conditional_end, Date(2020, 12, 31))
-    setup_regime_switching_inds!(m; cond_type = :full)
+    setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
     sys = compute_system(m; tvis = true)
     for i in 1:get_setting(m, :n_regimes)
         @test sys_true[i, :TTT] ≈ sys[i, :TTT]
@@ -864,6 +864,6 @@ end
     end
     m <= Setting(:gensys2_first_regime, 5)
     @test_throws DSGE.GensysError compute_system(m; tvis = true)
-end
+#end
 
 nothing

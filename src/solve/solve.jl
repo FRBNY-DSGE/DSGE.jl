@@ -473,7 +473,10 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                         verbose::Symbol = :high) where {S <: Real}
 
     # Calculate the matrices for the temporary alternative policies
-    gensys2_regimes = (first(fcast_gensys2_regimes) - 1):last(fcast_gensys2_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
+    # TODO: generalize to multiple times in which we need to impose temporary alternative policies
+    # ALSO: sometimes you don't need to recurse all the way back to first(fcast_gensys2_regimes) - 1,
+    #       would be good to also design a way to avoid these extra recursions.
+    gensys2_regimes = (first(fcast_gensys2_regimes) - 1):last(fcast_gensys2_regimes)
 
     # If using an alternative policy,
     # are there periods between the first forecast period and first period with temporary alt policies?
@@ -481,9 +484,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     # since gensys2 should be applied just to the alternative policies.
     # If not using an alternative policy, then we do not want to treat the conditional periods separately unless
     # explicitly instructed by :gensys2_separate_cond_regimes.
-    separate_cond_periods = (get_setting(m, :alternative_policy).key != :historical) ||
+    separate_cond_regimes = (get_setting(m, :alternative_policy).key != :historical) ||
         (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false)
-    n_no_alt_reg = separate_cond_periods ?
+    n_no_alt_reg = separate_cond_regimes ?
         (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
 
     if n_no_alt_reg > 0
@@ -527,10 +530,10 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             TTTs[fcast_reg], RRRs[fcast_reg], CCCs[fcast_reg] = DSGE.augment_states(m, TTT_gensys,
                                                                                     RRR_gensys, CCC_gensys)
         end
-        populate_reg = (fcast_gensys2_regimes[end] - get_setting(m, :n_rule_periods)):fcast_gensys2_regimes[end]
-    else
-        populate_reg = fcast_gensys2_regimes # I THINK THIS SHOULD fcast_gensys2_regimes[2:end], i.e. same populate_reg as above
     end
+
+    # only need to populate regimes during which a temporary altpolicy holds
+    populate_reg = (fcast_gensys2_regimes[end] - get_setting(m, :n_rule_periods)):fcast_gensys2_regimes[end]
 
     # Populate TTTs, RRRs, CCCs matrices
     if uncertain_zlb
@@ -574,7 +577,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         TTT_liftoff, RRR_liftoff, CCC_liftoff,
-                                        T_switch = separate_cond_periods ?
+                                        T_switch = separate_cond_regimes ?
                                         get_setting(m, :n_rule_periods) + 1 : length(fcast_gensys2_regimes))
         Tcal[end] = TTT_liftoff
         Rcal[end] = RRR_liftoff
@@ -668,7 +671,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         TTT_gensys_final, RRR_gensys_final, CCC_gensys_final;
-                                        T_switch = separate_cond_periods ?
+                                        T_switch = separate_cond_regimes ?
                                         get_setting(m, :n_rule_periods) + 1 : length(fcast_gensys2_regimes))
 
         Tcal[end] = TTT_gensys_final
