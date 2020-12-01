@@ -613,6 +613,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                     else
                         weights = get_setting(m, :alternative_policy_weights)
                     end
+                    @show fcast_reg, weights
 
                     altpols = get_setting(m, :alternative_policies)
 
