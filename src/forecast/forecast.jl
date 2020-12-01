@@ -437,11 +437,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
         orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
-        @show "Before loop"
-        @show get_setting(m, :tvis_information_set)
+
         for iter in 0:(size(obs, 2) - 3)
-            @show "Iteration start"
-            @show get_setting(m, :tvis_information_set)
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
@@ -466,9 +463,14 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             for (regind, date) in zip(altpol_reg_range, altpol_reg_qtrrange)
                 altpol_regime_dates[regind] = date
             end
-            m <= Setting(:regime_dates, altpol_regime_dates)
-            m <= Setting(:regime_switching, true)
-            setup_regime_switching_inds!(m; cond_type = cond_type)
+
+            if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= maximum(altpol_reg_range)
+                m <= Setting(:regime_switching, true)
+            else
+                m <= Setting(:regime_dates, altpol_regime_dates)
+                m <= Setting(:regime_switching, true)
+                setup_regime_switching_inds!(m; cond_type = cond_type)
+            end
 
             # Set up replace_eqcond entries
             m <= Setting(:replace_eqcond, true)
@@ -492,7 +494,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             if !isnothing(final_eqcond)
                 replace_eqcond[n_total_regimes] = final_eqcond
                 if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
-                    replace_eqcond[n_total_regimes:(get_setting(m, :cred_vary_until) + 1)] = final_eqcond
+                    for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
+                        replace_eqcond[z] = final_eqcond
+                    end
                 end
             end
             m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
@@ -512,8 +516,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             else
                 set_info_sets_altpolicy(m, n_total_regimes, first_zlb_regime)
             end
-            @show "Iteration later"
-            @show get_setting(m, :tvis_information_set)
+
             tvis = haskey(get_settings(m), :tvis_information_set) ? !isempty(get_setting(m, :tvis_information_set)) : false
 
             # Recompute to account for new regimes

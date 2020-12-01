@@ -933,7 +933,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
         end
 
-
         # 2B. Bounded forecasts
 
         if !isempty(intersect(output_vars, bddforecast_vars))
@@ -970,6 +969,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                         forecast(m, system, s_T;
                                  cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
                 end
+
 
                 # Now run the ZLB enforcing forecast
                 if rerun_smoother
