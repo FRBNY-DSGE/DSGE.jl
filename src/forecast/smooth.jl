@@ -77,7 +77,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
     end
 
     # Call smoother
-    smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
+    smoother = getfield(Main, Symbol(forecast_smoother(m), "_smoother"))
 
     if draw_states && smoother in [hamilton_smoother, koopman_smoother]
         @warn "$smoother called with draw_states = true"
