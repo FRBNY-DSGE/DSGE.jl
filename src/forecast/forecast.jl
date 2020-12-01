@@ -497,11 +497,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             if !isnothing(final_eqcond)
                 replace_eqcond[n_total_regimes] = final_eqcond
-                #=if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
+                if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
                     for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
                         replace_eqcond[z] = final_eqcond
                     end
-                end=#
+                end
             end
             m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
 
