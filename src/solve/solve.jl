@@ -564,6 +564,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                                  Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)], # from 2 b/c use t + 1 matrix, not t
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
+        @show nzlb
+        @show ng2
         if nzlb != ng2
             Th = Talt[1:n_endo, 1:n_endo]
 
