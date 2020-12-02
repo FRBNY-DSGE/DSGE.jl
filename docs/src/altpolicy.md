@@ -83,6 +83,9 @@ DSGE.ngdp_solve
 DSGE.ngdp_forecast_init
 ```
 
+## [Alternative Policy Uncertainty and Imperfect Credibility](@ref uncertainaltpol)
+Click on the section header for details on how to add policy uncertainty or
+imperfect credibility to alternative policies (both permanent and temporary).
 
 ## The `AltPolicy` Type
 

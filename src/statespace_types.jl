@@ -290,6 +290,8 @@ end
 """
 `TimeVaryingInformationSetSystem`
 
+A mutable struct containing the transition and measurement equations for a
+state-space model with regime-switching and time-varying information sets.
 """
 mutable struct TimeVaryingInformationSetSystem{T <: Real} <: AbstractSystem{T}
     transitions::Vector{Vector{Transition{T}}}
