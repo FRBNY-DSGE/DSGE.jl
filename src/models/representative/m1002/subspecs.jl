@@ -698,7 +698,7 @@ function ss30!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
@@ -782,7 +782,7 @@ function ss59!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
@@ -969,7 +969,7 @@ function ss60!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
@@ -1152,7 +1152,7 @@ function ss61!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
