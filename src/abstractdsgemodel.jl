@@ -574,8 +574,7 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = 
     end
     m <= Setting(:n_rule_periods, (cond_type == :none) ? n_regimes - (get_setting(m, :n_hist_regimes) + 1) :
                  n_regimes - (get_setting(m, :n_hist_regimes) + 1 + cond_adj),
-                 "Number of periods during which the (temporary) alternative policy applies, assuming the policy "
-                 * "does not occur during the conditional forecast horizon.")
+                 "Number of periods during which the (temporary) alternative policy applies")
     return m
 end
 
