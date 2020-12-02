@@ -12,8 +12,8 @@ newThalf = 10
 m = Model1002("ss59"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
                                                               :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true),
                                                               :add_urhat => Setting(:add_urhat, true),
-                                                              :flexible_ait_2020Q3_policy_change =>
-                                                              Setting(:flexible_ait_2020Q3_policy_change,
+                                                              :flexible_ait_policy_change =>
+                                                              Setting(:flexible_ait_policy_change,
                                                                       false))) # Set to false unless you want to re-generate any saved output
 m <= Setting(:date_forecast_start, Date(2020, 6, 30))
 m <= Setting(:date_conditional_end, Date(2020, 6, 30))

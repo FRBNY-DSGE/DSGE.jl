@@ -816,7 +816,7 @@ end
                                       Setting(:n_mon_anticipated_shocks, 6, "Number of anticipated policy shocks"),
                                       :imperfect_credibility_weights => Setting(:imperfect_credibility_weights,
                                                                                 [imperfect_cred_new, imperfect_cred_old]),
-                                      :flexible_ait_2020Q3_policy_change => Setting(:flexible_ait_2020Q3_policy_change, true))
+                                      :flexible_ait_policy_change => Setting(:flexible_ait_policy_change, true))
 
     m = Model1002("ss59", custom_settings = custom_set)
     usual_model_settings!(m, "201117", fcast_date = Date(2020, 9, 30))

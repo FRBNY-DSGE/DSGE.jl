@@ -61,8 +61,8 @@ end
 ## Regime switching and full-distriution
 # Initialize model objects
 Random.seed!(1793)
-m = Model1002("ss60"; custom_settings = Dict{Symbol, Setting}(:flexible_ait_2020Q3_policy_change =>
-                                                              Setting(:flexible_ait_2020Q3_policy_change,
+m = Model1002("ss60"; custom_settings = Dict{Symbol, Setting}(:flexible_ait_policy_change =>
+                                                              Setting(:flexible_ait_policy_change,
                                                                       false),
                                                               :add_pgap => Setting(:add_pgap, false),
                                                               :add_ygap => Setting(:add_ygap, false))) # Set to false unless you want to re-generate any saved output

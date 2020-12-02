@@ -5,9 +5,6 @@ m = AnSchorfheide()
 @testset "Test prepare forecast inputs" begin
     # Throw error if input_type=:subset but no subset_inds provided
     @test_throws ErrorException DSGE.prepare_forecast_inputs!(m, :subset, :none, [:histobs, :forecastobs])
-    # Throw error if trying to compute shockdec under alternative policy rule
-    m <= Setting(:alternative_policy, AltPolicy(:taylor93, eqcond, solve))
-    @test_throws ErrorException DSGE.prepare_forecast_inputs!(m, :mode, :none, [:shockdec])
     # Go back to normal policy rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
     # Test with df passed in
