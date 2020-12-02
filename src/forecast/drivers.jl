@@ -69,12 +69,12 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
 
     # Throw error if trying to compute shock decompositions under an alternative
     # policy rule
-    if alternative_policy(m).key != :historical &&
+#=    if alternative_policy(m).key != :historical &&
         any(prod -> prod in [:shockdec, :dettrend, :trend], output_prods)
 
         error("Only histories, forecasts, and IRFs can be computed under an alternative policy")
     end
-
+=#
     # Determine if we are only running IRFs. If so, we won't need to load data
     # below
     irfs_only = all(prod -> prod == :irf, output_prods)
@@ -1089,7 +1089,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             prev_quarter(date_forecast_start(m)) # this is the end date of history period
         end
         shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
-            shock_decompositions(m, system, histshocks_shockdec, start_date, end_date) :
+            shock_decompositions(m, system, histshocks_shockdec, start_date, date_forecast_end(m)) : #end_date) :
             shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
@@ -1124,7 +1124,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             else
                 prev_quarter(date_forecast_start(m)) # this is the end date of history period
             end
-            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, end_date)
+            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, date_forecast_end(m))#end_date)
         else
             dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
         end

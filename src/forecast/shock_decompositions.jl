@@ -107,10 +107,10 @@ function shock_decompositions(m::AbstractDSGEModel{S},
         regime_inds[1] = 1:regime_inds[1][end]
     end
 
-    shock_decompositions(system, horizon, histshocks, start_index, end_index, regime_inds)
+    shock_decompositions(m, system, horizon, histshocks, start_index, end_index, regime_inds)
 end
 
-function shock_decompositions(system::RegimeSwitchingSystem{S},
+function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
                               forecast_horizons::Int, histshocks::Matrix{S},
                               start_index::Int, end_index::Int,
                               regime_inds::Vector{UnitRange{Int}}) where {S<:AbstractFloat}
@@ -126,7 +126,7 @@ function shock_decompositions(system::RegimeSwitchingSystem{S},
     states = zeros(S, nstates, allperiods, nshocks)
     obs    = zeros(S, nobs,    allperiods, nshocks)
     pseudo = zeros(S, npseudo, allperiods, nshocks)
-    shocks = zeros(S, nshocks, histperiods)
+    shocks = zeros(S, nshocks, histperiods+forecast_horizons)
 
     # Check dates
     if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
@@ -140,18 +140,28 @@ function shock_decompositions(system::RegimeSwitchingSystem{S},
     fcast_shocks = zeros(S, nshocks, forecast_horizons) # these are always zero
     for i = 1:nshocks
         # Isolate single shock
-        shocks[i, :] = histshocks[i, :]
-        # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
-        for (reg_num, reg_ind) in enumerate(regime_inds)
-            init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
+        shocks[i, 1:histperiods] = histshocks[i, :]
 
-            states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ = forecast(system[reg_num], init_state, shocks[:, reg_ind])
+# Option 1: Passing in the model object
+#=
+        # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
+        init_state = zeros(S, nstates) # update initial state
+
+        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(m, system, init_state, shocks)
+=#
+# Option 2: Looping through each regime
+        for (reg_num, reg_ind) in enumerate(regime_inds)
+                init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
+
+                states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ = forecast(system[reg_num], init_state, shocks[:, reg_ind])
         end
 
+# Old Forecast setup
+#=
         fcast_inds = (histperiods + 1):allperiods
         states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
             forecast(system[length(regime_inds)], states[:, regime_inds[end][end], i], fcast_shocks)
-
+=#
         # zero out shocks
         shocks[i, :] .= 0.
     end
@@ -263,11 +273,11 @@ function deterministic_trends(m::AbstractDSGEModel{S},
     end
     regime_inds[end] = regime_inds[end][1]:end_index      # if the end index is in the middle of a regime or is past the regime's end
 
-    return deterministic_trends(system, z0, nperiods, start_index, end_index, regime_inds)
+    return deterministic_trends(m, system, z0, nperiods, start_index, end_index, regime_inds)
 end
 
 
-function deterministic_trends(system::RegimeSwitchingSystem{S}, z0::Vector{S}, nperiods::Int,
+function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S}, nperiods::Int,
                               start_index::Int, end_index::Int,
                               regime_inds::Vector{UnitRange{Int}}) where {S<:AbstractFloat}
 
@@ -283,6 +293,12 @@ function deterministic_trends(system::RegimeSwitchingSystem{S}, z0::Vector{S}, n
     obs    = Matrix{S}(undef, nobs,    nperiods)
     pseudo = Matrix{S}(undef, npseudo, nperiods)
 
+# Option 1: Passing in model object
+#=
+    shocks = zeros(S, nshocks, nperiods)
+    states, obs, pseudo, _ = forecast(m, system, z0, shocks)
+=#
+# Option 2: Forecasting for each regime via loop
     # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
     for (reg_num, reg_ind) in enumerate(regime_inds)
         init_state = (reg_num == 1) ? z0 : states[:, reg_ind[1] - 1] # update initial state
@@ -291,12 +307,14 @@ function deterministic_trends(system::RegimeSwitchingSystem{S}, z0::Vector{S}, n
         shocks = zeros(S, nshocks, length(reg_ind))
         states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
     end
+
+#=
     if regime_inds[end][end] < nperiods
         shocks   = zeros(S, nshocks, nperiods - regime_inds[end][end])
         last_ind = (1 + regime_inds[end][end]):nperiods
         states[:, last_ind], obs[:, last_ind], pseudo[:, last_ind], _ = forecast(system[length(regime_inds)], states[:, regime_inds[end][end]], shocks)
     end
-
+=#
     if start_index == 1 && end_index == nperiods
         return states, obs, pseudo
     else
