@@ -419,7 +419,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       rerun_smoother::Bool = false, catch_smoother_lapack::Bool = false,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                       show_failed_percent::Bool = false, only_filter::Bool = false,
-                      set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
                       verbose::Symbol = :low)
 
     ### Common Setup
@@ -652,7 +651,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
-                           set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false, 70, 71, 0., 12.),
                            filter_smooth::Bool = false, rerun_smoother::Bool = false,
                            catch_smoother_lapack::Bool = false)
     ### Setup
@@ -704,16 +702,15 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     if run_smoother
         # Call smoother
         if filter_smooth && (get_setting(m, :forecast_smoother) == :carter_kohn)
-            kal = filter(m, df, system; cond_type = cond_type, set_pgap_ygap = set_pgap_ygap)
+            kal = filter(m, df, system; cond_type = cond_type)
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       set_pgap_ygap = set_pgap_ygap,
                        s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt],
                        catch_smoother_lapack = catch_smoother_lapack)
         else
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       set_pgap_ygap = set_pgap_ygap, catch_smoother_lapack = catch_smoother_lapack)
+                       catch_smoother_lapack = catch_smoother_lapack)
         end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -763,14 +760,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         else
             kal = Kalman(Vector{Float64}(undef,0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Matrix{Float64}(undef, 0, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0), Vector{Float64}(undef, 0), Array{Float64}(undef, 0, 0, 0))
             try
-                kal = filter(m, df, system; cond_type = cond_type, set_pgap_ygap = set_pgap_ygap)
-                #=if set_pgap_ygap[1] && cond_type == :none
-                    kal[:s_T][set_pgap_ygap[2]] = set_pgap_ygap[4]
-                    kal[:s_T][set_pgap_ygap[3]] = set_pgap_ygap[5]
-                elseif set_pgap_ygap[1]
-                    kal[:s_filt][set_pgap_ygap[2], end-1] = set_pgap_ygap[4]
-                    kal[:s_filt][set_pgap_ygap[3], end-1] = set_pgap_ygap[5]
-                end=#
+                kal = filter(m, df, system; cond_type = cond_type)
             catch err
                 if isa(err, DomainError)
                     return Dict{Symbol, Array{Float64}}()
