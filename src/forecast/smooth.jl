@@ -58,7 +58,6 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                 s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                 cond_type::Symbol = :none, draw_states::Bool = false,
                 include_presample::Bool = false, in_sample::Bool = true,
-                set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false,70,71,0.,12.),
                 catch_smoother_lapack::Bool = false) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
@@ -86,15 +85,14 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
     states, shocks = try
         if smoother == hamilton_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0, set_pgap_ygap = set_pgap_ygap)
+                     s_0, P_0)
         elseif smoother == koopman_smoother
-            kal = filter(m, data, system; set_pgap_ygap = set_pgap_ygap)
+            kal = filter(m, data, system)
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0, kal[:s_pred], kal[:P_pred])
         elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states,
-                     set_pgap_ygap = set_pgap_ygap)
+                     s_0, P_0; draw_states = draw_states)
         else
             error("Invalid smoother: $(forecast_smoother(m))")
         end
@@ -133,7 +131,6 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
                 s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                 cond_type::Symbol = :none, draw_states::Bool = false,
                 include_presample::Bool = false, in_sample::Bool = true,
-                set_pgap_ygap::Tuple{Bool,Int,Int,Float64,Float64} = (false,70,71,0.,12.),
                 catch_smoother_lapack::Bool = false,
                 filter_smooth::Bool = false, s_pred::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                 P_pred::AbstractArray{S,3} = Array{S, 3}(undef, 0, 0, 0),
@@ -177,22 +174,20 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     states, shocks = try
         if smoother == hamilton_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0, set_pgap_ygap = set_pgap_ygap)
+                     s_0, P_0)
         elseif smoother == koopman_smoother
-            kal = filter(m, data, system; set_pgap_ygap = set_pgap_ygap)
+            kal = filter(m, data, system)
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0, kal[:s_pred], kal[:P_pred])
         elseif smoother == carter_kohn_smoother && filter_smooth
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states,
-                     set_pgap_ygap = set_pgap_ygap)
+                     s_0, P_0; draw_states = draw_states)
         elseif filter_smooth
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states,
-                     set_pgap_ygap = set_pgap_ygap)
+                     s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states)
         elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states, set_pgap_ygap = set_pgap_ygap)
+                     s_0, P_0; draw_states = draw_states)
         else
             error("Invalid smoother: $(forecast_smoother(m))")
         end
