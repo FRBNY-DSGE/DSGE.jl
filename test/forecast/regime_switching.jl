@@ -234,7 +234,7 @@ end
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:pgap_value, 12.0)
     m <= Setting(:gensys2, true)
-    m <= Setting(:hist_gensys2_regimes_gap, true) # separate the conditional regimes from remaining forecast regimes
+    m <= Setting(:gensys2_separate_cond_regimes, true) # separate the conditional regimes from remaining forecast regimes
 
     # Check zero rate rule causes an error if specified in a conditional period
     @test_throws DSGE.GensysError DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),

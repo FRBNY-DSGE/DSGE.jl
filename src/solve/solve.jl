@@ -453,14 +453,26 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     #       would be good to also design a way to avoid these extra recursions.
     gensys2_regimes = (first(fcast_gensys2_regimes) - 1):last(fcast_gensys2_regimes)
 
+    # Create variable hist_gensys2_regimes_gap, which indicates there are regimes between the last historical
+    # regime and the first gensys2 regime. Note that regimes in the conditional forecast horizon are not
+    # considered historical regimes.
+    #
     # If using an alternative policy,
     # are there periods between the first forecast period and first period with temporary alt policies?
     # For example, are there conditional periods? We don't want to use gensys2 on the conditional periods then
     # since gensys2 should be applied just to the alternative policies.
+    #
     # If not using an alternative policy, then we do not want to treat the conditional periods separately unless
-    # explicitly instructed by :hist_gensys2_regimes_gap.
+    # explicitly instructed by :hist_gensys2_regimes_gap, which specifies that there should be gaps between
+    # the last historical regime and the first gensys2 regime, namely during the conditional period.
+    #
+    # One other case is when there are regimes b/n the last conditional period and the first gensys2 regime.
+    # We infer this case by testing whether the first regime in replace_eqcond_func_dict is greater than
+    # or equal to the first regime after the conditional period ends
     hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
-        (haskey(get_settings(m), :hist_gensys2_regimes_gap) ? get_setting(m, :hist_gensys2_regimes_gap) : false)
+        (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false) ||
+        (findfirst([haskey(get_setting(m, :replace_eqcond_func_dict), i) for i in 1:get_setting(m, :n_regimes)]) -
+         get_setting(m, :reg_post_conditional_end) >= 0)
     n_no_alt_reg = hist_gensys2_regimes_gap ?
         (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
     if n_no_alt_reg > 0

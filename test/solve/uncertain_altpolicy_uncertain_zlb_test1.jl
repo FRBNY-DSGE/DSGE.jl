@@ -121,7 +121,7 @@ for j in 1:length(prob_vecs)
 
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
-    m <= Setting(:hist_gensys2_regimes_gap, true) # required b/c not using an alternative policy technically
+    m <= Setting(:gensys2_separate_cond_regimes, true) # required b/c not using an alternative policy technically
     replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
     for regind in tempZLB_regimes[j]
         replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
