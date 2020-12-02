@@ -924,11 +924,13 @@ function model_settings!(m::Model1002)
 
     # Add AIT for 2020-Q3 on
     if subspec(m) in ["ss30", "ss59", "ss60", "ss61"]
-        m <= Setting(:flexible_ait_2020Q3_policy_change, true, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
+        m <= Setting(:flexible_ait_2020Q3_policy_change, false,
+                     "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, true)
         m <= Setting(:add_ygap, true)
     else
-        m <= Setting(:flexible_ait_2020Q3_policy_change, false, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
+        m <= Setting(:flexible_ait_2020Q3_policy_change, false,
+                     "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, false)
         m <= Setting(:add_ygap, false)
     end
