@@ -556,7 +556,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
 
-        ng2  = length(Tcal) - 2 # number of gensys2 regimes
+        ng2  = length(Tcal) - 1 # number of gensys2 regimes
         nzlb = haskey(get_settings(m), :temporary_zlb_length) ? get_setting(m, :temporary_zlb_length) : ng2
 
         # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t

@@ -137,12 +137,12 @@ for j in 1:length(prob_vecs)
 
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
-    m <= Setting(:temporary_altpolicy, true)
+    m <= Setting(:gensys2_separate_cond_regimes, true)
     replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
     for regind in tempZLB_regimes[j]
         replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
     end
-    # replace_eqcond[tempZLB_regimes[j][cond_type]] = DSGE.smooth_ait_gdp_alt_replace_eq_entries # Will set the "lift-off" regime directly
+    replace_eqcond[tempZLB_regimes[j][end] + 1] = DSGE.smooth_ait_gdp_alt_replace_eq_entries
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
     fcasts[j] = deepcopy(baseline_fcasts)
 

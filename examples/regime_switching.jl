@@ -235,7 +235,6 @@ if temp_alt
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
-    m <= Setting(:temporary_altpolicy, true) # The new regimes to be added should be treated as temporary alternative policies
     replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
     for i in 4:(temp_n_regimes - 1)
         replace_eqcond[i] = replace_policy # Use the alternative policy for these regimes!
