@@ -56,10 +56,10 @@ function measurement(m::Model1002{T},
     # before 2020:Q3, the measurement equation should reflect the belief that the "permanent" regime is the
     # regime before 2020:Q3 starts.
     if flex_ait_2020Q3
-        if get_setting(m, :regime_dates)[4] != flexible_ait_policy_change_date
+        if get_setting(m, :regime_dates)[4] != get_setting(m, :flexible_ait_policy_change_date)
             reg_2020Q3 = 0
             for i in 1:get_setting(m, :n_regimes)
-                if get_setting(m, :regime_dates)[i] == flexible_ait_policy_change_date
+                if get_setting(m, :regime_dates)[i] == get_setting(m, :flexible_ait_policy_change_date)
                     reg_2020Q2 = i
                     break
                 end
