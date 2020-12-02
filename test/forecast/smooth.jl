@@ -301,6 +301,7 @@ end
     m <= Setting(:rate_expectations_source, :ois)
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
+    m <= Setting(:hist_gensys2_regimes_gap, true)
     replace_eqcond_func_dict_shortzlb = Dict()
     for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 1)
         replace_eqcond_func_dict_shortzlb[i] = DSGE.zero_rate_replace_eq_entries

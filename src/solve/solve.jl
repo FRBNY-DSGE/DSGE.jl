@@ -483,10 +483,10 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     # For example, are there conditional periods? We don't want to use gensys2 on the conditional periods then
     # since gensys2 should be applied just to the alternative policies.
     # If not using an alternative policy, then we do not want to treat the conditional periods separately unless
-    # explicitly instructed by :gensys2_separate_cond_regimes.
-    separate_cond_regimes = (get_setting(m, :alternative_policy).key != :historical) ||
-        (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false)
-    n_no_alt_reg = separate_cond_regimes ?
+    # explicitly instructed by :hist_gensys2_regimes_gap.
+    hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
+        (haskey(get_settings(m), :hist_gensys2_regimes_gap) ? get_setting(m, :hist_gensys2_regimes_gap) : false)
+    n_no_alt_reg = hist_gensys2_regimes_gap ?
         (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
 
     if n_no_alt_reg > 0
@@ -577,7 +577,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         TTT_liftoff, RRR_liftoff, CCC_liftoff,
-                                        T_switch = separate_cond_regimes ?
+                                        T_switch = hist_gensys2_regimes_gap ?
                                         get_setting(m, :n_rule_periods) + 1 : length(fcast_gensys2_regimes))
         Tcal[end] = TTT_liftoff
         Rcal[end] = RRR_liftoff
@@ -673,7 +673,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         TTT_gensys_final, RRR_gensys_final, CCC_gensys_final;
-                                        T_switch = separate_cond_regimes ?
+                                        T_switch = hist_gensys2_regimes_gap ?
                                         get_setting(m, :n_rule_periods) + 1 : length(fcast_gensys2_regimes))
 
         Tcal[end] = TTT_gensys_final
