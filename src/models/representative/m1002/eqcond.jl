@@ -489,8 +489,8 @@ function eqcond(m::Model1002, reg::Int)
                 Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
             end
 
-            #=if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
-                if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
+            #=if (haskey(m.settings, :flexible_ait_policy_change) ? get_setting(m, :flexible_ait_policy_change) : false)
+                if get_setting(m, :regime_dates)[reg] >= get_setting(m, :flexible_ait_policy_change_date)
                     Γ1[eq[:eq_rml1], endo[:rm_tl2]] = 0.
                     Γ0[eq[:eq_rml2], endo[:rm_tl2]] = 1.
                     Ψ[eq[:eq_rml2],  exo[:rm_shl2]] = 1.
@@ -785,8 +785,8 @@ function eqcond(m::Model1002, reg::Int)
    end
 
    # Switch to Flexible AIT in 2020-Q3 and beyond
-   if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
-       if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
+   if (haskey(m.settings, :flexible_ait_policy_change) ? get_setting(m, :flexible_ait_policy_change) : false)
+       if get_setting(m, :regime_dates)[reg] >= get_setting(m, :flexible_ait_policy_change_date)
            Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
        end
    end

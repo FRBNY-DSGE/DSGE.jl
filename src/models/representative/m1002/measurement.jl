@@ -48,23 +48,23 @@ function measurement(m::Model1002{T},
 
     # Set up for calculating k-periods ahead expectations and expected sums
     permanent_t = length(information_set[findfirst(information_set .== reg):end]) - 1 + reg
-    flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
-        get_setting(m, :flexible_ait_2020Q3_policy_change) : false
+    flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_policy_change) ?
+        get_setting(m, :flexible_ait_policy_change) : false
 
-    # With flexible_ait_2020Q3_policy_change: there is a regime-break in 2020:Q3, so before 2020:Q2,
+    # With flexible_ait_policy_change: there is a regime-break in 2020:Q3, so before 2020:Q2,
     # the final regime should be considered to be the regime corresponding to 2020:Q2, namely for regimes
     # before 2020:Q3, the measurement equation should reflect the belief that the "permanent" regime is the
     # regime before 2020:Q3 starts.
     if flex_ait_2020Q3
-        if get_setting(m, :regime_dates)[4] != Date(2020, 9, 30)
+        if get_setting(m, :regime_dates)[4] != flexible_ait_policy_change_date
             reg_2020Q3 = 0
             for i in 1:get_setting(m, :n_regimes)
-                if get_setting(m, :regime_dates)[i] == Date(2020, 9, 30)
+                if get_setting(m, :regime_dates)[i] == flexible_ait_policy_change_date
                     reg_2020Q2 = i
                     break
                 end
             end
-            @assert reg_2020Q2 != 0 "The setting :regime_dates does not contain the date 2020:Q3, which is required if the setting :flexible_ait_2020Q3_policy_change is true."
+            @assert reg_2020Q2 != 0 "The setting :regime_dates does not contain the date 2020:Q3, which is required if the setting :flexible_ait_policy_change is true."
         else
             reg_2020Q3 = 4
         end
