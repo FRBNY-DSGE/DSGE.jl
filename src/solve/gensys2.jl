@@ -1,8 +1,8 @@
 """
 ```
-function gensys_cplus(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, C::Vector{Float64},
-                      Ψ::Matrix{Float64}, Π::Matrix{Float64}, TTT::Matrix{Float64}, RRR::Matrix{Float64},
-                      CCC::Vector{Float64})
+gensys_cplus(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, C::Vector{Float64},
+             Ψ::Matrix{Float64}, Π::Matrix{Float64}, TTT::Matrix{Float64}, RRR::Matrix{Float64},
+             CCC::Vector{Float64})
 ```
 
 calculates the state space transition matrices when a temporary alternative policy applies.

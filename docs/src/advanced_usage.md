@@ -260,6 +260,7 @@ which will automatically compute the (required) settings
 - `:n_hist_regimes`: Number of regimes in the history
 - `:n_fcast_regimes`: Number of regimes in the forecast horizon (including the conditional forecast)
 - `:n_cond_regimes`: Number of regimes in the conditional forecast
+- `:n_rule_periods`: Number of regimes when using a temporary alternative policy
 
 Finally, to run a full-distribution forecast with regime-switching
 using `forecast_one` or `usual_model_forecast`, it is necessary to manually
@@ -268,19 +269,51 @@ Currently, we have not fully implemented loading parameters from a saved estimat
 For an example about how to do this, see this
 [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
 
+### [Time-Varying Information Sets](@id tvis)
+In many applications with regime-switching, changes in information sets may occur.
+For example, say in 1959:Q1 - 2007:Q3, people expected the Federal Reserve to always
+use a Taylor-style monetary policy rule. But in 2007:Q4, people realize that the Federal
+Reserve will implement a zero lower bound for `N` periods before switching back to the
+Taylor-style rule. The measurement equation used in 2007:Q4 and subsequent periods need
+to account for this change in the information set. In particular, quantities like
+anticipated nominal rates and 10Y inflation rates involve forecasting the expected
+state of the economy. If the transition matrices (e.g. `TTT`) are time-varying, and
+agents' information set includes knowledge that the matrices are time-varying, then
+the measurement equation should account for it. Explicitly, assume the state space
+evolves according to
+```math
+\begin{aligned}
+s_t = T_t s_{t - 1} + R_t \varepsilon_t + C_t.
+\end{aligned}
+```
+
+If in period `t`, the measurement equation includes the anticipated nominal rate
+in ``k`` periods, and agents know that the transition equations are time-varying over some horizon ``H``,
+then we need to calculate that expectation taking into account that agents know about
+the time variation in the matrices, e.g. ``T_{t + 1}, \dots, T_{t + H}``. This approach
+allows for varying degrees of myopia, e.g. ``H = 0`` implies that agents do not know about
+any time variation while ``H < k`` captures the case that agents only know about the
+time variation up to a certain horizon forward.
+
+See [The `TimeVaryingInformationSetSystem` Type](@ref tvistype) for details on how we
+implement a state space system with time-varying information sets and
+the [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/tvis_system.jl)
+for guidance on how to use it, e.g. calculating forecasts.
 
 ### Available Types of Regime Switching
 
-There are two cases involving regime switching that are implemented in DSGE.jl
+There are three cases involving regime switching that are implemented in DSGE.jl
 
-- Regime switching parameters
+- Exogenous and unanticipated regime switching (e.g. unanticipated regime-switching parameters)
 - Temporary alternative policies
+- Time-varying information sets
 
-To implement regime-switching parameters, see the
+To implement regime-switching parameters or use temporary alternative policies, see this
 [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl) for a regime-switching forecast.
-For further details, see
-the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl),
-which implements regime-switching parameters.
+For further details on regime-switching parameters, see
+the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
+To implement time-varying information sets, see
+this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/tvis_system.jl).
 
 Once the regime-switching settings are properly created, the syntax for running a forecast
 is the same as when there is no regime-switching. See [Forecasting](@ref).
@@ -302,6 +335,37 @@ we directly zero/un-zero the appropriate entries in the pre- and post-ZLB `QQ` m
 This approach also economizes on unnecessary switching,
 For instance, during the calculation of shock decompositions and trends, it is unnecessary
 to distinguish between the pre- and post-ZLB regimes.
+
+## [Alternative Policy Uncertainty and Imperfect Credibility](@id uncertainaltpol)
+The standard alternative policy code assumes that people completely believe the change in policy.
+However, in many cases, the more realistic modeling choice is assuming some uncertainty
+or imperfect credibility about the policy change. This approach can also address the concern
+that, in standard DSGEs, expectations have extremely strong effects (e.g. the forward guidance puzzle).
+
+
+We model the uncertainty/imperfect credibility by assuming there are ``n`` possible alternative policies
+that may occur tomorrow and ``n`` probability weights assigned to each policy. One of the policies is
+the desired alternative policy. Using the same approach as with temporary alternative policies
+(see [Calgiarini and Kulish](https://www.mitpressjournals.org/doi/pdf/10.1162/REST_a_00240)
+and [Regime-Switching](@ref solveregswitch)), the transition equation is solved
+as if the actual policy used is the desired policy but people expect with some probability that
+tomorrow some other alternative policy will be used. A typical application is
+assuming that with probability ``p`` the desired alternative policy occurs tomorrow
+and with probability ``1-p`` the historical policy occurs tomorrow. For more information,
+please see the function
+[`gensys_uncertain_altpol`](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/src/solve/gensys_uncertain_altpol.jl),
+which performs the calculations.
+
+This approach is robust to temporary alternative policies but requires the algorithm to account
+for time variation in the transition equation. In particular, we need to first compute
+the entire sequence of transition equations under the temporary alternative policy with
+perfect credibility. Once this sequence is available, we can then treat
+the temporary alternative policy as the desired alternative policy and apply the same calculations
+described in the previous paragraph to each period of the temporary alternative policy.
+\emph{Note, however, that this functionality is currently available only for temporary ZLBs}.
+
+To add alternative policy uncertainty and imperfect credibility, please see the script
+[imperfect_credibility.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples/imperfect_credibility.jl).
 
 ## Automatically Generating Anticipated Shocks
 

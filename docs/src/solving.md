@@ -38,6 +38,45 @@ as a wrapper for `AbstractDSGEModel` subtypes ([`solve`](@ref)). When the Gensys
 package becomes ready for use, we intend to deprecate our `gensys` code and
 substitute the `gensysdt` method for our code.
 
+## [Regime-Switching](@id solveregswitch)
+We allow solving the model with regime-switching in two cases.
+
+1. Exogenous and unanticipated regimes
+2. Temporary alternative policies.
+
+The first is straightforward to implement because
+the regimes are exogenous and unanticipated. We simply need to specify
+the equilibrium conditions in each regime, run `gensys` for each regime,
+and return multiple transition equations. The required steps
+to solve a model with exogenous and unanticipated regime-switching are
+
+1. Write `eqcond` to accept a second argument specifying the regime, e.g. `eqcond(m, reg)`.
+To allow no regime-switching, we recommend also writing the wrapper `eqcond(m) = eqcond(m, 1)`
+or whatever default regime is desired.
+
+2. Add the settings and indices required to ensure regime-switching is properly handled.
+See [Regime-Switching Forecasts](@ref) for guidance on how to do this.
+
+Temporary alternative policies are slightly more complicated. They leverage the same machinery
+as exogenous and unanticipated regime-switching, so steps 1 and 2 above are required still.
+But in addition, we need to specify in which regimes policies should be different
+than those specified by `eqcond`, which assumes all policies are permanent ones.
+Once we have specified these policies, we use the algorithm from
+[Calgiarini and Kulish](https://www.mitpressjournals.org/doi/pdf/10.1162/REST_a_00240)
+to calculate the rational expectations solution to a model with ``predicted structural changes'',
+which allows us to specify temporary alternative policies like a temporary ZLB or
+a temporary switch to average inflation targeting. The function implementing this algorithm
+is `gensys_cplus`.
+
+```@docs
+DSGE.gensys_cplus
+```
+
+See [Alternative Policies](@ref)
+and the regime-switching [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl)
+for guidance on how to use temporary alternative policies.
+
+
 ```@docs
 DSGE.solve
 ```
@@ -92,3 +131,27 @@ regime_switch_system[2, :transition]
 regime_switch_system[2, :measurement]
 regime_switch_system[2, :pseudo_measurement]
 ```
+
+## [The `TimeVaryingInformationSetSystem` Type](@id tvistype)
+This type implements a state space system with [time-varying information sets](@ref tvis).
+We alter two parts of the `RegimeSwitchingSystem`.
+
+First, the `transitions` field
+is now a `Vector{Vector{Transition}}`` because we may need to calculate the transition equations
+under different information sets. For example, the time-varying transition equations implied by expecting
+a temporary ZLB to 2023:Q4 in 2020:Q4 will be different than those implied by expecting a temporary ZLB to 2024:Q4.
+Thus, if the Federal Reserve announced a ZLB to 2023:Q4 in 2020:Q4, and then in 2021:Q1, they announced
+an extension of the ZLB to 2024:Q4, then the measurement equation needs to calculate
+two sets of time-varying transition equations.
+
+Second, we add two new fields, `information_set` and
+`select`. The first specifies which regimes are part of the information set in a given regime.
+The second specifies which transition equation to use in each regime. Continuing
+the example of the change in the ZLB length, the regime in the `select` field for 2020:Q4
+would point to the set of transition equations associated with a temporary ZLB to 20203:Q4,
+while the regime in `select` for 2021:Q1 would point
+to the set of transition equations associated with a temporary ZLB to 20204:Q4.
+
+For more guidance, see [Time-Varying Information Sets](@ref tvis) and
+the example [tvis_system.jl](https://github.com/FRBNY-DSGE/DSGE.jl), which
+shows how to work with this type.
