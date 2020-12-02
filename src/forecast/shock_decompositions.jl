@@ -126,7 +126,7 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     states = zeros(S, nstates, allperiods, nshocks)
     obs    = zeros(S, nobs,    allperiods, nshocks)
     pseudo = zeros(S, npseudo, allperiods, nshocks)
-    shocks = zeros(S, nshocks, histperiods+forecast_horizons)
+    shocks = zeros(S, nshocks, histperiods)
 
     # Check dates
     if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
@@ -140,7 +140,7 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     fcast_shocks = zeros(S, nshocks, forecast_horizons) # these are always zero
     for i = 1:nshocks
         # Isolate single shock
-        shocks[i, 1:histperiods] = histshocks[i, :]
+        shocks[i, :] = histshocks[i, :]
 
 # Option 1: Passing in the model object
 #=
@@ -150,11 +150,17 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
         states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(m, system, init_state, shocks)
 =#
 # Option 2: Looping through each regime
+
         for (reg_num, reg_ind) in enumerate(regime_inds)
+            if maximum(reg_ind) <= histperiods
                 init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
 
                 states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ = forecast(system[reg_num], init_state, shocks[:, reg_ind])
+            end
         end
+
+        fcast_inds = (histperiods + 1):allperiods
+        states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ = forecast(m, system, states[:,histperiods,i], fcast_shocks)
 
 # Old Forecast setup
 #=
@@ -292,21 +298,30 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     states = Matrix{S}(undef, nstates, nperiods)
     obs    = Matrix{S}(undef, nobs,    nperiods)
     pseudo = Matrix{S}(undef, npseudo, nperiods)
-
-# Option 1: Passing in model object
 #=
+# Option 1: Passing in model object
+
     shocks = zeros(S, nshocks, nperiods)
     states, obs, pseudo, _ = forecast(m, system, z0, shocks)
 =#
+
 # Option 2: Forecasting for each regime via loop
     # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
     for (reg_num, reg_ind) in enumerate(regime_inds)
-        init_state = (reg_num == 1) ? z0 : states[:, reg_ind[1] - 1] # update initial state
+        if reg_num <= get_setting(m, :n_hist_regimes)
+            init_state = (reg_num == 1) ? z0 : states[:, reg_ind[1] - 1] # update initial state
 
-        # Construct matrix of 0 shocks for this regime
-        shocks = zeros(S, nshocks, length(reg_ind))
-        states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
+            # Construct matrix of 0 shocks for this regime
+            shocks = zeros(S, nshocks, length(reg_ind))
+            states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
+        end
     end
+
+    # fcast_inds = (get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)
+    fcast_shocks = zeros(S, nshocks, nperiods-245)
+    fcast_inds = 246:nperiods
+    @show size(states), nperiods
+    states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ = forecast(m, system, states[:,245], fcast_shocks)
 
 #=
     if regime_inds[end][end] < nperiods
