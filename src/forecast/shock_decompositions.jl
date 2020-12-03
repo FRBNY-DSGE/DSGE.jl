@@ -93,9 +93,10 @@ end
 function shock_decompositions(m::AbstractDSGEModel{S},
                               system::RegimeSwitchingSystem{S}, histshocks::Matrix{S},
                               start_date::Dates.Date = date_presample_start(m),
-                              end_date::Dates.Date = prev_quarter(date_forecast_start(m))) where {S<:AbstractFloat}
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m));
+                              cond_type::Symbol = :none) where {S<:AbstractFloat}
     # Set up dates
-    horizon     = forecast_horizons(m)
+    horizon     = forecast_horizons(m; cond_type = cond_type)
     start_index = index_shockdec_start(m)
     end_index   = index_shockdec_end(m)
 
@@ -103,17 +104,20 @@ function shock_decompositions(m::AbstractDSGEModel{S},
     # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
     # in the pre-ZLB periods.
     regime_inds = regime_indices(m, start_date, end_date)
+    @show regime_inds
     if regime_inds[1][1] < 1 # remove periods occuring before desired start date
         regime_inds[1] = 1:regime_inds[1][end]
     end
-
-    shock_decompositions(m, system, horizon, histshocks, start_index, end_index, regime_inds)
+    @show regime_inds
+    shock_decompositions(m, system, horizon, histshocks, start_index, end_index, regime_inds,
+                         cond_type = cond_type)
 end
 
 function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
                               forecast_horizons::Int, histshocks::Matrix{S},
                               start_index::Int, end_index::Int,
-                              regime_inds::Vector{UnitRange{Int}}) where {S<:AbstractFloat}
+                              regime_inds::Vector{UnitRange{Int}};
+                              cond_type::Symbol = :none) where {S<:AbstractFloat}
 
     # Setup
     nshocks     = size(system[1, :RRR], 2)
@@ -150,19 +154,19 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
         states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(m, system, init_state, shocks)
 =#
 # Option 2: Looping through each regime
-        @show regime_inds
-        @show histperiods, allperiods, forecast_horizons
-        @show start_index, end_index
         for (reg_num, reg_ind) in enumerate(regime_inds)
-            if maximum(reg_ind) <= histperiods
-                init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
-
-                states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ = forecast(system[reg_num], init_state, shocks[:, reg_ind])
+            if reg_ind[end] > histperiods
+                break
             end
+            init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
+
+            states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ =
+                forecast(system[reg_num], init_state, shocks[:, reg_ind])
         end
 
         fcast_inds = (histperiods + 1):allperiods
-        states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ = forecast(m, system, states[:,histperiods,i], fcast_shocks)
+        states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
+            forecast(m, system, states[:, histperiods, i], fcast_shocks, cond_type = cond_type)
 
 # Old Forecast setup
 #=
@@ -264,7 +268,8 @@ end
 function deterministic_trends(m::AbstractDSGEModel{S},
                               system::RegimeSwitchingSystem{S}, z0::Vector{S},
                               start_date::Dates.Date = date_presample_start(m),
-                              end_date::Dates.Date = prev_quarter(date_forecast_start(m))) where {S<:AbstractFloat}
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m));
+                              cond_type::Symbol = :none) where {S<:AbstractFloat}
 
     # Dates: We compute the deterministic trend starting from the
     # first historical period.  However, since it is only used to
@@ -279,15 +284,19 @@ function deterministic_trends(m::AbstractDSGEModel{S},
     if regime_inds[1][1] < 1
         regime_inds[1] = 1:regime_inds[1][end]
     end
-    regime_inds[end] = regime_inds[end][1]:end_index      # if the end index is in the middle of a regime or is past the regime's end
-
-    return deterministic_trends(m, system, z0, nperiods, start_index, end_index, regime_inds)
+    # regime_inds[end] = regime_inds[end][1]:end_index      # if the end index is in the middle of a regime or is past the regime's end
+    @show regime_inds
+    if length(regime_inds[end]) == 0
+        pop!(regime_inds)
+    end
+    @show regime_inds
+    return deterministic_trends(m, system, z0, nperiods, start_index, end_index, regime_inds, cond_type = cond_type)
 end
 
 
 function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S}, nperiods::Int,
-                              start_index::Int, end_index::Int,
-                              regime_inds::Vector{UnitRange{Int}}) where {S<:AbstractFloat}
+                              start_index::Int, end_index::Int, regime_inds::Vector{UnitRange{Int}};
+                              cond_type::Symbol = :none) where {S<:AbstractFloat}
 
     # Set constant system matrices to 0
     system = zero_system_constants(system)
@@ -320,10 +329,11 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     end
 
     # fcast_inds = (get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)
-    fcast_shocks = zeros(S, nshocks, nperiods-244)
-    fcast_inds = 245:nperiods
-    @show size(states), nperiods
-    states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ = forecast(m, system, states[:,244], fcast_shocks)
+    fcast_shocks = zeros(S, nshocks, nperiods - regime_inds[end][end])
+    fcast_inds = (regime_inds[end][end] + 1):nperiods
+    states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ =
+        forecast(m, system, states[:, regime_inds[end][end]], fcast_shocks;
+                 cond_type = cond_type)
 
 #=
     if regime_inds[end][end] < nperiods
