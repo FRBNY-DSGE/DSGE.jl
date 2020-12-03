@@ -34,8 +34,9 @@ distribution of the parameters.
 
 - `n_blocks::Int = 1`: Number of blocks (for memory-management purposes)
 - `n_param_blocks::Int = 1`: Number of parameter blocks
-- `n_sim::Int    = 100`: Number of simulations. Note: # saved observations will be
-    n_sim * n_param_blocks * (n_blocks - b_burn).
+- `n_sim::Int    = 100`: Number of simulations per save block. Note: # saved observations will be
+    `n_sim * n_param_blocks * (n_blocks - b_burn)`. The # of total simulations will be
+    `n_sim * n_param_blocks * n_blocks * mhthin`.
 - `n_burn::Int   = 0`: Length of burn-in period
 - `mhthin::Int   = 1`: Thinning parameter (for mhthin = d, keep only every dth draw)
 - `adaptive_accpt::Bool = false`: Whether or not to adaptively adjust acceptance prob.
