@@ -1076,8 +1076,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         else
             prev_quarter(date_forecast_start(m)) # this is the end date of history period
         end
+        @show start_date, end_date, cond_type
         shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
-            shock_decompositions(m, system, histshocks_shockdec, start_date, date_forecast_end(m)) : #end_date) :
+            shock_decompositions(m, system, histshocks_shockdec, start_date, end_date; cond_type = cond_type) :
             shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
@@ -1112,7 +1113,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             else
                 prev_quarter(date_forecast_start(m)) # this is the end date of history period
             end
-            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, date_forecast_end(m))#end_date)
+            @show start_date, end_date, cond_type
+            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, end_date;
+                                                                               cond_type = cond_type)
         else
             dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
         end
