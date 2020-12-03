@@ -150,7 +150,9 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
         states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(m, system, init_state, shocks)
 =#
 # Option 2: Looping through each regime
-
+        @show regime_inds
+        @show histperiods, allperiods, forecast_horizons
+        @show start_index, end_index
         for (reg_num, reg_ind) in enumerate(regime_inds)
             if maximum(reg_ind) <= histperiods
                 init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
@@ -318,10 +320,10 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     end
 
     # fcast_inds = (get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)
-    fcast_shocks = zeros(S, nshocks, nperiods-245)
-    fcast_inds = 246:nperiods
+    fcast_shocks = zeros(S, nshocks, nperiods-244)
+    fcast_inds = 245:nperiods
     @show size(states), nperiods
-    states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ = forecast(m, system, states[:,245], fcast_shocks)
+    states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ = forecast(m, system, states[:,244], fcast_shocks)
 
 #=
     if regime_inds[end][end] < nperiods
