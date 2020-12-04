@@ -195,6 +195,7 @@ shockdec
         linealpha       --> 0
         bar_width       --> 1
         legendfont      --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
+        xlims           --> (x0, x1)
 
         inds = findall(start_date .<= dates .<= end_date)
         x = xnums[inds]
