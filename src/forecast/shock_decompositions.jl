@@ -7,8 +7,8 @@ shock_decompositions(system, forecast_horizons, histshocks, start_index,
 
 shock_decompositions(m, system, histshocks, start_date, end_date)
 
-shock_decompositions(system, forecast_horizons, histshocks, start_index,
-    end_index, regime_inds)
+shock_decompositions(m, system, forecast_horizons, histshocks, start_index,
+    end_index, regime_inds; cond_type = :none)
 ```
 
 ### Inputs
@@ -197,7 +197,8 @@ deterministic_trends(system, z0, nperiods, start_index, end_index)
 
 deterministic_trends(m, system, z0, start_date, end_date)
 
-deterministic_trends(system, z0, nperiods, regime_inds, regimes)
+deterministic_trends(m, system, z0, nperiods, start_index, end_index,
+    regime_inds, regimes; cond_type = :none)
 ```
 
 Compute deterministic trend values of states, observables, and

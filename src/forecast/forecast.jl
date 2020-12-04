@@ -1,10 +1,13 @@
 """
 ```
-forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}(undef, 0,0))
+forecast(m, system, z0; cond_type = :none,
+    enforce_zlb = false, shocks = Matrix{S}(undef, 0,0))
 
 forecast(m, altpolicy, z0, shocks)
 
 forecast(system, z0, shocks; enforce_zlb = false)
+
+forecast(m, system, z0, shocks; cond_type = :none, enforce_zlb = false)
 ```
 
 The first method produces a forecast, given a state space system,
@@ -16,7 +19,7 @@ it produces forecasts specifically when an alternative policy
 is used. Second, it enforces the ZLB by treating it as a temporary
 alternative policy.
 
-The third method is an internal function used by the first two methods.
+The third and fourth methods are internal functions used by the first two methods.
 
 ### Inputs
 
