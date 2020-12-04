@@ -2,65 +2,9 @@ using DSGE, ModelConstructors, Dates, OrderedCollections, Test, CSV, DataFrames,
 
 regenerate_output = false
 
-# Test automatic enforcement of ZLB as a temporary ZLB with no regime-switching
-custom_settings = Dict{Symbol, Setting}(
-    :data_vintage             => Setting(:data_vintage, "160812"),
-    :cond_vintage             => Setting(:cond_vintage, "160812"),
-    :cond_id                  => Setting(:cond_id, 0),
-    :use_population_forecast  => Setting(:use_population_forecast, true),
-    :date_presample_start     => Setting(:date_presample_start, Date(1959, 9, 30)),
-    :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
-    :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
-    :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
-
-dfs = Dict()
-path = dirname(@__FILE__)
-dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
-dfs[:none] = load("$path/../reference/regime_switch_data.jld2", "none")
-dfs[:full][end, :obs_nominalrate] = .5
-dfs[:none][end, :obs_nominalrate] = 0.5
-dfs[:full][end, :obs_gdp] = -.5
-
-m = Model1002("ss10", custom_settings = custom_settings)
-m <= Setting(:rate_expectations_source, :ois)
-m.settings[:regime_switching] = Setting(:regime_switching, false)
-m.settings[:forecast_ndraws] = Setting(:forecast_ndraws, 3)
-m.settings[:forecast_block_size] = Setting(:forecast_block_size, 2)
-m.settings[:forecast_jstep] = Setting(:forecast_jstep, 1)
-output_vars = [:forecastobs, :bddforecastobs]
-
-para = repeat(Matrix(map(x -> x.value, m.parameters)'), 3, 1)
-out = Dict()
-Random.seed!(1793 * 1000)
-for cond_type in [:full, :none]
-    out[cond_type] = Dict()
-    forecast_one(m, :mode, cond_type, output_vars, verbose = :none, params = para[1, :], df = dfs[cond_type],
-                 zlb_method = :temporary_altpolicy)
-    forecast_one(m, :full, cond_type, output_vars, verbose = :none, params = para, df = dfs[cond_type],
-                 zlb_method = :temporary_altpolicy)
-    for input_type in [:mode, :full]
-        out[cond_type][input_type] = Dict()
-        outfn = get_forecast_output_files(m, input_type, cond_type, output_vars)
-        out[cond_type][input_type][:bddforecastobs] = load(outfn[:bddforecastobs], "arr")
-        out[cond_type][input_type][:forecastobs]    = load(outfn[:forecastobs], "arr")
-    end
-end
-
-@testset "Automatic enforcement of ZLB as temporary alternative policy (no regime-switching)" begin
-    for cond_type in [:none, :full]
-        for input_type in [:mode, :full]
-            if input_type == :mode
-                @test all(out[cond_type][input_type][:bddforecastobs][m.observables[:obs_nominalrate], :] .> -1e-14)
-            else
-                @test all(out[cond_type][input_type][:bddforecastobs][:, m.observables[:obs_nominalrate], :] .> -1e-14)
-            end
-        end
-    end
-end
-
-## Regime switching and full-distriution
+## Regime switching and full-distribution
 # Initialize model objects
-Random.seed!(1793)
+Random.seed!(1793 * 10)
 m = Model1002("ss60"; custom_settings = Dict{Symbol, Setting}(:flexible_ait_policy_change =>
                                                               Setting(:flexible_ait_policy_change,
                                                                       false),
@@ -71,7 +15,7 @@ if (VERSION >= v"1.3")
 else
     df_full = DataFrame(CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
 end
-m <= Setting(:forecast_horizons, 30)
+m <= Setting(:forecast_horizons, 20)
 m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, # Have to add anticipated rates to conditional data
                                 :obs_nominalrate, :obs_longrate,
                                 :obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3,
@@ -82,7 +26,7 @@ m <= Setting(:cond_semi_names, [:obs_spread,
                                 :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6])
 m <= Setting(:date_forecast_start, Date(2020, 6, 30))
 m <= Setting(:date_conditional_end, Date(2020, 6, 30))
-m <= Setting(:forecast_ndraws, 10)
+m <= Setting(:forecast_ndraws, 5)
 m <= Setting(:forecast_block_size, get_setting(m, :forecast_ndraws))
 m <= Setting(:forecast_jstep, 1)
 m <= Setting(:use_parallel_workers, false)
@@ -143,13 +87,15 @@ output_files = get_forecast_output_files(m, :full, :full, output_vars)
 if regenerate_output
     using JLD2, FileIO
     if (VERSION >= v"1.5")
-        JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist_v1p5.jld2"), true, true, true, IOStream) do file
+        JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist_v1p5.jld2"),
+                     true, true, true, IOStream) do file
             for (k, v) in output_files
                 write(file, string(k), load(v, "arr"))
             end
         end
     else
-        JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"), true, true, true, IOStream) do file
+        JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"),
+                     true, true, true, IOStream) do file
             for (k, v) in output_files
                 write(file, string(k), load(v, "arr"))
             end
@@ -161,7 +107,8 @@ else
         load(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"))
     @testset "Automatic enforcement of ZLB as a temporary alternative policy during full-distribution forecast" begin
         for (k, v) in output_files # Test variables which don't have forward-looking measurement equations
-            @test @test_matrix_approx_eq refdata[string(k)][1:end - 3, vcat(1:9, 12:13), :] load(v, "arr")[1:end - 3, vcat(1:9, 12:13), :]
+            @test @test_matrix_approx_eq refdata[string(k)][1:end - 3,
+                                                            vcat(1:9, 12:13), :] load(v, "arr")[1:end - 3, vcat(1:9, 12:13), :]
             # measurement eqns for forward looking variables e.g. :obs_longrate are still being updated.
             if k == :bddforecastobs
                 @test all(refdata[string(k)][:, m.observables[:obs_nominalrate], :] .> -1e-14)
