@@ -51,7 +51,7 @@ end
     DSGE.update!(m; observables = [:obs_nominalrate, :obs_gdp, :π_t], lags = 4, λ = 0.5)
     dsge_data =
         df_to_matrix(dsge,
-                     CSV.read(joinpath(path, "../reference/test_dsgevar_likelihood_dsge_data.csv")))[obs_i, :]
+                     CSV.read(joinpath(path, "../reference/test_dsgevar_likelihood_dsge_data.csv"), DataFrame))[obs_i, :]
     lh = likelihood(m, dsge_data)
     @test lh ≈ DSGE.dsgevar_likelihood(m, dsge_data) ≈
         load(joinpath(path, "../reference/test_dsgevar_likelihood_dsge.jld2"), "llh")
