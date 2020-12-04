@@ -286,8 +286,7 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
     if :forecast in outputs || check
         s_T = histstates[:, end]
         _, forecastobs, forecastpseudo, _ =
-            forecast(m, regime_switching ? system[n_regimes(system)] : system, # select correct regime for forecast
-                     s_T, cond_type = cond_type, enforce_zlb = false, draw_shocks = false)
+            forecast(m, system, s_T, cond_type = cond_type, enforce_zlb = false, draw_shocks = false)
 
         out[:histforecastobs]    = hcat(histobs,    forecastobs)[:, 1:T+H]
         out[:histforecastpseudo] = hcat(histpseudo, forecastpseudo)[:, 1:T+H]
@@ -298,7 +297,13 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
         nstates = n_states_augmented(m)
         nshocks = n_shocks_exogenous(m)
 
-        _, out[:trendobs],    out[:trendpseudo]    = trends(system)
+        _, out[:trendobs], out[:trendpseudo] = trends(system)
+
+        data_shocks           = zeros(nshocks, T+H)
+        data_shocks[:, 1:T-k] = histshocks[:, 1:T-k]
+        Tstar                 = size(histshocks, 2) # either T or T+1
+        news_shocks           = zeros(nshocks, T+H)
+        system0               = zero_system_constants(system)
 
         if regime_switching
             # Create regime indices
@@ -307,34 +312,37 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
             else
                 prev_quarter(date_forecast_start(m))
             end
-            regime_inds      = regime_indices(m, date_mainsample_start(m), end_date) # main sample b/c smooth doesn't include presample
-            regime_inds[1]   = 1:regime_inds[1][end]
+            regime_inds    = regime_indices(m, date_mainsample_start(m), end_date) # main sample b/c smooth doesn't include presample
+            regime_inds[1] = 1:regime_inds[1][end]
 
-            _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(system, s_0, T+H, 1, T+H, regime_inds)
+            _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(m, system, s_0, T+H, 1, T+H, regime_inds;
+                                                                              cond_type = cond_type)
 
             # Applying all shocks
             _, out[:shockdecobs], out[:shockdecpseudo] =
-                shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H, regime_inds)
+                shock_decompositions(m, system, forecast_horizons(m; cond_type = cond_type),
+                                     histshocks, 1, T + H, regime_inds; cond_type = cond_type)
+
+            # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
+            _, out[:dataobs], out[:datapseudo], _ = forecast(m, system0, zeros(nstates), data_shocks;
+                                                             cond_type = cond_type)
+
+            news_shocks[:, T-k+1:Tstar] = histshocks[:, T-k+1:Tstar]
+            _, out[:newsobs], out[:newspseudo], _ = forecast(m, system0, zeros(nstates), news_shocks;
+                                                             cond_type = cond_type)
         else
             _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(system, s_0, T+H, 1, T+H)
 
             # Applying all shocks
             _, out[:shockdecobs], out[:shockdecpseudo] =
                 shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H)
+
+            # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
+            _, out[:dataobs], out[:datapseudo], _ = forecast(system0, zeros(nstates), data_shocks)
+
+            news_shocks[:, T-k+1:Tstar] = histshocks[:, T-k+1:Tstar]
+            _, out[:newsobs], out[:newspseudo], _ = forecast(system0, zeros(nstates), news_shocks)
         end
-
-        # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
-        system0 = regime_switching ? zero_system_constants(system[length(regime_inds)]) : zero_system_constants(system)
-
-        data_shocks = zeros(nshocks, T+H)
-        data_shocks[:, 1:T-k] = histshocks[:, 1:T-k]
-        _, out[:dataobs], out[:datapseudo], _ = forecast(system0, zeros(nstates), data_shocks)
-
-        Tstar = size(histshocks, 2) # either T or T+1
-        news_shocks = zeros(nshocks, T+H)
-
-        news_shocks[:, T-k+1:Tstar] = histshocks[:, T-k+1:Tstar]
-        _, out[:newsobs], out[:newspseudo], _ = forecast(system0, zeros(nstates), news_shocks)
     end
 
     # Return
