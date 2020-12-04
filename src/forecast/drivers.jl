@@ -1095,7 +1095,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     trends_to_compute = intersect(output_vars, trend_vars)
 
     if !isempty(trends_to_compute)
-        trendstates, trendobs, trendpseudo = trends(system)
+        trendstates, trendobs, trendpseudo = trends(system, m, start_date, end_date)
+        # trendstates, trendobs, trendpseudo = trends(system)
 
         forecast_output[:trendstates] = trendstates
         forecast_output[:trendobs]    = trendobs

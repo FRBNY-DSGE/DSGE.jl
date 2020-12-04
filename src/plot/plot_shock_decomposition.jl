@@ -147,6 +147,7 @@ shockdec
                    vert_line = quartertodate("0000-Q1"),
                    vert_line2 = quartertodate("0000-Q1"))
 
+    # end_date = Date(2020, 12, 31)
     # Error checking
     if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
         typeof(sd.args[2]) != MeansBands || typeof(sd.args[3]) != MeansBands ||
