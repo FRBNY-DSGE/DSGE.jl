@@ -104,11 +104,10 @@ function shock_decompositions(m::AbstractDSGEModel{S},
     # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
     # in the pre-ZLB periods.
     regime_inds = regime_indices(m, start_date, end_date)
-    @show regime_inds
     if regime_inds[1][1] < 1 # remove periods occuring before desired start date
         regime_inds[1] = 1:regime_inds[1][end]
     end
-    @show regime_inds
+
     shock_decompositions(m, system, horizon, histshocks, start_index, end_index, regime_inds,
                          cond_type = cond_type)
 end
@@ -165,9 +164,11 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
                 forecast(system[reg_num], init_state, shocks[:, reg_ind])
         end
 
-        fcast_inds = (histperiods + 1):allperiods
-        states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
-            forecast(m, system, states[:, histperiods, i], fcast_shocks, cond_type = cond_type)
+        if allperiods > histperiods
+            fcast_inds = (histperiods + 1):allperiods
+            states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
+                forecast(m, system, states[:, histperiods, i], fcast_shocks, cond_type = cond_type)
+        end
 
 # Old Forecast setup
 #=
@@ -285,12 +286,11 @@ function deterministic_trends(m::AbstractDSGEModel{S},
     if regime_inds[1][1] < 1
         regime_inds[1] = 1:regime_inds[1][end]
     end
-    # regime_inds[end] = regime_inds[end][1]:end_index      # if the end index is in the middle of a regime or is past the regime's end
-    @show regime_inds
+    regime_inds[end] = regime_inds[end][1]:end_index # if the end index is in the middle of a regime or is past the regime's end
     if length(regime_inds[end]) == 0
         pop!(regime_inds)
     end
-    @show regime_inds
+
     return deterministic_trends(m, system, z0, nperiods, start_index, end_index, regime_inds, cond_type = cond_type)
 end
 
@@ -330,12 +330,13 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     end
 
     # fcast_inds = (get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)
-    fcast_shocks = zeros(S, nshocks, nperiods - regime_inds[end][end])
-    fcast_inds = (regime_inds[end][end] + 1):nperiods
-    states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ =
-        forecast(m, system, states[:, regime_inds[end][end]], fcast_shocks;
-                 cond_type = cond_type)
-
+    if nperiods > regime_inds[end][end]
+        fcast_shocks = zeros(S, nshocks, nperiods - regime_inds[end][end])
+        fcast_inds = (regime_inds[end][end] + 1):nperiods
+        states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ =
+            forecast(m, system, states[:, regime_inds[end][end]], fcast_shocks;
+                     cond_type = cond_type)
+    end
 #=
     if regime_inds[end][end] < nperiods
         shocks   = zeros(S, nshocks, nperiods - regime_inds[end][end])

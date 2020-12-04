@@ -63,13 +63,15 @@ end
 
 m.settings[:regime_dates] = Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2010, 3, 31)))
 m.test_settings[:regime_dates] = Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2010, 3, 31)))
+m.settings[:regime_switching] = Setting(:regime_switching, true)
+m.test_settings[:regime_switching] = Setting(:regime_switching, true)
+setup_regime_switching_inds!(m)
 @testset "Regime-switching deterministic trends" begin
     dettrend = DSGE.deterministic_trends(m, reg_sys, zeros(8))
     @test @test_matrix_approx_eq dettrend[1] zeros(size(dettrend[1]))
     @test @test_matrix_approx_eq dettrend[2] zeros(size(dettrend[2]))
     @test @test_matrix_approx_eq dettrend[3] zeros(size(dettrend[3]))
 end
-
 
 # Check shock decompositions for regime-switching system
 out_shockdec1 = shock_decompositions(m, reg_sys, histshocks,
