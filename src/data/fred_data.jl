@@ -41,7 +41,7 @@ function load_fred_data(m::AbstractDSGEModel;
     if isfile(datafile)
 
         # Read in dataset and check that the file contains data for the proper dates
-        data = VERSION >= v"1.3" ? DataFrame!(CSV.File(datafile)) : CSV.read(datafile)
+        data = CSV.read(datafile, DataFrame)
 
         # Convert dates from strings to dates for date arithmetic
         format_dates!(:date, data)

@@ -26,7 +26,7 @@ m <= Setting(:cond_semi_names, [:obs_spread,
                                    :obs_nominalrate1, :obs_nominalrate2, :obs_nominalrate3,
                                    :obs_nominalrate4, :obs_nominalrate5, :obs_nominalrate6])
 output_vars = [:histobs, :forecastobs, :histpseudo, :forecastpseudo, :forecaststates]
-df_full = DataFrame(CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
+df_full = CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv"), DataFrame)
 modal_params = map(x -> x.value, m.parameters)
 setup_regime_switching_inds!(m; cond_type = :full) # Reset the regime dates b/c using full conditional forecast
 hist_rule = get_setting(m, :alternative_policy)

@@ -1,6 +1,6 @@
 # Load data to use for tests
 path = dirname(@__FILE__)
-fred = CSV.read("$path/../reference/fred_160812.csv")
+fred = CSV.read("$path/../reference/fred_160812.csv", DataFrame)
 
 # Specify vintage and dates
 custom_settings = Dict{Symbol, Setting}(

@@ -25,7 +25,7 @@ m <= Setting(:cond_semi_names, [:obs_spread,
 
 output_vars = [:histobs, :forecastobs, :histpseudo, :forecastpseudo]
 
-df_full = DataFrame(CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
+df_full = CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv"), DataFrame)
 modal_params = map(x -> x.value, m.parameters)
 
 hist_rule = get_setting(m, :alternative_policy)

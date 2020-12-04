@@ -4,7 +4,7 @@ path = dirname(@__FILE__)
 data = JLD2.jldopen("$path/../reference/load_data_out.jld2", "r") do file
     read(file, "data")
 end
-fred = CSV.read("$path/../reference/fred_160812.csv")
+fred = CSV.read("$path/../reference/fred_160812.csv", DataFrame)
 custom_settings = Dict{Symbol, Setting}(
     :data_vintage             => Setting(:data_vintage, "160812"),
     :cond_vintage             => Setting(:cond_vintage, "160812"),
