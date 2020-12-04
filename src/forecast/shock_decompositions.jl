@@ -119,6 +119,7 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
                               regime_inds::Vector{UnitRange{Int}};
                               cond_type::Symbol = :none) where {S<:AbstractFloat}
 
+    # forecast_horizons = 1
     # Setup
     nshocks     = size(system[1, :RRR], 2)
     nstates     = size(system[1, :TTT], 2)
@@ -380,6 +381,47 @@ function trends(system::RegimeSwitchingSystem{S}) where {S<:AbstractFloat}
         state_trends[:, i]  = system[i, :CCC]
         obs_trends[:, i]    = system[i, :ZZ] * system[i, :CCC] + system[i, :DD]
         pseudo_trends[:, i] = system[i, :ZZ_pseudo] * system[i, :CCC] + system[i, :DD_pseudo]
+    end
+
+    return state_trends, obs_trends, pseudo_trends
+end
+
+function trends(system::RegimeSwitchingSystem{S}, m, start_date, end_date) where {S<:AbstractFloat}
+
+    nreg  = n_regimes(system)
+    input = 1:nreg
+
+    dated = start_date
+    nper_vec = zeros(Int64, n_regimes(system))
+    for i in 1:n_regimes(system)
+        dated = get_setting(m, :regime_dates)[i]
+        if i != n_regimes(system)
+            dated2 = get_setting(m, :regime_dates)[i+1]
+            nper_vec[i] = DSGE.subtract_quarters(dated2, dated)
+        else
+            nper_vec[i] = max(DSGE.subtract_quarters(Date(2025,12,31), dated) + 1, 1)
+        end
+    end
+
+    state_trends  = Matrix{S}(undef, length(system[1, :CCC]), sum(nper_vec))
+    obs_trends    = Matrix{S}(undef, length(system[1, :DD]), sum(nper_vec))
+    pseudo_trends = Matrix{S}(undef, length(system[1, :DD_pseudo]), sum(nper_vec))
+
+    @show nper_vec
+    for j in 1:length(nper_vec)
+        for k in 1:nper_vec[j]
+            if j == 1 && k == 1
+                state_trends[:, 1]  = system[j, :CCC]
+                obs_trends[:, 1]    = system[j, :ZZ] * system[j, :CCC] + system[j, :DD]
+                pseudo_trends[:, 1] = system[j, :ZZ_pseudo] * system[j, :CCC] + system[j, :DD_pseudo]
+            else
+                counter = j == 1 ? k : sum(nper_vec[1:(j-1)]) + k
+                @show j, k
+                state_trends[:, counter]  = system[j, :CCC] + system[j, :TTT] * state_trends[:,counter-1]
+                obs_trends[:, counter]    = system[j, :ZZ] * state_trends[:,counter] + system[j, :DD]
+                pseudo_trends[:, counter] = system[j, :ZZ_pseudo] * state_trends[:,counter] + system[j, :DD_pseudo]
+            end
+        end
     end
 
     return state_trends, obs_trends, pseudo_trends

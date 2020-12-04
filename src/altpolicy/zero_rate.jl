@@ -14,8 +14,12 @@ function zero_rate_replace_eq_entries(m::AbstractDSGEModel,
 
     Γ0[eq[:eq_mp], :] .= 0.
     Γ1[eq[:eq_mp], :] .= 0.
-    Γ0[eq[:eq_mp], endo[:R_t]] = 1.0 #1
-    C[eq[:eq_mp]] = 0.0 / 4. - m[:Rstarn] #- 100*log(m[:Rstarn]) #log(Rstarn)
+    Γ0[eq[:eq_mp], endo[:R_t]] = 1.0 #
+    C[eq[:eq_mp]] = 0.0# / 4. - m[:Rstarn] #- 100*log(m[:Rstarn]) #log(Rstarn)
+
+    # Added as tests
+    Ψ[eq[:eq_mp], :] .= -m[:Rstarn]
+    # Γ0[eq[:eq_mp], endo[:rm_t]] = -1.0
 
     return Γ0, Γ1, C, Ψ, Π
  end
