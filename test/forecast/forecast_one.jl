@@ -1,13 +1,14 @@
 using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates, HDF5
 path = dirname(@__FILE__)
 
+generate_regime_switch_tests = false # Set to true if you want to regenerate the jld2 files for testing
+
 if VERSION < v"1.5"
     ver = "111"
 else
     ver = "150"
 end
 
-generate_regime_switch_tests = false # Set to true if you want to regenerate the jld2 files for testing
 # Initialize model object
 m = AnSchorfheide(testing = true)
 m <= Setting(:cond_id, 0)
@@ -154,6 +155,8 @@ custom_settings = Dict{Symbol, Setting}(
                                         :date_forecast_start      => Setting(:date_forecast_start, DSGE.quartertodate("2016-Q3")),
                                         :date_conditional_end     => Setting(:date_conditional_end, DSGE.quartertodate("2016-Q3")),
                                         :n_mon_anticipated_shocks => Setting(:n_mon_anticipated_shocks, 6))
+:forecast_horizons => Setting(:forecast_horizons, 12)
+:impulse_response_horizons => Setting(:impulse_response_horizons, 12)
 
 # Now check that regime switching works for different types of possible regimes
 regime_dates_dicts = [Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
