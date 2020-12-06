@@ -1,0 +1,268 @@
+using ClusterManagers, DSGE, ModelConstructors, FileIO, Plots, Dates, OrderedCollections, Distributed
+using Plots.PlotMeasures
+GR.inline("pdf")
+fn = dirname(@__FILE__)
+
+# This script shows how to use regime-switching
+# to enact an uncertain ZLB, follwed by an
+# uncertain alternative policy (in this case, AIT).
+# This script demonstrates a specific case of the general regime switching code
+# demonstrated in regime_switching.jl.
+
+# What do you want to do?
+zlb_altpolicy     = true   # run a forecast with an uncertain ZLB, then a return to the historical rule
+make_plots        = false  # Make plots
+save_plots        = false  # Save plots to figurespath(m, "forecast")
+add_workers       = false  # Run in parallel
+n_workers         = 10
+
+pol_str = "Uncertain ZLB, Uncertain AIT"
+
+# Initialize model objects and desired settings
+custom_settings = Dict{Symbol, Setting}(:n_mon_anticipated_shocks =>
+                                        Setting(:n_mon_anticipated_shocks, 6, "Number of anticipated policy shocks"),
+                                        :add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
+                                        :add_altpolicy_yagp => Setting(:add_altpolicy_ygap, true),
+                                        :add_urhat => Setting(:add_urhat, true),
+                                        :flextible_ait_policy_change =>
+                                        Setting(:flexible_ait_policy_change, false))
+m = Model1002("ss10"; custom_settings = custom_settings)   # We will directly construct the matrix of parameter draws
+m <= Setting(:flexible_ait_2020Q3_policy_change, false)
+
+data_vint = "201117"
+cond_vint = "201119"
+fcast_date = DSGE.quartertodate("2020-Q4")
+cond_date = DSGE.quartertodate("2020-Q4")
+date_fcast_end = iterate_quarters(fcast_date, 40)
+
+m10 = Model1002("ss10") # b/c loading from a saved estimation file has not been fully implemented
+
+for models in [m, m10]
+    # Not strictly necessary to have the same settings, but it makes it easier for us
+    usual_model_settings!(m, "201117"; cdvt = "201119", fcast_date = quartertodate("2020-Q4"))
+    m <= Setting(:use_population_forecast, false)
+    m <= Setting(:saveroot, joinpath("$(fn)", "..", "save"))
+    m <= Setting(:dataroot, joinpath("$(fn)", "..", "save", "input_data"))
+    m <= Setting(:date_forecast_end, date_fcast_end)
+    m <= Setting(:forecast_block_size, 40)
+    if get_setting(m, :sampling_method) == :SMC
+        m <= Setting(:forecast_jstep, 1)
+    end
+end
+
+# Set up parameters for regime-switching.
+overrides = forecast_input_file_overrides(m10)
+overrides[:full] = "$(fn)/../test/reference/mhsave_vint=181115.h5"
+modal_params = map(x -> x.value, m.parameters) # The default parameters will be our "modal" parameters for this exercise
+
+forecast_string = ""
+
+# Set up regime switching and forecast settings
+m <= Setting(:n_regimes, 2, true, "reg", "")   # How many regimes?
+m <= Setting(:regime_switching, true)          # Need to set that the model does have regime-switching
+m <= Setting(:forecast_block_size, 5000)
+m <= Setting(:use_parallel_workers, true)
+baseline_regime_dates = Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 9, 30))
+m <= Setting(:regime_dates, baseline_regime_dates)
+setup_regime_switching_inds!(m)
+
+# Some settings for alternative policy
+if zlb_altpolicy
+    # keep track of the historical policy
+    hist_rule = get_setting(m, :alternative_policy)
+
+    m <= Setting(:uncertain_zlb, true)
+    m <= Setting(:uncertain_altpolicy, true)
+
+    # parametrize the alternative policy (AIT, in this case)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:pgap_type, :smooth_ait_gdp_alt)
+    m <= Setting(:ygap_value, 12.)
+    m <= Setting(:ygap_type, :smooth_ait_gdp_alt)
+    m <= Setting(:smooth_ait_gdp_alt_ρ_smooth, 0.)
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:smooth_ait_gdp_alt_φ_y, 6.)
+    m <= Setting(:smooth_ait_gdp_alt_φ_π, 6.)
+
+    # Impose flexible AIT permanent policy, and set up the historical policy as the
+    # "alternative" rule -- under uncertain alternative policies, agents only
+    # partially incorporate the new policy in forming expectations. In the following example
+    # the setting :alternative_policy_weights indicates that agents form expectations using
+    # a convex combination of the implied laws of motion of the economy under old and new policy
+    # functions with weights of 1/2 each.
+    m <= Setting(:alternative_policy, DSGE.smooth_ait_gdp_alt())
+    m <= Setting(:alternative_policies, AltPolicy[hist_rule])
+    m <= Setting(:alternative_policy_weights, [0.5, 0.5])
+end
+
+
+for i in 1:2
+    adj = (i == 2) ? .9 : 1. # adjustment to the size of the standard deviation
+
+    # For each parameter, we need to instruct it that a regime exists.
+    # Note that the regimes MUST be entered in order of the regimes
+    # because regime values are stored in an OrderedDict, which is sorted
+    # by insertion order.
+    ModelConstructors.set_regime_val!(m[:σ_g], i, adj * m10[:σ_g].value)
+    ModelConstructors.set_regime_val!(m[:σ_b], i, adj * m10[:σ_b].value)
+    ModelConstructors.set_regime_val!(m[:σ_μ], i, adj * m10[:σ_μ].value)
+    ModelConstructors.set_regime_val!(m[:σ_ztil], i, adj * m10[:σ_ztil].value)
+    ModelConstructors.set_regime_val!(m[:σ_λ_f], i, adj * m10[:σ_λ_f].value)
+    ModelConstructors.set_regime_val!(m[:σ_λ_w], i, adj * m10[:σ_λ_w].value)
+    ModelConstructors.set_regime_val!(m[:σ_r_m], i, adj * m10[:σ_r_m].value)
+    ModelConstructors.set_regime_val!(m[:σ_σ_ω], i, adj * m10[:σ_σ_ω].value)
+    ModelConstructors.set_regime_val!(m[:σ_μ_e], i, adj * m10[:σ_μ_e].value)
+    ModelConstructors.set_regime_val!(m[:σ_γ], i, adj * m10[:σ_γ].value)
+    ModelConstructors.set_regime_val!(m[:σ_π_star], i, adj * m10[:σ_π_star].value)
+    ModelConstructors.set_regime_val!(m[:σ_lr], i, adj * m10[:σ_lr].value)
+    ModelConstructors.set_regime_val!(m[:σ_z_p], i, adj * m10[:σ_z_p].value)
+    ModelConstructors.set_regime_val!(m[:σ_tfp], i, adj * m10[:σ_tfp].value)
+    ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, adj * m10[:σ_gdpdef].value)
+    ModelConstructors.set_regime_val!(m[:σ_corepce], i, adj * m10[:σ_corepce].value)
+    ModelConstructors.set_regime_val!(m[:σ_gdp], i, adj * m10[:σ_gdp].value)
+    ModelConstructors.set_regime_val!(m[:σ_gdi], i, adj * m10[:σ_gdi].value)
+
+    for j = 1:DSGE.n_mon_anticipated_shocks(m)
+        ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, adj * m10[Symbol("σ_r_m$(j)")])
+    end
+end
+
+df = load_data(m; check_empty_columns = false)
+
+output_vars = [:histpseudo, :histobs, :histstdshocks,
+               :hist4qpseudo, :hist4qobs, :histutpseudo,
+               :forecastpseudo, :forecastobs, :forecastutpseudo,
+               :forecast4qpseudo, :forecast4qobs, :forecaststdshocks]
+
+if zlb_altpolicy
+    # First, need to set up new set of regime dates to implement a temporary zlb and uncertain policy change
+    Hbar = 4 # number of zlb regimes
+    n_tempZLB_regimes = 3+Hbar-1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
+    # Set up regime dates
+    temp_regime_dates = Dict{Int, Date}()
+    temp_regime_dates[1] = date_presample_start(m)
+    end_date = Date(2020, 12, 31) + Dates.Year(1) + Dates.Month(3)
+    for (i, date) in zip(2:(n_tempZLB_regimes+1),
+                         Date(2020, 12, 31):Dates.Month(3):end_date) # add forecast dates
+        temp_regime_dates[i] = date
+    end
+    m <= Setting(:regime_dates, temp_regime_dates)
+    m <= Setting(:regime_switching, true)
+    setup_regime_switching_inds!(m)
+
+    # Add parameter values for additional regimes
+    for i in 3:(n_tempZLB_regimes+1)
+        ModelConstructors.set_regime_val!(m[:σ_g], i, m10[:σ_g].value)
+        ModelConstructors.set_regime_val!(m[:σ_b], i, m10[:σ_b].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ], i, m10[:σ_μ].value)
+        ModelConstructors.set_regime_val!(m[:σ_ztil], i, m10[:σ_ztil].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_f], i, m10[:σ_λ_f].value)
+        ModelConstructors.set_regime_val!(m[:σ_λ_w], i, m10[:σ_λ_w].value)
+        ModelConstructors.set_regime_val!(m[:σ_r_m], i, m10[:σ_r_m].value)
+        ModelConstructors.set_regime_val!(m[:σ_σ_ω], i, m10[:σ_σ_ω].value)
+        ModelConstructors.set_regime_val!(m[:σ_μ_e], i, m10[:σ_μ_e].value)
+        ModelConstructors.set_regime_val!(m[:σ_γ], i, m10[:σ_γ].value)
+        ModelConstructors.set_regime_val!(m[:σ_π_star], i, m10[:σ_π_star].value)
+        ModelConstructors.set_regime_val!(m[:σ_lr], i, m10[:σ_lr].value)
+        ModelConstructors.set_regime_val!(m[:σ_z_p], i, m10[:σ_z_p].value)
+        ModelConstructors.set_regime_val!(m[:σ_tfp], i, m10[:σ_tfp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, m10[:σ_gdpdef].value)
+        ModelConstructors.set_regime_val!(m[:σ_corepce], i, m10[:σ_corepce].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdp], i, m10[:σ_gdp].value)
+        ModelConstructors.set_regime_val!(m[:σ_gdi], i, m10[:σ_gdi].value)
+
+        for j = 1:DSGE.n_mon_anticipated_shocks(m)
+            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m10[Symbol("σ_r_m$(j)")].value)
+        end
+    end
+
+    # Now set up settings for temp alt policy
+    m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
+    m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
+    m <= Setting(:temporary_altpolicy, true) # The new regimes to be added should be treated as temporary alternative policies
+    m <= Setting(:gensys2_separate_cond_regimes, true)
+    replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
+    for i in 3:n_tempZLB_regimes
+        replace_eqcond[i] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in these regimes
+    end
+    replace_eqcond[2+n_tempZLB_regimes+1] = DSGE.smooth_ait_gdp_alt_replace_eq_entries # switch to AIT in the final regime
+    m <= Setting(:replace_eqcond_func_dict, replace_eqcond) # Add mapping of regimes to new eqcond matrices
+
+    fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
+                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+end
+
+if make_plots
+    plots_dict = Dict()
+
+    # Define some plotting functions
+    function make_comp_plot(m::AbstractDSGEModel, plot_mat::OrderedDict{String, Dict{Symbol, Array{Float64}}},
+                            obs::Symbol, product::Symbol,
+                            dates_plot, data_plot,
+                            fcast_date, nfcast;
+                            styles::Vector{Symbol} = repeat([:solid], length(keys(plot_mat))),
+                            colors::Vector{Symbol} = repeat([:red], length(keys(plot_mat))))
+        series_ind = if product ==:forecastobs
+            m.observables[obs]
+        else
+            m.pseudo_observables[obs]
+        end
+
+        if product == :forecastobs
+            dates_plot = data_plot[!, :date]
+            histobs_plot = obs == :obs_hours ? data_plot[!, obs] : 4 .* data_plot[!, obs]
+            fcast_date_tmp = vcat(dates_plot[end - 1], fcast_date)
+            dates_plot = map(x -> DSGE.prev_quarter(x), dates_plot)
+            p = Plots.plot(dates_plot, histobs_plot, color = :black,
+                           label = "Data", linewidth = 3, legend = :bottomright, left_margin = 20px)
+        else
+            fcast_date_tmp = fcast_date
+            p = Plots.plot()
+        end
+
+        for (i, (key, val)) in enumerate(plot_mat)
+
+            if obs == :obs_hours || product == :forecastpseudo
+                forecast_plot = val[product][series_ind, :][1:nfcast]
+            else
+                forecast_plot = 4 .* val[product][series_ind, :][1:nfcast]
+            end
+            if product == :forecastobs
+                forecast_plot = vcat(histobs_plot[end], forecast_plot)
+            end
+
+            plot!(fcast_date_tmp, forecast_plot, color = colors[i],
+                  label = key, linewidth = 1, linestyle = styles[i])
+            if obs == :obs_nominalrate
+                ylims!((-2, 4))
+            end
+        end
+        return p
+    end
+
+    data_plot  = df[df[:, :date] .>= Date(2016, 3, 31), :]
+    fcast_date = map(x -> DSGE.prev_quarter(x), DSGE.get_quarter_ends(date_forecast_start(m), DSGE.quartertodate("2031-Q4")))
+    nfcast     = length(fcast_date)
+    dates_plot = map(x -> DSGE.prev_quarter(x), data_plot[!, :date])
+
+    for obs in [:obs_gdp, :obs_corepce, :obs_gdpdeflator, :obs_nominalrate, :obs_investment, :obs_consumption,
+                :obs_spread, :obs_wages, :obs_hours]
+        plots_dict[obs] = make_comp_plot(m, OrderedDict("$(pol_str)" => fcast_tempzlb),
+                                         obs, :forecastobs,
+                                         dates_plot, data_plot, fcast_date, nfcast,
+                                         colors = [:red, :blue, :purple])
+    end
+end
+
+if save_plots
+    if !isdir(figurespath(m, "forecast"))
+        mkdir(figurespath(m, "forecast"))
+    end
+
+    for (k, p) in plots_dict
+        Plots.savefig(p, joinpath(figuespath(m, "forecast"), "$(pol_str)_$(string(k)).pdf"))
+    end
+end
+
+nothing
