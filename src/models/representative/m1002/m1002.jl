@@ -1022,7 +1022,7 @@ function shock_groupings(m::Model1002)
         end
         zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
         det = ShockGroup("dt", [:dettrend], :gray40)
-        oth = ShockGroup("other", [:dettrend, :g_sh, :π_star_sh, :μ_sh], :gray40)
+        oth = ShockGroup("other", [:dettrend, :g_sh, :π_star_sh, :μ_sh], :gray40) # :dettrend
 
         # COVID-19 Shocks
         betcovid = ShockGroup("biidc", haskey(m.exogenous_shocks, :biidc_shl1) ? [:biidc_sh, :biidc_shl1] : [:biidc_sh],
@@ -1030,6 +1030,13 @@ function shock_groupings(m::Model1002)
         zcovid   = ShockGroup("ziid", [:ziid_sh], RGB(0., 0.5, 0.5))
         φcovid   = ShockGroup("phi", [:φ_sh], RGB(0.5, 0.5, 0.))
         ocovid   = ShockGroup("Other COVID", [:ziid_sh, :φ_sh], RGB(0., 0.5, 0.5))
+
+        if haskey(m.exogenous_shocks, :pgap_sh)
+            push!(ocovid.shocks, :pgap_sh)
+        end
+        if haskey(m.exogenous_shocks, :ygap_sh)
+            push!(ocovid.shocks, :ygap_sh)
+        end
 
         # return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
         # return [betcovid, zcovid, φcovid, bet, fin, tfp, pmu, pol, mea, oth]
