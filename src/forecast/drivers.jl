@@ -177,6 +177,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
     # Load full distribution
     elseif input_type == :full
 
+        @show input_file_name
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
@@ -530,6 +531,22 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             else
                 params_for_map = Vector{Float64}[params[i, :] for i in block_inds[block]]
             end
+
+            @show params_for_map[10,:]
+            @show input_type
+            @show cond_type
+            @show output_vars
+            @show use_filtered_shocks_in_shockdec
+            @show shock_name
+            @show shock_var_name
+            @show shock_var_value
+            @show regime_switching
+            @show n_regimes
+            @show zlb_method
+            @show set_regime_vals_altpolicy
+            @show set_info_sets_altpolicy
+            @show only_filter
+            @show rerun_smoother
 
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
@@ -1055,13 +1072,20 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     ### 3. Shock Decompositions
 
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
+    system = compute_system(m; apply_altpolicy = true, tvis = tvis)
 
     if !isempty(shockdecs_to_compute)
+        #=if apply_altpolicy
+            system = compute_system(m; apply_altpolicy = true, tvis = tvis)
+        end=#
         histshocks_shockdec = if use_filtered_shocks_in_shockdec
             filter_shocks(m, df, system, cond_type = cond_type)
         else
             histshocks
         end
+
+        @show uncertainty
+        @show size(histshocks_shockdec)
 
         start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
         end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
