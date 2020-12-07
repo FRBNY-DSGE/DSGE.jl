@@ -8,7 +8,7 @@ shock_decompositions(system, forecast_horizons, histshocks, start_index,
 shock_decompositions(m, system, histshocks, start_date, end_date)
 
 shock_decompositions(m, system, forecast_horizons, histshocks, start_index,
-    end_index, regime_inds; cond_type = :none)
+    end_index, regime_inds, cond_type)
 ```
 
 ### Inputs
@@ -93,7 +93,7 @@ end
 function shock_decompositions(m::AbstractDSGEModel{S},
                               system::RegimeSwitchingSystem{S}, histshocks::Matrix{S},
                               start_date::Dates.Date = date_presample_start(m),
-                              end_date::Dates.Date = prev_quarter(date_forecast_start(m));
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
                               cond_type::Symbol = :none) where {S<:AbstractFloat}
     # Set up dates
     horizon     = forecast_horizons(m; cond_type = cond_type)
@@ -108,17 +108,15 @@ function shock_decompositions(m::AbstractDSGEModel{S},
         regime_inds[1] = 1:regime_inds[1][end]
     end
 
-    shock_decompositions(m, system, horizon, histshocks, start_index, end_index, regime_inds,
-                         cond_type = cond_type)
+    shock_decompositions(m, system, horizon, histshocks, start_index, end_index, regime_inds, cond_type)
 end
 
 function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
                               forecast_horizons::Int, histshocks::Matrix{S},
                               start_index::Int, end_index::Int,
-                              regime_inds::Vector{UnitRange{Int}};
-                              cond_type::Symbol = :none) where {S<:AbstractFloat}
+                              regime_inds::Vector{UnitRange{Int}},
+                              cond_type::Symbol) where {S<:AbstractFloat}
 
-    # forecast_horizons = 1
     # Setup
     nshocks     = size(system[1, :RRR], 2)
     nstates     = size(system[1, :TTT], 2)
@@ -146,14 +144,7 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
         # Isolate single shock
         shocks[i, :] = histshocks[i, :]
 
-# Option 1: Passing in the model object
-#=
-        # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
-        init_state = zeros(S, nstates) # update initial state
-
-        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(m, system, init_state, shocks)
-=#
-# Option 2: Looping through each regime
+        # Looping through each historical regime
         for (reg_num, reg_ind) in enumerate(regime_inds)
             if reg_ind[end] > histperiods
                 break
@@ -164,19 +155,14 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
                 forecast(system[reg_num], init_state, shocks[:, reg_ind])
         end
 
+        # Run forecast using regime-switching forecast
         if allperiods > histperiods
             fcast_inds = (histperiods + 1):allperiods
             states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
                 forecast(m, system, states[:, histperiods, i], fcast_shocks, cond_type = cond_type)
         end
 
-# Old Forecast setup
-#=
-        fcast_inds = (histperiods + 1):allperiods
-        states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
-            forecast(system[length(regime_inds)], states[:, regime_inds[end][end], i], fcast_shocks)
-=#
-        # zero out shocks
+        # zero out shocks b/c want effects of single shocks
         shocks[i, :] .= 0.
     end
 
@@ -198,7 +184,7 @@ deterministic_trends(system, z0, nperiods, start_index, end_index)
 deterministic_trends(m, system, z0, start_date, end_date)
 
 deterministic_trends(m, system, z0, nperiods, start_index, end_index,
-    regime_inds, regimes; cond_type = :none)
+    regime_inds, regimes, cond_type)
 ```
 
 Compute deterministic trend values of states, observables, and
@@ -271,7 +257,7 @@ end
 function deterministic_trends(m::AbstractDSGEModel{S},
                               system::RegimeSwitchingSystem{S}, z0::Vector{S},
                               start_date::Dates.Date = date_presample_start(m),
-                              end_date::Dates.Date = prev_quarter(date_forecast_start(m));
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
                               cond_type::Symbol = :none) where {S<:AbstractFloat}
 
     # Dates: We compute the deterministic trend starting from the
@@ -287,18 +273,20 @@ function deterministic_trends(m::AbstractDSGEModel{S},
     if regime_inds[1][1] < 1
         regime_inds[1] = 1:regime_inds[1][end]
     end
-    regime_inds[end] = regime_inds[end][1]:end_index # if the end index is in the middle of a regime or is past the regime's end
+    if regime_inds[end][end] > end_index
+        regime_inds[end] = regime_inds[end][1]:end_index # if the end index is in the middle of a regime or is past the regime's end
+    end
     if length(regime_inds[end]) == 0
         pop!(regime_inds)
     end
 
-    return deterministic_trends(m, system, z0, nperiods, start_index, end_index, regime_inds, cond_type = cond_type)
+    return deterministic_trends(m, system, z0, nperiods, start_index, end_index, regime_inds, cond_type)
 end
 
 
 function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S}, nperiods::Int,
-                              start_index::Int, end_index::Int, regime_inds::Vector{UnitRange{Int}};
-                              cond_type::Symbol = :none) where {S<:AbstractFloat}
+                              start_index::Int, end_index::Int, regime_inds::Vector{UnitRange{Int}},
+                              cond_type::Symbol) where {S<:AbstractFloat}
 
     # Set constant system matrices to 0
     system = zero_system_constants(system)
@@ -311,26 +299,19 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     states = Matrix{S}(undef, nstates, nperiods)
     obs    = Matrix{S}(undef, nobs,    nperiods)
     pseudo = Matrix{S}(undef, npseudo, nperiods)
-#=
-# Option 1: Passing in model object
 
-    shocks = zeros(S, nshocks, nperiods)
-    states, obs, pseudo, _ = forecast(m, system, z0, shocks)
-=#
+    # Use forecast to iterate state-space system forward
+    # without shocks or the ZLB procedure during history
+    for (reg_num, reg_ind) in enumerate(regime_inds[1:get_setting(m, :n_hist_regimes)])
+        init_state = (reg_num == 1) ? z0 : states[:, reg_ind[1] - 1] # update initial state
 
-# Option 2: Forecasting for each regime via loop
-    # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
-    for (reg_num, reg_ind) in enumerate(regime_inds)
-        if reg_num <= get_setting(m, :n_hist_regimes)
-            init_state = (reg_num == 1) ? z0 : states[:, reg_ind[1] - 1] # update initial state
-
-            # Construct matrix of 0 shocks for this regime
-            shocks = zeros(S, nshocks, length(reg_ind))
-            states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
-        end
+        # Construct matrix of 0 shocks for this regime
+        shocks = zeros(S, nshocks, length(reg_ind))
+        states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
     end
 
-    # fcast_inds = (get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)
+    # Use regime-switching forecast to iterate state-space system forward
+    # during the forecast horizon
     if nperiods > regime_inds[end][end]
         fcast_shocks = zeros(S, nshocks, nperiods - regime_inds[end][end])
         fcast_inds = (regime_inds[end][end] + 1):nperiods
@@ -338,13 +319,7 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
             forecast(m, system, states[:, regime_inds[end][end]], fcast_shocks;
                      cond_type = cond_type)
     end
-#=
-    if regime_inds[end][end] < nperiods
-        shocks   = zeros(S, nshocks, nperiods - regime_inds[end][end])
-        last_ind = (1 + regime_inds[end][end]):nperiods
-        states[:, last_ind], obs[:, last_ind], pseudo[:, last_ind], _ = forecast(system[length(regime_inds)], states[:, regime_inds[end][end]], shocks)
-    end
-=#
+
     if start_index == 1 && end_index == nperiods
         return states, obs, pseudo
     else
@@ -357,16 +332,23 @@ end
 ```
 trends(system::System{S}) where {S<:AbstractFloat}
 trends(system::RegimeSwitchingSystem{S}) where {S<:AbstractFloat}
+trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
+                start_date::Dates.Date = date_presample_start(m),
+                end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
+                cond_type::Symbol) where {S<:AbstractFloat}
 ```
 
 Compute trend (steady-state) states, observables, and pseudo-observables. The
-trend is used for plotting shock decompositions.
+trend is used for plotting shock decompositions. The first method
+applies to non-regime switching systems, the second to regime-switching systems
+that do not involve time variation in the `CCC` or `DD` vectors,
+and the third to regime-switching systems with time variation in `CCC` or `DD`.
 """
 function trends(system::System{S}) where {S<:AbstractFloat}
 
     state_trend  = system[:CCC]
-    obs_trend    = system[:ZZ]*system[:CCC] + system[:DD]
-    pseudo_trend = system[:ZZ_pseudo]*system[:CCC] + system[:DD_pseudo]
+    obs_trend    = system[:ZZ] * system[:CCC] + system[:DD]
+    pseudo_trend = system[:ZZ_pseudo] * system[:CCC] + system[:DD_pseudo]
 
     return state_trend, obs_trend, pseudo_trend
 end
@@ -380,51 +362,105 @@ function trends(system::RegimeSwitchingSystem{S}) where {S<:AbstractFloat}
     obs_trends    = Matrix{S}(undef, length(system[1, :DD]), nreg)
     pseudo_trends = Matrix{S}(undef, length(system[1, :DD_pseudo]), nreg)
     for i in input
-        state_trends[:, i]  = system[i, :CCC]
-        obs_trends[:, i]    = system[i, :ZZ] * system[i, :CCC] + system[i, :DD]
-        pseudo_trends[:, i] = system[i, :ZZ_pseudo] * system[i, :CCC] + system[i, :DD_pseudo]
+        state_trends[:, i] .= 0.
+        obs_trends[:, i]    = system[i, :DD]
+        pseudo_trends[:, i] = system[i, :DD_pseudo]
     end
 
     return state_trends, obs_trends, pseudo_trends
 end
 
-function trends(system::RegimeSwitchingSystem{S}, m, start_date, end_date) where {S<:AbstractFloat}
+# Handles case of time-varying CCC and DD
+function trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
+                start_date::Dates.Date = date_presample_start(m),
+                end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
+                cond_type::Symbol = :none) where {S<:AbstractFloat}
 
-    nreg  = n_regimes(system)
-    input = 1:nreg
+    # Check if any CCC are nonzero, otherwise we can just use trends(system)
+    first_nonzero_CCC = findfirst([any(.!(system[i, :CCC] .≈ 0.)) for i in 1:n_regimes(system)])
+    if isnothing(first_nonzero_CCC)
+        return trends(system)
+    end
 
-    dated = start_date
-    nper_vec = zeros(Int64, n_regimes(system))
-    for i in 1:n_regimes(system)
-        dated = get_setting(m, :regime_dates)[i]
-        if i != n_regimes(system)
-            dated2 = get_setting(m, :regime_dates)[i+1]
-            nper_vec[i] = DSGE.subtract_quarters(dated2, dated)
-        else
-            nper_vec[i] = max(DSGE.subtract_quarters(Date(2025,12,31), dated) + 1, 1)
+    # Dates: We compute the trend starting from the
+    # first historical period.  However, since it is only used to
+    # compute shock decompositions, we truncate and only store
+    # results for periods corresponding to the shockdec period.
+    nperiods    = subtract_quarters(date_forecast_end(m), date_mainsample_start(m)) + 1
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
+
+    # Now calculate the regime indices in history and forecast
+    hist_regime_inds = regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
+    if hist_regime_inds[1][1] < 1
+        hist_regime_inds[1] = 1:hist_regime_inds[1][end]
+    end
+    if hist_regime_inds[end][end] >= end_index  # if the end index is in the middle of a regime or is past the regime's end
+        hist_regime_inds[end] = hist_regime_inds[end][1]:end_index
+        fcast_regime_inds = nothing
+    else
+        fcast_regime_inds = get_fcast_regime_inds(m, forecast_horizons(m; cond_type = cond_type), cond_type,
+                                                  start_index = hist_regime_inds[end][end])
+        fcast_cutoff = findfirst([regind[end] >= end_index for regind in fcast_regime_inds])
+        if isnothing(fcast_cutoff)
+            error("The index_shockdec_end(m) occurs past the index of the final forecast date.")
+        end
+        fcast_regime_inds = fcast_regime_inds[1:fcast_cutoff]
+        fcast_regime_inds[end] = fcast_regime_inds[end][1]:end_index
+    end
+    if length(hist_regime_inds[end]) == 0
+        pop!(hist_regime_inds)
+    end
+
+    # Initialize output
+    state_trends  = Matrix{S}(undef, length(system[1, :CCC]), end_index)
+    obs_trends    = Matrix{S}(undef, length(system[1, :DD]), end_index)
+    pseudo_trends = Matrix{S}(undef, length(system[1, :DD_pseudo]), end_index)
+
+    first_nonzero_CCC_hist, first_nonzero_CCC_fcast = if first_nonzero_CCC > length(hist_regime_inds)
+        length(hist_regime_inds) + 1, first_nonzero_CCC - length(hist_regime_inds)
+    else
+        first_nonzero_CCC, 1
+    end
+
+    for (reg, inds) in enumerate(hist_regime_inds[1:(first_nonzero_CCC_hist - 1)])
+        state_trends[:, inds]  .= 0.
+        obs_trends[:, inds]    .= system[reg, :DD]
+        pseudo_trends[:, inds] .= system[reg, :DD_pseudo]
+    end
+
+    for (i, inds) in enumerate(hist_regime_inds[first_nonzero_CCC_hist:end])
+        reg = i + first_nonzero_CCC_hist - 1
+        for t in inds
+            state_trends[:, t]  = system[reg, :CCC] + system[reg, :TTT] * state_trends[:, t - 1]
+            obs_trends[:, t]    = system[reg, :ZZ] * state_trends[:, t] + system[reg, :DD]
+            pseudo_trends[:, t] = system[reg, :ZZ_pseudo] * state_trends[:, t] + system[reg, :DD_pseudo]
         end
     end
 
-    state_trends  = Matrix{S}(undef, length(system[1, :CCC]), sum(nper_vec))
-    obs_trends    = Matrix{S}(undef, length(system[1, :DD]), sum(nper_vec))
-    pseudo_trends = Matrix{S}(undef, length(system[1, :DD_pseudo]), sum(nper_vec))
+    if !isnothing(fcast_regime_inds)
+        for (i, inds) in enumerate(fcast_regime_inds[1:(first_nonzero_CCC_fcast - 1)])
+            reg = i + length(hist_regime_inds)
+            for t in inds
+                state_trends[:, inds]  .= 0.
+                obs_trends[:, inds]    .= system[reg, :DD]
+                pseudo_trends[:, inds] .= system[reg, :DD_pseudo]
+            end
+        end
 
-    @show nper_vec
-    for j in 1:length(nper_vec)
-        for k in 1:nper_vec[j]
-            if j == 1 && k == 1
-                state_trends[:, 1]  = system[j, :CCC]
-                obs_trends[:, 1]    = system[j, :ZZ] * system[j, :CCC] + system[j, :DD]
-                pseudo_trends[:, 1] = system[j, :ZZ_pseudo] * system[j, :CCC] + system[j, :DD_pseudo]
-            else
-                counter = j == 1 ? k : sum(nper_vec[1:(j-1)]) + k
-                @show j, k
-                state_trends[:, counter]  = system[j, :CCC] + system[j, :TTT] * state_trends[:,counter-1]
-                obs_trends[:, counter]    = system[j, :ZZ] * state_trends[:,counter] + system[j, :DD]
-                pseudo_trends[:, counter] = system[j, :ZZ_pseudo] * state_trends[:,counter] + system[j, :DD_pseudo]
+        for (i, inds) in enumerate(fcast_regime_inds[first_nonzero_CCC_fcast:end])
+            reg = i + first_nonzero_CCC_fcast + length(hist_regime_inds) - 1
+            for t in inds
+                state_trends[:, t]  = system[reg, :CCC] + system[reg, :TTT] * state_trends[:, t - 1]
+                obs_trends[:, t]    = system[reg, :ZZ] * state_trends[:, t] + system[reg, :DD]
+                pseudo_trends[:, t] = system[reg, :ZZ_pseudo] * state_trends[:, t] + system[reg, :DD_pseudo]
             end
         end
     end
 
-    return state_trends, obs_trends, pseudo_trends
+    if start_index == 1
+        return state_trends, obs_trends, pseudo_trends
+    else
+        return state_trends[:, start_index:end], obs_trends[:, start_index:end], pseudo_trends[:, start_index:end]
+    end
 end

@@ -601,7 +601,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     end
 end
 
-function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Symbol)
+function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Symbol;
+                               start_index::Int = 0)
 
     fcast_post_cond_date = (cond_type == :none) ? date_forecast_start(m) : # If cond forecast, then we want to start forecasting
         max(date_forecast_start(m), iterate_quarters(date_conditional_end(m), 1)) # from the period after the conditional end period
@@ -610,16 +611,16 @@ function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Sy
     last_ind = 1
 
     # Construct vector of time periods for each regime in the forecast periods after the conditional forecast
-    regime_inds = Vector{UnitRange{Int}}(undef, 0)
-    start_reg = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
+    start_reg   = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
         max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
-    for i in start_reg:(get_setting(m, :n_regimes) - 1) # Last regime handled separately
+    regime_inds = Vector{UnitRange{Int}}(undef, get_setting(m, :n_regimes) - start_reg + 1)
+    for (rgi, i) in enumerate(start_reg:(get_setting(m, :n_regimes) - 1)) # Last regime handled separately
         qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i + 1], last_date)
-        push!(regime_inds, last_ind:(last_ind + qtr_diff - 1))
+        regime_inds[rgi] = (start_index + last_ind):(start_index + last_ind + qtr_diff - 1)
         last_ind += qtr_diff
         last_date = get_setting(m, :regime_dates)[i + 1]
     end
-    regime_inds = push!(regime_inds, last_ind:horizon) # Covers case where final hist regime is also first (and only) forecast regime.
+    regime_inds[end] = (start_index + last_ind):(start_index + horizon) # Covers case where final hist regime is also first (and only) forecast regime.
 
     return regime_inds
 end

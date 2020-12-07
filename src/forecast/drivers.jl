@@ -67,16 +67,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         error("Must supply nonempty subset_inds if input_type = :subset")
     end
 
-    # Throw error if trying to compute shock decompositions under an alternative
-    # policy rule
-#=    if alternative_policy(m).key != :historical &&
-        any(prod -> prod in [:shockdec, :dettrend, :trend], output_prods)
-
-        error("Only histories, forecasts, and IRFs can be computed under an alternative policy")
-    end
-=#
-    # Determine if we are only running IRFs. If so, we won't need to load data
-    # below
+    # Determine if we are only running IRFs. If so, we won't need to load data below
     irfs_only = all(prod -> prod == :irf, output_prods)
 
     # Load data if not provided, else check data well-formed
@@ -1077,7 +1068,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             prev_quarter(date_forecast_start(m)) # this is the end date of history period
         end
         shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
-            shock_decompositions(m, system, histshocks_shockdec, start_date, end_date; cond_type = cond_type) :
+            shock_decompositions(m, system, histshocks_shockdec, start_date, end_date, cond_type) :
             shock_decompositions(m, system, histshocks_shockdec)
 
         forecast_output[:shockdecstates] = shockdecstates
@@ -1092,8 +1083,20 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     trends_to_compute = intersect(output_vars, trend_vars)
 
     if !isempty(trends_to_compute)
-        trendstates, trendobs, trendpseudo = trends(system, m, start_date, end_date)
-        # trendstates, trendobs, trendpseudo = trends(system)
+        trendstates, trendobs, trendpseudo = if regime_switching &&
+            (haskey(get_settings(m), :time_varying_trends) ? get_setting(m, :time_varying_trends) : false)
+
+            start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
+            end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
+                max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+            else
+                prev_quarter(date_forecast_start(m)) # this is the end date of history period
+            end
+
+            trends(m, system, start_date, end_date, cond_type)
+        else
+            trends(system)
+        end
 
         forecast_output[:trendstates] = trendstates
         forecast_output[:trendobs]    = trendobs
@@ -1113,8 +1116,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             else
                 prev_quarter(date_forecast_start(m)) # this is the end date of history period
             end
-            dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states, start_date, end_date;
-                                                                               cond_type = cond_type)
+            dettrendstates, dettrendobs, dettrendpseudo =
+                deterministic_trends(m, system, initial_states, start_date, end_date, cond_type)
         else
             dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
         end

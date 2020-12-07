@@ -169,6 +169,9 @@ function default_settings!(m::AbstractDSGEModel)
     settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false,
         "Whether or not to compute bands for shock decomposition. Setting to false saves " *
         "signficant storage space.")
+    settings[:time_varying_trends] = Setting(:time_varying_trends, true,
+        "Indicator for whether the trends (CCC and DD) in the state space system are potentially time-varying. If false, " *
+        "some functions will use shortcuts for non-time-varying trends.")
 
 	# Sequential Monte Carlo
     settings[:n_particles] = Setting(:n_particles, 2000,
