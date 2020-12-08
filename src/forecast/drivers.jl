@@ -532,22 +532,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                 params_for_map = Vector{Float64}[params[i, :] for i in block_inds[block]]
             end
 
-            @show params_for_map[10,:]
-            @show input_type
-            @show cond_type
-            @show output_vars
-            @show use_filtered_shocks_in_shockdec
-            @show shock_name
-            @show shock_var_name
-            @show shock_var_value
-            @show regime_switching
-            @show n_regimes
-            @show zlb_method
-            @show set_regime_vals_altpolicy
-            @show set_info_sets_altpolicy
-            @show only_filter
-            @show rerun_smoother
-
             mapfcn = use_parallel_workers(m) ? pmap : map
             forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                  param, df, verbose = verbose,
@@ -1082,9 +1066,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histshocks
         end
 
-        @show uncertainty
-        @show size(histshocks_shockdec)
-
         start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
         end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
             max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
@@ -1112,10 +1093,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
             start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
             end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
-                max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+                max(date_conditional_end(m), prev_quarter(date_forecast_start(m)), date_forecast_end(m))
             else
-                prev_quarter(date_forecast_start(m)) # this is the end date of history period
-            end
+                max(prev_quarter(date_forecast_start(m)), date_forecast_end(m)) # this is the end date of history period
+            end # need to add date_forecast_end to end_date to avoid dimension mismatch in write_forecast_output
 
             trends(m, system, start_date, end_date, cond_type)
         else
