@@ -1,6 +1,6 @@
 using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates
 path = dirname(@__FILE__)
-
+#=
 # Set up arguments
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
@@ -86,7 +86,7 @@ out_shockdec2 = shock_decompositions(m, reg_sys, histshocks[:, 1:end - 1]) # che
     @test @test_matrix_approx_eq out_shockdec2[2] obs
     @test @test_matrix_approx_eq out_shockdec2[3] pseudo
 end
-
+=#
 ## Shock decompositions with time-varying CCC
 # Set up
 m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
@@ -130,9 +130,24 @@ pseudo = hcat(output[:histpseudo], output[:forecastpseudo])[:, index_shockdec_st
 impl_states = dropdims(sum(shockstates, dims = 3), dims = 3) + dettrendstates + trendstates
 impl_obs = dropdims(sum(shockobs, dims = 3), dims = 3) + dettrendobs + trendobs
 impl_pseudo = dropdims(sum(shockpseudo, dims = 3), dims = 3) + dettrendpseudo + trendpseudo
+
 @test states ≈ impl_states
 @test obs[vcat(1:9, 13), :] ≈ impl_obs[vcat(1:9, 13), :]
 @test pseudo ≈ impl_pseudo
 
+df_states = DSGE.prepare_means_table_trend_nostates(m, :full, :state,
+                                                    date_mainsample_start(m), date_conditional_end(m), apply_altpolicy = true)
+df_obs    = DSGE.prepare_means_table_trend_nostates(m, :full, :obs,
+                                                    date_mainsample_start(m), date_conditional_end(m), apply_altpolicy = true)
+df_pseudo = DSGE.prepare_means_table_trend_nostates(m, :full, :pseudo,
+                                                    date_mainsample_start(m), date_conditional_end(m), apply_altpolicy = true)
+
+@test all(Matrix(df_states[:, 2:end]) .≈ 0.)
+@test all((df_to_matrix(m, df_obs) .- sys[n_regimes(sys), :DD]) .≈ 0.)
+pseudo_obs = vcat(1:13, 19:n_pseudo_observables(m)) .+ 1 # Remove forward-looking pseudo-obs
+@test all((Matrix(df_pseudo[:, pseudo_obs])' .- sys[n_regimes(sys), :DD_pseudo][pseudo_obs .- 1]) .≈ 0.)
+
+p = plot_shock_decomposition(m, :obs_nominalrate, :obs, :mode, :full;
+                             trend_no_states = df_obs)
 
 nothing
