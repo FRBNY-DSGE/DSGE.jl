@@ -376,12 +376,6 @@ function trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
                 end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
                 cond_type::Symbol = :none) where {S<:AbstractFloat}
 
-    # Check if any CCC are nonzero, otherwise we can just use trends(system)
-    first_nonzero_CCC = findfirst([any(.!(system[i, :CCC] .≈ 0.)) for i in 1:n_regimes(system)])
-    if isnothing(first_nonzero_CCC)
-        return trends(system)
-    end
-
     # Dates: We compute the trend starting from the
     # first historical period.  However, since it is only used to
     # compute shock decompositions, we truncate and only store
@@ -416,6 +410,27 @@ function trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
     state_trends  = Matrix{S}(undef, length(system[1, :CCC]), end_index)
     obs_trends    = Matrix{S}(undef, length(system[1, :DD]), end_index)
     pseudo_trends = Matrix{S}(undef, length(system[1, :DD_pseudo]), end_index)
+
+    # Check if any CCC are nonzero, otherwise we can do a faster version
+    first_nonzero_CCC = findfirst([any(.!(system[i, :CCC] .≈ 0.)) for i in 1:n_regimes(system)])
+    if isnothing(first_nonzero_CCC)
+        state_trends .= 0.
+        for (reg, inds) in enumerate(hist_regime_inds)
+            for t in inds
+                obs_trends[:, t]    = system[reg, :DD]
+                pseudo_trends[:, t] = system[reg, :DD_pseudo]
+            end
+        end
+        for (i, inds) in enumerate(fcast_regime_inds)
+            reg = i + length(hist_regime_idns)
+            for t in inds
+                obs_trends[:, t]    = system[reg, :DD]
+                pseudo_trends[:, t] = system[reg, :DD_pseudo]
+            end
+        end
+
+        return state_trends, obs_trends, pseudo_trends
+    end
 
     first_nonzero_CCC_hist, first_nonzero_CCC_fcast = if first_nonzero_CCC > length(hist_regime_inds)
         length(hist_regime_inds) + 1, first_nonzero_CCC - length(hist_regime_inds)
