@@ -302,7 +302,7 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
 
     # Use forecast to iterate state-space system forward
     # without shocks or the ZLB procedure during history
-    for (reg_num, reg_ind) in enumerate(regime_inds[1:get_setting(m, :n_hist_regimes)])
+    for (reg_num, reg_ind) in enumerate(regime_inds)
         init_state = (reg_num == 1) ? z0 : states[:, reg_ind[1] - 1] # update initial state
 
         # Construct matrix of 0 shocks for this regime
@@ -315,6 +315,7 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     if nperiods > regime_inds[end][end]
         fcast_shocks = zeros(S, nshocks, nperiods - regime_inds[end][end])
         fcast_inds = (regime_inds[end][end] + 1):nperiods
+
         states[:, fcast_inds], obs[:, fcast_inds], pseudo[:, fcast_inds], _ =
             forecast(m, system, states[:, regime_inds[end][end]], fcast_shocks;
                      cond_type = cond_type)
@@ -421,54 +422,58 @@ function trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
                 pseudo_trends[:, t] = system[reg, :DD_pseudo]
             end
         end
-        for (i, inds) in enumerate(fcast_regime_inds)
-            reg = i + length(hist_regime_idns)
-            for t in inds
-                obs_trends[:, t]    = system[reg, :DD]
-                pseudo_trends[:, t] = system[reg, :DD_pseudo]
+        if !isnothing(fcast_regime_inds)
+            regbuffer = cond_type == :none ? get_setting(m, :reg_forecast_start) - 1 :
+                get_setting(m, :reg_post_conditional_end) - 1
+            for (i, inds) in enumerate(fcast_regime_inds)
+                reg = i + regbuffer
+                for t in inds
+                    obs_trends[:, t]    = system[reg, :DD]
+                    pseudo_trends[:, t] = system[reg, :DD_pseudo]
+                end
             end
         end
-
-        return state_trends, obs_trends, pseudo_trends
-    end
-
-    first_nonzero_CCC_hist, first_nonzero_CCC_fcast = if first_nonzero_CCC > length(hist_regime_inds)
-        length(hist_regime_inds) + 1, first_nonzero_CCC - length(hist_regime_inds)
     else
-        first_nonzero_CCC, 1
-    end
-
-    for (reg, inds) in enumerate(hist_regime_inds[1:(first_nonzero_CCC_hist - 1)])
-        state_trends[:, inds]  .= 0.
-        obs_trends[:, inds]    .= system[reg, :DD]
-        pseudo_trends[:, inds] .= system[reg, :DD_pseudo]
-    end
-
-    for (i, inds) in enumerate(hist_regime_inds[first_nonzero_CCC_hist:end])
-        reg = i + first_nonzero_CCC_hist - 1
-        for t in inds
-            state_trends[:, t]  = system[reg, :CCC] + system[reg, :TTT] * state_trends[:, t - 1]
-            obs_trends[:, t]    = system[reg, :ZZ] * state_trends[:, t] + system[reg, :DD]
-            pseudo_trends[:, t] = system[reg, :ZZ_pseudo] * state_trends[:, t] + system[reg, :DD_pseudo]
-        end
-    end
-
-    if !isnothing(fcast_regime_inds)
-        for (i, inds) in enumerate(fcast_regime_inds[1:(first_nonzero_CCC_fcast - 1)])
-            reg = i + length(hist_regime_inds)
-            for t in inds
-                state_trends[:, inds]  .= 0.
-                obs_trends[:, inds]    .= system[reg, :DD]
-                pseudo_trends[:, inds] .= system[reg, :DD_pseudo]
-            end
+        first_nonzero_CCC_hist, first_nonzero_CCC_fcast = if first_nonzero_CCC > length(hist_regime_inds)
+            length(hist_regime_inds) + 1, first_nonzero_CCC - length(hist_regime_inds)
+        else
+            first_nonzero_CCC, 1
         end
 
-        for (i, inds) in enumerate(fcast_regime_inds[first_nonzero_CCC_fcast:end])
-            reg = i + first_nonzero_CCC_fcast + length(hist_regime_inds) - 1
+        for (reg, inds) in enumerate(hist_regime_inds[1:(first_nonzero_CCC_hist - 1)])
+            state_trends[:, inds]  .= 0.
+            obs_trends[:, inds]    .= system[reg, :DD]
+            pseudo_trends[:, inds] .= system[reg, :DD_pseudo]
+        end
+
+        for (i, inds) in enumerate(hist_regime_inds[first_nonzero_CCC_hist:end])
+            reg = i + first_nonzero_CCC_hist - 1
             for t in inds
                 state_trends[:, t]  = system[reg, :CCC] + system[reg, :TTT] * state_trends[:, t - 1]
                 obs_trends[:, t]    = system[reg, :ZZ] * state_trends[:, t] + system[reg, :DD]
                 pseudo_trends[:, t] = system[reg, :ZZ_pseudo] * state_trends[:, t] + system[reg, :DD_pseudo]
+            end
+        end
+
+        if !isnothing(fcast_regime_inds)
+            reg_buffer = cond_type == :none ? get_setting(m, :reg_forecast_start) - 1 :
+                get_setting(m, :reg_post_conditional_end) - 1
+            for (i, inds) in enumerate(fcast_regime_inds[1:(first_nonzero_CCC_fcast - 1)])
+                reg = i + reg_buffer
+                for t in inds
+                    state_trends[:, inds]  .= 0.
+                    obs_trends[:, inds]    .= system[reg, :DD]
+                    pseudo_trends[:, inds] .= system[reg, :DD_pseudo]
+                end
+            end
+
+            for (i, inds) in enumerate(fcast_regime_inds[first_nonzero_CCC_fcast:end])
+                reg = i + first_nonzero_CCC_fcast - 1 + reg_buffer
+                for t in inds
+                    state_trends[:, t]  = system[reg, :CCC] + system[reg, :TTT] * state_trends[:, t - 1]
+                    obs_trends[:, t]    = system[reg, :ZZ] * state_trends[:, t] + system[reg, :DD]
+                    pseudo_trends[:, t] = system[reg, :ZZ_pseudo] * state_trends[:, t] + system[reg, :DD_pseudo]
+                end
             end
         end
     end
