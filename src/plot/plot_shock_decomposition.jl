@@ -38,9 +38,11 @@ into `plot_history_and_forecast`.
 function plot_shock_decomposition(m::AbstractDSGEModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   title = "", file_ext = "", four_quarter_avg = false,
+                                  trend_no_states::DataFrame = DataFrame(),
                                   kwargs...)
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
-                                     titles = isempty(title) ? String[] : [title], file_ext = file_ext, four_quarter_avg = four_quarter_avg,
+                                     titles = isempty(title) ? String[] : [title], file_ext = file_ext,
+                                     four_quarter_avg = four_quarter_avg, trend_no_states = trend_no_states,
                                      kwargs...)
     return plots[var]
 end
@@ -51,9 +53,8 @@ function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, cl
                                   groups::Vector{ShockGroup} = shock_groupings(m),
                                   plotroot::String = figurespath(m, "forecast"),
                                   titles::Vector{String} = String[],
-                                  file_ext::String = "",
-                                  verbose::Symbol = :low,
-                                  four_quarter_avg = false,
+                                  file_ext::String = "", four_quarter_avg = false,
+                                  trend_no_states::DataFrame = DataFrame(), verbose::Symbol = :low,
                                   kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
@@ -75,10 +76,11 @@ function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, cl
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
+
         # Call recipe
         plots[var] = shockdec(var, mbs..., groups;
                               ylabel = series_ylabel(m, var, class) * "\n(deviations from mean)",
-                              title = title, kwargs...)
+                              title = title, trend_no_states = trend_no_states, kwargs...)
 
         # Save plot
         if !isempty(plotroot)
@@ -145,10 +147,9 @@ shockdec
                    forecast_color = :red,
                    tick_size = 5,
                    vert_line = quartertodate("0000-Q1"),
-                   vert_line2 = quartertodate("0000-Q1"))
+                   vert_line2 = quartertodate("0000-Q1"),
+                   trend_no_states = DataFrame())
 
-    end_date = Date(2020, 12, 31)
-    start_date = Date(2015, 3, 31)
     # Error checking
     if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
         typeof(sd.args[2]) != MeansBands || typeof(sd.args[3]) != MeansBands ||
@@ -159,12 +160,17 @@ shockdec
     end
 
     var, shockdec, trend, dettrend, hist, forecast, groups = sd.args
+    if isempty(trend_no_states) && ("States Trend" in [group.name for group in groups])
+        @warn "The keyword trend_no_states is empty, so the forecast will be demeaned of the States Trend, and the States Trend will not be plotted as a separate shock."
+        states_trend_i = findfirst([group.name .== "States Trend" for group in groups])
+        groups = groups[vcat(1:(states_trend_i - 1), (states_trend_i + 1):length(groups))]
+    end
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
     df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
                                            mb_hist = hist, mb_forecast = forecast,
                                            detexify_shocks = false,
-                                           groups = groups)
+                                           groups = groups, trend_no_states = trend_no_states)
 
     dates = df[!, :date]
     xnums = (1:length(dates)) .- 0.5

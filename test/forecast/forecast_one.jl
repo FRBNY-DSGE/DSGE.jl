@@ -188,8 +188,6 @@ dfs[:none] = load("$path/../reference/regime_switch_data.jld2", "none")
 dfs[:semi] = load("$path/../reference/regime_switch_data.jld2", "semi")
 dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
 
-
-
 if generate_regime_switch_tests
     exp_out_dict_new = exp_out_dict # We won't be testing, but we want to have the same structure as the existing one dict
 end
@@ -210,11 +208,13 @@ end
         m_rs1.settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs1.settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
         m_rs1.settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs1.settings[:time_varying_trends] = Setting(:time_varying_trends, false)
         m_rs1.test_settings[:regime_switching] = Setting(:regime_switching, true)
         m_rs1.test_settings[:n_regimes] = Setting(:n_regimes, 3)
         m_rs1.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs1.test_settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
         m_rs1.test_settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs1.test_settings[:time_varying_trends] = Setting(:time_varying_trends, false)
         m_rs1 = DSGE.setup_regime_switching_inds!(m_rs1)
 
         # pseudo regime switching (identical values for standard deviations)
@@ -224,11 +224,13 @@ end
         m_rs2.settings[:n_regimes] = Setting(:n_regimes, 3)
         m_rs2.settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs2.settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
+        m_rs2.settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs2.settings[:time_varying_trends] = Setting(:time_varying_trends, false)
         m_rs2.test_settings[:regime_switching] = Setting(:regime_switching, true)
         m_rs2.test_settings[:n_regimes] = Setting(:n_regimes, 3)
         m_rs2.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs2.test_settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
-        m_rs2.settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs2.test_settings[:time_varying_trends] = Setting(:time_varying_trends, false)
         m_rs2.test_settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs2 = DSGE.setup_regime_switching_inds!(m_rs2)
 
@@ -240,11 +242,13 @@ end
         m_rs3.settings[:n_regimes] = Setting(:n_regimes, 3)
         m_rs3.settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs3.settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
+        m_rs3.settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs3.settings[:time_varying_trends] = Setting(:time_varying_trends, false)
         m_rs3.test_settings[:regime_switching] = Setting(:regime_switching, true)
         m_rs3.test_settings[:n_regimes] = Setting(:n_regimes, 3)
         m_rs3.test_settings[:regime_switching_ndraws] = Setting(:regime_switching_ndraws, 4)
         m_rs3.test_settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
-        m_rs3.settings[:regime_dates] = Setting(:regime_dates, v)
+        m_rs3.test_settings[:time_varying_trends] = Setting(:time_varying_trends, false)
         m_rs3.test_settings[:regime_dates] = Setting(:regime_dates, v)
         m_rs3 = DSGE.setup_regime_switching_inds!(m_rs3)
 

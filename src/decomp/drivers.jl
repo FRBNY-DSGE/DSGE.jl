@@ -315,13 +315,13 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
             regime_inds    = regime_indices(m, date_mainsample_start(m), end_date) # main sample b/c smooth doesn't include presample
             regime_inds[1] = 1:regime_inds[1][end]
 
-            _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(m, system, s_0, T+H, 1, T+H, regime_inds;
-                                                                              cond_type = cond_type)
+            _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(m, system, s_0, T+H, 1, T+H, regime_inds,
+                                                                              cond_type)
 
             # Applying all shocks
             _, out[:shockdecobs], out[:shockdecpseudo] =
                 shock_decompositions(m, system, forecast_horizons(m; cond_type = cond_type),
-                                     histshocks, 1, T + H, regime_inds; cond_type = cond_type)
+                                     histshocks, 1, T + H, regime_inds, cond_type)
 
             # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
             _, out[:dataobs], out[:datapseudo], _ = forecast(m, system0, zeros(nstates), data_shocks;

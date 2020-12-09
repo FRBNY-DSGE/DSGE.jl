@@ -1038,9 +1038,15 @@ function shock_groupings(m::Model1002)
             push!(ocovid.shocks, :ygap_sh)
         end
 
+        # Time-varying CCC, e.g. from temporary ZLB
+        if haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
+            st = ShockGroup("States Trend", [:StatesTrend], :darkgreen) # :dettrend
+            return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth, st]
+        else
+            return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth]
+        end
         # return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
         # return [betcovid, zcovid, φcovid, bet, fin, tfp, pmu, pol, mea, oth]
-       return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth]
     elseif subspec(m) != "ss12"
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
         bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
