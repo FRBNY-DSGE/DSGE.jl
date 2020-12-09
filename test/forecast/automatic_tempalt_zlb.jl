@@ -103,8 +103,8 @@ else
         load(joinpath(dirname(@__FILE__), "../reference/automatic_tempalt_zlb_fulldist.jld2"))
     @testset "Automatic enforcement of ZLB as a temporary alternative policy during full-distribution forecast" begin
         for (k, v) in output_files # Test variables which don't have forward-looking measurement equations
-            @test @test_matrix_approx_eq refdata[string(k)][1:end - 3,
-                                                            vcat(1:9, 12:13), :] load(v, "arr")[1:end - 3, vcat(1:9, 12:13), :]
+            @test @test_matrix_approx_eq refdata[string(k)][:,
+                                                            vcat(1:9, 12:13), :] load(v, "arr")[:, vcat(1:9, 12:13), :]
             # measurement eqns for forward looking variables e.g. :obs_longrate are still being updated.
             if k == :bddforecastobs
                 @test all(refdata[string(k)][:, m.observables[:obs_nominalrate], :] .> -1e-14)
