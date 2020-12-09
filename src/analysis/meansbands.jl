@@ -731,9 +731,15 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         df_shockdec = has_ij ? innerjoin(df_shockdec, df_mean, on = :date) :
             join(df_shockdec, df_mean, on = :date, kind = :inner)
         if isempty(trend_no_states)
-            df[!, :detrendedMean] = df_shockdec[!,var] - df_shockdec[!, :trend]
+            df[!, :detrendedMean] = df_shockdec[!, var] - df_shockdec[!, :trend]
         else
             var_trend_no_states   = trend_no_states[startdate .<= trend_no_states[!, :date] .<= enddate, var]
+            if size(var_trend_no_states, 1) != size(df_shockdec, 1)
+                error("The number of rows in kwarg `trend_no_states` does not match the number in df_shockdec. Check that " *
+                      "the Setting :date_forecast_end matches the date used for the calculation of the shockdecs " *
+                      "when constructing the `trend_no_states` DataFrame.")
+            end
+
             var_trend_states      = df_shockdec[!, :trend] - var_trend_no_states
             df[!, :detrendedMean] = df_shockdec[!,var] - var_trend_no_states
             df[!, :StatesTrend]   = var_trend_states
@@ -772,7 +778,7 @@ end
 # all zeros since the trend in states without the trend in states is just detrending the trend!
 # This function is tested in test/forecast/shock_decompositions.jl
 function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::Symbol, class::Symbol,
-                                            start_date::Date, end_date::Date;
+                                            start_date::Date, end_date::Date; annualize::Bool = true,
                                             apply_altpolicy::Bool = false) where {S <: Real}
 
     @assert class in [:obs, :state, :pseudo] "The allowed class variables are :state, :obs, and :pseudo"
@@ -854,8 +860,14 @@ function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::
         trends = trends[:, start_index:end]
     end
 
-    for (k, v) in (class == :obs ? m.observables : m.pseudo_observables)
-        df[!, k] = trends[v, :]
+    if annualize
+        for (k, v) in (class == :obs ? m.observables : m.pseudo_observables)
+            df[!, k] = 4. .* trends[v, :]
+        end
+    else
+        for (k, v) in (class == :obs ? m.observables : m.pseudo_observables)
+            df[!, k] = trends[v, :]
+        end
     end
 
     return df
