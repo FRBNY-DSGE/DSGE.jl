@@ -23,7 +23,6 @@ custom_settings = Dict{Symbol, Setting}(:n_mon_anticipated_shocks =>
                                         Setting(:n_mon_anticipated_shocks, 6, "Number of anticipated policy shocks"),
                                         :add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
                                         :add_altpolicy_yagp => Setting(:add_altpolicy_ygap, true),
-                                        :add_urhat => Setting(:add_urhat, true),
                                         :flextible_ait_policy_change =>
                                         Setting(:flexible_ait_policy_change, false))
 m = Model1002("ss10"; custom_settings = custom_settings)   # We will directly construct the matrix of parameter draws
