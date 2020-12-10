@@ -284,6 +284,7 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
     # Smooth and forecast
     histstates, histshocks, histpseudo, s_0 = smooth(m, df, system, cond_type = cond_type, draw_states = false,
                                                      catch_smoother_lapack = catch_smoother_lapack)
+
     if regime_switching
         # Get regime indices. Just want histobs, so no need to handle ZLB regime switch
         start_date = max(date_mainsample_start(m), df[1, :date])
@@ -292,7 +293,11 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
         if regime_inds[1][1] < 1
             regime_inds[1] = 1:regime_inds[1][end]
         end
-        regime_inds[end] = regime_inds[end][1]:(T + H)
+        cutoff = findfirst([inds[end] > T + H for inds in regime_inds])
+        if !isnothing(cutoff)
+            regime_inds = regime_inds[1:cutoff]
+            regime_inds[end] = regime_inds[end][1]:(T + H)
+        end
 
         # Calculate history
         histobs = zeros(n_observables(m), T + H)
