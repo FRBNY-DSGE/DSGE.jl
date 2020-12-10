@@ -425,6 +425,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         else
             error("Alternative policies and/or weights were not specified.")
         end
+
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
         Talt, _, Calt = altpols[1].solve(m)
 
@@ -498,7 +499,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                     else
                         weights = get_setting(m, :alternative_policy_weights)
                     end
-                    @show fcast_reg, weights
 
                     altpols = get_setting(m, :alternative_policies)
 
