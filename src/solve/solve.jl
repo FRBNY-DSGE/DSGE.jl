@@ -343,10 +343,9 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
                 if !flex_ait_pol_change || get_setting(m, :regime_dates)[reg] < get_setting(m, :flexible_ait_policy_change_date)
                     # Time-varying credibility weights for the regime reg for alternative_policy
                     if haskey(get_settings(m), :alternative_policy_varying_weights)
-                        weights =
-                        [get_setting(m, :alternative_policy_varying_weights)[i][reg - get_setting(m, :reg_forecast_start) + 1]
-                         for i in 1:length(get_setting(m, :alternative_policy_varying_weights))]
-                        weights = append!(weights, 1.0-sum(weights))
+                        liftoff_reg = haskey(get_settings(m), :gensys2_last_regime) ?
+                            get_setting(m, :gensys2_last_regime) : get_setting(m, :n_regimes)
+                        weights = get_setting(m, :alternative_policy_varying_weights)[reg]
                     else
                         weights = get_setting(m, :alternative_policy_weights)
                     end
@@ -425,11 +424,16 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         else
             error("Alternative policies and/or weights were not specified.")
         end
+        if isa(weights, AbstractDict)
+            # populate_reg should work for now b/c should coincide w/entries of replace_eqcond_func_dict
+            weights = [weights[i] for i in populate_reg]
+        end
 
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
         Talt, _, Calt = altpols[1].solve(m)
 
         # Calculate gensys2 matrices under belief that the desired lift-off policy will occur
+        # FIGURE OUT HOW TO NOT USE all gensys2_regimes, just use the minimal number of required eqcond matrices
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                         TTT_final, RRR_final, CCC_final,
@@ -493,9 +497,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                     # HORIZON ENDS AND THAT THE ALTERNATIVE POLICY VARYING WEIGHTS VECTOR SPECIFIES WEIGHTS
                     # STARTING IN THAT SAME PERIOD (i.e. alternative_policy_varying_weights[i][1] is the first ZLB period)
                     if haskey(get_settings(m), :alternative_policy_varying_weights)
-                        weights = [get_setting(m, :alternative_policy_varying_weights)[i][fcast_reg - ffreg + 1]
-                                   for i in 1:length(get_setting(m, :alternative_policy_varying_weights))]
-                        append!(weights, 1.0 - sum(weights))
+                        liftoff_reg = haskey(get_settings(m), :gensys2_last_regime) ?
+                            get_setting(m, :gensys2_last_regime) : get_setting(m, :n_regimes)
+                        weights = get_setting(m, :alternative_policy_varying_weights)[fcast_reg]
                     else
                         weights = get_setting(m, :alternative_policy_weights)
                     end

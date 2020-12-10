@@ -124,18 +124,40 @@ modal_params = map(x -> x.value, m.parameters)
 out1 = out = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-m <= Setting(:alternative_policy_varying_weights, [fill(.33, forecast_horizons(m))])
+# m <= Setting(:alternative_policy_varying_weights, [fill(.33, forecast_horizons(m))])
+m <= Setting(:alternative_policy_varying_weights,
+             Dict(k => [.33, 1. - .33] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
 out1_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 for k in keys(out1)
     @test out1[k] ≈ out1_tv[k]
 end
 
-m <= Setting(:alternative_policy_varying_weights, [vcat(zeros(3), collect(range(0., stop = 1., length = 10)), fill(1., 20))])
+# m <= Setting(:alternative_policy_varying_weights, [vcat(zeros(3), collect(range(0., stop = 1., length = 10)), fill(1., 20))])
+m <= Setting(:alternative_policy_varying_weights,
+             Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
+credvec = collect(range(0., stop = 1., length = 10))
+for (i, k) in enumerate(sort!(collect(keys(replace_eqcond_func_dict))))
+    if 3 < i <= 13
+        get_setting(m, :alternative_policy_varying_weights)[k] = [credvec[i - 3], 1. - credvec[i - 3]]
+    elseif i > 13
+        get_setting(m, :alternative_policy_varying_weights)[k] = [1., 0.]
+    end
+end
 out2 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-m <= Setting(:alternative_policy_varying_weights, [vcat(zeros(3), collect(range(0., stop = 1., length = 5)), fill(1., 30))])
+# m <= Setting(:alternative_policy_varying_weights, [vcat(zeros(3), collect(range(0., stop = 1., length = 5)), fill(1., 30))])
+m <= Setting(:alternative_policy_varying_weights,
+             Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
+credvec = collect(range(0., stop = 1., length = 5))
+for (i, k) in enumerate(sort!(collect(keys(replace_eqcond_func_dict))))
+    if 3 < i <= 8
+        get_setting(m, :alternative_policy_varying_weights)[k] = [credvec[i - 3], 1. - credvec[i - 3]]
+    elseif i > 8
+        get_setting(m, :alternative_policy_varying_weights)[k] = [1., 0.]
+    end
+end
 out3 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
