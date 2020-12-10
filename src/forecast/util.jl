@@ -388,12 +388,14 @@ function get_forecast_output_dims(m::AbstractDSGEModel, input_type::Symbol, outp
 
     if prod == :trend
         regime_switching = haskey(m.settings, :regime_switching) ? get_setting(m, :regime_switching) : false
-        if haskey(get_settings(m), :time_varying_trends) && get_setting(m, :time_varying_trends)
-            start_date = get(get_setting(m, :shockdec_startdate))
-            end_date = max(prev_quarter(date_forecast_start(m)), date_forecast_end(m))
-            return (ndraws, nvars, DSGE.subtract_quarters(end_date, start_date)+1)
-        elseif regime_switching
-            return (ndraws, nvars, get_setting(m, :n_regimes))
+        if regime_switching
+            if haskey(get_settings(m), :time_varying_trends) && get_setting(m, :time_varying_trends)
+                start_date = get(get_setting(m, :shockdec_startdate))
+                end_date = max(prev_quarter(date_forecast_start(m)), date_forecast_end(m))
+                return (ndraws, nvars, DSGE.subtract_quarters(end_date, start_date)+1)
+            else regime_switching
+                return (ndraws, nvars, get_setting(m, :n_regimes))
+            end
         else
             return (ndraws, nvars)
         end
