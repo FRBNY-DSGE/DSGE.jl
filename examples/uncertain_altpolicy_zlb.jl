@@ -189,6 +189,11 @@ if zlb_altpolicy
     replace_eqcond[2+n_tempZLB_regimes+1] = DSGE.smooth_ait_gdp_alt_replace_eq_entries # switch to AIT in the final regime
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond) # Add mapping of regimes to new eqcond matrices
 
+    # set up information sets
+    m <= Setting(:tvis_information_set, vcat([1:1, 2:2],
+                                             [i:get_setting(m, :n_regimes) for i in
+                                              3:get_setting(m, :n_regimes)]))
+
     fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                            df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
