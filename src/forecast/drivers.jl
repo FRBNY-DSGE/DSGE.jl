@@ -1117,12 +1117,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     ### 3. Shock Decompositions
 
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
-    system = compute_system(m; apply_altpolicy = true, tvis = tvis)
 
     if !isempty(shockdecs_to_compute)
-        #=if apply_altpolicy
-            system = compute_system(m; apply_altpolicy = true, tvis = tvis)
-        end=#
         histshocks_shockdec = if use_filtered_shocks_in_shockdec
             filter_shocks(m, df, system, cond_type = cond_type)
         else
