@@ -33,7 +33,7 @@ end
     @test DSGE.detexify(:τ) == :tau
     @test DSGE.detexify(:υ) == :upsilon
     @test DSGE.detexify(:ϕ) == :phi
-    @test DSGE.detexify(:φ) == :phi
+    @test DSGE.detexify(:φ) == :varphi
     @test DSGE.detexify(:χ) == :chi
     @test DSGE.detexify(:ψ) == :psi
     @test DSGE.detexify(:ω) == :omega
@@ -85,7 +85,7 @@ end
     @test DSGE.detexify("τ") == "tau"
     @test DSGE.detexify("υ") == "upsilon"
     @test DSGE.detexify("ϕ") == "phi"
-    @test DSGE.detexify("φ") == "phi"
+    @test DSGE.detexify("φ") == "varphi"
     @test DSGE.detexify("χ") == "chi"
     @test DSGE.detexify("ψ") == "psi"
     @test DSGE.detexify("ω") == "omega"
