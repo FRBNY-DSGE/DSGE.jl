@@ -61,8 +61,8 @@ function gensys_uncertain_zlb(prob_vec::Vector{Vector{S}}, Th::AbstractMatrix{S}
 
     # Calculate "uncertain" ZLB matrices and back out the transition equation
     for i in 1:length(Tzlbs)
-        Tbars[i] = prob_vec[1][i] * Tzlbs[i] + (1.0-prob_vec[1][i]) * Th # it is assumed Tzlbs is a vector of the T_{t + 1}^{(zlb)} matrices
-        Cbars[i] = prob_vec[1][i] * Czlbs[i] + (1.0-prob_vec[1][i]) * Ch
+        Tbars[i] = prob_vec[i][1] * Tzlbs[i] + (1.0-prob_vec[i][1]) * Th # it is assumed Tzlbs is a vector of the T_{t + 1}^{(zlb)} matrices
+        Cbars[i] = prob_vec[i][1] * Czlbs[i] + (1.0-prob_vec[i][1]) * Ch
 
         Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
         Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
