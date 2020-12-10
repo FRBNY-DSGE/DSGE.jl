@@ -136,21 +136,6 @@ output_vars = [:histpseudo, :histobs, :histstdshocks,
                :forecast4qpseudo, :forecast4qobs, :forecaststdshocks]
 
 if zlb_altpolicy
-    # First, need to set up new set of regime dates to implement a temporary zlb and uncertain policy change
-    Hbar = 4 # number of zlb regimes
-    n_tempZLB_regimes = 3+Hbar-1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
-    # Set up regime dates
-    temp_regime_dates = Dict{Int, Date}()
-    temp_regime_dates[1] = date_presample_start(m)
-    end_date = Date(2020, 12, 31) + Dates.Year(1) + Dates.Month(3)
-    for (i, date) in zip(2:(n_tempZLB_regimes+1),
-                         Date(2020, 12, 31):Dates.Month(3):end_date) # add forecast dates
-        temp_regime_dates[i] = date
-    end
-    m <= Setting(:regime_dates, temp_regime_dates)
-    m <= Setting(:regime_switching, true)
-    setup_regime_switching_inds!(m)
-
     # Add parameter values for additional regimes
     for i in 3:(n_tempZLB_regimes+1)
         ModelConstructors.set_regime_val!(m[:σ_g], i, m10[:σ_g].value)
@@ -177,6 +162,21 @@ if zlb_altpolicy
         end
     end
 
+    # then, set up new set of regime dates to implement a temporary zlb and uncertain policy change
+    Hbar = 4 # number of zlb regimes
+    n_tempZLB_regimes = 3+Hbar-1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
+    # Set up regime dates
+    temp_regime_dates = deepcopy(get_setting(m, :regime_dates))
+    temp_regime_dates[1] = date_presample_start(m)
+    end_date = Date(2020, 12, 31) + Dates.Year(1) + Dates.Month(3)
+    for (i, date) in zip(3:(n_tempZLB_regimes+1),
+                         Date(2020, 12, 31):Dates.Month(3):end_date) # add forecast dates
+        temp_regime_dates[i] = date
+    end
+    m <= Setting(:regime_dates, temp_regime_dates)
+    m <= Setting(:regime_switching, true)
+    setup_regime_switching_inds!(m)
+
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
@@ -193,6 +193,22 @@ if zlb_altpolicy
     m <= Setting(:tvis_information_set, vcat([1:1, 2:2],
                                              [i:get_setting(m, :n_regimes) for i in
                                               3:get_setting(m, :n_regimes)]))
+
+    # pgap and ygap initialization
+    df[!, :obs_pgap] .= NaN
+    df[!, :obs_ygap] .= NaN
+    ind_init = findfirst(df[!, :date] .== Date(2020, 6, 30))
+    df[ind_init, :obs_pgap] = 0.125
+    df[ind_init, :obs_ygap] = 12.
+
+    # adjust nominal rates data during temporary ZLB
+    tempzlb_quarters = DSGE.quarter_range(Date(2020, 12, 31),end_date)
+    start_ind = findfirst(df[!, :date] .== Date(2020, 12, 31))
+    if !isnothing(start_ind)
+        inds_tempzlb = start_ind:findfirst(date_forecast_start(m))
+        df[inds_tempzlb, :obs_nominalrate] .= NaN
+        df[inds_tempzlb, [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]] .= NaN
+    end
 
     fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                            df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
