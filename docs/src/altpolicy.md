@@ -56,7 +56,10 @@ uses the function `ngdp_replace_eq_defines` entries to define these changes.
 DSGE.ngdp_replace_eq_entries
 ```
 
-The user also needs to complete the following steps.
+For an example of how `eqcond` handles this requirement, please
+see the implementation for [`Model1002`](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/eqcond.jl).
+
+The user also needs to complete the following steps to apply temporary alternative policies.
 
 - Adding a regime for every period in the forecast horizon during which the alternative policy applies,
   plus one more regime for the first regime in which the alternative policy does NOT apply.
