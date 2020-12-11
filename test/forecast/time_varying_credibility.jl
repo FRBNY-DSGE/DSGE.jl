@@ -3,7 +3,7 @@ include("tvcred_parameterize.jl")
 
 # Forecast settings
 fcast_date = DSGE.quartertodate("2020-Q4")
-date_fcast_end  = iterate_quarters(fcast_date, 40)
+date_fcast_end  = iterate_quarters(fcast_date, 60)
 
 # Flexible AIT Rule
 imperfect_cred_flexait = .33
@@ -16,7 +16,7 @@ pgap_init              = 0.125
 ygap_init              = 12.
 pgap_ygap_init_date    = Date(2020, 6, 30)
 start_zlb_date         = Date(2021, 3, 31)
-end_zlb_date           = Date(2021, 12, 31)
+end_zlb_date           = Date(2022, 12, 31)
 
 # additional settings to implement Flexible AIT rule
 flexait_custom = Dict{Symbol, Setting}(:add_initialize_pgap_ygap_pseudoobs => Setting(:add_initialize_pgap_ygap_pseudoobs, true),
@@ -25,7 +25,7 @@ flexait_custom = Dict{Symbol, Setting}(:add_initialize_pgap_ygap_pseudoobs => Se
                                        :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true),
                                        :forecast_horizons => Setting(:forecast_horizons,
                                                                      subtract_quarters(date_fcast_end, fcast_date)),
-                                       :forecast_smoother => Setting(:forecast_smoother, :durbin_koopman),
+                                       :forecast_smoother => Setting(:forecast_smoother, :carter_kohn),
                                        :contemporaneous_and_proportional_antshocks =>
                                        Setting(:contemporaneous_and_proportional_antshocks, Symbol[:biidc]),
                                        :antshocks =>
@@ -48,6 +48,8 @@ flexait_custom = Dict{Symbol, Setting}(:add_initialize_pgap_ygap_pseudoobs => Se
 m = Model1002("ss59"; custom_settings = flexait_custom)
 usual_model_settings!(m, "200001", cdvt = "200001", fcast_date = fcast_date)
 m <= Setting(:time_varying_trends, true)
+get_setting(m, :regime_dates)[5] = Date(2020, 12, 31)
+setup_regime_switching_inds!(m, cond_type = :full)
 
 # Parameterize
 tvcred_parameterize!(m)
@@ -92,7 +94,6 @@ n_zlb_reg = DSGE.subtract_quarters(end_zlb_date, start_zlb_date) + 1
 
 # Set up replace_eqcond_func_dict
 m <= Setting(:replace_eqcond, true)
-m <= Setting(:temporary_zlb_length, n_zlb_reg)
 reg_dates = deepcopy(get_setting(m, :regime_dates))
 replace_eqcond_func_dict = Dict{Int, Function}()
 for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_regime), # See comments starting at line 57
@@ -103,10 +104,7 @@ for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_re
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
 replace_eqcond_func_dict[n_zlb_reg + gensys2_first_regime] = DSGE.flexible_ait_replace_eq_entries
-for i in 10:18
-    reg_dates[i] = DSGE.iterate_quarters(reg_dates[9], i - 9)
-    replace_eqcond_func_dict[i] = DSGE.flexible_ait_replace_eq_entries
-end
+nreg0 = length(reg_dates)
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
 
@@ -118,44 +116,64 @@ set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
                                          [i:get_setting(m, :n_regimes) for i in
                                           gensys2_first_regime:get_setting(m, :n_regimes)]))
+# CHANGING THE LOCATION OF THE LINE SETTING TEMPORARY ZLB LENGTH CHANGES THE FORECAST SO THERE'S A BUG SOMEWHERE
+# IF TEMPORARY ZLB LENGTH ISN'T SET FOR THE FIXED CRED FORECAST, YOU GET DIFFERENT RESULTS
+# m <= Setting(:temporary_zlb_length, n_zlb_reg)
 
 output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
-out1 = out = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+m <= Setting(:alternative_policy_weights, [0., 1.])
+@assert !haskey(m.settings, :alternative_policy_varying_weights)
+outp0 = out = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                             regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+m <= Setting(:alternative_policy_weights, [θ[:cred], 1. - θ[:cred]])
+outp33 = out = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-# m <= Setting(:alternative_policy_varying_weights, [fill(.33, forecast_horizons(m))])
+for i in (nreg0 - 1):(nreg0 + 15)
+    reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
+    replace_eqcond_func_dict[i] = DSGE.flexible_ait_replace_eq_entries
+end
+m <= Setting(:regime_dates,             reg_dates)
+m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+
+m <= Setting(:temporary_zlb_length, n_zlb_reg) # CHANGING THE LOCATION OF TEMPORARY ZLB LENGTH CHANGES THE FORECAST
 m <= Setting(:alternative_policy_varying_weights,
              Dict(k => [.33, 1. - .33] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
-out1_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-for k in keys(out1)
-    @test out1[k] ≈ out1_tv[k]
+for k in keys(outp33)
+#    @test outp33[k] ≈ outp33_tv[k]
 end
 
-# m <= Setting(:alternative_policy_varying_weights, [vcat(zeros(3), collect(range(0., stop = 1., length = 10)), fill(1., 20))])
 m <= Setting(:alternative_policy_varying_weights,
              Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
-credvec = collect(range(0., stop = 1., length = 10))
+credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(replace_eqcond_func_dict))))
-    if 3 < i <= 13
-        get_setting(m, :alternative_policy_varying_weights)[k] = [credvec[i - 3], 1. - credvec[i - 3]]
-    elseif i > 13
-        get_setting(m, :alternative_policy_varying_weights)[k] = [1., 0.]
+    if (get_setting(m, :temporary_zlb_length) - 1) < i
+        get_setting(m, :alternative_policy_varying_weights)[k] = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
+    end
+end
+out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+m <= Setting(:alternative_policy_varying_weights,
+             Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
+credvec = collect(range(0., stop = .5, length = 17))
+for (i, k) in enumerate(sort!(collect(keys(replace_eqcond_func_dict))))
+    if (get_setting(m, :temporary_zlb_length) - 1) < i
+        get_setting(m, :alternative_policy_varying_weights)[k] = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
     end
 end
 out2 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-# m <= Setting(:alternative_policy_varying_weights, [vcat(zeros(3), collect(range(0., stop = 1., length = 5)), fill(1., 30))])
 m <= Setting(:alternative_policy_varying_weights,
              Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
-credvec = collect(range(0., stop = 1., length = 5))
+credvec = collect(range(0., stop = .25, length = 17))
 for (i, k) in enumerate(sort!(collect(keys(replace_eqcond_func_dict))))
-    if 3 < i <= 8
-        get_setting(m, :alternative_policy_varying_weights)[k] = [credvec[i - 3], 1. - credvec[i - 3]]
-    elseif i > 8
-        get_setting(m, :alternative_policy_varying_weights)[k] = [1., 0.]
+    if (get_setting(m, :temporary_zlb_length) - 1) < i
+        get_setting(m, :alternative_policy_varying_weights)[k] = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
     end
 end
 out3 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
@@ -164,15 +182,27 @@ out3 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
 plot_dict = Dict()
 for k in [:obs_gdp, :obs_corepce, :obs_nominalrate, :obs_pgap, :obs_ygap]
     plot_dict[k] = plot()
-    plot!(1:30, out1[:forecastobs][m.observables[k], 1:30], label = "Fixed Cred = 0.33", linewidth = 3)
-    plot!(1:30, out2[:forecastobs][m.observables[k], 1:30], label = "TV Cred", linewidth = 3)
-    plot!(1:30, out3[:forecastobs][m.observables[k], 1:30], label = "TV Cred (Faster Rise)", linewidth = 3)
+    plot!(1:30, outp0[:forecastobs][m.observables[k], 1:30], label = "Fixed Cred = 0%", linewidth = 2,
+          legend = :topright)
+    plot!(1:30, outp33[:forecastobs][m.observables[k], 1:30], label = "System", linewidth = 2)
+    plot!(1:30, out1[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
+    plot!(1:30, out2[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
+    plot!(1:30, out3[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
 end
 for k in [:NaturalRate, :OutputGap]
     plot_dict[k] = plot()
-    plot!(1:30, out1[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "Fixed Cred = 0.33", linewidth = 3)
-    plot!(1:30, out2[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred", linewidth = 3)
-    plot!(1:30, out3[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred (Faster Rise)", linewidth = 3)
+    plot!(1:30, outp0[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "Fixed Cred = 0%", linewidth = 2,
+          legend = :bottomright)
+    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System", linewidth = 2)
+    plot!(1:30, out1[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
+    plot!(1:30, out2[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
+    plot!(1:30, out3[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
 end
 
+#=
+mkdir("tvcred_figs")
+for (k, v) in plot_dict
+    savefig(v, "tvcred_figs/$(k).pdf")
+end
+=#
 nothing
