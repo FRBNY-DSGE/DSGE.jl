@@ -135,6 +135,8 @@ output_vars = [:histpseudo, :histobs, :histstdshocks,
                :forecast4qpseudo, :forecast4qobs, :forecaststdshocks]
 
 if zlb_altpolicy
+    Hbar = 4 # number of zlb regimes
+    n_tempZLB_regimes = 3+Hbar-1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
     # Add parameter values for additional regimes
     for i in 3:(n_tempZLB_regimes+1)
         ModelConstructors.set_regime_val!(m[:σ_g], i, m10[:σ_g].value)
@@ -162,8 +164,6 @@ if zlb_altpolicy
     end
 
     # then, set up new set of regime dates to implement a temporary zlb and uncertain policy change
-    Hbar = 4 # number of zlb regimes
-    n_tempZLB_regimes = 3+Hbar-1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
     # Set up regime dates
     temp_regime_dates = deepcopy(get_setting(m, :regime_dates))
     temp_regime_dates[1] = date_presample_start(m)
