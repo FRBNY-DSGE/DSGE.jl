@@ -4,6 +4,8 @@
 + Fix error in calculating the diagonal of the Hessian with parallel workers
 + Update tests to handle seed changes in Julia 1.5
 + Convert missing values to NaNs when calculating means and bands
++ Fix accidental assumption that all fixed parameters occur at the end of the parameter vector in Metropolis-Hastings
++ Fix incorrect parameter blocking in Metropolis-Hastings
 
 # DSGE.jl 1.1.6
 ## Version Restrictions
