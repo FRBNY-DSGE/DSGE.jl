@@ -53,7 +53,7 @@ equilibrium conditions.
   filepath computation.
 
 * `subspec::String`: The model subspecification number, indicating that
-  some parameters from the original model spec (\"ss30\") are initialized
+  some parameters from the original model spec (\"ss10\") are initialized
   differently. Cached here for filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
@@ -266,7 +266,7 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(pseudo_observables);          m.pseudo_observables[k]          = i end
 end
 
-function Model1002(subspec::String = "ss30";
+function Model1002(subspec::String = "ss10";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 

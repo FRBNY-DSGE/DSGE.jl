@@ -13,7 +13,7 @@ using Nullables, DataFrames, OrderedCollections, Dates
 # Model Setup
 ##############
 # Instantiate the FRBNY DSGE model object
-m = Model1002()
+m = Model1002("ss10")
 
 # estimate as of 2015-Q3 using the default data vintage from 2015 Nov 27
 m <= Setting(:data_vintage, "181115")
