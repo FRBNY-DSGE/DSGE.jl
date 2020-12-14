@@ -797,7 +797,7 @@ end
 end
 
 @info "Two indeterminacy errors are expected in the following test."
-#@testset "Using gensys2 in historical regimes" begin
+@testset "Using gensys2 in historical regimes" begin
     function set_regime_vals_fnct!(m, n)
         if n > 4
             for p in m.parameters
@@ -864,6 +864,6 @@ end
     end
     m <= Setting(:gensys2_first_regime, 5)
     @test_throws DSGE.GensysError compute_system(m; tvis = true)
-#end
+end
 
 nothing
