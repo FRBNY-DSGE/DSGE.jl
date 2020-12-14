@@ -1135,7 +1135,7 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
         else
             # Computation time can be saved by realizing some matrices are not time-varying
             h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
-            Tᵏ⁻ʰₜ₊ₕ₊₁ = TTTs[permanent_t]^(k - h)
+            Tᵏ⁻ʰₜ₊ₕ₊₁ = (k == h) ? Diagonal(ones(length(CCCs[permanent_t]))) : TTTs[permanent_t]^(k - h)
 
             T_memo = Dict{Int, eltype(TTTs)}()
             if h > 0
@@ -1148,11 +1148,15 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
                 T_accum = Tᵏ⁻ʰₜ₊ₕ₊₁
             end
 
-            C_accum = deepcopy(CCCs[t + h])
-            for i in 1:(h - 1)
-                C_accum .+= T_memo[i + 1] * CCCs[t + i]
+            if h == 0 # Nothing to accumulate from the past
+                C_accum = zeros(size(T_accum, 1))
+            else
+                C_accum = deepcopy(CCCs[t + h])
+                for i in 1:(h - 1)
+                    C_accum .+= T_memo[i + 1] * CCCs[t + i]
+                end
+                C_accum .= Tᵏ⁻ʰₜ₊ₕ₊₁ * C_accum
             end
-            C_accum .= Tᵏ⁻ʰₜ₊ₕ₊₁ * C_accum
 
             if all(CCCs[permanent_t] .≈ 0.)
                 return T_accum, C_accum

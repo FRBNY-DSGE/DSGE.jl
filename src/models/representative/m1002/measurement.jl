@@ -163,7 +163,7 @@ function measurement(m::Model1002{T},
     ## 10 yrs infl exp
     TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t;
                                                  integ_series = integ_series)
-    TTT10        = TTT10./ 40. # divide by 40 to average across 10 years
+    TTT10        = TTT10 ./ 40. # divide by 40 to average across 10 years
     CCC10        = CCC10 ./ 40.
     ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1) + CCC10[endo[:π_t]]
