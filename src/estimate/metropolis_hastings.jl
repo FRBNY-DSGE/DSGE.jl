@@ -99,12 +99,10 @@ function metropolis_hastings(proposal_dist::Distribution,
     n_params       = length(parameters)
     if n_param_blocks == 1
         blocks_free = Vector{Int}[free_para_inds]
-    else
+        reblock     = false # to randomly block parameters again or not?
+    else # Actual parameter blocking will occur in the MH loop
         n_free_para = length(free_para_inds)
-        blocks_free = SMC.generate_free_blocks(n_free_para, n_param_blocks)
-        for block_f in blocks_free
-            sort!(block_f)
-        end
+        reblock     = true
     end
 
     # Report number of blocks that will be used
@@ -135,6 +133,14 @@ function metropolis_hastings(proposal_dist::Distribution,
         block_rejections = 0
 
         for j = 1:(n_sim * mhthin)
+
+            if reblock # Parameter blocking by randomly drawing blocks every MH draw
+                blocks_free = SMC.generate_free_blocks(n_free_para, n_param_blocks)
+                for block_f in blocks_free
+                    sort!(block_f)
+                end
+                @show blocks_free
+            end
 
             for (k, block_a) in enumerate(blocks_free)
 
