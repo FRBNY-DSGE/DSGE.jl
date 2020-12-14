@@ -41,8 +41,10 @@ flexait_custom = Dict{Symbol, Setting}(:add_initialize_pgap_ygap_pseudoobs => Se
                                        Setting(:proportional_antshocks, [:biidc, :φ, :ziid]),
                                        :n_anticipated_obs_gdp => Setting(:n_anticipated_obs_gdp, 1),
                                        :add_anticipated_obs_gdp => Setting(:add_anticipated_obs_gdp, true),
-                                       :flexible_ait_2020Q3_policy_change =>
-                                       Setting(:flexible_ait_2020Q3_policy_change, false))
+                                        :meas_err_anticipated_obs_gdp =>
+                                        Setting(:meas_err_anticipated_obs_gdp, 1.),
+                                       :flexible_ait_policy_change =>
+                                       Setting(:flexible_ait_policy_change, false))
 
 # Initialize model object
 m = Model1002("ss59"; custom_settings = flexait_custom)
@@ -116,34 +118,53 @@ set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
                                          [i:get_setting(m, :n_regimes) for i in
                                           gensys2_first_regime:get_setting(m, :n_regimes)]))
-# CHANGING THE LOCATION OF THE LINE SETTING TEMPORARY ZLB LENGTH CHANGES THE FORECAST SO THERE'S A BUG SOMEWHERE
-# IF TEMPORARY ZLB LENGTH ISN'T SET FOR THE FIXED CRED FORECAST, YOU GET DIFFERENT RESULTS
-# m <= Setting(:temporary_zlb_length, n_zlb_reg)
 
-output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo]
+output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo, :forecaststates]
 modal_params = map(x -> x.value, m.parameters)
 m <= Setting(:alternative_policy_weights, [0., 1.])
 @assert !haskey(m.settings, :alternative_policy_varying_weights)
+@assert !haskey(m.settings, :temporary_zlb_length)
 outp0 = out = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                             regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+                                     regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+#=
+forecast_one(m, :mode, :full, [:histobs, :forecastobs]; df = df, params = modal_params)
+compute_meansbands(m, :mode, :full, [:histobs, :forecastobs]; df = df)
+m <= Setting(:date_forecast_end, Date(year(date_forecast_start(m)) + 3, 12, 31))
+hist_start_date = Date(year(date_forecast_start(m)) - 1, 3, 31)
+DSGE.make_forecast_plots(m, :mode, :full, :forecastobs, hist_start_date = hist_start_date)
+=#
 m <= Setting(:alternative_policy_weights, [θ[:cred], 1. - θ[:cred]])
-outp33 = out = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                             regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-for i in (nreg0 - 1):(nreg0 + 15)
+outp33 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+sysp33 = compute_system(m; apply_altpolicy = true, tvis = true)
+for i in nreg0:(nreg0 + 15)
     reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
     replace_eqcond_func_dict[i] = DSGE.flexible_ait_replace_eq_entries
 end
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
-
+setup_regime_switching_inds!(m; cond_type = :full)
+m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
+                                         [i:get_setting(m, :n_regimes) for i in
+                                          gensys2_first_regime:get_setting(m, :n_regimes)]))
+set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 m <= Setting(:temporary_zlb_length, n_zlb_reg) # CHANGING THE LOCATION OF TEMPORARY ZLB LENGTH CHANGES THE FORECAST
 m <= Setting(:alternative_policy_varying_weights,
              Dict(k => [.33, 1. - .33] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
+sysp33_tv = compute_system(m; apply_altpolicy = true, tvis = true)
 outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+for reg in 1:n_regimes(sysp33)
+    @test sysp33[reg, :TTT] ≈ sysp33_tv[reg, :TTT]
+    @test sysp33[reg, :RRR] ≈ sysp33_tv[reg, :RRR]
+    @test sysp33[reg, :CCC] ≈ sysp33_tv[reg, :CCC]
+    @test sysp33[reg, :QQ] ≈ sysp33_tv[reg, :QQ]
+    @test sysp33[reg, :ZZ] ≈ sysp33_tv[reg, :ZZ]
+    @test sysp33[reg, :DD] ≈ sysp33_tv[reg, :DD]
+end
 for k in keys(outp33)
-#    @test outp33[k] ≈ outp33_tv[k]
+    @test outp33[k] ≈ outp33_tv[k]
 end
 
 m <= Setting(:alternative_policy_varying_weights,
@@ -181,28 +202,29 @@ out3 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
 
 plot_dict = Dict()
 for k in [:obs_gdp, :obs_corepce, :obs_nominalrate, :obs_pgap, :obs_ygap]
+    adj = k in [:obs_gdp, :obs_corepce, :obs_nominalrate] ? 4. : 1.
     plot_dict[k] = plot()
-    plot!(1:30, outp0[:forecastobs][m.observables[k], 1:30], label = "Fixed Cred = 0%", linewidth = 2,
+    plot!(1:30, adj * outp0[:forecastobs][m.observables[k], 1:30], label = "Fixed Cred = 0%", linewidth = 2,
           legend = :topright)
-    plot!(1:30, outp33[:forecastobs][m.observables[k], 1:30], label = "System", linewidth = 2)
-    plot!(1:30, out1[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, out2[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
-    plot!(1:30, out3[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
+    plot!(1:30, adj * out3[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
+    plot!(1:30, adj * out2[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
+    plot!(1:30, adj * out1[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
+    plot!(1:30, adj * outp33[:forecastobs][m.observables[k], 1:30], label = "System", linewidth = 2)
 end
 for k in [:NaturalRate, :OutputGap]
     plot_dict[k] = plot()
     plot!(1:30, outp0[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "Fixed Cred = 0%", linewidth = 2,
           legend = :bottomright)
-    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System", linewidth = 2)
-    plot!(1:30, out1[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, out2[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
     plot!(1:30, out3[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
+    plot!(1:30, out2[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
+    plot!(1:30, out1[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
+    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System", linewidth = 2)
 end
 
-#=
-mkdir("tvcred_figs")
+
+#=mkdir("tvcred_figs")
 for (k, v) in plot_dict
     savefig(v, "tvcred_figs/$(k).pdf")
-end
-=#
+end=#
+
 nothing
