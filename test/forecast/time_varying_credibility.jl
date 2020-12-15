@@ -71,7 +71,7 @@ df[ind_init, :obs_pgap] = -θ[:pgap] # initialize pgap and ygap in the date
 df[ind_init, :obs_ygap] = -θ[:ygap] # pgap_ygap_init_date, default to 2020:Q2
 
 m <= Setting(:flexible_ait_φ_π, θ[:φ_π])
-m <= Setting(:flexible_ait_φ_π, θ[:φ_y])
+m <= Setting(:flexible_ait_φ_y, θ[:φ_y])
 m <= Setting(:ait_Thalf, θ[:Thalf])
 m <= Setting(:gdp_Thalf, θ[:Thalf])
 m <= Setting(:pgap_value, θ[:pgap])
