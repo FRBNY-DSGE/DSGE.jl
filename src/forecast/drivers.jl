@@ -579,6 +579,9 @@ function forecast_one(m::AbstractDSGEModel{Float64},
         total_forecast_time = 0.0
         block_verbose = verbose == :none ? :none : :low
 
+        @show block_inds
+        arred = zeros(block_inds[end][end], 248)
+
         for block = start_block:nblocks
             println(verbose, :low, )
             info_print(verbose, :low, "Forecasting block $block of $nblocks...")
@@ -614,6 +617,14 @@ function forecast_one(m::AbstractDSGEModel{Float64},
 
             # Assemble outputs from this block and write to file
             forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+
+            if get_setting(m, :forecast_smoother) == :carter_kohn
+                for i in 1:length(forecast_outputs)
+                    arred[block_inds[block][i],1:length(forecast_outputs[i][:conded])] = forecast_outputs[i][:conded]
+                    delete!(forecast_outputs[i], :conded)
+                end
+            end
+
             forecast_output = assemble_block_outputs(forecast_outputs; show_failed_percent = show_failed_percent)
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable(block),
@@ -635,6 +646,11 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             println(verbose, :low, "Expected time remaining: $expected_time_remaining_min minutes")
         end # of loop through blocks
 
+        if get_setting(m, :forecast_smoother) == :carter_kohn
+            jldopen("condedJ.jld2", true, true, true, IOStream) do file
+                write(file, "conds", arred)
+            end
+        end
     end # of input_type
     combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
 
@@ -761,6 +777,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
                        s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt],
+                       catch_smoother_lapack = catch_smoother_lapack)
+        elseif get_setting(m, :forecast_smoother) == :carter_kohn
+            histstates, histshocks, histpseudo, initial_states, conded =
+                smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
                        catch_smoother_lapack = catch_smoother_lapack)
         else
             histstates, histshocks, histpseudo, initial_states =
@@ -1217,6 +1237,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         if !(key in output_vars)
             delete!(forecast_output, key)
         end
+    end
+
+    if input_type == :full && get_setting(m, :forecast_smoother) == :carter_kohn
+        forecast_output[:conded] = conded
     end
     return forecast_output
 end
