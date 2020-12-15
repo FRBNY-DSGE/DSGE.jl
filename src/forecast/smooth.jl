@@ -182,7 +182,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         @warn "$smoother called with draw_states = true"
     end
 
-    states, shocks = try
+    testing = try #states, shocks, conded = try
         if smoother == hamilton_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0)
@@ -204,10 +204,16 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         end
     catch e
         if catch_smoother_lapack && isa(e, LAPACKException)
-            fill(NaN, length(s_0), regime_inds[end][end]), fill(NaN, size(QQs[1], 1), regime_inds[end][end])
+            fill(NaN, length(s_0), regime_inds[end][end]), fill(NaN, size(QQs[1], 1), regime_inds[end][end]), fill(NaN, 246)
         else
             rethrow(e)
         end
+    end
+
+    states = testing[1]
+    shocks = testing[2]
+    if smoother == carter_kohn_smoother
+        conded = testing[3]
     end
 
     lapack_caught = catch_smoother_lapack ? any(isnan.(@view states[:, end])) : false
@@ -240,5 +246,9 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         pseudo = pseudo[:, t1:end]
     end
 
-    return states, shocks, pseudo, initial_states
+    if smoother == carter_kohn_smoother
+        return states, shocks, pseudo, initial_states, conded
+    else
+        return states, shocks, pseudo, initial_states
+    end
 end

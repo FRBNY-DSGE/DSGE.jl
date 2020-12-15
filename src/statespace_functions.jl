@@ -67,9 +67,18 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                                      gensys_regimes = gensys_regimes,
                                      gensys2_regimes = gensys2_regimes,
                                      verbose = verbose)
+            # @show collect(1:n_hist_regimes)
+            # @show fcast_regimes
+            # @show apply_altpolicy
+            # @show regime_switching
 
             transition_equations = Vector{Transition{T}}(undef, n_regimes)
+            # @show length(TTTs), length(RRRs), length(CCCs), length(transition_equations)
+            # @show n_regimes
+            # @show CCCs[4]
             for i = 1:n_regimes
+                # @show i
+                # save("mats.jld2", Dict("TTT" => TTTs[i], "CCC" => CCCs[i], "RRR" => RRRs[i]))
                 transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])
             end
 
