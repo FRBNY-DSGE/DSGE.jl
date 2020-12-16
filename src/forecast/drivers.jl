@@ -125,7 +125,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         println("time-varying credibility: " * string(haskey(get_settings(m), :alternative_policy_varying_weights)))
         if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
             println("Desired policy rule: " * string(get_setting(m, :alternative_policy).key))
-            println("Other policy rules: " * join([string(x.key) for x in get_setting(m, :alternative_policies)], ","))
+            println("Other policy rules: " * join([string(x.key) for x in get_setting(m, :alternative_policies)], ", "))
             if haskey(get_settings(m), :alternative_policy_varying_weights)
                 weights_dict = get_setting(m, :alternative_policy_varying_weights)
                 println("Credibility weights: ", OrderedDict(reg => weights_dict[reg] for reg in first_replace_reg:last_replace_reg))
