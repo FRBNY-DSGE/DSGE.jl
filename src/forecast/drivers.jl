@@ -82,14 +82,75 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
     end
 
     # If regime switching, check settings are consistent
-    if haskey(m.settings, :regime_switching)
-        if get_setting(m, :regime_switching)
-            @assert get_setting(m, :n_regimes) == length(get_setting(m, :regime_dates)) "The number" *
-                " in Setting :n_regimes ($(string(get_setting(m, :n_regimes))))" *
-                " does not match the length of Setting :regime_dates ($(string(length(get_setting(m, :regime_dates)))))."
-            @assert get_setting(m, :regime_dates)[1] == date_presample_start(m) "The first regime" *
-                " date ($(string(get_setting(m, :regime_dates)[1]))) must match the presample start date " *
-                "($(string(date_presample_start(m))))."
+    regswitch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
+    if regswitch
+        @assert get_setting(m, :n_regimes) == length(get_setting(m, :regime_dates)) "The number" *
+            " in Setting :n_regimes ($(string(get_setting(m, :n_regimes))))" *
+            " does not match the length of Setting :regime_dates ($(string(length(get_setting(m, :regime_dates)))))."
+        @assert get_setting(m, :regime_dates)[1] == date_presample_start(m) "The first regime" *
+            " date ($(string(get_setting(m, :regime_dates)[1]))) must match the presample start date " *
+            "($(string(date_presample_start(m))))."
+    end
+
+    # Print out settings of temporary policies
+    if verbose == :high && regswitch
+        println("n_regimes = $(get_setting(m, :n_regimes))")
+        println("reg_forecast_start = $(get_setting(m, :reg_forecast_start))")
+        println("reg_post_conditional_end = $(get_setting(m, :reg_post_conditional_end))")
+        println("n_rule_periods = $(get_setting(m, :n_rule_periods))")
+        println("time-varying information set: ", haskey(get_settings(m), :tvis_information_set) ?
+                get_setting(m, :tvis_information_set) : false)
+
+        println("gensys2: " * string(haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false))
+        replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+        println("replace_eqcond: " * string(replace_eqcond))
+        if replace_eqcond
+            replace_regs = collect(keys(get_setting(m, :replace_eqcond_func_dict)))
+            first_replace_reg = minimum(replace_regs)
+            last_replace_reg = maximum(replace_regs)
+        end
+        hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
+            (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false) ||
+            (findfirst([haskey(get_setting(m, :replace_eqcond_func_dict), i) for i in 1:get_setting(m, :n_regimes)]) -
+             get_setting(m, :reg_post_conditional_end) >= 0)
+        n_no_alt_reg = hist_gensys2_regimes_gap ?
+            (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
+        g2fr = haskey(get_settings(m), :gensys2_first_regime) ? get_setting(m, :gensys2_first_regime) :
+            get_setting(m, :reg_forecast_start)
+        println("gensys2_first_regime = $(g2fr + n_no_alt_reg)")
+
+        println("uncertain_altpolicy: " *
+                string(haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false))
+        println("uncertain_zlb: " * string(haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false))
+        println("time-varying credibility: " * string(haskey(get_settings(m), :alternative_policy_varying_weights)))
+        if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
+            println("Desired policy rule: " * string(get_setting(m, :alternative_policy).key))
+            println("Other policy rules: " * join([string(x.key) for x in get_setting(m, :alternative_policies)], ","))
+            if haskey(get_settings(m), :alternative_policy_varying_weights)
+                weights_dict = get_setting(m, :alternative_policy_varying_weights)
+                println("Credibility weights: ", OrderedDict(reg => weights_dict[reg] for reg in first_replace_reg:last_replace_reg))
+            else
+                println("Credibility weights: ", get_setting(m, :alternative_policy_weights))
+            end
+        end
+        if haskey(get_settings(m), :temporary_zlb_length)
+            println("temporary zlb length = ", get_setting(m, :temporary_zlb_length))
+        end
+        altkey = alternative_policy(m).key
+        if altkey in [:smooth_ait_gdp_alt, :smooth_ait_gdp, :flexible_ait]
+            println("skip_altpolicy_state_init: ", haskey(get_settings(m), :skip_altpolicy_state_init) ?
+                get_setting(m, :skip_altpolicy_state_init) : false)
+            println("add_initialize_pgap_ygap_pseudoobs: ", haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+                get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+            println("φ_π = ", get_setting(m, Symbol(altkey, "_φ_π")))
+            println("φ_y = ", get_setting(m, Symbol(altkey, "_φ_y")))
+            println("ait_Thalf = ", get_setting(m, :ait_Thalf))
+            println("gdp_Thalf = ", get_setting(m, :gdp_Thalf))
+            println("ρ_smooth = ", get_setting(m, Symbol(altkey, "_ρ_smooth")))
+            println("pgap type = ", get_setting(m, :pgap_type))
+            println("ygap type = ", get_setting(m, :ygap_type))
+            println("initial pgap = ", get_setting(m, :pgap_value))
+            println("initial ygap = ", get_setting(m, :ygap_value))
         end
     end
 
