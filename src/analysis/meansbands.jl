@@ -778,7 +778,7 @@ end
 # all zeros since the trend in states without the trend in states is just detrending the trend!
 # This function is tested in test/forecast/shock_decompositions.jl
 function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::Symbol, class::Symbol,
-                                            start_date::Date, end_date::Date; annualize::Bool = true,
+                                            start_date::Date, end_fcast_date::Date; annualize::Bool = true,
                                             apply_altpolicy::Bool = false) where {S <: Real}
 
     @assert class in [:obs, :state, :pseudo] "The allowed class variables are :state, :obs, and :pseudo"
@@ -798,22 +798,28 @@ function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::
     end
 
     # Otherwise, calculate potentially time-varying trends in DD or DD_pseudo
-    hist_regime_inds = regime_indices(m, start_date, end_date) # do not need to account for ZLB split b/c shocks don't matter for trends
+    hist_regime_inds = regime_indices(m, start_date, end_fcast_date) # do not need to account for ZLB split b/c shocks don't matter for trends
+    @show hist_regime_inds
     if hist_regime_inds[1][1] < 1
         hist_regime_inds[1] = 1:hist_regime_inds[1][end]
     end
+    @show hist_regime_inds
     if hist_regime_inds[end][end] >= end_index  # if the end index is in the middle of a regime or is past the regime's end
         hist_regime_inds[end] = hist_regime_inds[end][1]:end_index
         fcast_regime_inds = nothing
     else
         fcast_regime_inds = get_fcast_regime_inds(m, forecast_horizons(m; cond_type = cond_type), cond_type,
                                                   start_index = hist_regime_inds[end][end])
+        @show fcast_regime_inds
         fcast_cutoff = findfirst([regind[end] >= end_index for regind in fcast_regime_inds])
         if isnothing(fcast_cutoff)
             error("The index_shockdec_end(m) occurs past the index of the final forecast date.")
         end
+        @show fcast_cutoff
         fcast_regime_inds = fcast_regime_inds[1:fcast_cutoff]
+        @show fcast_regime_inds
         fcast_regime_inds[end] = fcast_regime_inds[end][1]:end_index
+        @show fcast_regime_inds
     end
     if length(hist_regime_inds[end]) == 0
         pop!(hist_regime_inds)
@@ -823,7 +829,8 @@ function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::
                             tvis = haskey(get_settings(m), :tvis_information_set))
 
     trends = Matrix{S}(undef, class == :obs ? n_observables(m) : n_pseudo_observables(m), end_index)
-
+    @show hist_regime_inds
+    @show fcast_regime_inds
     # Calculate DD or DD_pseudo trend, based on the class
     if class == :obs
         for (reg, inds) in enumerate(hist_regime_inds)
