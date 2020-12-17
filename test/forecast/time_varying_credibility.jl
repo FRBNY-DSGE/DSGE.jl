@@ -250,6 +250,18 @@ if !regenerate_reference_forecasts
                              VERSION >= v"1.5" ? "tvforecastobs_1p5" : "tvforecastobs")
         @test out1[:forecastobs] ≈ tvtestfcast
     end
+
+    @testset "Expectations in Measurement Equation with TV Credibility" begin
+        # Anticipated GDP growth
+        @test out1[:forecastobs][1, 3:end] ≈ out1[:forecastobs][20, 2:end - 1]
+        @test !(out1[:forecastobs][1, 2] ≈ out1[:forecastobs][20, 1]) # Taylor rule still holds in 2020:Q4, so the expectation won't match realization
+
+        # Anticipated nominal rates
+        for i in 1:6
+            @test out1[:forecastobs][6, (2 + i):end] ≈ out1[:forecastobs][13 + i, 2:end - i]
+            @test !(out1[:forecastobs][6, 1 + i] ≈ out1[:forecastobs][13 + i, 1]) # Taylor rule still holds in 2020:Q4, as noted above
+        end
+    end
 end
 
 if regenerate_reference_forecasts
@@ -271,7 +283,7 @@ if regenerate_reference_forecasts
         end
     end
 end
-# NEED TO HAVE DIFFERENT VERSIONS FOR 1.5 AND BELOW 1.5 (different Lin Alg it seems)
+
 
 
 #=
