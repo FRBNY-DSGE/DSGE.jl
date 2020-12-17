@@ -680,7 +680,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
                                       mb_hist::MeansBands = MeansBands(),
                                       detexify_shocks::Bool = true,
                                       groups::Vector{ShockGroup} = ShockGroup[],
-                                      trend_no_states::DataFrame = DataFrame())
+                                      trend_nostates::DataFrame = DataFrame())
 
     @assert get_product(mb_shockdec) == :shockdec "The first argument must be a MeansBands object for a shockdec"
     @assert get_product(mb_trend)    == :trend    "The second argument must be a MeansBands object for a trend"
@@ -730,18 +730,18 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
         df_shockdec = has_ij ? innerjoin(df_shockdec, df_mean, on = :date) :
             join(df_shockdec, df_mean, on = :date, kind = :inner)
-        if isempty(trend_no_states)
+        if isempty(trend_nostates)
             df[!, :detrendedMean] = df_shockdec[!, var] - df_shockdec[!, :trend]
         else
-            var_trend_no_states   = trend_no_states[startdate .<= trend_no_states[!, :date] .<= enddate, var]
-            if size(var_trend_no_states, 1) != size(df_shockdec, 1)
-                error("The number of rows in kwarg `trend_no_states` does not match the number in df_shockdec. Check that " *
+            var_trend_nostates   = trend_nostates[startdate .<= trend_nostates[!, :date] .<= enddate, var]
+            if size(var_trend_nostates, 1) != size(df_shockdec, 1)
+                error("The number of rows in kwarg `trend_nostates` does not match the number in df_shockdec. Check that " *
                       "the Setting :date_forecast_end matches the date used for the calculation of the shockdecs " *
-                      "when constructing the `trend_no_states` DataFrame.")
+                      "when constructing the `trend_nostates` DataFrame.")
             end
 
-            var_trend_states      = df_shockdec[!, :trend] - var_trend_no_states
-            df[!, :detrendedMean] = df_shockdec[!,var] - var_trend_no_states
+            var_trend_states      = df_shockdec[!, :trend] - var_trend_nostates
+            df[!, :detrendedMean] = df_shockdec[!,var] - var_trend_nostates
             df[!, :StatesTrend]   = var_trend_states
         end
     end
