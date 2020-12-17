@@ -94,6 +94,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
 
     # Print out settings of temporary policies
     if verbose == :high && regswitch
+        @info "Regime-Switching and Temporary Policy Settings"
         println("n_regimes = $(get_setting(m, :n_regimes))")
         println("reg_forecast_start = $(get_setting(m, :reg_forecast_start))")
         println("reg_post_conditional_end = $(get_setting(m, :reg_post_conditional_end))")
@@ -152,6 +153,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             println("initial pgap = ", get_setting(m, :pgap_value))
             println("initial ygap = ", get_setting(m, :ygap_value))
         end
+        println("") # add some space
     end
 
     return output_vars, df
