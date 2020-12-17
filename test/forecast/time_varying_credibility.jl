@@ -246,18 +246,34 @@ out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
 
 if !regenerate_reference_forecasts
     @testset "Compare TV Credibility to Reference Forecast" begin
-        tvtestfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "tvforecastobs")
+        tvtestfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"),
+                             VERSION >= v"1.5" ? "tvforecastobs_1p5" : "tvforecastobs")
         @test out1[:forecastobs] ≈ tvtestfcast
     end
 end
 
 if regenerate_reference_forecasts
+    tvtestfcast_othervers = if VERSION >= v"1.5"
+        h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "tvforecastobs")
+    else
+        h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "tvforecastobs_1p5")
+    end
+
     h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "w") do file
         write(file, "para", θ10)
         write(file, "forecastobs", outp33[:forecastobs])
-        write(file, "tvforecastobs", out1[:forecastobs])
+        if VERSION >= v"1.5"
+            write(file, "tvforecastobs", tvtestfcast_othervers)
+            write(file, "tvforecastobs_1p5", out1[:forecastobs])
+        else
+            write(file, "tvforecastobs", out1[:forecastobs])
+            write(file, "tvforecastobs_1p5", tvtestfcast_othervers)
+        end
     end
 end
+# NEED TO HAVE DIFFERENT VERSIONS FOR 1.5 AND BELOW 1.5 (different Lin Alg it seems)
+
+
 #=
 m <= Setting(:alternative_policy_varying_weights,
              Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
