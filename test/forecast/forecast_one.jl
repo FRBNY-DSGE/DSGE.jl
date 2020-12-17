@@ -250,6 +250,12 @@ end
         m_rs3.test_settings[:forecast_ndraws] = Setting(:forecast_ndraws, 4)
         m_rs3.test_settings[:time_varying_trends] = Setting(:time_varying_trends, false)
         m_rs3.test_settings[:regime_dates] = Setting(:regime_dates, v)
+        if haskey(m_rs3.settings, :model2para_regimes)
+            delete!(m_rs3.settings, :model2para_regimes)
+        end
+        if haskey(m_rs3.test_settings, :model2para_regimes)
+            delete!(m_rs3.test_settings, :model2para_regimes)
+        end
         m_rs3 = DSGE.setup_regime_switching_inds!(m_rs3)
 
         # Need to set shocks for second and third regimes
