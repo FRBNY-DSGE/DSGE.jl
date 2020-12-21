@@ -263,21 +263,21 @@ end
 ```
 make_forecast_plots(m, input_type, cond_type, output_var;
     forecast_string = "", plotroot = "", hist_start_date = 0001-01-01,
-    trends_nostates = DateFrame())
+    trend_nostates = DateFrame())
 ```
 
 Generate all `output_var` plots for the forecast of `m` specified by the
 `input_type`, `cond_type`, and optional `forecast_string`. If `plotroot` is not
 specified, plots are saved to `figurespath(m, \"forecast\")`.
 
-trends_nostates is a DataFrame for plotting the trend as a shock in the
-shock decomposition. Get the DataFrame via prepare_means_table_trends_nostates.
+trend_nostates is a DataFrame for plotting the trend as a shock in the
+shock decomposition. Get the DataFrame via prepare_means_table_trend_nostates.
 """
 function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
                              plotroot::String = "",
                              hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"),
-                             trends_nostates::DataFrame = DataFrame())
+                             trend_nostates::DataFrame = DataFrame())
 
     # Output directory
     if isempty(plotroot)
@@ -362,7 +362,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                                  forecast_label = "",
                                  tick_size = tick_size,
                                  legend = :bottomleft,
-                                 trends_nostates = trends_nostates)
+                                 trend_nostates = trend_nostates)
     else
         error("Unsupported product: " * string(product))
     end
