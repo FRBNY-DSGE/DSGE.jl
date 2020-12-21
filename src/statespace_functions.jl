@@ -67,18 +67,9 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                                      gensys_regimes = gensys_regimes,
                                      gensys2_regimes = gensys2_regimes,
                                      verbose = verbose)
-            # @show collect(1:n_hist_regimes)
-            # @show fcast_regimes
-            # @show apply_altpolicy
-            # @show regime_switching
 
             transition_equations = Vector{Transition{T}}(undef, n_regimes)
-            # @show length(TTTs), length(RRRs), length(CCCs), length(transition_equations)
-            # @show n_regimes
-            # @show CCCs[4]
             for i = 1:n_regimes
-                # @show i
-                # save("mats.jld2", Dict("TTT" => TTTs[i], "CCC" => CCCs[i], "RRR" => RRRs[i]))
                 transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])
             end
 
@@ -510,121 +501,121 @@ must specify the EE matrix after applying compute_system.
                             zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
                             check_system::Bool = true) where {S<:Real}
 
-                            # Set up indices
-                            oid  = m.observables # observables indices dictionary
-                            pid  = m.pseudo_observables # pseudo observables indices dictionary
-                            sid  = m.endogenous_states
-                            said = m.endogenous_states_augmented # states augmented
+        # Set up indices
+        oid  = m.observables # observables indices dictionary
+        pid  = m.pseudo_observables # pseudo observables indices dictionary
+        sid  = m.endogenous_states
+        said = m.endogenous_states_augmented # states augmented
 
-                            # Find shocks to keep
-                            shock_inds = map(k -> m.exogenous_shocks[k], shocks)
-                            Qout = system[:QQ][shock_inds, shock_inds]
+        # Find shocks to keep
+        shock_inds = map(k -> m.exogenous_shocks[k], shocks)
+        Qout = system[:QQ][shock_inds, shock_inds]
 
-                            # Find states to keep
-                            if !issubset(states, vcat(collect(keys(sid)), collect(keys(said))))
-                                false_states = setdiff(states, vcat(collect(keys(sid)), collect(keys(said))))
-                                error("The following states in keyword `states` do not exist in `system`: " *
-                                      join(string.(false_states), ", "))
-                            elseif !isempty(setdiff(vcat(collect(keys(sid)), collect(keys(said))), states))
-                                which_states = Vector{Int}(undef, length(states))
-                                for i = 1:length(states)
-                                    which_states[i] = haskey(sid, states[i]) ? sid[states[i]] : said[states[i]]
-                                end
-                                Tout = system[:TTT][which_states, which_states]
-                                Rout = system[:RRR][which_states, shock_inds]
-                                Cout = system[:CCC][which_states]
-                            else
-                                which_states = 1:n_states_augmented(m)
-                                Tout = copy(system[:TTT])
-                                Rout = system[:RRR][:, shock_inds]
-                                Cout = copy(system[:CCC])
-                            end
+        # Find states to keep
+        if !issubset(states, vcat(collect(keys(sid)), collect(keys(said))))
+            false_states = setdiff(states, vcat(collect(keys(sid)), collect(keys(said))))
+            error("The following states in keyword `states` do not exist in `system`: " *
+                  join(string.(false_states), ", "))
+        elseif !isempty(setdiff(vcat(collect(keys(sid)), collect(keys(said))), states))
+            which_states = Vector{Int}(undef, length(states))
+            for i = 1:length(states)
+                which_states[i] = haskey(sid, states[i]) ? sid[states[i]] : said[states[i]]
+            end
+            Tout = system[:TTT][which_states, which_states]
+            Rout = system[:RRR][which_states, shock_inds]
+            Cout = system[:CCC][which_states]
+        else
+            which_states = 1:n_states_augmented(m)
+            Tout = copy(system[:TTT])
+            Rout = system[:RRR][:, shock_inds]
+            Cout = copy(system[:CCC])
+        end
 
-                            # Compute new ZZ and DD matrices if different observables than current system
-                            if !isempty(symdiff(observables, collect(keys(oid))))
-                                Zout = zeros(S, length(observables), size(Tout, 1))
-                                Dout = zeros(S, length(observables))
-                                for (i, obs) in enumerate(observables)
-                                    Zout[i, :], Dout[i] = if haskey(oid, obs)
-                                        system[:ZZ][oid[obs], which_states], zero_DD ? zero(S) : system[:DD][oid[obs]]
-                                    elseif haskey(pid, obs)
-                                        system[:ZZ_pseudo][pid[obs], which_states], zero_DD ? zero(S) : system[:DD_pseudo][pid[obs]]
-                                    else
-                                        error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
-                                    end
-                                end
-                            else
-                                Zout = copy(system[:ZZ])[:, which_states]
-                                Dout = zero_DD ? zeros(S, size(Zout, 1)) : copy(system[:DD])
-                            end
+        # Compute new ZZ and DD matrices if different observables than current system
+        if !isempty(symdiff(observables, collect(keys(oid))))
+            Zout = zeros(S, length(observables), size(Tout, 1))
+            Dout = zeros(S, length(observables))
+            for (i, obs) in enumerate(observables)
+                Zout[i, :], Dout[i] = if haskey(oid, obs)
+                    system[:ZZ][oid[obs], which_states], zero_DD ? zero(S) : system[:DD][oid[obs]]
+                elseif haskey(pid, obs)
+                    system[:ZZ_pseudo][pid[obs], which_states], zero_DD ? zero(S) : system[:DD_pseudo][pid[obs]]
+                else
+                    error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
+                end
+            end
+        else
+            Zout = copy(system[:ZZ])[:, which_states]
+            Dout = zero_DD ? zeros(S, size(Zout, 1)) : copy(system[:DD])
+        end
 
-                            Eout = zeros(S, length(observables), length(observables)) # measurement errors are set to zero
+        Eout = zeros(S, length(observables), length(observables)) # measurement errors are set to zero
 
-                            # Compute new ZZ_pseudo, DD_pseudo if different pseudo_observables than current system
-                            if !isempty(symdiff(pseudo_observables, collect(keys(pid))))
-                                Zpseudoout = zeros(S, length(pseudo_observables), size(Tout, 1))
-                                Dpseudoout = zeros(S, length(pseudo_observables))
-                                for (i, pseudoobs) in enumerate(pseudo_observables)
-                                    Zpseudoout[i, :], Dpseudoout[i] = if haskey(oid, pseudoobs)
-                                        system[:ZZ][oid[pseudoobs], which_states], zero_DD_pseudo ?
-                                        zero(S) : system[:DD][oid[pseudoobs]]
-                                    elseif haskey(pid, pseudoobs)
-                                        system[:ZZ_pseudo][pid[pseudoobs], which_states], zero_DD_pseudo ?
-                                        zero(S) : system[:DD_pseudo][pid[pseudoobs]]
-                                    else
-                                        error("Observable/PseudoObservable $pseudoobs cannot be found in the DSGE model $m")
-                                    end
-                                end
-                            else
-                                Zpseudoout = copy(system[:ZZ_pseudo])[:, which_states]
-                                Dpseudoout = zero_DD_pseudo ? zeros(S, size(Zpseudoout, 1)) : copy(system[:DD_pseudo])
-                            end
+        # Compute new ZZ_pseudo, DD_pseudo if different pseudo_observables than current system
+        if !isempty(symdiff(pseudo_observables, collect(keys(pid))))
+            Zpseudoout = zeros(S, length(pseudo_observables), size(Tout, 1))
+            Dpseudoout = zeros(S, length(pseudo_observables))
+            for (i, pseudoobs) in enumerate(pseudo_observables)
+                Zpseudoout[i, :], Dpseudoout[i] = if haskey(oid, pseudoobs)
+                    system[:ZZ][oid[pseudoobs], which_states], zero_DD_pseudo ?
+                    zero(S) : system[:DD][oid[pseudoobs]]
+                elseif haskey(pid, pseudoobs)
+                    system[:ZZ_pseudo][pid[pseudoobs], which_states], zero_DD_pseudo ?
+                    zero(S) : system[:DD_pseudo][pid[pseudoobs]]
+                else
+                    error("Observable/PseudoObservable $pseudoobs cannot be found in the DSGE model $m")
+                end
+            end
+        else
+            Zpseudoout = copy(system[:ZZ_pseudo])[:, which_states]
+            Dpseudoout = zero_DD_pseudo ? zeros(S, size(Zpseudoout, 1)) : copy(system[:DD_pseudo])
+        end
 
-                            if check_system
-                                @assert size(Zout, 2) == size(Tout, 1) "Dimension 2 of new ZZ ($(size(Zout,2))) does not match dimension of states ($(size(Tout,1)))."
-                                @assert size(Qout, 1) == size(Rout, 2) "Dimension 2 of new RRR ($(size(Zout,2))) does not match dimension of shocks ($(size(Qout,1)))."
-                            end
+        if check_system
+            @assert size(Zout, 2) == size(Tout, 1) "Dimension 2 of new ZZ ($(size(Zout,2))) does not match dimension of states ($(size(Tout,1)))."
+            @assert size(Qout, 1) == size(Rout, 2) "Dimension 2 of new RRR ($(size(Zout,2))) does not match dimension of shocks ($(size(Qout,1)))."
+        end
 
-                            # Construct new system
-                            return System(Transition(Tout, Rout, Cout),
-                                          Measurement(Zout, Dout, Qout, Eout),
-                                          PseudoMeasurement(Zpseudoout, Dpseudoout))
-                        end
+        # Construct new system
+        return System(Transition(Tout, Rout, Cout),
+                      Measurement(Zout, Dout, Qout, Eout),
+                      PseudoMeasurement(Zpseudoout, Dpseudoout))
+    end
 
-                        function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
-                                                observables::Vector{Symbol} = collect(keys(get_observables(get_dsge(m)))),
-                                                cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                                                cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                                                pseudo_observables::Vector{Symbol} =
-                                                collect(keys(get_dsge(m).pseudo_observables)),
-                                                states::Vector{Symbol} =
-                                                vcat(collect(keys(get_dsge(m).endogenous_states)),
-                                                     collect(keys(get_dsge(m).endogenous_states_augmented))),
-                                                shocks::Vector{Symbol} = collect(keys(get_dsge(m).exogenous_shocks)),
-                                                zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
-                                                get_DD_coint_add::Bool = false,
-                                                check_system::Bool = true) where {S<:Real}
-                                                # Cointegrating relationships should exist as observables/pseudo_observables already
-                                                # in the underlying DSGE. We assume cointegrating relationships come after normal observables.
-                                                # Default behavior is to recreate the underlying DSGE's state space representation, however.
-                                                sys = compute_system(get_dsge(m), system; observables = vcat(observables, cointegrating),
-                                                                     pseudo_observables = pseudo_observables,
-                                                                     states = states, shocks = shocks, zero_DD = zero_DD,
-                                                                     zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
-                                                if get_DD_coint_add
-                                                    mtype = typeof(m)
-                                                    DD_coint_add = if hasmethod(compute_DD_coint_add, (mtype, Vector{Symbol}))
-                                                        compute_DD_coint_add(m, cointegrating_add)
-                                                    elseif hasmethod(compute_DD_coint_add, (mtype, ))
-                                                        compute_DD_coint_add(m)
-                                                    else
-                                                        compute_DD_coint_add(m, sys, cointegrating_add)
-                                                    end
-                                                    return sys, DD_coint_add
-                                                else
-                                                    return sys
-                                                end
-                                            end
+    function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
+                            observables::Vector{Symbol} = collect(keys(get_observables(get_dsge(m)))),
+                            cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                            cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                            pseudo_observables::Vector{Symbol} =
+                            collect(keys(get_dsge(m).pseudo_observables)),
+                            states::Vector{Symbol} =
+                            vcat(collect(keys(get_dsge(m).endogenous_states)),
+                                 collect(keys(get_dsge(m).endogenous_states_augmented))),
+                            shocks::Vector{Symbol} = collect(keys(get_dsge(m).exogenous_shocks)),
+                            zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
+                            get_DD_coint_add::Bool = false,
+                            check_system::Bool = true) where {S<:Real}
+        # Cointegrating relationships should exist as observables/pseudo_observables already
+        # in the underlying DSGE. We assume cointegrating relationships come after normal observables.
+        # Default behavior is to recreate the underlying DSGE's state space representation, however.
+        sys = compute_system(get_dsge(m), system; observables = vcat(observables, cointegrating),
+                             pseudo_observables = pseudo_observables,
+                             states = states, shocks = shocks, zero_DD = zero_DD,
+                             zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
+        if get_DD_coint_add
+            mtype = typeof(m)
+            DD_coint_add = if hasmethod(compute_DD_coint_add, (mtype, Vector{Symbol}))
+                compute_DD_coint_add(m, cointegrating_add)
+            elseif hasmethod(compute_DD_coint_add, (mtype, ))
+                compute_DD_coint_add(m)
+            else
+                compute_DD_coint_add(m, sys, cointegrating_add)
+            end
+            return sys, DD_coint_add
+        else
+            return sys
+        end
+    end
 
 """
 ```
@@ -1382,11 +1373,24 @@ additional required settings that must exist in `m` are:
         end
         gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
 
+        # Solve Taylor
+        ## TO DO: Generalize to any historical policy
+        m2 = copy(m)
+        m2 <= Setting(:solution_method, :gensys)
+        T_taylor, R_taylor, C_taylor = solve(m2; apply_altpolicy = false, regime_switching = false)
+        measure_taylor = measurement(m2, T_taylor, R_taylor, C_taylor)
+        pseudo_taylor = pseudo_measurement(m2, T_taylor, R_taylor, C_taylor)
+
         # Solve model
         transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
         TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
         RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
         CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
+
+        transitions_alt = Vector{Vector{Transition{T}}}(undef, n_tvis)
+        T_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+        R_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+        C_alt    = Vector{Vector{Vector{T}}}(undef, n_tvis)
         for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
             m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
             TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
@@ -1397,23 +1401,69 @@ additional required settings that must exist in `m` are:
             for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
                 transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
             end
+
+            # Solve altpolicy
+            m3 = copy(m)
+            m3 <= Setting(:uncertain_zlb, false)
+            m3 <= Setting(:uncertain_altpolicy, false)
+            T_alt[i], R_alt[i], C_alt[i] = solve(m3; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
+                                                 regimes = collect(1:n_regimes),
+                                                 pre_gensys2_regimes = collect(1:n_hist_regimes),
+                                                 fcast_gensys2_regimes = fcast_regimes, verbose = verbose)
+
+            transitions_alt[i] = Vector{Transition{T}}(undef, n_regimes)
+            for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
+                transitions_alt[i][j] = Transition(T_alt[i][j], R_alt[i][j], C_alt[i][j])
+            end
         end
 
         # Infer which measurement and pseudo-measurement equations to use
         measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
+        measurement_alt = Vector{Measurement{T}}(undef,       n_regimes)
         has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
         if has_pseudo # Only calculate PseudoMeasurement equation if the method exists
             pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+            pseudo_alt = Vector{PseudoMeasurement{T}}(undef, n_regimes)
         end
         for (reg, i) in enumerate(tvis_select)
             measurement_eqns[reg] = measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg],
                                                 reg = reg, TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
                                                 information_set = tvis_infoset[reg])
 
+            # Measurement for Alt Policy
+            measurement_alt[reg] = measurement(m3, T_alt[i][reg], R_alt[i][reg], C_alt[i][reg],
+                                               reg = reg, TTTs = T_alt[i], CCCs = C_alt[i],
+                                               information_set = tvis_infoset[reg])
+
             if has_pseudo
                 pseudo_measurement_eqns[reg] = pseudo_measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg], reg = reg,
                                                                   TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
                                                                   information_set = tvis_infoset[reg])
+
+                # Pseudo measurement for Alt Policy
+                pseudo_alt[reg] = pseudo_measurement(m3, T_alt[i][reg], R_alt[i][reg], C_alt[i][reg],
+                                                     reg = reg, TTTs = T_alt[i], CCCs = C_alt[i],
+                                                     information_set = tvis_infoset[reg])
+            end
+
+            # Modify Measurement and Pseudo Measurement equations to account for imperfect awareness
+            ## TO DO: Generalize to multiple possible altpolicies
+            ant_mon_shk = [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]
+            gdp_keys = haskey(get_settings(m), :add_anticipated_obs_gdp) && get_setting(m, :add_anticipated_obs_gdp) ?
+            [Symbol("obs_gdp$i") for i in 1:get_setting(m, :n_anticipated_obs_gdp)] : []
+
+            new_wt = get_setting(m, :imperfect_awareness_weights)[1]
+
+            for k in vcat([:obs_longinflation, :obs_longrate], ant_mon_shk, gdp_keys)
+                measurement_eqns[reg][:ZZ][m.observables[k],:] = measurement_alt[reg][:ZZ][m3.observables[k],:] .* new_wt .+ measurement_taylor[:ZZ][m2.observables[k],:] .* (1.0 - new_wt)
+                measurement_eqns[reg][:DD][m.observables[k],:] = measurement_alt[reg][:DD][m3.observables[k],:] .* new_wt .+ measurement_taylor[:DD][m2.observables[k],:] .* (1.0 - new_wt)
+            end
+
+            if has_pseudo
+                for k in [:Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate]
+                    pseudo_measurement_eqns[reg][:ZZ_pseudo][m.pseudo_observables[k],:] = measurement_alt[reg][:ZZ_pseudo][m3.pseudo_observables[k],:] .* new_wt .+ measurement_taylor[:ZZ_pseudo][m2.pseudo_observables[k],:] .* (1.0 - new_wt)
+                    pseudo_measurement_eqns[reg][:DD_pseudo][m.pseudo_observables[k],:] = measurement_alt[reg][:DD_pseudo][m3.pseudo_observables[k],:] .* new_wt .+ measurement_taylor[:DD_pseudo][m2.pseudo_observables[k],:] .* (1.0 - new_wt)
+                end
             end
         end
 
@@ -1423,4 +1473,25 @@ additional required settings that must exist in `m` are:
         else
             return TimeVaryingInformationSetSystem(transitions, measurement_eqns, tvis_infoset, tvis_select)
         end
+    end
+
+    ```
+    Helper function for imperfect awareness to add
+    convex combination of historical and alternative policy.
+    ```
+    function helper_imperfect_awareness(m::AbstractDSGEModel)
+        # Solve Taylor
+        ## TO DO: Generalize to any historical policy
+        m2 = copy(m)
+        m2 <= Setting(:solution_method, :gensys)
+        T_taylor, R_taylor, C_taylor = solve(m2; apply_altpolicy = false, regime_switching = false)
+        measure_taylor = measurement(m2, T_taylor, R_taylor, C_taylor)
+        pseudo_taylor = pseudo_measurement(m2, T_taylor, R_taylor, C_taylor)
+
+        transitions_alt = Vector{Vector{Transition{T}}}(undef, n_tvis)
+        T_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+        R_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+        C_alt    = Vector{Vector{Vector{T}}}(undef, n_tvis)
+
+
     end

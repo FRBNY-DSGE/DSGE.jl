@@ -783,7 +783,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
                        s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt],
                        catch_smoother_lapack = catch_smoother_lapack)
-        elseif get_setting(m, :forecast_smoother) == :carter_kohn
+        elseif testing_carter_kohn && get_setting(m, :forecast_smoother) == :carter_kohn
             histstates, histshocks, histpseudo, initial_states, conded =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
                        catch_smoother_lapack = catch_smoother_lapack, testing_carter_kohn = testing_carter_kohn)
