@@ -833,7 +833,7 @@ function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::
             for (i, inds) in enumerate(fcast_regime_inds)
                 reg = i + length(hist_regime_inds)
                 for t in inds
-                    trends[:, inds] .= system[reg, :DD]
+                    trends[:, t] .= system[reg, :DD]
                 end
             end
         end

@@ -58,7 +58,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                 s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
                 cond_type::Symbol = :none, draw_states::Bool = false,
                 include_presample::Bool = false, in_sample::Bool = true,
-                catch_smoother_lapack::Bool = false) where {S<:AbstractFloat}
+                catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
 
@@ -93,7 +93,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
         @warn "$smoother called with draw_states = true"
     end
 
-    states, shocks = try
+    testing = try #states, shocks = try
         if smoother == hamilton_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0)
@@ -101,7 +101,10 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
             kal = filter(m, data, system)
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0, kal[:s_pred], kal[:P_pred])
-        elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
+        elseif smoother == carter_kohn_smoother
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0; draw_states = draw_states, testing_carter_kohn = testing_carter_kohn)
+        elseif smoother == durbin_koopman_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0; draw_states = draw_states)
         else
@@ -109,10 +112,16 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
         end
     catch e
         if catch_smoother_lapack && isa(e, LAPACKException)
-            fill(NaN, length(s_0), regime_inds[end][end]), fill(NaN, size(QQs[1], 1), regime_inds[end][end])
+            fill(NaN, length(s_0), regime_inds[end][end]), fill(NaN, size(QQs[1], 1), regime_inds[end][end]), fill(NaN, 242)
         else
             rethrow(e)
         end
+    end
+
+    states = testing[1]
+    shocks = testing[2]
+    if testing_carter_kohn && smoother == carter_kohn_smoother
+        conded = testing[3]
     end
 
     lapack_caught = catch_smoother_lapack ? any(isnan.(@view states[:, end])) : false
@@ -135,7 +144,11 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
         system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
     end
 
-    return states, shocks, pseudo, initial_states
+    if testing_carter_kohn && smoother == carter_kohn_smoother
+        return states, shocks, pseudo, initial_states, conded
+    else
+        return states, shocks, pseudo, initial_states
+    end
 end
 
 function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSystem{S},
@@ -146,7 +159,8 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
                 filter_smooth::Bool = false, s_pred::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                 P_pred::AbstractArray{S,3} = Array{S, 3}(undef, 0, 0, 0),
                 s_filt::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
-                P_filt::AbstractArray{S, 3} = Array{S, 3}(undef, 0, 0, 0)) where {S<:AbstractFloat}
+                P_filt::AbstractArray{S, 3} = Array{S, 3}(undef, 0, 0, 0),
+                testing_carter_kohn::Bool = false) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
 
@@ -192,11 +206,15 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
                      s_0, P_0, kal[:s_pred], kal[:P_pred])
         elseif smoother == carter_kohn_smoother && filter_smooth
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states)
+                     s_0, P_0; draw_states = draw_states, testing_carter_kohn = testing_carter_kohn)
         elseif filter_smooth
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states)
-        elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
+                     s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states,
+                     testing_carter_kohn = testing_carter_kohn)
+        else if smoother == carter_kohn_smoother
+            smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+                     s_0, P_0; draw_states = draw_states, testing_carter_kohn = testing_carter_kohn)
+        elseif smoother == durbin_koopman_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0; draw_states = draw_states)
         else
@@ -212,7 +230,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
 
     states = testing[1]
     shocks = testing[2]
-    if smoother == carter_kohn_smoother
+    if testing_carter_kohn && smoother == carter_kohn_smoother
         conded = testing[3]
     end
 
@@ -246,7 +264,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         pseudo = pseudo[:, t1:end]
     end
 
-    if smoother == carter_kohn_smoother
+    if testing_carter_kohn && smoother == carter_kohn_smoother
         return states, shocks, pseudo, initial_states, conded
     else
         return states, shocks, pseudo, initial_states

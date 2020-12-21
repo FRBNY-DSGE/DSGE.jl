@@ -455,6 +455,7 @@ conditional data case given by `cond_type`.
 - `pegFFR::Bool = false`: peg the nominal FFR at the value specified by `FFRpeg`
 - `FFRpeg::Float64 = -0.25/4`: value of the FFR peg
 - `H::Int = 4`: number of horizons for which the FFR is pegged
+- `testing_carer_kohn::Bool = false`: whether to create a file storing some property of Σ in Carter Kohn
 
 ### Outputs
 
@@ -474,7 +475,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       rerun_smoother::Bool = false, catch_smoother_lapack::Bool = false,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                       show_failed_percent::Bool = false, only_filter::Bool = false,
-                      verbose::Symbol = :low)
+                      verbose::Symbol = :low, testing_carter_kohn::Bool = false)
 
     ### Common Setup
 
@@ -520,7 +521,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
-                                                rerun_smoother = rerun_smoother, catch_smoother_lapack = catch_smoother_lapack)
+                                                rerun_smoother = rerun_smoother, catch_smoother_lapack = catch_smoother_lapack,
+                                                testing_carter_kohn = testing_carter_kohn)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -579,8 +581,9 @@ function forecast_one(m::AbstractDSGEModel{Float64},
         total_forecast_time = 0.0
         block_verbose = verbose == :none ? :none : :low
 
-        @show block_inds
-        arred = zeros(block_inds[end][end], 248)
+        if testing_carter_kohn
+            arred = zeros(block_inds[end][end], 246)
+        end
 
         for block = start_block:nblocks
             println(verbose, :low, )
@@ -612,18 +615,20 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  set_info_sets_altpolicy = set_info_sets_altpolicy,
                                                                  pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
                                                                  rerun_smoother = rerun_smoother,
-                                                                 catch_smoother_lapack = catch_smoother_lapack),
+                                                                 catch_smoother_lapack = catch_smoother_lapack,
+                                                                 testing_carter_kohn = testing_carter_kohn),
                                       params_for_map)
 
             # Assemble outputs from this block and write to file
             forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
 
-            if get_setting(m, :forecast_smoother) == :carter_kohn
+            if testing_carter_kohn && get_setting(m, :forecast_smoother) == :carter_kohn
                 for i in 1:length(forecast_outputs)
                     arred[block_inds[block][i],1:length(forecast_outputs[i][:conded])] = forecast_outputs[i][:conded]
                     delete!(forecast_outputs[i], :conded)
                 end
             end
+
 
             forecast_output = assemble_block_outputs(forecast_outputs; show_failed_percent = show_failed_percent)
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
@@ -646,8 +651,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
             println(verbose, :low, "Expected time remaining: $expected_time_remaining_min minutes")
         end # of loop through blocks
 
-        if get_setting(m, :forecast_smoother) == :carter_kohn
-            jldopen("condedJ.jld2", true, true, true, IOStream) do file
+        if testing_carter_kohn && get_setting(m, :forecast_smoother) == :carter_kohn
+            jldopen("conded_svd_diagm.jld2", true, true, true, IOStream) do file
                 write(file, "conds", arred)
             end
         end
@@ -723,7 +728,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            filter_smooth::Bool = false, rerun_smoother::Bool = false,
-                           catch_smoother_lapack::Bool = false)
+                           catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -781,7 +786,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         elseif get_setting(m, :forecast_smoother) == :carter_kohn
             histstates, histshocks, histpseudo, initial_states, conded =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       catch_smoother_lapack = catch_smoother_lapack)
+                       catch_smoother_lapack = catch_smoother_lapack, testing_carter_kohn = testing_carter_kohn)
         else
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
@@ -1239,7 +1244,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         end
     end
 
-    if input_type == :full && get_setting(m, :forecast_smoother) == :carter_kohn
+    if testing_carter_kohn && input_type == :full && get_setting(m, :forecast_smoother) == :carter_kohn
         forecast_output[:conded] = conded
     end
     return forecast_output
