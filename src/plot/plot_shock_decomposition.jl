@@ -78,7 +78,7 @@ function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, cl
     for (var, title) in zip(vars, titles)
 
         # Call recipe
-        ylabs = trends_nostates == DataFrame() ? "\n(deviations from mean)" : ""
+        ylabs = trend_nostates == DataFrame() ? "\n(deviations from mean)" : ""
         plots[var] = shockdec(var, mbs..., groups;
                               ylabel = series_ylabel(m, var, class) * ylabs,
                               title = title, trend_nostates = trend_nostates, kwargs...)
