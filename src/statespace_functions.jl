@@ -1,6 +1,7 @@
 """
 ```
 compute_system(m; apply_altpolicy = false, tvis::Bool = false, verbose = :high)
+compute_system_helper(m; apply_altpolicy = false, tvis::Bool = false, verbose = :high)
 ```
 
 Given the current model parameters, compute the state-space system
@@ -11,9 +12,134 @@ whether the state-space system involves time-varying information sets.
 To use `tvis = true`, at least the setting `:tvis_information_set` must
 exist. See `?DSGE.compute_tvis_system` for more information about
 computing state-space systems with time-varying information sets.
+
+compute_system just runs compute_system_helper (which actually computes
+the system) and then in the case of imperfect but positive credibility,
+adjusts the anticipated observables and pseudo-observables' measurement
+equations.
 """
+
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
+
+    # Getting altpolicy weights to avoid ugliness of constantly checking which one is in use
+    vary_wt, altpol_wts, altpol_name = haskey(m.settings, :alternative_policy_varying_weights) ? (true, get_setting(m, :alternative_policy_varying_weights), :alternative_policy_varying_weights) :
+    (haskey(m.settings, :imperfect_credibility_varying_weights) ? (true, get_setting(m, :imperfect_credibility_varying_weights), :imperfect_credibility_varying_weights) :
+     (haskey(m.settings, :alternative_policy_weights) ? (false, get_setting(m, :alternative_policy_weights), :alternative_policy_weights) : (haskey(m.settings, :imperfect_credibility_weights) ? (false, get_setting(m, :imperfect_credibility_weights), :imperfect_credibility_weights) : (false, [2.], :irrelevant))))
+
+    # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
+    if haskey(m.settings, :uncertain_zlb) && !get_setting(m, :uncertain_zlb) &&
+        haskey(m.settings, :replace_eqcond_func_dict) && altpol_name != :irrelevant
+        if vary_wt
+            for reg in keys(altpol_wts)
+                if get_setting(m, :replace_eqcond_func_dict)[reg] == DSGE.zero_rate_replace_eq_entries
+                    altpol_vec = zeros(length(altpol_wts[reg]))
+                    altpol_vec[1] = 1.0
+                    altpol_wts[reg] = altpol_vec
+                end
+            end
+            ## Without time-varying credibility, uncertain_zlb and uncertain_altpolicy must be the same
+        elseif haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy)
+            if get_setting(m, :replace_eqcond_func_dict)[reg] == DSGE.zero_rate_replace_eq_entries
+                altpol_vec = zeros(length(altpol_wts))
+                altpol_vec[1] = 1.0
+                altpol_wts = altpol_vec
+            end
+        end
+    end
+
+    # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
+    ## only helpful for combining historical and alternative policies with
+    ## the right weights later on
+    if haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy) &&
+        haskey(m.settings, :replace_eqcond_func_dict) && altpol_name != :irrelevant
+        if vary_wt
+            for reg in keys(altpol_wts)
+                if get_setting(m, :replace_eqcond_func_dict)[reg] == alternative_policy(m).eqcond
+                    altpol_vec = zeros(length(altpol_wts[reg]))
+                    altpol_vec[1] = 1.0
+                    altpol_wts[reg] = altpol_vec
+                end
+            end
+        end #Else accounted for in ZLB
+    end
+
+    system_main = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
+
+    # If correcting measurement eqs for anticipated (pseudo) observables is unnecessary (eg. running Taylor or no regime switching or no uncertainty in ZLB or altpolicy or either perfect or zero credibility - invariant perfect or zero credibility in the case of time varying) then return system now.
+
+    if !apply_altpolicy || !haskey(m.settings, :regime_switching) || !get_setting(m, :regime_switching) || !haskey(m.settings, :replace_eqcond_func_dict) ||
+        (haskey(m.settings, :uncertain_zlb) && !get_setting(m, :uncertain_zlb) && haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy)) || altpol_name == :irrelevant || (!vary_wt && 1.0 in altpol_wts) ||
+        (vary_wt && all([1.0 in val && val == first(values(altpol_wts)) for val in values(altpol_wts)]))  ## TODO: Setting names should change once refactoring done
+        return system_main
+    end
+
+    m2 = deepcopy(m)
+    m2 <= Setting(:regime_switching, false)
+    m2 <= Setting(:uncertain_altpolicy, false)
+    m2 <= Setting(:uncertain_zlb, false)
+    # Called taylor but should run whatever is specified as historical policy
+    ## either in alternative_policies or imperfect_credibility_historical_policy setting
+    system_taylor = compute_system_helper(m2; apply_altpolicy = false, tvis = tvis, verbose = verbose)
+
+    n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
+    system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
+
+    for i in 1:n_altpolicies
+        m3 = deepcopy(m)
+        ## Setting alternative policy weights = [1., 0.] in all forecast regimes for given altpolicy
+        m3 <= Setting(:uncertain_zlb, false)
+        m3 <= Setting(:uncertain_altpolicy, false)
+
+        if vary_wt
+            altpol_vec = copy(altpol_wts)
+            for j in keys(altpol_vec)
+                altpol_vec[j] = zeros(length(n_altpolicies)+1)
+                altpol_vec[j][i] = 1.0
+            end
+        else
+            altpol_vec = zeros(n_altpolicies+1)
+            altpol_vec[i] = 1.0
+        end
+        m3 <= Setting(altpol_name, altpol_vec)
+        system_altpolicies[i] = compute_system_helper(m3; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
+    end
+
+    # Checks if pseudo measurement is required
+    type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
+    has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
+    hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T})) ? true : false
+
+    # Modify Measurement and Pseudo Measurement equations to account for imperfect awareness
+    ant_mon_shk = [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]
+    gdp_keys = haskey(get_settings(m), :add_anticipated_obs_gdp) && get_setting(m, :add_anticipated_obs_gdp) ?
+    [Symbol("obs_gdp$i") for i in 1:get_setting(m, :n_anticipated_obs_gdp)] : []
+
+    min_reg = minimum(collect(keys(get_setting(m, :replace_eqcond_func_dict))))-1
+
+    # Correct the measurement equations for anticipated observables via convex combination
+    for reg in sort!(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
+        new_wt = vary_wt ? altpol_wts[reg] : altpol_wts
+
+        for k in vcat([:obs_longinflation, :obs_longrate], ant_mon_shk, gdp_keys)
+            system_main.measurements[reg][:ZZ][m.observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.measurement[:ZZ][m2.observables[k],:]
+            system_main.measurements[reg][:DD][m.observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.measurement[:DD][m2.observables[k],:]
+        end
+
+        if has_pseudo
+            for k in [:Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate]
+                system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo][m2.pseudo_observables[k],:]
+                system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo][m2.pseudo_observables[k],:]
+            end
+        end
+    end
+
+    return system_main
+end
+
+
+function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
+                               tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
     if tvis
         @assert haskey(get_settings(m), :tvis_information_set) "The setting :tvis_information_set is not defined"
@@ -140,7 +266,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             # Solve measurement equation
             measurement_equation = measurement(m, TTT, RRR, CCC)
 
-            if get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond
+            if get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond && apply_altpolicy
                 measurement_equation[:DD][get_observables(m)[:obs_nominalrate]] = m[:Rstarn]
             end
 
@@ -1342,129 +1468,70 @@ additional required settings that must exist in `m` are:
     state space system to use when calculating the measurement
     and pseudo measurement equations. These state space systems
     correspond to different sets of equilibrium conditions (usually).
-    """
-    function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
+"""
+function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                                  verbose::Symbol = :high) where {T <: Real}
 
-        @assert get_setting(m, :solution_method) ==
-        :gensys "Currently, the solution method must be :gensys to calculate a state-space system with time-varying information sets"
+    @assert get_setting(m, :solution_method) ==
+    :gensys "Currently, the solution method must be :gensys to calculate a state-space system with time-varying information sets"
 
-        @assert get_setting(m, :replace_eqcond) "The setting :replace_eqcond must be true to calculate a state-space system with time-varying information sets"
+    @assert get_setting(m, :replace_eqcond) "The setting :replace_eqcond must be true to calculate a state-space system with time-varying information sets"
 
-        # :regime_dates should have the same number of possible regimes. Any differences in eqcond
-        # should be specified by tvis_replace_eqcond_func_dict
-        tvis_infoset                  = get_setting(m, :tvis_information_set)
-        tvis_replace_eqcond_func_dict = get_setting(m, :tvis_replace_eqcond_func_dict)
-        tvis_select                   = get_setting(m, :tvis_select_system)
-        regime_switching              = get_setting(m, :regime_switching)
+    # :regime_dates should have the same number of possible regimes. Any differences in eqcond
+    # should be specified by tvis_replace_eqcond_func_dict
+    tvis_infoset                  = get_setting(m, :tvis_information_set)
+    tvis_replace_eqcond_func_dict = get_setting(m, :tvis_replace_eqcond_func_dict)
+    tvis_select                   = get_setting(m, :tvis_select_system)
+    regime_switching              = get_setting(m, :regime_switching)
 
-        n_tvis           = length(tvis_replace_eqcond_func_dict)
-        n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
-        get_setting(m, :n_regimes) : 1
-        n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
-        get_setting(m, :n_hist_regimes) : 1
+    n_tvis           = length(tvis_replace_eqcond_func_dict)
+    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+    get_setting(m, :n_regimes) : 1
+    n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
+    get_setting(m, :n_hist_regimes) : 1
 
-        # determine which regimes use gensys/gensys2
-        first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))) : n_hist_regimes + 1
-        last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : first_gensys2_regime + 1
-        gensys_regimes = [1:first_gensys2_regime-1]
-        if last_gensys2_regime != n_regimes
-            append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
+    # determine which regimes use gensys/gensys2
+    first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))) : n_hist_regimes + 1
+    last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : first_gensys2_regime + 1
+    gensys_regimes = [1:first_gensys2_regime-1]
+    if last_gensys2_regime != n_regimes
+        append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
+    end
+    gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
+
+    # Solve model
+    transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
+    TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+    RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+    CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
+
+    for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
+        m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
+        TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
+                                                      regimes = collect(1:n_regimes),
+                                                      gensys_regimes = gensys_regimes,
+                                                      gensys2_regimes = gensys2_regimes, verbose = verbose)
+        transitions[i] = Vector{Transition{T}}(undef, n_regimes)
+        for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
+            transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
         end
-        gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
+    end
 
-        # Solve Taylor
-        ## TO DO: Generalize to any historical policy
-        m2 = copy(m)
-        m2 <= Setting(:solution_method, :gensys)
-        T_taylor, R_taylor, C_taylor = solve(m2; apply_altpolicy = false, regime_switching = false)
-        measure_taylor = measurement(m2, T_taylor, R_taylor, C_taylor)
-        pseudo_taylor = pseudo_measurement(m2, T_taylor, R_taylor, C_taylor)
+    # Infer which measurement and pseudo-measurement equations to use
+    measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
+    has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+    if has_pseudo # Only calculate PseudoMeasurement equation if the method exists
+        pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+    end
+    for (reg, i) in enumerate(tvis_select)
+        measurement_eqns[reg] = measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg],
+                                            reg = reg, TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
+                                            information_set = tvis_infoset[reg])
 
-        # Solve model
-        transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
-        TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-        RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-        CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
-
-        transitions_alt = Vector{Vector{Transition{T}}}(undef, n_tvis)
-        T_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-        R_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-        C_alt    = Vector{Vector{Vector{T}}}(undef, n_tvis)
-        for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
-            m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
-            TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
-                                                          regimes = collect(1:n_regimes),
-                                                          gensys_regimes = gensys_regimes,
-                                                          gensys2_regimes = gensys2_regimes, verbose = verbose)
-            transitions[i] = Vector{Transition{T}}(undef, n_regimes)
-            for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
-                transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
-            end
-
-            # Solve altpolicy
-            m3 = copy(m)
-            m3 <= Setting(:uncertain_zlb, false)
-            m3 <= Setting(:uncertain_altpolicy, false)
-            T_alt[i], R_alt[i], C_alt[i] = solve(m3; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
-                                                 regimes = collect(1:n_regimes),
-                                                 pre_gensys2_regimes = collect(1:n_hist_regimes),
-                                                 fcast_gensys2_regimes = fcast_regimes, verbose = verbose)
-
-            transitions_alt[i] = Vector{Transition{T}}(undef, n_regimes)
-            for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
-                transitions_alt[i][j] = Transition(T_alt[i][j], R_alt[i][j], C_alt[i][j])
-            end
-        end
-
-        # Infer which measurement and pseudo-measurement equations to use
-        measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
-        measurement_alt = Vector{Measurement{T}}(undef,       n_regimes)
-        has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
-        if has_pseudo # Only calculate PseudoMeasurement equation if the method exists
-            pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
-            pseudo_alt = Vector{PseudoMeasurement{T}}(undef, n_regimes)
-        end
-        for (reg, i) in enumerate(tvis_select)
-            measurement_eqns[reg] = measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg],
-                                                reg = reg, TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
-                                                information_set = tvis_infoset[reg])
-
-            # Measurement for Alt Policy
-            measurement_alt[reg] = measurement(m3, T_alt[i][reg], R_alt[i][reg], C_alt[i][reg],
-                                               reg = reg, TTTs = T_alt[i], CCCs = C_alt[i],
-                                               information_set = tvis_infoset[reg])
-
-            if has_pseudo
-                pseudo_measurement_eqns[reg] = pseudo_measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg], reg = reg,
-                                                                  TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
-                                                                  information_set = tvis_infoset[reg])
-
-                # Pseudo measurement for Alt Policy
-                pseudo_alt[reg] = pseudo_measurement(m3, T_alt[i][reg], R_alt[i][reg], C_alt[i][reg],
-                                                     reg = reg, TTTs = T_alt[i], CCCs = C_alt[i],
-                                                     information_set = tvis_infoset[reg])
-            end
-
-            # Modify Measurement and Pseudo Measurement equations to account for imperfect awareness
-            ## TO DO: Generalize to multiple possible altpolicies
-            ant_mon_shk = [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]
-            gdp_keys = haskey(get_settings(m), :add_anticipated_obs_gdp) && get_setting(m, :add_anticipated_obs_gdp) ?
-            [Symbol("obs_gdp$i") for i in 1:get_setting(m, :n_anticipated_obs_gdp)] : []
-
-            new_wt = get_setting(m, :imperfect_awareness_weights)[1]
-
-            for k in vcat([:obs_longinflation, :obs_longrate], ant_mon_shk, gdp_keys)
-                measurement_eqns[reg][:ZZ][m.observables[k],:] = measurement_alt[reg][:ZZ][m3.observables[k],:] .* new_wt .+ measurement_taylor[:ZZ][m2.observables[k],:] .* (1.0 - new_wt)
-                measurement_eqns[reg][:DD][m.observables[k],:] = measurement_alt[reg][:DD][m3.observables[k],:] .* new_wt .+ measurement_taylor[:DD][m2.observables[k],:] .* (1.0 - new_wt)
-            end
-
-            if has_pseudo
-                for k in [:Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate]
-                    pseudo_measurement_eqns[reg][:ZZ_pseudo][m.pseudo_observables[k],:] = measurement_alt[reg][:ZZ_pseudo][m3.pseudo_observables[k],:] .* new_wt .+ measurement_taylor[:ZZ_pseudo][m2.pseudo_observables[k],:] .* (1.0 - new_wt)
-                    pseudo_measurement_eqns[reg][:DD_pseudo][m.pseudo_observables[k],:] = measurement_alt[reg][:DD_pseudo][m3.pseudo_observables[k],:] .* new_wt .+ measurement_taylor[:DD_pseudo][m2.pseudo_observables[k],:] .* (1.0 - new_wt)
-                end
-            end
+        if has_pseudo
+            pseudo_measurement_eqns[reg] = pseudo_measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg], reg = reg,
+                                                              TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
+                                                              information_set = tvis_infoset[reg])
         end
 
         if has_pseudo
@@ -1474,24 +1541,4 @@ additional required settings that must exist in `m` are:
             return TimeVaryingInformationSetSystem(transitions, measurement_eqns, tvis_infoset, tvis_select)
         end
     end
-
-    ```
-    Helper function for imperfect awareness to add
-    convex combination of historical and alternative policy.
-    ```
-    function helper_imperfect_awareness(m::AbstractDSGEModel)
-        # Solve Taylor
-        ## TO DO: Generalize to any historical policy
-        m2 = copy(m)
-        m2 <= Setting(:solution_method, :gensys)
-        T_taylor, R_taylor, C_taylor = solve(m2; apply_altpolicy = false, regime_switching = false)
-        measure_taylor = measurement(m2, T_taylor, R_taylor, C_taylor)
-        pseudo_taylor = pseudo_measurement(m2, T_taylor, R_taylor, C_taylor)
-
-        transitions_alt = Vector{Vector{Transition{T}}}(undef, n_tvis)
-        T_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-        R_alt    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-        C_alt    = Vector{Vector{Vector{T}}}(undef, n_tvis)
-
-
-    end
+end
