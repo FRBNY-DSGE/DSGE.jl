@@ -663,7 +663,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     # Compute state space
     update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
 
-    system = compute_system(m; tvis = tvis)
+    system = compute_system(m; apply_altpolicy = true, tvis = tvis)
 
     # Initialize output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -775,8 +775,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         # Re-solve model with alternative policy rule, if applicable
         apply_altpolicy = alternative_policy(m).solve != solve
         if apply_altpolicy
-            system = compute_system(m; apply_altpolicy = true, tvis = tvis)
-
             if haskey(get_settings(m), :skip_altpolicy_state_init) ? !get_setting(m, :skip_altpolicy_state_init) : true
                 # Adjust the initial state vector for pgap and ygap
                 if haskey(m.settings, :pgap_type) && haskey(get_settings(m), :pgap_value)
