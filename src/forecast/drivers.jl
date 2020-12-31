@@ -728,7 +728,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            filter_smooth::Bool = false, rerun_smoother::Bool = false,
-                           catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false)
+                           catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false,
+                           return_loglh::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -833,7 +834,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
     if !isempty(forecasts_to_compute)
         # Get initial forecast state vector s_T
-        s_T = if run_smoother # ONLY THIS BRANCH WORKS FOR REGIME SWITCHING
+        s_T = if run_smoother && !return_loglh # ONLY THIS BRANCH WORKS FOR REGIME SWITCHING
             # The last smoothed state is either s_{T|T} (if !uncertainty) or
             # drawn from N(s_{T|T}, P_{T|T}) (if uncertainty)
             histstates[:, end]
@@ -1135,6 +1136,10 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                                        regime_switching ? system[cond_ZZ_regime, :QQ] : system[:QQ])
             end
         end
+    end
+
+    if return_loglh
+        return kal[:loglh]
     end
 
     ### 3. Shock Decompositions

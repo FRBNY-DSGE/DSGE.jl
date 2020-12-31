@@ -63,7 +63,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
 
     for para in m.parameters
         if !isempty(para.regimes)
-            if (haskey(get_settings(m), :model2para_regimes) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
+            if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
                 ModelConstructors.toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
             else
                 ModelConstructors.toggle_regime!(para, reg)
