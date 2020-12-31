@@ -121,7 +121,7 @@ function Cloud(m::AbstractDSGEModel, n_parts::Int)
 Easier constructor for Cloud, which initializes the weights to be equal, and everything else in the Particle object etc. to be empty.
 """
 function Cloud(m::AbstractDSGEModel, n_parts::Int)
-    return Cloud(Matrix{Float64}(undef, n_parts, n_parameters(m) + 5),
+    return Cloud(Matrix{Float64}(undef, n_parts, n_parameters(m) + 6),
                  zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
 end
 

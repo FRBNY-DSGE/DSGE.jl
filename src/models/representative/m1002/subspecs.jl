@@ -779,8 +779,8 @@ function ss59!(m::Model1002)
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
-    # if !haskey(get_settings(m), :model2para_regimes) # check if it was set by custom_settings already
-    #     m <= Setting(:model2para_regimes, Dict{Symbol, Dict{Int, Int}}()) # initialize
+    # if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+    #     m <= Setting(:model2para_regime, Dict{Symbol, Dict{Int, Int}}()) # initialize
     # end
     setup_regime_switching_inds!(m)
 
@@ -887,7 +887,7 @@ function ss59!(m::Model1002)
     end
 
     # TODO: add functionality for different model regimes from parameter regimes by
-    #       creating the Setting model2para_regimes.
+    #       creating the Setting model2para_regime.
     # Define regimes for standard shocks
     for i in 1:4
         adj = (i == 2 || i == 3) ? .25 : 1.
@@ -971,8 +971,8 @@ function ss60!(m::Model1002)
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
-    # if !haskey(get_settings(m), :model2para_regimes) # check if it was set by custom_settings already
-    #     m <= Setting(:model2para_regimes, Dict{Symbol, Dict{Int, Int}}()) # initialize
+    # if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+    #     m <= Setting(:model2para_regime, Dict{Symbol, Dict{Int, Int}}()) # initialize
     # end
     setup_regime_switching_inds!(m)
 
@@ -1157,8 +1157,8 @@ function ss61!(m::Model1002)
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
-    # if !haskey(get_settings(m), :model2para_regimes) # check if it was set by custom_settings already
-    #     m <= Setting(:model2para_regimes, Dict{Symbol, Dict{Int, Int}}()) # initialize
+    # if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+    #     m <= Setting(:model2para_regime, Dict{Symbol, Dict{Int, Int}}()) # initialize
     # end
     setup_regime_switching_inds!(m)
 
