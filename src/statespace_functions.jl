@@ -23,9 +23,9 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
     # Getting altpolicy weights to avoid ugliness of constantly checking which one is in use
-    vary_wt, altpol_wts, altpol_name = haskey(m.settings, :alternative_policy_varying_weights) ? (true, get_setting(m, :alternative_policy_varying_weights), :alternative_policy_varying_weights) :
-    (haskey(m.settings, :imperfect_credibility_varying_weights) ? (true, get_setting(m, :imperfect_credibility_varying_weights), :imperfect_credibility_varying_weights) :
-     (haskey(m.settings, :alternative_policy_weights) ? (false, get_setting(m, :alternative_policy_weights), :alternative_policy_weights) : (haskey(m.settings, :imperfect_credibility_weights) ? (false, get_setting(m, :imperfect_credibility_weights), :imperfect_credibility_weights) : (false, [2.], :irrelevant))))
+    vary_wt, altpol_wts, altpol_name = haskey(m.settings, :imperfect_awareness_varying_weights) ? (true, get_setting(m, :imperfect_awareness_varying_weights), :imperfect_awareness_varying_weights) :
+     (haskey(m.settings, :imperfect_awareness_weights) ? (false, get_setting(m, :imperfect_awareness_weights), :imperfect_awareness_weights) :
+     (false, [2.], :irrelevant))
 
     # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
     if haskey(m.settings, :uncertain_zlb) && !get_setting(m, :uncertain_zlb) &&
@@ -40,6 +40,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             end
             ## Without time-varying credibility, uncertain_zlb and uncertain_altpolicy must be the same
         elseif haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy)
+            @warn "If not using time varying credibility, uncertain_zlb and uncertain_altpolicy must be the same."
             if get_setting(m, :replace_eqcond_func_dict)[reg] == DSGE.zero_rate_replace_eq_entries
                 altpol_vec = zeros(length(altpol_wts))
                 altpol_vec[1] = 1.0
@@ -180,13 +181,19 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
         if solution_method == :gensys
 
             # determine which regimes use gensys/gensys2
-            first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))) : n_hist_regimes + 1
-            last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : first_gensys2_regime + 1
-            gensys_regimes = [1:first_gensys2_regime-1]
-            if last_gensys2_regime != n_regimes
-                append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
+            first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))...) : n_hist_regimes + 1
+            last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : n_regimes
+            if get_setting(m, :gensys2)
+                gensys_regimes = [1:first_gensys2_regime-1]
+                if last_gensys2_regime != n_regimes
+                    append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
+                end
+            else
+                gensys_regimes = [1:n_regimes]
             end
             gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
+            @show gensys_regimes
+            @show gensys2_regimes
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
@@ -1484,38 +1491,45 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     tvis_select                   = get_setting(m, :tvis_select_system)
     regime_switching              = get_setting(m, :regime_switching)
 
-    n_tvis           = length(tvis_replace_eqcond_func_dict)
-    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
-    get_setting(m, :n_regimes) : 1
-    n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
-    get_setting(m, :n_hist_regimes) : 1
+        n_tvis           = length(tvis_replace_eqcond_func_dict)
+        n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+        get_setting(m, :n_regimes) : 1
+        n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
+        get_setting(m, :n_hist_regimes) : 1
 
-    # determine which regimes use gensys/gensys2
-    first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))) : n_hist_regimes + 1
-    last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : first_gensys2_regime + 1
-    gensys_regimes = [1:first_gensys2_regime-1]
-    if last_gensys2_regime != n_regimes
-        append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
-    end
-    gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
-
-    # Solve model
-    transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
-    TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-    RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
-    CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
-
-    for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
-        m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
-        TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
-                                                      regimes = collect(1:n_regimes),
-                                                      gensys_regimes = gensys_regimes,
-                                                      gensys2_regimes = gensys2_regimes, verbose = verbose)
-        transitions[i] = Vector{Transition{T}}(undef, n_regimes)
-        for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
-            transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
+        # determine which regimes use gensys/gensys2
+        first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))...) : n_hist_regimes + 1
+        last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : n_regimes
+        if get_setting(m, :gensys2)
+            gensys_regimes = [1:first_gensys2_regime-1]
+            if last_gensys2_regime != n_regimes
+                append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
+            end
+        else
+            gensys_regimes = [1:n_regimes]
         end
-    end
+        gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
+
+        @show gensys_regimes
+        @show gensys2_regimes
+
+        # Solve model
+        transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
+        TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+        RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+        CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
+        for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
+            m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
+            TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
+                                                          regimes = collect(1:n_regimes),
+                                                          gensys_regimes = gensys_regimes,
+                                                          gensys2_regimes = gensys2_regimes, verbose = verbose)
+            transitions[i] = Vector{Transition{T}}(undef, n_regimes)
+            for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
+                transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
+            end
+        end
+
     # Infer which measurement and pseudo-measurement equations to use
     measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
     has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
