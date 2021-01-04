@@ -216,11 +216,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
             if gensys2
                 for reg_range in gensys2_regimes
                     solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
-<<<<<<< HEAD
                                    TTTs, RRRs, CCCs; gensys2_regimes = collect(reg_range), uncertain_zlb = uncertain_zlb,
-=======
-                                   TTTs, RRRs, CCCs; fcast_gensys2_regimes = collect(reg_range), uncertain_zlb = uncertain_zlb,
->>>>>>> Refactoring (not fully set up for Kbar, but skeleton in place).
                                    verbose = verbose)
                     # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
                     #       any temporary policy
@@ -300,32 +296,15 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
                                     altpolicy_solve::Function = solve,
                                     verbose::Symbol = :high) where {S <: Real}
 
-<<<<<<< HEAD
-    flex_ait_pol_change = haskey(get_settings(m), :flexible_ait_policy_change) ?
-    get_setting(m, :flexible_ait_policy_change) : false
-    if flex_ait_pol_change
-        weights = get_setting(m, :imperfect_credibility_weights)
-        histpol = AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)]
-    end
-
-=======
->>>>>>> Refactoring (not fully set up for Kbar, but skeleton in place).
     for reg in regimes
         TTT_gensys, CCC_gensys, RRR_gensys, eu =
         gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
                1+1e-6, verbose = verbose)
 
-<<<<<<< HEAD
-        if altpolicy_solve == solve || !apply_altpolicy
-            TTT_gensys, CCC_gensys, RRR_gensys, eu =
-            gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
-                   1+1e-6, verbose = verbose)
-=======
         # Check for LAPACK exception, existence and uniqueness
         if eu[1] != 1 || eu[2] != 1
             throw(GensysError("Error in Gensys, Regime $reg"))
         end
->>>>>>> Refactoring (not fully set up for Kbar, but skeleton in place).
 
         if get_setting(m, :gensys2) && get_setting(m, :uncertain_altpolicy)
             first_gensys2_regime = min(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
@@ -339,55 +318,11 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
             end
             if reg >= first_gensys2_regime
                 TTT_gensys, RRR_gensys, CCC_gensys =
-<<<<<<< HEAD
-                gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = apply_altpolicy,
-=======
                 gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = true,
->>>>>>> Refactoring (not fully set up for Kbar, but skeleton in place).
                                         TTT = TTT_gensys, regime_switching = true, regimes = Int[reg])
             end
         end
 
-<<<<<<< HEAD
-            TTT_gensys = real(TTT_gensys)
-            RRR_gensys = real(RRR_gensys)
-            CCC_gensys = real(CCC_gensys)
-
-            # Populate the TTTs, etc., for regime `reg`
-            TTTs[reg], RRRs[reg], CCCs[reg] =
-            augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-        else
-            TTTs[reg], RRRs[reg], CCCs[reg] =
-            altpolicy_solve(m; regime_switching = true, regimes = Int[reg])
-
-            if uncertain_altpolicy
-                inds = 1:n_states(m)
-                if !flex_ait_pol_change || get_setting(m, :regime_dates)[reg] < get_setting(m, :flexible_ait_policy_change_date)
-                    # Time-varying credibility weights for the regime reg for alternative_policy
-                    if haskey(get_settings(m), :alternative_policy_varying_weights)
-                        liftoff_reg = haskey(get_settings(m), :gensys2_last_regime) ?
-                            get_setting(m, :gensys2_last_regime) : get_setting(m, :n_regimes)
-                        weights = get_setting(m, :alternative_policy_varying_weights)[reg]
-                    else
-                        weights = get_setting(m, :alternative_policy_weights)
-                    end
-                    histpol = get_setting(m, :alternative_policies)
-                end
-                TTT_gensys, RRR_gensys, CCC_gensys =
-                gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = apply_altpolicy,
-                                        TTT = TTTs[reg][inds, inds],
-                                        regime_switching = true, regimes = Int[reg])
-
-                TTT_gensys = real(TTT_gensys)
-                RRR_gensys = real(RRR_gensys)
-                CCC_gensys = real(CCC_gensys)
-
-                # Populate the TTTs, etc., for regime `reg`
-                TTTs[reg], RRRs[reg], CCCs[reg] =
-                augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-            end
-        end
-=======
         TTT_gensys = real(TTT_gensys)
         RRR_gensys = real(RRR_gensys)
         CCC_gensys = real(CCC_gensys)
@@ -395,7 +330,6 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
         # Populate the TTTs, etc., for regime `reg`
         TTTs[reg], RRRs[reg], CCCs[reg] =
         augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
->>>>>>> Refactoring (not fully set up for Kbar, but skeleton in place).
     end
     return TTTs, RRRs, CCCs
 end
@@ -496,7 +430,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             # regime correctly, as the lift-off is no longer the final regime, and won't be covered by
             # setting Tcal[end] = TTT_gensys_final
             # First UnitRange is for actual regime number, second for the index of Tcal, Rcal, & Ccal
-            for (fcast_reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 2):(ng2 + 1))
+            for (fcast_reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 1):(ng2 + 1))
                 TTT_gensys, CCC_gensys, RRR_gensys, eu =
                 gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
                        1+1e-6, verbose = verbose)

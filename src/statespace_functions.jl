@@ -1470,7 +1470,7 @@ additional required settings that must exist in `m` are:
     correspond to different sets of equilibrium conditions (usually).
 """
 function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                                 verbose::Symbol = :high) where {T <: Real}
+                             verbose::Symbol = :high) where {T <: Real}
 
     @assert get_setting(m, :solution_method) ==
     :gensys "Currently, the solution method must be :gensys to calculate a state-space system with time-varying information sets"
@@ -1516,7 +1516,6 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
             transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
         end
     end
-
     # Infer which measurement and pseudo-measurement equations to use
     measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
     has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
@@ -1533,12 +1532,12 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
                                                               TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
                                                               information_set = tvis_infoset[reg])
         end
+    end
 
-        if has_pseudo
-            return TimeVaryingInformationSetSystem(transitions, measurement_eqns, pseudo_measurement_eqns,
-                                                   tvis_infoset, tvis_select)
-        else
-            return TimeVaryingInformationSetSystem(transitions, measurement_eqns, tvis_infoset, tvis_select)
-        end
+    if has_pseudo
+        return TimeVaryingInformationSetSystem(transitions, measurement_eqns, pseudo_measurement_eqns,
+                                               tvis_infoset, tvis_select)
+    else
+        return TimeVaryingInformationSetSystem(transitions, measurement_eqns, tvis_infoset, tvis_select)
     end
 end
