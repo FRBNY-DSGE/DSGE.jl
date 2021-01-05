@@ -1,4 +1,4 @@
-# DSGE.jl 1.1.7 (in development)
+# DSGE.jl 1.2 (in development)
 ## Version Restrictions
 + Minimum CSV version is v0.8
 
@@ -15,7 +15,7 @@
 + Convert missing values to NaNs when calculating means and bands
 + Fix accidental assumption that all fixed parameters occur at the end of the parameter vector in Metropolis-Hastings
 + Fix incorrect parameter blocking in Metropolis-Hastings
-+ Refactoring to regime-switching code to make it simpler to use and maintain
++ Refactor regime-switching code to make it easier to use and maintain
 
 # DSGE.jl 1.1.6
 ## Version Restrictions
