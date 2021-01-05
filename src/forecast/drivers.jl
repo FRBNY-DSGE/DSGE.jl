@@ -782,16 +782,13 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             kal = filter(m, df, system; cond_type = cond_type)
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt],
-                       catch_smoother_lapack = catch_smoother_lapack)
-        elseif testing_carter_kohn && get_setting(m, :forecast_smoother) == :carter_kohn
-            histstates, histshocks, histpseudo, initial_states, conded =
-                smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       catch_smoother_lapack = catch_smoother_lapack, testing_carter_kohn = testing_carter_kohn)
+                       set_pgap_ygap = set_pgap_ygap,
+                       s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt])
+
         else
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       catch_smoother_lapack = catch_smoother_lapack)
+                       set_pgap_ygap = set_pgap_ygap)
         end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -860,6 +857,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 kal[:s_T]
             end
         end
+        save("flexible_perm_sT_2.jld2", Dict("s_T" => s_T))
 
         # Re-solve model with alternative policy rule, if applicable
         apply_altpolicy = alternative_policy(m).solve != solve

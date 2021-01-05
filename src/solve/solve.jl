@@ -347,25 +347,39 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                         gensys2_regimes::Vector{Int} = Int[1], uncertain_zlb::Bool = false,
                         verbose::Symbol = :high) where {S <: Real}
 
-    # Solve for the final regime of the alternative rule
-    altpolicy_solve = get_setting(m, :alternative_policy).solve # TODO: replace w/replace_eqcond_func_dict approach
-    TTT_final, RRR_final, CCC_final = altpolicy_solve(m; regime_switching = true,
-                                                      regimes = Int[last(gensys2_regimes)])
+    # Calculate the matrices for the temporary alternative policies
+    @show fcast_regimes
+    gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) #(first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
 
-    n_endo = length(m.endogenous_states)
-    TTT_final = TTT_final[1:n_endo, 1:n_endo] # make sure the non-augmented version
-    RRR_final = RRR_final[1:n_endo, :]        # is used
-    CCC_final = CCC_final[1:n_endo]
+    # If using an alternative policy,
+    # are there periods between the first forecast period and first period with temporary alt policies?
+    # For example, are there conditional periods? We don't want to use gensys2 on the conditional periods then
+    # since gensys2 should be applied just to the alternative policies.
+    # If not using an alternative policy, then we do not want to treat the conditional periods separately unless
+    # explicitly instructed by :gensys2_separate_cond_regimes.
+    separate_cond_periods = (get_setting(m, :alternative_policy).key != :historical) ||
+        (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false)
+    n_no_alt_reg = separate_cond_periods ?
+        (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
 
-    # if we're using an uncertain alternative policy, we have to compute the
-    # weighted final transition matrix
-    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
-    if uncertain_altpolicy
-        weights = if haskey(get_settings(m), :imperfect_awareness_varying_weights)
-            get_setting(m, :imperfect_awareness_varying_weights)[last(gensys2_regimes)]
-        else
-            get_setting(m, :imperfect_awareness_weights)
-        end
+    if n_no_alt_reg > 0
+        # Get the T, R, C matrices between the first forecast period & first rule period
+        for fcast_reg in first(fcast_regimes):(first(fcast_regimes) + n_no_alt_reg - 1)
+            TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
+                       1+1e-6, verbose = verbose)
+
+
+            if haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
+                get_setting(m, :flexible_ait_2020Q3_policy_change) : false &&
+                get_setting(m, :regime_dates)[fcast_reg] >= Date(2020, 9, 30)
+
+                weights = get_setting(m, :imperfect_credibility_weights)
+                histpol = AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)]
+                TTT_gensys, RRR_gensys, CCC_gensys =
+                    gensys_uncertain_altpol(m, weights, histpol;
+                                            TTT = TTT_gensys, regime_switching = true, regimes = Int[fcast_reg])
+            end
 
         altpols = get_setting(m, :alternative_policies)
 
@@ -381,12 +395,15 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     # Populate TTTs, RRRs, CCCs matrices
     if uncertain_zlb
         # Setup
-        ffreg = first(gensys2_regimes) + 1
-        altpols, weights = if haskey(get_settings(m), :imperfect_awareness_varying_weights) &&
-            haskey(get_settings(m), :alternative_policies)
-            get_setting(m, :alternative_policies), get_setting(m, :imperfect_awareness_varying_weights)
-        elseif haskey(get_settings(m), :alternative_policies) && haskey(get_settings(m), :imperfect_awareness_weights)
-            get_setting(m, :alternative_policies), get_setting(m, :imperfect_awareness_weights)
+        ffreg = first(fcast_regimes) + n_no_alt_reg
+        @show n_no_alt_reg
+        @show ffreg
+        @show fcast_regimes
+        altpols, weights = if haskey(get_settings(m), :alternative_policies) && haskey(get_settings(m), :alternative_policy_weights)
+            get_setting(m, :alternative_policies), get_setting(m, :alternative_policy_weights)
+        elseif (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
+                get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
+            [get_setting(m, :imperfect_credibility_historical_policy)], get_setting(m, :imperfect_credibility_weights)
         else
             error("Alternative policies and/or weights were not specified.")
         end
@@ -404,15 +421,14 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         # TODO: generalize to having multiple distinct sets of regimes which are gensys2 regimes
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                        TTT_final, RRR_final, CCC_final,
-                                        T_switch = length(gensys2_regimes) - 1)
-        Tcal[end] = TTT_final # T_switch is the desired length of Tcal, hence
-        Rcal[end] = RRR_final # length(gensys2_regimes) - 1 gives you the transition equations
-        Ccal[end] = CCC_final # for the first regime of replace_eqcond_func_dict to the last regime
+                                        TTT_liftoff, RRR_liftoff, CCC_liftoff,
+                                        T_switch = (separate_cond_periods ?
+                                        get_setting(m, :n_rule_periods) + 1 : get_setting(m, :n_fcast_regimes)))
+        Tcal[end] = TTT_liftoff
+        Rcal[end] = RRR_liftoff
+        Ccal[end] = CCC_liftoff
 
-        # Now calculate transition matrices under an uncertain ZLB
-        # Γ0_til, etc., are eqcond matrices implementing ZLB, i.e. zero_rate_rule
-        # It is assumed that there is no re
+        # For Taylor Rule
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
 
@@ -485,12 +501,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                 Ccal[ical] = CCC_gensys
             end
         end
-
-        # Note that, if uncertain_altpolicy is true, TTT_final should be the
-        # transition matrix associated w/imperfect awareness
-        Tcal[end] = TTT_final
-        Rcal[end] = RRR_final
-        Ccal[end] = CCC_final
 
     else
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],

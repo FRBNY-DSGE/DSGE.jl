@@ -678,6 +678,10 @@ function eqcond(m::Model1002, reg::Int)
                end
            end
        end
+       if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+                   get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+                   Ψ[eq[:eq_pgap], exo[:pgap_sh]] = 1.
+               end
    end
 
    if haskey(m.settings, :add_altpolicy_ygap) ? get_setting(m, :add_altpolicy_ygap) : false
@@ -704,6 +708,10 @@ function eqcond(m::Model1002, reg::Int)
                end
            end
        end
+       if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+                   get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+                   Ψ[eq[:eq_ygap], exo[:ygap_sh]] = 1.
+               end
    end
 
    if haskey(m.settings, :add_rw) ? get_setting(m, :add_rw) : false
