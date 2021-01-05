@@ -799,7 +799,7 @@ function eqcond(m::Model1002, reg::Int)
    # This step MUST be the last block of code prior to switching parameter values back to the first regime.
    if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
        if haskey(m.settings, :replace_eqcond_func_dict)
-           if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
+           if haskey(get_setting(m, :replace_eqcond_func_dict), reg)
                Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
            end
        end
