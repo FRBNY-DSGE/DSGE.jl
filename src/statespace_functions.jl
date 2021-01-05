@@ -77,6 +77,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
     uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
     uncertain_zlb = haskey(m.settings, :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false
+    altpol_vec_orig = get_setting(m, altpol_name)
 
     m <= Setting(:regime_switching, false)
     m <= Setting(:uncertain_altpolicy, false)
@@ -108,6 +109,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
     m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
     m <= Setting(:uncertain_zlb, uncertain_zlb)
+    m <= Setting(altpol_name, altpol_vec_orig)
 
     # Checks if pseudo measurement is required
     type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
