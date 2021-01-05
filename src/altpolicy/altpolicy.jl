@@ -49,3 +49,25 @@ function AltPolicy(key::Symbol, eqcond_fcn::Function, solve_fcn::Function;
 end
 
 Base.string(a::AltPolicy) = string(a.key)
+
+function altpolicy_replace_eq_entries(key::Symbol)
+    if key == :flexible_ait
+        return flexible_ait_replace_eq_entries
+    elseif key == :zero_rate
+        return zero_rate_replace_eq_entries
+    elseif key == :smooth_ait_gdp_alt
+        smooth_ait_gdp_alt_replace_eq_entries
+    elseif key == :smooth_ait_gdp
+        smooth_ait_gdp_replace_eq_entries
+    elseif key == :ait
+        ait_replace_eq_entries
+    elseif key == :ngdp
+        ngdp_replace_eq_entries
+    elseif key == :rw_zero_rate
+        rw_zero_rate_replace_eq_entries
+    elseif key == :rw
+        rw_replace_eq_entries
+    else
+        error("AltPolicy $(key) has not been added to `altpolicy_replace_eq_entries` as having a method for replacing equilibrium conditions")
+    end
+end
