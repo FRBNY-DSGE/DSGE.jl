@@ -380,7 +380,7 @@ end
 function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states::AbstractMatrix{S},
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
-                  tol::S = -1e-14) where {S <: Real}
+                  tol::S = -1e-4) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false

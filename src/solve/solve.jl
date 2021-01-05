@@ -481,7 +481,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                         verbose::Symbol = :high) where {S <: Real}
 
     # Calculate the matrices for the temporary alternative policies
-    gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
+    @show fcast_regimes
+    gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) #(first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
 
     # If using an alternative policy,
     # are there periods between the first forecast period and first period with temporary alt policies?
@@ -533,6 +534,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     if uncertain_zlb
         # Setup
         ffreg = first(fcast_regimes) + n_no_alt_reg
+        @show n_no_alt_reg
+        @show ffreg
+        @show fcast_regimes
         altpols, weights = if haskey(get_settings(m), :alternative_policies) && haskey(get_settings(m), :alternative_policy_weights)
             get_setting(m, :alternative_policies), get_setting(m, :alternative_policy_weights)
         elseif (haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
@@ -582,7 +586,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Ralts[end] = Ralt[1:n_endo, :]
         Calts[end] = Calt[1:n_endo]
 =#
-        #save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str).jld2", Dict("Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal))
+        save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str).jld2", Dict("Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal))
 
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
@@ -600,12 +604,12 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         end
 
 #        @show get_setting(m, :alternative_policy_weights)[1]
-#         save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str)_last.jld2", Dict("TTTs" => TTTs, "RRRs" => RRRs, "CCCs" => CCCs))#,
-#=         "Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal, "Gam0_til" => Γ0_til, "Gam1_til" => Γ1_til,
+         save("uncertain_zlb_$(get_setting(m, :alternative_policy_weights)[1])$(Hbar_str)_last.jld2", Dict("TTTs" => TTTs, "RRRs" => RRRs, "CCCs" => CCCs,
+         "Tcal" => Tcal, "Rcal" => Rcal, "Ccal" => Ccal, "Gam0_til" => Γ0_til, "Gam1_til" => Γ1_til,
          "Gam2_til" => Γ2_til, "C_til" => C_til, "Psi_til" => Ψ_til, "TTT_liftoff" => TTT_liftoff,
          "RRR_liftoff" => RRR_liftoff, "CCC_liftoff" => CCC_liftoff, "TTT_gensys_final" => TTT_gensys_final,
          "RRR_gensys_final" => RRR_gensys_final, "CCC_gensys_final" => CCC_gensys_final,
-         "gensys2_regimes" => gensys2_regimes, "populate_reg" => populate_reg, "Talt" => Talt, "Calt" => Calt))=#
+         "gensys2_regimes" => gensys2_regimes, "populate_reg" => populate_reg, "Talt" => Talt, "Calt" => Calt))
 
     else
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
