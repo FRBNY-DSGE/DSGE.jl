@@ -1,4 +1,4 @@
-# DSGE.jl 1.1.7 (in development)
+# DSGE.jl 1.2 (in development)
 ## Version Restrictions
 + Minimum CSV version is v0.8
 
@@ -13,7 +13,7 @@
 + Fix error in calculating the diagonal of the Hessian with parallel workers
 + Update tests to handle seed changes in Julia 1.5
 + Convert missing values to NaNs when calculating means and bands
-+ Refactoring to regime-switching code to make it simpler to use and maintain
++ Refactor regime-switching code to make it easier to use and maintain
 
 # DSGE.jl 1.1.6
 ## Version Restrictions
