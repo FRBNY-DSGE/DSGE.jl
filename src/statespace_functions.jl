@@ -232,12 +232,9 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
 
             # determine which regimes use gensys/gensys2
             # TODO: rename first_gensys2_regime and last_gensys2_regime to first_temporary_policy_regime, etc.
-            ## Note first_gensys2_regime is first regime in which equilibrium conditions expected to be replaced,
-            ## BUT gensys2_regimes needs to include the regime *before* first_gensys2_regime b/c
-            ## it is needed as a boundary condtion.
             first_gensys2_regime = if haskey(get_settings(m), :replace_eqcond_func_dict)
                 minimum(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
-            elseif haskey(get_settings(m), :reg_forecast_start) # TODO: we may want to throw an error instead of making a guess?
+            elseif haskey(get_settings(m), :reg_forecast_start)
                 get_setting(m, :reg_forecast_start)
             else
                 n_hist_regimes + 1

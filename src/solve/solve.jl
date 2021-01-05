@@ -26,13 +26,13 @@ S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
 """
 function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
                regime_switching::Bool = false,
-               gensys_regimes::Vector{UnitRange{Int}} = UnitRange{Int}[1:1],
-               gensys2_regimes::Vector{UnitRange{Int}} = UnitRange{Int}[1:1],
+               gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
+               gensys2_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
                regimes::Vector{Int} = Int[1],
                verbose::Symbol = :high) where {T <: Real}
 
     altpolicy_solve = alternative_policy(m).solve
-    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
 
     if regime_switching
         return solve_regime_switching(m; apply_altpolicy = apply_altpolicy, gensys_regimes = gensys_regimes,
@@ -184,26 +184,26 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                                 verbose::Symbol = :high) where {T <: Real}
 
     altpolicy_solve = alternative_policy(m).solve
-    gensys2 = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
-    uncertain_zlb = haskey(get_settings(m), :uncertain_zlb) && get_setting(m, :uncertain_zlb)
+    gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
+    uncertain_zlb = haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false
     if get_setting(m, :solution_method) == :gensys
         if length(regimes) == 1 # Calculate the solution to a specific regime
             return solve_one_regime(m; apply_altpolicy = apply_altpolicy, regime = regimes[1],
                                     uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
         else # Calculate the reduced-form state space matrices for all regimes
-            Γ0s = Vector{Matrix{T}}(undef, length(regimes))
-            Γ1s = Vector{Matrix{T}}(undef, length(regimes))
-            Cs = Vector{Vector{T}}(undef, length(regimes))
-            Ψs = Vector{Matrix{T}}(undef, length(regimes))
-            Πs = Vector{Matrix{T}}(undef, length(regimes))
+            Γ0s = Vector{Matrix{Float64}}(undef, length(regimes))
+            Γ1s = Vector{Matrix{Float64}}(undef, length(regimes))
+            Cs = Vector{Vector{Float64}}(undef, length(regimes))
+            Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
+            Πs = Vector{Matrix{Float64}}(undef, length(regimes))
 
             for reg in regimes
                 Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = eqcond(m, reg)
             end
 
-            TTTs = Vector{Matrix{T}}(undef, length(regimes))
-            RRRs = Vector{Matrix{T}}(undef, length(regimes))
-            CCCs = Vector{Vector{T}}(undef, length(regimes))
+            TTTs = Vector{Matrix{Float64}}(undef, length(regimes))
+            RRRs = Vector{Matrix{Float64}}(undef, length(regimes))
+            CCCs = Vector{Vector{Float64}}(undef, length(regimes))
 
             # Solve model for gensys regimes
             for reg_range in gensys_regimes
@@ -250,7 +250,6 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
         end
 
         # Since we only have one regime in solve_one_regime, no time-varying credibility
-        ## TODO: delete this block of code about flexible_ait_policy_change once refactoring is fully complete
         if (haskey(get_settings(m), :flexible_ait_policy_change) ?
             get_setting(m, :flexible_ait_policy_change) : false) &&
             get_setting(m, :regime_dates)[regime] >= get_setting(m, :flexible_ait_policy_change_date)
@@ -293,16 +292,9 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
                                     Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                                     TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                                     regimes::Vector{Int} = Int[1],
-                                    uncertain_altpolicy::Bool = false, # TODO: delete uncertain_altpolicy kwarg
-                                    apply_altpolicy::Bool = false,
+                                    uncertain_altpolicy::Bool = false, apply_altpolicy::Bool = false,
                                     altpolicy_solve::Function = solve,
                                     verbose::Symbol = :high) where {S <: Real}
-
-    uncertain_altpol = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
-    first_gensys2_regime = minimum(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
-    if uncertain_altpol
-        histpol = AltPolicy[get_setting(m, :imperfect_awareness_historical_policy)]
-    end
 
     for reg in regimes
         TTT_gensys, CCC_gensys, RRR_gensys, eu =
@@ -314,15 +306,19 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
             throw(GensysError("Error in Gensys, Regime $reg"))
         end
 
-        if uncertain_altpol
-            weights = haskey(get_settings(m), :imperfect_awareness_varying_weights) ?
-                get_setting(m, :imperfect_awareness_varying_weights)[reg] : get_setting(m, :imperfect_awareness_weights)
-            #weights = [get_setting(m, :imperfect_awareness_varying_weights)[i][reg-get_setting(m, :reg_forecast_start)+1]
-            #               for i in 1:length(get_setting(m, :imperfect_awareness_varying_weights))]
-            #append!(weights, 1.0 - sum(weights))
-
-            # Time-varying credibility weights for the regime reg
+        if get_setting(m, :gensys2) && get_setting(m, :uncertain_altpolicy)
+            first_gensys2_regime = min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))...)
+            weights = get_setting(m, :imperfect_awareness_weights)
+            histpol = AltPolicy[get_setting(m, :imperfect_awareness_historical_policy)]
             if reg >= first_gensys2_regime
+                # Time-varying credibility weights for the regime reg
+
+                if haskey(get_settings(m), :imperfect_awareness_varying_weights)
+                    #weights = [get_setting(m, :imperfect_awareness_varying_weights)[i][reg-get_setting(m, :reg_forecast_start)+1]
+                #               for i in 1:length(get_setting(m, :imperfect_awareness_varying_weights))]
+                    #append!(weights, 1.0 - sum(weights))
+                    weights = get_setting(m, :imperfect_awareness_varying_weights)[reg]
+                end
                 TTT_gensys, RRR_gensys, CCC_gensys =
                 gensys_uncertain_altpol(m, weights, histpol; apply_altpolicy = true,
                                         TTT = TTT_gensys, regime_switching = true, regimes = Int[reg])
@@ -337,7 +333,6 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
         TTTs[reg], RRRs[reg], CCCs[reg] =
         augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
     end
-
     return TTTs, RRRs, CCCs
 end
 
@@ -346,46 +341,37 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                         TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                         gensys2_regimes::Vector{Int} = Int[1], uncertain_zlb::Bool = false,
                         verbose::Symbol = :high) where {S <: Real}
+    # Solve for the final regime of the alternative rule
+    altpolicy_solve = get_setting(m, :alternative_policy).solve
+    TTT_final, RRR_final, CCC_final = altpolicy_solve(m; regime_switching = true,
+                                                      regimes = Int[last(gensys2_regimes)])
 
-    # Calculate the matrices for the temporary alternative policies
-    @show fcast_regimes
-    gensys2_regimes = (first(fcast_regimes) - 1):last(fcast_regimes) #(first(fcast_regimes) - 1):last(fcast_regimes) # TODO: generalize to multiple times in which we need to impose temporary alternative policies
+    n_endo = length(m.endogenous_states)
+    TTT_final = TTT_final[1:n_endo, 1:n_endo] # make sure the non-augmented version
+    RRR_final = RRR_final[1:n_endo, :]        # is returned
+    CCC_final = CCC_final[1:n_endo]
 
-    # If using an alternative policy,
-    # are there periods between the first forecast period and first period with temporary alt policies?
-    # For example, are there conditional periods? We don't want to use gensys2 on the conditional periods then
-    # since gensys2 should be applied just to the alternative policies.
-    # If not using an alternative policy, then we do not want to treat the conditional periods separately unless
-    # explicitly instructed by :gensys2_separate_cond_regimes.
-    separate_cond_periods = (get_setting(m, :alternative_policy).key != :historical) ||
-        (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false)
-    n_no_alt_reg = separate_cond_periods ?
-        (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
-
-    if n_no_alt_reg > 0
-        # Get the T, R, C matrices between the first forecast period & first rule period
-        for fcast_reg in first(fcast_regimes):(first(fcast_regimes) + n_no_alt_reg - 1)
-            TTT_gensys, CCC_gensys, RRR_gensys, eu =
-                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
-                       1+1e-6, verbose = verbose)
-
-
-            if haskey(get_settings(m), :flexible_ait_2020Q3_policy_change) ?
-                get_setting(m, :flexible_ait_2020Q3_policy_change) : false &&
-                get_setting(m, :regime_dates)[fcast_reg] >= Date(2020, 9, 30)
-
-                weights = get_setting(m, :imperfect_credibility_weights)
-                histpol = AltPolicy[get_setting(m, :imperfect_credibility_historical_policy)]
-                TTT_gensys, RRR_gensys, CCC_gensys =
-                    gensys_uncertain_altpol(m, weights, histpol;
-                                            TTT = TTT_gensys, regime_switching = true, regimes = Int[fcast_reg])
-            end
+    # if we're using an uncertain alternative policy, we have to compute the
+    # weighted final transition matrix
+    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
+    if uncertain_altpolicy
+        if haskey(get_settings(m), :imperfect_awareness_varying_weights)
+            weights = get_setting(m, :imperfect_awareness_varying_weights)
+            #append!(weights, 1.0 - sum(weights))
+            weights = weights[last(gensys2_regimes)]
+        else
+            weights = get_setting(m, :imperfect_awareness_weights)
+        end
 
         altpols = get_setting(m, :alternative_policies)
 
-        TTT_final, RRR_final, CCC_final =
+        TTT_final_weighted, RRR_final_weighted, CCC_final_weighted =
         gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true,
                                 TTT = TTT_final, regimes = Int[last(gensys2_regimes)])
+
+        TTT_final_weighted = real(TTT_final_weighted)
+        RRR_final_weighted = real(RRR_final_weighted)
+        CCC_final_weighted = real(CCC_final_weighted)
     end
 
     TTT_final = real(TTT_final)
@@ -409,28 +395,27 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         end
         if isa(weights, AbstractDict)
             # populate_reg should work for now b/c should coincide w/entries of replace_eqcond_func_dict
-            # Note also that first(gensys2_regimes) is actually one regime *before* the first regime
-            # in which equilibrium conditions change due to replace_eqcond_func_dict.
-            weights = [weights[i] for i in (first(gensys2_regimes) + 1):last(gensys2_regimes)]
+            weights = [weights[i] for i in first(gensys2_regimes)+1:last(gensys2_regimes)]
         end
 
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
         Talt, _, Calt = altpols[1].solve(m)
 
         # Calculate gensys2 matrices under belief that the desired lift-off policy will occur
-        # TODO: generalize to having multiple distinct sets of regimes which are gensys2 regimes
+        # FIGURE OUT HOW TO NOT USE all gensys2_regimes, just use the minimal number of required eqcond matrices
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                        TTT_liftoff, RRR_liftoff, CCC_liftoff,
-                                        T_switch = (separate_cond_periods ?
-                                        get_setting(m, :n_rule_periods) + 1 : get_setting(m, :n_fcast_regimes)))
-        Tcal[end] = TTT_liftoff
-        Rcal[end] = RRR_liftoff
-        Ccal[end] = CCC_liftoff
+                                        TTT_final, RRR_final, CCC_final,
+                                        T_switch = length(gensys2_regimes)-1)
+        Tcal[end] = TTT_final
+        Rcal[end] = RRR_final
+        Ccal[end] = CCC_final
 
-        # For Taylor Rule
+        # Now calculate transition matrices under an uncertain ZLB
+        # Γ0_til, etc., are eqcond matrices implementing ZLB, i.e. zero_rate_rule
+        # It is assumed that there is no re
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
-            gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
+        gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
 
         ng2  = length(Tcal) - 1 # number of gensys2 regimes
         nzlb = haskey(get_settings(m), :temporary_zlb_length) ? get_setting(m, :temporary_zlb_length) : ng2
@@ -502,6 +487,15 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             end
         end
 
+        if uncertain_altpolicy
+            Tcal[end] = TTT_final_weighted
+            Rcal[end] = RRR_final_weighted
+            Ccal[end] = CCC_final_weighted
+        else
+            Tcal[end] = TTT_final
+            Rcal[end] = RRR_final
+            Ccal[end] = CCC_final
+        end
     else
         Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                         Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
