@@ -948,15 +948,6 @@ function model_settings!(m::Model1002)
     m <= Setting(:add_cumulative, false)
     m <= Setting(:add_flexible_price_growth, false)
 
-    # Add forward-looking observables and pseudo-observables
-    m <= Setting(:forward_looking_observables,
-                 vcat([:obs_longinflation, :obs_longrate],
-                       [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)],
-                      (haskey(get_settings(m), :add_anticipated_obs_gdp) && get_setting(m, :add_anticipated_obs_gdp) ?
-                       [Symbol("obs_gdp$i") for i in 1:get_setting(m, :n_anticipated_obs_gdp)] : [])))
-    m <= Setting(:forward_looking_pseudo_observables,
-                 [:Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate])
-
     nothing
 end
 
