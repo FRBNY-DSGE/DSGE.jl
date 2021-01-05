@@ -27,6 +27,9 @@ optimize!(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix;
           store_trace::Bool    = false,
           show_trace::Bool     = false,
           extended_trace::Bool = false,
+          mle::Bool            = false, # default from estimate.jl
+          step_size::Float64   = .01,
+          toggle::Bool         = true,  # default from estimate.jl
           verbose::Symbol      = :none)
 ```
 Wrapper function to send a model to csminwel (or another optimization routine).
@@ -43,6 +46,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                    extended_trace::Bool = false,
                    mle::Bool            = false, # default from estimate.jl
                    step_size::Float64   = .01,
+                   toggle::Bool         = true,  # default from estimate.jl
                    verbose::Symbol      = :none)
 
     ########################################################################################
@@ -66,9 +70,10 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     end
 
     # Inputs to optimization
-    H0             = 1e-4 * eye(n_parameters_free(m))
-    para_free_inds = findall([!θ.fixed for θ in get_parameters(m)])
-    x_model        = transform_to_real_line(get_parameters(m))
+    para_free_inds = SMC.get_fixed_para_inds(get_parameters(m);
+                                             regime_switching = regime_switching, toggle = toggle)
+    H0             = 1e-4 * eye(length(para_free_inds))
+    x_model        = transform_to_real_line(get_parameters(m)) # TODO: extend transform_to_real_line to regime-switching
     x_opt          = x_model[para_free_inds]
 
     ########################################################################################
@@ -78,7 +83,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     function f_opt(x_opt)
         try
             x_model[para_free_inds] = x_opt
-            transform_to_model_space!(m, x_model)
+            transform_to_model_space!(m, x_model) # TODO: extend transform_to_model_space to regime-switching
         catch
             return Inf
         end
@@ -122,24 +127,24 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
             end
 
             # Convert x_proposal to model space and expand to full parameter vector
-            x_all = T[p.value for p in get_parameters(m)]  # to get fixed values
+            x_all = T[ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)]  # to get fixed values
             x_all[para_free_inds] = x                 # this is from real line
 
-            x_all_model = transform_to_model_space(get_parameters(m), x_all)
+            x_all_model = transform_to_model_space(get_parameters(m), x_all) # TODO: generalize to regime-switching
             x_proposal_all = copy(x_all_model)
 
             success = false
             while !success
                 # take a step in model space
                 for i in subset_inds
-                    prior_var = moments(get_parameters(m)[i])[2] # moments(get(get_parameters(m)[i].prior))[2]
+                    prior_var = moments(get_parameters(m)[i])[2] # moments(get(get_parameters(m)[i].prior))[2] # TODO: generalize to regime-switching
                     proposal_in_bounds = false
                     proposal = x_all_model[i]
-                    lower = get_parameters(m)[i].valuebounds[1]
+                    lower = get_parameters(m)[i].valuebounds[1] # TODO: generalize to regime-switching
                     upper = get_parameters(m)[i].valuebounds[2]
 
                     # draw a new parameter value, and redraw if out of bounds
-                    while !proposal_in_bounds
+                    while !proposal_in_bounds # TODO: generalize to regime-switching
                         r = rand([-1 1]) * rand()
                         proposal = x_all_model[i] + (r * step_size * prior_var)
                         if lower < proposal < upper
@@ -153,7 +158,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 try
                     DSGE.update!(m, x_proposal_all)
                     compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
-                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
+                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all) # TODO: generalize to regime-switching
                     success = true
                 catch ex
                     if !(typeof(ex) in [DomainError, ParamBoundsError, GensysError])
@@ -176,23 +181,23 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
             end
 
             # Convert x_proposal to model space and expand to full parameter vector
-            x_all = T[p.value for p in get_parameters(m)] # to get fixed values
-            x_all[para_free_inds] = x                     # this is from real line
+            x_all = T[ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)]  # to get fixed values
+            x_all[para_free_inds] = x                 # this is from real line
 
-            x_all_m = transform_to_model_space(get_parameters(m), x_all)
+            x_all_m = transform_to_model_space(get_parameters(m), x_all)  # TODO: generalize to regime-switching
             x_proposal_all = copy(x_all_m)
 
             success = false
             while !success
                 # take a step in model space
                 for i in subset_inds
-                    prior_var = moments(get_parameters(m)[i])[2]#moments(get(m.parameters[i].prior))[2]
+                    prior_var = moments(get_parameters(m)[i])[2]#moments(get(m.parameters[i].prior))[2] # TODO: generalize to regime-switching
                     proposal_in_bounds = false
                     proposal = x_all_m[i]
-                    lower = get_parameters(m)[i].valuebounds[1]
+                    lower = get_parameters(m)[i].valuebounds[1] # TODO: generalize to regime-switching
                     upper = get_parameters(m)[i].valuebounds[2]
                     # draw a new parameter value, and redraw if out of bounds
-                    while !proposal_in_bounds
+                    while !proposal_in_bounds # TODO: generalize to regime-switching
                         r = rand([-1 1]) * rand()
                         proposal = x_all_m[i] + (r * step_size * prior_var)
                         if lower < proposal < upper
@@ -206,7 +211,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 try
                     DSGE.update!(m, x_proposal_all)
                     compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
-                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all)
+                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all) # TODO: generalize to regime-switching
                     success = true
                 catch ex
                     if !(typeof(ex) in [DomainError, ParamBoundsError, GensysError])
@@ -284,19 +289,20 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     ########################################################################################
 
     x_model[para_free_inds] = out.minimizer
-    transform_to_model_space!(m, x_model)
+    transform_to_model_space!(m, x_model) # TODO: generalize to regime-switching
 
     # Match original dimensions
-    out.minimizer = map(θ -> θ.value, get_parameters(m))
+    out.minimizer = ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)
 
-    H = zeros(n_parameters(m), n_parameters(m))
+    npara = regime_switching ? n_parameters_regime_switching(m) : n_parameters(m)
+    H = zeros(npara, npara)
     if H_ != nothing
 
         # Fill in rows/cols of zeros corresponding to location of fixed parameters
         # For each row corresponding to a free parameter, fill in columns corresponding to
         # free parameters. Everything else is 0.
         for (row_free, row_full) in enumerate(para_free_inds)
-            H[row_full,para_free_inds] = H_[row_free,:]
+            H[row_full, para_free_inds] = H_[row_free,:]
         end
 
     end
