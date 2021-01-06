@@ -464,5 +464,12 @@ function init_observable_mappings!(m::Model1002)
         observables = new_observables
     end
 
+    # Needed to implement measurement equation correctly
+    m <= Setting(:forward_looking_observables,
+                 vcat([:obs_longinflation, :obs_longrate],
+                      [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)],
+                      haskey(get_settings(m), :add_anticipated_obs_gdp) && get_setting(m, :add_anticipated_obs_gdp) ?
+                      [Symbol("obs_gdp$i") for i in 1:get_setting(m, :n_anticipated_obs_gdp)] : []))
+
     m.observable_mappings = observables
 end
