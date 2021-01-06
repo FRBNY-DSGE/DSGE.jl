@@ -216,31 +216,51 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
 
     solution_method = get_setting(m, :solution_method)
 
-    regime_switching = haskey(get_settings(m), :regime_switching) ?
-    get_setting(m, :regime_switching) : false
-    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
-    get_setting(m, :n_regimes) : 1
-    n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
-    get_setting(m, :n_hist_regimes) : 1
+    regime_switching = haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
+    n_regimes        = (regime_switching && haskey(get_settings(m), :n_regimes)) ? get_setting(m, :n_regimes) : 1
+    n_hist_regimes   = (regime_switching && haskey(get_settings(m), :n_hist_regimes)) ? get_setting(m, :n_hist_regimes) : 1
 
     # Solve model
     if regime_switching
         if solution_method == :gensys
 
             # determine which regimes use gensys/gensys2
-            first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))...) : n_hist_regimes + 1
-            last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : n_regimes
-            if get_setting(m, :gensys2)
+#=            first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))...) : n_hist_regimes + 1
+            last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : n_regimes=#
+
+            first_gensys2_regime = if haskey(get_settings(m), :replace_eqcond_func_dict)
+                minimum(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
+            elseif haskey(get_settings(m), :reg_forecast_start) # TODO: we may want to throw an error instead of making a guess?
+                get_setting(m, :reg_forecast_start)
+            else
+                n_hist_regimes + 1
+            end
+            last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ?
+                first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : n_regimes
+
+            if haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
+                gensys_regimes = UnitRange{Int}[1:(first_gensys2_regime - 1)]
+                if last_gensys2_regime != n_regimes
+                    append!(gensys_regimes, [(last_gensys2_regime + 1):n_regimes])
+                end
+            else
+                gensys_regimes = UnitRange{Int}[1:n_regimes]
+            end
+#=            if get_setting(m, :gensys2)
                 gensys_regimes = [1:first_gensys2_regime-1]
                 if last_gensys2_regime != n_regimes
                     append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
                 end
             else
                 gensys_regimes = [1:n_regimes]
-            end
+            end=#
+
+            ## regimes using gensys2
             gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
             @show gensys_regimes
             @show gensys2_regimes
+
+            # Solve!
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
@@ -255,7 +275,9 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
 
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
-            has_pseudo = true
+#             has_pseudo = true
+            has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
+                hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
             if tvis
                 if hasmethod(measurement, type_tuple)
                     measurement_equations = measurement(m, TTTs, RRRs, CCCs;
@@ -278,8 +300,6 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
                                                                                reg = reg, TTTs = TTTs, CCCs = CCCs,
                                                                                information_set = get_setting(m, :tvis_information_set)[reg])
                     end
-                else
-                    has_pseudo = false
                 end
             else
                 if hasmethod(measurement, type_tuple)
@@ -298,8 +318,6 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
                     for reg in 1:n_regimes
                         pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg)
                     end
-                else
-                    has_pseudo = false
                 end
             end
 
@@ -320,9 +338,10 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
             # Solve measurement equation
             measurement_equation = measurement(m, TTT, RRR, CCC)
 
+#=          # TODO: delete this chunk of code, can't have an equilibrium w/ permanent ZLB, will trigger endogeneity problem
             if get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond && apply_altpolicy
                 measurement_equation[:DD][get_observables(m)[:obs_nominalrate]] = m[:Rstarn]
-            end
+            end=#
 
         elseif solution_method == :klein
             # Unpacking the method from solve to hang on to TTT_jump
@@ -407,199 +426,199 @@ with weight λ.
     If `data` is passed in, then `β` and `Σ` are estimated from the data using `m`
     as a prior with weight λ. Otherwise, `β` and `Σ` comprise the VECM approximation
     of the DSGE `m`.
-    """
-    function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
-                            check_system::Bool = false, get_system::Bool = false,
-                            get_population_moments::Bool = false, use_intercept::Bool = false,
-                            tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
+"""
+function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_population_moments::Bool = false, use_intercept::Bool = false,
+                        tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
-        regime_switching = haskey(get_settings(m), :regime_switching) ?
+    regime_switching = haskey(get_settings(m), :regime_switching) ?
         get_setting(m, :regime_switching) : false
-        n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
+    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
         get_setting(m, :n_regimes) : 1
 
-        dsge = get_dsge(m)
-        if regime_switching
-            error("Regime switching has not been implemented for a DSGEVAR yet.")
-            system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
-                                    verbose = verbose) # This `system` is really a RegimeSwitchingSystem
+    dsge = get_dsge(m)
+    if regime_switching
+        error("Regime switching has not been implemented for a DSGEVAR yet.")
+        system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
+                                verbose = verbose) # This `system` is really a RegimeSwitchingSystem
 
-            systems = Vector{System{T}}(undef, n_regimes)
-            for i in 1:n_regimes
-                systems[i] = compute_system(dsge, System(system, i); observables = collect(keys(get_observables(m))),
-                                            shocks = collect(keys(get_shocks(m))), check_system = check_system)
-            end
-            system = RegimeSwitchingSystem(systems) # construct a RegimeSwitchingSystem from underlying systems
-        else
-            system = compute_system(dsge; verbose = verbose)
-            system = compute_system(dsge, system; observables = collect(keys(get_observables(m))),
-                                    shocks = collect(keys(get_shocks(m))), check_system = check_system)
+        systems = Vector{System{T}}(undef, n_regimes)
+        for i in 1:n_regimes
+            systems[i] = compute_system(dsge, System(system, i); observables = collect(keys(get_observables(m))),
+                                        shocks = collect(keys(get_shocks(m))), check_system = check_system)
         end
+        system = RegimeSwitchingSystem(systems) # construct a RegimeSwitchingSystem from underlying systems
+    else
+        system = compute_system(dsge; verbose = verbose)
+        system = compute_system(dsge, system; observables = collect(keys(get_observables(m))),
+                                shocks = collect(keys(get_shocks(m))), check_system = check_system)
+    end
+
+    if get_system
+        return system
+    elseif regime_switching
+        EEs, MMs = measurement_error(m; regime_switching = regime_switching, n_regimes = n_regimes)
+        out = get_population_moments ? Vector{Tuple{3, Matrix{T}}}(undef, n_regimes) :
+            Vector{Tuple{2, Matrix{T}}}(undef, n_regimes)
+
+        for i in 1:n_regimes
+            out[i] = var_approx_state_space(system[i, :TTT], system[i, :RRR], system[i, :QQ],
+                                            system[i, :DD], system[i, :ZZ], EEs[i], MMs[i], n_lags(m);
+                                            get_population_moments = get_population_moments,
+                                            use_intercept = use_intercept)
+        end
+
+        return out
+    else
+        EE, MM = measurement_error(m)
+
+        return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                      system[:DD], system[:ZZ], EE, MM, n_lags(m);
+                                      get_population_moments = get_population_moments,
+                                      use_intercept = use_intercept)
+    end
+end
+
+function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
+                        apply_altpolicy::Bool = false,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_population_moments::Bool = false,
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
+
+    if get_λ(m) == Inf
+        # Then we just want the VAR approximation of the DSGE
+        return compute_system(m; apply_altpolicy = apply_altpolicy,
+                              check_system = check_system, get_system = get_system,
+                              get_population_moments = get_population_moments, use_intercept = true,
+                              verbose = verbose)
+    else
+        # Create a system using the method for DSGE-VARs and λ = ∞
+        system = compute_system(m; apply_altpolicy = apply_altpolicy,
+                                check_system = check_system,
+                                get_system = true, use_intercept = true,
+                                verbose = verbose)
 
         if get_system
             return system
-        elseif regime_switching
-            EEs, MMs = measurement_error(m; regime_switching = regime_switching, n_regimes = n_regimes)
-            out = get_population_moments ? Vector{Tuple{3, Matrix{T}}}(undef, n_regimes) :
-            Vector{Tuple{2, Matrix{T}}}(undef, n_regimes)
-
-            for i in 1:n_regimes
-                out[i] = var_approx_state_space(system[i, :TTT], system[i, :RRR], system[i, :QQ],
-                                                system[i, :DD], system[i, :ZZ], EEs[i], MMs[i], n_lags(m);
-                                                get_population_moments = get_population_moments,
-                                                use_intercept = use_intercept)
-            end
-
-            return out
         else
             EE, MM = measurement_error(m)
 
-            return var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
-                                          system[:DD], system[:ZZ], EE, MM, n_lags(m);
-                                          get_population_moments = get_population_moments,
-                                          use_intercept = use_intercept)
-        end
-    end
-
-    function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
-                            apply_altpolicy::Bool = false,
-                            check_system::Bool = false, get_system::Bool = false,
-                            get_population_moments::Bool = false,
-                            tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
-
-        if get_λ(m) == Inf
-            # Then we just want the VAR approximation of the DSGE
-            return compute_system(m; apply_altpolicy = apply_altpolicy,
-                                  check_system = check_system, get_system = get_system,
-                                  get_population_moments = get_population_moments, use_intercept = true,
-                                  verbose = verbose)
-        else
-            # Create a system using the method for DSGE-VARs and λ = ∞
-            system = compute_system(m; apply_altpolicy = apply_altpolicy,
-                                    check_system = check_system,
-                                    get_system = true, use_intercept = true,
-                                    verbose = verbose)
-
-            if get_system
-                return system
-            else
-                EE, MM = measurement_error(m)
-
-                lags = n_lags(m)
-                YYYY, XXYY, XXXX =
+            lags = n_lags(m)
+            YYYY, XXYY, XXXX =
                 compute_var_population_moments(data, lags; use_intercept = true)
-                out = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
-                                             system[:DD], system[:ZZ], EE, MM, n_lags(m);
-                                             get_population_moments = true,
-                                             use_intercept = true)
+            out = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                         system[:DD], system[:ZZ], EE, MM, n_lags(m);
+                                         get_population_moments = true,
+                                         use_intercept = true)
 
-                if get_population_moments
-                    return out..., YYYY, XXYY, XXXX
-                else
-                    # Compute prior-weighted population moments
-                    λ = get_λ(m)
-                    YYYYC = YYYY + λ .* out[1]
-                    XXYYC = XXYY + λ .* out[2]
-                    XXXXC = XXXX + λ .* out[3]
+            if get_population_moments
+                return out..., YYYY, XXYY, XXXX
+            else
+                # Compute prior-weighted population moments
+                λ = get_λ(m)
+                YYYYC = YYYY + λ .* out[1]
+                XXYYC = XXYY + λ .* out[2]
+                XXXXC = XXXX + λ .* out[3]
 
-                    # Draw stationary VAR system
-                    n_periods = size(data, 2) - lags
-                    β, Σ =  draw_stationary_VAR(YYYYC, XXYYC, XXXXC,
-                                                convert(Int, floor(n_periods + λ * n_periods)),
-                                                size(data, 1), lags)
+                # Draw stationary VAR system
+                n_periods = size(data, 2) - lags
+                β, Σ =  draw_stationary_VAR(YYYYC, XXYYC, XXXXC,
+                                            convert(Int, floor(n_periods + λ * n_periods)),
+                                            size(data, 1), lags)
 
-                    return β, Σ
-                end
+                return β, Σ
             end
         end
     end
+end
 
-    # Same functions as above but for AbstractDSGEVECMModel types
-    function compute_system(m::AbstractDSGEVECMModel{T}; apply_altpolicy::Bool = false,
-                            check_system::Bool = false, get_system::Bool = false,
-                            get_population_moments::Bool = false, use_intercept::Bool = false,
-                            tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
+# Same functions as above but for AbstractDSGEVECMModel types
+function compute_system(m::AbstractDSGEVECMModel{T}; apply_altpolicy::Bool = false,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_population_moments::Bool = false, use_intercept::Bool = false,
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
 
-        dsge = get_dsge(m)
-        system = compute_system(dsge; verbose = verbose)
+    dsge = get_dsge(m)
+    system = compute_system(dsge; verbose = verbose)
 
-        # Use wrapper compute_system for AbstractDSGEVECMModel types
-        # (as opposed to compute_system(m::AbstractDSGEModel, system::System; ...))
-        system, DD_coint_add = compute_system(m, system; observables = collect(keys(get_observables(m))),
-                                              cointegrating = collect(keys(get_cointegrating(m))),
-                                              cointegrating_add = collect(keys(get_cointegrating_add(m))),
-                                              shocks = collect(keys(get_shocks(m))), check_system = check_system,
-                                              get_DD_coint_add = true)
+    # Use wrapper compute_system for AbstractDSGEVECMModel types
+    # (as opposed to compute_system(m::AbstractDSGEModel, system::System; ...))
+    system, DD_coint_add = compute_system(m, system; observables = collect(keys(get_observables(m))),
+                                          cointegrating = collect(keys(get_cointegrating(m))),
+                                          cointegrating_add = collect(keys(get_cointegrating_add(m))),
+                                          shocks = collect(keys(get_shocks(m))), check_system = check_system,
+                                          get_DD_coint_add = true)
+
+    if get_system
+        return system, DD_coint_add
+    else
+        EE, MM = measurement_error(m)
+
+        return vecm_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                       system[:DD], system[:ZZ], EE, MM, n_observables(m),
+                                       n_lags(m), n_cointegrating(m), n_cointegrating_add(m),
+                                       DD_coint_add;
+                                       get_population_moments = get_population_moments,
+                                       use_intercept = use_intercept)
+    end
+end
+
+function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
+                        apply_altpolicy::Bool = false,
+                        check_system::Bool = false, get_system::Bool = false,
+                        get_population_moments::Bool = false,
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
+
+    if get_λ(m) == Inf
+        # Then we just want the VECM approximation of the DSGE
+        # with no additional cointegration
+        return compute_system(m; apply_altpolicy = apply_altpolicy,
+                              check_system = check_system, get_system = get_system,
+                              get_population_moments = get_population_moments, use_intercept = true,
+                              verbose = verbose)
+    else
+        # Create a system using the method for DSGE-VECMs and λ = ∞
+        system, DD_coint_add = compute_system(m; apply_altpolicy = apply_altpolicy,
+                                              check_system = check_system,
+                                              get_system = true, use_intercept = true,
+                                              verbose = verbose)
 
         if get_system
-            return system, DD_coint_add
+            return system
         else
             EE, MM = measurement_error(m)
 
-            return vecm_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
-                                           system[:DD], system[:ZZ], EE, MM, n_observables(m),
-                                           n_lags(m), n_cointegrating(m), n_cointegrating_add(m),
-                                           DD_coint_add;
-                                           get_population_moments = get_population_moments,
-                                           use_intercept = use_intercept)
-        end
-    end
-
-    function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
-                            apply_altpolicy::Bool = false,
-                            check_system::Bool = false, get_system::Bool = false,
-                            get_population_moments::Bool = false,
-                            tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
-
-        if get_λ(m) == Inf
-            # Then we just want the VECM approximation of the DSGE
-            # with no additional cointegration
-            return compute_system(m; apply_altpolicy = apply_altpolicy,
-                                  check_system = check_system, get_system = get_system,
-                                  get_population_moments = get_population_moments, use_intercept = true,
-                                  verbose = verbose)
-        else
-            # Create a system using the method for DSGE-VECMs and λ = ∞
-            system, DD_coint_add = compute_system(m; apply_altpolicy = apply_altpolicy,
-                                                  check_system = check_system,
-                                                  get_system = true, use_intercept = true,
-                                                  verbose = verbose)
-
-            if get_system
-                return system
-            else
-                EE, MM = measurement_error(m)
-
-                lags = n_lags(m)
-                YYYY, XXYY, XXXX =
+            lags = n_lags(m)
+            YYYY, XXYY, XXXX =
                 compute_var_population_moments(data, lags; use_intercept = true)
-                out = vecm_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
-                                              system[:DD], system[:ZZ], EE, MM, size(data, 1),
-                                              n_lags(m), n_cointegrating(m),
-                                              n_cointegrating_add(m), DD_coint_add;
-                                              get_population_moments = true,
-                                              use_intercept = true)
+            out = vecm_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
+                                          system[:DD], system[:ZZ], EE, MM, size(data, 1),
+                                          n_lags(m), n_cointegrating(m),
+                                          n_cointegrating_add(m), DD_coint_add;
+                                          get_population_moments = true,
+                                          use_intercept = true)
 
-                if get_population_moments
-                    return out..., YYYY, XXYY, XXXX
-                else
-                    # Compute prior-weighted population moments
-                    λ = get_λ(m)
-                    YYYYC = YYYY + λ .* out[1]
-                    XXYYC = XXYY + λ .* out[2]
-                    XXXXC = XXXX + λ .* out[3]
+            if get_population_moments
+                return out..., YYYY, XXYY, XXXX
+            else
+                # Compute prior-weighted population moments
+                λ = get_λ(m)
+                YYYYC = YYYY + λ .* out[1]
+                XXYYC = XXYY + λ .* out[2]
+                XXXXC = XXXX + λ .* out[3]
 
-                    # Draw VECM system
-                    n_periods = size(data, 2) - lags
-                    β, Σ =  draw_VECM(YYYYC, XXYYC, XXXXC,
-                                      convert(Int, n_periods + λ * n_periods),
-                                      size(data, 1), lags, n_cointegrating(m))
+                # Draw VECM system
+                n_periods = size(data, 2) - lags
+                β, Σ =  draw_VECM(YYYYC, XXYYC, XXXXC,
+                                  convert(Int, n_periods + λ * n_periods),
+                                  size(data, 1), lags, n_cointegrating(m))
 
-                    return β, Σ
-                end
+                return β, Σ
             end
         end
     end
+end
 
 """
 ```
@@ -669,133 +688,133 @@ must specify the EE matrix after applying compute_system.
 * `shocks`: variables that should be
     entered into the new `RRR` and `QQ` matrices as shocks.
     They must be existing exogenous shocks.
-    """
-    function compute_system(m::AbstractDSGEModel{S}, system::System;
-                            observables::Vector{Symbol} = collect(keys(m.observables)),
-                            pseudo_observables::Vector{Symbol} =
-                            collect(keys(m.pseudo_observables)),
-                            states::Vector{Symbol} =
-                            vcat(collect(keys(m.endogenous_states)),
-                                 collect(keys(m.endogenous_states_augmented))),
-                            shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
-                            zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
-                            check_system::Bool = true) where {S<:Real}
+"""
+function compute_system(m::AbstractDSGEModel{S}, system::System;
+                        observables::Vector{Symbol} = collect(keys(m.observables)),
+                        pseudo_observables::Vector{Symbol} =
+                        collect(keys(m.pseudo_observables)),
+                        states::Vector{Symbol} =
+                        vcat(collect(keys(m.endogenous_states)),
+                             collect(keys(m.endogenous_states_augmented))),
+                        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+                        zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
+                        check_system::Bool = true) where {S<:Real}
 
-        # Set up indices
-        oid  = m.observables # observables indices dictionary
-        pid  = m.pseudo_observables # pseudo observables indices dictionary
-        sid  = m.endogenous_states
-        said = m.endogenous_states_augmented # states augmented
+    # Set up indices
+    oid  = m.observables # observables indices dictionary
+    pid  = m.pseudo_observables # pseudo observables indices dictionary
+    sid  = m.endogenous_states
+    said = m.endogenous_states_augmented # states augmented
 
-        # Find shocks to keep
-        shock_inds = map(k -> m.exogenous_shocks[k], shocks)
-        Qout = system[:QQ][shock_inds, shock_inds]
+    # Find shocks to keep
+    shock_inds = map(k -> m.exogenous_shocks[k], shocks)
+    Qout = system[:QQ][shock_inds, shock_inds]
 
-        # Find states to keep
-        if !issubset(states, vcat(collect(keys(sid)), collect(keys(said))))
-            false_states = setdiff(states, vcat(collect(keys(sid)), collect(keys(said))))
-            error("The following states in keyword `states` do not exist in `system`: " *
-                  join(string.(false_states), ", "))
-        elseif !isempty(setdiff(vcat(collect(keys(sid)), collect(keys(said))), states))
-            which_states = Vector{Int}(undef, length(states))
-            for i = 1:length(states)
-                which_states[i] = haskey(sid, states[i]) ? sid[states[i]] : said[states[i]]
-            end
-            Tout = system[:TTT][which_states, which_states]
-            Rout = system[:RRR][which_states, shock_inds]
-            Cout = system[:CCC][which_states]
-        else
-            which_states = 1:n_states_augmented(m)
-            Tout = copy(system[:TTT])
-            Rout = system[:RRR][:, shock_inds]
-            Cout = copy(system[:CCC])
+    # Find states to keep
+    if !issubset(states, vcat(collect(keys(sid)), collect(keys(said))))
+        false_states = setdiff(states, vcat(collect(keys(sid)), collect(keys(said))))
+        error("The following states in keyword `states` do not exist in `system`: " *
+              join(string.(false_states), ", "))
+    elseif !isempty(setdiff(vcat(collect(keys(sid)), collect(keys(said))), states))
+        which_states = Vector{Int}(undef, length(states))
+        for i = 1:length(states)
+            which_states[i] = haskey(sid, states[i]) ? sid[states[i]] : said[states[i]]
         end
-
-        # Compute new ZZ and DD matrices if different observables than current system
-        if !isempty(symdiff(observables, collect(keys(oid))))
-            Zout = zeros(S, length(observables), size(Tout, 1))
-            Dout = zeros(S, length(observables))
-            for (i, obs) in enumerate(observables)
-                Zout[i, :], Dout[i] = if haskey(oid, obs)
-                    system[:ZZ][oid[obs], which_states], zero_DD ? zero(S) : system[:DD][oid[obs]]
-                elseif haskey(pid, obs)
-                    system[:ZZ_pseudo][pid[obs], which_states], zero_DD ? zero(S) : system[:DD_pseudo][pid[obs]]
-                else
-                    error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
-                end
-            end
-        else
-            Zout = copy(system[:ZZ])[:, which_states]
-            Dout = zero_DD ? zeros(S, size(Zout, 1)) : copy(system[:DD])
-        end
-
-        Eout = zeros(S, length(observables), length(observables)) # measurement errors are set to zero
-
-        # Compute new ZZ_pseudo, DD_pseudo if different pseudo_observables than current system
-        if !isempty(symdiff(pseudo_observables, collect(keys(pid))))
-            Zpseudoout = zeros(S, length(pseudo_observables), size(Tout, 1))
-            Dpseudoout = zeros(S, length(pseudo_observables))
-            for (i, pseudoobs) in enumerate(pseudo_observables)
-                Zpseudoout[i, :], Dpseudoout[i] = if haskey(oid, pseudoobs)
-                    system[:ZZ][oid[pseudoobs], which_states], zero_DD_pseudo ?
-                    zero(S) : system[:DD][oid[pseudoobs]]
-                elseif haskey(pid, pseudoobs)
-                    system[:ZZ_pseudo][pid[pseudoobs], which_states], zero_DD_pseudo ?
-                    zero(S) : system[:DD_pseudo][pid[pseudoobs]]
-                else
-                    error("Observable/PseudoObservable $pseudoobs cannot be found in the DSGE model $m")
-                end
-            end
-        else
-            Zpseudoout = copy(system[:ZZ_pseudo])[:, which_states]
-            Dpseudoout = zero_DD_pseudo ? zeros(S, size(Zpseudoout, 1)) : copy(system[:DD_pseudo])
-        end
-
-        if check_system
-            @assert size(Zout, 2) == size(Tout, 1) "Dimension 2 of new ZZ ($(size(Zout,2))) does not match dimension of states ($(size(Tout,1)))."
-            @assert size(Qout, 1) == size(Rout, 2) "Dimension 2 of new RRR ($(size(Zout,2))) does not match dimension of shocks ($(size(Qout,1)))."
-        end
-
-        # Construct new system
-        return System(Transition(Tout, Rout, Cout),
-                      Measurement(Zout, Dout, Qout, Eout),
-                      PseudoMeasurement(Zpseudoout, Dpseudoout))
+        Tout = system[:TTT][which_states, which_states]
+        Rout = system[:RRR][which_states, shock_inds]
+        Cout = system[:CCC][which_states]
+    else
+        which_states = 1:n_states_augmented(m)
+        Tout = copy(system[:TTT])
+        Rout = system[:RRR][:, shock_inds]
+        Cout = copy(system[:CCC])
     end
 
-    function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
-                            observables::Vector{Symbol} = collect(keys(get_observables(get_dsge(m)))),
-                            cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                            cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
-                            pseudo_observables::Vector{Symbol} =
-                            collect(keys(get_dsge(m).pseudo_observables)),
-                            states::Vector{Symbol} =
-                            vcat(collect(keys(get_dsge(m).endogenous_states)),
-                                 collect(keys(get_dsge(m).endogenous_states_augmented))),
-                            shocks::Vector{Symbol} = collect(keys(get_dsge(m).exogenous_shocks)),
-                            zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
-                            get_DD_coint_add::Bool = false,
-                            check_system::Bool = true) where {S<:Real}
-        # Cointegrating relationships should exist as observables/pseudo_observables already
-        # in the underlying DSGE. We assume cointegrating relationships come after normal observables.
-        # Default behavior is to recreate the underlying DSGE's state space representation, however.
-        sys = compute_system(get_dsge(m), system; observables = vcat(observables, cointegrating),
-                             pseudo_observables = pseudo_observables,
-                             states = states, shocks = shocks, zero_DD = zero_DD,
-                             zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
-        if get_DD_coint_add
-            mtype = typeof(m)
-            DD_coint_add = if hasmethod(compute_DD_coint_add, (mtype, Vector{Symbol}))
-                compute_DD_coint_add(m, cointegrating_add)
-            elseif hasmethod(compute_DD_coint_add, (mtype, ))
-                compute_DD_coint_add(m)
+    # Compute new ZZ and DD matrices if different observables than current system
+    if !isempty(symdiff(observables, collect(keys(oid))))
+        Zout = zeros(S, length(observables), size(Tout, 1))
+        Dout = zeros(S, length(observables))
+        for (i, obs) in enumerate(observables)
+            Zout[i, :], Dout[i] = if haskey(oid, obs)
+                system[:ZZ][oid[obs], which_states], zero_DD ? zero(S) : system[:DD][oid[obs]]
+            elseif haskey(pid, obs)
+                system[:ZZ_pseudo][pid[obs], which_states], zero_DD ? zero(S) : system[:DD_pseudo][pid[obs]]
             else
-                compute_DD_coint_add(m, sys, cointegrating_add)
+                error("Observable/PseudoObservable $obs cannot be found in the DSGE model $m")
             end
-            return sys, DD_coint_add
-        else
-            return sys
         end
+    else
+        Zout = copy(system[:ZZ])[:, which_states]
+        Dout = zero_DD ? zeros(S, size(Zout, 1)) : copy(system[:DD])
     end
+
+    Eout = zeros(S, length(observables), length(observables)) # measurement errors are set to zero
+
+    # Compute new ZZ_pseudo, DD_pseudo if different pseudo_observables than current system
+    if !isempty(symdiff(pseudo_observables, collect(keys(pid))))
+        Zpseudoout = zeros(S, length(pseudo_observables), size(Tout, 1))
+        Dpseudoout = zeros(S, length(pseudo_observables))
+        for (i, pseudoobs) in enumerate(pseudo_observables)
+            Zpseudoout[i, :], Dpseudoout[i] = if haskey(oid, pseudoobs)
+                system[:ZZ][oid[pseudoobs], which_states], zero_DD_pseudo ?
+                    zero(S) : system[:DD][oid[pseudoobs]]
+            elseif haskey(pid, pseudoobs)
+                system[:ZZ_pseudo][pid[pseudoobs], which_states], zero_DD_pseudo ?
+                    zero(S) : system[:DD_pseudo][pid[pseudoobs]]
+            else
+                error("Observable/PseudoObservable $pseudoobs cannot be found in the DSGE model $m")
+            end
+        end
+    else
+        Zpseudoout = copy(system[:ZZ_pseudo])[:, which_states]
+        Dpseudoout = zero_DD_pseudo ? zeros(S, size(Zpseudoout, 1)) : copy(system[:DD_pseudo])
+    end
+
+    if check_system
+        @assert size(Zout, 2) == size(Tout, 1) "Dimension 2 of new ZZ ($(size(Zout,2))) does not match dimension of states ($(size(Tout,1)))."
+        @assert size(Qout, 1) == size(Rout, 2) "Dimension 2 of new RRR ($(size(Zout,2))) does not match dimension of shocks ($(size(Qout,1)))."
+    end
+
+    # Construct new system
+    return System(Transition(Tout, Rout, Cout),
+                  Measurement(Zout, Dout, Qout, Eout),
+                  PseudoMeasurement(Zpseudoout, Dpseudoout))
+end
+
+function compute_system(m::AbstractDSGEVECMModel{S}, system::System;
+                        observables::Vector{Symbol} = collect(keys(get_observables(get_dsge(m)))),
+                        cointegrating::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                        cointegrating_add::Vector{Symbol} = Vector{Symbol}(undef, 0),
+                        pseudo_observables::Vector{Symbol} =
+                        collect(keys(get_dsge(m).pseudo_observables)),
+                        states::Vector{Symbol} =
+                        vcat(collect(keys(get_dsge(m).endogenous_states)),
+                             collect(keys(get_dsge(m).endogenous_states_augmented))),
+                        shocks::Vector{Symbol} = collect(keys(get_dsge(m).exogenous_shocks)),
+                        zero_DD::Bool = false, zero_DD_pseudo::Bool = false,
+                        get_DD_coint_add::Bool = false,
+                        check_system::Bool = true) where {S<:Real}
+    # Cointegrating relationships should exist as observables/pseudo_observables already
+    # in the underlying DSGE. We assume cointegrating relationships come after normal observables.
+    # Default behavior is to recreate the underlying DSGE's state space representation, however.
+    sys = compute_system(get_dsge(m), system; observables = vcat(observables, cointegrating),
+                         pseudo_observables = pseudo_observables,
+                         states = states, shocks = shocks, zero_DD = zero_DD,
+                         zero_DD_pseudo = zero_DD_pseudo, check_system = check_system)
+    if get_DD_coint_add
+        mtype = typeof(m)
+        DD_coint_add = if hasmethod(compute_DD_coint_add, (mtype, Vector{Symbol}))
+            compute_DD_coint_add(m, cointegrating_add)
+        elseif hasmethod(compute_DD_coint_add, (mtype, ))
+            compute_DD_coint_add(m)
+        else
+            compute_DD_coint_add(m, sys, cointegrating_add)
+        end
+        return sys, DD_coint_add
+    else
+        return sys
+    end
+end
 
 """
 ```
