@@ -9,9 +9,9 @@ m30 <= Setting(:date_forecast_start, Date(2020, 9, 30))
 m30 <= Setting(:date_conditional_end, Date(2020, 9, 30))
 df = load_data(m30; check_empty_columns = false)
 sys30 = compute_system(m30)
-m30 <= Setting(:imperfect_credibility_weights, [.5, .5])
+m30 <= Setting(:imperfect_awareness_weights, [.5, .5])
 sys30_imperf_cred = compute_system(m30)
-m30 <= Setting(:imperfect_credibility_weights, [1., 0.])
+m30 <= Setting(:imperfect_awareness_weights, [1., 0.])
 
 # Now check m10 generates same results when using flexible AIT policy as an alternative policy
 m10 = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),

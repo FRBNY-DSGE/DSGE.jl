@@ -814,8 +814,9 @@ end
     imperfect_cred_old = 1. - imperfect_cred_new
     custom_set = Dict{Symbol,Setting}(:n_mon_anticipated_shocks =>
                                       Setting(:n_mon_anticipated_shocks, 6, "Number of anticipated policy shocks"),
-                                      :imperfect_credibility_weights => Setting(:imperfect_credibility_weights,
-                                                                                [imperfect_cred_new, imperfect_cred_old]),
+                                      :imperfect_awareness_weights => Setting(:imperfect_awareness_weights,
+                                                                              [imperfect_cred_new, imperfect_cred_old]),
+                                      :alternative_policies => Setting(:alternative_policies, [DSGE.taylor_rule()]),
                                       :flexible_ait_policy_change => Setting(:flexible_ait_policy_change, true))
 
     m = Model1002("ss59", custom_settings = custom_set)
@@ -836,7 +837,6 @@ end
     m <= Setting(:regime_dates, reg_dates)
     m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
     setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
-    m <= Setting(:gensys2_first_regime, 4)
     m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
 
     sys_true = compute_system(m; tvis = true)
@@ -852,18 +852,13 @@ end
         @test sys_true[i, :TTT] ≈ sys[i, :TTT]
         @test sys_true[i, :ZZ] ≈ sys[i, :ZZ]
     end
-    m <= Setting(:gensys2_first_regime, 5)
-    @test_throws DSGE.GensysError compute_system(m; tvis = true)
 
-    m <= Setting(:gensys2_first_regime, 4)
     m <= Setting(:uncertain_zlb, true)
     sys = compute_system(m; tvis = true)
     for i in 1:get_setting(m, :n_regimes)
         @test sys_true_unc[i, :TTT] ≈ sys[i, :TTT]
         @test sys_true_unc[i, :ZZ] ≈ sys[i, :ZZ]
     end
-    m <= Setting(:gensys2_first_regime, 5)
-    @test_throws DSGE.GensysError compute_system(m; tvis = true)
 end
 
 nothing
