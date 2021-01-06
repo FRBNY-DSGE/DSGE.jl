@@ -28,7 +28,7 @@ output_vars = [:histobs, :forecastobs, :histpseudo, :forecastpseudo]
 df_full = CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv"), DataFrame)
 modal_params = map(x -> x.value, m.parameters)
 
-hist_rule = get_setting(m, :alternative_policy)
+hist_rule = DSGE.taylor_rule()
 setup_regime_switching_inds!(m; cond_type = :full) # Reset the regime dates b/c using full conditional forecast
 
 # Set up parameters
@@ -75,7 +75,7 @@ T_unc = Dict()
 R_unc = Dict()
 C_unc = Dict()
 for j in 1:length(prob_vecs)
-    m <= Setting(:alternative_policy_weights, prob_vecs[j])
+    m <= Setting(:imperfect_awareness_weights, prob_vecs[j])
     T_unc[j], R_unc[j], C_unc[j] = DSGE.gensys_uncertain_altpol(m, prob_vecs[j], DSGE.AltPolicy[hist_rule],
                                                                 apply_altpolicy = true)
     T_unc[j], R_unc[j], C_unc[j] = DSGE.augment_states(m, T_unc[j], R_unc[j], C_unc[j])
@@ -102,7 +102,8 @@ baseline_fcasts = DSGE.forecast_one_draw(m, :mode, :full, vcat(:forecaststates, 
 
 # Now calculate everything else
 for j in 1:length(prob_vecs)
-    m <= Setting(:alternative_policy_weights, prob_vecs[j])
+    m <= Setting(:imperfect_awareness_varying_weights,
+                 Dict(i => prob_vecs[j] for i in 4:(4 + Hbar_vec[j])))
 
     # Set up initial state
     s₀ = baseline_fcasts[:forecaststates][:, 1]
@@ -146,14 +147,14 @@ for j in 1:length(prob_vecs)
     # Automatic calculation
     m <= Setting(:uncertain_altpolicy, true)
     m <= Setting(:uncertain_zlb, true)
-    autoTs[j], autoRs[j], autoCs[j] = solve(m; apply_altpolicy = true, regime_switching = true,
-                                            pre_gensys2_regimes = collect(1:get_setting(m, :n_hist_regimes)),
-                                            fcast_gensys2_regimes =
-                                            collect((get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)),
+    autoTs[j], autoRs[j], autoCs[j] = solve(m; apply_altpolicy = false, regime_switching = true,
+                                            gensys_regimes = [1:get_setting(m, :n_hist_regimes) + 1],
+                                            gensys2_regimes =
+                                            [(get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)],
                                             regimes = collect(1:get_setting(m, :n_regimes)))
     auto_fcasts[j] = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params,
-                                                                                df_full; regime_switching = true, n_regimes =
-                                                                                get_setting(m, :n_regimes))
+                                            df_full; regime_switching = true, n_regimes =
+                                            get_setting(m, :n_regimes))
     m <= Setting(:uncertain_altpolicy, false) # Need to turn these off afterward
     m <= Setting(:uncertain_zlb, false)
 

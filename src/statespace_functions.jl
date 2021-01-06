@@ -99,9 +99,10 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
     # Called taylor but should run whatever is specified as historical policy
     ## either in alternative_policies or imperfect_credibility_historical_policy setting
-    system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
+    # system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
 
-    n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
+    # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
+    n_altpolicies = vary_wt ? length(first(values(altpol_wts))) : length(altpol_wts)
     system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
 
     m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
@@ -144,19 +145,21 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
                 system_main.measurements[reg][:ZZ][m.observables[k], :] =
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :] for i in 1:length(new_wt)])
+                system_main.measurements[reg][:DD][m.observables[k]] =
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:length(new_wt)])
+#=                system_main.measurements[reg][:ZZ][m.observables[k], :] =
                     sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :] for i in 1:(length(new_wt) - 1)]) +
                     new_wt[end] .* system_taylor.measurement[:ZZ][m.observables[k], :]
                 system_main.measurements[reg][:DD][m.observables[k]] =
                     sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:(length(new_wt) - 1)]) +
-                    new_wt[end] .* system_taylor.measurement[:DD][m.observables[k]]
+                    new_wt[end] .* system_taylor.measurement[:DD][m.observables[k]]=#
             end
         else
             system_main.measurements[reg][:ZZ] .=
-                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:(length(new_wt) - 1)]) +
-                new_wt[end] .* system_taylor.measurement[:ZZ]
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
             system_main.measurements[reg][:DD] .=
-                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD] for i in 1:(length(new_wt) - 1)]) +
-                new_wt[end] .* system_taylor.measurement[:DD]
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD] for i in 1:length(new_wt)])
         end
 
         if has_pseudo
@@ -164,20 +167,24 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 for k in get_setting(m, :forward_looking_pseudo_observables)
                     system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
                         sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
+                             for i in 1:length(new_wt)])
+                    system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
+                             for i in 1:length(new_wt)])
+#=                    system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
                              for i in 1:(length(new_wt)-1)]) +
                                  new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo][m.pseudo_observables[k], :]
                     system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
                         sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
                              for i in 1:(length(new_wt)-1)]) +
-                                 new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo][m.pseudo_observables[k]]
+                                 new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo][m.pseudo_observables[k]]=#
                 end
             else
                 system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
-                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:(length(new_wt) - 1)]) +
-                    new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo]
+                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:length(new_wt)])
                 system_main.pseudo_measurements[reg][:DD_pseudo] .=
-                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo] for i in 1:(length(new_wt) - 1)]) +
-                    new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo]
+                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo] for i in 1:length(new_wt)])
             end
         end
     end
