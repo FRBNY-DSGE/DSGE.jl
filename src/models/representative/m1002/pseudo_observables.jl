@@ -418,6 +418,9 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    # Needed to implement pseudo-measurement equation correctly
+    m <= Setting(:forward_looking_pseudo_observables, [:Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate])
+
     # Add to model object
     m.pseudo_observable_mappings = pseudo
 end

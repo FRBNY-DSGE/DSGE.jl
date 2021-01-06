@@ -18,18 +18,25 @@ the system) and then in the case of imperfect but positive credibility,
 adjusts the anticipated observables and pseudo-observables' measurement
 equations.
 """
-
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
     # Getting altpolicy weights to avoid ugliness of constantly checking which one is in use
-    vary_wt, altpol_wts, altpol_name = haskey(m.settings, :imperfect_awareness_varying_weights) ? (true, get_setting(m, :imperfect_awareness_varying_weights), :imperfect_awareness_varying_weights) :
-     (haskey(m.settings, :imperfect_awareness_weights) ? (false, get_setting(m, :imperfect_awareness_weights), :imperfect_awareness_weights) :
+    vary_wt, altpol_wts, altpol_wts_name = haskey(m.settings, :imperfect_awareness_varying_weights) ?
+        (true, get_setting(m, :imperfect_awareness_varying_weights), :imperfect_awareness_varying_weights) :
+     (haskey(m.settings, :imperfect_awareness_weights) ?
+      (false, get_setting(m, :imperfect_awareness_weights), :imperfect_awareness_weights) :
      (false, [2.], :irrelevant))
 
+    # Grab these settings
+    has_uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy)
+    has_uncertain_zlb = haskey(m.settings, :uncertain_zlb)
+    has_replace_eqcond_func = haskey(m.settings, :replace_eqcond_func_dict)
+    uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
+    uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+
     # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
-    if haskey(m.settings, :uncertain_zlb) && !get_setting(m, :uncertain_zlb) &&
-        haskey(m.settings, :replace_eqcond_func_dict) && altpol_name != :irrelevant
+    if has_uncertain_zlb && !uncertain_zlb && has_replace_eqcond_func && altpol_wts_name != :irrelevant
         if vary_wt
             for reg in keys(altpol_wts)
                 if get_setting(m, :replace_eqcond_func_dict)[reg] == DSGE.zero_rate_replace_eq_entries
@@ -52,36 +59,44 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
     ## only helpful for combining historical and alternative policies with
     ## the right weights later on
-    if haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy) &&
-        haskey(m.settings, :replace_eqcond_func_dict) && altpol_name != :irrelevant
+    if has_uncertain_altpolicy && !uncertain_altpolicy &&
+        has_replace_eqcond_func && altpol_wts_name != :irrelevant
         if vary_wt
+            altpol_replace_eq_entries = altpolicy_replace_eq_entries(alternative_policy(m).key)
             for reg in keys(altpol_wts)
-                if get_setting(m, :replace_eqcond_func_dict)[reg] == alternative_policy(m).eqcond
+                if get_setting(m, :replace_eqcond_func_dict)[reg] == altpol_replace_eq_entries
                     altpol_vec = zeros(length(altpol_wts[reg]))
                     altpol_vec[1] = 1.0
                     altpol_wts[reg] = altpol_vec
                 end
             end
-        end #Else accounted for in ZLB
+        end # Else accounted for in ZLB
     end
 
     system_main = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
 
-    # If correcting measurement eqs for anticipated (pseudo) observables is unnecessary (eg. running Taylor or no regime switching or no uncertainty in ZLB or altpolicy or either perfect or zero credibility - invariant perfect or zero credibility in the case of time varying) then return system now.
+    # If correcting measurement eqs for anticipated (pseudo) observables is unnecessary
+    # (eg. running Taylor or no regime switching or no uncertainty in ZLB or altpolicy or
+    # either perfect or zero credibility - invariant perfect or zero credibility in the case of time varying),
+    # then return system now.
+    if !apply_altpolicy || !haskey(m.settings, :regime_switching) || !get_setting(m, :regime_switching) ||
+        !has_replace_eqcond_func || # if replace_eqcond_func_dict is not defined, then no alt policies occur
+        (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy &&
+         !uncertain_altpolicy) || altpol_wts_name == :irrelevant || (!vary_wt && 1.0 in altpol_wts) ||
+        (vary_wt && all([1.0 in val && val == first(values(altpol_wts)) for val in values(altpol_wts)]))
+        ## TODO: Setting names should change once refactoring done
 
-    if !apply_altpolicy || !haskey(m.settings, :regime_switching) || !get_setting(m, :regime_switching) || !haskey(m.settings, :replace_eqcond_func_dict) ||
-        (haskey(m.settings, :uncertain_zlb) && !get_setting(m, :uncertain_zlb) && haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy)) || altpol_name == :irrelevant || (!vary_wt && 1.0 in altpol_wts) ||
-        (vary_wt && all([1.0 in val && val == first(values(altpol_wts)) for val in values(altpol_wts)]))  ## TODO: Setting names should change once refactoring done
         return system_main
     end
 
-    uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
-    uncertain_zlb = haskey(m.settings, :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false
-    altpol_vec_orig = get_setting(m, altpol_name)
-
+    # Turn off these settings temporarily to get historical policy
     m <= Setting(:regime_switching, false)
     m <= Setting(:uncertain_altpolicy, false)
     m <= Setting(:uncertain_zlb, false)
+
+    # Save this name to be replaced later
+    altpol_vec_orig = get_setting(m, altpol_wts_name)
+
     # Called taylor but should run whatever is specified as historical policy
     ## either in alternative_policies or imperfect_credibility_historical_policy setting
     system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
@@ -89,53 +104,80 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
     system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
 
-    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
 
-    for i in 1:n_altpolicies
+    for i in 1:n_altpolicies # loop over alternative policies, noting that we've already computed the historical policy
         ## With alternative policy weights = [1., 0.] in all forecast regimes for given altpolicy
         if vary_wt
-            altpol_vec = copy(altpol_wts)
+            altpol_vec = deepcopy(altpol_wts) # abuse of the name here, technically. altpol_vec is a Dictionary in this case
             for j in keys(altpol_vec)
-                altpol_vec[j] = zeros(length(n_altpolicies)+1)
-                altpol_vec[j][i] = 1.0
+                altpol_vec[j] = zeros(length(n_altpolicies) + 1) # weight on n_altpolicies first, then weight on historical policy
+                altpol_vec[j][i] = 1.0 # perfect credibility on each alternative policy
             end
         else
-            altpol_vec = zeros(n_altpolicies+1)
+            altpol_vec = zeros(n_altpolicies + 1)
             altpol_vec[i] = 1.0
         end
-        m <= Setting(altpol_name, altpol_vec)
+        m <= Setting(altpol_wts_name, altpol_vec)
         system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
     end
 
+    # Now add uncertain altpolicy and zlb back
     m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
     m <= Setting(:uncertain_zlb, uncertain_zlb)
-    m <= Setting(altpol_name, altpol_vec_orig)
+    m <= Setting(altpol_wts_name, altpol_vec_orig)
 
     # Checks if pseudo measurement is required
     type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
     has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
-    hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T})) ? true : false
+        hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
 
-    # Modify Measurement and Pseudo Measurement equations to account for imperfect awareness
-    ant_mon_shk = [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]
-    gdp_keys = haskey(get_settings(m), :add_anticipated_obs_gdp) && get_setting(m, :add_anticipated_obs_gdp) ?
-    [Symbol("obs_gdp$i") for i in 1:get_setting(m, :n_anticipated_obs_gdp)] : []
+    has_fwd_looking_obs = haskey(get_settings(m), :forward_looking_observables)
+    if has_pseudo
+        has_fwd_looking_pseudo = haskey(get_settings(m), :forward_looking_pseudo_observables)
+    end
 
-    min_reg = minimum(collect(keys(get_setting(m, :replace_eqcond_func_dict))))-1
-
-    # Correct the measurement equations for anticipated observables via convex combination
+    ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
         new_wt = vary_wt ? altpol_wts[reg] : altpol_wts
 
-        for k in vcat([:obs_longinflation, :obs_longrate], ant_mon_shk, gdp_keys)
-            system_main.measurements[reg][:ZZ][m.observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.measurement[:ZZ][m.observables[k],:]
-            system_main.measurements[reg][:DD][m.observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.measurement[:DD][m.observables[k],:]
+        if has_fwd_looking_obs
+            for k in get_setting(m, :forward_looking_observables)
+                system_main.measurements[reg][:ZZ][m.observables[k], :] =
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :] for i in 1:(length(new_wt) - 1)]) +
+                    new_wt[end] .* system_taylor.measurement[:ZZ][m.observables[k], :]
+                system_main.measurements[reg][:DD][m.observables[k]] =
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:(length(new_wt) - 1)]) +
+                    new_wt[end] .* system_taylor.measurement[:DD][m.observables[k]]
+            end
+        else
+            system_main.measurements[reg][:ZZ] .=
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:(length(new_wt) - 1)]) +
+                new_wt[end] .* system_taylor.measurement[:ZZ]
+            system_main.measurements[reg][:DD] .=
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD] for i in 1:(length(new_wt) - 1)]) +
+                new_wt[end] .* system_taylor.measurement[:DD]
         end
 
         if has_pseudo
-            for k in [:Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate]
-                system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo][m.pseudo_observables[k],:]
-                system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k],:] = sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k],:] for i in 1:(length(new_wt)-1)]) .+ new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo][m.pseudo_observables[k],:]
+            if has_fwd_looking_pseudo
+                for k in get_setting(m, :forward_looking_pseudo_observables)
+                    system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
+                             for i in 1:(length(new_wt)-1)]) +
+                                 new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo][m.pseudo_observables[k], :]
+                    system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
+                             for i in 1:(length(new_wt)-1)]) +
+                                 new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo][m.pseudo_observables[k]]
+                end
+            else
+                system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
+                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:(length(new_wt) - 1)]) +
+                    new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo]
+                system_main.pseudo_measurements[reg][:DD_pseudo] .=
+                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo] for i in 1:(length(new_wt) - 1)]) +
+                    new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo]
             end
         end
     end
