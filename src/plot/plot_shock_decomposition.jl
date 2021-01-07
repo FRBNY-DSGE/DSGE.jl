@@ -151,8 +151,6 @@ shockdec
                    vert_line2 = quartertodate("0000-Q1"),
                    trend_nostates = DataFrame())
 
-    end_date = Date(2025, 12, 31)
-    start_date = Date(2017, 3, 31)
     # Error checking
     if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
         typeof(sd.args[2]) != MeansBands || typeof(sd.args[3]) != MeansBands ||
