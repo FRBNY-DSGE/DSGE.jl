@@ -30,7 +30,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                            !haskey(get_setting(m, :replace_eqcond_func_dict), fcast_reg)) &&
                            haskey(m.settings, :alternative_policy) && get_setting(m, :alternative_policy).key != :historical
         get_setting(m, :replace_eqcond_func_dict)[fcast_reg] = get_setting(m, :alternative_policy).replace_eqcond
-    end # Do for regime_dates and remove apply_altpolicy from solve.
+    end
 
     # Getting altpolicy weights to avoid ugliness of constantly checking which one is in use
     vary_wt, altpol_wts, altpol_wts_name = haskey(m.settings, :imperfect_awareness_varying_weights) ?
