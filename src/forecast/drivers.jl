@@ -125,7 +125,12 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         println("uncertain_zlb: " * string(haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false))
         println("time-varying credibility: " * string(haskey(get_settings(m), :imperfect_awareness_varying_weights)))
         if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
-            println("Desired policy rule: " * string(get_setting(m, :alternative_policy).key))
+            println("Desired policy rule: " *
+                    string(haskey(get_settings(m), :replace_eqcond_func_dict) ?
+                           get_setting(m,
+                                       :replace_eqcond_func_dict)[minimum(collect(keys(get_setting(m,
+                                                                                                   :replace_eqcond_func_dict))))] :
+                           get_setting(m, :alternative_policy).key))
             println("Other policy rules: " * join([string(x.key) for x in get_setting(m, :alternative_policies)], ", "))
             if haskey(get_settings(m), :imperfect_awareness_varying_weights)
                 weights_dict = get_setting(m, :imperfect_awareness_varying_weights)
