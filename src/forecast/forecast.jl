@@ -163,7 +163,7 @@ function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, 
 #=    alt_policy = alternative_policy(m)
 
     # TODO: check that these handling of the altpolicy cases work properly
-    if (alt_policy.solve != identity &&
+    if (altpolicy_solve(m, alt_policy) != identity &&
         alt_policy.forecast_init != identity && (!haskey(m.settings, :initialize_pgap_ygap) || get_setting(m, :initialize_pgap_ygap)))
         shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
     end=#

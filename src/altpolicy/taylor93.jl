@@ -7,7 +7,9 @@ Create an instance of the `AltPolicy` proposed in John Taylor's \"Discretion
 versus policy rules in practice\" (1993).
 """
 function taylor93()
-    AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve, color = RGB(1., 0., 0.))
+    AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve,
+              replace_eqcond = taylor93_eqcond,
+              color = RGB(1., 0., 0.))
 end
 
 function taylor93_eqcond(m::AbstractDSGEModel)
