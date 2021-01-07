@@ -749,7 +749,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
 
     if regime_switching
-        system = compute_system(m; tvis = tvis)
+        system = compute_system(m; apply_altpolicy = alternative_policy(m).solve != solve, tvis = tvis)
     else
         system = compute_system(m; apply_altpolicy = false, tvis = tvis)
     end
