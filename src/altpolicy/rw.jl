@@ -8,7 +8,6 @@ deviations from a reference rate.
 """
 function rw()
     AltPolicy(:rw, rw_eqcond, rw_solve,
-              replace_eqcond = rw_replace_eq_entries,
               forecast_init = rw_forecast_init,
               color = RGB(0., 0., 0.5430)) # dark blue
 end
@@ -185,7 +184,58 @@ Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
 function rw_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Vector{Int} = Int[1])
-    return DSGE.altpolicy_solve(m, rw(); regime_switching = regime_switching, regimes = regimes)
+    # Get equilibrium condition matrices
+
+    if length(regimes) == 1
+        Γ0, Γ1, C, Ψ, Π = rw_eqcond(m, regimes[1])
+        TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = :low)
+
+        # Check for LAPACK exception, existence and uniqueness
+        if eu[1] != 1 || eu[2] != 1
+            throw(GensysError())
+        end
+
+        TTT_gensys = real(TTT_gensys)
+        RRR_gensys = real(RRR_gensys)
+        CCC_gensys = real(CCC_gensys)
+
+        # Augment states
+        TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
+                                            reg = regimes[1])
+        return TTT, RRR, CCC
+    else
+        Γ0s = Vector{Matrix{Float64}}(undef, length(regimes))
+        Γ1s = Vector{Matrix{Float64}}(undef, length(regimes))
+        Cs = Vector{Vector{Float64}}(undef, length(regimes))
+        Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
+        Πs = Vector{Matrix{Float64}}(undef, length(regimes))
+        for reg in regimes
+            Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg]  = rw_eqcond(m, reg)
+        end
+
+        n_regimes = length(regimes)
+        TTTs= Vector{Matrix{Float64}}(undef, n_regimes)
+        RRRs = Vector{Matrix{Float64}}(undef, n_regimes)
+        CCCs = Vector{Vector{Float64}}(undef, n_regimes)
+
+        # Solve model
+        for reg in regimes
+            TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg], 1+1e-6)
+
+            if !((eu[1] == 1) & (eu[2] == 1))
+                throw(GensysError("Gensys does not give existence"))
+            end
+            TTT_gensys = real(TTT_gensys)
+            RRR_gensys = real(RRR_gensys)
+            CCC_gensys = reshape(CCC_gensys, size(CCC_gensys, 1))
+
+            # Augment states
+            TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
+                                                             regime_switching = regime_switching,
+                                                             reg = reg)
+        end
+        return TTTs, RRRs, CCCs
+    end
 end
 
 """

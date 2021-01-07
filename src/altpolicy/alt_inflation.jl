@@ -7,9 +7,7 @@ Create an instance of the `AltPolicy` proposed in John Taylor's \"Discretion
 versus policy rules in practice\" (1993).
 """
 function alt_inflation()
-    AltPolicy(:alt_inflation, alt_inflation_eqcond, alt_inflation_solve,
-              replace_eqcond = alt_inflation_eqcond,
-              color = RGB(1., 0., 0.))
+    AltPolicy(:alt_inflation, alt_inflation_eqcond, alt_inflation_solve, color = RGB(1., 0., 0.))
 end
 
 function alt_inflation_eqcond(m::AbstractDSGEModel)
@@ -33,8 +31,6 @@ function alt_inflation_eqcond(m::AbstractDSGEModel)
     return Γ0, Γ1, C, Ψ, Π
 end
 
-# No regime switching here, hence why this doesn't call altpolicy_solve.
-## If needed, change arguments and call altpolicy_solve
 function alt_inflation_solve(m::AbstractDSGEModel)
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π = alt_inflation_eqcond(m)
