@@ -213,7 +213,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                                            verbose = verbose)
             end
 
-            @show gensys2
             if gensys2 # NEED TO ALLOW EMPTY VERSION
                 for reg_range in gensys2_regimes
                     solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
@@ -439,7 +438,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             # setting Tcal[end] = TTT_gensys_final
             # First UnitRange is for actual regime number, second for the index of Tcal, Rcal, & Ccal
             for (fcast_reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 1):(ng2 + 1))
-                @show fcast_reg, ical
                 TTT_gensys, CCC_gensys, RRR_gensys, eu =
                 gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
                        1+1e-6, verbose = verbose)
@@ -519,7 +517,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
     # only need to populate regimes during which a temporary altpolicy holds
     populate_reg = gensys2_regimes[2]:gensys2_regimes[end]
-    @show populate_reg
     for (i, reg) in enumerate(populate_reg)
         TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i], reg = reg)
     end

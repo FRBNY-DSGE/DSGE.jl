@@ -312,8 +312,6 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
 
             ## regimes using gensys2
             # gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
-            @show gensys_regimes
-            @show gensys2_regimes
 
             # Solve!
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
@@ -1636,9 +1634,6 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
         gensys_regimes = [1:n_regimes]
     end
     gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
-
-    @show gensys_regimes
-    @show gensys2_regimes
 
     # Solve model
     transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
