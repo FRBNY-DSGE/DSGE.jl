@@ -100,6 +100,12 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
     # Called taylor but should run whatever is specified as historical policy
     ## either in alternative_policies or imperfect_credibility_historical_policy setting
+#=    altpols = get_setting(m, :alternative_policies)
+    orig_replace_eqcond_func_dict = get_setting(m, :replace_eqcond_func_dict)
+    for altpol in altpols
+        m <= Setting(:replace_eqcond_func_dict, Dict(1 => altpol.replace_eq_entries)) # one possible way to get perfect credibility
+        system_altpol = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose) # of alternative policies
+    end=#
     system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
 
     # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
