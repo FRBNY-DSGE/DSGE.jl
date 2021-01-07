@@ -21,6 +21,17 @@ equations.
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
+    # Set replace_eqcond_func_dict if alternative_policy but no replace_eqcond_func_dict
+    fcast_reg = haskey(m.settings, :reg_post_conditional_end) ?
+        max(get_setting(m, :reg_post_conditional_end), get_setting(m, :reg_forecast_start)) :
+        get_setting(m, :reg_forecast_start) # Errors if no reg_forecast_start key in settings
+
+    if apply_altpolicy && (!haskey(m.settings, :replace_eqcond_func_dict) ||
+                           !haskey(get_setting(m, :replace_eqcond_func_dict), fcast_reg)) &&
+                           haskey(m.settings, :alternative_policy) && get_setting(m, :alternative_policy).key != :historical
+        get_setting(m, :replace_eqcond_func_dict)[fcast_reg] = get_setting(m, :alternative_policy).replace_eqcond
+    end
+
     # Getting altpolicy weights to avoid ugliness of constantly checking which one is in use
     vary_wt, altpol_wts, altpol_wts_name = haskey(m.settings, :imperfect_awareness_varying_weights) ?
         (true, get_setting(m, :imperfect_awareness_varying_weights), :imperfect_awareness_varying_weights) :
