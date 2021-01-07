@@ -87,7 +87,6 @@ end
     setup_regime_switching_inds!(m)
     m <= Setting(:pgap_value, 12.)
     m <= Setting(:pgap_type, :ngdp)
-    histpolicy = get_setting(m, :alternative_policy)
     m <= Setting(:alternative_policy, AltPolicy(:ngdp, DSGE.ngdp_eqcond, DSGE.ngdp_solve,
                                                 forecast_init = DSGE.ngdp_forecast_init))
     system = compute_system(m; apply_altpolicy = true)
@@ -95,8 +94,8 @@ end
 
     # First test with unconditional
     ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :none)
+    @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
     ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, :ngdp, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :none)
-
     @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
 
     # Now test a conditional forecast with regime switching in the forecast
@@ -119,8 +118,8 @@ end
     z0 = zeros(n_states_augmented(m))
 
     ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :full)
+    @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
     ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, :ngdp, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :full)
-
     @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
 end
 
