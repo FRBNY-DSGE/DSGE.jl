@@ -40,10 +40,10 @@ Random.seed!(1793)
     m <= Setting(:replace_eqcond, true)
     # Tell model that the gensys2 regimes should be
     # treated as temporary alt policies
-    m <= Setting(:temporary_altpolicy, true)
+    # m <= Setting(:temporary_altpolicy, true)
     # Which rule to replace with in which periods
     replace_eqcond = Dict{Int, Function}()
-    for i in 3:n_reg_temp
+    for i in 3:(n_reg_temp - 1)
        replace_eqcond[i] = ngdp_replace_eq_entries
    end
 
@@ -53,23 +53,28 @@ Random.seed!(1793)
     m <= Setting(:pgap_type, :ngdp)
     m = setup_regime_switching_inds!(m)
 
-    sys_temp = solve(m, regime_switching = true, regimes = collect(1:n_reg_temp), pre_gensys2_regimes = [1, 2],
-                     fcast_gensys2_regimes = collect(3:n_reg_temp), apply_altpolicy = true)
-    Γ0s = Vector{Matrix{Float64}}(undef, n_reg_temp-2)
-    Γ1s = Vector{Matrix{Float64}}(undef, n_reg_temp-2)
-    Cs = Vector{Vector{Float64}}(undef,  n_reg_temp-2)
-    Ψs = Vector{Matrix{Float64}}(undef, n_reg_temp-2)
-    Πs = Vector{Matrix{Float64}}(undef, n_reg_temp-2)
+    sys_temp = solve(m, regime_switching = true, regimes = collect(1:n_reg_temp),
+                     gensys_regimes = UnitRange{Int}[1:2],
+                     gensys2_regimes = UnitRange{Int}[2:n_reg_temp], apply_altpolicy = false)
+    Γ0s = Vector{Matrix{Float64}}(undef, n_reg_temp - 2)
+    Γ1s = Vector{Matrix{Float64}}(undef, n_reg_temp - 2)
+    Cs = Vector{Vector{Float64}}(undef,  n_reg_temp - 2)
+    Ψs = Vector{Matrix{Float64}}(undef, n_reg_temp - 2)
+    Πs = Vector{Matrix{Float64}}(undef, n_reg_temp - 2)
     n_endo = length(collect(keys(m.endogenous_states)))
-    for i in (3-2):(n_reg_temp-2)
-        global Γ0s[i], Γ1s[i], Cs[i], Ψs[i], Πs[i] = eqcond(m, i+2)
+    for i in (3 - 2):(n_reg_temp - 2)
+        global Γ0s[i], Γ1s[i], Cs[i], Ψs[i], Πs[i] = eqcond(m, i + 2)
     end
-    Tcal,Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t_s[1:n_endo, 1:n_endo], r_s[1:n_endo, :], c_s[1:n_endo])
+    Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t_s[1:n_endo, 1:n_endo], r_s[1:n_endo, :], c_s[1:n_endo],
+                                        T_switch = 12)
     @test Tcal[1] ≈ sys_temp[1][3][1:n_endo, 1:n_endo]
+
     # Then when start recrusion with rule, should get same TTTs in every perod
     t, r, c = ngdp_solve(m, regime_switching = false, regimes = Int[3])
 
-    Tcal,Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t[1:n_endo, 1:n_endo], r[1:n_endo, :], c[1:n_endo])
+    get_setting(m, :replace_eqcond_func_dict)[n_reg_temp] = DSGE.ngdp_replace_eq_entries
+    Γ0s[end], Γ1s[end], Cs[end], Ψs[end], Πs[end] = eqcond(m, n_reg_temp)
+    Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t[1:n_endo, 1:n_endo], r[1:n_endo, :], c[1:n_endo])
     for i in 1:length(Tcal)
         @test Tcal[i] ≈ t[1:n_endo, 1:n_endo]
     end
@@ -154,59 +159,6 @@ end
     @test all(isapprox.(p[1:10, :], pseudo[1:10, :], atol = 1e-3))
 end
 
-@testset "Test rule switching forecast" begin
-    output_vars = [:forecastobs, :histobs, :histpseudo, :forecastpseud]
-
-    m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap =>
-                                                                  Setting(:add_altpolicy_pgap, true)))
-    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
-
-    m <= Setting(:regime_switching, true)
-    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
-                                                  2 => Date(2020, 3, 31),
-                                                  3 => Date(2020, 6, 30)))
-    m = setup_regime_switching_inds!(m)
-    m <= Setting(:forecast_horizons, 12)
-
-    fp = dirname(@__FILE__)
-    df = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_none")
-
-    m <= Setting(:replace_eqcond, false)
-    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
-        3 => ngdp_replace_eq_entries))
-    m <= Setting(:pgap_type, :ngdp)
-    m <= Setting(:pgap_value, 12.0)
-
-    m <= Setting(:gensys2, false)
-
-    m <= Setting(:alternative_policy, AltPolicy(:ngdp, ngdp_eqcond, ngdp_solve, forecast_init = DSGE.ngdp_forecast_init))
-
-    fcast_altperm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
-                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-    # Testing ore basic permanent NGDP
-    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap =>
-                                                                    Setting(:add_altpolicy_pgap, true)))
-    m <= Setting(:forecast_horizons, 12)
-    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
-    m <= Setting(:regime_switching, true)
-    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
-                                                2 => Date(2020, 3, 31),
-                                                3 => Date(2020, 6, 30)))
-
-    m = setup_regime_switching_inds!(m)
-
-    m <= Setting(:pgap_value, 12.0)
-    m <= Setting(:pgap_type, :ngdp)
-
-    m <= Setting(:alternative_policy, AltPolicy(:ngdp, ngdp_eqcond, ngdp_solve, forecast_init = DSGE.ngdp_forecast_init))
-
-    fcast_altperm2 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
-                                            df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-    @test fcast_altperm[:forecastobs] == fcast_altperm2[:forecastobs]
-end
-
 @testset "Temporary alternative policies with non-trivial conditional forecasting" begin
     output_vars = [:forecastobs]
 
@@ -236,12 +188,8 @@ end
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:pgap_value, 12.0)
     m <= Setting(:gensys2, true)
-    m <= Setting(:gensys2_separate_cond_regimes, true) # separate the conditional regimes from remaining forecast regimes
 
     # Check zero rate rule causes an error if specified in a conditional period
-    @test_throws DSGE.GensysError DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
-                                   df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
     m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
         4 => zero_rate_replace_eq_entries, 5 => zero_rate_replace_eq_entries))
     fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),

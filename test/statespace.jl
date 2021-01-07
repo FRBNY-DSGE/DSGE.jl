@@ -426,6 +426,60 @@ end
     end
 end
 
+@testset "Implement alternative policy using replace_eqcond_func_dict" begin
+    output_vars = [:forecastobs, :histobs, :histpseudo, :forecastpseud]
+
+    m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap =>
+                                                                  Setting(:add_altpolicy_pgap, true)))
+    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
+
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
+                                                  2 => Date(2020, 3, 31),
+                                                  3 => Date(2020, 6, 30)))
+    m = setup_regime_switching_inds!(m)
+    m <= Setting(:forecast_horizons, 12)
+
+    fp = dirname(@__FILE__)
+    df = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_none")
+
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
+        3 => ngdp_replace_eq_entries))
+    m <= Setting(:pgap_type, :ngdp)
+    m <= Setting(:pgap_value, 12.0)
+
+    m <= Setting(:gensys2, false) # don't treat as a temporary policy
+    sys1 = compute_system(m)
+    fcast_altperm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
+                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+    # Testing ore basic permanent NGDP
+    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap =>
+                                                                    Setting(:add_altpolicy_pgap, true)))
+    m <= Setting(:forecast_horizons, 12)
+    m <= Setting(:date_forecast_start, Date(2020, 6, 30))
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
+                                                2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30)))
+    m = setup_regime_switching_inds!(m)
+
+    m <= Setting(:pgap_value, 12.0)
+    m <= Setting(:pgap_type, :ngdp)
+    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
+        i => ngdp_replace_eq_entries for i in 1:3))
+    m <= Setting(:replace_eqcond, true)
+    sys2 = compute_system(m)
+
+    for i in 1:3
+        @test !(sys1[1, :TTT] ≈ sys2[i, :TTT])
+        @test !(sys1[2, :TTT] ≈ sys2[i, :TTT])
+        @test sys1[3, :TTT] ≈ sys2[i, :TTT]
+        @test sys1[1, :TTT] ≈ sys1[2, :TTT]
+    end
+end
+
 @testset "Calculating transition matrices/vectors for k-periods ahead expectations and expected sums" begin
     # Test k-periods ahead expectations
     # TODO: add a tvis = true keyword to compute_system and to call compute_tvis_system internally w/in compute_system
