@@ -441,7 +441,7 @@ end
     m <= Setting(:forecast_horizons, 12)
 
     fp = dirname(@__FILE__)
-    df = load(joinpath(fp, "../reference/regime_switch_data.jld2"), "regime_switch_df_none")
+    df = load(joinpath(fp, "reference", "regime_switch_data.jld2"), "regime_switch_df_none")
 
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
@@ -482,9 +482,6 @@ end
 
 @testset "Calculating transition matrices/vectors for k-periods ahead expectations and expected sums" begin
     # Test k-periods ahead expectations
-    # TODO: add a tvis = true keyword to compute_system and to call compute_tvis_system internally w/in compute_system
-    # if the keyword is true, and then, using the info in the resulting TVISSystem, calculate the appropriate
-    # RegimeSwitchingSystem that is associated with the TVISSystem.
     m = Model1002("ss10")
     sys_constant = compute_system(m)
     m <= Setting(:date_forecast_start, Date(2020, 9, 30))
