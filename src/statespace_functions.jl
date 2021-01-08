@@ -46,13 +46,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 end
             end
             ## Without time-varying credibility, uncertain_zlb and uncertain_altpolicy must be the same
-        elseif haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy)
-            @warn "If not using time varying credibility, uncertain_zlb and uncertain_altpolicy must be the same."
-            if get_setting(m, :replace_eqcond_func_dict)[reg] == DSGE.zero_rate_replace_eq_entries
-                altpol_vec = zeros(length(altpol_wts))
-                altpol_vec[1] = 1.0
-                altpol_wts = altpol_vec
-            end
+        elseif haskey(m.settings, :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+            error("If not using time varying credibility, uncertain_zlb and uncertain_altpolicy must be the same.")
         end
     end
 
@@ -131,7 +126,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
         #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
         #  It is more efficient to find a way to compute each altpolicy individually ONCE.
-        if vary_wt
+#=        if vary_wt
             altpol_vec = deepcopy(altpol_wts) # abuse of the name here, technically. altpol_vec is a Dictionary in this case
             for j in keys(altpol_vec)
                 altpol_vec[j] = zeros(length(n_altpolicies) + 1) # weight on n_altpolicies first, then weight on historical policy
@@ -141,7 +136,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             altpol_vec = zeros(n_altpolicies + 1)
             altpol_vec[i] = 1.0
         end
-        m <= Setting(altpol_wts_name, altpol_vec)
+        m <= Setting(altpol_wts_name, altpol_vec)=#
         system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
     end
 
@@ -173,10 +168,12 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 system_main.measurements[reg][:DD][m.observables[k]] =
                     sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:length(new_wt)])=#
                 system_main.measurements[reg][:ZZ][m.observables[k], :] =
-                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :] for i in 1:(length(new_wt) - 1)]) +
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :]
+                         for i in 1:(length(new_wt) - 1)]) +
                     new_wt[end] .* system_taylor.measurement[:ZZ][m.observables[k], :]
                 system_main.measurements[reg][:DD][m.observables[k]] =
-                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:(length(new_wt) - 1)]) +
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]]
+                         for i in 1:(length(new_wt) - 1)]) +
                     new_wt[end] .* system_taylor.measurement[:DD][m.observables[k]]
             end
         else
@@ -200,11 +197,11 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                              for i in 1:length(new_wt)])=#
                     system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
                         sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
-                             for i in 1:(length(new_wt)-1)]) +
+                             for i in 1:(length(new_wt) - 1)]) +
                                  new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo][m.pseudo_observables[k], :]
                     system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
                         sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
-                             for i in 1:(length(new_wt)-1)]) +
+                             for i in 1:(length(new_wt) - 1)]) +
                                  new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo][m.pseudo_observables[k]]
                 end
             else
