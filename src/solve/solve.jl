@@ -261,9 +261,8 @@ function solve_one_regime(m::AbstractDSGEModel{T}; regime::Int = 1, uncertain_al
 
     if uncertain_altpolicy && apply_altpolicy
         # Since we only have one regime in solve_one_regime, no time-varying credibility
-        weights = get_setting(m, :imperfect_awareness_weights)
+        weights = last(get_setting(m, :regime_eqcond_info)[regime])
         altpols = get_setting(m, :alternative_policies)
-
         inds = 1:n_states(m)
         TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
                                                                      TTT = TTT[inds, inds])
@@ -299,18 +298,15 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
             throw(GensysError("Error in Gensys, Regime $reg"))
         end
 
-        if uncertain_altpol
-            # Time-varying credibility weights for the regime reg
-            # first_gensys2_regime = minimum(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
-            # if reg >= first_gensys2_regime
-#=            weights = haskey(get_settings(m), :imperfect_awareness_varying_weights) ?
-                get_setting(m, :imperfect_awareness_varying_weights)[reg] : get_setting(m, :imperfect_awareness_weights)=#
-            if haskey(get_settings(m), :imperfect_awareness_varying_weights) &&
-                haskey(get_setting(m, :imperfect_awareness_varying_weights), reg)
-                weights = get_setting(m, :imperfect_awareness_varying_weights)[reg]
+        if haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg)
+            weights = last(get_setting(m, :regime_eqcond_info)[reg])
+            if !isempty(weights)
+                first_altpol_regime = min(collect(keys(get_setting(m, :regime_eqcond_info)))...)
+                altpols = get_setting(m, :alternative_policies)
+                # Time-varying credibility weights for the regime reg
                 TTT_gensys, RRR_gensys, CCC_gensys =
-                    gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = false,
-                                            TTT = TTT_gensys, regime_switching = true, regimes = Int[reg])
+                gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true,
+                                        TTT = TTT_gensys, regime_switching = true, regimes = Int[reg])
             end
         end
 
@@ -345,12 +341,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     # weighted final transition matrix
     uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
     if uncertain_altpolicy
-        weights = if haskey(get_settings(m), :imperfect_awareness_varying_weights)
-            get_setting(m, :imperfect_awareness_varying_weights)[last(gensys2_regimes)]
-        else
-            get_setting(m, :imperfect_awareness_weights)
-        end
-
+        weights = last(get_setting(m, :regime_eqcond_info)[last(gensys2_regimes)])
         altpols = get_setting(m, :alternative_policies)
 
         TTT_final_weighted, RRR_final_weighted, CCC_final_weighted =
@@ -371,17 +362,11 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
         # Setup
         ffreg = first(gensys2_regimes) + 1
-        altpols, weights = if haskey(get_settings(m), :imperfect_awareness_varying_weights) &&
-            haskey(get_settings(m), :alternative_policies)
-            get_setting(m, :alternative_policies), get_setting(m, :imperfect_awareness_varying_weights)
-        elseif haskey(get_settings(m), :alternative_policies) && haskey(get_settings(m), :imperfect_awareness_weights)
-            get_setting(m, :alternative_policies), get_setting(m, :imperfect_awareness_weights)
-        else
-            error("Alternative policies and/or weights were not specified.")
-        end
-        if isa(weights, AbstractDict)
-            # populate_reg should work for now b/c should coincide w/entries of replace_eqcond_func_dict
-            weights = [weights[i] for i in first(gensys2_regimes)+1:last(gensys2_regimes)]
+        altpols = get_setting(m, :alternative_policies)
+        weights = Vector{Vector{Float64}}(undef, length(gensys2_regimes) -1)
+        for (i, reg) in enumerate(gensys2_regimes[2]:gensys2_regimes[end])
+            @show i, reg
+            weights[i] = last(get_setting(m, :regime_eqcond_info)[reg])
         end
 
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
@@ -423,34 +408,30 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             # regime correctly, as the lift-off is no longer the final regime, and won't be covered by
             # setting Tcal[end] = TTT_gensys_final
             # First UnitRange is for actual regime number, second for the index of Tcal, Rcal, & Ccal
-            for (fcast_reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 1):(ng2 + 1))
+            for (reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 1):(ng2 + 1))
+                @show fcast_reg, ical
                 TTT_gensys, CCC_gensys, RRR_gensys, eu =
-                gensys(Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg],
+                gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
                        1+1e-6, verbose = verbose)
 
                 # Check for LAPACK exception, existence and uniqueness
                 if eu[1] != 1 || eu[2] != 1
                     throw(GensysError("Error in Gensys, Regime $fcast_reg"))
                 end
+
                 TTT_gensys = real(TTT_gensys)
                 RRR_gensys = real(RRR_gensys)
                 CCC_gensys = real(CCC_gensys)
 
                 if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
-                    # THE INDEXING HERE ASSUMES TEMORARY ZLB STARTS IN THE PERIOD AFTER THE CONDITIONAL FORECAST
-                    # HORIZON ENDS AND THAT THE ALTERNATIVE POLICY VARYING WEIGHTS VECTOR SPECIFIES WEIGHTS
-                    # STARTING IN THAT SAME PERIOD (i.e. alternative_policy_varying_weights[i][1] is the first ZLB period)
-                    if haskey(get_settings(m), :imperfect_awareness_varying_weights)
-                        weights = get_setting(m, :imperfect_awareness_varying_weights)[fcast_reg]
-                    else
-                        weights = get_setting(m, :imperfect_awareness_weights)
+                    if haskey(get_settings(m), :regime_eqcond_info) ? haskey(get_setting(m, :regime_eqcond_info), reg) : false
+                        weights = last(get_setting(m, :regime_eqcond_info)[reg])
+                        altpols = get_setting(m, :alternative_policies)
+
+                        TTT_gensys, RRR_gensys, CCC_gensys =
+                        gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true, TTT = TTT_gensys,
+                                                regime_switching = true, regimes = Int[reg])
                     end
-
-                    altpols = get_setting(m, :alternative_policies)
-
-                    TTT_gensys, RRR_gensys, CCC_gensys =
-                    gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true, TTT = TTT_gensys,
-                                            regime_switching = true, regimes = Int[fcast_reg])
                 end
 
                 Tcal[ical] = TTT_gensys

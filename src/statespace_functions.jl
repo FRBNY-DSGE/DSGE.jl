@@ -282,18 +282,18 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
 
     if tvis
         @assert haskey(get_settings(m), :tvis_information_set) "The setting :tvis_information_set is not defined"
-        n_tvis = haskey(get_settings(m), :tvis_replace_eqcond_func_dict) ? length(get_setting(m, :tvis_replace_eqcond_func_dict)) : 1
-        if n_tvis == 1 && haskey(get_settings(m), :tvis_replace_eqcond_func_dict)
-            if haskey(get_settings(m), :replace_eqcond_func_dict)
-                if get_setting(m, :tvis_replace_eqcond_func_dict)[1] != get_setting(m, :replace_eqcond_func_dict)
-                    warn_str = "The dictionary of functions in the Setting :replace_eqcond_func_dict does not match the one specified " *
-                    "by the length-one Setting :tvis_replace_eqcond_func_dict. Replacing :replace_eqcond_func_dict with the dictionary " *
-                    "of functions contained in :tvis_replace_eqcond_func_dict."
+        n_tvis = haskey(get_settings(m), :tvis_regime_eqcond_info) ? length(get_setting(m, :tvis_replace_eqcond_func_dict)) : 1
+        if n_tvis == 1 && haskey(get_settings(m), :tvis_regime_eqcond_info)
+            if haskey(get_settings(m), :regime_eqcond_info)
+                if get_setting(m, :tvis_regime_eqcond_info)[1] != get_setting(m, :replace_eqcond_func_dict)
+                    warn_str = "The dictionary of functions in the Setting :regime_eqcond_info does not match the one specified " *
+                    "by the length-one Setting :tvis_regime_eqcond_info. Replacing :replace_eqcond_func_dict with the dictionary " *
+                    "of functions contained in :tvis_regime_eqcond_info."
                     @warn warn_str
-                    m <= Setting(:replace_eqcond_func_dict, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
+                    m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
                 end
             else
-                m <= Setting(:replace_eqcond_func_dict, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
+                m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
             end
         end
 
@@ -314,7 +314,6 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
     # Solve model
     if regime_switching
         if solution_method == :gensys
-
             # determine which regimes use gensys/gensys2
 #=            first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))...) : n_hist_regimes + 1
             last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) + 1 : n_regimes=#
@@ -1642,7 +1641,7 @@ additional required settings that must exist in `m` are:
 - `:tvis_information_set`: Vector of `UnitRange{Int}` specifying
     which regimes should be included in the information set
     corresponding each regime.
-- `:tvis_replace_eqcond_func_dict`: Vector of `replace_eqcond_func_dict`
+- `:tvis_regime_eqcond_info`: Vector of `replace_eqcond_func_dict`
     to specify different sets of equilibrium conditions, which
     generate different state space systems (usually).
 - `:tvis_select_system`: Vector of `Int` to specify which
@@ -1665,9 +1664,9 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     @assert get_setting(m, :replace_eqcond) "The setting :replace_eqcond must be true to calculate a state-space system with time-varying information sets"
 
     # :regime_dates should have the same number of possible regimes. Any differences in eqcond
-    # should be specified by tvis_replace_eqcond_func_dict
+    # should be specified by tvis_regime_eqcond_info
     tvis_infoset                  = get_setting(m, :tvis_information_set)
-    tvis_replace_eqcond_func_dict = get_setting(m, :tvis_replace_eqcond_func_dict)
+    tvis_regime_eqcond_info = get_setting(m, :tvis_replace_eqcond_func_dict)
     tvis_select                   = get_setting(m, :tvis_select_system)
     regime_switching              = get_setting(m, :regime_switching)
 
