@@ -324,7 +324,6 @@ end
 
 
 
-#=
 m <= Setting(:imperfect_awareness_varying_weights,
              Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
 credvec = collect(range(0., stop = .5, length = 17))
@@ -367,7 +366,7 @@ for k in [:obs_gdp, :obs_corepce, :obs_nominalrate, :obs_pgap, :obs_ygap, :obs_l
     plot!(1:30, adj * out3[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
     plot!(1:30, adj * out2[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
     plot!(1:30, adj * out1[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, adj * outp33[:forecastobs][m.observables[k], 1:30], label = "System", linewidth = 2)
+    plot!(1:30, adj * outp33[:forecastobs][m.observables[k], 1:30], label = "System Replication", linewidth = 2)
 end
 for k in [:NaturalRate, :OutputGap, :Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate]
     plot_dict[k] = plot()
@@ -376,12 +375,12 @@ for k in [:NaturalRate, :OutputGap, :Expected10YearRateGap, :Expected10YearRate,
     plot!(1:30, out3[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
     plot!(1:30, out2[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
     plot!(1:30, out1[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System", linewidth = 2)
+    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System Replication", linewidth = 2)
 end
 
 # mkdir("tvcred_meas_fix_figs")
 for (k, v) in plot_dict
     savefig(v, "tvcred_meas_fix_figs/$(k).pdf")
 end
-=#
+
 nothing
