@@ -71,3 +71,9 @@ function altpolicy_replace_eq_entries(key::Symbol)
         error("AltPolicy $(key) has not been added to `altpolicy_replace_eq_entries` as having a method for replacing equilibrium conditions")
     end
 end
+
+# Type to hold the entries in the regime_eqcond_info dictionary for alternative policies & regime switching
+mutable struct EqcondEntry{T<:Real}
+    alternative_policy::Union{AltPolicy, Missing}
+    weights::Union{Vector{Float64}, Missing}
+end
