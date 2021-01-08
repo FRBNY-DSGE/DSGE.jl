@@ -1,5 +1,5 @@
 using DSGE, ModelConstructors, Dates, Test, LinearAlgebra, FileIO, Random, JLD2
-writing_output = false # Write output for tests which use random values
+#=writing_output = false # Write output for tests which use random values
 if VERSION < v"1.5"
     ver = "111"
 else
@@ -847,7 +847,6 @@ end
     end
 end
 
-@info "Two indeterminacy errors are expected in the following test."
 @testset "Using gensys2 in historical regimes" begin
     function set_regime_vals_fnct!(m, n)
         if n > 4
@@ -909,6 +908,71 @@ end
     for i in 1:get_setting(m, :n_regimes)
         @test sys_true_unc[i, :TTT] ≈ sys[i, :TTT]
         @test sys_true_unc[i, :ZZ] ≈ sys[i, :ZZ]
+    end
+end
+=#
+@testset "Measurement equation of forward-looking variables" begin
+    function set_regime_vals_fnct!(m, n)
+        if n > 4
+            for p in m.parameters
+                if !isempty(p.regimes) && haskey(p.regimes, :value)
+                    for i in 5:n
+                        ModelConstructors.set_regime_val!(p, i, ModelConstructors.regime_val(p, 4))
+                    end
+                end
+            end
+        end
+    end
+    imperfect_cred_new = .5
+    imperfect_cred_old = 1. - imperfect_cred_new
+    custom_set = Dict{Symbol,Setting}(:n_mon_anticipated_shocks =>
+                                      Setting(:n_mon_anticipated_shocks, 6, "Number of anticipated policy shocks"),
+                                      :imperfect_awareness_weights => Setting(:imperfect_awareness_weights,
+                                                                              [imperfect_cred_new, imperfect_cred_old]),
+                                      :alternative_policies => Setting(:alternative_policies, [DSGE.taylor_rule()]),
+                                      :flexible_ait_policy_change => Setting(:flexible_ait_policy_change, true))
+
+    m = Model1002("ss59", custom_settings = custom_set)
+    usual_model_settings!(m, "201117", fcast_date = Date(2020, 9, 30))
+    m <= Setting(:flexible_ait_policy_change, false) # was true just so initialize a bunch of settings
+
+    set_regime_vals_fnct!(m, 4 + 4)
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:gensys2, true)
+    reg_dates = deepcopy(get_setting(m, :regime_dates))
+    replace_eqcond_func_dict = Dict{Int, Function}()
+    for (regind, date) in zip(4:(4 + 4), # 4 + 1 b/c zero for 4 periods and liftoff, add 3 to make correct regime
+                              DSGE.quarter_range(reg_dates[4], DSGE.iterate_quarters(reg_dates[4], 4)))
+        reg_dates[regind] = date
+        if regind != 4 + 4
+            replace_eqcond_func_dict[regind] = zero_rate_replace_eq_entries
+        end
+    end
+    replace_eqcond_func_dict[8] = DSGE.flexible_ait_replace_eq_entries
+    m <= Setting(:regime_dates, reg_dates)
+    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
+# GET RID OF THIS I THINK    m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
+
+    m <= Setting(:regime_switching, false)
+    sys_taylor = compute_system(m)
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:uncertain_zlb, false)
+    m <= Setting(:uncertain_altpolicy, false)
+    sys_perfcred = compute_system(m; apply_altpolicy = true)
+    m <= Setting(:uncertain_zlb, true)
+    m <= Setting(:uncertain_altpolicy, true)
+    sys_unczlb_uncalt = compute_system(m; apply_altpolicy = true)
+
+    for i in sort!(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
+        @test sys_unczlb_uncalt[i, :ZZ] ≈ imperfect_cred_new * sys_perfcred[i, :ZZ] +
+            imperfect_cred_old * sys_taylor[:ZZ]
+        @test sys_unczlb_uncalt[i, :ZZ_pseudo] ≈ imperfect_cred_new * sys_perfcred[i, :ZZ_pseudo] +
+            imperfect_cred_old * sys_taylor[:ZZ_pseudo]
+        @test sys_unczlb_uncalt[i, :DD] ≈ imperfect_cred_new * sys_perfcred[i, :DD] +
+            imperfect_cred_old * sys_taylor[:DD]
+        @test sys_unczlb_uncalt[i, :DD_pseudo] ≈ imperfect_cred_new * sys_perfcred[i, :DD_pseudo] +
+            imperfect_cred_old * sys_taylor[:DD_pseudo]
     end
 end
 
