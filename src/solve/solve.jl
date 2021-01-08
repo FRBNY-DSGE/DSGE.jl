@@ -410,7 +410,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             # regime correctly, as the lift-off is no longer the final regime, and won't be covered by
             # setting Tcal[end] = TTT_gensys_final
             # First UnitRange is for actual regime number, second for the index of Tcal, Rcal, & Ccal
-            for (fcast_reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 1):(ng2 + 1))
+            for (reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 1):(ng2 + 1))
+                @show fcast_reg, ical
                 TTT_gensys, CCC_gensys, RRR_gensys, eu =
                 gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
                        1+1e-6, verbose = verbose)
