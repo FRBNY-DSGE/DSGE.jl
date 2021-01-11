@@ -112,12 +112,12 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
         #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
         #  It is more efficient to find a way to compute each altpolicy individually ONCE.
-#=        if vary_wt
-            altpol_vec = deepcopy(altpol_wts) # abuse of the name here, technically. altpol_vec is a Dictionary in this case
-            for j in keys(altpol_vec)
-                altpol_vec[j] = zeros(length(n_altpolicies) + 1) # weight on n_altpolicies first, then weight on historical policy
-                altpol_vec[j][i] = 1.0 # perfect credibility on each alternative policy
-            end
+        #=        if vary_wt
+        altpol_vec = deepcopy(altpol_wts) # abuse of the name here, technically. altpol_vec is a Dictionary in this case
+        for j in keys(altpol_vec)
+        altpol_vec[j] = zeros(length(n_altpolicies) + 1) # weight on n_altpolicies first, then weight on historical policy
+        altpol_vec[j][i] = 1.0 # perfect credibility on each alternative policy
+        end
         else
         altpol_vec = zeros(n_altpolicies + 1)
         altpol_vec[i] = 1.0
@@ -261,9 +261,6 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
                 gensys2_regimes = Vector{UnitRange{Int}}(undef, 0)
                 gensys_regimes  = UnitRange{Int}[1:n_regimes]
             end
-
-            @show gensys_regimes
-            @show gensys2_regimes
 
             # Solve!
             TTTs, RRRs, CCCs = solve(m; regime_switching = regime_switching,
