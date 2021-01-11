@@ -313,7 +313,7 @@ function metropolis_hastings(propdist::Distribution,
 
     loglikelihood = if isa(m, AbstractDSGEModel)
         function _loglikelihood_dsge(p::ParameterVector, data::Matrix{Float64})::Float64
-            update!(m, p; toggle = toggle)
+            update!(m, p; regime_switching = regime_switching, toggle = toggle)
             likelihood(m, data; sampler = true, catch_errors = false,
                        use_chand_recursion = use_chand_recursion)
         end

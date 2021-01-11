@@ -426,27 +426,29 @@ end
 
 """
 ```
-update!(m::AbstractDSGEModel, values::ParameterVector{T}; toggle::Bool = true) where T
+update!(m::AbstractDSGEModel, values::ParameterVector{T};
+    regime_switching::Bool = false, toggle::Bool = true) where T
 ```
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
-If `values` has longer length than `m.parameter`, then we assume
-the parameters are regime-switching, in which case `update!` assumes the `value` field
-of each parameter in values` holds the parameter value in the first regime, and
-then we update the field `regimes` for each parameter
 
 ### Arguments
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 
 ### Keyword
+- `regime_switching`: if true, then we assume the parameters are regime-switching,
+    in which case `update!` assumes the `value` field
+    of each parameter in values` holds the parameter value in the first regime, and
+    then we update the field `regimes` for each parameter
 - `toggle`: if true, we call `ModelConstructors.toggle_regime!(values)` before
     updating any values to ensure the `value` field of the parameters in `values`
     correspond to regime 1 values.
 """
-function update!(m::AbstractDSGEModel, values::ParameterVector{T}; toggle::Bool = true) where {T <: Real}
+function update!(m::AbstractDSGEModel, values::ParameterVector{T};
+                 regime_switching::Bool = false, toggle::Bool = true) where {T <: Real}
 
     # Update regime-switching if length of `values` exceeds m.parameters
-    if length(values) > n_parameters(m) # This should call length(m.parameters) in ModelConstructors
+    if regime_switching
         if toggle
             ModelConstructors.toggle_regime!(values)
         end

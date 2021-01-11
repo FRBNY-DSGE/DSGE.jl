@@ -49,7 +49,7 @@ end
 posterior!(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}},
            parameters::Vector{T}, data::Matrix{T};
            sampler::Bool = false, catch_errors::Bool = false,
-           φ_smc::Float64 = 1.) where {T<:AbstractFloat}
+           ϕ_smc::Float64 = 1., toggle::Bool = true) where {T<:AbstractFloat}
 ```
 
 Evaluates the log posterior density at `parameters`.
@@ -66,17 +66,21 @@ Evaluates the log posterior density at `parameters`.
      period are also returned.
 - `catch_errors`: Whether to catch errors of type `GensysError` or `ParamBoundsError`
      If `sampler = true`, both should always be caught.
-- `φ_smc`: a tempering factor to change the relative weighting of the prior and
+- `ϕ_smc`: a tempering factor to change the relative weighting of the prior and
      the likelihood when calculating the posterior. It is used primarily in SMC.
+- `toggle`: if true, we call `ModelConstructors.toggle_regime!(values)` before
+    updating any values to ensure the `value` field of the parameters in `values`
+    correspond to regime 1 values.
 """
 function posterior!(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}},
                     parameters::Vector{T}, data::AbstractArray;
                     sampler::Bool = false, ϕ_smc::Float64 = 1.,
-                    catch_errors::Bool = false) where {T<:AbstractFloat}
+                    catch_errors::Bool = false, toggle::Bool = true) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
+    regime_switching = haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
     if sampler
         try
-            DSGE.update!(m, parameters)
+            DSGE.update!(m, parameters; regime_switching = regime_switching, toggle = toggle)
         catch err
             if isa(err, ParamBoundsError)
                 return -Inf
@@ -85,7 +89,7 @@ function posterior!(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}},
             end
         end
     else
-        DSGE.update!(m, parameters)
+        DSGE.update!(m, parameters; toggle = toggle, regime_switching = regime_switching))
     end
     return posterior(m, data; sampler = sampler, ϕ_smc = ϕ_smc, catch_errors = catch_errors)
 end
