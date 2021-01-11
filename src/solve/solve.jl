@@ -262,7 +262,7 @@ function solve_one_regime(m::AbstractDSGEModel{T}; apply_altpolicy = false,
 
     if uncertain_altpolicy && apply_altpolicy
         # Since we only have one regime in solve_one_regime, no time-varying credibility
-        weights = last(get_setting(m, :regime_eqcond_info)[regime])
+        weights = get_setting(m, :regime_eqcond_info)[regime].weights
         altpols = get_setting(m, :alternative_policies)
         inds = 1:n_states(m)
         TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
@@ -300,7 +300,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
         end
 
         if haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg)
-            weights = last(get_setting(m, :regime_eqcond_info)[reg])
+            weights = get_setting(m, :regime_eqcond_info)[reg].weights
             if !isempty(weights)
                 first_altpol_regime = min(collect(keys(get_setting(m, :regime_eqcond_info)))...)
                 altpols = get_setting(m, :alternative_policies)
@@ -342,7 +342,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     # weighted final transition matrix
     uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
     if uncertain_altpolicy
-        weights = last(get_setting(m, :regime_eqcond_info)[last(gensys2_regimes)])
+        weights = get_setting(m, :regime_eqcond_info)[last(gensys2_regimes)].weights
         altpols = get_setting(m, :alternative_policies)
 
         TTT_final_weighted, RRR_final_weighted, CCC_final_weighted =
@@ -367,7 +367,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         weights = Vector{Vector{Float64}}(undef, length(gensys2_regimes) -1)
         for (i, reg) in enumerate(gensys2_regimes[2]:gensys2_regimes[end])
             @show i, reg
-            weights[i] = last(get_setting(m, :regime_eqcond_info)[reg])
+            weights[i] = get_setting(m, :regime_eqcond_info)[reg].weights
         end
 
         @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
@@ -425,7 +425,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                 CCC_gensys = real(CCC_gensys)
 
                 if haskey(get_settings(m), :regime_eqcond_info) ? haskey(get_setting(m, :regime_eqcond_info), reg) : false
-                    weights = last(get_setting(m, :regime_eqcond_info)[reg])
+                    weights = get_setting(m, :regime_eqcond_info)[reg].weights
                     altpols = get_setting(m, :alternative_policies)
 
                     TTT_gensys, RRR_gensys, CCC_gensys =
