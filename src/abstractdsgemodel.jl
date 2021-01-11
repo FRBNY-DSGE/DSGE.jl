@@ -424,39 +424,48 @@ end
 
 """
 ```
-update!(m::AbstractDSGEModel, values::ParameterVector{T}; regime_switching::Bool = false) where T
+update!(m::AbstractDSGEModel, values::ParameterVector{T}; toggle::Bool = true) where T
 ```
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
+If `values` has longer length than `m.parameter`, then we assume
+the parameters are regime-switching, in which case `update!` assumes the `value` field
+of each parameter in values` holds the parameter value in the first regime, and
+then we update the field `regimes` for each parameter
 
 ### Arguments
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 
-### Keywords
-- `regime_switching`:: true if `values` is augmented with regime-switching parameters. Then
-    `update!` assumes the `value` field of each parameter in values` holds
-    the parameter value in the first regime, and then we update the field
-    `regimes` for each parameter
+### Keyword
+- `toggle`: if true, we call `ModelConstructors.toggle_regime!(values)` before
+    updating any values to ensure the `value` field of the parameters in `values`
+    correspond to regime 1 values.
 """
-function update!(m::AbstractDSGEModel, values::ParameterVector{T};
-                 regime_switching::Bool = false) where {T <: Real}
+function update!(m::AbstractDSGEModel, values::ParameterVector{T}; toggle::Bool = true) where {T <: Real}
 
-    ModelConstructors.update!(m.parameters, [θ.value for θ in values]) # Update first-regime values
+    # Update regime-switching if length of `values` exceeds m.parameters
+    if length(values) > n_parameters(m) # This should call length(m.parameters) in ModelConstructors
+        if toggle
+            ModelConstructors.toggle_regime!(values)
+        end
 
-    # Update regime-switching
-    if regime_switching
-        for para in m.parameters
+        # Update first-regime values
+        ModelConstructors.update!(m.parameters, [θ.value for θ in values])
+
+        # Update remaining regimes
+        for (i, para) in enumerate(m.parameters)
             if !isempty(para.regimes)
                 for (ind, val) in para.regimes[:value]
                     if ind == 1
                         ModelConstructors.set_regime_val!(para, 1, para.value)
                     else
-                        ModelConstructors.set_regime_val!(para, ind,
-                                                          values[findfirst(x->x.key==para.key, values)].regimes[:value][ind])
+                        ModelConstructors.set_regime_val!(para, ind, regime_val(values[i], ind))
                     end
                 end
             end
         end
+    else
+        ModelConstructors.update!(m.parameters, [θ.value for θ in values])
     end
 
     steadystate!(m)

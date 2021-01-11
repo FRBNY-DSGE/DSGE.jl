@@ -254,8 +254,8 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
         cc0 = get_setting(m, :mh_cc0)
         cc  = get_setting(m, :mh_cc)
 
-        metropolis_hastings(propdist, m, data, cc0, cc; verbose = verbose,
-                            filestring_addl = filestring_addl);
+        metropolis_hastings(propdist, m, data, cc0, cc; regime_switching = regime_switching,
+                            toggle = toggle, verbose = verbose, filestring_addl = filestring_addl);
 
     elseif get_setting(m, :sampling_method) == :SMC
         ########################################################################################
@@ -272,7 +272,8 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
              save_intermediate = save_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
              run_csminwel = run_csminwel,
-             tempered_update_prior_weight = tempered_update_prior_weight)
+             tempered_update_prior_weight = tempered_update_prior_weight,
+             regime_switching = regime_switching)
     end
 
     ########################################################################################
