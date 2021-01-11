@@ -669,7 +669,7 @@ end
 
 """
 ```
-forecast_one_draw(m, input_type, cond_type, output_vars; params, df;
+forecast_one_draw(m, input_type, cond_type, output_vars, params, df;
     verbose = :low, only_filter = false)
 ```
 
