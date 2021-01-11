@@ -73,7 +73,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     para_free_inds = SMC.get_fixed_para_inds(get_parameters(m);
                                              regime_switching = regime_switching, toggle = toggle)
     H0             = 1e-4 * eye(length(para_free_inds))
-    x_model        = transform_to_real_line(get_parameters(m)) # TODO: extend transform_to_real_line to regime-switching
+    x_model        = transform_to_real_line(get_parameters(m); regime_switching = regime_switching)
     x_opt          = x_model[para_free_inds]
 
     ########################################################################################
@@ -83,7 +83,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     function f_opt(x_opt)
         try
             x_model[para_free_inds] = x_opt
-            transform_to_model_space!(m, x_model) # TODO: extend transform_to_model_space to regime-switching
+            transform_to_model_space!(m, x_model; regime_switching = regime_switching)
         catch
             return Inf
         end
@@ -130,18 +130,30 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
             x_all = T[ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)]  # to get fixed values
             x_all[para_free_inds] = x                 # this is from real line
 
-            x_all_model = transform_to_model_space(get_parameters(m), x_all) # TODO: generalize to regime-switching
+            x_all_model = transform_to_model_space(get_parameters(m), x_all; regime_switching = regime_switching)
             x_proposal_all = copy(x_all_model)
 
             success = false
             while !success
                 # take a step in model space
                 for i in subset_inds
-                    prior_var = moments(get_parameters(m)[i])[2] # moments(get(get_parameters(m)[i].prior))[2] # TODO: generalize to regime-switching
+                    # TODO: generalize to regime-switching. Key problem is that we need to construct a dictionary which maps
+                    # the indices of `x_all` or at least `para_free_inds` to the location in get_parameters(m)
+                    if regime_switching
+                        p_i, reg_i = x_ind_2_pvec_ind[i] # returns index within get_parameters(m) and the regime
+                    else
+                        p_i = i
+                    end
+                    prior_var = moments(get_parameters(m)[i])[2] # moments(get(get_parameters(m)[i].prior))[2]
                     proposal_in_bounds = false
                     proposal = x_all_model[i]
-                    lower = get_parameters(m)[i].valuebounds[1] # TODO: generalize to regime-switching
-                    upper = get_parameters(m)[i].valuebounds[2]
+                    if haskey(get_parameters(m)[i].regimes, :valuebounds)
+                        lower = regime_valuebounds(get_parameters(m)[i], 1)[1]
+                        upper = regime_valuebounds(get_parameters(m)[i], 1)[2]
+                    else
+                        lower = get_parameters(m)[i].valuebounds[1]
+                        upper = get_parameters(m)[i].valuebounds[2]
+                    end
 
                     # draw a new parameter value, and redraw if out of bounds
                     while !proposal_in_bounds # TODO: generalize to regime-switching
@@ -158,7 +170,8 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 try
                     DSGE.update!(m, x_proposal_all)
                     compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
-                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all) # TODO: generalize to regime-switching
+                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all;
+                                                            regime_switching = regime_switching)
                     success = true
                 catch ex
                     if !(typeof(ex) in [DomainError, ParamBoundsError, GensysError])
@@ -184,7 +197,8 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
             x_all = T[ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)]  # to get fixed values
             x_all[para_free_inds] = x                 # this is from real line
 
-            x_all_m = transform_to_model_space(get_parameters(m), x_all)  # TODO: generalize to regime-switching
+            x_all_m = transform_to_model_space(get_parameters(m), x_all;
+                                               regime_switching = regime_switching)
             x_proposal_all = copy(x_all_m)
 
             success = false
@@ -211,7 +225,8 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 try
                     DSGE.update!(m, x_proposal_all)
                     compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
-                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all) # TODO: generalize to regime-switching
+                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all
+                                                            regime_switching = regime_switching)
                     success = true
                 catch ex
                     if !(typeof(ex) in [DomainError, ParamBoundsError, GensysError])
@@ -231,12 +246,15 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     temperature = get_setting(m, :simulated_annealing_temperature)
     rng = get_rng(m)
     if method == :simulated_annealing
-       opt_result = optimizer(f_opt, x_opt;
-                              iterations = iterations, step_size = step_size,
-                              store_trace = store_trace, show_trace = show_trace,
-                              extended_trace = extended_trace,
-                              neighbor! = neighbor!, verbose = verbose, rng = rng,
-                              temperature = temperature)
+        if regime_switching
+            error("Simulated annealing with regime switching currently does not work.")
+        end
+        opt_result = optimizer(f_opt, x_opt;
+                               iterations = iterations, step_size = step_size,
+                               store_trace = store_trace, show_trace = show_trace,
+                               extended_trace = extended_trace,
+                               neighbor! = neighbor!, verbose = verbose, rng = rng,
+                               temperature = temperature)
         converged = opt_result.iteration_converged
         out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
                                   opt_result.iterations)
@@ -246,9 +264,9 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                                iterations = iterations,
                                store_trace = store_trace, show_trace = show_trace,
                                extended_trace = extended_trace, verbose = verbose, rng = rng)
-       converged = opt_result.iteration_converged
-       out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
-                                 opt_result.iterations)
+        converged = opt_result.iteration_converged
+        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
+                                  opt_result.iterations)
 
     elseif method == :csminwel
         opt_result, H_ = optimizer(f_opt, x_opt, H0;
@@ -289,7 +307,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     ########################################################################################
 
     x_model[para_free_inds] = out.minimizer
-    transform_to_model_space!(m, x_model) # TODO: generalize to regime-switching
+    transform_to_model_space!(m, x_model; regime_switching = regime_switching)
 
     # Match original dimensions
     out.minimizer = ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)
