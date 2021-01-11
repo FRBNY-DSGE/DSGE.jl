@@ -102,17 +102,14 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
     ## only helpful for combining historical and alternative policies with
     ## the right weights later on
-    if has_uncertain_altpolicy && !uncertain_altpolicy &&
-        has_regime_eqcond_info && altpol_wts_name != :irrelevant
-        if vary_wt
-            for reg in keys(regime_eqcond_info)
-                if regime_eqcond_info[reg].alternative_policy == alternative_policy(m)
-                    altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
-                    altpol_vec[1] = 1.0
-                    regime_eqcond_info[reg].weights = altpol_vec
-                end
+    if has_uncertain_altpolicy && !uncertain_altpolicy && has_regime_eqcond_info
+        for reg in keys(regime_eqcond_info)
+            if regime_eqcond_info[reg].alternative_policy == alternative_policy(m)
+                altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
+                altpol_vec[1] = 1.0
+                regime_eqcond_info[reg].weights = altpol_vec
             end
-        end # Else accounted for in ZLB
+        end
     end
 
     system_main = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
@@ -123,7 +120,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # then return system now.
     # The !apply_altpolicy check may be problematic after refactoring altpolicy.
     if !apply_altpolicy || !haskey(m.settings, :regime_switching) || !get_setting(m, :regime_switching) ||
-        !has_regime_eqcond_info || # if replace_eqcond_func_dict is not defined, then no alt policies occur
+        !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
         (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy)
         ## TODO: Setting names should change once refactoring done
 
@@ -213,8 +210,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     end
 
     ## Correct the measurement equations for anticipated observables via convex combination
-    for reg in sort!(collect(keys(get_setting(m, :replace_eqcond_func_dict))))
-        new_wt = vary_wt ? altpol_wts[reg] : altpol_wts
+    for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+        new_wt = regime_eqcond_info[reg].weights
 
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
@@ -280,18 +277,18 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
 
     if tvis
         @assert haskey(get_settings(m), :tvis_information_set) "The setting :tvis_information_set is not defined"
-        n_tvis = haskey(get_settings(m), :tvis_regime_eqcond_info) ? length(get_setting(m, :tvis_replace_eqcond_func_dict)) : 1
+        n_tvis = haskey(get_settings(m), :tvis_regime_eqcond_info) ? length(get_setting(m, :tvis_regime_eqcond_info)) : 1
         if n_tvis == 1 && haskey(get_settings(m), :tvis_regime_eqcond_info)
             if haskey(get_settings(m), :regime_eqcond_info)
-                if get_setting(m, :tvis_regime_eqcond_info)[1] != get_setting(m, :replace_eqcond_func_dict)
+                if get_setting(m, :tvis_regime_eqcond_info)[1] != get_setting(m, :regime_eqcond_info)
                     warn_str = "The dictionary of functions in the Setting :regime_eqcond_info does not match the one specified " *
-                    "by the length-one Setting :tvis_regime_eqcond_info. Replacing :replace_eqcond_func_dict with the dictionary " *
+                    "by the length-one Setting :tvis_regime_eqcond_info. Replacing :regime_eqcond_info with the dictionary " *
                     "of functions contained in :tvis_regime_eqcond_info."
                     @warn warn_str
-                    m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
+                    m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_regime_eqcond_info)[1])
                 end
             else
-                m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_replace_eqcond_func_dict)[1])
+                m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_regime_eqcond_info)[1])
             end
         end
 
@@ -1606,7 +1603,7 @@ additional required settings that must exist in `m` are:
 - `:tvis_information_set`: Vector of `UnitRange{Int}` specifying
 which regimes should be included in the information set
 corresponding each regime.
-- `:tvis_regime_eqcond_info`: Vector of `replace_eqcond_func_dict`
+- `:tvis_regime_eqcond_info`: Vector of `regime_eqcond_info`
 to specify different sets of equilibrium conditions, which
 generate different state space systems (usually).
 - `:tvis_select_system`: Vector of `Int` to specify which
@@ -1631,18 +1628,18 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     # :regime_dates should have the same number of possible regimes. Any differences in eqcond
     # should be specified by tvis_regime_eqcond_info
     tvis_infoset                  = get_setting(m, :tvis_information_set)
-    tvis_regime_eqcond_info = get_setting(m, :tvis_replace_eqcond_func_dict)
+    tvis_regime_eqcond_info = get_setting(m, :tvis_regime_eqcond_info)
     tvis_select                   = get_setting(m, :tvis_select_system)
     regime_switching              = get_setting(m, :regime_switching)
 
-    n_tvis           = length(tvis_replace_eqcond_func_dict)
+    n_tvis           = length(tvis_regime_eqcond_info)
     n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
     get_setting(m, :n_regimes) : 1
     n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
     get_setting(m, :n_hist_regimes) : 1
 
     # determine which regimes use gensys/gensys2
-    first_gensys2_regime = haskey(get_settings(m), :replace_eqcond_func_dict) ? min(collect(keys(get_setting(m, :replace_eqcond_func_dict)))...) : n_hist_regimes + 1
+    first_gensys2_regime = haskey(get_settings(m), :regime_eqcond_info) ? min(collect(keys(get_setting(m, :regime_eqcond_info)))...) : n_hist_regimes + 1
     last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ? first_gensys2_regime + get_setting(m, :temporary_zlb_length) : n_regimes
     if get_setting(m, :gensys2)
         gensys_regimes = [1:first_gensys2_regime-1]
@@ -1659,11 +1656,10 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
     RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
     CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
-    for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
+    for (i, regime_eqcond_info) in enumerate(tvis_regime_eqcond_info) # For each set of equilibrium conditions,
         if apply_altpolicy
-            m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
+            m <= Setting(:regime_eqcond_info, regime_eqcond_info)         # calculate the implied regime-switching system
         end
-
         TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
                                                       regimes = collect(1:n_regimes),
                                                       gensys_regimes = gensys_regimes,
