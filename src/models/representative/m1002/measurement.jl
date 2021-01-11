@@ -289,9 +289,9 @@ function measurement(m::Model1002{T},
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC .!= 0.)
         # Are we using the zero rate alternative policy or not?
-        is_zero_rate_rule = (haskey(get_settings(m), :replace_eqcond_func_dict) ?
-                             (!isempty(get_setting(m, :replace_eqcond_func_dict)) && get_setting(m, :replace_eqcond)) : false) ||
-                             get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond
+        is_zero_rate_rule = (haskey(get_settings(m), :regime_eqcond_info) ?
+                             (!isempty(get_setting(m, :regime_eqcond_info)) && get_setting(m, :replace_eqcond)) : false) ||
+        alternative_policy(m).eqcond == zero_rate_eqcond
 
         # If we are using the zero rate rule, then we don't adjust DD. If we run the code block below,
         # then the zero rate rule will cause CCC to be nonzero in multiple places, leading to the

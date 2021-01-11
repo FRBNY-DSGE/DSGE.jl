@@ -65,7 +65,7 @@ function solve(m::AbstractDSGEModel{T}; apply_altpolicy = false,
             end
 
             if uncertain_altpolicy && apply_altpolicy
-                weights = get_setting(m, :imperfect_awareness_weights)
+                weights = get_setting(m, :regime_eqcond_info)[1].weights
                 altpols = get_setting(m, :alternative_policies)
                 inds = 1:n_states(m)
                 TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = apply_altpolicy,
