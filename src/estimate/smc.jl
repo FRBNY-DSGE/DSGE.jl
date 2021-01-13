@@ -87,7 +87,8 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     # Define tempering settings
     tempered_update_prior_weight = get_setting(m, :tempered_update_prior_weight)
     tempering_target             = get_setting(m, :adaptive_tempering_target_smc)
-    use_fixed_schedule           = tempering_target == 0.0
+    use_fixed_schedule           = haskey(get_settings(m), :use_fixed_schedule) ?
+        get_setting(m, :use_fixed_schedule) : tempering_target == 0.0
 
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
