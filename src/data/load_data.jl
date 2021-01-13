@@ -33,7 +33,7 @@ means, standard deviations,
 """
 function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bool = true,
                    verbose::Symbol=:low, check_empty_columns::Bool = true,
-                   summary_statistics::Symbol = :low)
+                   summary_statistics::Symbol = :low, add_vals = (false, Date(2020,12,31)))
     recreate_data = false
 
     # Check if already downloaded
@@ -55,7 +55,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
     if recreate_data
         println(verbose, :low, "Creating dataset...")
 
-        levels = load_data_levels(m; verbose=verbose)
+        levels = load_data_levels(m; verbose=verbose, add_vals = add_vals)
         if cond_type in [:semi, :full]
             cond_levels = load_cond_data_levels(m; verbose=verbose)
             levels, cond_levels = reconcile_column_names(levels, cond_levels)
@@ -139,7 +139,8 @@ using `load_fred_data`. See `?load_fred_data` for more details.
 
 Data from non-FRED data sources are read from disk, verified, and merged.
 """
-function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
+function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low,
+                          add_vals = (false,Date(2020,12,31)))
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
     start_date = date_presample_start(m) - Dates.Month(6)
@@ -152,6 +153,14 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
     df = load_fred_data(m; start_date=firstdayofquarter(start_date),
                         end_date=end_date, verbose=verbose)
 
+    if add_vals[1]
+        temp2 = CSV.read(get_data_filename(m,:full), DataFrame)
+        for k in names(temp2)[2:end]
+            if k in names(df)
+                df[df[:date] .== add_vals[2],k] = temp2[1,k]
+            end
+        end
+    end
 
     # Set ois series to load
     if n_mon_anticipated_shocks(m) > 0
