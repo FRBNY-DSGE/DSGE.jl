@@ -40,7 +40,6 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 regime_eqcond_info[reg].weights = altpol_vec
             end
         end
-    end
 
     # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
     ## only helpful for combining historical and alternative policies with
@@ -262,8 +261,7 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
             end
 
             # Solve!
-            TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
-                                     regime_switching = regime_switching,
+            TTTs, RRRs, CCCs = solve(m; regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
                                      gensys_regimes = gensys_regimes,
                                      gensys2_regimes = gensys2_regimes,
@@ -333,7 +331,7 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
     else
         if solution_method == :gensys
 
-            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+            TTT, RRR, CCC = solve(m; verbose = verbose)
             transition_equation = Transition(TTT, RRR, CCC)
 
             # Solve measurement equation
