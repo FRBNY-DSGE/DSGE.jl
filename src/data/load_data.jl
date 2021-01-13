@@ -154,7 +154,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low,
                         end_date=end_date, verbose=verbose)
 
     if add_vals[1]
-        temp2 = CSV.read(get_data_filename(m,:full), DataFrame)
+        temp2 = CSV.read(get_setting(m, :cond_filename), DataFrame)
         for k in names(temp2)[2:end]
             if k in names(df)
                 df[df[:date] .== add_vals[2],k] = temp2[1,k]
