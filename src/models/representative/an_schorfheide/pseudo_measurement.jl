@@ -13,7 +13,7 @@ x_t = ZZ_pseudo*s_t + DD_pseudo
 function pseudo_measurement(m::AnSchorfheide{T},
                             TTT::Matrix{T},
                             RRR::Matrix{T},
-                            CCC::Vector{T}) where {T<:AbstractFloat}
+                            CCC::Vector{T}; reg::Int = 1) where {T<:AbstractFloat}
     endo   = m.endogenous_states
     pseudo = m.pseudo_observables
 

@@ -15,6 +15,10 @@ specified in their proper positions.
 * `Ψ`  (`n_states` x `n_shocks_exogenous`) holds coefficients of iid shocks.
 * `Π`  (`n_states` x `n_states_expectational`) holds coefficients of expectational states.
 """
+function eqcond(m::AnSchorfheide, reg::Int)
+    return eqcond(m)
+end
+
 function eqcond(m::AnSchorfheide)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
