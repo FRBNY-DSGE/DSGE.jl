@@ -585,3 +585,36 @@ function eqcond(m::AbstractDSGEModel, Γ0::AbstractMatrix{S}, Γ1::AbstractMatri
                 C::AbstractVector{S}, Ψ::AbstractMatrix{S}, Π::AbstractMatrix{S}) where {S <: Real}
     return Γ0, Γ1, C, Ψ, Π
 end
+
+```
+setup_param_regimes(m::AbstractDSGEModel; param_regs::Matrix{Int} = [0 0])
+
+Function to set up the model with parameter regime switching
+for estimation. param_regs should be a matrix where for each row r,
+the i{th} element is the parameter regime for the i{th} model regime
+for parameter r (including parameters with no regime-switching: set
+the rows for non-regime-switching parameters to all 1s, although any
+value will give the same result).
+If no params_reg is provided, then all parameters point the model regime
+to the first parameter regime (there is only 1 parameter regime).
+```
+function setup_param_regimes!(m::AbstractDSGEModel; param_mat::Array{Int,2} = [0 0])
+    param_reg = Dict{Symbol, Dict{Int, Int}}()
+    n_regs = haskey(m.settings, :n_regimes) ? get_setting(m, :n_regimes) : 1
+    if param_mat == [0 0]
+        param_mat = ones(length(m.parameters), n_regs)
+    end
+    @assert size(param_mat) == (length(m.parameters), n_regs)
+
+    for i in 1:length(m.parameters)
+        reg_dict = Dict{Int, Int}()
+        for reg in 1:n_regs
+            reg_dict[reg] = param_mat[i,reg]
+        end
+        param_reg[m.parameters[i].key] = reg_dict
+    end
+
+    m <= Setting(:model2para_regime, param_reg)
+
+    return nothing
+end
