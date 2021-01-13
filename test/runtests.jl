@@ -54,6 +54,7 @@ my_tests = [
             "estimate/smc/resample",
             "estimate/smc/particle",
             "estimate/smc/smc",
+            "estimate/smc/regime_switching_smc",
 
             "forecast/drivers",
             "forecast/smooth",
