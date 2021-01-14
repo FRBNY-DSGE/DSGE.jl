@@ -389,19 +389,21 @@ end
 
 """
 ```
-transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T}) where T<:AbstractFloat
+transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T}; regime_switching::Bool = false) where T<:AbstractFloat
 ```
 
 Transforms `values` from the real line to the model space, and assigns `values[i]` to
 `m.parameters[i].value` for non-steady-state parameters. Recomputes the steady-state
-paramter values.
+parameter values.
 
 ### Arguments
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
+- `regime_switching`: set to true if the model's parameters are regime-switching
 """
-function transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T}) where {T<:AbstractFloat}
-    new_values = transform_to_model_space(m.parameters, values)
+function transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T};
+                                   regime_switching::Bool = false) where {T<:AbstractFloat}
+    new_values = transform_to_model_space(m.parameters, values; regime_switching = regime_switching)
     DSGE.update!(m, new_values)
     steadystate!(m)
 end
@@ -448,7 +450,7 @@ function update!(m::AbstractDSGEModel, values::ParameterVector{T};
     # Update regime-switching if length of `values` exceeds m.parameters
     if regime_switching
         if toggle
-            ModelConstructors.toggle_regime!(values)
+            ModelConstructors.toggle_regime!(values, 1)
         end
 
         # Update first-regime values

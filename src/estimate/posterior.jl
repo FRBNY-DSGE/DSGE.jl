@@ -89,7 +89,7 @@ function posterior!(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}},
             end
         end
     else
-        DSGE.update!(m, parameters; toggle = toggle, regime_switching = regime_switching))
+        DSGE.update!(m, parameters)
     end
     return posterior(m, data; sampler = sampler, ϕ_smc = ϕ_smc, catch_errors = catch_errors)
 end

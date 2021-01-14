@@ -53,7 +53,6 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
     ### Step 1: Setup
     ########################################################################################
 
-
     # For now, only csminwel should be used
     optimizer = if method == :csminwel
         csminwel
@@ -69,9 +68,11 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
         error("Method ", method, " is not supported.")
     end
 
+    regime_switching = haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
+
     # Inputs to optimization
-    para_free_inds = SMC.get_fixed_para_inds(get_parameters(m);
-                                             regime_switching = regime_switching, toggle = toggle)
+    para_free_inds = ModelConstructors.get_free_para_inds(get_parameters(m);
+                                                          regime_switching = regime_switching, toggle = toggle)
     H0             = 1e-4 * eye(length(para_free_inds))
     x_model        = transform_to_real_line(get_parameters(m); regime_switching = regime_switching)
     x_opt          = x_model[para_free_inds]
@@ -225,7 +226,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                 try
                     DSGE.update!(m, x_proposal_all)
                     compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
-                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all
+                    x_proposal_all = transform_to_real_line(get_parameters(m), x_proposal_all;
                                                             regime_switching = regime_switching)
                     success = true
                 catch ex

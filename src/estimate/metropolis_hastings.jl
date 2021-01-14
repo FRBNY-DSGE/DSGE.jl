@@ -104,8 +104,8 @@ function metropolis_hastings(proposal_dist::Distribution,
     end
 
     # Parameter Blocking
-    free_para_inds = SMC.get_fixed_para_inds(parameters;
-                                             regime_switching = regime_switching, toggle = toggle)
+    free_para_inds = ModelConstructors.get_free_para_inds(parameters;
+                                                          regime_switching = regime_switching, toggle = toggle)
     n_params       = regime_switching ? n_parameters_regime_switching(parameters) : length(parameters)
     if n_param_blocks == 1
         blocks_free = Vector{Int}[free_para_inds]
@@ -309,7 +309,9 @@ function metropolis_hastings(propdist::Distribution,
     savepath = rawpath(m, "estimate", "mhsave.h5", filestring_addl)
 
     # To check: Defaulting to using Chandrasekhar recursions if no missing data
-    use_chand_recursion = !any(isnan.(data))
+    # and not regime-switching (Chandrasekhar recursions have not been extended yet
+    # for regime-switching)
+    use_chand_recursion = !any(isnan.(data)) && !regime_switching
 
     loglikelihood = if isa(m, AbstractDSGEModel)
         function _loglikelihood_dsge(p::ParameterVector, data::Matrix{Float64})::Float64
