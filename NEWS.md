@@ -8,6 +8,7 @@
 + Time-varying imperfect awareness/credibility
 + Ability to use temporary policies during history (previously only available as alternative policy during forecast)
 + Regime-switching allowed during forecast for shock decompositions, deterministic trends, and trends
++ Regime-switching estimation of DSGE models using MH and SMC
 
 ## Bug fixes and cleanup
 + Fix error in calculating the diagonal of the Hessian with parallel workers
