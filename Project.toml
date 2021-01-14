@@ -1,7 +1,7 @@
 name = "DSGE"
 uuid = "6cf23378-2c47-544c-b0c3-6efefe57ca11"
 authors = ["William Chen <william.chen@ny.frb.org>", "Shlok Goyal <shlok.goyal@ny.frb.org>", "Alissa Johnson <alissa.johnson@ny.frb.org>"]
-version = "1.1.7"
+version = "1.2.0"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
