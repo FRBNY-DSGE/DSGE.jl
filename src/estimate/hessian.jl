@@ -12,13 +12,13 @@ function hessian!(m::Union{AbstractDSGEModel,AbstractVARModel},
                   toggle::Bool = true, verbose::Symbol = :none) where T<:AbstractFloat
 
     regime_switching = haskey(get_settings(m), :regime_switching) &&
-        get_seting(m, :regime_switching)
+        get_setting(m, :regime_switching)
 
     DSGE.update!(m, x)
 
     # Index of free parameters
-    para_free_inds = SMC.get_free_para_inds(get_parameters(m);
-                                            regime_switching = regime_switching, toggle = toggle)
+    para_free_inds = ModelConstructors.get_free_para_inds(get_parameters(m);
+                                                          regime_switching = regime_switching, toggle = toggle)
 
     # Compute hessian only for freem parameters with indices less than max. Useful for
     # testing purposes.
