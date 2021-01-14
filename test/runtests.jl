@@ -48,6 +48,7 @@ my_tests = [
             "estimate/var/dsgevecm_likelihood",
 
             "estimate/metropolis_hastings",
+            "estimate/regime_switching_mh",
             "estimate/smc/helpers",
             "estimate/smc/initialization",
             "estimate/smc/mutation",

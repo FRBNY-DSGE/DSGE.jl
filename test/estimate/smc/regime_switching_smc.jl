@@ -67,15 +67,15 @@ sys = compute_system(m)
 
 regswitch_lik = DSGE.likelihood(m, data)
 
-@testset "Estimate regime-switching AnSchorfheide" begin
+@testset "Estimate regime-switching AnSchorfheide with SMC (approx. 3 min.)" begin
 
     @test true_lik == regswitch_lik
 
     # Regime switching estimation
-    @info "Using SMC on regime-switching AnSchorfheide (approx. 3 min.)"
     true_para = ModelConstructors.get_values(m.parameters)
     Random.seed!(1793)
-    DSGE.smc2(m, data, regime_switching = true, run_csminwel = false)
+    DSGE.smc2(m, data, regime_switching = true, run_csminwel = false,
+              verbose = :none)
 
     posterior_means = vec(mean(load_draws(m, :full), dims = 1))
 
