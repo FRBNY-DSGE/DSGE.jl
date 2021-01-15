@@ -418,6 +418,14 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
                                  get_setting(m, :forecast_zlb_value))
 
+    # Check replace_eqcond_func_dict if any regimes use the zero rate rule
+    for (reg, v) in original_eqcond_dict
+        if v == zero_rate_replace_eq_entries
+            @warn "The setting replace_eqcond_func_dict has a regime with zero_rate_replace_eq_entries, which will cause Gensys error. Please remove these regimes or otherwise avoid having zero_rate_replace_eq_entries in regimes."
+            break
+        end
+    end
+
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
         first_zlb_regime += n_hist_regimes
         if cond_type != :none
