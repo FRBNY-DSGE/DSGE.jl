@@ -680,7 +680,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
                                       mb_hist::MeansBands = MeansBands(),
                                       detexify_shocks::Bool = true,
                                       groups::Vector{ShockGroup} = ShockGroup[],
-                                      trend_nostates::DataFrame = DataFrame())
+                                      trend_nostates::DataFrame = DataFrame(), df_enddate = Date(2100,12,31))
 
     @assert get_product(mb_shockdec) == :shockdec "The first argument must be a MeansBands object for a shockdec"
     @assert get_product(mb_trend)    == :trend    "The second argument must be a MeansBands object for a trend"
@@ -725,11 +725,13 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
         # Truncate to just the dates we want
         startdate = df[1, :date]
-        enddate   = df[end, :date]
+        enddate   = min(df[end, :date], df_enddate)
         df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[!, :date] .<= enddate, [:date, var]]
 
         df_shockdec = has_ij ? innerjoin(df_shockdec, df_mean, on = :date) :
             join(df_shockdec, df_mean, on = :date, kind = :inner)
+        df = df[startdate .<= df[!, :date] .<= enddate, :]
+
         if isempty(trend_nostates)
             df[!, :detrendedMean] = df_shockdec[!, var] - df_shockdec[!, :trend]
         else

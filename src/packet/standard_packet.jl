@@ -277,7 +277,8 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                              forecast_string::String = "",
                              plotroot::String = "",
                              hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"),
-                             trend_nostates::DataFrame = DataFrame())
+                             trend_nostates::DataFrame = DataFrame(),
+                             legend = :bottomleft, df_enddate = Date(2100,12,31))
 
     # Output directory
     if isempty(plotroot)
@@ -340,7 +341,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                                   names = Dict(:hist => hist_label, :forecast => forecast_label),
                                   end_date = end_date,
                                   tick_size = tick_size,
-                                  legend = :bottomleft)
+                                  legend = legend)
     elseif product == :bddforecast
         plot_history_and_forecast(m, varnames, class, input_type, cond_type,
                                   forecast_string = forecast_string,
@@ -350,7 +351,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                                   names = Dict(:hist => hist_label, :forecast => forecast_label),
                                   end_date = end_date,
                                   tick_size = tick_size,
-                                  legend = :bottomleft)
+                                  legend = legend)
     elseif product == :shockdec
         groups = DSGE.shock_groupings(m)
         plot_shock_decomposition(m, varnames, class, input_type, cond_type,
@@ -361,8 +362,9 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                                  hist_label = "",
                                  forecast_label = "",
                                  tick_size = tick_size,
-                                 legend = :bottomleft,
-                                 trend_nostates = trend_nostates)
+                                 legend = legend,
+                                 trend_nostates = trend_nostates,
+                                 df_enddate = Date(2100,12,31))
     else
         error("Unsupported product: " * string(product))
     end
