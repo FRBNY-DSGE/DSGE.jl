@@ -38,12 +38,12 @@ into `plot_history_and_forecast`.
 function plot_shock_decomposition(m::AbstractDSGEModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   title = "", file_ext = "", four_quarter_avg = false,
-                                  trend_nostates::DataFrame = DataFrame(),
+                                  trend_nostates::DataFrame = DataFrame(), df_enddate::Date = Date(2100,12,31),
                                   kwargs...)
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
                                      titles = isempty(title) ? String[] : [title], file_ext = file_ext,
                                      four_quarter_avg = four_quarter_avg, trend_nostates = trend_nostates,
-                                     kwargs...)
+                                     df_enddate = df_enddate, kwargs...)
     return plots[var]
 end
 
@@ -55,6 +55,7 @@ function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, cl
                                   titles::Vector{String} = String[],
                                   file_ext::String = "", four_quarter_avg = false,
                                   trend_nostates::DataFrame = DataFrame(), verbose::Symbol = :low,
+                                  df_enddate::Date = Date(2100,12,31),
                                   kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
@@ -81,7 +82,7 @@ function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, cl
         ylabs = trend_nostates == DataFrame() ? "\n(deviations from mean)" : ""
         plots[var] = shockdec(var, mbs..., groups;
                               ylabel = series_ylabel(m, var, class) * ylabs,
-                              title = title, trend_nostates = trend_nostates, kwargs...)
+                              title = title, trend_nostates = trend_nostates, df_enddate = df_enddate, kwargs...)
 
         # Save plot
         if !isempty(plotroot)
@@ -149,7 +150,7 @@ shockdec
                    tick_size = 5,
                    vert_line = quartertodate("0000-Q1"),
                    vert_line2 = quartertodate("0000-Q1"),
-                   trend_nostates = DataFrame())
+                   trend_nostates = DataFrame(), df_enddate = Date(2100,12,31))
 
     # Error checking
     if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
@@ -171,7 +172,7 @@ shockdec
     df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
                                            mb_hist = hist, mb_forecast = forecast,
                                            detexify_shocks = false,
-                                           groups = groups, trend_nostates = trend_nostates)
+                                           groups = groups, trend_nostates = trend_nostates, df_enddate = df_enddate)
 
     dates = df[!, :date]
     xnums = (1:length(dates)) .- 0.5
