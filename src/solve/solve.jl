@@ -197,7 +197,9 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
             Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
             Πs = Vector{Matrix{Float64}}(undef, length(regimes))
 
+            @show regimes
             for reg in regimes
+                @show reg
                 Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = eqcond(m, reg)
             end
 

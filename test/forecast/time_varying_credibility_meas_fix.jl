@@ -110,15 +110,15 @@ n_zlb_reg = DSGE.subtract_quarters(end_zlb_date, start_zlb_date) + 1
 # Set up regime_eqcond_info
 m <= Setting(:replace_eqcond, true)
 reg_dates = deepcopy(get_setting(m, :regime_dates))
-regime_eqcond_info = Dict{Int, Tuple{Function, Vector{Float64}}}()
+regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
 for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_regime), # See comments starting at line 57
                           DSGE.quarter_range(reg_dates[gensys2_first_regime],
                                              DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
     reg_dates[regind] = date
-    regime_eqcond_info[regind] = (zero_rate_replace_eq_entries, [0., 1.])
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), [0., 1.])
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
-regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = (DSGE.flexible_ait_replace_eq_entries, [0., 1.])
+regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0., 1.])
 nreg0 = length(reg_dates)
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
@@ -151,7 +151,7 @@ sysp33 = compute_system(m; apply_altpolicy = true, tvis = true)
 
 for i in nreg0:(nreg0 + 15)
     reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
-    regime_eqcond_info[i] = (DSGE.flexible_ait_replace_eq_entries, [.33, 1-.33])
+    regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.flexible_ait(), [.33, 1-.33])
 end
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
@@ -166,9 +166,7 @@ m <= Setting(:imperfect_awareness_varying_weights,
 for i in keys(get_setting(m, :regime_eqcond_info))
     last(get_setting(m, :regime_eqcond_info)) = [.33, 1-.33]
 end
-println("BEFORE LAST SYSTEM")
 sysp33_tv = compute_system(m; apply_altpolicy = true, tvis = true)
-println("AFTER LAST SYSTEM")
 outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                    regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 @testset "Compare Fixed to Time-Varying Credibility" begin
