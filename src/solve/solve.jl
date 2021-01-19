@@ -197,7 +197,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
             Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
             Πs = Vector{Matrix{Float64}}(undef, length(regimes))
 
-            println("solve ln 200")
             for reg in regimes
                 Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = get_setting(m, :replace_eqcond) && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg) ?
                     get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg; toggle_regimes = false) : eqcond(m, reg)
