@@ -430,7 +430,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
         if nzlb != ng2
-            @show "Are we ending up in this block?"
+            # @show "Are we ending up in this block?"
             # TODO: generalize this code block
             # It is currently assumed that ffreg is the first regime w/ZLB (and cannot be another temporary altpolicy),
             # so ffreg + nzlb is the first regime w/out ZLB. Starting from nzlb + 1 ensures we populate the lift-off
