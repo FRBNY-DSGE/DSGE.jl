@@ -66,8 +66,10 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
 
         # Set replace_eqcond to nothing if !apply_altpolicy
-        if !apply_altpolicy
+        if !apply_altpolicy && has_replace_eqcond_func
+            replace_eq_copy = copy(get_setting(m, :replace_eqcond_func_dict))
             delete!(m.settings, :replace_eqcond_func_dict)
+            has_replace_eqcond_func = false
         end
 
         # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
@@ -123,6 +125,9 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         (vary_wt && all([1.0 in val && val == first(values(altpol_wts)) for val in values(altpol_wts)]))
         ## TODO: Setting names should change once refactoring done
 
+        if !apply_altpolicy
+            m <= Setting(:replace_eqcond_func_dict, replace_eq_copy)
+        end
         return system_main
     end
 
@@ -1675,10 +1680,10 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
     CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
     for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
-        m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
-        if !apply_altpolicy
-            delete!(m.settings, :replace_eqcond_func_dict)
+        if apply_altpolicy
+            m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
         end
+
         TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
         regimes = collect(1:n_regimes),
         gensys_regimes = gensys_regimes,
