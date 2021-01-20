@@ -213,6 +213,11 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
         TTT_aug[endo_new[:e_gdpexp_t], endo_new[:e_gdpexp_t]] = m[:ρ_gdpexp]
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        TTT_aug[endo_new[:e_condcorepce_t], endo_new[:e_condcorepce_t]] = m[:ρ_condcorepce]
+    end
+
     # Fundamental inflation
     if subspec(m) in ["ss13", "ss14", "ss15", "ss16", "ss17", "ss18", "ss19"]
         betabar = exp((1-m[:σ_c] ) * m[:z_star]) * m[:β]
@@ -259,6 +264,11 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
         RRR_aug[endo_new[:e_gdpexp_t], exo[:gdpexp_sh]] = 1.0
+    end
+
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        RRR_aug[endo_new[:e_condcorepce_t], exo[:condcorepce_sh]] = 1.0
     end
 
     ### CCC Modifications

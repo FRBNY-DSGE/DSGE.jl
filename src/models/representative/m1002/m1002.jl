@@ -250,6 +250,12 @@ function init_model_indices!(m::Model1002)
         push!(exogenous_shocks, :gdpexp_sh)
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        push!(endogenous_states_augmented, :e_condcorepce_t)
+        push!(exogenous_shocks, :condcorepce_sh)
+    end
+
     # Observables
     observables = keys(m.observable_mappings)
 
@@ -645,6 +651,16 @@ buted to steady-state inflation.",
                        tex_label="\\sigma_{gdpexp}")
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        m <= parameter(:ρ_condcorepce, 0., (-0.999, 0.999), (-0.999, 0.999),
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{cond corepce}")
+        m <= parameter(:σ_condcorepce, 0.0999, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{cond corepce}")
+    end
+
     for key in get_setting(m, :proportional_antshocks)
         propant_tex_label = DSGE.detexify(key) == key ? string(key) : "\\" * string(DSGE.detexify(key))
         m <= parameter(Symbol(:σ_, key, :_prop), 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
@@ -1038,7 +1054,7 @@ function shock_groupings(m::Model1002)
         mei = ShockGroup("mu", [:μ_sh], :cyan)
         if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
             get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
-            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :condgdp_sh],
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :condgdp_sh, :condcorepce_sh],
                              RGB(0.0, 0.8, 0.0))
         elseif haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
             get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
