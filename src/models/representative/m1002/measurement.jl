@@ -143,6 +143,11 @@ function measurement(m::Model1002{T},
     ZZ[obs[:obs_corepce], endo_new[:e_corepce_t]] = 1.0
     DD[obs[:obs_corepce]]                         = 100*(m[:π_star]-1)
 
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        ZZ[obs[:obs_corepce], endo_new[:e_condcorepce_t]] = 1.
+    end
+
     ## Nominal interest rate
     ZZ[obs[:obs_nominalrate], endo[:R_t]] = 1.0
     DD[obs[:obs_nominalrate]]             = m[:Rstarn]
@@ -238,6 +243,12 @@ function measurement(m::Model1002{T},
     if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
         QQ[exo[:gdpexp_sh], exo[:gdpexp_sh]] = m[:σ_gdpexp] ^ 2
+    end
+
+    # measurement errors for "conditional" observations of Core PCE
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        QQ[exo[:condcorepce_sh], exo[:condcorepce_sh]] = m[:σ_condcorepce] ^ 2
     end
 
     # Automated addition of anticipated shocks to QQ

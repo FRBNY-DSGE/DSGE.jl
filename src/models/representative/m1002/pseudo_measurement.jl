@@ -161,6 +161,15 @@ function pseudo_measurement(m::Model1002{T},
         end
     end
 
+    ## Pseudo Core PCE # TODO
+    if haskey(m.settings, :add_pseudo_corepce)
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61"]
+            ZZ_pseudo[pseudo[:PseudoCorePCE], endo[:π_t]]              = 1.0
+            ZZ_pseudo[pseudo[:PseudoCorePCE], endo_addl[:e_corepce_t]] = 1.0
+            DD_pseudo[pseudo[:PseudoCorePCE]]                          = 100. * (m[:π_star] - 1.)
+        end
+    end
+
     ## Natural Rate
     ZZ_pseudo[pseudo[:NaturalRate],endo[:r_f_t]] = 1.
     DD_pseudo[pseudo[:NaturalRate]]              = 100.0*(m[:rstar]-1.0)

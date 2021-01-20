@@ -33,6 +33,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_pseudo_corepce)
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61"]
+            push!(pseudo_names, :PseudoCorePCE)
+        end
+    end
+
     if haskey(m.settings, :add_NominalWageGrowth)
         if get_setting(m, :add_NominalWageGrowth)
             push!(pseudo_names, :NominalWageGrowth)
@@ -394,6 +400,14 @@ function init_pseudo_observable_mappings!(m::Model1002)
             pseudo[:PseudoGDP].name     = "GDP Growth Pseudo-observable"
             pseudo[:PseudoGDP].longname = "GDP Growth Pseudo-observable"
             pseudo[:PseudoGDP].rev_transform = loggrowthtopct_annualized_percapita
+        end
+    end
+
+    if haskey(m.settings, :add_pseudo_corepce)
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61"]
+            pseudo[:PseudoCorePCE].name     = "Core PCE Pseudo-observable"
+            pseudo[:PseudoCorePCE].longname = "Core PCE Pseudo-observable"
+            pseudo[:PseudoCorePCE].rev_transform = loggrowthtopct_annualized
         end
     end
 
