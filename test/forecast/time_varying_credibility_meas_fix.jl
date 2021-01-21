@@ -176,14 +176,14 @@ outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, d
     for reg in 1:n_regimes(sysp33)
         @show reg
         @test sysp33[reg, :TTT] ≈ sysp33_tv[reg, :TTT]
-    #    @test sysp33[reg, :RRR] ≈ sysp33_tv[reg, :RRR]
-    #    @test sysp33[reg, :CCC] ≈ sysp33_tv[reg, :CCC]
-    #    @test sysp33[reg, :QQ] ≈ sysp33_tv[reg, :QQ]
-    #    @test sysp33[reg, :ZZ] ≈ sysp33_tv[reg, :ZZ]
-    #    @test sysp33[reg, :DD] ≈ sysp33_tv[reg, :DD]
+        @test sysp33[reg, :RRR] ≈ sysp33_tv[reg, :RRR]
+        @test sysp33[reg, :CCC] ≈ sysp33_tv[reg, :CCC]
+        @test sysp33[reg, :QQ] ≈ sysp33_tv[reg, :QQ]
+        @test sysp33[reg, :ZZ] ≈ sysp33_tv[reg, :ZZ]
+        @test sysp33[reg, :DD] ≈ sysp33_tv[reg, :DD]
     end
     for k in keys(outp33)
-    #    @test outp33[k] ≈ outp33_tv[k]
+        @test outp33[k] ≈ outp33_tv[k]
     end
 
     if !regenerate_reference_forecasts
