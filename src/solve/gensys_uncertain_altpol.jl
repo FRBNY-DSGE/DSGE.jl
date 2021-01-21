@@ -16,7 +16,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
     if regime_switching
         if length(regimes) == 1
             Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ? (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
-                                                                              get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1], toggle_regimes=false) :
+                                                                              get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
                                                                               eqcond(m, regimes[1])) :
                                                                               eqcond(m, regimes[1])
 
@@ -56,7 +56,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
                 for fcast_reg in regimes
                     Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =  haskey(get_settings(m), :regime_eqcond_info) ?
                                                                               (haskey(get_setting(m, :regime_eqcond_info), fcast_reg) ?
-                                                                               get_setting(m, :regime_eqcond_info)[fcast_reg].alternative_policy.eqcond(m, fcast_reg, toggle_regimes=false) :
+                                                                               get_setting(m, :regime_eqcond_info)[fcast_reg].alternative_policy.eqcond(m, fcast_reg) :
                                                                               eqcond(m, fcast_reg)) :
                                                                               eqcond(m, fcast_reg)
                 end
@@ -114,7 +114,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
         end
     else
         Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ? (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
-                                                                          get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1], toggle_regimes=false) :
+                                                                          get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
                                                                           eqcond(m, regimes[1])) :
                                                                           eqcond(m, regimes[1])
 
