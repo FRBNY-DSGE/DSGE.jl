@@ -203,10 +203,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T}; apply_altpolicy::Bool =
                     get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg; toggle_regimes = false) : eqcond(m, reg)
             end
 
-            if any(map(x->x!=undef, Cs))
-                @show Cs
-            end
-
             TTTs = Vector{Matrix{Float64}}(undef, length(regimes))
             RRRs = Vector{Matrix{Float64}}(undef, length(regimes))
             CCCs = Vector{Vector{Float64}}(undef, length(regimes))
