@@ -276,27 +276,14 @@ out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
 
 # Commented out below because expectations don't match realization
 ## in imperfect credibility
-#=
 if !regenerate_reference_forecasts
+    inds = vcat(1:9, 12:13)
     @testset "Compare TV Credibility to Reference Forecast" begin
         tvtestfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"),
                              VERSION >= v"1.5" ? "tvforecastobs_1p5" : "tvforecastobs")
-        @test out1[:forecastobs] ≈ tvtestfcast
-    end
-
-    @testset "Expectations in Measurement Equation with TV Credibility" begin
-        # Anticipated GDP growth
-        @test out1[:forecastobs][1, 3:end] ≈ out1[:forecastobs][20, 2:end - 1]
-        @test !(out1[:forecastobs][1, 2] ≈ out1[:forecastobs][20, 1]) # Taylor rule still holds in 2020:Q4, so the expectation won't match realization
-
-        # Anticipated nominal rates
-        for i in 1:6
-            @test out1[:forecastobs][6, (2 + i):end] ≈ out1[:forecastobs][13 + i, 2:end - i]
-            @test !(out1[:forecastobs][6, 1 + i] ≈ out1[:forecastobs][13 + i, 1]) # Taylor rule still holds in 2020:Q4, as noted above
-        end
+        @test maximum(abs.(out1[:forecastobs][inds, :] - tvtestfcast[inds, :])) < 5e-5
     end
 end
-=#
 
 if regenerate_reference_forecasts
 #=    tvtestfcast_othervers = if VERSION >= v"1.5"
@@ -324,7 +311,6 @@ end
 
 
 
-#=
 m <= Setting(:imperfect_awareness_varying_weights,
              Dict(k => [0., 1.] for k in keys(get_setting(m, :replace_eqcond_func_dict))))
 credvec = collect(range(0., stop = .5, length = 17))
@@ -367,7 +353,7 @@ for k in [:obs_gdp, :obs_corepce, :obs_nominalrate, :obs_pgap, :obs_ygap, :obs_l
     plot!(1:30, adj * out3[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
     plot!(1:30, adj * out2[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
     plot!(1:30, adj * out1[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, adj * outp33[:forecastobs][m.observables[k], 1:30], label = "System", linewidth = 2)
+    plot!(1:30, adj * outp33[:forecastobs][m.observables[k], 1:30], label = "System Replication", linewidth = 2)
 end
 for k in [:NaturalRate, :OutputGap, :Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate]
     plot_dict[k] = plot()
@@ -376,12 +362,12 @@ for k in [:NaturalRate, :OutputGap, :Expected10YearRateGap, :Expected10YearRate,
     plot!(1:30, out3[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
     plot!(1:30, out2[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
     plot!(1:30, out1[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System", linewidth = 2)
+    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System Replication", linewidth = 2)
 end
 
 # mkdir("tvcred_meas_fix_figs")
 for (k, v) in plot_dict
     savefig(v, "tvcred_meas_fix_figs/$(k).pdf")
 end
-=#
+
 nothing
