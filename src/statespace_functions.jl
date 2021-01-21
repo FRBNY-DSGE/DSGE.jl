@@ -21,24 +21,72 @@ equations.
 function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
-    # Getting altpolicy weights to avoid ugliness of constantly checking which one is in use
-    vary_wt, altpol_wts, altpol_wts_name = haskey(m.settings, :imperfect_awareness_varying_weights) ?
-        (true, get_setting(m, :imperfect_awareness_varying_weights), :imperfect_awareness_varying_weights) :
-     (haskey(m.settings, :imperfect_awareness_weights) ?
-      (false, get_setting(m, :imperfect_awareness_weights), :imperfect_awareness_weights) :
-     (false, [2.], :irrelevant))
+    if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching)
+        # Set replace_eqcond_func_dict if alternative_policy but no replace_eqcond_func_dict
+        fcast_reg = haskey(m.settings, :reg_post_conditional_end) ?
+            max(get_setting(m, :reg_post_conditional_end), get_setting(m, :reg_forecast_start)) :
+            get_setting(m, :reg_forecast_start) # Errors if no reg_forecast_start key in settings
 
-    # Grab these settings
-    has_uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy)
-    has_uncertain_zlb = haskey(m.settings, :uncertain_zlb)
-    has_replace_eqcond_func = haskey(m.settings, :replace_eqcond_func_dict)
-    uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
-    uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+        if apply_altpolicy && (!haskey(m.settings, :replace_eqcond_func_dict) ||
+                               !haskey(get_setting(m, :replace_eqcond_func_dict), fcast_reg)) &&
+                               haskey(m.settings, :alternative_policy) && get_setting(m, :alternative_policy).key != :historical
+            get_setting(m, :replace_eqcond_func_dict)[fcast_reg] = get_setting(m, :alternative_policy).replace_eqcond
 
-    # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
-    if has_uncertain_zlb && !uncertain_zlb && has_replace_eqcond_func && altpol_wts_name != :irrelevant
-        if vary_wt
-            for reg in keys(altpol_wts)
+            # Fixing regime_dates to account for adding fcast_reg if necessary
+            cond_date = haskey(m.settings, :date_conditional_end) ?
+                DSGE.iterate_quarters(get_setting(m, :date_conditional_end),1) : get_setting(m, :date_forecast_start)
+            fcast_date = max(get_setting(m, :date_forecast_start), cond_date)
+
+            if !(fcast_reg in keys(get_setting(m, :regime_dates)))
+                get_setting(m, :regime_dates)[fcast_reg] = fcast_date
+            elseif get_setting(m, :regime_dates)[fcast_reg] != fcast_date
+                regime_dated = copy(get_setting(m, :regime_dates))
+
+                get_setting(m, :regime_dates)[fcast_reg] = fcast_date
+                for k in keys(get_setting(m, :regime_dates))
+                    if k >= fcast_reg
+                        get_setting(m, :regime_dates)[k+1] = regime_dated[k]
+                    end
+                end
+            end
+        end # Do for regime_dates and remove apply_altpolicy from solve.
+
+        # Getting altpolicy weights to avoid ugliness of constantly checking which one is in use
+        vary_wt, altpol_wts, altpol_wts_name = haskey(m.settings, :imperfect_awareness_varying_weights) ?
+            (true, get_setting(m, :imperfect_awareness_varying_weights), :imperfect_awareness_varying_weights) :
+            (haskey(m.settings, :imperfect_awareness_weights) ?
+             (false, get_setting(m, :imperfect_awareness_weights), :imperfect_awareness_weights) :
+             (false, [2.], :irrelevant))
+
+        # Grab these settings
+        has_uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy)
+        has_uncertain_zlb = haskey(m.settings, :uncertain_zlb)
+        has_replace_eqcond_func = haskey(m.settings, :replace_eqcond_func_dict)
+        uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
+        uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+        gensys2 = haskey(m.settings, :gensys2) && get_setting(m, :gensys2)
+
+        # Set replace_eqcond to nothing if !apply_altpolicy
+        if !apply_altpolicy && has_replace_eqcond_func
+            replace_eq_copy = copy(get_setting(m, :replace_eqcond_func_dict))
+            delete!(m.settings, :replace_eqcond_func_dict)
+            has_replace_eqcond_func = false
+            m <= Setting(:gensys2, false)
+        end
+
+        # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
+        if has_uncertain_zlb && !uncertain_zlb && has_replace_eqcond_func && altpol_wts_name != :irrelevant
+            if vary_wt
+                for reg in keys(altpol_wts)
+                    if get_setting(m, :replace_eqcond_func_dict)[reg] == DSGE.zero_rate_replace_eq_entries
+                        altpol_vec = zeros(length(altpol_wts[reg]))
+                        altpol_vec[1] = 1.0
+                        altpol_wts[reg] = altpol_vec
+                    end
+                end
+                ## Without time-varying credibility, uncertain_zlb and uncertain_altpolicy must be the same
+            elseif haskey(m.settings, :uncertain_altpolicy) && !get_setting(m, :uncertain_altpolicy)
+                @warn "If not using time varying credibility, uncertain_zlb and uncertain_altpolicy must be the same."
                 if get_setting(m, :replace_eqcond_func_dict)[reg] == DSGE.zero_rate_replace_eq_entries
                     altpol_vec = zeros(length(altpol_wts[reg]))
                     altpol_vec[1] = 1.0
@@ -82,6 +130,10 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         (vary_wt && all([1.0 in val && val == first(values(altpol_wts)) for val in values(altpol_wts)]))
         ## TODO: Setting names should change once refactoring done
 
+        if !apply_altpolicy
+            m <= Setting(:replace_eqcond_func_dict, replace_eq_copy)
+            m <= Setting(:gensys2, gensys2)
+        end
         return system_main
     end
 
@@ -92,6 +144,10 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
     # Save this name to be replaced later
     altpol_vec_orig = get_setting(m, altpol_wts_name)
+    replace_eq_copy = copy(get_setting(m, :replace_eqcond_func_dict))
+    delete!(m.settings, :replace_eqcond_func_dict)
+    gensys2 = haskey(m.settings, :gensys2) && get_setting(m, :gensys2)
+    m <= Setting(:gensys2, false)
 
     # Called taylor but should run whatever is specified as historical policy
     ## either in alternative_policies or imperfect_credibility_historical_policy setting
@@ -101,7 +157,10 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         m <= Setting(:replace_eqcond_func_dict, Dict(1 => altpol.replace_eq_entries)) # one possible way to get perfect credibility
         system_altpol = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose) # of alternative policies
     end=#
+
     system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
+    m <= Setting(:replace_eqcond_func_dict, replace_eq_copy)
+    m <= Setting(:gensys2, gensys2)
 
     # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
     # n_altpolicies = vary_wt ? length(first(values(altpol_wts))) : length(altpol_wts)
@@ -126,7 +185,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
         #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
         #  It is more efficient to find a way to compute each altpolicy individually ONCE.
-#=        if vary_wt
+        if vary_wt
             altpol_vec = deepcopy(altpol_wts) # abuse of the name here, technically. altpol_vec is a Dictionary in this case
             for j in keys(altpol_vec)
                 altpol_vec[j] = zeros(length(n_altpolicies) + 1) # weight on n_altpolicies first, then weight on historical policy
@@ -136,7 +195,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             altpol_vec = zeros(n_altpolicies + 1)
             altpol_vec[i] = 1.0
         end
-        m <= Setting(altpol_wts_name, altpol_vec)=#
+        m <= Setting(altpol_wts_name, altpol_vec)
         system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
     end
 
@@ -311,8 +370,7 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
             # gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
 
             # Solve!
-            TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
-                                     regime_switching = regime_switching,
+            TTTs, RRRs, CCCs = solve(m; regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
                                      gensys_regimes = gensys_regimes,
                                      gensys2_regimes = gensys2_regimes,
@@ -382,7 +440,7 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
     else
         if solution_method == :gensys
 
-            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+            TTT, RRR, CCC = solve(m; verbose = verbose)
             transition_equation = Transition(TTT, RRR, CCC)
 
             # Solve measurement equation
@@ -1638,7 +1696,10 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
     CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
     for (i, replace_eqcond_func_dict) in enumerate(tvis_replace_eqcond_func_dict) # For each set of equilibrium conditions,
-        m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
+        if apply_altpolicy
+            m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)         # calculate the implied regime-switching system
+        end
+
         TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
         regimes = collect(1:n_regimes),
         gensys_regimes = gensys_regimes,
