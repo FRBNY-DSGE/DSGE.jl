@@ -376,10 +376,10 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
         # Calculate gensys2 matrices under belief that the desired lift-off policy will occur
         # TODO: generalize to having multiple distinct sets of regimes which are gensys2 regimes
-        Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
-                                        Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                        TTT_final, RRR_final, CCC_final,
-                                        T_switch = length(gensys2_regimes)-1)
+        Tcal, Rcal, Ccal = gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
+                                   Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
+                                   TTT_final, RRR_final, CCC_final,
+                                   T_switch = length(gensys2_regimes)-1)
         Tcal[end] = TTT_final
         Rcal[end] = RRR_final
         Ccal[end] = CCC_final
@@ -448,10 +448,10 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             Ccal[end] = CCC_final
         end
     else
-        Tcal, Rcal, Ccal = gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
-                                        Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                        TTT_final, RRR_final, CCC_final;
-                                        T_switch = length(gensys2_regimes)-1)
+        Tcal, Rcal, Ccal = gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
+                                   Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
+                                   TTT_final, RRR_final, CCC_final;
+                                   T_switch = length(gensys2_regimes)-1)
 
         if uncertain_altpolicy
             Tcal[end] = TTT_final_weighted
