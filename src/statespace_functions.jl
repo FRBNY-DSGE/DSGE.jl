@@ -261,6 +261,9 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
                 gensys_regimes  = UnitRange{Int}[1:n_regimes]
             end
 
+            @show gensys_regimes
+            @show gensys2_regimes
+
             # Solve!
             TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
                                      regime_switching = regime_switching,

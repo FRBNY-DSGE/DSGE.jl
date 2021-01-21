@@ -302,7 +302,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 
     # Define our iteration function
     check_zero_rate = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
-        (zero_rate_replace_eq_entries in collect(values(get_setting(m, :replace_eqcond_func_dict))))
+    (DSGE.zero_rate() in collect(values(get_setting(m, :regime_eqcond_info))))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
@@ -396,8 +396,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
     original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : UnitRange{Int64}[]
-    original_eqcond_dict = haskey(get_settings(m), :replace_eqcond_func_dict) ? get_setting(m, :replace_eqcond_func_dict) :
-        Dict{Int, Function}()
+    original_eqcond_dict = haskey(get_settings(m), :regime_eqcond_info) ? get_setting(m, :regime_eqcond_info) :
+        Dict{Int, DSGE.EqcondEntry}()
 
     # Grab some information about the forecast
     n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
@@ -479,30 +479,35 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             m <= Setting(:gensys2, true)
             replace_eqcond = deepcopy(original_eqcond_dict) # Which rule to replace with in which periods
             for regind in first_zlb_regime:(n_total_regimes - 1)
-                replace_eqcond[regind] = zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
+                if !haskey(replace_eqcond, regind)
+                    weights = zeros(length(get_setting(m, :alternative_policies)))
+                    weights[1] = 1.
+                    replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), weights)
+                end
+                replace_eqcond[regind].alternative_policy = DSGE.zero_rate() # Temp ZLB rule in this regimes
             end
 
             final_eqcond = if altpolicy == :ait
-                ait_replace_eq_entries # Add permanent AIT regime
+                DSGE.ait() # Add permanent AIT regime
             elseif altpolicy == :ngdp
-                ngdp_replace_eq_entries # Add permanent NGDP regime
+                DSGE.ngdp() # Add permanent NGDP regime
             elseif altpolicy == :smooth_ait_gdp
-                smooth_ait_gdp_replace_eq_entries # Add permanent smooth AIT-GDP regime
+                DSGE.smooth_ait_gdp() # Add permanent smooth AIT-GDP regime
             elseif altpolicy == :smooth_ait_gdp_alt
-                smooth_ait_gdp_alt_replace_eq_entries # Add permanent smooth AIT-GDP (alternative specification) regime
+                DSGE.smooth_ait_gdp_alt # Add permanent smooth AIT-GDP (alternative specification) regime
             elseif altpolicy == :flexible_ait
-                flexible_ait_replace_eq_entries # Add Flexible AIT
+                DSGE.flexible_ait() # Add Flexible AIT
             end # If none of these conditions apply, then the plain eqcond is used
 
             if !isnothing(final_eqcond)
-                replace_eqcond[n_total_regimes] = final_eqcond
+                replace_eqcond[n_total_regimes].alternative_policy = final_eqcond
                 if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
                     for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
-                        replace_eqcond[z] = final_eqcond
+                        replace_eqcond[z].alternative_policy = final_eqcond
                     end
                 end
             end
-            m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+            m <= Setting(:regime_eqcond_info, replace_eqcond)
 
             # Set up parameters if there are switching parameter values.
             #
@@ -591,7 +596,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     m <= Setting(:replace_eqcond,   is_replace_eqcond)
     m <= Setting(:gensys2,          is_gensys2)
     if !is_replace_eqcond
-        delete!(get_settings(m), :replace_eqcond_func_dict)
+        delete!(get_settings(m), :regime_eqcond_info)
     end
 
     if rerun_smoother
