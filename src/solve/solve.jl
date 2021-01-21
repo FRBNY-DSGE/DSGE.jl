@@ -197,10 +197,14 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
             Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
             Πs = Vector{Matrix{Float64}}(undef, length(regimes))
 
-            @show regimes
+            println("solve ln 200")
             for reg in regimes
-                @show reg
-                Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = eqcond(m, reg)
+                Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = get_setting(m, :replace_eqcond) && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg) ?
+                    get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg; toggle_regimes = false) : eqcond(m, reg)
+            end
+
+            if any(map(x->x!=undef, Cs))
+                @show Cs
             end
 
             TTTs = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -291,6 +295,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
     end
 
     for reg in regimes
+        println("solve ln 298")
         TTT_gensys, CCC_gensys, RRR_gensys, eu =
             gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
                    1+1e-6, verbose = verbose)

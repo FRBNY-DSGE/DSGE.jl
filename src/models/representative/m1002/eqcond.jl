@@ -796,22 +796,15 @@ function eqcond(m::Model1002, reg::Int)
        end
    end
 
-   # Switch to Flexible AIT in 2020-Q3 and beyond
-   if (haskey(m.settings, :flexible_ait_policy_change) ? get_setting(m, :flexible_ait_policy_change) : false)
-       if get_setting(m, :regime_dates)[reg] >= get_setting(m, :flexible_ait_policy_change_date)
-           Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
-       end
-   end
-
    # If running temporary alterantive policies, we update the gensys matrices here.
    # This step MUST be the last block of code prior to switching parameter values back to the first regime.
-   if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+   #=if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
        if haskey(m.settings, :regime_eqcond_info)
            if haskey(get_setting(m, :regime_eqcond_info), reg)
                Γ0, Γ1, C, Ψ, Π = get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, Γ0, Γ1, C, Ψ, Π)
            end
        end
-   end
+   end=#
 
    for para in m.parameters
         if !isempty(para.regimes)
