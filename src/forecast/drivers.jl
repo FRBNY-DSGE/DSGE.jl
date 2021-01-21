@@ -112,8 +112,8 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         end
         hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
             (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false) ||
-            (findfirst([haskey(get_setting(m, :replace_eqcond_func_dict), i) for i in 1:get_setting(m, :n_regimes)]) -
-             get_setting(m, :reg_post_conditional_end) >= 0)
+            (haskey(m.settings, :replace_eqcond_func_dict) && (findfirst([haskey(get_setting(m, :replace_eqcond_func_dict), i) for i in 1:get_setting(m, :n_regimes)]) -
+             get_setting(m, :reg_post_conditional_end) >= 0))
         n_no_alt_reg = hist_gensys2_regimes_gap ?
             (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
         g2fr = haskey(get_settings(m), :gensys2_first_regime) ? get_setting(m, :gensys2_first_regime) :
