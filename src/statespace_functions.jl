@@ -64,12 +64,14 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         has_replace_eqcond_func = haskey(m.settings, :replace_eqcond_func_dict)
         uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
         uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+        gensys2 = haskey(m.settings, :gensys2) && get_setting(m, :gensys2)
 
         # Set replace_eqcond to nothing if !apply_altpolicy
         if !apply_altpolicy && has_replace_eqcond_func
             replace_eq_copy = copy(get_setting(m, :replace_eqcond_func_dict))
             delete!(m.settings, :replace_eqcond_func_dict)
             has_replace_eqcond_func = false
+            m <= Setting(:gensys2, false)
         end
 
         # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
@@ -127,6 +129,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
         if !apply_altpolicy
             m <= Setting(:replace_eqcond_func_dict, replace_eq_copy)
+            m <= Setting(:gensys2, gensys2)
         end
         return system_main
     end
@@ -140,11 +143,14 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     altpol_vec_orig = get_setting(m, altpol_wts_name)
     replace_eq_copy = copy(get_setting(m, :replace_eqcond_func_dict))
     delete!(m.settings, :replace_eqcond_func_dict)
+    gensys2 = haskey(m.settings, :gensys2) && get_setting(m, :gensys2)
+    m <= Setting(:gensys2, false)
 
     # Called taylor but should run whatever is specified as historical policy
     ## either in alternative_policies or imperfect_credibility_historical_policy setting
     system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
     m <= Setting(:replace_eqcond_func_dict, replace_eq_copy)
+    m <= Setting(:gensys2, gensys2)
 
     # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
     # n_altpolicies = vary_wt ? length(first(values(altpol_wts))) : length(altpol_wts)
