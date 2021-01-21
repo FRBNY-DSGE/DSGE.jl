@@ -185,7 +185,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
         #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
         #  It is more efficient to find a way to compute each altpolicy individually ONCE.
-        if vary_wt
+#=        if vary_wt
             altpol_vec = deepcopy(altpol_wts) # abuse of the name here, technically. altpol_vec is a Dictionary in this case
             for j in keys(altpol_vec)
                 altpol_vec[j] = zeros(length(n_altpolicies) + 1) # weight on n_altpolicies first, then weight on historical policy
@@ -195,7 +195,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             altpol_vec = zeros(n_altpolicies + 1)
             altpol_vec[i] = 1.0
         end
-        m <= Setting(altpol_wts_name, altpol_vec)
+        m <= Setting(altpol_wts_name, altpol_vec)=#
         system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
     end
 
