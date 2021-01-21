@@ -94,7 +94,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
                 end
             end
             ## Without time-varying credibility, uncertain_zlb and uncertain_altpolicy must be the same
-        elseif haskey(m.settings, :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+        elseif has_uncertain_altpolicy && has_uncertain_zlb && uncertain_zlb != uncertain_altpolicy
             error("If not using time varying credibility, uncertain_zlb and uncertain_altpolicy must be the same.")
         end
     end
