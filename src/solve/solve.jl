@@ -364,7 +364,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         altpols = get_setting(m, :alternative_policies)
         weights = Vector{Vector{Float64}}(undef, length(gensys2_regimes) -1)
         for (i, reg) in enumerate(gensys2_regimes[2]:gensys2_regimes[end])
-            @show i, reg
             weights[i] = get_setting(m, :regime_eqcond_info)[reg].weights
         end
 
@@ -390,7 +389,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
 
         ng2  = length(Tcal) - 1 # number of gensys2 regimes
-        @show ng2
         nzlb = haskey(get_settings(m), :temporary_zlb_length) ? get_setting(m, :temporary_zlb_length) : ng2
 
         # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
