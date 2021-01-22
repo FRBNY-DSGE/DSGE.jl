@@ -72,24 +72,24 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
         if has_uncertain_zlb && !uncertain_zlb && has_regime_eqcond_info
             for reg in keys(regime_eqcond_info)
-                if regime_eqcond_info[reg].alternative_policy == DSGE.zero_rate()
+                if regime_eqcond_info[reg].alternative_policy.key == :zero_rate
                     altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
                     altpol_vec[1] = 1.0
                     regime_eqcond_info[reg].weights = altpol_vec
                 end
             end
         end
-    end
 
-    # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
-    ## only helpful for combining historical and alternative policies with
-    ## the right weights later on
-    if has_uncertain_altpolicy && !uncertain_altpolicy && has_regime_eqcond_info
-        for reg in keys(regime_eqcond_info)
-            if regime_eqcond_info[reg].alternative_policy == alternative_policy(m)
-                altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
-                altpol_vec[1] = 1.0
-                regime_eqcond_info[reg].weights = altpol_vec
+        # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
+        ## only helpful for combining historical and alternative policies with
+        ## the right weights later on
+        if has_uncertain_altpolicy && !uncertain_altpolicy && has_regime_eqcond_info
+            for reg in keys(regime_eqcond_info)
+                if regime_eqcond_info[reg].alternative_policy.key == alternative_policy(m).key
+                    altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
+                    altpol_vec[1] = 1.0
+                    regime_eqcond_info[reg].weights = altpol_vec
+                end
             end
         end
     end
@@ -106,7 +106,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy)
         ## TODO: Setting names should change once refactoring done
 
-        if !apply_altpolicy
+        if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy
             m <= Setting(:regime_eqcond_info, regime_info_copy)
             m <= Setting(:gensys2, gensys2)
         end
@@ -192,8 +192,8 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
     ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-        new_wt = regime_eqcond_info[reg].weights
-@show new_wt
+        new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
+        @show reg new_wt
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
                 # COMMENTED CODE IS THE DESIRED VERSION in some form or fashion. May want to write a helper function which

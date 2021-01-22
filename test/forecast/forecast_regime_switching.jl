@@ -17,8 +17,8 @@ Random.seed!(1793)
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
-                                                  2 => Date(2020, 3, 31),
-                                                  3 => Date(2020, 6, 30)))
+                                                2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30)))
     m = setup_regime_switching_inds!(m)
 
     t_s, r_s, c_s = solve(m, regimes = Int[3])
@@ -42,12 +42,12 @@ Random.seed!(1793)
     # treated as temporary alt policies
     # m <= Setting(:temporary_altpolicy, true)
     # Which rule to replace with in which periods
-    replace_eqcond = Dict{Int, Function}()
+    replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
     for i in 3:(n_reg_temp - 1)
-       replace_eqcond[i] = ngdp_replace_eq_entries
-   end
+        replace_eqcond[i] = DSGE.EqcondEntry(DSGE.ngdp(), [1., 0.])
+    end
 
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+    m <= Setting(:regime_eqcond_info, replace_eqcond)
 
     m <= Setting(:pgap_value, 12.0 : 0.0)
     m <= Setting(:pgap_type, :ngdp)
@@ -55,7 +55,7 @@ Random.seed!(1793)
 
     sys_temp = solve(m, regime_switching = true, regimes = collect(1:n_reg_temp),
                      gensys_regimes = UnitRange{Int}[1:2],
-                     gensys2_regimes = UnitRange{Int}[2:n_reg_temp], apply_altpolicy = false)
+                     gensys2_regimes = UnitRange{Int}[2:n_reg_temp])#, apply_altpolicy=false)
     Γ0s = Vector{Matrix{Float64}}(undef, n_reg_temp - 2)
     Γ1s = Vector{Matrix{Float64}}(undef, n_reg_temp - 2)
     Cs = Vector{Vector{Float64}}(undef,  n_reg_temp - 2)
@@ -66,13 +66,13 @@ Random.seed!(1793)
         global Γ0s[i], Γ1s[i], Cs[i], Ψs[i], Πs[i] = eqcond(m, i + 2)
     end
     Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t_s[1:n_endo, 1:n_endo], r_s[1:n_endo, :], c_s[1:n_endo],
-                                        T_switch = 12)
+                                         T_switch = 12)
     @test Tcal[1] ≈ sys_temp[1][3][1:n_endo, 1:n_endo]
 
     # Then when start recrusion with rule, should get same TTTs in every perod
     t, r, c = ngdp_solve(m, regime_switching = false, regimes = Int[3])
 
-    get_setting(m, :replace_eqcond_func_dict)[n_reg_temp] = DSGE.ngdp_replace_eq_entries
+    get_setting(m, :regime_eqcond_info)[n_reg_temp].alternative_policy = DSGE.ngdp()
     Γ0s[end], Γ1s[end], Cs[end], Ψs[end], Πs[end] = eqcond(m, n_reg_temp)
     Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t[1:n_endo, 1:n_endo], r[1:n_endo, :], c[1:n_endo])
     for i in 1:length(Tcal)
@@ -133,11 +133,11 @@ end
     m <= Setting(:gensys2, true)
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:temporary_altpolicy, true)
-    replace_eqcond = Dict{Int, Function}()
+    replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
     for i in 3:5
-        replace_eqcond[i] = zero_rate_replace_eq_entries
+        replace_eqcond[i] = DSGE.EqcondEntry(zero_rate(), [1., 0.])
     end
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+    m <= Setting(:regime_eqcond_info, replace_eqcond)
 
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -183,15 +183,13 @@ end
     df[date_ind, :obs_nominalrate] = .3 / 4.
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:temporary_altpolicy, true)
-    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
-        3 => zero_rate_replace_eq_entries))
+    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(3 => DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])))
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:pgap_value, 12.0)
     m <= Setting(:gensys2, true)
 
     # Check zero rate rule causes an error if specified in a conditional period
-    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
-        4 => zero_rate_replace_eq_entries, 5 => zero_rate_replace_eq_entries))
+    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(4 => DSGE.EqcondEntry(zero_rate(), [1., 0.]), 5 => DSGE.EqcondEntry(zero_rate(), [1., 0.])))
     fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
@@ -251,7 +249,7 @@ end
     push!(answers[:full], [1:3, 4:57])
 
     push!(rss, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31), 3 => Date(2021, 12, 31),
-                           4 => Date(2022, 12, 31)))
+                               4 => Date(2022, 12, 31)))
     push!(fss, Date(2020, 6, 30))
     push!(ces, Date(2020, 12, 31))
     push!(answers[:none], [1:6, 7:10, 11:60])
@@ -416,8 +414,8 @@ end
     m <= Setting(:date_conditional_end, Date(2020, 3, 31))
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
-                                                  2 => Date(2019, 12, 31),
-                                                  3 => Date(2020, 3, 31)))
+                                                2 => Date(2019, 12, 31),
+                                                3 => Date(2020, 3, 31)))
     m = setup_regime_switching_inds!(m)
 
     t_s, r_s, c_s = solve(m, regimes = Int[3])
@@ -440,13 +438,13 @@ end
     # Treat temporary rule as altpolicy
     m <= Setting(:temporary_altpolicy, true)
     # Which rule to replace with inn nwhich periods
-    replace_eqcond = Dict{Int, Function}()
+    replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
     for i in 4:n_reg_temp-1
-       replace_eqcond[i] = DSGE.zero_rate_replace_eq_entries
-   end
+        replace_eqcond[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
     replace_eqcond[n_reg_temp] = eqcond
 
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+    m <= Setting(:regime_eqcond_info, replace_eqcond)
 
     m <= Setting(:pgap_value, 12.0 : 0.0)
     m <= Setting(:pgap_type, :ngdp)
