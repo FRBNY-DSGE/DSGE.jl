@@ -22,7 +22,7 @@ fn = dirname(@__FILE__)
 run_full_forecast = true  # Run full distribution forecast
 temp_alt          = true  # Temporary NGDP targeting?
 perm_alt          = true  # Permanent NGDP targeting?
-make_plots        = false  # Make plots
+make_plots        = true  # Make plots
 save_plots        = false  # Save plots to figurespath(m, "forecast")
 add_workers       = false # Run in parallel
 n_workers         = 10
@@ -235,11 +235,11 @@ if temp_alt
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
-    replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
+    regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}() # Which eqcond to use in which periods
     for i in 4:(temp_n_regimes - 1)
-        replace_eqcond[i] = replace_policy # Use the alternative policy for these regimes!
+        regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.ngdp()) # Use the alternative policy for these regimes!
     end
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond) # Add mapping of regimes to new eqcond matrices
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info) # Add mapping of regimes to new eqcond matrices
 
     m <= Setting(:pgap_value, 12.0)  # parametrizing the NGDP rule
     m <= Setting(:pgap_type, policy)
