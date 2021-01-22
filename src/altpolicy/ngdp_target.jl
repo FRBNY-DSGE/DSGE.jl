@@ -93,7 +93,6 @@ Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
 function ngdp_eqcond(m::AbstractDSGEModel, reg::Int = 1)
-
     # get the old indices
     old_states = sort!(collect(values(m.endogenous_states)))
     old_eqs    = sort!(collect(values(m.equilibrium_conditions)))

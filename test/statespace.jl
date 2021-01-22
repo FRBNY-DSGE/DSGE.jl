@@ -425,7 +425,7 @@ end
         regswitch_sys1[i, :TTT][1, 1] = oldval
     end
 end
-=#
+
 @testset "Implement alternative policy using regime_eqcond_info" begin
     output_vars = [:forecastobs, :histobs, :histpseudo, :forecastpseudo]
 
@@ -452,8 +452,8 @@ end
     m <= Setting(:gensys2, false) # don't treat as a temporary policy
     @show get_setting(m, :regime_eqcond_info)
     sys1 = compute_system(m)
-    fcast_altperm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
-                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+    #fcast_altperm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
+    #                                       df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
     # Testing ore basic permanent NGDP
     m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap =>
@@ -744,7 +744,7 @@ end
     @test T_acc5 ≈ sum(T_accum)
     @test C_acc5 ≈ sum(C_accum)
 end
-
+=#
 @testset "Time-Varying Information Set state space system" begin
     m = Model1002("ss10")
     system = compute_system(m)
@@ -761,11 +761,12 @@ end
     for i in 2:6
         regime_eqcond_info1[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
     end
-    #regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    regime_eqcond_info1[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     regime_eqcond_info2 = Dict()
     for i in 2:6
         regime_eqcond_info2[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
     end
+    regime_eqcond_info2[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, ones(Int, 7))
@@ -791,7 +792,8 @@ end
         sys1[reg, :ZZ] == sys2[reg, :ZZ]
     end
 
-    delete!(regime_eqcond_info2, 6)
+    #delete!(regime_eqcond_info2, 6)
+    regime_eqcond_info2[6] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, [1, 1, 1, 1, 2, 2, 2])
@@ -960,12 +962,12 @@ end
     m <= Setting(:regime_eqcond_info, deepcopy(regime_eqcond_info_cp))
     m <= Setting(:uncertain_altpolicy, false)
     m <= Setting(:gensys2, true)
-    sys_perfcred = compute_system(m; apply_altpolicy = true)
+    sys_perfcred = compute_system(m)
 
     m <= Setting(:regime_eqcond_info, deepcopy(regime_eqcond_info_cp))
     m <= Setting(:uncertain_zlb, true)
     m <= Setting(:uncertain_altpolicy, true)
-    sys_unczlb_uncalt = compute_system(m; apply_altpolicy = true)
+    sys_unczlb_uncalt = compute_system(m)
 
 
     for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
