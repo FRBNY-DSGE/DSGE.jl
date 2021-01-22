@@ -182,7 +182,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
                                 gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int64}}(undef, 0),
                                 regimes::Vector{Int} = Int[1],
                                 verbose::Symbol = :high) where {T <: Real}
-
     altpolicy_solve = alternative_policy(m).solve
     gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
     uncertain_zlb = haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false
@@ -196,7 +195,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
             Cs = Vector{Vector{Float64}}(undef, length(regimes))
             Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
             Πs = Vector{Matrix{Float64}}(undef, length(regimes))
-
             for reg in regimes
                 Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = get_setting(m, :replace_eqcond) && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg) ?
                     get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)

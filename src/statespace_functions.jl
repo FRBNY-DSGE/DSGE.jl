@@ -18,7 +18,7 @@ the system) and then in the case of imperfect but positive credibility,
 adjusts the anticipated observables and pseudo-observables' measurement
 equations.
 """
-function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
+function compute_system(m::AbstractDSGEModel{T};
                         tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
     # Grab these settings
@@ -226,7 +226,7 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
 
         if n_tvis > 1 # case of n_tvis = 1 handled below to avoid constructing redundant TimeVaryingInformationSetSystem
             @assert haskey(get_settings(m), :tvis_select_system) "The setting :tvis_select_system is not defined"
-            tvis_sys = compute_tvis_system(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+            tvis_sys = compute_tvis_system(m; verbose = verbose)
             transition_eqns = Transition{T}[tvis_sys[select, reg, :transition] for (reg, select) in enumerate(tvis_sys[:select])]
             return RegimeSwitchingSystem(transition_eqns, tvis_sys[:measurements], tvis_sys[:pseudo_measurements])
         end
@@ -1546,7 +1546,7 @@ state space system to use when calculating the measurement
 and pseudo measurement equations. These state space systems
 correspond to different sets of equilibrium conditions (usually).
 """
-function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
+function compute_tvis_system(m::AbstractDSGEModel{T};
                          verbose::Symbol = :high) where {T <: Real}
 
     # TODO: update this compute_tvis_system to compute the average over forward-looking variables
@@ -1559,6 +1559,9 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = fa
     :gensys "Currently, the solution method must be :gensys to calculate a state-space system with time-varying information sets"
 
     @assert get_setting(m, :replace_eqcond) "The setting :replace_eqcond must be true to calculate a state-space system with time-varying information sets"
+
+
+    apply_altpolicy = haskey(m.settings, :regime_eqcond_info) || (haskey(m.settings, :alternative_policy) && get_setting(m, :alternative_policy).key != :historical)
 
     # :regime_dates should have the same number of possible regimes. Any differences in eqcond
     # should be specified by tvis_regime_eqcond_info
