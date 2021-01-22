@@ -92,9 +92,7 @@ m <= Setting(:ygap_value, θ[:ygap])
 m <= Setting(:ygap_type, :flexible_ait)
 m <= Setting(:flexible_ait_ρ_smooth, θ[:ρ_smooth])
 m <= Setting(:alternative_policy, DSGE.flexible_ait())
-m <= Setting(:imperfect_awareness_weights, [θ[:cred], 1. - θ[:cred]])
 m <= Setting(:alternative_policies, AltPolicy[θ[:historical_policy]])
-m <= Setting(:imperfect_awareness_historical_policy, AltPolicy[θ[:historical_policy]][1])
 m <= Setting(:skip_altpolicy_state_init, true)
 
 ## Set up temporary ZLB
@@ -135,14 +133,11 @@ m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime -
 # output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo, :forecaststates]
 output_vars = [:forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
-m <= Setting(:imperfect_awareness_weights, [0., 1.])
 
-@assert !haskey(m.settings, :imperfect_awareness_varying_weights)
 @assert !haskey(m.settings, :temporary_zlb_length)
 outp0 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                      regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-m <= Setting(:imperfect_awareness_weights, [θ[:cred], 1. - θ[:cred]])
 for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [θ[:cred], 1. - θ[:cred]]
 end
@@ -164,8 +159,6 @@ m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime -
                                           gensys2_first_regime:get_setting(m, :n_regimes)]))
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 m <= Setting(:temporary_zlb_length, n_zlb_reg)
-#m <= Setting(:imperfect_awareness_varying_weights,
-#             Dict(k => [.33, 1. - .33] for k in keys(get_setting(m, :regime_eqcond_info))))
 for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [.33, 1-.33]
 end
