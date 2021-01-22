@@ -65,10 +65,10 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     setup_regime_switching_inds!(m)
 
     m <= Setting(:alternative_policies, AltPolicy[hist_rule])
-    m <= Setting(:imperfect_awareness_varying_weights,
-                 Dict(i => [.5, .5] for i in 2:5))
+#    m <= Setting(:imperfect_awareness_varying_weights,
+#                 Dict(i => [.5, .5] for i in 2:5))
     m <= Setting(:replace_eqcond, true)
-    m <= Setting(:replace_eqcond_func_dict, Dict(i => DSGE.ngdp_replace_eq_entries for i in 2:5))
+    m <= Setting(:regime_eqcond_info, Dict(i => DSGE.EqcondEntry(DSGE.ngdp(), [.5, .5]) for i in 2:5))
     m <= Setting(:uncertain_altpolicy, true)
     @test !haskey(DSGE.get_settings(m), :gensys2)
     TTTs, RRRs, CCCs = solve(m; apply_altpolicy = false, regime_switching = true,
@@ -82,8 +82,11 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
         @test CCCs[i] == CCCs[2]
     end
 
-    m <= Setting(:imperfect_awareness_varying_weights,
-                 Dict(i => [1., 0.] for i in 2:5))
+#    m <= Setting(:imperfect_awareness_varying_weights,
+#                 Dict(i => [1., 0.] for i in 2:5))
+    for i in 2:5
+        get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
+    end
     TTTs2, RRRs2, CCCs2 = solve(m; apply_altpolicy = false, regime_switching = true,
                                 gensys_regimes = UnitRange{Int}[1:5], # gensys2_regimes = UnitRange{Int}[1:5],
                                 regimes = collect(1:5))

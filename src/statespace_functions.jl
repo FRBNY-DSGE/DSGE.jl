@@ -41,15 +41,16 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
             end
         end
 
-    # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
-    ## only helpful for combining historical and alternative policies with
-    ## the right weights later on
-    if has_uncertain_altpolicy && !uncertain_altpolicy && has_regime_eqcond_info
-        for reg in keys(regime_eqcond_info)
-            if regime_eqcond_info[reg].alternative_policy == alternative_policy(m)
-                altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
-                altpol_vec[1] = 1.0
-                regime_eqcond_info[reg].weights = altpol_vec
+        # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
+        ## only helpful for combining historical and alternative policies with
+        ## the right weights later on
+        if has_uncertain_altpolicy && !uncertain_altpolicy && has_regime_eqcond_info
+            for reg in keys(regime_eqcond_info)
+                if regime_eqcond_info[reg].alternative_policy.key == alternative_policy(m).key
+                    altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
+                    altpol_vec[1] = 1.0
+                    regime_eqcond_info[reg].weights = altpol_vec
+                end
             end
         end
     end
