@@ -64,7 +64,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     # The !apply_altpolicy check may be problematic after refactoring altpolicy.
     if !apply_altpolicy || !haskey(m.settings, :regime_switching) || !get_setting(m, :regime_switching) ||
         !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
-        (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy)
+        (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy) || (!has_uncertain_zlb && !has_uncertain_altpolicy)
         ## TODO: Setting names should change once refactoring done
         return system_main
     end
