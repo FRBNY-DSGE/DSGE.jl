@@ -4,19 +4,24 @@
 CurrentModule = DSGE
 ```
 
-## Procedure for Permanent Alternative Policies
-
-This section describes forecasting under a (permanent) alternative monetary policy
+This section describes forecasting under an alternative monetary policy
 rule. That is:
 
-1. Filtering and smoothing is done under the historical monetary policy rule,
+1. The state space system is split into two exogenous and unanticipated regimes,
+the "historical" regime and the "forecast" regime. The historical policy rule applies
+during the "historical" regime, and the alternative policy rule applies
+to the "forecast' regime.
+2. Filtering and smoothing is done under the historical monetary policy rule,
    i.e. the one defined in the `eqcond` method for the given model.
-2. Before forecasting, the state space matrices are recomputed under the
-   alternative policy rule.
 3. Forecasts and IRFs are computed under the alternative rule.
 
-Note that shock decompositions (and the two associated products, trends and
-deterministic trends) cannot currently be computed under an alternative policy.
+See [Regime-Switching Forecasts](@id regime-switch-forecast) for details on how
+forecasting works when the state space system includes exogenous regime-switching.
+
+Alternative policies can be either permanent or temporary. To use alternative policies,
+the user needs to ensure that the model can be solved with regime-switching (see [Regime-Switching](@ref solveregswitch)).
+
+## Procedure for Permanent Alternative Policies
 
 The user defines some instance of the `AltPolicy` type (described below) and
 sets it as the value for the `:alternative_policy` `Setting`. Then the function
@@ -35,16 +40,23 @@ forecast_one(m, :mode, :none, [:forecastobs, :forecastpseudo])
 compute_meansbands(m, :mode, :none, [:forecastobs, :forecastpseudo])
 ```
 
+Note that under the hood, permanent alternative policies utilize some of the same
+machinery as temporary alternative policies, but they use different algorithms
+for converting the equilibrium conditions from gensys form to the
+reduced form transition matrices for a state space system.
+
 ## Procedure for Temporary Alternative Policies
 
 Another counterfactual exercise is temporarily imposing a different monetary policy
-rule, i.e. a temporary alternative policy. To implement this, we utilize
-exogenous regime switching in the forecast horizon. See [Regime-Switching Forecasts](@id regime-switch-forecast)
-for details on regime-switching.
+rule, i.e. a temporary alternative policy, before switching
+back to either the historical rule or some (permanent) alternative rule. To implement this, we utilize
+exogenous regime switching in the forecast horizon.
 
 In a rational expectations equilibrium, agents will take into account the fact that
 the temporary policy is expected to terminate. A different algorithm than Chris Sims's
-standard `gensys` algorithm is required, which we have implemented as `gensys_cplus`.
+standard `gensys` algorithm is required, which we have implemented as `gensys2`. Note
+that this `gensys2` is different from the `gensys2` Chris Sims has implemented to
+calculate second-order perturbations.
 
 To set up a temporary alternative policy, a user needs to specify
 the changes to the equilibrium conditions to the policy rule in `eqcond`
@@ -55,9 +67,6 @@ uses the function `ngdp_replace_eq_defines` entries to define these changes.
 ```@docs
 DSGE.ngdp_replace_eq_entries
 ```
-
-For an example of how `eqcond` handles this requirement, please
-see the implementation for [`Model1002`](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/eqcond.jl).
 
 The user also needs to complete the following steps to apply temporary alternative policies.
 
@@ -87,6 +96,8 @@ DSGE.ngdp_forecast_init
 ```
 
 ## [Alternative Policy Uncertainty and Imperfect Credibility](@ref uncertainaltpol)
+TODO: delete this section b/c it'll be covered under imperfect awareness.
+
 Click on the section header for details on how to add policy uncertainty or
 imperfect credibility to alternative policies (both permanent and temporary).
 

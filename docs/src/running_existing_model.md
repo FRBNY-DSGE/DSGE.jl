@@ -28,6 +28,9 @@ For more advanced usage, see
 - `test_smc.jl`: use SMC to estimate DSGE models.
 - `decompose_forecast.jl`: understand why a forecast has changed by running a forecast decomposition
 - `regime_switching.jl`: set up a forecast with regime-switching in the history and forecast horizon
+- `uncertain_altpolicy_zlb.jl`: set up a forecast with a temporary ZLB and
+  imperfect awareness about the credibility of a policy switch to flexible AIT.
+- `tvis_system.jl`: set up a state space system and forecast with time-varying information sets
 - `run_dsgevar.jl`: estimate and analyze impulse responses for a `DSGEVAR`.
 - `run_dsgevecm.jl`: analyze impulse response for DSGE-VECMs.
 

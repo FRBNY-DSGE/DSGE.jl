@@ -1,5 +1,9 @@
 # [Forecasting](@id forecast-step)
 
+This page describes forecasting without regime-switching.
+Click [here](@ref regime-switch-forecast) to learn about forecasting
+with regime-switching.
+
 ```@meta
 CurrentModule = DSGE
 ```
@@ -178,13 +182,13 @@ Note that `load_draws` expects an HDF5 dataset called either `params` (for
 
 ## Computing Forecast Outputs
 
-For each draw of parameters, the forecast calculations are run by 
-the lower-level function `forecast_one_draw`. 
+For each draw of parameters, the forecast calculations are run by
+the lower-level function `forecast_one_draw`.
 
 This function is also useful on its own
 when the user wants to run a single-draw forecast without writing the output to data.
 A common use case is running experiments with different forecast specifications and/or alternative policy rules.
-Given the appropriate inputs, `forecast_one_draw` will return a `Dict` whose keys are the names of 
+Given the appropriate inputs, `forecast_one_draw` will return a `Dict` whose keys are the names of
 output variables (e.g. `:forecastobs`) and values are the corresponding matrices.
 This function does not perform transformations, so the units of the output are all model units,
 which are typically at the quarterly frequency, such as quarterly per-capita GDP growth.

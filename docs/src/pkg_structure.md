@@ -7,7 +7,8 @@
 ### `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
 ### `abstractvarmodel.jl`: Defines the `AbstractVARModel`, `AbstractDSGEVARModel`, and `AbstractDSGEVECMModel` types.
 ### `defaults.jl`: Default settings for models.
-### `statespace.jl`: Defines types and functions for computing the state-space representation of models.
+### `statespace_types.jl`: Defines types for computing the state-space representation of models.
+### `statespace_functions.jl`: Defines functions for computing the state-space representation of models.
 ### `data/`: Manipulating and updating input dataset.
 ### `solve/`: Solving the model; includes `gensys.jl` code.
 ### `estimate/`: Optimization, posterior sampling, and other functionality.
