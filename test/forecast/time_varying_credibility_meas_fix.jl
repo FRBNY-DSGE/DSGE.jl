@@ -133,11 +133,9 @@ m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime -
 # output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo, :forecaststates]
 output_vars = [:forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
-
 @assert !haskey(m.settings, :temporary_zlb_length)
 outp0 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                      regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
 for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [θ[:cred], 1. - θ[:cred]]
 end

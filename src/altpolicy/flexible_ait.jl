@@ -68,7 +68,7 @@ flexible_ait_eqcond(m::AbstractDSGEModel)
 Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
-function flexible_ait_eqcond(m::AbstractDSGEModel, reg::Int = 1)
+function flexible_ait_eqcond(m::AbstractDSGEModel, reg::Int = 1; toggle_regimes = true)
     # get the old indices
     old_states = sort!(collect(values(m.endogenous_states)))
     old_eqs    = sort!(collect(values(m.equilibrium_conditions)))
@@ -119,21 +119,25 @@ function flexible_ait_eqcond(m::AbstractDSGEModel, reg::Int = 1)
     Π  = zeros(Float64, nstates, n_shocks_expectational(m))
     Π[old_eqs, :] = Π_noaltpol
 
-    for para in m.parameters
-        if !isempty(para.regimes)
-            if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
-                ModelConstructors.toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
-            else
-                ModelConstructors.toggle_regime!(para, reg)
+    if toggle_regimes
+        for para in m.parameters
+            if !isempty(para.regimes)
+                if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
+                    ModelConstructors.toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
+                else
+                    ModelConstructors.toggle_regime!(para, reg)
+                end
             end
         end
     end
 
     Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
 
-    for para in m.parameters
-        if !isempty(para.regimes)
-            ModelConstructors.toggle_regime!(para, 1)
+    if toggle_regimes
+        for para in m.parameters
+            if !isempty(para.regimes)
+                ModelConstructors.toggle_regime!(para, 1)
+            end
         end
     end
 
