@@ -392,6 +392,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
 
         ng2  = length(Tcal) - 1 # number of gensys2 regimes
+        @show ng2
         nzlb = haskey(get_settings(m), :temporary_zlb_length) ? get_setting(m, :temporary_zlb_length) : ng2
 
         # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
@@ -410,14 +411,13 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             # setting Tcal[end] = TTT_gensys_final
             # First UnitRange is for actual regime number, second for the index of Tcal, Rcal, & Ccal
             for (reg, ical) in zip((ffreg + nzlb):gensys2_regimes[end], (nzlb + 1):(ng2 + 1))
-                @show fcast_reg, ical
                 TTT_gensys, CCC_gensys, RRR_gensys, eu =
                 gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
                        1+1e-6, verbose = verbose)
 
                 # Check for LAPACK exception, existence and uniqueness
                 if eu[1] != 1 || eu[2] != 1
-                    throw(GensysError("Error in Gensys, Regime $fcast_reg"))
+                    throw(GensysError("Error in Gensys, Regime $reg"))
                 end
 
                 TTT_gensys = real(TTT_gensys)
@@ -426,7 +426,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
                 if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
                     if haskey(get_settings(m), :regime_eqcond_info) ? haskey(get_setting(m, :regime_eqcond_info), reg) : false
-                        weights = last(get_setting(m, :regime_eqcond_info)[reg]).weights
+                        weights = get_setting(m, :regime_eqcond_info)[reg].weights
                         altpols = get_setting(m, :alternative_policies)
 
                         TTT_gensys, RRR_gensys, CCC_gensys =

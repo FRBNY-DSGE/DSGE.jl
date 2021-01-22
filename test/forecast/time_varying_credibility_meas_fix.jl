@@ -178,12 +178,12 @@ outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, d
         @test sysp33[reg, :TTT] ≈ sysp33_tv[reg, :TTT]
         @test sysp33[reg, :RRR] ≈ sysp33_tv[reg, :RRR]
         @test sysp33[reg, :CCC] ≈ sysp33_tv[reg, :CCC]
- #       @test sysp33[reg, :QQ] ≈ sysp33_tv[reg, :QQ]
- #       @test sysp33[reg, :ZZ] ≈ sysp33_tv[reg, :ZZ]
- #       @test sysp33[reg, :DD] ≈ sysp33_tv[reg, :DD]
+        @test sysp33[reg, :QQ] ≈ sysp33_tv[reg, :QQ]
+        @test sysp33[reg, :ZZ] ≈ sysp33_tv[reg, :ZZ]
+        @test sysp33[reg, :DD] ≈ sysp33_tv[reg, :DD]
     end
     for k in keys(outp33)
-#        @test outp33[k] ≈ outp33_tv[k]
+        @test outp33[k] ≈ outp33_tv[k]
     end
 
     if !regenerate_reference_forecasts
@@ -282,14 +282,14 @@ out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
 =#
 # Commented out below because expectations don't match realization
 ## in imperfect credibility
-if !regenerate_reference_forecasts
+#=if !regenerate_reference_forecasts
     inds = vcat(1:9, 12:13)
     @testset "Compare TV Credibility to Reference Forecast" begin
         tvtestfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"),
                              VERSION >= v"1.5" ? "tvforecastobs_1p5" : "tvforecastobs")
         @test maximum(abs.(out1[:forecastobs][inds, :] - tvtestfcast[inds, :])) < 5e-5
     end
-end
+end=#
 
 
 #=
