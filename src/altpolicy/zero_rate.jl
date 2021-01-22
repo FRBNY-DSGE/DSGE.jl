@@ -18,7 +18,7 @@ function zero_rate_replace_eq_entries(m::AbstractDSGEModel,
     C[eq[:eq_mp]] = 0.0 / 4. - m[:Rstarn]
 
     return Γ0, Γ1, C, Ψ, Π
- end
+end
 
 """
 ```
@@ -85,7 +85,7 @@ function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false, r
 
         # Augment states
         TTT, RRR, CCC = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys; regime_switching = regime_switching,
-                                       reg = regimes[1])
+                                            reg = regimes[1])
         return TTT, RRR, CCC
     else
         Γ0s = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -115,8 +115,8 @@ function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false, r
 
             # Augment states
             TTTs[reg], RRRs[reg], CCCs[reg] = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
-                                                             regime_switching = regime_switching,
-                                                             reg = reg)
+                                                                  regime_switching = regime_switching,
+                                                                  reg = reg)
         end
     end
 
@@ -131,6 +131,6 @@ init_zero_rate_forecast(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Ve
 Adjust shocks matrix and final state vector for forecasting under the ZERO_RATE rule
 """
 function zero_rate_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T};
-                           cond_type::Symbol = :none) where {T<:AbstractFloat}
+                                 cond_type::Symbol = :none) where {T<:AbstractFloat}
     return shocks, final_state
 end

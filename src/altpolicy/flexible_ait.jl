@@ -196,8 +196,8 @@ function flexible_ait_solve(m::AbstractDSGEModel; regime_switching::Bool = false
 
             # Augment states
             TTTs[reg], RRRs[reg], CCCs[reg] = DSGE.augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys;
-                                                             regime_switching = regime_switching,
-                                                             reg = reg)
+                                                                  regime_switching = regime_switching,
+                                                                  reg = reg)
         end
 
         return TTTs, RRRs, CCCs
@@ -212,7 +212,7 @@ init_flexible_ait_forecast(m::AbstractDSGEModel, shocks::Matrix{T}, final_state:
 Adjust shocks matrix and final state vector for forecasting under the FLEXIBLE_AIT rule
 """
 function flexible_ait_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T};
-                                       cond_type::Symbol = :none) where {T<:AbstractFloat}
+                                    cond_type::Symbol = :none) where {T<:AbstractFloat}
 
     pgap_t  = m.endogenous_states[:pgap_t]
     ygap_t = m.endogenous_states[:ygap_t]
