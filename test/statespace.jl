@@ -1,5 +1,5 @@
 using DSGE, ModelConstructors, Dates, Test, LinearAlgebra, FileIO, Random, JLD2
-#=writing_output = false # Write output for tests which use random values
+writing_output = false # Write output for tests which use random values
 if VERSION < v"1.5"
     ver = "111"
 else
@@ -744,7 +744,8 @@ end
     @test T_acc5 ≈ sum(T_accum)
     @test C_acc5 ≈ sum(C_accum)
 end
-=#
+
+#=
 @testset "Time-Varying Information Set state space system" begin
     m = Model1002("ss10")
     system = compute_system(m)
@@ -841,7 +842,7 @@ end
         @test sys4[reg, :ZZ] != sys2[reg, :ZZ]
     end
 end
-
+=#
 @testset "Using gensys2 in historical regimes" begin
     function set_regime_vals_fnct!(m, n)
         if n > 4
@@ -879,6 +880,7 @@ end
             regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
         end
     end
+    regime_eqcond_info[8] = DSGE.EqcondEntry(DSGE.flexible_ait(), [imperfect_cred_new, imperfect_cred_old])
     m <= Setting(:regime_dates, reg_dates)
     m <= Setting(:regime_eqcond_info, regime_eqcond_info)
     setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)

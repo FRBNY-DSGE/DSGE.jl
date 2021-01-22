@@ -200,7 +200,6 @@ function compute_system(m::AbstractDSGEModel{T};
     ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
         new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
-        @show reg new_wt
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
                 # COMMENTED CODE IS THE DESIRED VERSION in some form or fashion. May want to write a helper function which
