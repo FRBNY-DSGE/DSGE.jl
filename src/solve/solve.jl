@@ -299,7 +299,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
             throw(GensysError("Error in Gensys, Regime $reg"))
         end
 
-        if haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg)
+        if uncertain_altpol && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg)
             weights = get_setting(m, :regime_eqcond_info)[reg].weights
             if !isempty(weights)
                 first_altpol_regime = min(collect(keys(get_setting(m, :regime_eqcond_info)))...)
