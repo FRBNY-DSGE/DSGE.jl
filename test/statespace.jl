@@ -425,9 +425,9 @@ end
         regswitch_sys1[i, :TTT][1, 1] = oldval
     end
 end
-
-@testset "Implement alternative policy using replace_eqcond_func_dict" begin
-    output_vars = [:forecastobs, :histobs, :histpseudo, :forecastpseud]
+=#
+@testset "Implement alternative policy using regime_eqcond_info" begin
+    output_vars = [:forecastobs, :histobs, :histpseudo, :forecastpseudo]
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap =>
                                                                   Setting(:add_altpolicy_pgap, true)))
@@ -444,12 +444,13 @@ end
     df = load(joinpath(fp, "reference", "regime_switch_data.jld2"), "regime_switch_df_none")
 
     m <= Setting(:replace_eqcond, true)
-    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
-        3 => ngdp_replace_eq_entries))
+    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(
+                                                                  3 => DSGE.EqcondEntry(DSGE.ngdp(), [1., 0.])))
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:pgap_value, 12.0)
 
     m <= Setting(:gensys2, false) # don't treat as a temporary policy
+    @show get_setting(m, :regime_eqcond_info)
     sys1 = compute_system(m)
     fcast_altperm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
                                            df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
@@ -467,17 +468,18 @@ end
 
     m <= Setting(:pgap_value, 12.0)
     m <= Setting(:pgap_type, :ngdp)
-    m <= Setting(:replace_eqcond_func_dict, Dict{Int, Function}(
-        i => ngdp_replace_eq_entries for i in 1:3))
+    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(                                                          i => DSGE.EqcondEntry(DSGE.ngdp(), [1., 0.]) for i in 1:3))
     m <= Setting(:replace_eqcond, true)
+    @show get_setting(m, :regime_eqcond_info)
     sys2 = compute_system(m)
 
     for i in 1:3
+        @show i
         @test !(sys1[1, :TTT] ≈ sys2[i, :TTT])
         @test !(sys1[2, :TTT] ≈ sys2[i, :TTT])
         @test sys1[3, :TTT] ≈ sys2[i, :TTT]
-        @test sys1[1, :TTT] ≈ sys1[2, :TTT]
     end
+    @test sys1[1, :TTT] ≈ sys1[2, :TTT]
 end
 
 @testset "Calculating transition matrices/vectors for k-periods ahead expectations and expected sums" begin
@@ -492,16 +494,14 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:regime_switching, true)
-    replace_eqcond_func_dict = Dict()
-    replace_eqcond_func_dict[2] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[3] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[4] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[5] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[6] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[7] = eqcond
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
+    for i in 2:6
+        regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
+    regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info)
     setup_regime_switching_inds!(m)
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict])
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, ones(Int, 7))
     sys = compute_system(m)
@@ -577,14 +577,12 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:regime_switching, true)
-    replace_eqcond_func_dict = Dict()
-    replace_eqcond_func_dict[2] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[3] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[4] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[5] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[6] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[7] = eqcond
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
+    for i in 2:6
+        regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
+    regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info)
     setup_regime_switching_inds!(m)
     sys = compute_system(m)
 
@@ -668,14 +666,12 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:regime_switching, true)
-    replace_eqcond_func_dict = Dict()
-    replace_eqcond_func_dict[2] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[3] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[4] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[5] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[6] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict[7] = eqcond
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    regime_eqcond_info = Dict()
+    for i in 2:6
+        regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
+    regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info)
     setup_regime_switching_inds!(m)
     sys = compute_system(m)
 
@@ -761,19 +757,16 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:regime_switching, true)
-    replace_eqcond_func_dict1 = Dict()
-    replace_eqcond_func_dict1[2] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict1[3] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict1[4] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict1[5] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict1[6] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict2 = Dict()
-    replace_eqcond_func_dict2[2] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict2[3] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict2[4] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict2[5] = DSGE.zero_rate_replace_eq_entries
-    replace_eqcond_func_dict2[6] = DSGE.zero_rate_replace_eq_entries
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1, replace_eqcond_func_dict2])
+    regime_eqcond_info1 = Dict()
+    for i in 2:6
+        regime_eqcond_info1[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
+    #regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    regime_eqcond_info2 = Dict()
+    for i in 2:6
+        regime_eqcond_info2[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, ones(Int, 7))
     sys1 = DSGE.compute_tvis_system(m)
@@ -798,17 +791,17 @@ end
         sys1[reg, :ZZ] == sys2[reg, :ZZ]
     end
 
-    delete!(replace_eqcond_func_dict2, 6)
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1, replace_eqcond_func_dict2])
+    delete!(regime_eqcond_info2, 6)
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, [1, 1, 1, 1, 2, 2, 2])
     sys1 = DSGE.compute_tvis_system(m)
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict1)
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1])
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info1)
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1])
     m <= Setting(:tvis_select_system, ones(Int, 7))
     sys2 = compute_system(m; tvis = true)
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict2)
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict2])
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info2)
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info2])
     m <= Setting(:tvis_select_system, ones(Int, 7)) # ones here b/c there's only one system for the TVIS to use
     sys3 = compute_system(m; tvis = true)
     for reg in 1:4
@@ -824,7 +817,7 @@ end
         @test sys2[reg, :ZZ] == sys3[reg, :ZZ]
     end
 
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict1, replace_eqcond_func_dict2])
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_select_system, [1, 1, 1, 1, 2, 2, 2])
     sys4 = compute_system(m; tvis = true)
     for reg in 1:4
@@ -876,16 +869,16 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     reg_dates = deepcopy(get_setting(m, :regime_dates))
-    replace_eqcond_func_dict = Dict{Int, Function}()
+    regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
     for (regind, date) in zip(4:(4 + 4), # 4 + 1 b/c zero for 4 periods and liftoff, add 3 to make correct regime
                               DSGE.quarter_range(reg_dates[4], DSGE.iterate_quarters(reg_dates[4], 4)))
         reg_dates[regind] = date
         if regind != 4 + 4
-            replace_eqcond_func_dict[regind] = zero_rate_replace_eq_entries
+            regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
         end
     end
     m <= Setting(:regime_dates, reg_dates)
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict)
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info)
     setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
     m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
 
@@ -910,7 +903,7 @@ end
         @test sys_true_unc[i, :ZZ] ≈ sys[i, :ZZ]
     end
 end
-=#
+
 @testset "Measurement equation of forward-looking variables" begin
     function set_regime_vals_fnct!(m, n)
         if n > 4
