@@ -104,9 +104,11 @@ m <= Setting(:alternative_policy, DSGE.flexible_ait())
 m <= Setting(:tvis_information_set, [1:1, 2:2, 3:6, 4:6, 5:6, 6:6])
 m <= Setting(:replace_eqcond, true)
 m <= Setting(:gensys2, true)
-m <= Setting(:replace_eqcond_func_dict, Dict(3 => DSGE.zero_rate_replace_eq_entries,
-                                             4 => DSGE.zero_rate_replace_eq_entries,
-                                             5 => DSGE.zero_rate_replace_eq_entries))
+zero_rate_eqcond = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+m <= Setting(:regime_eqcond_info, Dict(3 => deepcopy(zero_rate_eqcond),
+                                             4 => deepcopy(zero_rate_eqcond),
+                                             5 => deepcopy(zero_rate_eqcond),
+                                             6 => DSGE.EqcondEntry(DSGE.flexible_ait(), [1., 0.])))
 setup_regime_switching_inds!(m; cond_type = :full)
 df = load(joinpath(path, "..", "reference", "regime_switch_data.jld2"), "regime_switch_df_full")
 sys = compute_system(m; apply_altpolicy = true, tvis = true)
