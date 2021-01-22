@@ -16,7 +16,7 @@ calculates the transition matrices when there is uncertainty about whether a ZLB
 
 As an example, the Federal Reserve in 2020-Q3 switched to flexible AIT. The "historical" policy is
 a Taylor-style rule, and the `til` matrices correspond to the predictable form of flexible AIT.
-The `Tzlbs`, `Rzlbs`, and `Czlbs` include temporary switches to a ZLB specified by the `replace_eqcond_func_dict`.
+The `Tzlbs`, `Rzlbs`, and `Czlbs` include temporary switches to a ZLB specified by the `regime_eqcond_info`.
 """
 function gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::AbstractMatrix{S}, Ch::AbstractVector{S},
                               Tzlbs::Vector{Matrix{S}}, Rzlbs::Vector{Matrix{S}}, Czlbs::Vector{Vector{S}},
