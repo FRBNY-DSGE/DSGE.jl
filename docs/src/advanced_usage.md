@@ -208,14 +208,15 @@ m = Model990(custom_settings = custom_settings, testing = true)
 
 Forecasts can involve state-space systems with exogenous and unanticipated regime-switching
 in the history periods and forecast horizon. Anticipated temporary alternative policies
-can also occur in the forecast horizon. Historical
+can also occur in both the history and the forecast horizon. Historical
 regime switching may occur to reflect structural breaks or
 to allow a DSGE to handle special circumstances, such as the COVID-19 pandemic.
-Regime switches in the forecast horizon may occur because of
-temporary alternative policies. In a rational expectations equilibrium,
+Regime switches in the forecast horizon may occur because agents
+expect a ZLB until some date in the future. In a rational expectations equilibrium,
 agents will behave differently if they know a forecasted policy is temporary
 rather than permanent. Using exogenous regime-switching along with a modified
 `gensys` solution algorithm is one way of implementing this expectation.
+See [Regime-Switching](@ref solveregswitch) for more details on the solution algorithm.
 
 In this section, we will go over the interface for running
 regime-switching forecasts and discuss some details of the implementation.
@@ -225,7 +226,7 @@ To understand how to implement your own regime-switching model, we recommend
 examining the implementation of [regime-switching
 equilibrium conditions](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
 for `Model1002` and how it is integrated with our [solvers](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/solve/solve.jl).
-For a guide to running temporary alternative policies, please see [Alternative Policies](@ref).
+For a guide to running permanent and/or temporary alternative policies, please see [Alternative Policies](@ref).
 
 ### Preparing a Model's Settings for Regime-Switching
 
@@ -249,7 +250,7 @@ the regime number to the first date (inclusive) of that regime.
 Before running a forecast, we must also run
 
 ```
-setup_regime_switching_inds!(m)
+setup_regime_switching_inds!(m; cond_type = cond_type)
 ```
 
 which will automatically compute the (required) settings
@@ -261,6 +262,10 @@ which will automatically compute the (required) settings
 - `:n_fcast_regimes`: Number of regimes in the forecast horizon (including the conditional forecast)
 - `:n_cond_regimes`: Number of regimes in the conditional forecast
 - `:n_rule_periods`: Number of regimes when using a temporary alternative policy
+
+These settings will generally depend on whether the forecast is conditional or not,
+so the user needs to pass in `cond_type = :full` or `cond_type = :semi` to `setup_regime_switching_inds!`
+if the user wants a forecast with correct regime-switching.
 
 Finally, to run a full-distribution forecast with regime-switching
 using `forecast_one` or `usual_model_forecast`, it is necessary to manually
@@ -305,7 +310,7 @@ for guidance on how to use it, e.g. calculating forecasts.
 There are three cases involving regime switching that are implemented in DSGE.jl
 
 - Exogenous and unanticipated regime switching (e.g. unanticipated regime-switching parameters)
-- Temporary alternative policies
+- Alternative policies (temporary and permanent)
 - Time-varying information sets
 
 To implement regime-switching parameters or use temporary alternative policies, see this
@@ -329,19 +334,17 @@ the [smoothing code](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/forec
 as well as the auxiliary functions `zlb_regime_matrices` and `zlb_regime_indices`
 in this [file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/estimate/kalman.jl).
 
-
 This approach saves computational time. Rather than creating redundant matrices,
 we directly zero/un-zero the appropriate entries in the pre- and post-ZLB `QQ` matrices.
 This approach also economizes on unnecessary switching,
 For instance, during the calculation of shock decompositions and trends, it is unnecessary
 to distinguish between the pre- and post-ZLB regimes.
 
-## [Alternative Policy Uncertainty and Imperfect Credibility](@id uncertainaltpol)
+## [Alternative Policy Uncertainty and Imperfect Awareness](@id uncertainaltpol)
 The standard alternative policy code assumes that people completely believe the change in policy.
 However, in many cases, the more realistic modeling choice is assuming some uncertainty
 or imperfect credibility about the policy change. This approach can also address the concern
 that, in standard DSGEs, expectations have extremely strong effects (e.g. the forward guidance puzzle).
-
 
 We model the uncertainty/imperfect credibility by assuming there are ``n`` possible alternative policies
 that may occur tomorrow and ``n`` probability weights assigned to each policy. One of the policies is
@@ -366,6 +369,9 @@ described in the previous paragraph to each period of the temporary alternative 
 
 To add alternative policy uncertainty and imperfect credibility, please see the script
 [imperfect_credibility.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples/imperfect_credibility.jl).
+
+TODO: document more explicitly the setup as well as time-varying credibility. Also explain how the measurement equation is affected, e.g.
+how does `compute_system` work with this approach.
 
 ## Automatically Generating Anticipated Shocks
 

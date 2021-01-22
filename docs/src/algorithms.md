@@ -8,6 +8,7 @@ CurrentModule = DSGE
 
 ```@docs
 gensys
+gensys2
 ```
 
 ## [Optimization](@id algs-optimization)

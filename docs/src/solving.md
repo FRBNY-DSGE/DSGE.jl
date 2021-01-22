@@ -42,7 +42,7 @@ substitute the `gensysdt` method for our code.
 We allow solving the model with regime-switching in two cases.
 
 1. Exogenous and unanticipated regimes
-2. Temporary alternative policies.
+2. Alternative policies (permanent and temporary)
 
 The first is straightforward to implement because
 the regimes are exogenous and unanticipated. We simply need to specify
@@ -50,12 +50,27 @@ the equilibrium conditions in each regime, run `gensys` for each regime,
 and return multiple transition equations. The required steps
 to solve a model with exogenous and unanticipated regime-switching are
 
-1. Write `eqcond` to accept a second argument specifying the regime, e.g. `eqcond(m, reg)`.
+1. Write `eqcond` to accept a second argument specifying the regime, e.g. `eqcond(m::MyDSGEModel, reg::Int)`.
 To allow no regime-switching, we recommend also writing the wrapper `eqcond(m) = eqcond(m, 1)`
 or whatever default regime is desired.
 
-2. Add the settings and indices required to ensure regime-switching is properly handled.
+2. Add additional keyword arguments to `measurement` so that it is defined as
+```
+function measurement(m::MyDSGEModel, TTT::AbstractMatrix{T}, RRR::AbstractMatrix{T}, CCC::AbstractVector{T};
+                     reg::Int = 1, TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
+                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
+                     information_set::UnitRange = reg:reg) where {T <: Real}
+```
+The type assertions for the arrays and keywords are not strictly necessary but are advised.
+
+3. Add the settings and indices required to ensure regime-switching is properly handled.
 See [Regime-Switching Forecasts](@ref) for guidance on how to do this.
+
+For 1 and 2, we recommend conferring with the implementation of regime-switching for Model 1002.
+See the [equilibrium conditions here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
+and the [measurement equation here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/measurement.jl).
+Note that the `pseudo_measurement` function currently does not support the additional keyword arguments, unlike `measurement`,
+as can be seen by the [pseudo-measurement equation for Model 1002](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/pseudo_measurement.jl).
 
 Temporary alternative policies are slightly more complicated. They leverage the same machinery
 as exogenous and unanticipated regime-switching, so steps 1 and 2 above are required still.
@@ -66,10 +81,10 @@ Once we have specified these policies, we use the algorithm from
 to calculate the rational expectations solution to a model with ``predicted structural changes'',
 which allows us to specify temporary alternative policies like a temporary ZLB or
 a temporary switch to average inflation targeting. The function implementing this algorithm
-is `gensys_cplus`.
+is `gensys2`.
 
 ```@docs
-DSGE.gensys_cplus
+DSGE.gensys2
 ```
 
 See [Alternative Policies](@ref)
