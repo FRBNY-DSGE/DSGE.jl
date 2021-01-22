@@ -45,7 +45,7 @@ machinery as temporary alternative policies, but they use different algorithms
 for converting the equilibrium conditions from gensys form to the
 reduced form transition matrices for a state space system.
 
-## Procedure for Temporary Alternative Policies
+## [Procedure for Temporary Alternative Policies](@id tempaltpol-procedure)
 
 Another counterfactual exercise is temporarily imposing a different monetary policy
 rule, i.e. a temporary alternative policy, before switching
@@ -58,51 +58,52 @@ standard `gensys` algorithm is required, which we have implemented as `gensys2`.
 that this `gensys2` is different from the `gensys2` Chris Sims has implemented to
 calculate second-order perturbations.
 
-To set up a temporary alternative policy, a user needs to specify
-the changes to the equilibrium conditions to the policy rule in `eqcond`
-For instance, a
-[Nominal GDP targeting policy](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/altpolicy/ngdp_target.jl).
-uses the function `ngdp_replace_eq_defines` entries to define these changes.
-
-```@docs
-DSGE.ngdp_replace_eq_entries
-```
-
-The user also needs to complete the following steps to apply temporary alternative policies.
-
-- Adding a regime for every period in the forecast horizon during which the alternative policy applies,
-  plus one more regime for the first regime in which the alternative policy does NOT apply.
-- Adding the setting `Setting(:gensys2, true)` to indicate `gensys_cplus` should be used
-- Adding the setting `Setting(:replace_eqcond, true)` to indicate the `eqcond` function will be replaced
-- Adding the setting `Setting(:replace_eqcond_func_dict, replace_eqcond)`, where `replace_eqcond`
-  should be a `Dict{Int, Function}` mapping regimes to alternative `eqcond` functions. Note that
-  the user only needs to populate regimes in which the `eqcond` function differs from the standard one.
-
-To see an example of using temporary alternative policies, see the
-[example script for regime-switching](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
-
-In contrast, the permanent version of Nominal GDP targeting would be
+To set up a temporary alternative policy, a user first needs to specify
+alternative policy using the type `AltPolicy`. For instance, this code implements a
+[Nominal GDP targeting policy](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/altpolicy/ngdp_target.jl),
+and the `AltPolicy` is constructed by calling `DSGE.ngdp()`, or equivalently
 
 ```
 AltPolicy(policy, DSGE.ngdp_eqcond, DSGE.ngdp_solve, forecast_init = DSGE.ngdp_forecast_init)
 ```
 
-where
+where the inputs to `AltPolicy` here are
 
 ```@docs
 DSGE.ngdp_eqcond
+DSGE.ngdp_replace_eq_entries
 DSGE.ngdp_solve
 DSGE.ngdp_forecast_init
 ```
 
-## [Alternative Policy Uncertainty and Imperfect Credibility](@ref uncertainaltpol)
-TODO: delete this section b/c it'll be covered under imperfect awareness.
+Note that `ngdp_replace_eq_entries` is called by `ngdp_eqcond` but is not a direct input to `AltPolicy`.
 
+The user also needs to complete the following steps to apply temporary alternative policies.
+
+- Adding a regime for every period during which the alternative policy applies,
+  plus one more regime for the policy which will be permanently in place after the temporary policies end.
+- Adding the setting `Setting(:gensys2, true)` to indicate `gensys2` should be used. If this setting is false
+  or non-existent, then alternative policies will be treated as if they are permanent. Their equilibrium
+  conditions will be solved using `gensys`, which can lead to determinacy and uniqueness problems if
+  the alternative policy should be temporary (e.g. a temporary ZLB).
+- Adding the setting `Setting(:replace_eqcond, true)` to indicate equilibrium conditions will be replaced.
+- Adding the setting `Setting(:regime_eqcond_info, info)`, where `info` should be a
+  `Dict{Int, DSGE.EqcondEntry}` mapping regimes to instances of `EqcondEntry`, a type which holds
+  any information needed to update equilibrium conditions to implement a given alternative policy.
+  Borrowing the example of temporary NGDP targeting, the relevant `EqcondEntry` would be constructed as
+  `EqcondEntry(DSGE.ngdp())`. Note that the user only needs to populate this dictionary with regimes in
+  which the `eqcond` function differs from the default.
+
+To see an example of using temporary alternative policies, see the
+[example script for regime-switching](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
+
+## [Alternative Policy Uncertainty and Imperfect Awareness](@ref uncertainaltpol)
 Click on the section header for details on how to add policy uncertainty or
 imperfect credibility to alternative policies (both permanent and temporary).
 
-## The `AltPolicy` Type
+## Types
 
 ```@docs
 DSGE.AltPolicy
+DSGE.EqcondEntry
 ```

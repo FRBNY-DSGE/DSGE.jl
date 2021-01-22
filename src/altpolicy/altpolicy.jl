@@ -72,7 +72,14 @@ function altpolicy_replace_eq_entries(key::Symbol)
     end
 end
 
-# Type to hold the entries in the regime_eqcond_info dictionary for alternative policies & regime switching
+"""
+```
+mutable struct EqcondEntry
+```
+
+Type to hold the entries in the regime_eqcond_info dictionary for
+alternative policies, regime switching, and imperfect awareness.
+"""
 mutable struct EqcondEntry
     alternative_policy::Union{AltPolicy, Missing}
     weights::Union{Array{Float64, 1}, Missing}
@@ -80,4 +87,8 @@ end
 
 function EqcondEntry()
     return EqcondEntry(missing, missing)
+end
+
+function EqcondEntry(altpol::AltPolicy)
+    return EqcondEntry(altpol, missing)
 end
