@@ -30,7 +30,7 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                regimes::Vector{Int} = Int[1],
                verbose::Symbol = :high) where {T <: Real}
 
-    apply_altpolicy = haskey(m.settings, :replace_eqcond_func_dict)
+    apply_altpolicy = haskey(m.settings, :regime_eqcond_info)
     altpolicy_solve = alternative_policy(m).solve
     uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
 
@@ -199,7 +199,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
 
             for reg in regimes
                 Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = get_setting(m, :replace_eqcond) && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg) ?
-                    get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg; toggle_regimes = false) : eqcond(m, reg)
+                    get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)
             end
 
             TTTs = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -233,7 +233,7 @@ end
 function solve_one_regime(m::AbstractDSGEModel{T}; regime::Int = 1, uncertain_altpolicy::Bool = false,
                           verbose::Symbol = :high) where {T <: Real}
 
-    apply_altpolicy = haskey(m.settings, :replace_eqcond_func_dict)
+    apply_altpolicy = haskey(m.settings, :regime_eqcond_info)
     altpolicy_solve = alternative_policy(m).solve
 
     if altpolicy_solve == solve || !apply_altpolicy
@@ -290,7 +290,6 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
     end
 
     for reg in regimes
-        println("solve ln 298")
         TTT_gensys, CCC_gensys, RRR_gensys, eu =
             gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
                    1+1e-6, verbose = verbose)

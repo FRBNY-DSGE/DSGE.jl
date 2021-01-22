@@ -86,7 +86,7 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     system_altpol = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose) # of alternative policies
     end=#
     system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
-    m <= Setting(:replace_eqcond_func_dict, replace_eq_copy)
+    m <= Setting(:regime_eqcond_info, regime_info_copy)
     m <= Setting(:gensys2, gensys2)
 
     # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
