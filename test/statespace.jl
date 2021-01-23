@@ -1,6 +1,6 @@
 using DSGE, ModelConstructors, Dates, Test, LinearAlgebra, FileIO, Random, JLD2
-#=
-#=writing_output = false # Write output for tests which use random values
+
+writing_output = false # Write output for tests which use random values
 if VERSION < v"1.5"
     ver = "111"
 else
@@ -745,8 +745,8 @@ end
     @test T_acc5 ≈ sum(T_accum)
     @test C_acc5 ≈ sum(C_accum)
 end
-=#
-# @testset "Time-Varying Information Set state space system" begin
+
+@testset "Time-Varying Information Set state space system" begin
     m = Model1002("ss10")
     system = compute_system(m)
     m <= Setting(:date_forecast_start, Date(2020, 9, 30))
@@ -758,6 +758,8 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:regime_switching, true)
+
+    # Check that using the same regime_eqcond_info but different tvis_select_system yields the same results
     regime_eqcond_info1 = Dict()
     for i in 2:6
         regime_eqcond_info1[i] = DSGE.EqcondEntry(DSGE.zero_rate())#, [1., 0.])
@@ -767,11 +769,10 @@ end
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, ones(Int, 7))
-    sys1 = DSGE.compute_tvis_system(m; apply_altpolicy = true)
+    sys1 = DSGE.compute_tvis_system(m)
     m <= Setting(:tvis_select_system, fill(2, 7))
-    sys2 = DSGE.compute_tvis_system(m; apply_altpolicy = true)
+    sys2 = DSGE.compute_tvis_system(m)
 
-    # Check that using the same regime_eqcond_info but different tvis_select_system yields the same results
     @test isa(sys1[:transitions], Vector{Vector{Transition{Float64}}})
     @test isa(sys1[:measurements], Vector{Measurement{Float64}})
     @test isa(sys1[:pseudo_measurements], Vector{PseudoMeasurement{Float64}})
@@ -790,19 +791,20 @@ end
         sys1[reg, :ZZ] == sys2[reg, :ZZ]
     end
 
-    regime_eqcond_info2[6] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve))#, [1., 0.])
+    # Check using the different regime_eqcond_info
+    regime_eqcond_info2[6] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve))#, [1., 0.]) # shorten the ZLB
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
     m <= Setting(:tvis_select_system, [1, 1, 1, 1, 2, 2, 2])
-    sys1 = DSGE.compute_tvis_system(m; apply_altpolicy = true)
+    sys1 = DSGE.compute_tvis_system(m) # Does not seem to be doing regime-switching
     m <= Setting(:regime_eqcond_info, regime_eqcond_info1)
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1])
     m <= Setting(:tvis_select_system, ones(Int, 7))
-    sys2 = compute_system(m; tvis = true, apply_altpolicy = true)
+    sys2 = compute_system(m; tvis = true)
     m <= Setting(:regime_eqcond_info, regime_eqcond_info2)
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info2])
     m <= Setting(:tvis_select_system, ones(Int, 7)) # ones here b/c there's only one system for the TVIS to use
-    sys3 = compute_system(m; tvis = true, apply_altpolicy = true)
+    sys3 = compute_system(m; tvis = true)
     for reg in 1:4
         @test sys1[reg, :ZZ] ≈ sys2[reg, :ZZ]
     end
@@ -837,7 +839,7 @@ end
     for reg in 5:5 # only to 5 b/c the difference in info sets about ZLB length
         @test sys4[reg, :ZZ] != sys2[reg, :ZZ]
     end
-# end
+end
 
 @testset "Using gensys2 in historical regimes" begin
     function set_regime_vals_fnct!(m, n)
@@ -966,7 +968,6 @@ end
     m <= Setting(:uncertain_zlb, true)
     m <= Setting(:uncertain_altpolicy, true)
     sys_unczlb_uncalt = compute_system(m)
-
 
     for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
         @test sys_unczlb_uncalt[i, :ZZ] ≈ imperfect_cred_new * sys_perfcred[i, :ZZ] +

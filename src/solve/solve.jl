@@ -197,8 +197,11 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
             Cs = Vector{Vector{Float64}}(undef, length(regimes))
             Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
             Πs = Vector{Matrix{Float64}}(undef, length(regimes))
+
+            do_replace_eqcond = haskey(get_settings(m), :replace_eqcond) && get_setting(m, :replace_eqcond) &&
+                haskey(get_settings(m), :regime_eqcond_info)
             for reg in regimes
-                Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = replace_eqcond && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg) ?
+                Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = do_replace_eqcond && haskey(get_setting(m, :regime_eqcond_info), reg) ?
                     get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)
             end
 
@@ -445,6 +448,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             Ccal[end] = CCC_final
         end
     else
+
         Tcal, Rcal, Ccal = gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                    Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                    TTT_final, RRR_final, CCC_final;
@@ -462,7 +466,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     end
 
     # only need to populate regimes during which a temporary altpolicy holds
-    populate_reg = gensys2_regimes[2]:gensys2_regimes[end]
+    populate_reg = gensys2_regimes[2:end]
     for (i, reg) in enumerate(populate_reg)
         TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i], reg = reg)
     end
