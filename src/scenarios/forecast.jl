@@ -12,7 +12,7 @@ zero (since we forecast in deviations from baseline) and shocks that are not in
 function compute_scenario_system(m::AbstractDSGEModel, scen::Scenario;
                                  tvis::Bool = false, apply_altpolicy::Bool = false)
 
-    system = compute_system(m, tvis = tvis, apply_altpolicy = apply_altpolicy)
+    system = compute_system(m, tvis = tvis)
 
     # Set constant system matrices to 0
     system = zero_system_constants(system)

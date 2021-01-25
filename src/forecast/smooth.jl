@@ -103,7 +103,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
                      s_0, P_0, kal[:s_pred], kal[:P_pred])
         elseif smoother == carter_kohn_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states, testing_carter_kohn = testing_carter_kohn)
+                     s_0, P_0; draw_states = draw_states)
         elseif smoother == durbin_koopman_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0; draw_states = draw_states)
@@ -206,14 +206,13 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
                      s_0, P_0, kal[:s_pred], kal[:P_pred])
         elseif smoother == carter_kohn_smoother && filter_smooth
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states, testing_carter_kohn = testing_carter_kohn)
+                     s_0, P_0; draw_states = draw_states)
         elseif filter_smooth
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states,
-                     testing_carter_kohn = testing_carter_kohn)
+                     s_0, P_0, stil_pred, Ptil_pred, stil_filt, Ptil_filt; draw_states = draw_states)
         elseif smoother == carter_kohn_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-                     s_0, P_0; draw_states = draw_states, testing_carter_kohn = testing_carter_kohn)
+                     s_0, P_0; draw_states = draw_states)
         elseif smoother == durbin_koopman_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0; draw_states = draw_states)

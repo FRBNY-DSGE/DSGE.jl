@@ -46,6 +46,7 @@ Random.seed!(1793)
     for i in 3:(n_reg_temp - 1)
         replace_eqcond[i] = DSGE.EqcondEntry(DSGE.ngdp(), [1., 0.])
     end
+    replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
 
     m <= Setting(:regime_eqcond_info, replace_eqcond)
 
@@ -63,9 +64,9 @@ Random.seed!(1793)
     Πs = Vector{Matrix{Float64}}(undef, n_reg_temp - 2)
     n_endo = length(collect(keys(m.endogenous_states)))
     for i in (3 - 2):(n_reg_temp - 2)
-        global Γ0s[i], Γ1s[i], Cs[i], Ψs[i], Πs[i] = eqcond(m, i + 2)
+        global Γ0s[i], Γ1s[i], Cs[i], Ψs[i], Πs[i] = haskey(replace_eqcond, i+2) ? replace_eqcond[i+2].alternative_policy.eqcond(m, i+2) : eqcond(m, i + 2)
     end
-    Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t_s[1:n_endo, 1:n_endo], r_s[1:n_endo, :], c_s[1:n_endo],
+    Tcal, Rcal, Ccal = DSGE.gensys2(m, Γ0s, Γ1s, Cs, Ψs, Πs, t_s[1:n_endo, 1:n_endo], r_s[1:n_endo, :], c_s[1:n_endo],
                                          T_switch = 12)
     @test Tcal[1] ≈ sys_temp[1][3][1:n_endo, 1:n_endo]
 
@@ -74,7 +75,7 @@ Random.seed!(1793)
 
     get_setting(m, :regime_eqcond_info)[n_reg_temp].alternative_policy = DSGE.ngdp()
     Γ0s[end], Γ1s[end], Cs[end], Ψs[end], Πs[end] = eqcond(m, n_reg_temp)
-    Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s, Γ1s, Cs, Ψs, Πs, t[1:n_endo, 1:n_endo], r[1:n_endo, :], c[1:n_endo])
+    Tcal, Rcal, Ccal = DSGE.gensys2(m, Γ0s, Γ1s, Cs, Ψs, Πs, t[1:n_endo, 1:n_endo], r[1:n_endo, :], c[1:n_endo])
     for i in 1:length(Tcal)
         @test Tcal[i] ≈ t[1:n_endo, 1:n_endo]
     end
@@ -442,7 +443,7 @@ end
     for i in 4:n_reg_temp-1
         replace_eqcond[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
     end
-    replace_eqcond[n_reg_temp] = eqcond
+    replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
 
     m <= Setting(:regime_eqcond_info, replace_eqcond)
 

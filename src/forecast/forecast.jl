@@ -86,6 +86,7 @@ where `S<:AbstractFloat`.
 function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, System{S}},
                   z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
                   shocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
+    println("LN 89")
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -204,6 +205,7 @@ end
 function forecast(system::System{S}, z0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
+    println("LN 208")
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
@@ -223,6 +225,7 @@ function forecast(system::System{S}, z0::Vector{S},
 
         # Change monetary policy shock to account for 0.13 interest rate bound
         if enforce_zlb
+            println("ENFORCING ZLB")
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
@@ -259,6 +262,8 @@ end
 function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S},
     shocks::Matrix{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
+
+    println("LN 263")
 
     # Determine how many regimes occur in the forecast, depending
     # on whether we need to subtract conditional forecast regimes or not
@@ -391,6 +396,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                   histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
 
+    println("LN 396")
     # Grab "original" settings" so they can be restored later
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
@@ -488,7 +494,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             replace_eqcond = deepcopy(original_eqcond_dict) # Which rule to replace with in which periods
             for regind in first_zlb_regime:(n_total_regimes - 1)
                 if !haskey(replace_eqcond, regind)
-                    weights = zeros(length(get_setting(m, :alternative_policies)))
+                    weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) : 1)
                     weights[1] = 1.
                     replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), weights)
                 end
@@ -508,15 +514,22 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             end # If none of these conditions apply, then the plain eqcond is used
 
             if !isnothing(final_eqcond)
-                replace_eqcond[n_total_regimes].alternative_policy = final_eqcond
-                if (haskey(get_settings(m), :alternative_policy_varying_weights) || haskey(get_settings(m), :imperfect_credibility_varying_weights)) && (haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes)
+                if !haskey(replace_eqcond, n_total_regimes)
+                    weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) : 1)
+                    weights[1] = 1.
+                    replace_eqcond[n_total_regimes] = DSGE.EqcondEntry(final_eqcond, weights)
+                else
+                    replace_eqcond[n_total_regimes].alternative_policy = final_eqcond
+                end
+                # NOTE: the following assumes there is only one temporary altpol
+                if haskey(m.settings, :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
                     for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
                         replace_eqcond[z].alternative_policy = final_eqcond
                     end
                 end
             end
             m <= Setting(:regime_eqcond_info, replace_eqcond)
-
+@show replace_eqcond
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
@@ -536,7 +549,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             tvis = haskey(get_settings(m), :tvis_information_set) ? !isempty(get_setting(m, :tvis_information_set)) : false
 
             # Recompute to account for new regimes
-            system = compute_system(m; tvis = tvis, apply_altpolicy = true)
+            system = compute_system(m; tvis = tvis)
+
+
 
             if rerun_smoother
                 histstates, histshocks, histpseudo, initial_states =
@@ -546,6 +561,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             # Forecast!
             states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
+
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
             # in forecast_one will not work.
