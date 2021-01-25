@@ -81,6 +81,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     m <= Setting(:uncertain_altpolicy, false)
     m <= Setting(:uncertain_zlb, false)
 
+<<<<<<< HEAD
     # Save this name to be replaced later
     # altpol_vec_orig = get_setting(m, altpol_wts_name)
 
@@ -99,6 +100,14 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
     # n_altpolicies = vary_wt ? length(first(values(altpol_wts))) : length(altpol_wts)
     n_altpolicies = 1
+=======
+    if !haskey(m.settings, :alternative_policies)
+        m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
+    end
+
+    orig_altpol = get_setting(m, :alternative_policy)
+    n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
+>>>>>>> Add multiple altpolicies with uncertain_ZLB + tests for it
     system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
 
     m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
@@ -128,6 +137,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
             m <= Setting(:gensys2, gensys2)
         elseif i > 1
             m <= Setting(:alternative_policy, get_setting(m, :alternative_policies)[i-1])
+            system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
         else
             system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
         end
@@ -136,7 +146,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     # Now add uncertain altpolicy and zlb back
     m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
     m <= Setting(:uncertain_zlb, uncertain_zlb)
-    #m <= Setting(altpol_wts_name, altpol_vec_orig)
     m <= Setting(:alternative_policy, orig_altpol)
 
     # Checks if pseudo measurement is required
@@ -165,7 +174,12 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
 =#
     ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+<<<<<<< HEAD
         new_wt = regime_eqcond_info[reg].weights
+=======
+        new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
+
+>>>>>>> Add multiple altpolicies with uncertain_ZLB + tests for it
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
                 system_main.measurements[reg][:ZZ][m.observables[k], :] =
@@ -175,7 +189,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
             end
         else
             # TODO: This needs to be updated
-            ## Why is this else here?
             system_main.measurements[reg][:ZZ] .=
                 sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
             system_main.measurements[reg][:DD] .=
@@ -194,7 +207,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                 end
             else
                 # TODO: This needs to be updated
-                ## Why is this else here?
                 system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
                 sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:length(new_wt)])
                 system_main.pseudo_measurements[reg][:DD_pseudo] .=
