@@ -402,13 +402,7 @@ The other alternative policies that agents believe may occur are then added as f
 m <= Setting(:alternative_policies, [altpolicy1, altpolicy2]) # altpolicy1 and altpolicy2 are AltPolicy instances
 ```
 
-If probability weights are constant, then the user can add the line
-
-```
-m <= Setting(:imperfect_awareness_weights, [p, 1 - p])
-```
-
-Otherwise, the user can specify the probability weights when creating the `EqcondEntry` instance
+The user specifies the probability weights when creating the `EqcondEntry` instance
 for the `:regime_eqcond_info` dictionary, e.g.
 
 ```

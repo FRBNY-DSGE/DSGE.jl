@@ -86,7 +86,6 @@ where `S<:AbstractFloat`.
 function forecast(m::AbstractDSGEModel, system::Union{RegimeSwitchingSystem{S}, System{S}},
                   z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
                   shocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
-    println("LN 89")
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -205,7 +204,6 @@ end
 function forecast(system::System{S}, z0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
-    println("LN 208")
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
@@ -262,8 +260,6 @@ end
 function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S},
     shocks::Matrix{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
-
-    println("LN 263")
 
     # Determine how many regimes occur in the forecast, depending
     # on whether we need to subtract conditional forecast regimes or not
@@ -396,7 +392,6 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                   histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
 
-    println("LN 396")
     # Grab "original" settings" so they can be restored later
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false

@@ -67,12 +67,6 @@ setup_regime_switching_inds!(m)
 
 # Some settings for alternative policy
 if zlb_altpolicy
-    # keep track of the historical policy
-    hist_rule = get_setting(m, :alternative_policy)
-
-    m <= Setting(:uncertain_zlb, true)
-    m <= Setting(:uncertain_altpolicy, true)
-
     # parametrize the alternative policy (AIT, in this case)
     m <= Setting(:pgap_value, 0.)
     m <= Setting(:pgap_type, :smooth_ait_gdp_alt)
@@ -83,16 +77,6 @@ if zlb_altpolicy
     m <= Setting(:gdp_Thalf, 10.)
     m <= Setting(:smooth_ait_gdp_alt_φ_y, 6.)
     m <= Setting(:smooth_ait_gdp_alt_φ_π, 6.)
-
-    # Impose flexible AIT permanent policy, and set up the historical policy as the
-    # "alternative" rule -- under uncertain alternative policies, agents only
-    # partially incorporate the new policy in forming expectations. In the following example
-    # the setting :alternative_policy_weights indicates that agents form expectations using
-    # a convex combination of the implied laws of motion of the economy under old and new policy
-    # functions with weights of 1/2 each.
-    m <= Setting(:alternative_policy, DSGE.smooth_ait_gdp_alt())
-    m <= Setting(:alternative_policies, AltPolicy[hist_rule])
-    m <= Setting(:alternative_policy_weights, [0.5, 0.5])
 end
 
 
@@ -176,17 +160,28 @@ if zlb_altpolicy
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m)
 
+    # Following two settings turn imperfect awareness
+    m <= Setting(:uncertain_altpolicy, true) # turns imperfect awareness on
+    m <= Setting(:uncertain_zlb, true) # needed to allow a temporary ZLB with imperfect awareness
+
+    # set the "alternative" rule for imperfect awareness
+    # taylor_rule corresponds to the default monetary policy rule we use,
+    # which has coefficients on the output gap, inflation gap, and output growth
+    m <= Setting(:alternative_policies, AltPolicy[taylor_rule()])
+
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
-    m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
-    m <= Setting(:temporary_altpolicy, true) # The new regimes to be added should be treated as temporary alternative policies
-    m <= Setting(:gensys2_separate_cond_regimes, true)
-    replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
-    for i in 3:n_tempZLB_regimes
-        replace_eqcond[i] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in these regimes
+    m <= Setting(:replace_eqcond, true) # The gensys2 algo replaces eqcond matrices, so this step is required
+    m <= Setting(:temporary_zlb_length, n_tempZLB_regimes - 2) # specifies number of ZLB regimes; required if there is
+                                                               # further regime-switching after the ZLB ends (aside from
+                                                               # the extra regime for the "lift-off" from ZLB)
+    credvec = range(0., stop = 1., length = n_tempZLB_regimes - 2) # Credibility of ZLB increases as time goes on
+    replace_eqcond = Dict{Int, EqcondEntry}() # Which eqcond to use in which periods
+    for (i, reg) in enumerate(3:n_tempZLB_regimes)
+        replace_eqcond[reg] = EqcondEntry(zero_rate(), [credvec[i], 1. - credvec[i]]) # Temp ZLB rule in these regimes
     end
-    replace_eqcond[2+n_tempZLB_regimes+1] = DSGE.smooth_ait_gdp_alt_replace_eq_entries # switch to AIT in the final regime
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond) # Add mapping of regimes to new eqcond matrices
+    replace_eqcond[n_tempZLB_regimes + 1] = EqcondEntry(DSGE.smooth_ait_gdp_alt(), [1., 0.]) # switch to AIT in the final regime
+    m <= Setting(:regime_eqcond_info, replace_eqcond) # Add mapping of regimes to new eqcond matrices
 
     # set up information sets
     m <= Setting(:tvis_information_set, vcat([1:1, 2:2],
