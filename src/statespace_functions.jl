@@ -114,7 +114,9 @@ function compute_system(m::AbstractDSGEModel{T};
         ## TODO: Setting names should change once refactoring done
 
         if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy
-            m <= Setting(:regime_eqcond_info, regime_info_copy)
+            if has_regime_eqcond_info
+                m <= Setting(:regime_eqcond_info, regime_info_copy)
+            end
             m <= Setting(:gensys2, gensys2)
         end
         return system_main
@@ -317,8 +319,8 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
                 gensys_regimes  = UnitRange{Int}[1:n_regimes]
             end
 
-            @show gensys_regimes
-            @show gensys2_regimes
+            #@show gensys_regimes
+            #@show gensys2_regimes
 
             # Solve!
             TTTs, RRRs, CCCs = solve(m; regime_switching = regime_switching,

@@ -95,11 +95,13 @@ C_unc = Dict()
 for j in 1:length(prob_vecs)
     m <= Setting(:smooth_ait_gdp_alt_φ_y, φ_y_vec[j])
     m <= Setting(:smooth_ait_gdp_alt_φ_π, φ_π_vec[j])
-
-    T_unc[j], R_unc[j], C_unc[j] = DSGE.gensys_uncertain_altpol(m, prob_vecs[j], DSGE.AltPolicy[hist_rule],
-                                                                apply_altpolicy = true)
+    # we need to set regime_eqcond_info to correctly calculate the final regime transitions
+    m <= Setting(:regime_eqcond_info, Dict(get_setting(m, :n_regimes) =>
+                                           DSGE.EqcondEntry(DSGE.smooth_ait_gdp_alt(), prob_vecs[j])))
+    T_unc[j], R_unc[j], C_unc[j] = DSGE.gensys_uncertain_altpol(m, prob_vecs[j], DSGE.AltPolicy[hist_rule], regimes=[get_setting(m, :n_regimes)])
     T_unc[j], R_unc[j], C_unc[j] = DSGE.augment_states(m, T_unc[j], R_unc[j], C_unc[j])
 end
+delete!(m.settings, :regime_eqcond_info)
 
 # Now we calculate the uncertain temp ZLB
 tempZLB_regimes = Dict()
@@ -139,12 +141,12 @@ for j in 1:length(prob_vecs)
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:gensys2_separate_cond_regimes, true)
-    replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
+    replace_eqcond = Dict{Int, DSGE.EqcondEntry}()     # Which rule to replace with in which periods
     for regind in tempZLB_regimes[j]
-        replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
+        replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), prob_vecs[j]) # Temp ZLB rule in this regimes
     end
-    replace_eqcond[tempZLB_regimes[j][end] + 1] = DSGE.smooth_ait_gdp_alt_replace_eq_entries
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+    replace_eqcond[tempZLB_regimes[j][end] + 1] = DSGE.EqcondEntry(DSGE.smooth_ait_gdp_alt(), prob_vecs[j])
+    m <= Setting(:regime_eqcond_info, replace_eqcond)
     fcasts[j] = deepcopy(baseline_fcasts)
 
     # Set up matrices for regime-switching. Note that we have
@@ -163,12 +165,12 @@ for j in 1:length(prob_vecs)
     # Automatic calculation
     m <= Setting(:uncertain_altpolicy, true)
     m <= Setting(:uncertain_zlb, true)
-    autoTs[j], autoRs[j], autoCs[j] = solve(m; apply_altpolicy = true, regime_switching = true,
+    autoTs[j], autoRs[j], autoCs[j] = solve(m; regime_switching = true,
                                             gensys_regimes = [1:(get_setting(m, :n_hist_regimes) + 1)],
                                             gensys2_regimes =
                                             [(get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)],
                                             regimes = collect(1:get_setting(m, :n_regimes)))
-    auto_sys       = compute_system(m; apply_altpolicy = true)
+    auto_sys       = compute_system(m)
     auto_fcasts[j] = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params,
                                                                                 df_full; regime_switching = true, n_regimes =
                                                                                 get_setting(m, :n_regimes))
@@ -180,16 +182,16 @@ for j in 1:length(prob_vecs)
     # Only need to fill up the matrices for the forecast regimes for this part
     for fcast_reg in 3:length(TTTs_uzlb)
         Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =
-            eqcond(m, fcast_reg)
+            DSGE.zero_rate_eqcond(m, fcast_reg)
     end
-    TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = solve(m; apply_altpolicy = true)
+    TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = solve(m)
     TTT_gensys_final = TTT_gensys_final[1:n_states(m), 1:n_states(m)]
     RRR_gensys_final = RRR_gensys_final[1:n_states(m), :]
     CCC_gensys_final = CCC_gensys_final[1:n_states(m)]
 
     # Calculate temp ZLB regimes under assumption smooth AIT-GDP occurs forever after ZLB ends
     gensys2_regimes = (tempZLB_regimes[j][1] - 1):(tempZLB_regimes[j][end] + 1)
-    Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
+    Tcal, Rcal, Ccal = DSGE.gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                          Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                          TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
     Tcal[end] = TTT_gensys_final
