@@ -23,7 +23,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             if isempty(TTT)
                 assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
                 @assert assert_cond "The Setting :uncertain_altpolicy must be false if TTT is empty."
-                TTT, _, _ = solve(m; regime_switching = regime_switching, regimes = regimes, apply_altpolicy = apply_altpolicy)
+                TTT, _, _ = solve(m; regime_switching = regime_switching, regimes = regimes)
             end
 
             Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
@@ -121,7 +121,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
         if isempty(TTT)
             assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
             @assert assert_cond "The Setting :uncertain_altpolicy must be false if TTT is empty."
-            TTT, _, _ = solve(m; apply_altpolicy = apply_altpolicy)
+            TTT, _, _ = solve(m)
         end
 
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
