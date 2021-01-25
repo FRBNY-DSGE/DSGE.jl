@@ -106,13 +106,13 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
         println("replace_eqcond: " * string(replace_eqcond))
         if replace_eqcond
-            replace_regs = collect(keys(get_setting(m, :replace_eqcond_func_dict)))
+            replace_regs = collect(keys(get_setting(m, :regime_eqcond_info)))
             first_replace_reg = minimum(replace_regs)
             last_replace_reg = maximum(replace_regs)
         end
         hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
             (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false) ||
-            (haskey(m.settings, :replace_eqcond_func_dict) && (findfirst([haskey(get_setting(m, :replace_eqcond_func_dict), i) for i in 1:get_setting(m, :n_regimes)]) -
+            (haskey(m.settings, :regime_eqcond_info) && (findfirst([haskey(get_setting(m, :regime_eqcond_info), i) for i in 1:get_setting(m, :n_regimes)]) -
              get_setting(m, :reg_post_conditional_end) >= 0))
         n_no_alt_reg = hist_gensys2_regimes_gap ?
             (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
@@ -126,10 +126,10 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         println("time-varying credibility: " * string(haskey(get_settings(m), :imperfect_awareness_varying_weights)))
         if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
             println("Desired policy rule: " *
-                    string(haskey(get_settings(m), :replace_eqcond_func_dict) ?
+                    string(haskey(get_settings(m), :regime_eqcond_info) ?
                            get_setting(m,
-                                       :replace_eqcond_func_dict)[minimum(collect(keys(get_setting(m,
-                                                                                                   :replace_eqcond_func_dict))))] :
+                                       :regime_eqcond_info)[minimum(collect(keys(get_setting(m,
+                                                                                                   :regime_eqcond_info))))] :
                            get_setting(m, :alternative_policy).key))
             println("Other policy rules: " * join([string(x.key) for x in get_setting(m, :alternative_policies)], ", "))
             if haskey(get_settings(m), :imperfect_awareness_varying_weights)
