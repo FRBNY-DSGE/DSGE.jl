@@ -376,8 +376,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             Talt = Talt[1:n_endo,1:n_endo]
             Calt = Calt[1:n_endo]
         else
-            Talt = Vector{AbstractMatrix{Real}}(undef, length(altpols))
-            Calt = Vector{AbstractVector{Real}}(undef, length(altpols))
+            Talt = Vector{Matrix{Float64}}(undef, length(altpols))
+            Calt = Vector{Vector{Float64}}(undef, length(altpols))
 
             for i in 1:length(altpols)
                 Talt[i], _, Calt[i] = altpols[i].solve(m)
