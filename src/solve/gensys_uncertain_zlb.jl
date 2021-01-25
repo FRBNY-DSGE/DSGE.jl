@@ -110,7 +110,7 @@ function gensys_uncertain_zlb(prob_vec::AbstractVector{S},
 end
 
 # With time-varying credibility
-function gensys_uncertain_zlb(prob_vec::Vector{Vector{S}},Th,Ch,
+function gensys_uncertain_zlb(prob_vec::Vector{Vector{S}},Th::Vector{Matrix{Float64}},Ch::Vector{Vector{Float64}},
                               #Th::AbstractVector{AbstractMatrix{S}}, Ch::AbstractVector{AbstractVector{S}},
                               Tzlbs::Vector{Matrix{S}}, Rzlbs::Vector{Matrix{S}}, Czlbs::Vector{Vector{S}},
                               Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
