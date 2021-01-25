@@ -275,8 +275,7 @@ function decomposition_forecast(m::AbstractDSGEModel, df::DataFrame, params::Vec
 
     # Compute state space
     DSGE.update!(m, params)
-    system = compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set),
-                            apply_altpolicy = apply_altpolicy)
+    system = compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
 
     # Initialize output dictionary
     out = Dict{Symbol, Array{Float64}}()

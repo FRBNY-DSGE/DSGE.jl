@@ -821,7 +821,7 @@ function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::
         pop!(hist_regime_inds)
     end
 
-    system = compute_system(m; apply_altpolicy = apply_altpolicy,
+    system = compute_system(m;
                             tvis = haskey(get_settings(m), :tvis_information_set))
 
     trends = Matrix{S}(undef, class == :obs ? n_observables(m) : n_pseudo_observables(m), end_index)
