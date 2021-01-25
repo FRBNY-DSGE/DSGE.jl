@@ -302,18 +302,6 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:gensys2_separate_cond_regimes, true)
-    regime_eqcond_info_shortzlb = Dict()
-    for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 1)
-        regime_eqcond_info_shortzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
-    end
-    regime_eqcond_info_shortzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
-
-    regime_eqcond_info_longzlb = Dict()
-    for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 1)
-        regime_eqcond_info_longzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
-    end
-    regime_eqcond_info_longzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
-
     regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
     for (i, d) in enumerate(DSGE.quarter_range(Date(2016, 9, 30), Date(2021, 3, 31)))
         regime_dates[i + 1] = d
@@ -321,6 +309,20 @@ end
     m <= Setting(:regime_dates, regime_dates)
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m; cond_type = :full)
+    regime_eqcond_info_shortzlb = Dict()
+    for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 1)
+        regime_eqcond_info_shortzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
+    regime_eqcond_info_shortzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    regime_eqcond_info_shortzlb[get_setting(m, :n_regimes)] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+
+    regime_eqcond_info_longzlb = Dict()
+    for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 1)
+        regime_eqcond_info_longzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+    end
+    regime_eqcond_info_longzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    regime_eqcond_info_longzlb[get_setting(m, :n_regimes)] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+
     reg_2020Q1 = get_setting(m, :n_regimes) - 4
     reg_2018Q1 = DSGE.subtract_quarters(Date(2018, 3, 31), Date(2016, 9, 30)) + 2
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info_shortzlb, regime_eqcond_info_longzlb])
