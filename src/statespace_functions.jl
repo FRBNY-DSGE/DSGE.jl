@@ -1,7 +1,7 @@
 """
 ```
-compute_system(m; apply_altpolicy = false, tvis::Bool = false, verbose = :high)
-compute_system_helper(m; apply_altpolicy = false, tvis::Bool = false, verbose = :high)
+compute_system(m; tvis::Bool = false, verbose = :high)
+compute_system_helper(m; tvis::Bool = false, verbose = :high)
 ```
 
 Given the current model parameters, compute the state-space system
@@ -29,7 +29,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
             max(get_setting(m, :reg_post_conditional_end), get_setting(m, :reg_forecast_start)) :
             get_setting(m, :reg_forecast_start) # Errors if no reg_forecast_start key in settings
 
-        if apply_altpolicy && (!haskey(m.settings, :regime_eqcond_info) ||
+#=        if apply_altpolicy && (!haskey(m.settings, :regime_eqcond_info) ||
                                !haskey(get_setting(m, :regime_eqcond_info), fcast_reg)) &&
                                haskey(m.settings, :alternative_policy) && get_setting(m, :alternative_policy).key != :historical
 
@@ -63,7 +63,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                 get_setting(m, :regime_eqcond_info)[reg] = DSGE.EqcondEntry(get_setting(m, :alternative_policy),
                                                                             vcat([1.], zeros(alt_pol_length)))
             end
-        end # Do for regime_dates and remove apply_altpolicy from solve.
+        end # Do for regime_dates and remove apply_altpolicy from solve.=#
 
         # Grab these settings
         has_uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy)
@@ -118,6 +118,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     if !apply_altpolicy || !haskey(m.settings, :regime_switching) || !get_setting(m, :regime_switching) ||
         !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
         (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy) || (!has_uncertain_zlb && !has_uncertain_altpolicy)
+
         ## TODO: Setting names should change once refactoring done
         if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy && has_regime_eqcond_info
             m <= Setting(:regime_eqcond_info, regime_info_copy)
@@ -126,7 +127,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
 
         return system_main
     end
-
 
     # Turn off these settings temporarily to get historical policy
     m <= Setting(:regime_switching, false)

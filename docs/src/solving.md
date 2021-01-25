@@ -69,8 +69,6 @@ See [Regime-Switching Forecasts](@ref) for guidance on how to do this.
 For 1 and 2, we recommend conferring with the implementation of regime-switching for Model 1002.
 See the [equilibrium conditions here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
 and the [measurement equation here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/measurement.jl).
-Note that the `pseudo_measurement` function currently does not support the additional keyword arguments, unlike `measurement`,
-as can be seen by the [pseudo-measurement equation for Model 1002](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/pseudo_measurement.jl).
 
 Temporary alternative policies are slightly more complicated. They leverage the same machinery
 as exogenous and unanticipated regime-switching, so steps 1 and 2 above are required still.

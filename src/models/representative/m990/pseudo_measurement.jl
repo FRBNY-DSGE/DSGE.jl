@@ -13,7 +13,12 @@ x_t = ZZ_pseudo*s_t + DD_pseudo
 function pseudo_measurement(m::Model990{T},
                             TTT::Matrix{T},
                             RRR::Matrix{T},
-                            CCC::Vector{T}) where {T<:AbstractFloat}
+                            CCC::Vector{T};
+                            reg::Int = 1,
+                            TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
+                            CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
+                            information_set::UnitRange = reg:reg) where {T<:AbstractFloat}
+
     endo   = m.endogenous_states
     pseudo = m.pseudo_observables
 
@@ -97,4 +102,3 @@ function pseudo_measurement(m::Model990{T},
     # Collect indices and transforms
     return PseudoMeasurement(ZZ_pseudo, DD_pseudo)
 end
-

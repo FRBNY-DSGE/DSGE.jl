@@ -21,7 +21,11 @@ Cov(ϵ_t, u_t) = 0
 function measurement(m::Model990{T},
                      TTT::Matrix{T},
                      RRR::Matrix{T},
-                     CCC::Vector{T}) where {T<:AbstractFloat}
+                     CCC::Vector{T}; reg::Int = 1,
+                     TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
+                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
+                     information_set::UnitRange = reg:reg) where {T <: AbstractFloat}
+
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks

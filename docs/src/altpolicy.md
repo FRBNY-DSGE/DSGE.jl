@@ -24,7 +24,7 @@ the user needs to ensure that the model can be solved with regime-switching (see
 ## Procedure for Permanent Alternative Policies
 
 The user defines some instance of the `AltPolicy` type (described below) and
-sets it as the value for the `:alternative_policy` `Setting`. Then the function
+then calls the function `setup_permanent_altpol!`. Then the function
 calls made to forecast and compute means and bands remain the same as usual (see
 [Forecasting](@ref) and [Computing Means and Bands](@ref means-bands)).
 
@@ -35,15 +35,22 @@ proposed monetary policy rule. Then you can run:
 
 ```julia
 m = AnSchorfheide()
-m <= Setting(:alternative_policy, AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve))
+setup_permanent_altpol!(m, AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve); cond_type = :none)
 forecast_one(m, :mode, :none, [:forecastobs, :forecastpseudo])
 compute_meansbands(m, :mode, :none, [:forecastobs, :forecastpseudo])
 ```
 
-Note that under the hood, permanent alternative policies utilize some of the same
+Permanent alternative policies utilize some of the same
 machinery as temporary alternative policies, but they use different algorithms
 for converting the equilibrium conditions from gensys form to the
 reduced form transition matrices for a state space system.
+The function `setup_permanent_altpol!` performs the setup required
+to interface with this machinery. The keyword argument `cond_type` is necessary
+because when the alternative policy is applied depends on whether
+the forecast is conditional or not. If a forecast is conditional,
+it is assumed that the alternative policy does not occur until
+after the conditional horizon, to maintain the idea that the alternative policy
+is entirely unanticipated.
 
 ## [Procedure for Temporary Alternative Policies](@id tempaltpol-procedure)
 

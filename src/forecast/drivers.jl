@@ -976,7 +976,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     if only_filter
                         @warn "The setting :cond_ZZ_regime is not specified. Making an educated guess..."
                     end
-                    get_setting(m, :reg_forecast_start) + get_setting(m, :n_cond_regimes) - 1
+                    if get_setting(m, :n_cond_regimes) > 0 # if regime-switching during conditional horizon, need to add them and
+                        get_setting(m, :reg_forecast_start) + get_setting(m, :n_cond_regimes) - 1 # minus 1 for reg_forecast_start
+                    else # otherwise no regime-switching during conditional horizon, so just use the same regime as forecast start date
+                        get_setting(m, :reg_forecast_start)
+                    end
                 end
             else
                 1
@@ -1120,7 +1124,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     if only_filter
                         @warn "The setting :cond_ZZ_regime is not specified. Making an educated guess..."
                     end
-                    get_setting(m, :reg_forecast_start) + get_setting(m, :n_cond_regimes) - 1
+                    if get_setting(m, :n_cond_regimes) > 0 # if regime-switching during conditional horizon, need to add them and
+                        get_setting(m, :reg_forecast_start) + get_setting(m, :n_cond_regimes) - 1 # minus 1 for reg_forecast_start
+                    else # otherwise no regime-switching during conditional horizon, so just use the same regime as forecast start date
+                        get_setting(m, :reg_forecast_start)
+                    end
                 end
             else
                 1
