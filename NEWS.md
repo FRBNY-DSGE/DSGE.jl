@@ -1,12 +1,14 @@
-# DSGE.jl 1.2 (in development)
+# DSGE.jl 1.2
 ## Version Restrictions
 + Minimum CSV version is v0.8
++ Minimum ModelConstructors version is v0.2.4
 
 ## New features and enhancements
 + Functions for calculating k-period ahead expectations and sums for measurement equation
 + Time-varying information sets for regime-switching
 + Time-varying imperfect awareness/credibility
 + Ability to use temporary policies during history (previously only available as alternative policy during forecast)
++ Refactor alternative policy code to use regime-switching
 + Regime-switching allowed during forecast for shock decompositions, deterministic trends, and trends
 + Regime-switching estimation of DSGE models using MH and SMC
 
