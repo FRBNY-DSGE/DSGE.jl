@@ -302,14 +302,17 @@ end
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
     m <= Setting(:gensys2_separate_cond_regimes, true)
-    replace_eqcond_func_dict_shortzlb = Dict()
+    regime_eqcond_info_shortzlb = Dict()
     for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 1)
-        replace_eqcond_func_dict_shortzlb[i] = DSGE.zero_rate_replace_eq_entries
+        regime_eqcond_info_shortzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
     end
-    replace_eqcond_func_dict_longzlb = Dict()
+    regime_eqcond_info_shortzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+
+    regime_eqcond_info_longzlb = Dict()
     for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 1)
-        replace_eqcond_func_dict_longzlb[i] = DSGE.zero_rate_replace_eq_entries
+        regime_eqcond_info_longzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
     end
+    regime_eqcond_info_longzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
 
     regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
     for (i, d) in enumerate(DSGE.quarter_range(Date(2016, 9, 30), Date(2021, 3, 31)))
@@ -320,7 +323,7 @@ end
     setup_regime_switching_inds!(m; cond_type = :full)
     reg_2020Q1 = get_setting(m, :n_regimes) - 4
     reg_2018Q1 = DSGE.subtract_quarters(Date(2018, 3, 31), Date(2016, 9, 30)) + 2
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb, replace_eqcond_func_dict_longzlb])
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info_shortzlb, regime_eqcond_info_longzlb])
     m <= Setting(:tvis_select_system, vcat(ones(Int, reg_2018Q1), fill(2, get_setting(m, :n_regimes) - reg_2018Q1)))
     m <= Setting(:tvis_information_set, vcat([1:1], [i:reg_2020Q1 for i in 2:reg_2018Q1],
                                              [i:get_setting(m, :n_regimes) for i in (reg_2018Q1 + 1):get_setting(m, :n_regimes)]))
