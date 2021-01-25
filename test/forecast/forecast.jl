@@ -89,7 +89,7 @@ end
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:alternative_policy, AltPolicy(:ngdp, DSGE.ngdp_eqcond, DSGE.ngdp_solve,
                                                 forecast_init = DSGE.ngdp_forecast_init))
-    system = compute_system(m; apply_altpolicy = true)
+    system = compute_system(m)
     z0 = zeros(n_states_augmented(m))
 
     # First test with unconditional
@@ -114,7 +114,7 @@ end
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:alternative_policy, AltPolicy(:ngdp, DSGE.ngdp_eqcond, DSGE.ngdp_solve,
                                                 forecast_init = DSGE.ngdp_forecast_init))
-    system = compute_system(m; apply_altpolicy = true)
+    system = compute_system(m)
     z0 = zeros(n_states_augmented(m))
 
     ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :full)
