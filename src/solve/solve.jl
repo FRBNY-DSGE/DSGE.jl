@@ -182,6 +182,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
                                 gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int64}}(undef, 0),
                                 regimes::Vector{Int} = Int[1],
                                 verbose::Symbol = :high) where {T <: Real}
+
     altpolicy_solve = alternative_policy(m).solve
     gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
     uncertain_zlb = haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false
@@ -418,7 +419,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                 if eu[1] != 1 || eu[2] != 1
                     throw(GensysError("Error in Gensys, Regime $reg"))
                 end
-
                 TTT_gensys = real(TTT_gensys)
                 RRR_gensys = real(RRR_gensys)
                 CCC_gensys = real(CCC_gensys)
