@@ -499,7 +499,7 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
     dsge = get_dsge(m)
     if regime_switching
         error("Regime switching has not been implemented for a DSGEVAR yet.")
-        system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
+        system = compute_system(dsge;
                                 verbose = verbose) # This `system` is really a RegimeSwitchingSystem
 
         systems = Vector{System{T}}(undef, n_regimes)
