@@ -129,7 +129,7 @@ module DSGE
         decompose_forecast, decomposition_means,
 
         # altpolicy/
-        AltPolicy, taylor93, taylor99, alt_inflation,
+        AltPolicy, setup_permanent_altpol!, taylor93, taylor99, alt_inflation,
         ait, ait_replace_eq_entries, ait_solve, ait_eqcond,
         ngdp, ngdp_replace_eq_entries, ngdp_solve, ngdp_eqcond,
         zero_rate,  zero_rate_replace_eq_entries, zero_rate_solve, zero_rate_eqcond,

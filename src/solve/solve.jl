@@ -152,16 +152,15 @@ Base.showerror(io::IO, ex::KleinError) = print(io, ex.msg)
 
 """
 ```
-solve_regime_switching(m::AbstractDSGEModel; apply_altpolicy = false)
+solve_regime_switching(m::AbstractDSGEModel)
 
-solve_one_regime(m::AbstractDSGEModel; apply_altpolicy = false)
+solve_one_regime(m::AbstractDSGEModel)
 
 solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ01::Vector{Matrix{S}},
     Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}};
     TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
     regimes::Vector{Int} = Int[1], uncertain_altpolicy::Bool = false,
-    apply_altpolicy::Bool = false, altpolicy_solve::Function = solve,
-    verbose::Symbol = :high)
+    altpolicy_solve::Function = solve, verbose::Symbol = :high)
 
 solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ01::Vector{Matrix{S}},
     Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
