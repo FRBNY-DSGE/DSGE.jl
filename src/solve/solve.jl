@@ -372,8 +372,20 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             weights[i] = get_setting(m, :regime_eqcond_info)[reg].weights
         end
 
-        @assert length(altpols) == 1 "Currently, uncertain_zlb works only for two policies (two possible MP rules)."
-        Talt, _, Calt = altpols[1].solve(m)
+        if length(altpols) == 1
+            Talt, _, Calt = altpols[1].solve(m)
+            Talt = Talt[1:n_endo,1:n_endo]
+            Calt = Calt[1:n_endo]
+        else
+            Talt = Vector{AbstractMatrix{Real}}(undef, length(altpols))
+            Calt = Vector{AbstractVector{Real}}(undef, length(altpols))
+
+            for i in 1:length(altpols)
+                Talt[i], _, Calt[i] = altpols[i].solve(m)
+                Talt[i] = Talt[i][1:n_endo,1:n_endo]
+                Calt[i] = Calt[i][1:n_endo]
+            end
+        end
 
         # Calculate gensys2 matrices under belief that the desired lift-off policy will occur
         # TODO: generalize to having multiple distinct sets of regimes which are gensys2 regimes
@@ -399,7 +411,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
         # Then, if nzlb = 1, Tcal should have length 2, and you only need the lift-off matrix
         Tcal[1:(1 + nzlb)], Rcal[1:(1 + nzlb)], Ccal[1:(1 + nzlb)] =
-            gensys_uncertain_zlb(weights, Talt[1:n_endo, 1:n_endo], Calt[1:n_endo],
+            gensys_uncertain_zlb(weights, Talt, Calt,
                                  Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 

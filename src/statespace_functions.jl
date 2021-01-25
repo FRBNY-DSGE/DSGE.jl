@@ -56,8 +56,12 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                     end
                 end
             end
+
+            alt_pol_length = haskey(m.settings, :alternative_policies) ?
+                length(get_setting(m, :alternative_policies)) : 1
             for reg in fcast_reg:get_setting(m, :n_regimes)
-                get_setting(m, :regime_eqcond_info)[reg] = DSGE.EqcondEntry(get_setting(m, :alternative_policy), [1., 0.])
+                get_setting(m, :regime_eqcond_info)[reg] = DSGE.EqcondEntry(get_setting(m, :alternative_policy),
+                                                                            vcat([1.], zeros(alt_pol_length)))
             end
         end # Do for regime_dates and remove apply_altpolicy from solve.
 
@@ -133,16 +137,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
         m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
     end
 
-
-    # Called taylor but should run whatever is specified as historical policy
-    ## either in alternative_policies or imperfect_credibility_historical_policy setting
-    #=    altpols = get_setting(m, :alternative_policies)
-    orig_replace_eqcond_func_dict = get_setting(m, :replace_eqcond_func_dict)
-    for altpol in altpols
-    m <= Setting(:replace_eqcond_func_dict, Dict(1 => altpol.replace_eq_entries)) # one possible way to get perfect credibility
-    system_altpol = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose) # of alternative policies
-    end=#
-
     orig_altpol = get_setting(m, :alternative_policy)
     n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
     system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
@@ -174,6 +168,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
             m <= Setting(:gensys2, gensys2)
         elseif i > 1
             m <= Setting(:alternative_policy, get_setting(m, :alternative_policies)[i-1])
+            system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
         else
             system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
         end
@@ -182,7 +177,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     # Now add uncertain altpolicy and zlb back
     m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
     m <= Setting(:uncertain_zlb, uncertain_zlb)
-    #m <= Setting(altpol_wts_name, altpol_vec_orig)
     m <= Setting(:alternative_policy, orig_altpol)
 
     # Checks if pseudo measurement is required
@@ -212,6 +206,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
         new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
+
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
                 system_main.measurements[reg][:ZZ][m.observables[k], :] =
@@ -221,7 +216,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
             end
         else
             # TODO: This needs to be updated
-            ## Why is this else here?
             system_main.measurements[reg][:ZZ] .=
                 sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
             system_main.measurements[reg][:DD] .=
@@ -240,7 +234,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                 end
             else
                 # TODO: This needs to be updated
-                ## Why is this else here?
                 system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
                 sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:length(new_wt)])
                 system_main.pseudo_measurements[reg][:DD_pseudo] .=
