@@ -89,7 +89,7 @@ m <= Setting(:reoptimize, false)
         end
     else
         # when saving the output in REPL, the results seem different from testing, but the Hessian is still fairly close
-        @test maximum(abs.(h5read(joinpath(path, "..", "reference", "hessian_rs2=true_vint=210101.h5"), "hessian") - out_hessian)) < 7.5e-2
+        @test maximum(abs.(h5read(joinpath(path, "..", "reference", "hessian_rs2=true_vint=210101.h5"), "hessian") - out_hessian)) < 8e-2
     end
 end
 

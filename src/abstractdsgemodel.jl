@@ -267,8 +267,8 @@ impulse_response_horizons(m::AbstractDSGEModel) = get_setting(m, :impulse_respon
 n_shockdec_periods(m::AbstractDSGEModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
 
 # Interface for alternative policy settings
-alternative_policy(m::AbstractDSGEModel) = haskey(m.settings, :regime_eqcond_info) ?
-get_setting(m, :regime_eqcond_info)[haskey(m.settings, :n_regimes) ? get_setting(m, :n_regimes) : 1].alternative_policy : get_setting(m, :alternative_policy)
+alternative_policy(m::AbstractDSGEModel) = haskey(m.settings, :regime_eqcond_info) &&
+haskey(m.settings, :n_regimes) && haskey(get_setting(m, :regime_eqcond_info), get_setting(m, :n_regimes)) ? get_setting(m, :regime_eqcond_info)[get_setting(m, :n_regimes)].alternative_policy : haskey(m.settings, :alternative_policy) ? get_setting(m, :alternative_policy) : AltPolicy(:historical, eqcond, solve)
 function date_forecast_end(m::AbstractDSGEModel)
     if haskey(get_settings(m), :date_forecast_end)
         return get_setting(m, :date_forecast_end)

@@ -236,7 +236,7 @@ end
 function solve_one_regime(m::AbstractDSGEModel{T}; regime::Int = 1, uncertain_altpolicy::Bool = false,
                           verbose::Symbol = :high) where {T <: Real}
 
-    apply_altpolicy = haskey(m.settings, :regime_eqcond_info)
+    apply_altpolicy = haskey(m.settings, :regime_eqcond_info) || haskey(m.settings, :alternative_policy)
     altpolicy_solve = alternative_policy(m).solve
 
     if altpolicy_solve == solve || !apply_altpolicy
