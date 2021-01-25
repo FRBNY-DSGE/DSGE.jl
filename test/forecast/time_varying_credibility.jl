@@ -166,7 +166,6 @@ outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, d
 
 @testset "Compare Fixed to Time-Varying Credibility" begin
     for reg in 1:n_regimes(sysp33)
-        @show reg
         @test sysp33[reg, :TTT] ≈ sysp33_tv[reg, :TTT]
         @test sysp33[reg, :RRR] ≈ sysp33_tv[reg, :RRR]
         @test sysp33[reg, :CCC] ≈ sysp33_tv[reg, :CCC]
