@@ -129,11 +129,10 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     m <= Setting(:uncertain_altpolicy, false)
     m <= Setting(:uncertain_zlb, false)
 
-    # Save this name to be replaced later
-    regime_info_copy = copy(get_setting(m, :regime_eqcond_info))
-    delete!(m.settings, :regime_eqcond_info)
-    gensys2 = haskey(m.settings, :gensys2) && get_setting(m, :gensys2)
-    m <= Setting(:gensys2, false)
+    if !haskey(m.settings, :alternative_policies)
+        m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
+    end
+
 
     # Called taylor but should run whatever is specified as historical policy
     ## either in alternative_policies or imperfect_credibility_historical_policy setting
@@ -144,13 +143,8 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     system_altpol = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose) # of alternative policies
     end=#
 
-    system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
-    m <= Setting(:regime_eqcond_info, regime_info_copy)
-    m <= Setting(:gensys2, gensys2)
-
-    # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
-    # n_altpolicies = vary_wt ? length(first(values(altpol_wts))) : length(altpol_wts)
-    n_altpolicies = 1
+    orig_altpol = get_setting(m, :alternative_policy)
+    n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
     system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
 
     m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
@@ -171,24 +165,25 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
         #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
         #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
         #  It is more efficient to find a way to compute each altpolicy individually ONCE.
-        #=        if vary_wt
-        altpol_vec = deepcopy(altpol_wts) # abuse of the name here, technically. altpol_vec is a Dictionary in this case
-        for j in keys(altpol_vec)
-        altpol_vec[j] = zeros(length(n_altpolicies) + 1) # weight on n_altpolicies first, then weight on historical policy
-        altpol_vec[j][i] = 1.0 # perfect credibility on each alternative policy
-        end
+        if i > 1 && get_setting(m, :alternative_policies)[i-1].key == :taylor_rule
+            m <= Setting(:gensys2, false)
+            replace_eq_copy = copy(get_setting(m, :regime_eqcond_info))
+            delete!(m.settings, :regime_eqcond_info)
+            system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
+            m <= Setting(:regime_eqcond_info, replace_eq_copy)
+            m <= Setting(:gensys2, gensys2)
+        elseif i > 1
+            m <= Setting(:alternative_policy, get_setting(m, :alternative_policies)[i-1])
         else
-        altpol_vec = zeros(n_altpolicies + 1)
-        altpol_vec[i] = 1.0
+            system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
         end
-        m <= Setting(altpol_wts_name, altpol_vec)=#
-        system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
     end
 
     # Now add uncertain altpolicy and zlb back
     m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
     m <= Setting(:uncertain_zlb, uncertain_zlb)
     #m <= Setting(altpol_wts_name, altpol_vec_orig)
+    m <= Setting(:alternative_policy, orig_altpol)
 
     # Checks if pseudo measurement is required
     type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
@@ -199,57 +194,53 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     if has_pseudo
         has_fwd_looking_pseudo = haskey(get_settings(m), :forward_looking_pseudo_observables)
     end
-
+#=
+    function get_meas(system::AbstractSystem, reg::Int; pseudo = false)
+        if typeof(system) == System{Float64} && !pseudo
+            return system.measurement
+        elseif typeof(system) == System{Float64} && pseudo
+            return system.pseudo_measurement
+        elseif typeof(system) == RegimeSwitchingSystem{Float64} && !pseudo
+            return system.measurements[reg]
+        elseif typeof(system) == RegimeSwitchingSystem{Float64} && pseudo
+            return system.pseudo_measurements[reg]
+        else
+            error("Incorrect System Type")
+        end
+    end
+=#
     ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
         new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
-                # COMMENTED CODE IS THE DESIRED VERSION in some form or fashion. May want to write a helper function which
-                # figures out whether a given system is regime-switching or not.
-                #=                system_main.measurements[reg][:ZZ][m.observables[k], :] =
-                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :] for i in 1:length(new_wt)])
-                system_main.measurements[reg][:DD][m.observables[k]] =
-                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:length(new_wt)])=#
                 system_main.measurements[reg][:ZZ][m.observables[k], :] =
-                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :]
-                     for i in 1:(length(new_wt) - 1)]) +
-                new_wt[end] .* system_taylor.measurement[:ZZ][m.observables[k], :]
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :] for i in 1:length(new_wt)])
                 system_main.measurements[reg][:DD][m.observables[k]] =
-                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]]
-                     for i in 1:(length(new_wt) - 1)]) +
-                new_wt[end] .* system_taylor.measurement[:DD][m.observables[k]]
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:length(new_wt)])
             end
         else
             # TODO: This needs to be updated
+            ## Why is this else here?
             system_main.measurements[reg][:ZZ] .=
-            sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
             system_main.measurements[reg][:DD] .=
-            sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD] for i in 1:length(new_wt)])
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD] for i in 1:length(new_wt)])
         end
 
         if has_pseudo
             if has_fwd_looking_pseudo
                 for k in get_setting(m, :forward_looking_pseudo_observables)
-                    # COMMENTED CODE IS THE DESIRED VERSION in some form or fashion. May want to write a helper function which
-                    # figures out whether a given system is regime-switching or not.
-                    #=                    system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
-                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
-                    for i in 1:length(new_wt)])
-                    system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
-                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
-                    for i in 1:length(new_wt)])=#
                     system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
-                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
-                         for i in 1:(length(new_wt) - 1)]) +
-                    new_wt[end] .* system_taylor.pseudo_measurement[:ZZ_pseudo][m.pseudo_observables[k], :]
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
+                             for i in 1:length(new_wt)])
                     system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
-                    sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
-                         for i in 1:(length(new_wt) - 1)]) +
-                    new_wt[end] .* system_taylor.pseudo_measurement[:DD_pseudo][m.pseudo_observables[k]]
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
+                             for i in 1:length(new_wt)])
                 end
             else
                 # TODO: This needs to be updated
+                ## Why is this else here?
                 system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
                 sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:length(new_wt)])
                 system_main.pseudo_measurements[reg][:DD_pseudo] .=

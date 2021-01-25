@@ -13,6 +13,9 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
     @assert length(altpolicies) == length(prob_vec) - 1
 
+    altpolicies = altpolicies[prob_vec[2:end] .> 0.0]
+    prob_vec = vcat(prob_vec[1], prob_vec[2:end][prob_vec[2:end] .> 0.0])
+
     if regime_switching
         if length(regimes) == 1
             Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ? (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
