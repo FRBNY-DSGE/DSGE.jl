@@ -30,7 +30,7 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                regimes::Vector{Int} = Int[1],
                verbose::Symbol = :high) where {T <: Real}
 
-    apply_altpolicy = haskey(m.settings, :regime_eqcond_info)
+    apply_altpolicy = haskey(m.settings, :regime_eqcond_info) || haskey(m.settings, :alternative_policy)
     altpolicy_solve = alternative_policy(m).solve
     uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
 

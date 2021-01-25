@@ -15,13 +15,15 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
 
 @testset "Gensys when alternative policies are not credible" begin
     for (i, prob_vec) in enumerate([[1., 0.], [.5, .5], [.999, .001]])
+        m <= Setting(:regime_eqcond_info, Dict(1 => DSGE.EqcondEntry(DSGE.ngdp(), prob_vec)))
         T_prs, R_prs, C_prs = DSGE.gensys_uncertain_altpol(m, prob_vec, DSGE.AltPolicy[hist_rule],
                                                            apply_altpolicy = true)
         T_prs, R_prs, C_prs = DSGE.augment_states(m, T_prs, R_prs, C_prs)
+        #delete!(m.settings, :regime_eqcond_info)
 
-        m <= Setting(:imperfect_awareness_weights, prob_vec)
+        #m <= Setting(:imperfect_awareness_weights, prob_vec)
         m <= Setting(:uncertain_altpolicy, true)
-        TTT, RRR, CCC = solve(m; apply_altpolicy = true) # check automatic calculation
+        TTT, RRR, CCC = solve(m) # check automatic calculation
         m <= Setting(:uncertain_altpolicy, false) # to make DSGE.gensys_uncertain_altpol above work
 
         @test TTT ≈ T_prs
@@ -71,7 +73,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     m <= Setting(:regime_eqcond_info, Dict(i => DSGE.EqcondEntry(DSGE.ngdp(), [.5, .5]) for i in 2:5))
     m <= Setting(:uncertain_altpolicy, true)
     @test !haskey(DSGE.get_settings(m), :gensys2)
-    TTTs, RRRs, CCCs = solve(m; apply_altpolicy = false, regime_switching = true,
+    TTTs, RRRs, CCCs = solve(m; regime_switching = true,
                              gensys_regimes = UnitRange{Int}[1:5], # gensys2_regimes = UnitRange{Int}[1:5],
                              regimes = collect(1:5))
 
@@ -87,7 +89,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     for i in 2:5
         get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
     end
-    TTTs2, RRRs2, CCCs2 = solve(m; apply_altpolicy = false, regime_switching = true,
+    TTTs2, RRRs2, CCCs2 = solve(m; regime_switching = true,
                                 gensys_regimes = UnitRange{Int}[1:5], # gensys2_regimes = UnitRange{Int}[1:5],
                                 regimes = collect(1:5))
 
