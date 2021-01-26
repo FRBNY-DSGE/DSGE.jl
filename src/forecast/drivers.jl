@@ -794,13 +794,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             kal = filter(m, df, system; cond_type = cond_type)
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       set_pgap_ygap = set_pgap_ygap,
                        s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt])
 
         else
             histstates, histshocks, histpseudo, initial_states =
-                smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
-                       set_pgap_ygap = set_pgap_ygap)
+                smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty)
         end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast

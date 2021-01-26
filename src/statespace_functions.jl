@@ -20,23 +20,37 @@ equations.
 """
 function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
-    # Grab these settings
-    has_uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy)
-    has_uncertain_zlb = haskey(m.settings, :uncertain_zlb)
-    has_regime_eqcond_info = haskey(m.settings, :regime_eqcond_info)
-    uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
-    uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+    apply_altpolicy = haskey(m.settings, :regime_eqcond_info) || (haskey(m.settings, :alternative_policy) &&
+                                                                  get_setting(m, :alternative_policy).key != :historical)
 
-    # Grab regime info dictionary, if one exists
-    regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : nothing
+    if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching)
+        # Grab these settings
+        has_uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy)
+        has_uncertain_zlb = haskey(get_settings(m), :uncertain_zlb)
+        has_regime_eqcond_info = haskey(get_settings(m), :regime_eqcond_info)
+        uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
+        uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+        is_gensys2 = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
-    # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
-    if has_uncertain_zlb && !uncertain_zlb && has_regime_eqcond_info
-        for reg in keys(regime_eqcond_info)
-            if regime_eqcond_info[reg].alternative_policy.eqcond == DSGE.zero_rate_replace_eq_entries
-                altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
-                altpol_vec[1] = 1.0
-                regime_eqcond_info[reg].weights = altpol_vec
+        # Grab regime info dictionary, if one exists
+        regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, EqcondEntry}()
+
+        # Set replace_eqcond to nothing if !apply_altpolicy
+        if !apply_altpolicy && has_regime_eqcond_info
+            regime_info_copy = copy(get_setting(m, :regime_eqcond_info))
+            delete!(m.settings, :regime_eqcond_info)
+            has_regime_eqcond_info = false
+            m <= Setting(:gensys2, false)
+        end
+
+        # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
+        if has_uncertain_zlb && !uncertain_zlb && has_regime_eqcond_info
+            for reg in keys(regime_eqcond_info)
+                if regime_eqcond_info[reg].alternative_policy.key == :zero_rate
+                    altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
+                    altpol_vec[1] = 1.0
+                    regime_eqcond_info[reg].weights = altpol_vec
+                end
             end
         end
 
@@ -69,7 +83,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
             if has_regime_eqcond_info
                 m <= Setting(:regime_eqcond_info, regime_info_copy)
             end
-            m <= Setting(:gensys2, gensys2)
+            m <= Setting(:gensys2, is_gensys2)
         end
 
         return system_main
@@ -99,7 +113,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
             delete!(m.settings, :regime_eqcond_info)
             system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
             m <= Setting(:regime_eqcond_info, replace_eq_copy)
-            m <= Setting(:gensys2, gensys2)
+            m <= Setting(:gensys2, is_gensys2)
         elseif i > 1
             m <= Setting(:alternative_policy, get_setting(m, :alternative_policies)[i-1])
             system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
