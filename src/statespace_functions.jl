@@ -135,7 +135,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                     sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:length(new_wt)])
             end
         else
-            # TODO: This needs to be updated
             system_main.measurements[reg][:ZZ] .=
                 sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
             system_main.measurements[reg][:DD] .=
@@ -153,7 +152,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                              for i in 1:length(new_wt)])
                 end
             else
-                # TODO: This needs to be updated
                 system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
                 sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:length(new_wt)])
                 system_main.pseudo_measurements[reg][:DD_pseudo] .=
