@@ -18,7 +18,7 @@ As an example, the Federal Reserve in 2020-Q3 switched to flexible AIT. The "his
 a Taylor-style rule, and the `til` matrices correspond to the predictable form of flexible AIT.
 The `Tzlbs`, `Rzlbs`, and `Czlbs` include temporary switches to a ZLB specified by the `regime_eqcond_info`.
 """
-function gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::Matrix{S}, Ch::Vector{S}, #Th::AbstractMatrix{S}, Ch::AbstractVector{S},
+function gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::Matrix{S}, Ch::Vector{S},
                               Tzlbs::Vector{Matrix{S}}, Rzlbs::Vector{Matrix{S}}, Czlbs::Vector{Vector{S}},
                               Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
                               C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
@@ -30,7 +30,6 @@ function gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::Matrix{S}, Ch::Ve
     Cout  = Vector{Vector{S}}(undef, length(Tzlbs) + 1)
 
     # Calculate "uncertain" ZLB matrices and back out the transition equation
-    #cond_vec = zeros(length(Tzlbs))
     for i in 1:length(Tzlbs)
         Tbars[i] = prob_vec[1] * Tzlbs[i] + prob_vec[2] * Th # it is assumed Tzlbs is a vector of the T_{t + 1}^{(zlb)} matrices
         Cbars[i] = prob_vec[1] * Czlbs[i] + prob_vec[2] * Ch
@@ -38,10 +37,7 @@ function gensys_uncertain_zlb(prob_vec::AbstractVector{S}, Th::Matrix{S}, Ch::Ve
         Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
         Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
         Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
-
-        #cond_vec[i] = LinearAlgebra.cond(Γ2_til * Tbars[i] + Γ0_til)
     end
-    #save("/data/dsge_data_dir/dsgejl/william/policy/one_off/covid_exercises/System_2020_Q3/flexible_ait_2020Q3/save/uncertain_cond.jld2", Dict("cond_vec" => cond_vec))
 
     # Add terminal condition
     Tout[end] = Tzlbs[end]
