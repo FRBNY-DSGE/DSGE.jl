@@ -208,10 +208,6 @@ $(document).ready(function() {
       $('#documenter-themepicker option').each(function(i,e) {
         e.selected = (e.value === theme);
       })
-    } else {
-      $('#documenter-themepicker option').each(function(i,e) {
-        e.selected = $("html").hasClass(`theme--${e.value}`);
-      })
     }
   }
 })

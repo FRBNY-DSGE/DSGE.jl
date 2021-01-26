@@ -181,7 +181,7 @@ $(document).ready(function() {
   var store = {}
 
   documenterSearchIndex['docs'].forEach(function(e) {
-      store[e.location] = {title: e.title, category: e.category, page: e.page}
+      store[e.location] = {title: e.title, category: e.category}
   })
 
   $(function(){
@@ -221,11 +221,7 @@ $(document).ready(function() {
         data = store[result.ref]
         link = $('<a class="docs-label">'+data.title+'</a>')
         link.attr('href', documenterBaseURL+'/'+result.ref)
-        if (data.category != "page"){
-          cat = $('<span class="docs-category">('+data.category+', '+data.page+')</span>')
-        } else {
-          cat = $('<span class="docs-category">('+data.category+')</span>')
-        }
+        cat = $('<span class="docs-category">('+data.category+')</span>')
         li = $('<li>').append(link).append(" ").append(cat)
         searchresults.append(li)
       })
