@@ -258,9 +258,15 @@ function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = 
         if solution_method == :gensys
             # Determine which regimes should use gensys2/gensys
             if haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
-                first_gensys2_regime = if haskey(get_settings(m), :regime_eqcond_info)
-                    minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
+                if haskey(get_settings(m), :regime_eqcond_info)
+                    sorted_eqcond = sort!(collect(get_setting(m, :regime_eqcond_info)), by=x->x[1])
+                    first_gensys2_ind = findfirst(x->x[2].alternative_policy.key == :zero_rate, sorted_eqcond)
+                    first_gensys2_regime = !isnothing(first_gensys2_ind) ? sorted_eqcond[first_gensys2_ind][1] : nothing
                 else
+                    first_gensys2_regime = nothing
+                end
+                   # minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
+                if first_gensys2_regime == nothing
                     GensysError("No equilibrium conditions in any regime are being temporarily replaced, " *
                                 "but the setting :gensys2 is true.")
                 end
