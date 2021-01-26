@@ -243,7 +243,7 @@ function write_forecast_outputs(m::AbstractDSGEModel, input_type::Symbol,
                         # Initialize dataset
                         #pfile = file #.plain
                         dset = isdefined(HDF5, :create_dataset) ?
-                            HDF5.create_dataset(file, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims) :
+                            HDF5.create_dataset(file, "arr", datatype(Float64), dataspace(dims...); chunk = chunk_dims) :
                             HDF5.d_create(file, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
                     end
                 end
