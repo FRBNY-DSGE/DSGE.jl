@@ -373,7 +373,11 @@ function write_forecast_block(file, arr::Array,
     dims = size(dataset)
     ndims = length(dims)
     dataset[block_inds, fill(Colon(), ndims-1)...] = arr
-    HDF5.set_dims!(dataset, dims)
+    if isdefined(HDF5, :set_extent_dims)
+        HDF5.set_extent_dims(dataset, dims)
+    else
+        HDF5.set_dims!(dataset, dims)
+    end
 end
 
 """
