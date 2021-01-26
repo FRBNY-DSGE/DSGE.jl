@@ -19,9 +19,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
         T_prs, R_prs, C_prs = DSGE.gensys_uncertain_altpol(m, prob_vec, DSGE.AltPolicy[hist_rule],
                                                            apply_altpolicy = true)
         T_prs, R_prs, C_prs = DSGE.augment_states(m, T_prs, R_prs, C_prs)
-        #delete!(m.settings, :regime_eqcond_info)
 
-        #m <= Setting(:imperfect_awareness_weights, prob_vec)
         m <= Setting(:uncertain_altpolicy, true)
         TTT, RRR, CCC = solve(m) # check automatic calculation
         m <= Setting(:uncertain_altpolicy, false) # to make DSGE.gensys_uncertain_altpol above work
@@ -32,7 +30,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
 
         m <= Setting(:alternative_policy_weights, prob_vec)
         m <= Setting(:uncertain_altpolicy, true)
-        TTT, RRR, CCC = solve(m; apply_altpolicy = true) # check automatic calculation
+        TTT, RRR, CCC = solve(m) # check automatic calculation
         m <= Setting(:uncertain_altpolicy, false) # to make DSGE.gensys_uncertain_altpol above work
 
         @test TTT ≈ T_prs
@@ -81,7 +79,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     m <= Setting(:uncertain_altpolicy, true)
     @test !haskey(DSGE.get_settings(m), :gensys2)
     TTTs, RRRs, CCCs = solve(m; regime_switching = true,
-                             gensys_regimes = UnitRange{Int}[1:5], # gensys2_regimes = UnitRange{Int}[1:5],
+                             gensys_regimes = UnitRange{Int}[1:5],
                              regimes = collect(1:5))
 
     @test !(TTTs[2] ≈ T_ngdp)
@@ -95,7 +93,7 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
         get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
     end
     TTTs2, RRRs2, CCCs2 = solve(m; regime_switching = true,
-                                gensys_regimes = UnitRange{Int}[1:5], # gensys2_regimes = UnitRange{Int}[1:5],
+                                gensys_regimes = UnitRange{Int}[1:5],
                                 regimes = collect(1:5))
 
     @test !(TTTs2[2] ≈ TTTs[2])
