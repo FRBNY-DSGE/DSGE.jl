@@ -223,7 +223,6 @@ function forecast(system::System{S}, z0::Vector{S},
 
         # Change monetary policy shock to account for 0.13 interest rate bound
         if enforce_zlb
-            println("ENFORCING ZLB")
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
@@ -524,7 +523,6 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 end
             end
             m <= Setting(:regime_eqcond_info, replace_eqcond)
-@show replace_eqcond
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
