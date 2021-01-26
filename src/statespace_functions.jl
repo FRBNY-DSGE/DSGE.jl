@@ -1558,8 +1558,26 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; verbose::Symbol = :high) w
     CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
 
     for (i, regime_eqcond_info) in enumerate(tvis_regime_eqcond_info) # For each set of equilibrium conditions,
-        m <= Setting(:regime_eqcond_info, regime_eqcond_info)         # calculate the implied regime-switching system
-        TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; apply_altpolicy = apply_altpolicy, regime_switching = regime_switching,
+        # Update regime_eqcond_info and compute implied gensys/gensys2 regimes
+        if apply_altpolicy
+            m <= Setting(:regime_eqcond_info, regime_eqcond_info) # calculate the implied regime-switching system
+            first_gensys2_regime = minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
+        else
+            first_gensys2_regime = n_hist_regimes + 1
+        end
+        last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ?
+            first_gensys2_regime + get_setting(m, :temporary_zlb_length) : n_regimes
+        if get_setting(m, :gensys2)
+            gensys_regimes = [1:first_gensys2_regime-1]
+            if last_gensys2_regime != n_regimes
+                append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
+            end
+        else
+            gensys_regimes = [1:n_regimes]
+        end
+        gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
+
+        TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; regime_switching = regime_switching,
                                                       regimes = collect(1:n_regimes),
                                                       gensys_regimes = gensys_regimes,
                                                       gensys2_regimes = gensys2_regimes, verbose = verbose)
