@@ -81,33 +81,12 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     m <= Setting(:uncertain_altpolicy, false)
     m <= Setting(:uncertain_zlb, false)
 
-<<<<<<< HEAD
-    # Save this name to be replaced later
-    # altpol_vec_orig = get_setting(m, altpol_wts_name)
-
-    # Called taylor but should run whatever is specified as historical policy
-    ## either in alternative_policies or imperfect_credibility_historical_policy setting
-    #=    altpols = get_setting(m, :alternative_policies)
-    orig_replace_eqcond_func_dict = get_setting(m, :replace_eqcond_func_dict)
-    for altpol in altpols
-    m <= Setting(:replace_eqcond_func_dict, Dict(1 => altpol.replace_eq_entries)) # one possible way to get perfect credibility
-    system_altpol = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose) # of alternative policies
-    end=#
-    system_taylor = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
-    m <= Setting(:regime_eqcond_info, regime_info_copy)
-    m <= Setting(:gensys2, gensys2)
-
-    # n_altpolicies = vary_wt ? (length(first(values(altpol_wts))) - 1) : (length(altpol_wts) - 1)
-    # n_altpolicies = vary_wt ? length(first(values(altpol_wts))) : length(altpol_wts)
-    n_altpolicies = 1
-=======
     if !haskey(m.settings, :alternative_policies)
         m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
     end
 
     orig_altpol = get_setting(m, :alternative_policy)
     n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
->>>>>>> Add multiple altpolicies with uncertain_ZLB + tests for it
     system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
 
     m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
@@ -157,29 +136,11 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     if has_pseudo
         has_fwd_looking_pseudo = haskey(get_settings(m), :forward_looking_pseudo_observables)
     end
-#=
-    function get_meas(system::AbstractSystem, reg::Int; pseudo = false)
-        if typeof(system) == System{Float64} && !pseudo
-            return system.measurement
-        elseif typeof(system) == System{Float64} && pseudo
-            return system.pseudo_measurement
-        elseif typeof(system) == RegimeSwitchingSystem{Float64} && !pseudo
-            return system.measurements[reg]
-        elseif typeof(system) == RegimeSwitchingSystem{Float64} && pseudo
-            return system.pseudo_measurements[reg]
-        else
-            error("Incorrect System Type")
-        end
-    end
-=#
+
     ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-<<<<<<< HEAD
         new_wt = regime_eqcond_info[reg].weights
-=======
-        new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
 
->>>>>>> Add multiple altpolicies with uncertain_ZLB + tests for it
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
                 system_main.measurements[reg][:ZZ][m.observables[k], :] =
