@@ -451,7 +451,6 @@ end
     m <= Setting(:pgap_value, 12.0)
 
     m <= Setting(:gensys2, false) # don't treat as a temporary policy
-    @show get_setting(m, :regime_eqcond_info)
     sys1 = compute_system(m)
     #fcast_altperm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
     #                                       df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
@@ -469,13 +468,11 @@ end
 
     m <= Setting(:pgap_value, 12.0)
     m <= Setting(:pgap_type, :ngdp)
-    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(                                                          i => DSGE.EqcondEntry(DSGE.ngdp(), [1., 0.]) for i in 1:3))
+    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(i => DSGE.EqcondEntry(DSGE.ngdp(), [1., 0.]) for i in 1:3))
     m <= Setting(:replace_eqcond, true)
-    @show get_setting(m, :regime_eqcond_info)
     sys2 = compute_system(m)
 
     for i in 1:3
-        @show i
         @test !(sys1[1, :TTT] ≈ sys2[i, :TTT])
         @test !(sys1[2, :TTT] ≈ sys2[i, :TTT])
         @test sys1[3, :TTT] ≈ sys2[i, :TTT]

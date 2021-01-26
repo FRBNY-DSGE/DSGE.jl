@@ -63,28 +63,17 @@ Solves for the transition equation of `m` under a Taylor Rule.
 """
 function taylor_rule_eqcond(m::AbstractDSGEModel, reg::Int = 1)
 
+    # get the old indices
+    old_states = sort!(collect(values(m.endogenous_states)))
+    old_eqs    = sort!(collect(values(m.equilibrium_conditions)))
+
     # Get equilibrium condition matrices
-    Γ0_noaltpol, Γ1_noaltpol, C_noaltpol, Ψ_noaltpol, Π_noaltpol = eqcond(m, reg)
-
-    nstates = n_states(m)
-
-    # fill in new Γ0, Γ1, C, Ψ, Π
-    Γ0 = zeros(Float64, nstates, nstates)
-    Γ0[old_eqs, old_states] = Γ0_noaltpol
-
-    Γ1 = zeros(Float64, nstates, nstates)
-    Γ1[old_eqs, old_states] = Γ1_noaltpol
-
-    C  = zeros(Float64, nstates)
-    C[old_eqs, :] = C_noaltpol
-
-    Ψ  = zeros(Float64, nstates, n_shocks_exogenous(m))
-    Ψ[old_eqs, :] = Ψ_noaltpol
-
-    Π  = zeros(Float64, nstates, n_shocks_expectational(m))
-    Π[old_eqs, :] = Π_noaltpol
+    Γ0, Γ1, C, Ψ, Π = eqcond(m, reg)
 
     # Update parameters to regime `reg` since `eqcond` will reset to the first regime
+    # Note that this step is necessary (in general) since
+    # taylor_replace_eq_entries will use parameters as coefficients for
+    # the monetary policy rule
     for para in m.parameters
         if !isempty(para.regimes)
             if (haskey(get_settings(m), :model2para_regimes) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
@@ -98,7 +87,7 @@ function taylor_rule_eqcond(m::AbstractDSGEModel, reg::Int = 1)
     Γ0, Γ1, C, Ψ, Π = taylor_rule_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
 
     # Reset to the first regime
-    ModelConstructors.toggle_regime!(m.parameters)
+    ModelConstructors.toggle_regime!(m.parameters, 1)
 
     return Γ0, Γ1, C, Ψ, Π
 end
