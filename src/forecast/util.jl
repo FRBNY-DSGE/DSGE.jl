@@ -29,9 +29,9 @@ function n_forecast_draws(m::AbstractDSGEModel, input_type::Symbol)
         input_file = get_forecast_input_file(m, input_type)
         draws = h5open(input_file, "r") do file
             if get_setting(m, :sampling_method) == :MH
-                dataset = HDF5.o_open(file, "mhparams")
+                dataset = isdefined(HDF5, :open_object) ? HDF5.open_object(file, "mhparams") : HDF5.o_open(file, "mhparams")
             elseif get_setting(m, :sampling_method) == :SMC
-                dataset = HDF5.o_open(file, "smcparams")
+                dataset = isdefined(HDF5, :open_object) ? HDF5.open_object(file, "smcparams") : HDF5.o_open(file, "smcparams")
             else
                 throw("Invalid :sampling_method setting specification.")
             end

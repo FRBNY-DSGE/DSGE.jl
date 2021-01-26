@@ -130,9 +130,12 @@ function metropolis_hastings(proposal_dist::Distribution,
     # Open HDF5 file for saving parameter draws
     simfile     = h5open(savepath, "w")
     n_saved_obs = n_sim * n_param_blocks * (n_blocks - n_burn)
-    parasim     = d_create(simfile, "mhparams", datatype(Float64),
-                           dataspace(n_saved_obs, n_params),
-                           "chunk", (n_sim * n_param_blocks, n_params))
+    parasim     = isdefined(HDF5, :create_dataset) ?
+        HDF5.create_dataset(simfile, "mhparams", datatype(Float64),
+                            dataspace(n_saved_obs, n_params),
+                            "chunk", (n_sim * n_param_blocks, n_params)) :
+                                HDF5.d_create(simfile, "mhparams", datatype(Float64),
+                                              dataspace(n_saved_obs, n_params), "chunk", (n_sim * n_param_blocks, n_params))
 
     # Keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0.
