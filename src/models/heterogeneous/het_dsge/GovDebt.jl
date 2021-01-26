@@ -48,7 +48,7 @@ r = 0.01                        # 4 percent steady state annual real interest ra
 α = 0.3                         # capital share
 H = 1.0                         # aggregate hours worked
 δ  = 0.03                       # depreciation
-sH_over_sL = 1.2/0.8
+sH_over_sL = 1.2 / 0.8
 pLH = 0.1                       # prob of going from low to high persistent skill
 pHL = 0.1                      # prob of going fom
 γ = 0.#0.004                       # TFP growth
@@ -58,7 +58,7 @@ g = 1/(1-GoverY)                # steady state value of g_t, where G_t/Y_t = (1-
 In    = 0.443993816237631       # normalizing constant for the mollifier
 na = 300                         # cash on hand ditn grid points - set to smaller numbers for debugging
 ns = 2# 5                         # skill distribution grid points
-zlo =  1./3.                      # second income shock to mollify actual income
+zlo =  1. / 3.                      # second income shock to mollify actual income
 zhi = 2. - zlo                       # upper bound on this process
 BoverY = 0.26
 
@@ -102,11 +102,11 @@ T = Rk*k*ℯ^(-γ) - x - (1-(1/g))*y - ((1+r)*ℯ^(-γ)-1)*bg        # net trans
 function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat, pHL::AbstractFloat, ns::Int)
     f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
     ss_skill_distr = [pHL/(pLH+pHL); pLH/(pLH+pHL)]
-    slo = 1./(ss_skill_distr'*[1;sH_over_sL])
+    slo = 1. / (ss_skill_distr'*[1;sH_over_sL])
     sgrid = slo*[1;sH_over_sL]
     sscale = sgrid[2] - sgrid[1]
     swts     = (sscale/ns)*ones(ns) #quadrature weights
-    f = f1./repmat(swts',ns,1)
+    f = f1 ./ repmat(swts',ns,1)
     return (f, sgrid, swts)
 end
 (f, sgrid, swts) = persistent_skill_process(sH_over_sL, pLH, pHL, ns)
@@ -176,7 +176,7 @@ function dmollifier(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
     In = 0.443993816237631
     if x<ehi && x>elo
         temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
-        out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
+        out  = -(2*temp ./ ((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
     else
         out = 0.0
     end
@@ -186,7 +186,7 @@ end
 
 qp(z) = dmollifier(z,zhi,zlo)
 
-Win = 1./(5.+0.02*(repeat(agrid,ns)-5))
+Win = 1 ./ (5.+0.02*(repeat(agrid,ns)-5))
 Win = 2*ones(na*ns)/(ahi+alo)
 aswts = kron(swts,awts)
 

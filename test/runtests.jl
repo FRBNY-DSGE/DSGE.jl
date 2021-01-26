@@ -7,7 +7,7 @@ HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
             "abstractdsgemodel",
-            "abstractvarmodel",
+#=            "abstractvarmodel",
             "defaults",
             "parameters",
             "util",
@@ -115,13 +115,13 @@ my_tests = [
             # "models/heterogeneous/real_bond_mkup/real_bond_mkup",
             # "models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
             # "models/heterogeneous/one_asset_hank/one_asset_hank",
-            # "models/heterogeneous/one_asset_hank/interns",
+            # "models/heterogeneous/one_asset_hank/interns",=#
             ]
 
 if VERSION >= v"1.3"
     my_tests = vcat([
-                     "packet/packet", # These two tests generate segmentation fault errors
-                     "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1)
+#=                     "packet/packet", # These two tests generate segmentation fault errors
+                     "plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1)=#
                     ],
                     my_tests)
 end
