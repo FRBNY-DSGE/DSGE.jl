@@ -19,6 +19,7 @@
 + Fix accidental assumption that all fixed parameters occur at the end of the parameter vector in Metropolis-Hastings
 + Fix incorrect parameter blocking in Metropolis-Hastings
 + Refactor regime-switching code to make it easier to use and maintain
++ Update syntax for HDF5 deprecations
 
 # DSGE.jl 1.1.6
 ## Version Restrictions
