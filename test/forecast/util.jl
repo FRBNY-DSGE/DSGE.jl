@@ -86,9 +86,8 @@ if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(homedir(),".freddatarc"))
     ndraws = 10
     paras = load_draws(m, :full, 1:ndraws, verbose = :none)
 
-    forecast_outputs = map(p -> DSGE.forecast_one_draw(m, :full, :none, output_vars,
-                                                       p, df, verbose = :none),
-                           paras)
+    forecast_outputs = [DSGE.forecast_one_draw(m, :full, :none, output_vars, p, df, verbose = :none) for p in paras]
+
     forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
     out = DSGE.assemble_block_outputs(forecast_outputs)
     @testset "Testing assemble_block_outputs" begin
