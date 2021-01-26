@@ -51,7 +51,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
 
 [compat]
-BasisMatrices = "0.6"
+BasisMatrices = "0.6, 0.7"
 BenchmarkTools = "^0.4.3, 0.5"
 CSV = "0.8"
 Calculus = "0.4, 0.5"
