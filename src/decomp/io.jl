@@ -63,7 +63,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                 # to an h5. The data in the HDF5 will be transferred to the jld2
                 # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
                 # is executed.
-                JLD2.jldopen(filepath, "w") do file
+                JLD2.jldopen(filepath, true, true, true, IOStream) do file
                     # Write metadata
                     # Pass in m_old because its historical and forecast dates are used
                     write_forecast_metadata(m_old, file, var)
