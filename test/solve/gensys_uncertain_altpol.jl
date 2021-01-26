@@ -4,7 +4,7 @@ regen = false
 
 
 m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
-hist_rule = get_setting(m, :alternative_policy)
+hist_rule = DSGE.taylor_rule()
 m <= Setting(:alternative_policies, AltPolicy[hist_rule])
 m <= Setting(:alternative_policy, DSGE.ngdp())
 m <= Setting(:pgap_type, :ngdp)
@@ -15,9 +15,20 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
 
 @testset "Gensys when alternative policies are not credible" begin
     for (i, prob_vec) in enumerate([[1., 0.], [.5, .5], [.999, .001]])
+        m <= Setting(:regime_eqcond_info, Dict(1 => DSGE.EqcondEntry(DSGE.ngdp(), prob_vec)))
         T_prs, R_prs, C_prs = DSGE.gensys_uncertain_altpol(m, prob_vec, DSGE.AltPolicy[hist_rule],
                                                            apply_altpolicy = true)
         T_prs, R_prs, C_prs = DSGE.augment_states(m, T_prs, R_prs, C_prs)
+        #delete!(m.settings, :regime_eqcond_info)
+
+        #m <= Setting(:imperfect_awareness_weights, prob_vec)
+        m <= Setting(:uncertain_altpolicy, true)
+        TTT, RRR, CCC = solve(m) # check automatic calculation
+        m <= Setting(:uncertain_altpolicy, false) # to make DSGE.gensys_uncertain_altpol above work
+
+        @test TTT ≈ T_prs
+        @test RRR ≈ R_prs
+        @test CCC ≈ C_prs
 
         m <= Setting(:alternative_policy_weights, prob_vec)
         m <= Setting(:uncertain_altpolicy, true)
@@ -65,11 +76,12 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     setup_regime_switching_inds!(m)
 
     m <= Setting(:alternative_policies, AltPolicy[hist_rule])
-    m <= Setting(:alternative_policy_weights, [.5, .5])
+    m <= Setting(:replace_eqcond, true)
+    m <= Setting(:regime_eqcond_info, Dict(i => DSGE.EqcondEntry(DSGE.ngdp(), [.5, .5]) for i in 2:5))
     m <= Setting(:uncertain_altpolicy, true)
     @test !haskey(DSGE.get_settings(m), :gensys2)
-    TTTs, RRRs, CCCs = solve(m; apply_altpolicy = true, regime_switching = true,
-                             hist_regimes = collect(1:1), fcast_regimes = collect(2:5),
+    TTTs, RRRs, CCCs = solve(m; regime_switching = true,
+                             gensys_regimes = UnitRange{Int}[1:5], # gensys2_regimes = UnitRange{Int}[1:5],
                              regimes = collect(1:5))
 
     @test !(TTTs[2] ≈ T_ngdp)
@@ -79,9 +91,11 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
         @test CCCs[i] == CCCs[2]
     end
 
-    m <= Setting(:alternative_policy_weights, [1., 0.])
-    TTTs2, RRRs2, CCCs2 = solve(m; apply_altpolicy = true, regime_switching = true,
-                                hist_regimes = collect(1:1), fcast_regimes = collect(2:5),
+    for i in 2:5
+        get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
+    end
+    TTTs2, RRRs2, CCCs2 = solve(m; regime_switching = true,
+                                gensys_regimes = UnitRange{Int}[1:5], # gensys2_regimes = UnitRange{Int}[1:5],
                                 regimes = collect(1:5))
 
     @test !(TTTs2[2] ≈ TTTs[2])

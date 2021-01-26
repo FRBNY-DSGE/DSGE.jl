@@ -16,6 +16,10 @@ specified in their proper positions.
 * `Π`  (`n_states` x `n_states_expectational`) holds coefficients of expectational states.
 """
 function eqcond(m::AnSchorfheide)
+    return eqcond(m, 1)
+end
+
+function eqcond(m::AnSchorfheide, reg::Int)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -26,6 +30,17 @@ function eqcond(m::AnSchorfheide)
     C  = zeros(n_states(m))
     Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
     Π  = zeros(n_states(m), n_shocks_expectational(m))
+
+    # Regime-switching parameters
+    for para in m.parameters
+        if !isempty(para.regimes)
+            if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
+                toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
+            else
+                toggle_regime!(para, reg)
+            end
+        end
+    end
 
     ### ENDOGENOUS STATES ###
 
@@ -82,6 +97,13 @@ function eqcond(m::AnSchorfheide)
     Γ0[eq[:eq_Eπ], endo[:π_t]] = 1
     Γ1[eq[:eq_Eπ], endo[:Eπ_t]] = 1
     Π[eq[:eq_Eπ], ex[:Eπ_sh]] = 1
+
+    # Ensure parameter regimes are in 1 at the end
+    for para in m.parameters
+        if !isempty(para.regimes)
+            toggle_regime!(para, 1)
+        end
+    end
 
     return Γ0, Γ1, C, Ψ, Π
 end

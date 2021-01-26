@@ -14,7 +14,7 @@ were to implement another model using DSGE.jl, these procedures can also be used
 estimate those models.
 
 Please see
-[examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples) on the GitHub
+[examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples) on the GitHub
 or the equivalent folder inside your Julia packages directory for example scripts we have created.
 
 For getting started, see these two scripts.
@@ -28,6 +28,9 @@ For more advanced usage, see
 - `test_smc.jl`: use SMC to estimate DSGE models.
 - `decompose_forecast.jl`: understand why a forecast has changed by running a forecast decomposition
 - `regime_switching.jl`: set up a forecast with regime-switching in the history and forecast horizon
+- `uncertain_altpolicy_zlb.jl`: set up a forecast with a temporary ZLB and
+  imperfect awareness about the credibility of a policy switch to flexible AIT.
+- `tvis_system.jl`: set up a state space system and forecast with time-varying information sets
 - `run_dsgevar.jl`: estimate and analyze impulse responses for a `DSGEVAR`.
 - `run_dsgevecm.jl`: analyze impulse response for DSGE-VECMs.
 
@@ -35,7 +38,7 @@ For more advanced usage, see
 
 To estimate and forecast in Julia, simply create an instance of the model object
 and call `estimate` and `forecast_all`. A minimal
-[example](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/docs/examples/run_default.jl)
+[example](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples/run_default.jl)
 is reproduced below.
 
 ```julia

@@ -4,14 +4,14 @@ using ModelConstructors, Nullables, Dates, OrderedCollections
 prob_vecs = [[1., 0.], [.5, .5], [0., 1.]]
 Hbar_vec = [14, 10, 6]
 
-m = Model1002("ss59"; custom_settings = Dict{Symbol, Setting}(:flexible_ait_2020Q3_policy_change =>
-                                                              Setting(:flexible_ait_2020Q3_policy_change,
+m = Model1002("ss59"; custom_settings = Dict{Symbol, Setting}(:flexible_ait_policy_change =>
+                                                              Setting(:flexible_ait_policy_change,
                                                                       false),
                                                               :add_pgap => Setting(:add_pgap, false),
                                                               :add_ygap => Setting(:add_ygap, false),
                                                               :add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
                                                               :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true))) # Set to false unless you want to re-generate any saved output
-m <= Setting(:flexible_ait_2020Q3_policy_change, false) # Set to false unless you want to re-generate any saved output
+m <= Setting(:flexible_ait_policy_change, false) # Set to false unless you want to re-generate any saved output
 m <= Setting(:date_forecast_start, Date(2020, 6, 30))
 m <= Setting(:date_conditional_end, Date(2020, 6, 30))
 m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, # Have to add anticipated rates to conditional data
@@ -25,10 +25,10 @@ m <= Setting(:cond_semi_names, [:obs_spread,
 
 output_vars = [:histobs, :forecastobs, :histpseudo, :forecastpseudo]
 
-df_full = DataFrame(CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv")))
+df_full = CSV.read(joinpath(dirname(@__FILE__), "../reference/uncertain_altpolicy_data.csv"), DataFrame)
 modal_params = map(x -> x.value, m.parameters)
 
-hist_rule = get_setting(m, :alternative_policy)
+hist_rule = DSGE.taylor_rule()
 setup_regime_switching_inds!(m; cond_type = :full) # Reset the regime dates b/c using full conditional forecast
 
 # Set up parameters
@@ -75,9 +75,7 @@ T_unc = Dict()
 R_unc = Dict()
 C_unc = Dict()
 for j in 1:length(prob_vecs)
-    m <= Setting(:alternative_policy_weights, prob_vecs[j])
-    T_unc[j], R_unc[j], C_unc[j] = DSGE.gensys_uncertain_altpol(m, prob_vecs[j], DSGE.AltPolicy[hist_rule],
-                                                                apply_altpolicy = true)
+    T_unc[j], R_unc[j], C_unc[j] = DSGE.gensys_uncertain_altpol(m, prob_vecs[j], DSGE.AltPolicy[hist_rule])
     T_unc[j], R_unc[j], C_unc[j] = DSGE.augment_states(m, T_unc[j], R_unc[j], C_unc[j])
 end
 
@@ -102,8 +100,6 @@ baseline_fcasts = DSGE.forecast_one_draw(m, :mode, :full, vcat(:forecaststates, 
 
 # Now calculate everything else
 for j in 1:length(prob_vecs)
-    m <= Setting(:alternative_policy_weights, prob_vecs[j])
-
     # Set up initial state
     s₀ = baseline_fcasts[:forecaststates][:, 1]
 
@@ -121,14 +117,13 @@ for j in 1:length(prob_vecs)
 
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:gensys2, true)
-    m <= Setting(:temporary_altpolicy, true)
-    m <= Setting(:gensys2_separate_cond_regimes, true)
-    replace_eqcond = Dict{Int, Function}()     # Which rule to replace with in which periods
+    m <= Setting(:gensys2_separate_cond_regimes, true) # required b/c not using an alternative policy technically
+    replace_eqcond = Dict{Int, DSGE.EqcondEntry}()     # Which rule to replace with in which periods
     for regind in tempZLB_regimes[j]
-        replace_eqcond[regind] = DSGE.zero_rate_replace_eq_entries # Temp ZLB rule in this regimes
+        replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), prob_vecs[j]) # Temp ZLB rule in this regimes
     end
-    # replace_eqcond[tempZLB_regimes[j][end]] = DSGE.eqcond # Will set the "lift-off" regime directly
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond)
+    replace_eqcond[tempZLB_regimes[j][end]+1] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), prob_vecs[j]) # Will set the "lift-off" regime directly
+    m <= Setting(:regime_eqcond_info, replace_eqcond)
     fcasts[j] = deepcopy(baseline_fcasts)
 
     # Set up matrices for regime-switching. Note that we have
@@ -147,14 +142,14 @@ for j in 1:length(prob_vecs)
     # Automatic calculation
     m <= Setting(:uncertain_altpolicy, true)
     m <= Setting(:uncertain_zlb, true)
-    autoTs[j], autoRs[j], autoCs[j] = solve(m; apply_altpolicy = true, regime_switching = true,
-                                            hist_regimes = collect(1:get_setting(m, :n_hist_regimes)),
-                                            fcast_regimes =
-                                            collect((get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)),
+    autoTs[j], autoRs[j], autoCs[j] = solve(m; regime_switching = true,
+                                            gensys_regimes = [1:get_setting(m, :n_hist_regimes) + 1],
+                                            gensys2_regimes =
+                                            [(get_setting(m, :n_hist_regimes) + 1):get_setting(m, :n_regimes)],
                                             regimes = collect(1:get_setting(m, :n_regimes)))
     auto_fcasts[j] = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params,
-                                                                                df_full; regime_switching = true, n_regimes =
-                                                                                get_setting(m, :n_regimes))
+                                            df_full; regime_switching = true, n_regimes =
+                                            get_setting(m, :n_regimes))
     m <= Setting(:uncertain_altpolicy, false) # Need to turn these off afterward
     m <= Setting(:uncertain_zlb, false)
 
@@ -163,16 +158,16 @@ for j in 1:length(prob_vecs)
     # Only need to fill up the matrices for the forecast regimes for this part
     for fcast_reg in 3:length(TTTs_uzlb)
         Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =
-            eqcond(m, fcast_reg)
+        DSGE.zero_rate().eqcond(m, fcast_reg)
     end
-    TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = solve(m; apply_altpolicy = true)
+    TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = solve(m)
     TTT_gensys_final = TTT_gensys_final[1:n_states(m), 1:n_states(m)]
     RRR_gensys_final = RRR_gensys_final[1:n_states(m), :]
     CCC_gensys_final = CCC_gensys_final[1:n_states(m)]
 
     # Calculate temp ZLB regimes under assumption smooth AIT-GDP occurs forever after ZLB ends
     gensys2_regimes = (tempZLB_regimes[j][1] - 1):(tempZLB_regimes[j][end] + 1)
-    Tcal, Rcal, Ccal = DSGE.gensys_cplus(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
+    Tcal, Rcal, Ccal = DSGE.gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                          Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                          TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
     Tcal[end] = TTT_gensys_final

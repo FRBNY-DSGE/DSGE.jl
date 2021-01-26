@@ -208,24 +208,25 @@ m = Model990(custom_settings = custom_settings, testing = true)
 
 Forecasts can involve state-space systems with exogenous and unanticipated regime-switching
 in the history periods and forecast horizon. Anticipated temporary alternative policies
-can also occur in the forecast horizon. Historical
+can also occur in both the history and the forecast horizon. Historical
 regime switching may occur to reflect structural breaks or
 to allow a DSGE to handle special circumstances, such as the COVID-19 pandemic.
-Regime switches in the forecast horizon may occur because of
-temporary alternative policies. In a rational expectations equilibrium,
+Regime switches in the forecast horizon may occur because agents
+expect a ZLB until some date in the future. In a rational expectations equilibrium,
 agents will behave differently if they know a forecasted policy is temporary
 rather than permanent. Using exogenous regime-switching along with a modified
 `gensys` solution algorithm is one way of implementing this expectation.
+See [Regime-Switching](@ref solveregswitch) for more details on the solution algorithm.
 
 In this section, we will go over the interface for running
 regime-switching forecasts and discuss some details of the implementation.
 It is useful to also look at the posted
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl) for regime-switching.
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl) for regime-switching.
 To understand how to implement your own regime-switching model, we recommend
 examining the implementation of [regime-switching
 equilibrium conditions](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
 for `Model1002` and how it is integrated with our [solvers](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/solve/solve.jl).
-For a guide to running temporary alternative policies, please see [Alternative Policies](@ref).
+For a guide to running permanent and/or temporary alternative policies, please see [Alternative Policies](@ref).
 
 ### Preparing a Model's Settings for Regime-Switching
 
@@ -249,7 +250,7 @@ the regime number to the first date (inclusive) of that regime.
 Before running a forecast, we must also run
 
 ```
-setup_regime_switching_inds!(m)
+setup_regime_switching_inds!(m; cond_type = cond_type)
 ```
 
 which will automatically compute the (required) settings
@@ -260,48 +261,235 @@ which will automatically compute the (required) settings
 - `:n_hist_regimes`: Number of regimes in the history
 - `:n_fcast_regimes`: Number of regimes in the forecast horizon (including the conditional forecast)
 - `:n_cond_regimes`: Number of regimes in the conditional forecast
+- `:n_rule_periods`: Number of regimes when using a temporary alternative policy
+
+These settings will generally depend on whether the forecast is conditional or not,
+so the user needs to pass in `cond_type = :full` or `cond_type = :semi` to `setup_regime_switching_inds!`
+if the user wants a forecast with correct regime-switching.
 
 Finally, to run a full-distribution forecast with regime-switching
 using `forecast_one` or `usual_model_forecast`, it is necessary to manually
 construct the matrix of parameter draws and pass them as an input with the keyword `params`.
 Currently, we have not fully implemented loading parameters from a saved estimation file.
 For an example about how to do this, see this
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl).
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
 
+### [Time-Varying Information Sets](@id tvis)
+In many applications with regime-switching, changes in information sets may occur.
+For example, say in 1959:Q1 - 2007:Q3, people expected the Federal Reserve to always
+use a Taylor-style monetary policy rule. But in 2007:Q4, people realize that the Federal
+Reserve will implement a zero lower bound for `N` periods before switching back to the
+Taylor-style rule. The measurement equation used in 2007:Q4 and subsequent periods need
+to account for this change in the information set. In particular, quantities like
+anticipated nominal rates and 10Y inflation rates involve forecasting the expected
+state of the economy. If the transition matrices (e.g. `TTT`) are time-varying, and
+agents' information set includes knowledge that the matrices are time-varying, then
+the measurement equation should account for it. Explicitly, assume the state space
+evolves according to
+```math
+\begin{aligned}
+s_t = T_t s_{t - 1} + R_t \varepsilon_t + C_t.
+\end{aligned}
+```
+
+If in period `t`, the measurement equation includes the anticipated nominal rate
+in ``k`` periods, and agents know that the transition equations are time-varying over some horizon ``H``,
+then we need to calculate that expectation taking into account that agents know about
+the time variation in the matrices, e.g. ``T_{t + 1}, \dots, T_{t + H}``. This approach
+allows for varying degrees of myopia, e.g. ``H = 0`` implies that agents do not know about
+any time variation while ``H < k`` captures the case that agents only know about the
+time variation up to a certain horizon forward.
+
+To help the user write the correct measurement equation with time-varying transition equations,
+we have implemented the following two functions:
+
+```@docs
+DSGE.k_periods_ahead_expectations
+DSGE.k_periods_ahead_expected_sums
+```
+
+See the [measurement equation for Model 1002](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/model/representative/m1002/measurement.jl)
+for an example of how these functions are used.
+
+For details on how we implement a state space system with time-varying information sets,
+see [The `TimeVaryingInformationSetSystem` Type](@ref tvistype). For guidance on how to use this type,
+e.g. calculating forecats, see this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/tvis_system.jl).
 
 ### Available Types of Regime Switching
 
-There are two cases involving regime switching that are implemented in DSGE.jl
+There are three cases involving regime switching that are implemented in DSGE.jl
 
-- Regime switching parameters
-- Temporary alternative policies
+- Exogenous and unanticipated regime switching (e.g. unanticipated regime-switching parameters)
+- Alternative policies (temporary and permanent)
+- Time-varying information sets
 
-To implement regime-switching parameters, see the
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/regime_switching.jl) for a regime-switching forecast.
-For further details, see
-the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl),
-which implements regime-switching parameters.
+To implement regime-switching parameters or use temporary alternative policies, see this
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl) for regime-switching forecasts.
+This [documentation on temporary alternative policies](@ref tempaltpol-procedure) will also be helpful.
+For further details on regime-switching parameters, see
+the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
+To implement time-varying information sets, see
+this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/tvis_system.jl).
 
 Once the regime-switching settings are properly created, the syntax for running a forecast
 is the same as when there is no regime-switching. See [Forecasting](@ref).
 
 ### Handling of the Zero Lower Bound (ZLB)
 
-Technically speaking, the New York Fed DSGE model handles the ZLB as a separate regime
-in which anticipated monetary policy shocks become "alive" and have positive
-standard deviations. However, the ZLB is not implemented
+The New York Fed DSGE model can handle the ZLB in two ways.
+
+In the first way, the New York Fed DSGE model treats the ZLB as a temporary alternative policy
+over a pre-specified horizon. In the second way, the New York Fed DSGE model treats the ZLB as a
+separate regime in which anticipated monetary policy shocks become "alive" and have positive
+standard deviations. However, this second form of the ZLB is not implemented
 as a separate regime. The reason is the only difference in the "pre-ZLB" and "post-ZLB"
 regimes is whether or not anticipated monetary policy shocks are non-zero. For an example, see
 the [smoothing code](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/forecast/smooth.jl)
 as well as the auxiliary functions `zlb_regime_matrices` and `zlb_regime_indices`
 in this [file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/estimate/kalman.jl).
 
-
 This approach saves computational time. Rather than creating redundant matrices,
 we directly zero/un-zero the appropriate entries in the pre- and post-ZLB `QQ` matrices.
 This approach also economizes on unnecessary switching,
 For instance, during the calculation of shock decompositions and trends, it is unnecessary
 to distinguish between the pre- and post-ZLB regimes.
+
+## [Alternative Policy Uncertainty and Imperfect Awareness](@id uncertainaltpol)
+The standard alternative policy code assumes that people completely believe the change in policy.
+However, in many cases, the more realistic modeling choice is assuming some uncertainty
+or imperfect awareness/credibility about the policy change. This approach can also partially address the concern
+that expectations have counterfactually strong effects in standard DSGEs (e.g. the forward guidance puzzle).
+
+### Theory
+We model imperfect awareness by assuming there are ``n`` possible alternative policies
+that may occur tomorrow and ``n`` probability weights assigned to each policy. Further, it is believed
+that the alternative policy which occurs tomorrow will be permanent. One of the policies is
+the alternative policy which is actually implemented. The function
+[`gensys_uncertain_altpol`](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/src/solve/gensys_uncertain_altpol.jl)
+calculates the state space transition equation implied by these beliefs.
+A typical application is assuming that with probability ``p`` some alternative policy occurs tomorrow
+and with probability ``1-p`` the historical policy occurs tomorrow.
+
+Imperfect awareness can occur in multiple periods and feature time-varying credibility by assuming myopia.
+For example, say agents in period ``t`` believe the central bank will implement AIT in ``t + 1`` and all
+subsequent periods with probability ``p_t`` and the historical rule otherwise. After period ``t + 1`` occurs and
+the central bank actually implements AIT, agents again believe that in period ``t + 2`` and all subsequent periods,
+the central bank will implement AIT with probability ``p_{t + 1}`` and the historical rule otherwise.
+
+Imperfect awareness is robust to temporary alternative policies but requires the algorithm to account
+for time variation in the transition equation. In particular, we need to first compute
+the entire sequence of transition equations under the temporary alternative policy with
+perfect credibility. Once this sequence is available, we can then treat
+the temporary alternative policy as the alternative policy which is actually implemented
+and apply the same calculations described in the previous paragraph to each period of the temporary alternative policy.
+\emph{Note, however, that this functionality is currently available only for temporary ZLBs}.
+
+### Implementation
+
+To apply imperfect awareness, the user needs to specify the possible alternative policies
+and the probability weights on these policies.
+
+The alternative policy which is actually implemented should be
+added to the `:regime_eqcond_info` dictionary as an `EqcondEntry`, e.g.
+
+```
+get_setting(m, :regime_eqcond_info)[2] = DSGE.EqcondEntry(DSGE.ngdp())
+```
+
+The other alternative policies that agents believe may occur are then added as follows:
+
+```
+m <= Setting(:alternative_policies, [altpolicy1, altpolicy2]) # altpolicy1 and altpolicy2 are AltPolicy instances
+```
+
+The user specifies the probability weights when creating the `EqcondEntry` instance
+for the `:regime_eqcond_info` dictionary, e.g.
+
+```
+DSGE.EqcondEntry(DSGE.ngdp(), [p_t, 1 - p_t])
+```
+
+This approach permits time-variation in the probability weight because the user can use different `p_t`
+for each regime, e.g.
+
+```
+get_setting(m, :regime_eqcond_info)[2] = DSGE.EqcondEntry(DSGE.ngdp(), [.5, .5])
+get_setting(m, :regime_eqcond_info)[3] = DSGE.EqcondEntry(DSGE.ngdp(), [1., 0.])
+```
+
+Finally, before solving for the state space system or running forecasts, the user needs to add the line
+
+```
+m <= Seting(:uncertain_altpolicy, true)
+```
+
+To use imperfect awareness with a temporary ZLB, the user needs to also add the following lines to
+the model's setup:
+
+```
+m <= Setting(:uncertain_zlb, true)
+m <= Setting(:temporary_zlb_length, n_zlb_regs)
+```
+
+The first line tells that a temporary ZLB with imperfect awareness should apply.
+The second line indicates the number of regimes for which the ZLB occurs. If the second line is not specified,
+then it is assumed that all regimes in `get_setting(m, :regime_eqcond_info)` except the last one
+are ZLB regimes. This assumption can be wrong, for example, if credibility changes after the ZLB ends.
+
+For further guidance on adding imperfect awareness, please see the script
+[uncertain_altpolicy_zlb.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples/uncertain_altpolicy_zlb.jl).
+
+### Forward-Looking Variables in the Measurement and Pseudo-Measurement Equations
+The measurement and pseudo-measurement equations often include "forward-looking" observables, such as
+the anticipated nominal interest rate and the expected average inflation rate over the next ten years.
+The measurement equations for these observables are therefore affected when imperfect awareness is assumed.
+Say ``ZZ_1`` and ``ZZ_2`` are the measurement equation matrices mapping states to observables under two different
+monetary policy rules which may occur and that all the observables are forward-looking.
+For simplicity, additionally assume that the associated ``DD_1`` and ``DD_2`` are both zero.
+Because agents at the end of period ``t`` believe that either policy 1 or policy 2 occurs permanently in period ``t + 1``,
+the measurement equation agents use to map states to data is just the weighted average
+of the measurement matrices, i.e.
+
+```math
+\begin{aligned}
+ZZ = p ZZ_1 + (1 - p) ZZ_2
+\end{aligned}
+```
+
+The reason is that, conditional on alternative policy 1 occurring, the observables in ``t + 1`` should be
+
+```math
+\begin{aligned}
+\mathbb{E}_t[y_{t + 1} \mid \text{policy 1}] & = ZZ_1 \mathbb{E}_t[s_{t + 1} \mid \text{policy 1}].
+\end{aligned}
+```
+
+Similarly, if policy 2 occurs, then
+
+```math
+\begin{aligned}
+\mathbb{E}_t[y_{t + 1} \mid \text{policy 2}] & = ZZ_2 \mathbb{E}_t[s_{t + 1} \mid \text{policy 2}].
+\end{aligned}
+```
+
+The law of iterated expectations gives us the desired result.
+
+The user does not need to worry about coding their measurement equations to account for this,
+as long as the measurement equation will properly compute ``ZZ_i``,
+given the policies specified in the settings `:regime_eqcond_info` and `:alternative_policies`.
+DSGE.jl will handle the calculation of the convex combinations under the hood. The only setting
+which users are advised to add is one that indicates which rows of ``ZZ``
+are associated with forward-looking observables, e.g.
+
+```
+m <= Setting(:forward_looking_observables, [:obs_longinflation, :obs_nominalrate1])
+m <= Setting(:forward_looking_pseudo_observables, [:Expected10YearNaturalRate])
+```
+
+If such a setting exists, then DSGE.jl will only calculate the weighted average for the
+rows associated with these observables/pseudo-observables. Otherwise, we
+compute the weighted average of the different measurement matrices. This latter approach
+will always work, but it comes at the cost of unnecessary operations.
 
 ## Automatically Generating Anticipated Shocks
 

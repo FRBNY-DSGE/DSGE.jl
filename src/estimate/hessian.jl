@@ -1,21 +1,24 @@
 """
 ```
 hessian!(m::Union{AbstractDSGEModel,AbstractVARModel}, x::Vector{T}, data::AbstractArray;
-         verbose::Symbol = :none) where {T<:AbstractFloat}
+    check_neg_diag::Bool = true, toggle::Bool = false,
+    verbose::Symbol = :none) where {T<:AbstractFloat}
 ```
 
 Compute Hessian of DSGE/VAR posterior function evaluated at x.
 """
 function hessian!(m::Union{AbstractDSGEModel,AbstractVARModel},
-                  x::Vector{T},
-                  data::AbstractArray; check_neg_diag::Bool = true,
-                  verbose::Symbol = :none) where T<:AbstractFloat
+                  x::Vector{T}, data::AbstractArray; check_neg_diag::Bool = true,
+                  toggle::Bool = true, verbose::Symbol = :none) where T<:AbstractFloat
+
+    regime_switching = haskey(get_settings(m), :regime_switching) &&
+        get_setting(m, :regime_switching)
 
     DSGE.update!(m, x)
 
     # Index of free parameters
-    para_free      = [!θ.fixed for θ in get_parameters(m)]
-    para_free_inds = findall(para_free)
+    para_free_inds = ModelConstructors.get_free_para_inds(get_parameters(m);
+                                                          regime_switching = regime_switching, toggle = toggle)
 
     # Compute hessian only for freem parameters with indices less than max. Useful for
     # testing purposes.

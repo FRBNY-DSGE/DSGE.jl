@@ -89,6 +89,7 @@ m_rs.settings[:regime_dates] = Setting(:regime_dates,
                                        Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2010, 3, 31), 3 => Date(2012, 9, 30)))
 m_rs.test_settings[:regime_dates] = Setting(:regime_dates,
                                             Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2010, 3, 31), 3 => Date(2012, 9, 30)))
+setup_regime_switching_inds!(m_rs)
 df = load("$path/../reference/regime_switch_data.jld2", "none")
 
 for i in 1:3

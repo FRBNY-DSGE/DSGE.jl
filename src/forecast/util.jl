@@ -64,13 +64,11 @@ function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_in
         end_ind   = ndraws
     else
         if input_type == :full || input_type == :prior || input_type == :init_draw_shocks || input_type == :mode_draw_shocks
-            regime_switching = (haskey(m.settings, :regime_switching) && haskey(m.settings, :regime_switching_ndraws)) ?
-                get_setting(m, :regime_switching) : false
             set_ndraw = haskey(m.settings, :forecast_ndraws) ? get_setting(m, :forecast_ndraws) : 0
             if set_ndraw > 0
                 ndraws = set_ndraw
             else
-                ndraws = regime_switching ? get_setting(m, :regime_switching_ndraws) : n_forecast_draws(m, :full)
+                ndraws = n_forecast_draws(m, :full)
             end
             jstep     = get_jstep(m, ndraws)
             start_ind = 1
@@ -391,7 +389,13 @@ function get_forecast_output_dims(m::AbstractDSGEModel, input_type::Symbol, outp
     if prod == :trend
         regime_switching = haskey(m.settings, :regime_switching) ? get_setting(m, :regime_switching) : false
         if regime_switching
-            return (ndraws, nvars, get_setting(m, :n_regimes))
+            if haskey(get_settings(m), :time_varying_trends) && get_setting(m, :time_varying_trends)
+                start_date = get(get_setting(m, :shockdec_startdate))
+                end_date = max(prev_quarter(date_forecast_start(m)), date_forecast_end(m))
+                return (ndraws, nvars, DSGE.subtract_quarters(end_date, start_date)+1)
+            else regime_switching
+                return (ndraws, nvars, get_setting(m, :n_regimes))
+            end
         else
             return (ndraws, nvars)
         end

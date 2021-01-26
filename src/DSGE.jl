@@ -129,10 +129,8 @@ module DSGE
         decompose_forecast, decomposition_means,
 
         # altpolicy/
-        AltPolicy, taylor93, taylor99, alt_inflation,
-        ait, ait_replace_eq_entries, ait_solve, ait_eqcond,
-        ngdp, ngdp_replace_eq_entries, ngdp_solve, ngdp_eqcond,
-        zero_rate,  zero_rate_replace_eq_entries, zero_rate_solve, zero_rate_eqcond,
+        AltPolicy, EqcondEntry, setup_permanent_altpol!, default_policy, taylor93, taylor99, taylor_rule,
+        alt_inflation, ait, ngdp, zero_rate, flexible_ait, smooth_ait_gdp_alt,
 
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
@@ -196,7 +194,8 @@ module DSGE
     include("abstractvarmodel.jl")
     include("defaults.jl")
     include("models/poolmodel/poolmodel.jl")
-    include("statespace.jl")
+    include("statespace_types.jl")
+    include("statespace_functions.jl")
     include("util.jl")
     include("grids.jl")
 
@@ -276,8 +275,10 @@ module DSGE
     include("decomp/meansbands.jl")
 
     include("altpolicy/altpolicy.jl")
+    include("altpolicy/default_policy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
+    include("altpolicy/taylor_rule.jl")
     include("altpolicy/alt_inflation.jl")
     include("altpolicy/ait.jl")
     include("altpolicy/ngdp_target.jl")
@@ -334,7 +335,6 @@ module DSGE
     include("models/representative/m1002/pseudo_observables.jl")
     include("models/representative/m1002/pseudo_measurement.jl")
     include("models/representative/m1002/augment_states.jl")
-    include("models/representative/m1002/taylor_rule.jl")
 
     include("models/representative/m1010/m1010.jl")
     include("models/representative/m1010/subspecs.jl")

@@ -698,7 +698,7 @@ function ss30!(m::Model1002)
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
@@ -711,8 +711,12 @@ function ss30!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 end
 
@@ -775,10 +779,13 @@ function ss59!(m::Model1002)
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    # if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+    #     m <= Setting(:model2para_regime, Dict{Symbol, Dict{Int, Int}}()) # initialize
+    # end
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
@@ -791,8 +798,12 @@ function ss59!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
@@ -875,6 +886,8 @@ function ss59!(m::Model1002)
                        tex_label=@sprintf("\\sigma_{ant%d}",i))
     end
 
+    # TODO: add functionality for different model regimes from parameter regimes by
+    #       creating the Setting model2para_regime.
     # Define regimes for standard shocks
     for i in 1:4
         adj = (i == 2 || i == 3) ? .25 : 1.
@@ -958,10 +971,13 @@ function ss60!(m::Model1002)
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    # if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+    #     m <= Setting(:model2para_regime, Dict{Symbol, Dict{Int, Int}}()) # initialize
+    # end
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
@@ -974,8 +990,12 @@ function ss60!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero
@@ -1137,10 +1157,13 @@ function ss61!(m::Model1002)
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30)))
+    # if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+    #     m <= Setting(:model2para_regime, Dict{Symbol, Dict{Int, Int}}()) # initialize
+    # end
     setup_regime_switching_inds!(m)
 
     # Default settings for flexible AIT rule
-    if get_setting(m, :flexible_ait_2020Q3_policy_change)
+    if get_setting(m, :flexible_ait_policy_change)
         m <= Setting(:pgap_type, :flexible_ait)
         m <= Setting(:pgap_value, 0.)
         m <= Setting(:ygap_type, :flexible_ait)
@@ -1153,8 +1176,12 @@ function ss61!(m::Model1002)
         m <= Setting(:flexible_ait_φ_y, 6.)
 
         # Set up imperfect credibility of flexible AIT rule
-        m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
-        m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        if !haskey(get_settings(m), :imperfect_credibility_weights)
+            m <= Setting(:imperfect_credibility_weights, [1., 0.]) # default to perfect credibility
+        end
+        if !haskey(get_settings(m), :imperfect_credibility_historical_policy)
+            m <= Setting(:imperfect_credibility_historical_policy, taylor_rule())
+        end
     end
 
     # Allow the lower bound of non-COVID-19 parameters to equal zero

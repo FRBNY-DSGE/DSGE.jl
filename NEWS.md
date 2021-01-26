@@ -1,4 +1,16 @@
-# DSGE.jl 1.1.7 (in development)
+# DSGE.jl 1.2
+## Version Restrictions
++ Minimum CSV version is v0.8
++ Minimum ModelConstructors version is v0.2.4
+
+## New features and enhancements
++ Functions for calculating k-period ahead expectations and sums for measurement equation
++ Time-varying information sets for regime-switching
++ Time-varying imperfect awareness/credibility
++ Ability to use temporary policies during history (previously only available as alternative policy during forecast)
++ Refactor alternative policy code to use regime-switching
++ Regime-switching allowed during forecast for shock decompositions, deterministic trends, and trends
++ Regime-switching estimation of DSGE models using MH and SMC
 
 ## Bug fixes and cleanup
 + Fix error in calculating the diagonal of the Hessian with parallel workers
@@ -6,6 +18,7 @@
 + Convert missing values to NaNs when calculating means and bands
 + Fix accidental assumption that all fixed parameters occur at the end of the parameter vector in Metropolis-Hastings
 + Fix incorrect parameter blocking in Metropolis-Hastings
++ Refactor regime-switching code to make it easier to use and maintain
 
 # DSGE.jl 1.1.6
 ## Version Restrictions

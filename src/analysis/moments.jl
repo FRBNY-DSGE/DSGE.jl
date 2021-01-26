@@ -123,10 +123,10 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
                 post_ub[i] = quantile(params[i, :], .95)
             end
         end
-    end
 
-    df[!,:post_lb] = post_lb
-    df[!,:post_ub] = post_ub
+        df[!,:post_lb] = post_lb
+        df[!,:post_ub] = post_ub
+    end
 
     return df
 end

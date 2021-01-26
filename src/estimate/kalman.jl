@@ -248,7 +248,7 @@ function regime_indices(m::AbstractDSGEModel{S}, start_date::Dates.Date = date_p
     T = subtract_quarters(end_date, start_date) + 1
 
     n_regime_periods = Vector{Int}(undef, length(get_setting(m, :regime_dates)))
-    last_regime = findfirst(values(get_setting(m, :regime_dates)) .> end_date) # Last regime based on end date
+    last_regime = findfirst(sort!(collect(values(get_setting(m, :regime_dates)))) .> end_date) # Last regime based on end date
     if isnothing(last_regime)
         last_regime = length(get_setting(m, :regime_dates))
     end
@@ -261,6 +261,9 @@ function regime_indices(m::AbstractDSGEModel{S}, start_date::Dates.Date = date_p
         regime_inds[reg] = (n_regime_periods[reg] + 1):n_regime_periods[reg + 1]
     end
     regime_inds[end] = (n_regime_periods[last_regime] + 1):T
+    if length(regime_inds[end]) == 0 # Last regime is empty so just delete it
+        pop!(regime_inds)
+    end
 
     return regime_inds
 end

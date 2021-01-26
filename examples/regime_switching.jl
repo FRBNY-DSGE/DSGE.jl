@@ -22,8 +22,8 @@ fn = dirname(@__FILE__)
 run_full_forecast = true  # Run full distribution forecast
 temp_alt          = true  # Temporary NGDP targeting?
 perm_alt          = true  # Permanent NGDP targeting?
-make_plots        = false  # Make plots
-save_plots        = false  # Save plots to figurespath(m, "forecast")
+make_plots        = true  # Make plots
+save_plots        = false # Save plots to figurespath(m, "forecast")
 add_workers       = false # Run in parallel
 n_workers         = 10
 
@@ -32,17 +32,18 @@ custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altp
 m = Model1002("ss10"; custom_settings = custom_settings)   # We will directly construct the matrix of parameter draws
 m10 = Model1002("ss10") # b/c loading from a saved estimation file has not been fully implemented
 
-for models in [m, m10]
+for model in [m, m10]
     # Not strictly necessary to have the same settings, but it makes it easier for us
-    m <= Setting(:sampling_method, :MH)
-    usual_model_settings!(m, "181115"; cdvt = "181115", fcast_date = quartertodate("2018-Q4"))
-    m <= Setting(:use_population_forecast, false)
-    m <= Setting(:saveroot, joinpath("$(fn)", "..", "..", "save"))
-    m <= Setting(:dataroot, joinpath("$(fn)", "..", "..", "save", "input_data"))
-    m <= Setting(:date_forecast_end, quartertodate("2030-Q1"))
-    m <= Setting(:forecast_block_size, 40)
-    if get_setting(m, :sampling_method) == :SMC
-        m <= Setting(:forecast_jstep, 1)
+    model <= Setting(:sampling_method, :MH)
+    usual_model_settings!(model, "181115"; cdvt = "181115", fcast_date = quartertodate("2018-Q4"))
+    model <= Setting(:use_population_forecast, false)
+    model <= Setting(:saveroot, joinpath("$(fn)", "..", "save"))
+    model <= Setting(:dataroot, joinpath("$(fn)", "..", "save", "input_data"))
+    model <= Setting(:date_forecast_end, quartertodate("2030-Q1"))
+    model <= Setting(:forecast_horizons, DSGE.subtract_quarters(date_forecast_end(model), date_forecast_start(model)) + 1)
+    model <= Setting(:forecast_block_size, 40)
+    if get_setting(model, :sampling_method) == :SMC
+        model <= Setting(:forecast_jstep, 1)
     end
 end
 
@@ -67,18 +68,19 @@ if temp_alt || perm_alt
     policy_eqcond        = DSGE.ngdp_eqcond
     policy_solve         = DSGE.ngdp_solve
     policy_forecast_init = DSGE.ngdp_forecast_init
-    pol_str = "NGDP"
+    pol_str              = "NGDP"
 end
 
 # Set up parameters for regime-switching.
 # See the full forecast code block for the construction
 # of the matrix of parameter draws
 overrides = forecast_input_file_overrides(m10)
-overrides[:full] = "$(fn)/../../test/reference/mhsave_vint=181115.h5"
+overrides[:full] = "$(fn)/../test/reference/mhsave_vint=181115.h5"
 modal_params = map(x -> x.value, m10.parameters) # The default parameters will be our "modal" parameters for this exercise
 θ10 = load_draws(m10, :full)
 
-for i in 1:3
+para_regs = perm_alt ? (1:4) : (1:3) # if permanent altpolicy occurs, then we need to add a fourth regime
+for i in para_regs
     adj = (i == 2) ? .9 : 1. # adjustment to the size of the standard deviation
 
     # For each parameter, we need to instruct it that a regime exists.
@@ -117,8 +119,7 @@ if run_full_forecast
     # Set up matrix of parameter draws
     m <= Setting(:forecast_jstep, 1)
     m <= Setting(:forecast_block_size, 100)
-    param_mat = zeros(100,
-                   ModelConstructors.n_parameters_regime_switching(m)) # Need to use a special method to count the additional regimes
+    param_mat = zeros(100, ModelConstructors.n_parameters_regime_switching(m)) # Need to use a special method to count the additional regimes
     n_pvec = n_parameters(m) # This is just length(m.parameters), so it counts the "unique" number of parameters, excluding regimes
     for i in 1:size(param_mat, 1)
         # Start w/regime 1 b/c all regime 1 parameters are grouped together
@@ -152,11 +153,11 @@ if run_full_forecast
         @everywhere using DSGE, OrderedCollections
     end
 
-#=    usual_model_forecast(m, :full, :none, output_vars,
+    usual_model_forecast(m, :full, :none, output_vars,
                          forecast_string = forecast_string,
                          density_bands = [.5, .6, .68, .7, .8, .9],
                          check_empty_columns = false,
-                         params = param_mat) # Need to pass in parameters directly, see ?forecast_one=#
+                         params = param_mat) # Need to pass in parameters directly, see ?forecast_one
 
     if add_workers
         rmprocs(my_procs)
@@ -173,7 +174,7 @@ if run_full_forecast
 end
 
 if perm_alt
-    m <= Setting(:replace_eqcond, false)  # Make sure this setting is false
+    # m <= Setting(:replace_eqcond, false)  # Make sure this setting is false
     m <= Setting(:pgap_type, policy)      # Use NGDP
     m <= Setting(:pgap_value, 12.0)       # parametrizing the NGDP rule
     m <= Setting(:regime_switching, true) # Regime-switching should still be on b/c historical regimes
@@ -182,9 +183,8 @@ if perm_alt
 
     m <= Setting(:gensys2, false) # Make sure we use the normal gensys algorithm
 
-    m <= Setting(:alternative_policy, AltPolicy(policy, policy_eqcond, policy_solve,
-                                                forecast_init = policy_forecast_init)) # Set up permanent alternative policy
-    @info "Warnings about assuming CCC is zero are expected and are satisfied for the alternative policy requested."
+    setup_permanent_altpol!(m, AltPolicy(policy, policy_eqcond, policy_solve,
+                                         forecast_init = policy_forecast_init)) # Set up permanent alternative policy
     fcast_permalt = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                            df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
@@ -235,17 +235,16 @@ if temp_alt
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # This new gensys algo replaces eqcond matrices, so this step is required
-    m <= Setting(:temporary_altpolicy, true) # The new regimes to be added should be treated as temporary alternative policies
-    replace_eqcond = Dict{Int, Function}() # Which eqcond to use in which periods
+    regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}() # Which eqcond to use in which periods
     for i in 4:(temp_n_regimes - 1)
-        replace_eqcond[i] = replace_policy # Use the alternative policy for these regimes!
+        regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.ngdp()) # Use the alternative policy for these regimes!
     end
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond) # Add mapping of regimes to new eqcond matrices
+    regime_eqcond_info[temp_n_regimes] = DSGE.EqcondEntry(default_policy()) # Use the alternative policy for these regimes!
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info) # Add mapping of regimes to new eqcond matrices
 
     m <= Setting(:pgap_value, 12.0)  # parametrizing the NGDP rule
     m <= Setting(:pgap_type, policy)
 
-    @info "Warnings about assuming CCC is zero are expected and are satisfied for the temporary alternative policies requested."
     fcast_tempalt = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                          df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 end
@@ -323,14 +322,14 @@ if make_plots
     end
 
     data_plot  = df[df[:, :date] .>= Date(2016, 3, 31), :]
-    fcast_date = map(x -> DSGE.prev_quarter(x), DSGE.get_quarter_ends(date_forecast_start(m), DSGE.quartertodate("2031-Q4")))
+    fcast_date = map(x -> DSGE.prev_quarter(x), DSGE.get_quarter_ends(date_forecast_start(m), date_forecast_end(m)))
     nfcast     = length(fcast_date)
     dates_plot = map(x -> DSGE.prev_quarter(x), data_plot[!, :date])
 
     for obs in [:obs_gdp, :obs_corepce, :obs_gdpdeflator, :obs_nominalrate, :obs_investment, :obs_consumption,
                 :obs_spread, :obs_wages, :obs_hours]
         plots_dict[obs] = make_comp_plot(m, OrderedDict("Temp $(pol_str)" => fcast_tempalt,
-                                                          "Shock" => fcast,
+                                                          "Baseline" => fcast,
                                                           "$(pol_str)" => fcast_permalt),
                                          obs, :forecastobs,
                                          dates_plot, data_plot, fcast_date, nfcast,
@@ -338,7 +337,7 @@ if make_plots
     end
 
     plots_dict[:cum_NominalGDPLevel] = make_ngdp_plot(m, OrderedDict("Temp $(pol_str)" => fcast_tempalt,
-                                                                       "Shock" => fcast,
+                                                                       "Baseline" => fcast,
                                                                        "$(pol_str)" => fcast_permalt),
                                                       dates_plot, data_plot, fcast_date, nfcast,
                                                       colors = [:red, :blue, :purple])

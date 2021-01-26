@@ -644,7 +644,8 @@ end
 ```
 prepare_means_table_shockdec(mb_shockdec, mb_trend, mb_dettrend, var;
     shocks = get_shocks(mb_shockdec), mb_forecast = MeansBands(),
-    mb_hist = MeansBands(), detexify = true, groups = [])
+    mb_hist = MeansBands(), detexify = true, groups = [],
+    states_trend_shock = false)
 ```
 
 Returns a `DataFrame` representing a detrended shock decompostion for
@@ -669,6 +670,8 @@ argument is omitted) and the deterministic trend.
 - `mb_hist::MeansBands`: a `MeansBands` object for smoothed states.
 - `detexify::Bool`: whether to remove Unicode characters from shock names
 - `groups::Vector{ShockGroup}`: if provided, shocks will be grouped accordingly
+- `states_trend_shock::Bool`: whether to treat nonzero trends in the states
+    from nonzero `CCC` as a shock rather than a trend.
 """
 function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
                                       mb_dettrend::MeansBands, var::Symbol;
@@ -676,7 +679,8 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
                                       mb_forecast::MeansBands = MeansBands(),
                                       mb_hist::MeansBands = MeansBands(),
                                       detexify_shocks::Bool = true,
-                                      groups::Vector{ShockGroup} = ShockGroup[])
+                                      groups::Vector{ShockGroup} = ShockGroup[],
+                                      trend_nostates::DataFrame = DataFrame(), df_enddate = Date(2100,12,31))
 
     @assert get_product(mb_shockdec) == :shockdec "The first argument must be a MeansBands object for a shockdec"
     @assert get_product(mb_trend)    == :trend    "The second argument must be a MeansBands object for a trend"
@@ -721,12 +725,27 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
         # Truncate to just the dates we want
         startdate = df[1, :date]
-        enddate   = df[end, :date]
-        df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[!,:date] .<= enddate, [:date, var]]
+        enddate   = min(df[end, :date], df_enddate)
+        df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[!, :date] .<= enddate, [:date, var]]
 
         df_shockdec = has_ij ? innerjoin(df_shockdec, df_mean, on = :date) :
             join(df_shockdec, df_mean, on = :date, kind = :inner)
-        df[!,:detrendedMean] = df_shockdec[!,var] - df_shockdec[!,:trend]
+        df = df[startdate .<= df[!, :date] .<= enddate, :]
+
+        if isempty(trend_nostates)
+            df[!, :detrendedMean] = df_shockdec[!, var] - df_shockdec[!, :trend]
+        else
+            var_trend_nostates   = trend_nostates[startdate .<= trend_nostates[!, :date] .<= enddate, var]
+            if size(var_trend_nostates, 1) != size(df_shockdec, 1)
+                error("The number of rows in kwarg `trend_nostates` does not match the number in df_shockdec. Check that " *
+                      "the Setting :date_forecast_end matches the date used for the calculation of the shockdecs " *
+                      "when constructing the `trend_nostates` DataFrame.")
+            end
+
+            var_trend_states      = df_shockdec[!, :trend] - var_trend_nostates
+            df[!, :detrendedMean] = df_shockdec[!,var] - var_trend_nostates
+            df[!, :StatesTrend]   = var_trend_states
+        end
     end
 
     # Group shocks if desired
@@ -755,6 +774,105 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     return df
 end
 
+# Helper function for plotting the trend in states separately. This function
+# calculates trends without any trends in states. For example,
+# rather than return the trend in states, this function will return a DataFrame of
+# all zeros since the trend in states without the trend in states is just detrending the trend!
+# This function is tested in test/forecast/shock_decompositions.jl
+function prepare_means_table_trend_nostates(m::AbstractDSGEModel{S}, cond_type::Symbol, class::Symbol,
+                                            start_date::Date, end_fcast_date::Date; annualize::Bool = true,
+                                            apply_altpolicy::Bool = false) where {S <: Real}
+
+    @assert class in [:obs, :state, :pseudo] "The allowed class variables are :state, :obs, and :pseudo"
+
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
+
+    if class == :state
+        # States trend should be zero always, so create a DataFrame of zeros
+        df           = DataFrame()
+        df[!, :date] = quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+        for var in keys(m.endogenous_states_augmented)
+            df[!, var] .= zero(S)
+        end
+
+        return df
+    end
+
+    # Otherwise, calculate potentially time-varying trends in DD or DD_pseudo
+    hist_regime_inds = regime_indices(m, start_date, end_fcast_date) # do not need to account for ZLB split b/c shocks don't matter for trends
+    if hist_regime_inds[1][1] < 1
+        hist_regime_inds[1] = 1:hist_regime_inds[1][end]
+    end
+    if hist_regime_inds[end][end] >= end_index  # if the end index is in the middle of a regime or is past the regime's end
+        hist_regime_inds[end] = hist_regime_inds[end][1]:end_index
+        fcast_regime_inds = nothing
+    else
+        fcast_regime_inds = get_fcast_regime_inds(m, forecast_horizons(m; cond_type = cond_type), cond_type,
+                                                  start_index = hist_regime_inds[end][end])
+        fcast_cutoff = findfirst([regind[end] >= end_index for regind in fcast_regime_inds])
+        if isnothing(fcast_cutoff)
+            error("The index_shockdec_end(m) occurs past the index of the final forecast date.")
+        end
+        fcast_regime_inds = fcast_regime_inds[1:fcast_cutoff]
+        fcast_regime_inds[end] = fcast_regime_inds[end][1]:end_index
+    end
+    if length(hist_regime_inds[end]) == 0
+        pop!(hist_regime_inds)
+    end
+
+    system = compute_system(m;
+                            tvis = haskey(get_settings(m), :tvis_information_set))
+
+    trends = Matrix{S}(undef, class == :obs ? n_observables(m) : n_pseudo_observables(m), end_index)
+    # Calculate DD or DD_pseudo trend, based on the class
+    if class == :obs
+        for (reg, inds) in enumerate(hist_regime_inds)
+            trends[:, inds] .= system[reg, :DD]
+        end
+
+        if !isnothing(fcast_regime_inds)
+            for (i, inds) in enumerate(fcast_regime_inds)
+                reg = i + length(hist_regime_inds)
+                for t in inds
+                    trends[:, t] .= system[reg, :DD]
+                end
+            end
+        end
+    else
+        for (reg, inds) in enumerate(hist_regime_inds)
+            trends[:, inds] .= system[reg, :DD_pseudo]
+        end
+
+        if !isnothing(fcast_regime_inds)
+            for (i, inds) in enumerate(fcast_regime_inds)
+                reg = i + length(hist_regime_inds)
+                for t in inds
+                    trends[:, inds] .= system[reg, :DD_pseudo]
+                end
+            end
+        end
+    end
+
+    # Construct DataFrame of trends
+    df           = DataFrame()
+    df[!, :date] = quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+    if start_index != 1
+        trends = trends[:, start_index:end]
+    end
+
+    if annualize
+        for (k, v) in (class == :obs ? m.observables : m.pseudo_observables)
+            df[!, k] = 4. .* trends[v, :]
+        end
+    else
+        for (k, v) in (class == :obs ? m.observables : m.pseudo_observables)
+            df[!, k] = trends[v, :]
+        end
+    end
+
+    return df
+end
 
 #="""
 ```

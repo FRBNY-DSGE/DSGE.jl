@@ -1,8 +1,6 @@
 function simulate_data(m::AbstractDSGEModel,
                        para_init::OrderedDict{Symbol, Vector{Float64}};
-                       savepath::String = "",
-                       save_aux_dir::String = "",
-                       filestring_addl::Vector{String} = Vector{String}(undef, 0),
+                       filepath::String = "sim_data.h5",
                        burnin::Int = 1, n_periods::Int = 200,
                        s_0::Vector{Float64} = Vector{Float64}(undef, 0),
                        P_0::Matrix{Float64} = Matrix{Float64}(undef, 0, 0),
@@ -18,17 +16,15 @@ function simulate_data(m::AbstractDSGEModel,
 
     for i in 1:n_para_sets
         para_init_single = Dict{Symbol, Float64}(zip(defined_keys, [defined_vals[j][i] for j in 1:n_para]))
-        simulate_data(m; para_init = para_init_single, savepath = savepath, save_aux_dir = save_aux_dir,
-                      filestring_addl = filestring_addl, burnin = burnin, n_periods = n_periods,
+        simulate_data(m; para_init = para_init_single, filepath = filepath,
+                      burnin = burnin, n_periods = n_periods,
                       s_0 = s_0, P_0 = P_0, meas_error = meas_error)
     end
 end
 
 function simulate_data(m::AbstractDSGEModel;
                        para_init::OrderedDict{Symbol, Float64} = OrderedDict{Symbol, Float64}(),
-                       savepath::String = "",
-                       save_aux_dir::String = "",
-                       filestring_addl::Vector{String} = Vector{String}(undef,0),
+                       filepath::String = "sim_data.h5",
                        burnin::Int = 1, n_periods::Int = 200,
                        s_0::Vector{Float64} = Vector{Float64}(undef, 0),
                        P_0::Matrix{Float64} = Matrix{Float64}(undef, 0, 0),
@@ -41,16 +37,11 @@ function simulate_data(m::AbstractDSGEModel;
         end
     end
 
-    save_string = construct_save_filepath(m, "sim_data", para_init = para_init,
-                                          savepath = savepath,
-                                          save_aux_dir = save_aux_dir,
-                                          filestring_addl = filestring_addl,
-                                          file_extension = "h5")
     answer = ""
-    if isfile(save_string)
+    if isfile(filepath)
         invalid_answer = true
         while invalid_answer
-            println("WARNING: $save_string already exists. Do you want to overwrite it with a new dataset? (y/n)")
+            println("WARNING: $filepath already exists. Do you want to overwrite it with a new dataset? (y/n)")
             answer = readline(stdin)
             if (answer == "y" || answer == "n")
                 invalid_answer = false
@@ -60,17 +51,17 @@ function simulate_data(m::AbstractDSGEModel;
         end
     end
 
-    # If you want to over-write, or if there is no data currently existing in the $save_string location
-    if answer == "y" || !isfile(save_string)
+    # If you want to over-write, or if there is no data currently existing in the $filepath location
+    if answer == "y" || !isfile(filepath)
         data = simulate_observables(m, burnin = burnin, n_periods = n_periods, s_0 = s_0, P_0 = P_0, meas_error = meas_error)
 
         if answer == "y"
-            rm(save_string)
-            h5write(save_string, "data", data)
+            rm(filepath)
+            h5write(filepath, "data", data)
         else
-            h5write(save_string, "data", data)
+            h5write(filepath, "data", data)
         end
-        println("Wrote $save_string")
+        println("Wrote $filepath")
 
         return data
     elseif answer == "n"
@@ -83,7 +74,7 @@ function simulate_observables(m::AbstractDSGEModel;
                               s_0::Vector{Float64} = Vector{Float64}(undef, 0),
                               P_0::Matrix{Float64} = Matrix{Float64}(undef, 0, 0),
                               meas_error::Float64 = 1e-3)
-    system = compute_system(m)
+    system = compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set))
 
     n_states = size(system[:TTT], 1)
     n_obs    = length(system[:DD])

@@ -267,8 +267,8 @@ impulse_response_horizons(m::AbstractDSGEModel) = get_setting(m, :impulse_respon
 n_shockdec_periods(m::AbstractDSGEModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
 
 # Interface for alternative policy settings
-alternative_policy(m::AbstractDSGEModel) = get_setting(m, :alternative_policy)
-
+alternative_policy(m::AbstractDSGEModel) = haskey(m.settings, :regime_eqcond_info) &&
+haskey(m.settings, :n_regimes) && haskey(get_setting(m, :regime_eqcond_info), get_setting(m, :n_regimes)) ? get_setting(m, :regime_eqcond_info)[get_setting(m, :n_regimes)].alternative_policy : haskey(m.settings, :alternative_policy) ? get_setting(m, :alternative_policy) : AltPolicy(:historical, eqcond, solve)
 function date_forecast_end(m::AbstractDSGEModel)
     if haskey(get_settings(m), :date_forecast_end)
         return get_setting(m, :date_forecast_end)
@@ -389,19 +389,21 @@ end
 
 """
 ```
-transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T}) where T<:AbstractFloat
+transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T}; regime_switching::Bool = false) where T<:AbstractFloat
 ```
 
 Transforms `values` from the real line to the model space, and assigns `values[i]` to
 `m.parameters[i].value` for non-steady-state parameters. Recomputes the steady-state
-paramter values.
+parameter values.
 
 ### Arguments
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
+- `regime_switching`: set to true if the model's parameters are regime-switching
 """
-function transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T}) where {T<:AbstractFloat}
-    new_values = transform_to_model_space(m.parameters, values)
+function transform_to_model_space!(m::AbstractDSGEModel, values::Vector{T};
+                                   regime_switching::Bool = false) where {T<:AbstractFloat}
+    new_values = transform_to_model_space(m.parameters, values; regime_switching = regime_switching)
     DSGE.update!(m, new_values)
     steadystate!(m)
 end
@@ -424,7 +426,8 @@ end
 
 """
 ```
-update!(m::AbstractDSGEModel, values::ParameterVector{T}; regime_switching::Bool = false) where T
+update!(m::AbstractDSGEModel, values::ParameterVector{T};
+    regime_switching::Bool = false, toggle::Bool = true) where T
 ```
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
 
@@ -432,31 +435,41 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 
-### Keywords
-- `regime_switching`:: true if `values` is augmented with regime-switching parameters. Then
-    `update!` assumes the `value` field of each parameter in values` holds
-    the parameter value in the first regime, and then we update the field
-    `regimes` for each parameter
+### Keyword
+- `regime_switching`: if true, then we assume the parameters are regime-switching,
+    in which case `update!` assumes the `value` field
+    of each parameter in values` holds the parameter value in the first regime, and
+    then we update the field `regimes` for each parameter
+- `toggle`: if true, we call `ModelConstructors.toggle_regime!(values)` before
+    updating any values to ensure the `value` field of the parameters in `values`
+    correspond to regime 1 values.
 """
 function update!(m::AbstractDSGEModel, values::ParameterVector{T};
-                 regime_switching::Bool = false) where {T <: Real}
+                 regime_switching::Bool = false, toggle::Bool = true) where {T <: Real}
 
-    ModelConstructors.update!(m.parameters, [θ.value for θ in values]) # Update first-regime values
-
-    # Update regime-switching
+    # Update regime-switching if length of `values` exceeds m.parameters
     if regime_switching
-        for para in m.parameters
+        if toggle
+            ModelConstructors.toggle_regime!(values, 1)
+        end
+
+        # Update first-regime values
+        ModelConstructors.update!(m.parameters, [θ.value for θ in values])
+
+        # Update remaining regimes
+        for (i, para) in enumerate(m.parameters)
             if !isempty(para.regimes)
                 for (ind, val) in para.regimes[:value]
                     if ind == 1
                         ModelConstructors.set_regime_val!(para, 1, para.value)
                     else
-                        ModelConstructors.set_regime_val!(para, ind,
-                                                          values[findfirst(x->x.key==para.key, values)].regimes[:value][ind])
+                        ModelConstructors.set_regime_val!(para, ind, regime_val(values[i], ind))
                     end
                 end
             end
         end
+    else
+        ModelConstructors.update!(m.parameters, [θ.value for θ in values])
     end
 
     steadystate!(m)
@@ -496,7 +509,26 @@ SteadyStateConvergenceError() = SteadyStateConvergenceError("SteadyState didn't 
 Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 
 
-function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none)
+"""
+```
+setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none,
+    temp_altpolicy_in_cond_regimes::Bool = false)
+```
+
+calculates the indices needed to solve and forecast a model with regime-switching.
+
+### Keywords
+- `cond_type`: the correct regime indices for forecasting depend on whether the forecast is conditional or not
+- `temp_altpolicy_in_cond_regimes`: If true, then temporary alternative policies can occur
+    during the conditional forecast horizon, and regime indices (namely `n_rule_periods`) will be calculated accordingly.
+"""
+function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none,
+                                      temp_altpolicy_in_cond_regimes::Bool = false)
+
+    if haskey(get_settings(m), :regime_switching) ? !get_setting(m, :regime_switching) : true
+        @warn "The setting :regime_switching is either false or is not defined yet. Updating the setting to be true."
+        m <= Setting(:regime_switching, true)
+    end
 
     n_hist_regimes = 0
     n_cond_regimes = 0
@@ -541,9 +573,62 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = 
     m <= Setting(:n_hist_regimes, n_hist_regimes, "Number of regimes in the history")
     m <= Setting(:n_fcast_regimes, n_fcast_regimes, "Number of regimes in the forecast horizon")
     m <= Setting(:n_cond_regimes, n_cond_regimes, "Number of regime switches during the conditional forecast horizon")
-    # num periods rule in place is num regimes - n_hist_regimes - 1 (since in last regime, go back to normal rule)
+
+    # Number of periods that the rule is in place is (normally)
+    # n_regimes - n_hist_regimes - 1 (-1 b/c in last regime, go back to normal rule)
+    # If conditional forecasting occurs and the rule occurs afterward, we need to subtract n_cond_regimes.
+    # If rule occurs during the conditional forecast horizon or before, then we need to add
+    # extra periods to n_rule_periods
+    cond_adj = if temp_altpolicy_in_cond_regimes
+        haskey(get_settings(m), :gensys2_first_regime) ?
+            (get_setting(m, :gensys2_first_regime) - get_setting(m, :n_hist_regimes) - 1) : 0
+    else
+        get_setting(m, :n_cond_regimes)
+    end
     m <= Setting(:n_rule_periods, (cond_type == :none) ? n_regimes - (get_setting(m, :n_hist_regimes) + 1) :
-                 n_regimes - (get_setting(m, :n_hist_regimes) + 1 + get_setting(m, :n_cond_regimes)) ,
-                 "Number of periods during which the (temporary) alternative policy applies.")
+                 n_regimes - (get_setting(m, :n_hist_regimes) + 1 + cond_adj),
+                 "Number of periods during which the (temporary) alternative policy applies")
+    return m
+end
+
+# Dummy function for eqcond, relevant when using gensys2
+function eqcond(m::AbstractDSGEModel, Γ0::AbstractMatrix{S}, Γ1::AbstractMatrix{S},
+                C::AbstractVector{S}, Ψ::AbstractMatrix{S}, Π::AbstractMatrix{S}) where {S <: Real}
+    return Γ0, Γ1, C, Ψ, Π
+end
+
+"""
+```
+setup_param_regimes!(m::AbstractDSGEModel, param_regs::Matrix{Int} = []
+
+Function to set up the model with parameter regime switching
+for estimation. param_regs should be a matrix where for each row r,
+the i{th} element is the parameter regime for the i{th} model regime
+for parameter r (including parameters with no regime-switching: set
+the rows for non-regime-switching parameters to all 1s, although any
+value will give the same result).
+```
+"""
+function setup_param_regimes!(m::AbstractDSGEModel, param_mat::Array{Int, 2} = Matrix{Int}(undef, 0, 0))
+
+    param_reg   = Dict{Symbol, Dict{Int, Int}}()
+    nmodel_regs = haskey(m.settings, :n_regimes) ? get_setting(m, :n_regimes) : 1
+
+    if isempty(param_mat)
+        param_mat = ones(n_parameters(m), nmodel_regs)
+    end
+
+    @assert nmodel_regs == size(param_mat, 2) "The number of columns in `param_mat` must match the number of model regimes"
+
+    for i in 1:n_parameters(m)
+        reg_dict = Dict{Int, Int}()
+        for reg in 1:nmodel_regs
+            reg_dict[reg] = param_mat[i, reg]
+        end
+        param_reg[m.parameters[i].key] = reg_dict
+    end
+
+    m <= Setting(:model2para_regime, param_reg)
+
     return m
 end

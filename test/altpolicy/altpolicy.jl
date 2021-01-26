@@ -1,15 +1,19 @@
 using DSGE, Test, ModelConstructors
 
 # Initialize model object
-m = Model990(testing = true)
+m = Model990()
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
+m990 = Model990(testing = true)
+m990 <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
+m990 <= Setting(:use_population_forecast, true)
 
 # Forecast under historical rule
 paras = [α.value for α in m.parameters]
-df = load_data(m, verbose = :none)
+df = load_data(m990, verbose = :none)
 
 output_vars = [:histpseudo, :forecastpseudo, :irfpseudo]
+sys_hist = compute_system(m)
 out_hist = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
 
 # Getting indices
@@ -17,15 +21,15 @@ eq_mp    = m.equilibrium_conditions[:eq_mp]
 eq_other = setdiff(1:n_equilibrium_conditions(m), eq_mp)
 
 # Assign alternative policy
-m <= Setting(:alternative_policy, DSGE.taylor93())
+setup_permanent_altpol!(m, DSGE.taylor93())
 
 # Compare equilibrium conditions under historical and alternative rules
 Γ0_hist, Γ1_hist, ~ = eqcond(m)
-Γ0_alt93,  Γ1_alt93,  ~ = alternative_policy(m).eqcond(m)
+Γ0_alt93,  Γ1_alt93,  ~ = get_setting(m, :regime_eqcond_info)[2].alternative_policy.eqcond(m)
 
 # Repeat for Taylor99
-m <= Setting(:alternative_policy, DSGE.taylor99())
-Γ0_alt99,  Γ1_alt99,  ~ = alternative_policy(m).eqcond(m)
+setup_permanent_altpol!(m, DSGE.taylor99())
+Γ0_alt99,  Γ1_alt99,  ~ = get_setting(m, :regime_eqcond_info)[2].alternative_policy.eqcond(m)
 
 ## First, check if coefficients in matrices correct
 ### Taylor 93
@@ -59,19 +63,20 @@ end
     @test !(Γ1_hist[eq_mp, :]  ≈ Γ1_alt99[eq_mp, :])
 end
 
-# Test error thrown if trying to run shockdec products
-@testset "Check AltPolicy error thrown with shockdec products" begin
-    @test_throws ErrorException forecast_one(m, :mode, :none, [:shockdecobs])
-    @test_throws ErrorException forecast_one(m, :mode, :none, [:dettrendobs])
-    @test_throws ErrorException forecast_one(m, :mode, :none, [:trendobs])
-end
-
 # Forecast under Taylor 93 and Taylor 99
-m <= Setting(:alternative_policy, DSGE.taylor93())
-out_alt93 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
-m <= Setting(:alternative_policy, DSGE.taylor99())
-out_alt99 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none)
-
+setup_permanent_altpol!(m, DSGE.taylor93())
+out_alt93 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none,
+                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+setup_permanent_altpol!(m, DSGE.taylor99())
+out_alt99 = DSGE.forecast_one_draw(m, :mode, :none, output_vars, paras, df, verbose = :none,
+                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+m <= Setting(:date_forecast_start, DSGE.iterate_quarters(date_forecast_start(m), -1))
+m <= Setting(:date_conditional_end, date_forecast_start(m))
+setup_permanent_altpol!(m, DSGE.taylor99(); cond_type = :full)
+out_alt99_cond = DSGE.forecast_one_draw(m, :mode, :full, output_vars, paras, df, verbose = :none,
+                                        regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+m <= Setting(:date_forecast_start, DSGE.iterate_quarters(date_forecast_start(m), 1))
+m <= Setting(:date_conditional_end, date_forecast_start(m))
 @testset "Check forecast under Taylor 93" begin
     @test out_hist[:histpseudo] ≈ out_alt93[:histpseudo]
     @test !(out_hist[:forecastpseudo] ≈ out_alt93[:forecastpseudo])
@@ -85,9 +90,9 @@ end
 # New Policy Rules #
 ####################
 
-m = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
-my = Model1002("ss10"; testing = true, custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
-                                                                               :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true)))
+m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
+my = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true),
+                                                               :add_altpolicy_ygap => Setting(:add_altpolicy_ygap, true)))
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
 my <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
@@ -95,9 +100,12 @@ my <= Setting(:use_population_forecast, true)
 
 # Getting indices
 eq_mp    = m.equilibrium_conditions[:eq_mp]
-eq_other = setdiff(1:n_equilibrium_conditions(m), eq_mp)
+eq_pgap  = m.equilibrium_conditions[:eq_pgap]
+eq_other = setdiff(1:n_equilibrium_conditions(m), [eq_mp, eq_pgap])
 eq_mpy    = my.equilibrium_conditions[:eq_mp]
-eq_othery = setdiff(1:n_equilibrium_conditions(my), eq_mpy)
+eq_pgapy  = my.equilibrium_conditions[:eq_pgap]
+eq_ygapy  = my.equilibrium_conditions[:eq_ygap]
+eq_othery = setdiff(1:n_equilibrium_conditions(my), [eq_mpy, eq_pgapy, eq_ygapy])
 eq_otherymp = 1:n_equilibrium_conditions(my)
 
 # Compare equilibrium conditions under historical and alternative rules
@@ -105,45 +113,44 @@ eq_otherymp = 1:n_equilibrium_conditions(my)
 Γ0_histy, Γ1_histy, ~ = eqcond(my)
 
 # Matrices for alt_inflation
-m <= Setting(:alternative_policy, DSGE.alt_inflation())
-Γ0_alt_inf,  Γ1_alt_inf,  ~ = alternative_policy(m).eqcond(m)
+setup_permanent_altpol!(m, DSGE.alt_inflation())
+Γ0_alt_inf,  Γ1_alt_inf,  ~ = get_setting(m, :regime_eqcond_info)[2].alternative_policy.eqcond(m)
 
 # Repeat for zero_rate
-m <= Setting(:alternative_policy, DSGE.zero_rate())
-Γ0_alt_zero,  Γ1_alt_zero,  ~ = alternative_policy(m).eqcond(m)
-
-# Repeat for rw
-my <= Setting(:alternative_policy, DSGE.rw())
-Γ0_alt_rw,  Γ1_alt_rw,  ~ = alternative_policy(my).eqcond(my)
-
-# Repeat for rw_zero_rate
-my <= Setting(:alternative_policy, DSGE.rw_zero_rate())
-Γ0_alt_rw_zero,  Γ1_alt_rw_zero,  ~ = alternative_policy(my).eqcond(my)
+setup_permanent_altpol!(m, DSGE.zero_rate())
+Γ0_alt_zero,  Γ1_alt_zero,  ~ = get_setting(m, :regime_eqcond_info)[2].alternative_policy.eqcond(m)
 
 # Repeat for smooth_ait_gdp
-my <= Setting(:alternative_policy, DSGE.smooth_ait_gdp())
-Γ0_alt_smooth,  Γ1_alt_smooth,  ~ = alternative_policy(my).eqcond(my)
+setup_permanent_altpol!(my, DSGE.smooth_ait_gdp())
+Γ0_alt_smooth,  Γ1_alt_smooth,  ~ = get_setting(my, :regime_eqcond_info)[2].alternative_policy.eqcond(my)
 
 # Repeat for smooth_ait_gdp_alt
-my <= Setting(:alternative_policy, DSGE.smooth_ait_gdp_alt())
-Γ0_alt_smooth_alt,  Γ1_alt_smooth_alt,  ~ = alternative_policy(my).eqcond(my)
+setup_permanent_altpol!(my, DSGE.smooth_ait_gdp_alt())
+Γ0_alt_smooth_alt,  Γ1_alt_smooth_alt,  ~ = get_setting(my, :regime_eqcond_info)[2].alternative_policy.eqcond(my)
 
 # Repeat for flexible_ait
-my <= Setting(:alternative_policy, DSGE.flexible_ait())
-Γ0_alt_flex_ait,  Γ1_alt_flex_ait,  ~ = alternative_policy(my).eqcond(my)
+setup_permanent_altpol!(my, DSGE.flexible_ait())
+Γ0_alt_flex_ait,  Γ1_alt_flex_ait,  ~ = get_setting(my, :regime_eqcond_info)[2].alternative_policy.eqcond(my)
 
 # Repeat for ait
-my <= Setting(:alternative_policy, DSGE.ait())
+setup_permanent_altpol!(my, DSGE.ait())
 my <= Setting(:pgap_type, :ait)
 my <= Setting(:pgap_value, 0.)
-Γ0_alt_ait,  Γ1_alt_ait,  ~ = alternative_policy(my).eqcond(my)
+Γ0_alt_ait,  Γ1_alt_ait,  ~ = get_setting(my, :regime_eqcond_info)[2].alternative_policy.eqcond(my)
 
 # Repeat for ngdp
-my <= Setting(:alternative_policy, DSGE.ngdp())
+setup_permanent_altpol!(my, DSGE.ait())
 my <= Setting(:pgap_type, :ngdp)
 my <= Setting(:pgap_value, 12.)
-Γ0_alt_ngdp,  Γ1_alt_ngdp,  ~ = alternative_policy(my).eqcond(my)
+Γ0_alt_ngdp,  Γ1_alt_ngdp,  ~ = get_setting(my, :regime_eqcond_info)[2].alternative_policy.eqcond(my)
 
+# Repeat for rw
+setup_permanent_altpol!(my, DSGE.rw())
+Γ0_alt_rw,  Γ1_alt_rw,  ~ = get_setting(my, :regime_eqcond_info)[2].alternative_policy.eqcond(my)
+
+# Repeat for rw_zero_rate
+setup_permanent_altpol!(my, DSGE.rw_zero_rate())
+Γ0_alt_rw_zero,  Γ1_alt_rw_zero,  ~ = get_setting(my, :regime_eqcond_info)[2].alternative_policy.eqcond(my)
 
 # Testing
 @testset "Compare AltPolicy eqconds under hist and alt rules" begin
@@ -151,17 +158,6 @@ my <= Setting(:pgap_value, 12.)
     @test Γ1_hist[eq_other, :] ≈ Γ1_alt_inf[eq_other, :]
     @test !(Γ0_hist[eq_mp, :]  ≈ Γ0_alt_inf[eq_mp, :])
     @test !(Γ1_hist[eq_mp, :]  ≈ Γ1_alt_inf[eq_mp, :])
-
-    @test Γ0_histy[eq_othery, eq_otherymp] ≈ Γ0_alt_rw[eq_othery, eq_otherymp]
-    @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_rw[eq_othery, eq_otherymp]
-    @test !(Γ0_histy[eq_mp, eq_other]  ≈ Γ0_alt_rw[eq_mp, eq_othery])
-    @test !(Γ1_histy[eq_mp, eq_other]  ≈ Γ1_alt_rw[eq_mp, eq_othery])
-
-    @test Γ0_histy[eq_othery, eq_otherymp] ≈ Γ0_alt_rw_zero[eq_othery, eq_otherymp]
-    @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_rw_zero[eq_othery, eq_otherymp]
-    @test !(Γ0_histy[eq_mp, eq_other]  ≈ Γ0_alt_rw_zero[eq_mp, eq_othery])
-    @test !(Γ1_histy[eq_mp, eq_other]  ≈ Γ1_alt_rw_zero[eq_mp, eq_othery])
-
     @test Γ0_hist[eq_other, eq_other] ≈ Γ0_alt_zero[eq_other, eq_other]
     @test Γ1_hist[eq_other, eq_other] ≈ Γ1_alt_zero[eq_other, eq_other]
     @test !(Γ0_hist[eq_mp, :]  ≈ Γ0_alt_zero[eq_mp, :])
@@ -191,11 +187,20 @@ my <= Setting(:pgap_value, 12.)
     @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_ngdp[eq_othery, eq_otherymp]
     @test !(Γ0_histy[eq_mp, eq_other]  ≈ Γ0_alt_ngdp[eq_mp, eq_othery])
     @test !(Γ1_histy[eq_mp, eq_other]  ≈ Γ1_alt_ngdp[eq_mp, eq_othery])
+
+    @test Γ0_histy[eq_othery, eq_otherymp] ≈ Γ0_alt_rw[eq_othery, eq_otherymp]
+    @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_rw[eq_othery, eq_otherymp]
+    @test !(Γ0_histy[eq_mp, eq_other]  ≈ Γ0_alt_rw[eq_mp, eq_othery])
+    @test !(Γ1_histy[eq_mp, eq_other]  ≈ Γ1_alt_rw[eq_mp, eq_othery])
+
+    @test Γ0_histy[eq_othery, eq_otherymp] ≈ Γ0_alt_rw_zero[eq_othery, eq_otherymp]
+    @test Γ1_histy[eq_othery, eq_otherymp] ≈ Γ1_alt_rw_zero[eq_othery, eq_otherymp]
+    @test !(Γ0_histy[eq_mp, eq_other]  ≈ Γ0_alt_rw_zero[eq_mp, eq_othery])
+    @test !(Γ1_histy[eq_mp, eq_other]  ≈ Γ1_alt_rw_zero[eq_mp, eq_othery])
 end
 
-
 # Checking if setting variables works
-## These values are random and not actually good choices
+## These values are random and not actually good choices per se
 m <= Setting(:ait_Thalf, 14.2)
 m <= Setting(:gdp_Thalf, 5.6)
 m <= Setting(:smooth_ait_gdp_ρ_smooth, 0.23)

@@ -177,17 +177,21 @@ end
     push!(regfcaststart, 2)
     push!(regpostcond, 2)
 
+    @info "The following warnings about automatically adding regime-switching as a setting are expected."
+    m <= Setting(:regime_switching, true)
     for (rs, fs, ce, nr, nhr, nfr, ncr, nrp, rfs, rpc) in zip(rss, fss, ces, nreg, nhistreg,
                                                               nfcastreg, ncondreg, nruleper, regfcaststart, regpostcond)
         m <= Setting(:regime_dates, rs)
         m <= Setting(:date_forecast_start, fs)
         m <= Setting(:date_conditional_end, ce)
         setup_regime_switching_inds!(m)
+        m <= Setting(:regime_switching, false)
         for (set, setans) in zip([:n_regimes, :n_hist_regimes, :n_fcast_regimes, :n_cond_regimes, :n_rule_periods,
                                   :reg_forecast_start, :reg_post_conditional_end], [nr, nhr, nfr, ncr, nrp, rfs, rpc])
             @test get_setting(m, set) == setans
         end
         setup_regime_switching_inds!(m; cond_type = :full)
+        delete!(m.settings, :regime_switching)
         @test get_setting(m, :n_rule_periods) == (nrp - ncr)
         setup_regime_switching_inds!(m; cond_type = :semi)
         @test get_setting(m, :n_rule_periods) == (nrp - ncr)

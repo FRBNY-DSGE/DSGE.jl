@@ -33,6 +33,12 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_pseudo_corepce)
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61"]
+            push!(pseudo_names, :PseudoCorePCE)
+        end
+    end
+
     if haskey(m.settings, :add_NominalWageGrowth)
         if get_setting(m, :add_NominalWageGrowth)
             push!(pseudo_names, :NominalWageGrowth)
@@ -397,6 +403,14 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
+    if haskey(m.settings, :add_pseudo_corepce)
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61"]
+            pseudo[:PseudoCorePCE].name     = "Core PCE Pseudo-observable"
+            pseudo[:PseudoCorePCE].longname = "Core PCE Pseudo-observable"
+            pseudo[:PseudoCorePCE].rev_transform = loggrowthtopct_annualized
+        end
+    end
+
     if haskey(m.settings, :add_laborproductivity_measurement)
         if get_setting(m, :add_laborproductivity_measurement)
             pseudo[:laborproductivity].name     = "Log Labor Productivity"
@@ -417,6 +431,9 @@ function init_pseudo_observable_mappings!(m::Model1002)
             pseudo[:Epi_t].longname = "Short-term Inflation Expectations"
         end
     end
+
+    # Needed to implement pseudo-measurement equation correctly
+    m <= Setting(:forward_looking_pseudo_observables, [:Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate])
 
     # Add to model object
     m.pseudo_observable_mappings = pseudo

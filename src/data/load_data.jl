@@ -33,7 +33,7 @@ means, standard deviations,
 """
 function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bool = true,
                    verbose::Symbol=:low, check_empty_columns::Bool = true,
-                   summary_statistics::Symbol = :low)
+                   summary_statistics::Symbol = :low, add_vals = (false, Date(2020,12,31)))
     recreate_data = false
 
     # Check if already downloaded
@@ -55,7 +55,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
     if recreate_data
         println(verbose, :low, "Creating dataset...")
 
-        levels = load_data_levels(m; verbose=verbose)
+        levels = load_data_levels(m; verbose=verbose, add_vals = add_vals)
         if cond_type in [:semi, :full]
             cond_levels = load_cond_data_levels(m; verbose=verbose)
             levels, cond_levels = reconcile_column_names(levels, cond_levels)
@@ -64,8 +64,7 @@ function load_data(m::AbstractDSGEModel; cond_type::Symbol = :none, try_disk::Bo
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
         if :obs_nominalrate1 in cond_semi_names(m) || :obs_nominalrate1 in cond_full_names(m)
-            ois_data = VERSION >= v"1.3" ? DataFrame(CSV.File(inpath(m, "raw", "ois_$(data_vintage(m)).csv"))) :
-                CSV.read(inpath(m, "raw", "ois_$(data_vintage(m)).csv"), copycols = true)
+            ois_data = CSV.read(inpath(m, "raw", "ois_$(data_vintage(m)).csv"), DataFrame, copycols = true)
             dates = DSGE.get_quarter_ends(iterate_quarters(date_mainsample_end(m), 1), date_conditional_end(m))
             n_cond = length(dates)
 
@@ -140,7 +139,8 @@ using `load_fred_data`. See `?load_fred_data` for more details.
 
 Data from non-FRED data sources are read from disk, verified, and merged.
 """
-function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
+function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low,
+                          add_vals = (false,Date(2020,12,31)))
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
     start_date = date_presample_start(m) - Dates.Month(6)
@@ -153,6 +153,14 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
     df = load_fred_data(m; start_date=firstdayofquarter(start_date),
                         end_date=end_date, verbose=verbose)
 
+    if add_vals[1]
+        temp2 = CSV.read(get_setting(m, :cond_filename), DataFrame)
+        for k in names(temp2)[2:end]
+            if k in names(df)
+                df[df[:date] .== add_vals[2],k] = temp2[1,k]
+            end
+        end
+    end
 
     # Set ois series to load
     if n_mon_anticipated_shocks(m) > 0
@@ -202,8 +210,7 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
             println(verbose, :low, "Reading data from $file...")
 
             # Read in dataset and check that the file contains data for the proper dates
-            addl_data = VERSION >= v"1.3" ? DataFrame(CSV.File(file)) :
-                CSV.read(file, copycols = true)
+            addl_data = CSV.read(file, DataFrame, copycols = true)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
@@ -283,7 +290,7 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         println(verbose, :low, "Reading conditional data from $file...")
 
         # Read data
-        cond_df = VERSION >= v"1.3" ? DataFrame(CSV.File(file)) : CSV.read(file, copycols = true)
+        cond_df = CSV.read(file, DataFrame, copycols = true)
         format_dates!(:date, cond_df)
 
         date_cond_end = cond_df[end, :date]
@@ -291,8 +298,7 @@ function load_cond_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low)
         # Use population forecast as population data
         population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
         if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
-            pop_forecast = VERSION >= v"1.3" ? DataFrame(CSV.File(population_forecast_file)) :
-                CSV.read(population_forecast_file, copycols = true)
+            pop_forecast = CSV.read(population_forecast_file, DataFrame, copycols = true)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
@@ -355,8 +361,7 @@ Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
 function read_data(m::AbstractDSGEModel; cond_type::Symbol = :none, check_empty_columns::Bool = true)
     filename = get_data_filename(m, cond_type)
-    df       = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
-        CSV.read(filename, copycols = true)
+    df       = CSV.read(filename, DataFrame, copycols = true)
 
     # Convert date column from string to Date
     df[!,:date] = map(Date, df[!,:date])
@@ -558,8 +563,7 @@ end
 function read_population_data(filename::String; verbose::Symbol = :low)
     println(verbose, :low, "Reading population data from $filename...")
 
-    df = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
-        CSV.read(filename, copycols = true)
+    df = CSV.read(filename, DataFrame, copycols = true)
     DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
@@ -594,8 +598,7 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
     if isfile(filename)
         println(verbose, :low, "Loading population forecast from $filename...")
 
-        df = VERSION >= v"1.3" ? DataFrame(CSV.File(filename)) :
-            CSV.read(filename, copycols = true)
+        df = CSV.read(filename, DataFrame, copycols = true)
         rename!(df, :POPULATION => population_mnemonic)
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
@@ -638,7 +641,7 @@ function load_reference_forecast(m::AbstractModel, year::Int, quarter::Int, file
 
     df = DataFrame(date = dates)
 
-    series = VERSION >= v"1.3" ? DataFrame!(CSV.File(file)) : CSV.read(file)
+    series = CSV.read(file, DataFrame)
 
     datestr = reference_forecast_vintage(year, quarter, :bluechip)
     date_index = something(findfirst(isequal(datestr), series[:date]), 0)

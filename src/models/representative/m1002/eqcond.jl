@@ -33,7 +33,11 @@ function eqcond(m::Model1002, reg::Int)
 
     for para in m.parameters
         if !isempty(para.regimes)
-            ModelConstructors.toggle_regime!(para, reg)
+            if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
+                ModelConstructors.toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
+            else
+                ModelConstructors.toggle_regime!(para, reg)
+            end
         end
     end
 
@@ -489,8 +493,8 @@ function eqcond(m::Model1002, reg::Int)
                 Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
             end
 
-            #=if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
-                if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
+            #=if (haskey(m.settings, :flexible_ait_policy_change) ? get_setting(m, :flexible_ait_policy_change) : false)
+                if get_setting(m, :regime_dates)[reg] >= get_setting(m, :flexible_ait_policy_change_date)
                     Γ1[eq[:eq_rml1], endo[:rm_tl2]] = 0.
                     Γ0[eq[:eq_rml2], endo[:rm_tl2]] = 1.
                     Ψ[eq[:eq_rml2],  exo[:rm_shl2]] = 1.
@@ -637,9 +641,9 @@ function eqcond(m::Model1002, reg::Int)
    #     rather than just when we start using the alt rule.
    if haskey(m.settings, :add_altpolicy_pgap) ? get_setting(m, :add_altpolicy_pgap) : false
        Γ0[eq[:eq_pgap], endo[:pgap_t]]  =  1.
-       if haskey(m.settings, :replace_eqcond_func_dict)
-           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
-               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+       if haskey(m.settings, :regime_eqcond_info)
+           if reg >= minimum(keys(get_setting(m, :regime_eqcond_info))) &&
+               reg <= maximum(keys(get_setting(m, :regime_eqcond_info))) &&
                haskey(m.settings, :pgap_type)
                if get_setting(m, :pgap_type) == :ngdp
                    Γ0[eq[:eq_pgap], endo[:pgap_t]] =  1.
@@ -668,6 +672,10 @@ function eqcond(m::Model1002, reg::Int)
                    Γ0[eq[:eq_pgap], endo[:π_t]]    = -1.
                    Γ1[eq[:eq_pgap], endo[:pgap_t]] = ρ_pgap
                end
+               if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+                   get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+                   Ψ[eq[:eq_pgap], exo[:pgap_sh]] = 1.
+               end
            end
        end
        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
@@ -678,9 +686,9 @@ function eqcond(m::Model1002, reg::Int)
 
    if haskey(m.settings, :add_altpolicy_ygap) ? get_setting(m, :add_altpolicy_ygap) : false
        Γ0[eq[:eq_ygap], endo[:ygap_t]]  =  1.
-       if haskey(m.settings, :replace_eqcond_func_dict)
-           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
-               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+       if haskey(m.settings, :regime_eqcond_info)
+           if reg >= minimum(keys(get_setting(m, :regime_eqcond_info))) &&
+               reg <= maximum(keys(get_setting(m, :regime_eqcond_info))) &&
                haskey(m.settings, :ygap_type)
                if get_setting(m, :ygap_type) in [:smooth_ait_gdp, :smooth_ait_gdp_alt, :flexible_ait, :rw]
                    Thalf  = haskey(get_settings(m), :gdp_Thalf) ? get_setting(m, :gdp_Thalf) : 10.
@@ -694,6 +702,10 @@ function eqcond(m::Model1002, reg::Int)
                    Γ0[eq[:eq_ygap], endo[:z_t]]    = -1.
                    Γ1[eq[:eq_ygap], endo[:y_t]]    = -1.
                end
+               if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+                   get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+                   Ψ[eq[:eq_ygap], exo[:ygap_sh]] = 1.
+               end
            end
        end
        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
@@ -706,9 +718,9 @@ function eqcond(m::Model1002, reg::Int)
        Γ0[eq[:eq_rw], endo[:rw_t]]     =  1.
        Γ0[eq[:eq_Rref], endo[:Rref_t]] =  1.
 
-       if haskey(m.settings, :replace_eqcond_func_dict)
-           if reg >= minimum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
-               reg <= maximum(keys(get_setting(m, :replace_eqcond_func_dict))) &&
+       if haskey(m.settings, :regime_eqcond_info)
+           if reg >= minimum(keys(get_setting(m, :regime_eqcond_info))) &&
+               reg <= maximum(keys(get_setting(m, :regime_eqcond_info))) &&
                haskey(m.settings, :Rref_type)
 
                ρ_rw = haskey(get_settings(m), :ρ_rw) ? get_setting(m, :ρ_rw) : 0.93
@@ -784,22 +796,15 @@ function eqcond(m::Model1002, reg::Int)
        end
    end
 
-   # Switch to Flexible AIT in 2020-Q3 and beyond
-   if (haskey(m.settings, :flexible_ait_2020Q3_policy_change) ? get_setting(m, :flexible_ait_2020Q3_policy_change) : false)
-       if get_setting(m, :regime_dates)[reg] >= Date(2020, 9, 30)
-           Γ0, Γ1, C, Ψ, Π = flexible_ait_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π)
-       end
-   end
-
    # If running temporary alterantive policies, we update the gensys matrices here.
    # This step MUST be the last block of code prior to switching parameter values back to the first regime.
-   if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
-       if haskey(m.settings, :replace_eqcond_func_dict)
-           if haskey(get_setting(m, :replace_eqcond_func_dict), reg) && reg != get_setting(m, :n_regimes)
-               Γ0, Γ1, C, Ψ, Π = get_setting(m, :replace_eqcond_func_dict)[reg](m, Γ0, Γ1, C, Ψ, Π)
+   #=if haskey(m.settings, :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+       if haskey(m.settings, :regime_eqcond_info)
+           if haskey(get_setting(m, :regime_eqcond_info), reg)
+               Γ0, Γ1, C, Ψ, Π = get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, Γ0, Γ1, C, Ψ, Π)
            end
        end
-   end
+   end=#
 
    for para in m.parameters
         if !isempty(para.regimes)

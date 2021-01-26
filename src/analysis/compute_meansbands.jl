@@ -51,6 +51,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                             check_empty_columns::Bool = true,
                             bdd_fcast::Bool = true, skipnan::Bool = false,
                             pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
+                            variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -90,6 +91,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                                     population_data = population_data,
                                     population_forecast = population_forecast,
                                     skipnan = skipnan, pseudo2data = pseudo2data,
+                                    variable_names = variable_names,
                                     verbose = verbose,
                                     kwargs...)
             GC.gc()
@@ -111,6 +113,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                             population_forecast::DataFrame = DataFrame(),
                             skipnan::Bool = false,
                             pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
+                            variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             verbose::Symbol = :none,
                             kwargs...)
 
@@ -122,10 +125,13 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
     metadata = get_mb_metadata(m, input_type, cond_type, output_var; forecast_string = forecast_string)
 
     date_list      = product == :irf ? Date[] : collect(keys(metadata[:date_inds]))
-    variable_names = collect(keys(metadata[:indices]))
+    if isempty(variable_names)
+        variable_names = collect(keys(metadata[:indices]))
+    end
     pop_growth     = get_mb_population_series(product, population_data, population_forecast, date_list)
 
     # Compute means and bands
+    map_fcn = get_setting(m, :use_parallel_workers) ? pmap : map
     if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                    :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
                    # :forecastlvl, :histlvl, :bddforecastlvl]
@@ -141,11 +147,11 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                                                kwargs...)
             end
         else
-            mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
-                                                         pop_growth = pop_growth, forecast_string = forecast_string,
-                                                         pseudo2data = pseudo2data,
-                                                         skipnan = skipnan, kwargs...),
-                          variable_names)
+            mb_vec = map_fcn(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
+                                                            pop_growth = pop_growth, forecast_string = forecast_string,
+                                                            pseudo2data = pseudo2data,
+                                                            skipnan = skipnan, kwargs...),
+                             variable_names)
         end
 
         # Re-assemble pmap outputs
@@ -244,9 +250,9 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                                               pop_growth = pop_growth, use_data = haskey(pseudo2data, var_name))
 
     # Handle NaNs
-    if skipnan && output_var != :histobs && any(isnan.(transformed_series))
+    if skipnan && !(output_var in [:histobs, :hist4qobs]) && any(isnan.(transformed_series))
         # Remove rows with NaNs
-        nanrows = vec(mapslices(x -> any(isnan.(x)), transformed_series, dims = Int[2]))
+        nanrows = vec(mapslices(x -> all(isnan.(x)), transformed_series, dims = Int[2]))
         transformed_series = transformed_series[.!nanrows, :]
     end
 
@@ -557,9 +563,9 @@ function compute_meansbands(models::Vector,
                                               pop_growth = pop_growth,  use_data = haskey(pseudo2data, var_name))
 
     # Handle NaNs
-    if skipnan && output_var != :histobs && any(isnan.(transformed_series))
+    if skipnan && !(output_var in [:histobs, :hist4qobs]) && any(isnan.(transformed_series))
         # Remove rows with NaNs
-        nanrows = vec(mapslices(x -> any(isnan.(x)), transformed_series, dims = Int[2]))
+        nanrows = vec(mapslices(x -> all(isnan.(x)), transformed_series, dims = Int[2]))
         transformed_series = transformed_series[.!nanrows, :]
     end
 

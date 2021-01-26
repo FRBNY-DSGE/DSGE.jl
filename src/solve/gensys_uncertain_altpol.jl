@@ -13,18 +13,20 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
     @assert length(altpolicies) == length(prob_vec) - 1
 
+    altpolicies = altpolicies[prob_vec[2:end] .> 0.0]
+    prob_vec = vcat(prob_vec[1], prob_vec[2:end][prob_vec[2:end] .> 0.0])
+
     if regime_switching
         if length(regimes) == 1
-            Γ0, Γ1, C, Ψ, Π = if apply_altpolicy
-                get_setting(m, :alternative_policy).eqcond(m, regimes[1])
-            else
-                eqcond(m, regimes[1])
-            end
+            Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ? (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
+                                                                              get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
+                                                                              eqcond(m, regimes[1])) :
+                                                                              eqcond(m, regimes[1])
 
             if isempty(TTT)
                 assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
                 @assert assert_cond "The Setting :uncertain_altpolicy must be false if TTT is empty."
-                TTT, _, _ = solve(m; regime_switching = regime_switching, regimes = regimes, apply_altpolicy = apply_altpolicy)
+                TTT, _, _ = solve(m; regime_switching = regime_switching, regimes = regimes)
             end
 
             Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
@@ -55,7 +57,11 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             if isempty(Γ0s) || isempty(Γ1s) || isempty(Cs) || isempty(Ψs) || isempty(Πs)
                 # If any of these are empty, we recompute the relevant matrices
                 for fcast_reg in regimes
-                    Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] = eqcond(m, fcast_reg)
+                    Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =  haskey(get_settings(m), :regime_eqcond_info) ?
+                                                                              (haskey(get_setting(m, :regime_eqcond_info), fcast_reg) ?
+                                                                               get_setting(m, :regime_eqcond_info)[fcast_reg].alternative_policy.eqcond(m, fcast_reg) :
+                                                                              eqcond(m, fcast_reg)) :
+                                                                              eqcond(m, fcast_reg)
                 end
 
                 # ALSO NEED TO ADD THE APPLY ALTPOLICY OPTION
@@ -110,16 +116,15 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             return Tcals, Rcals, Ccals
         end
     else
-        Γ0, Γ1, C, Ψ, Π = if apply_altpolicy
-            get_setting(m, :alternative_policy).eqcond(m)
-        else
-            eqcond(m)
-        end
+        Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ? (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
+                                                                          get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
+                                                                          eqcond(m, regimes[1])) :
+                                                                          eqcond(m, regimes[1])
 
         if isempty(TTT)
             assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
             @assert assert_cond "The Setting :uncertain_altpolicy must be false if TTT is empty."
-            TTT, _, _ = solve(m; apply_altpolicy = apply_altpolicy)
+            TTT, _, _ = solve(m)
         end
 
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)

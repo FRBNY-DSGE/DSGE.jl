@@ -262,17 +262,23 @@ end
 """
 ```
 make_forecast_plots(m, input_type, cond_type, output_var;
-    forecast_string = "", plotroot = "", hist_start_date = 0001-01-01)
+    forecast_string = "", plotroot = "", hist_start_date = 0001-01-01,
+    trend_nostates = DateFrame())
 ```
 
 Generate all `output_var` plots for the forecast of `m` specified by the
 `input_type`, `cond_type`, and optional `forecast_string`. If `plotroot` is not
 specified, plots are saved to `figurespath(m, \"forecast\")`.
+
+trend_nostates is a DataFrame for plotting the trend as a shock in the
+shock decomposition. Get the DataFrame via prepare_means_table_trend_nostates.
 """
 function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                              forecast_string::String = "",
                              plotroot::String = "",
-                             hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"))
+                             hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"),
+                             trend_nostates::DataFrame = DataFrame(),
+                             legend = :bottomleft, df_enddate = Date(2100,12,31))
 
     # Output directory
     if isempty(plotroot)
@@ -335,7 +341,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                                   names = Dict(:hist => hist_label, :forecast => forecast_label),
                                   end_date = end_date,
                                   tick_size = tick_size,
-                                  legend = :bottomleft)
+                                  legend = legend)
     elseif product == :bddforecast
         plot_history_and_forecast(m, varnames, class, input_type, cond_type,
                                   forecast_string = forecast_string,
@@ -345,7 +351,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                                   names = Dict(:hist => hist_label, :forecast => forecast_label),
                                   end_date = end_date,
                                   tick_size = tick_size,
-                                  legend = :bottomleft)
+                                  legend = legend)
     elseif product == :shockdec
         groups = DSGE.shock_groupings(m)
         plot_shock_decomposition(m, varnames, class, input_type, cond_type,
@@ -356,7 +362,9 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                                  hist_label = "",
                                  forecast_label = "",
                                  tick_size = tick_size,
-                                 legend = :bottomleft)
+                                 legend = legend,
+                                 trend_nostates = trend_nostates,
+                                 df_enddate = Date(2100,12,31))
     else
         error("Unsupported product: " * string(product))
     end

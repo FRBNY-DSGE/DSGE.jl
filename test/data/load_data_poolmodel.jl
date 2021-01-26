@@ -26,7 +26,7 @@ observables[:Model805] = Observable(:Model805, [:p805__wrongorigmatlab],
     @info "The following warnings are expected"
     df1 = load_data(m; try_disk = false)
     df1 = load_data(m)
-    df2 = CSV.read(joinpath(dataroot(m), "raw/wrongorigmatlab_190822.csv"))
+    df2 = CSV.read(joinpath(dataroot(m), "raw/wrongorigmatlab_190822.csv"), DataFrame)
     df2[!,:date] = Vector{Dates.Date}(df2[!,:date])
     df2[!,:p904] = Vector{Float64}(df2[!,:p904])
     df2[!,:p805] = Vector{Float64}(df2[!,:p805])

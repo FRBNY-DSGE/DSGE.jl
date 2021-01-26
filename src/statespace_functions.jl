@@ -1,323 +1,320 @@
 """
-`Transition{T<:AbstractFloat}`
-
-The transition equation of the state-space model takes the form
-
-    `s_t = TTT*s_{t-1} + RRR*ϵ_t + CCC`
-
-The `Transition` type stores the coefficient `Matrix{T}`s (`TTT`, `RRR`) and constant `Vector{T} CCC`.
-"""
-mutable struct Transition{T<:AbstractFloat}
-    TTT::Matrix{T}
-    RRR::Matrix{T}
-    CCC::Vector{T}
-end
-function Transition(TTT::Matrix{T}, RRR::Matrix{T}) where T<:AbstractFloat
-    CCC = zeros(eltype(TTT), size(TTT, 1))
-    Transition{T}(TTT, RRR, CCC)
-end
-function Transition(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where T<:AbstractFloat
-    Transition{T}(TTT, RRR, collect(CCC))
-end
-function Base.getindex(eq::Transition, d::Symbol)
-    if d in (:TTT, :RRR, :CCC)
-        return getfield(eq, d)
-    else
-        throw(KeyError(d))
-    end
-end
-
-"""
-`Measurement{T<:AbstractFloat}`
-
-The measurement equation of the state-space model takes the form
-
-   `y_t = ZZ*s_t + DD + u_t`
-
-where the error `u_t` is the measurement error, which is uncorrelated with the
-shocks in the transition equation `ϵ_t`.
-
-### Fields
-
-If `Ns` is the number of states `s_t`, `Ny` is the number of
-observables `y_t`, and `Ne` is the number of shocks `ϵ_t`:
-
-- `ZZ`: the `Ny` x `Ns`  measurement matrix
-- `DD`: the `Ny` x 1 constant vector
-- `QQ`: the `Ne` x `Ne` covariance matrix for the shocks `ϵ_t`
-- `EE`: the `Ny` x `Ny` covariance matrix for the measurement error `η_t`
-"""
-mutable struct Measurement{T<:AbstractFloat}
-    ZZ::Matrix{T}
-    DD::Vector{T}
-    QQ::Matrix{T}
-    EE::Matrix{T}
-end
-
-function Base.getindex(M::Measurement, d::Symbol)
-    if d in (:ZZ, :DD, :QQ, :EE)
-        return getfield(M, d)
-    else
-        throw(KeyError(d))
-    end
-end
-
-function measurement(m::AbstractDSGEModel, trans::Transition; shocks::Bool=true)
-    TTT = trans[:TTT]
-    RRR = trans[:RRR]
-    CCC = trans[:CCC]
-    measurement(m, TTT, RRR, CCC; shocks=shocks)
-end
-
-"""
 ```
-PseudoMeasurement{T<:AbstractFloat}
-```
-
-The pseudo-measurement equation of the state-space model takes the form
-
-   `x_t = ZZ_pseudo*s_t + DD_pseudo`
-
-### Fields
-
-Let `Ns` be the number of states `s_t` and `Nx` be the number of
-pseudo-observables `x_t`:
-
-- `ZZ_pseudo`: the `Nx` x `Ns` pseudo-measurement matrix
-- `DD_pseudo`: the `Nx` x 1 constant vector
-"""
-mutable struct PseudoMeasurement{T<:AbstractFloat}
-    ZZ_pseudo::Matrix{T}
-    DD_pseudo::Vector{T}
-end
-
-function Base.getindex(M::PseudoMeasurement, d::Symbol)
-    if d in (:ZZ_pseudo, :DD_pseudo)
-        return getfield(M, d)
-    else
-        throw(KeyError(d))
-    end
-end
-
-"""
-`System{T<:AbstractFloat}`
-
-A mutable struct containing the transition and measurement equations for a
-state-space model. The matrices may be directly indexed: `sys[:TTT]`
-returns `sys.transition.TTT`, `sys[:ZZ]` returns `sys.measurement.ZZ`, etc.
-"""
-mutable struct System{T<:AbstractFloat}
-    transition::Transition{T}
-    measurement::Measurement{T}
-    pseudo_measurement::PseudoMeasurement{T}
-end
-
-function System(transition::Transition{T}, measurement::Measurement{T}) where T<:AbstractFloat
-    # Initialize empty pseudo-measurement equation
-    _n_states = size(transition.TTT, 1)
-    _n_pseudo = 0
-    ZZ_pseudo = zeros(_n_pseudo, _n_states)
-    DD_pseudo = zeros(_n_pseudo)
-    pseudo_measurement = PseudoMeasurement(ZZ_pseudo, DD_pseudo)
-
-    return System(transition, measurement, pseudo_measurement)
-end
-
-function Base.getindex(system::System, d::Symbol)
-    if d in (:transition, :measurement, :pseudo_measurement)
-        return getfield(system, d)
-    elseif d in fieldnames(typeof(system.transition))
-        return getfield(system.transition, d)
-    elseif d in fieldnames(typeof(system.measurement))
-        return getfield(system.measurement, d)
-    elseif d in fieldnames(typeof(system.pseudo_measurement))
-        return getfield(system.pseudo_measurement, d)
-    else
-        throw(KeyError(d))
-    end
-end
-
-function Base.copy(system::System)
-    trans = Transition(system[:TTT], system[:RRR], system[:CCC])
-    meas  = Measurement(system[:ZZ], system[:DD], system[:QQ], system[:EE])
-    pseudo_meas = PseudoMeasurement(system[:ZZ_pseudo], system[:DD_pseudo])
-    return System(trans, meas, pseudo_meas)
-end
-
-"""
-`RegimeSwitchingSystem{N<:Int,T<:AbstractFloat}`
-
-A mutable struct containing the transition and measurement equations for a
-state-space model with regime-switching.
-The matrices may be directly indexed: `sys[1, :TTT]`
-returns `sys.regime[1].transition.TTT`, etc.
-"""
-mutable struct RegimeSwitchingSystem{T <: Real}
-    transitions::Vector{Transition{T}}
-    measurements::Vector{Measurement{T}}
-    pseudo_measurements::Vector{PseudoMeasurement{T}}
-
-    RegimeSwitchingSystem{T}(transitions, measurements, pseudo_measurements) where {T <: Real} = length(transitions) == length(measurements) ?
-        new(transitions, measurements, pseudo_measurements) :
-        error("The number of Transition (n = $(length(transitions)))" *
-              " and Measurement (n = $(length(measurements))) objects must match.")
-end
-
-RegimeSwitchingSystem(transitions::Vector{Transition{T}}, measurements::Vector{Measurement{T}},
-                      pseudo_measurements::Vector{PseudoMeasurement{T}}) where {T <: Real} =
-                          RegimeSwitchingSystem{T}(transitions, measurements, pseudo_measurements)
-
-function RegimeSwitchingSystem(transitions::Vector{Transition{T}},
-                               measurements::Vector{Measurement{T}}) where {T<:AbstractFloat}
-
-    # Initialize empty pseudo-measurement equation
-    _n_states = size(transitions[1].TTT, 1)
-    _n_pseudo = 0
-    ZZ_pseudo = zeros(_n_pseudo, _n_states)
-    DD_pseudo = zeros(_n_pseudo)
-    pseudo_measurement = PseudoMeasurement(ZZ_pseudo, DD_pseudo)
-    pseudo_measurements = [pseudo_measurement for i in 1:length(transitions)]
-
-    return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
-end
-
-function RegimeSwitchingSystem(systems::Vector{System{T}}) where {T <: Real}
-    n_regimes           = length(systems)
-    transitions         = Vector{Transition{T}}(undef, n_regimes)
-    measurements        = Vector{Measurement{T}}(undef, n_regimes)
-    pseudo_measurements = Vector{PseudoMeasurement{T}}(undef, n_regimes)
-    for i in 1:n_regimes
-        transitions[i]         = systems[i].transition
-        measurements[i]        = systems[i].measurement
-        pseudo_measurements[i] = systems[i].pseudo_measurement
-    end
-    return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
-end
-
-# Retrieve System correspond to a regime
-function System(system::RegimeSwitchingSystem, regime::Int)
-    return System(system.transitions[regime],
-                  system.measurements[regime],
-                  system.pseudo_measurements[regime])
-end
-
-# Get fields of the RegimeSwitchingSystem
-function Base.getindex(system::RegimeSwitchingSystem{T},
-                       d::Symbol) where {T<:AbstractFloat}
-    if d in (:transitions, :measurements, :pseudo_measurements)
-        return getfield(system, d)
-    elseif d == :regimes
-        return 1:length(system.transitions)
-    else
-        throw(KeyError(d))
-    end
-end
-
-# Get a specific regime
-function Base.getindex(system::RegimeSwitchingSystem{T},
-                       d::Int) where {T<:AbstractFloat}
-    if d < 1 || d > length(system.transitions)
-        throw(BoundsError(system.transitions,d))
-    else
-        return System(system, d)
-    end
-end
-
-# Get specific matrix or type from specific regime
-function Base.getindex(system::RegimeSwitchingSystem{T},
-                       regime::Int, d::Symbol) where {T <: Real}
-    if d == :transition
-        system.transitions[regime]
-    elseif d == :measurement
-        system.measurements[regime]
-    elseif d == :pseudo_measurement
-        system.pseudo_measurements[regime]
-    elseif d in (:TTT, :RRR, :CCC)
-        system.transitions[regime][d]
-    elseif d in (:ZZ, :DD, :QQ, :EE)
-        system.measurements[regime][d]
-    elseif d in (:ZZ_pseudo, :DD_pseudo)
-        system.pseudo_measurements[regime][d]
-    else
-        throw(KeyError(d))
-    end
-end
-
-function n_regimes(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
-    return length(system.transitions)
-end
-
-function Base.copy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
-    n_reg = n_regimes(system)
-    transitions         = Vector{Transition{T}}(undef, n_reg)
-    measurements        = Vector{Measurement{T}}(undef, n_reg)
-    pseudo_measurements = Vector{PseudoMeasurement{T}}(undef, n_reg)
-
-    for i in 1:length(system[:transitions])
-        trans = Transition(system[i,:TTT], system[i,:RRR], system[i,:CCC])
-        meas  = Measurement(system[i,:ZZ], system[i,:DD],
-                            system[i,:QQ], system[i,:EE])
-        pseudo_meas = PseudoMeasurement(system[i,:ZZ_pseudo], system[i,:DD_pseudo])
-
-        transitions[i]         = trans
-        measurements[i]        = meas
-        pseudo_measurements[i] = pseudo_meas
-    end
-    return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
-end
-
-function Base.deepcopy(system::RegimeSwitchingSystem{T}) where {T<:AbstractFloat}
-    n_reg = n_regimes(system)
-    transitions         = Vector{Transition{T}}(undef, n_reg)
-    measurements        = Vector{Measurement{T}}(undef, n_reg)
-    pseudo_measurements = Vector{PseudoMeasurement{T}}(undef, n_reg)
-
-    for i in 1:length(system[:transitions])
-        trans = Transition(deepcopy(system[i,:TTT]), deepcopy(system[i,:RRR]), deepcopy(system[i,:CCC]))
-        meas  = Measurement(deepcopy(system[i,:ZZ]), deepcopy(system[i,:DD]),
-                            deepcopy(system[i,:QQ]), deepcopy(system[i,:EE]))
-        pseudo_meas = PseudoMeasurement(deepcopy(system[i,:ZZ_pseudo]), deepcopy(system[i,:DD_pseudo]))
-
-        transitions[i]         = trans
-        measurements[i]        = meas
-        pseudo_measurements[i] = pseudo_meas
-    end
-    return RegimeSwitchingSystem(transitions, measurements, pseudo_measurements)
-end
-
-"""
-```
-compute_system(m; apply_altpolicy = false, verbose = :high)
+compute_system(m; tvis::Bool = false, verbose = :high)
+compute_system_helper(m; tvis::Bool = false, verbose = :high)
 ```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` or `RegimeSwitchingSystem` object.
+The keyword `apply_altpolicy` indicates whether the state-space system
+should reflect an alternative policy, and the keyword `tvis` indicates
+whether the state-space system involves time-varying information sets.
+To use `tvis = true`, at least the setting `:tvis_information_set` must
+exist. See `?DSGE.compute_tvis_system` for more information about
+computing state-space systems with time-varying information sets.
+
+compute_system just runs compute_system_helper (which actually computes
+the system) and then in the case of imperfect but positive credibility,
+adjusts the anticipated observables and pseudo-observables' measurement
+equations.
 """
-function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
-                        verbose::Symbol = :high) where {T <: Real}
+function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
+
+    apply_altpolicy = haskey(m.settings, :regime_eqcond_info) || (haskey(m.settings, :alternative_policy) &&
+                                                                  get_setting(m, :alternative_policy).key != :historical)
+
+    if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching)
+        # Set regime_eqcond_info if alternative_policy but no regime_eqcond_info
+        fcast_reg = haskey(m.settings, :reg_post_conditional_end) ?
+            max(get_setting(m, :reg_post_conditional_end), get_setting(m, :reg_forecast_start)) :
+            get_setting(m, :reg_forecast_start) # Errors if no reg_forecast_start key in settings
+
+#=        if apply_altpolicy && (!haskey(m.settings, :regime_eqcond_info) ||
+                               !haskey(get_setting(m, :regime_eqcond_info), fcast_reg)) &&
+                               haskey(m.settings, :alternative_policy) && get_setting(m, :alternative_policy).key != :historical
+
+            if !haskey(m.settings, :regime_eqcond_info)
+                m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}())
+            end
+
+            m <= Setting(:replace_eqcond, true) # Turn this setting on b/c an alt policy was requested
+
+            # Fixing regime_dates to account for adding fcast_reg if necessary
+            cond_date = haskey(m.settings, :date_conditional_end) ?
+                DSGE.iterate_quarters(get_setting(m, :date_conditional_end), 1) : get_setting(m, :date_forecast_start)
+            fcast_date = max(get_setting(m, :date_forecast_start), cond_date)
+
+            if !(fcast_reg in keys(get_setting(m, :regime_dates)))
+                get_setting(m, :regime_dates)[fcast_reg] = fcast_date
+            elseif get_setting(m, :regime_dates)[fcast_reg] != fcast_date
+                regime_dated = copy(get_setting(m, :regime_dates))
+
+                get_setting(m, :regime_dates)[fcast_reg] = fcast_date
+                for k in keys(get_setting(m, :regime_dates))
+                    if k >= fcast_reg
+                        get_setting(m, :regime_dates)[k+1] = regime_dated[k]
+                    end
+                end
+            end
+
+            alt_pol_length = haskey(m.settings, :alternative_policies) ?
+                length(get_setting(m, :alternative_policies)) : 1
+            for reg in fcast_reg:get_setting(m, :n_regimes)
+                get_setting(m, :regime_eqcond_info)[reg] = DSGE.EqcondEntry(get_setting(m, :alternative_policy),
+                                                                            vcat([1.], zeros(alt_pol_length)))
+            end
+        end # Do for regime_dates and remove apply_altpolicy from solve.=#
+
+        # Grab these settings
+        has_uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy)
+        has_uncertain_zlb = haskey(m.settings, :uncertain_zlb)
+        has_regime_eqcond_info = haskey(m.settings, :regime_eqcond_info)
+        uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
+        uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+        gensys2 = haskey(m.settings, :gensys2) && get_setting(m, :gensys2)
+
+        regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, DSGE.EqcondEntry}()
+
+        # Set replace_eqcond to nothing if !apply_altpolicy
+        if !apply_altpolicy && has_regime_eqcond_info
+            regime_info_copy = copy(get_setting(m, :regime_eqcond_info))
+            delete!(m.settings, :regime_eqcond_info)
+            has_regime_eqcond_info = false
+            m <= Setting(:gensys2, false)
+        end
+
+        # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
+        if has_uncertain_zlb && !uncertain_zlb && has_regime_eqcond_info
+            for reg in keys(regime_eqcond_info)
+                if regime_eqcond_info[reg].alternative_policy.key == :zero_rate
+                    altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
+                    altpol_vec[1] = 1.0
+                    regime_eqcond_info[reg].weights = altpol_vec
+                end
+            end
+        end
+
+        # Same for uncertain_altpolicy (note: unnecessary for compute_system_helper
+        ## only helpful for combining historical and alternative policies with
+        ## the right weights later on
+        if has_uncertain_altpolicy && !uncertain_altpolicy && has_regime_eqcond_info
+            for reg in keys(regime_eqcond_info)
+                if regime_eqcond_info[reg].alternative_policy.key == alternative_policy(m).key
+                    altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
+                    altpol_vec[1] = 1.0
+                    regime_eqcond_info[reg].weights = altpol_vec
+                end
+            end
+        end
+    end
+
+    system_main = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
+
+    # If correcting measurement eqs for anticipated (pseudo) observables is unnecessary
+    # (eg. running Taylor or no regime switching or no uncertainty in ZLB or altpolicy or
+    # either perfect or zero credibility - invariant perfect or zero credibility in the case of time varying),
+    # then return system now.
+    # The !apply_altpolicy check may be problematic after refactoring altpolicy.
+    if !apply_altpolicy || !haskey(m.settings, :regime_switching) || !get_setting(m, :regime_switching) ||
+        !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
+        (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy) || (!has_uncertain_zlb && !has_uncertain_altpolicy)
+
+        ## TODO: Setting names should change once refactoring done
+        if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy && has_regime_eqcond_info
+            m <= Setting(:regime_eqcond_info, regime_info_copy)
+            m <= Setting(:gensys2, gensys2)
+        end
+
+        return system_main
+    end
+
+    # Turn off these settings temporarily to get historical policy
+    m <= Setting(:regime_switching, false)
+    m <= Setting(:uncertain_altpolicy, false)
+    m <= Setting(:uncertain_zlb, false)
+
+    if !haskey(m.settings, :alternative_policies)
+        m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
+    end
+
+    orig_altpol = get_setting(m, :alternative_policy)
+    n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
+    system_altpolicies = Vector{RegimeSwitchingSystem}(undef, n_altpolicies)
+
+    m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
+
+    # TODO: THIS BLOCK OF CODE IS INEFFICIENT. The problem is this. We want to compute the perfect credibility
+    # state space system for each possible alternative policy when there is imperfect awareness/policy uncertainty.
+    # This code does it by setting the credibility of different policies to 1 and looping. HOWEVER,
+    # this code incurs unnecessary costs b/c we compute the transition matrices every loop for all alternative policies
+    # and calculate the implied transition equations given the weights vector. What we really want to do is calculate
+    # the transition equations w/out the uncertain_altpolicy thing on at all and just use the correct replace_eqcond_func_dict
+    # or solve/eqcond functions.
+    #
+    # To avoid this problem, currently, we are hard-coding that there are only two alternative policies, the desired one
+    # and the historical one, which we assume to be the transition equations when there is no regime-switching,
+    # i.e. the system_taylor calculated above.
+    for i in 1:n_altpolicies # loop over alternative policies, noting that we've already computed the historical policy
+        ## With alternative policy weights = [1., 0.] in all forecast regimes for given altpolicy
+        #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
+        #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
+        #  It is more efficient to find a way to compute each altpolicy individually ONCE.
+        if i > 1 && get_setting(m, :alternative_policies)[i-1].key == :taylor_rule
+            m <= Setting(:gensys2, false)
+            replace_eq_copy = copy(get_setting(m, :regime_eqcond_info))
+            delete!(m.settings, :regime_eqcond_info)
+            system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
+            m <= Setting(:regime_eqcond_info, replace_eq_copy)
+            m <= Setting(:gensys2, gensys2)
+        elseif i > 1
+            m <= Setting(:alternative_policy, get_setting(m, :alternative_policies)[i-1])
+            system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
+        else
+            system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
+        end
+    end
+
+    # Now add uncertain altpolicy and zlb back
+    m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
+    m <= Setting(:uncertain_zlb, uncertain_zlb)
+    m <= Setting(:alternative_policy, orig_altpol)
+
+    # Checks if pseudo measurement is required
+    type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
+    has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
+    hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+
+    has_fwd_looking_obs = haskey(get_settings(m), :forward_looking_observables)
+    if has_pseudo
+        has_fwd_looking_pseudo = haskey(get_settings(m), :forward_looking_pseudo_observables)
+    end
+#=
+    function get_meas(system::AbstractSystem, reg::Int; pseudo = false)
+        if typeof(system) == System{Float64} && !pseudo
+            return system.measurement
+        elseif typeof(system) == System{Float64} && pseudo
+            return system.pseudo_measurement
+        elseif typeof(system) == RegimeSwitchingSystem{Float64} && !pseudo
+            return system.measurements[reg]
+        elseif typeof(system) == RegimeSwitchingSystem{Float64} && pseudo
+            return system.pseudo_measurements[reg]
+        else
+            error("Incorrect System Type")
+        end
+    end
+=#
+    ## Correct the measurement equations for anticipated observables via convex combination
+    for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+        new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
+
+        if has_fwd_looking_obs
+            for k in get_setting(m, :forward_looking_observables)
+                system_main.measurements[reg][:ZZ][m.observables[k], :] =
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :] for i in 1:length(new_wt)])
+                system_main.measurements[reg][:DD][m.observables[k]] =
+                    sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:length(new_wt)])
+            end
+        else
+            # TODO: This needs to be updated
+            system_main.measurements[reg][:ZZ] .=
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
+            system_main.measurements[reg][:DD] .=
+                sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD] for i in 1:length(new_wt)])
+        end
+
+        if has_pseudo
+            if has_fwd_looking_pseudo
+                for k in get_setting(m, :forward_looking_pseudo_observables)
+                    system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :]
+                             for i in 1:length(new_wt)])
+                    system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
+                        sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]]
+                             for i in 1:length(new_wt)])
+                end
+            else
+                # TODO: This needs to be updated
+                system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
+                sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:length(new_wt)])
+                system_main.pseudo_measurements[reg][:DD_pseudo] .=
+                sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo] for i in 1:length(new_wt)])
+            end
+        end
+    end
+
+    return system_main
+end
+
+
+function compute_system_helper(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
+                               tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
+
+    if tvis
+        @assert haskey(get_settings(m), :tvis_information_set) "The setting :tvis_information_set is not defined"
+        n_tvis = haskey(get_settings(m), :tvis_regime_eqcond_info) ? length(get_setting(m, :tvis_regime_eqcond_info)) : 1
+        if n_tvis == 1 && haskey(get_settings(m), :tvis_regime_eqcond_info)
+            if haskey(get_settings(m), :regime_eqcond_info)
+                if get_setting(m, :tvis_regime_eqcond_info)[1] != get_setting(m, :regime_eqcond_info)
+                    warn_str = "The dictionary of functions in the Setting :regime_eqcond_info does not match the one specified " *
+                    "by the length-one Setting :tvis_regime_eqcond_info. Replacing :regime_eqcond_info with the dictionary " *
+                    "of functions contained in :tvis_regime_eqcond_info."
+                    @warn warn_str
+                    m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_regime_eqcond_info)[1])
+                end
+            else
+                m <= Setting(:regime_eqcond_info, get_setting(m, :tvis_regime_eqcond_info)[1])
+            end
+        end
+
+        if n_tvis > 1 # case of n_tvis = 1 handled below to avoid constructing redundant TimeVaryingInformationSetSystem
+            @assert haskey(get_settings(m), :tvis_select_system) "The setting :tvis_select_system is not defined"
+            tvis_sys = compute_tvis_system(m; verbose = verbose)
+            transition_eqns = Transition{T}[tvis_sys[select, reg, :transition] for (reg, select) in enumerate(tvis_sys[:select])]
+            return RegimeSwitchingSystem(transition_eqns, tvis_sys[:measurements], tvis_sys[:pseudo_measurements])
+        end
+    end
 
     solution_method = get_setting(m, :solution_method)
 
-    regime_switching = haskey(get_settings(m), :regime_switching) ?
-        get_setting(m, :regime_switching) : false
-    n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
-        get_setting(m, :n_regimes) : 1
-    n_hist_regimes   = regime_switching && haskey(get_settings(m), :n_hist_regimes) ?
-        get_setting(m, :n_hist_regimes) : 1
+    regime_switching = haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
+    n_regimes        = (regime_switching && haskey(get_settings(m), :n_regimes)) ? get_setting(m, :n_regimes) : 1
+    n_hist_regimes   = (regime_switching && haskey(get_settings(m), :n_hist_regimes)) ? get_setting(m, :n_hist_regimes) : 1
 
     # Solve model
     if regime_switching
         if solution_method == :gensys
-            if haskey(get_settings(m), :reg_forecast_start)
-                fcast_regimes = collect(get_setting(m, :reg_forecast_start):n_regimes)
+            # Determine which regimes should use gensys2/gensys
+            if haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
+                if haskey(get_settings(m), :regime_eqcond_info)
+                    sorted_eqcond = sort!(collect(get_setting(m, :regime_eqcond_info)), by=x->x[1])
+                    first_gensys2_ind = findfirst(x->x[2].alternative_policy.key == :zero_rate, sorted_eqcond)
+                    first_gensys2_regime = !isnothing(first_gensys2_ind) ? sorted_eqcond[first_gensys2_ind][1] : nothing
+                else
+                    first_gensys2_regime = nothing
+                end
+                   # minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
+                if first_gensys2_regime == nothing
+                    GensysError("No equilibrium conditions in any regime are being temporarily replaced, " *
+                                "but the setting :gensys2 is true.")
+                end
+                last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ?
+                min(first_gensys2_regime + get_setting(m, :temporary_zlb_length), n_regimes) : n_regimes #NOTE removed a +1 here--if tests start failing, check here first
+
+                gensys_regimes = UnitRange{Int}[1:(first_gensys2_regime - 1)]
+                if last_gensys2_regime != n_regimes
+                    append!(gensys_regimes, [(last_gensys2_regime + 1):n_regimes])
+                end
+                gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
             else
-                fcast_regimes = collect(n_hist_regimes + 1:n_regimes)
+                gensys2_regimes = Vector{UnitRange{Int}}(undef, 0)
+                gensys_regimes  = UnitRange{Int}[1:n_regimes]
             end
-            TTTs, RRRs, CCCs = solve(m; apply_altpolicy = apply_altpolicy,
-                                     regime_switching = regime_switching,
+
+            # Solve!
+            TTTs, RRRs, CCCs = solve(m; regime_switching = regime_switching,
                                      regimes = collect(1:n_regimes),
-                                     hist_regimes = collect(1:n_hist_regimes),
-                                     fcast_regimes = fcast_regimes,
+                                     gensys_regimes = gensys_regimes,
+                                     gensys2_regimes = gensys2_regimes,
                                      verbose = verbose)
 
             transition_equations = Vector{Transition{T}}(undef, n_regimes)
@@ -327,31 +324,56 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
 
             # Infer which measurement and pseudo-measurement equations to use
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
-            if hasmethod(measurement, type_tuple)
-                measurement_equations = measurement(m, TTTs, RRRs, CCCs; TTTs = TTTs, CCCs = CCCs,
-                                                    apply_altpolicy = apply_altpolicy)
+            #             has_pseudo = true
+            has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
+            hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+            if tvis
+                if hasmethod(measurement, type_tuple)
+                    measurement_equations = measurement(m, TTTs, RRRs, CCCs;
+                                                        information_set = get_setting(m, :tvis_information_set))
+                else
+                    measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
+                                                                 TTTs = TTTs, CCCs = CCCs,
+                                                                 information_set = get_setting(m, :tvis_information_set)[reg])
+                    end
+                end
+
+                if hasmethod(pseudo_measurement, type_tuple)
+                    pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+                elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+                    pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
+                                                                               reg = reg, TTTs = TTTs, CCCs = CCCs,
+                                                                               information_set = get_setting(m, :tvis_information_set)[reg])
+                    end
+                end
             else
-                measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
-                for reg in 1:n_regimes
-                    measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                             reg = reg, TTTs = TTTs,
-                                                             CCCs = CCCs, apply_altpolicy = apply_altpolicy)
+                if hasmethod(measurement, type_tuple)
+                    measurement_equations = measurement(m, TTTs, RRRs, CCCs)
+                else
+                    measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg)
+                    end
+                end
+
+                if hasmethod(pseudo_measurement, type_tuple)
+                    pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+                elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+                    pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+                    for reg in 1:n_regimes
+                        pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg)
+                    end
                 end
             end
 
-            if hasmethod(pseudo_measurement, type_tuple)
-                pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
-                return RegimeSwitchingSystem(transition_equations,
-                                             measurement_equations,
-                                             pseudo_measurement_equations)
-            elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
-                pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
-                for reg in 1:n_regimes
-                    pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                                           reg = reg)
-                end
-
+            if has_pseudo
                 return RegimeSwitchingSystem(transition_equations, measurement_equations, pseudo_measurement_equations)
+            else
+                return RegimeSwitchingSystem(transition_equations, measurement_equations)
             end
         else
             error("Regime switching with the Klein solution algorithm has not been implemented.")
@@ -359,15 +381,16 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
     else
         if solution_method == :gensys
 
-            TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+            TTT, RRR, CCC = solve(m; verbose = verbose)
             transition_equation = Transition(TTT, RRR, CCC)
 
             # Solve measurement equation
             measurement_equation = measurement(m, TTT, RRR, CCC)
 
-            if get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond
-                measurement_equation[:DD][get_observables(m)[:obs_nominalrate]] = m[:Rstarn]
-            end
+            #=          # TODO: delete this chunk of code, can't have an equilibrium w/ permanent ZLB, will trigger endogeneity problem
+            if get_setting(m, :alternative_policy).eqcond == zero_rate_eqcond && apply_altpolicy
+            measurement_equation[:DD][get_observables(m)[:obs_nominalrate]] = m[:Rstarn]
+            end=#
 
         elseif solution_method == :klein
             # Unpacking the method from solve to hang on to TTT_jump
@@ -401,28 +424,28 @@ function compute_system(m::AbstractDSGEModel{T}; apply_altpolicy::Bool = false,
         else
             throw("solution_method provided does not exist.")
         end
-    end
 
-    type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
-    if hasmethod(pseudo_measurement, type_tuple)
-        # Solve pseudo-measurement equation
-        pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
-        return System(transition_equation, measurement_equation, pseudo_measurement_equation)
-    else
-        return System(transition_equation, measurement_equation)
+        type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
+        if hasmethod(pseudo_measurement, type_tuple)
+            # Solve pseudo-measurement equation
+            pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
+            return System(transition_equation, measurement_equation, pseudo_measurement_equation)
+        else
+            return System(transition_equation, measurement_equation)
+        end
     end
 end
 
 """
 ```
 compute_system(m; apply_altpolicy = false,
-               check_system = false, get_system = false,
-               get_population_moments = false, use_intercept = false,
-               verbose = :high)
-compute_system(m, data; apply_altpolicy = false,
-               check_system = false, get_system = false,
-               get_population_moments = false,
-               verbose = :high)
+            check_system = false, get_system = false,
+            get_population_moments = false, use_intercept = false,
+            tvis::Bool = false, verbose = :high)
+            compute_system(m, data; apply_altpolicy = false,
+            check_system = false, get_system = false,
+            get_population_moments = false,
+            tvis::Bool = false, verbose = :high)
 ```
 Given the current model parameters, compute the DSGE-VAR or DSGE-VECM system
 corresponding to model `m`. If a matrix `data` is also passed, then
@@ -431,41 +454,42 @@ with weight λ.
 
 ### Keyword Arguments
 * `check_system::Bool`: see `?compute_system` that takes the input `m::AbstractDSGEModel`
-    and `system::System`.
+   and `system::System`.
 * `get_system::Bool`: see Outputs
 * `get_population_moments::Bool`: see Outputs
 * `use_intercept::Bool`: use an intercept term when computing the OLS estimate of the VAR system.
+* `tvis::Bool` indicates whether the state-space system involves time-varying information sets.
 
 ### Outputs
 * If `get_system = true`:
-    Returns the updated `system` whose measurement matrices `ZZ`, `DD`, and `QQ` correspond
-    to the VAR or VECM specified by `m`. If `m` is an `AbstractDSGEVECMModel`,
-    then the `system` and the vector implied by additional cointegrating relationships
-    are returned as a 2-element tuple.
+  Returns the updated `system` whose measurement matrices `ZZ`, `DD`, and `QQ` correspond
+  to the VAR or VECM specified by `m`. If `m` is an `AbstractDSGEVECMModel`,
+  then the `system` and the vector implied by additional cointegrating relationships
+  are returned as a 2-element tuple.
 * If `get_population_moments = true`:
-    Returns the limit cross product matrices that describe the DSGE implied
+  Returns the limit cross product matrices that describe the DSGE implied
     population moments between the observables and their lags. If `data` is
     also passed as an input, then the sample population moments are also returned.
 * Otherwise:
-    Returns `β` and `Σ`, the coefficients and observables covariance matrix of the VAR or VECM.
-    If `data` is passed in, then `β` and `Σ` are estimated from the data using `m`
-    as a prior with weight λ. Otherwise, `β` and `Σ` comprise the VECM approximation
-    of the DSGE `m`.
+Returns `β` and `Σ`, the coefficients and observables covariance matrix of the VAR or VECM.
+If `data` is passed in, then `β` and `Σ` are estimated from the data using `m`
+as a prior with weight λ. Otherwise, `β` and `Σ` comprise the VECM approximation
+of the DSGE `m`.
 """
 function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false, use_intercept::Bool = false,
-                        verbose::Symbol = :high) where {T <: Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 
     regime_switching = haskey(get_settings(m), :regime_switching) ?
-        get_setting(m, :regime_switching) : false
+    get_setting(m, :regime_switching) : false
     n_regimes        = regime_switching && haskey(get_settings(m), :n_regimes) ?
-        get_setting(m, :n_regimes) : 1
+    get_setting(m, :n_regimes) : 1
 
     dsge = get_dsge(m)
     if regime_switching
         error("Regime switching has not been implemented for a DSGEVAR yet.")
-        system = compute_system(dsge; apply_altpolicy = apply_altpolicy,
+        system = compute_system(dsge;
                                 verbose = verbose) # This `system` is really a RegimeSwitchingSystem
 
         systems = Vector{System{T}}(undef, n_regimes)
@@ -485,13 +509,13 @@ function compute_system(m::AbstractDSGEVARModel{T}; apply_altpolicy::Bool = fals
     elseif regime_switching
         EEs, MMs = measurement_error(m; regime_switching = regime_switching, n_regimes = n_regimes)
         out = get_population_moments ? Vector{Tuple{3, Matrix{T}}}(undef, n_regimes) :
-            Vector{Tuple{2, Matrix{T}}}(undef, n_regimes)
+        Vector{Tuple{2, Matrix{T}}}(undef, n_regimes)
 
         for i in 1:n_regimes
             out[i] = var_approx_state_space(system[i, :TTT], system[i, :RRR], system[i, :QQ],
-                                          system[i, :DD], system[i, :ZZ], EEs[i], MMs[i], n_lags(m);
-                                          get_population_moments = get_population_moments,
-                                          use_intercept = use_intercept)
+                                            system[i, :DD], system[i, :ZZ], EEs[i], MMs[i], n_lags(m);
+                                            get_population_moments = get_population_moments,
+                                            use_intercept = use_intercept)
         end
 
         return out
@@ -509,7 +533,7 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
                         apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false,
-                        verbose::Symbol = :high) where {T<:Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
 
     if get_λ(m) == Inf
         # Then we just want the VAR approximation of the DSGE
@@ -531,7 +555,7 @@ function compute_system(m::AbstractDSGEVARModel{T}, data::Matrix{T};
 
             lags = n_lags(m)
             YYYY, XXYY, XXXX =
-                compute_var_population_moments(data, lags; use_intercept = true)
+            compute_var_population_moments(data, lags; use_intercept = true)
             out = var_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
                                          system[:DD], system[:ZZ], EE, MM, n_lags(m);
                                          get_population_moments = true,
@@ -562,9 +586,9 @@ end
 function compute_system(m::AbstractDSGEVECMModel{T}; apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false, use_intercept::Bool = false,
-                        verbose::Symbol = :high) where {T<:Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
 
-dsge = get_dsge(m)
+    dsge = get_dsge(m)
     system = compute_system(dsge; verbose = verbose)
 
     # Use wrapper compute_system for AbstractDSGEVECMModel types
@@ -593,7 +617,7 @@ function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
                         apply_altpolicy::Bool = false,
                         check_system::Bool = false, get_system::Bool = false,
                         get_population_moments::Bool = false,
-                        verbose::Symbol = :high) where {T<:Real}
+                        tvis::Bool = false, verbose::Symbol = :high) where {T<:Real}
 
     if get_λ(m) == Inf
         # Then we just want the VECM approximation of the DSGE
@@ -606,8 +630,8 @@ function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
         # Create a system using the method for DSGE-VECMs and λ = ∞
         system, DD_coint_add = compute_system(m; apply_altpolicy = apply_altpolicy,
                                               check_system = check_system,
-                                get_system = true, use_intercept = true,
-                                verbose = verbose)
+                                              get_system = true, use_intercept = true,
+                                              verbose = verbose)
 
         if get_system
             return system
@@ -616,9 +640,9 @@ function compute_system(m::AbstractDSGEVECMModel{T}, data::Matrix{T};
 
             lags = n_lags(m)
             YYYY, XXYY, XXXX =
-                compute_var_population_moments(data, lags; use_intercept = true)
+            compute_var_population_moments(data, lags; use_intercept = true)
             out = vecm_approx_state_space(system[:TTT], system[:RRR], system[:QQ],
-                                         system[:DD], system[:ZZ], EE, MM, size(data, 1),
+                                          system[:DD], system[:ZZ], EE, MM, size(data, 1),
                                           n_lags(m), n_cointegrating(m),
                                           n_cointegrating_add(m), DD_coint_add;
                                           get_population_moments = true,
@@ -662,7 +686,7 @@ F_ϵ: structural shock distribution
 F_u: likelihood function measurement error distribution
 F_λ: initial distribution of λ for state transition function
 """
-function compute_system(m::PoolModel{T}; verbose::Symbol = :high) where T<:AbstractFloat
+function compute_system(m::PoolModel{T}; tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
     Φ, F_ϵ, F_λ = transition(m)
     Ψ, F_u = measurement(m)
     return Φ, Ψ, F_ϵ, F_u, F_λ
@@ -671,20 +695,20 @@ end
 """
 ```
 compute_system(m::AbstractDSGEModel, system::System;
-        observables::Vector{Symbol} = collect(keys(m.observables)),
-        pseudo_observables::Vector{Symbol} = collect(keys(m.pseudo_observables)),
-        states::Vector{Symbol} = vcat(collect(keys(m.endogenou_states)),
-                                      collect(keys(m.endogenous_states_augmented)))
-        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
-        zero_DD = false, zero_DD_pseudo = false)
+observables::Vector{Symbol} = collect(keys(m.observables)),
+pseudo_observables::Vector{Symbol} = collect(keys(m.pseudo_observables)),
+states::Vector{Symbol} = vcat(collect(keys(m.endogenou_states)),
+collect(keys(m.endogenous_states_augmented)))
+shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+zero_DD = false, zero_DD_pseudo = false)
 compute_system(m::AbstractDSGEVECMModel, system::System;
-        observables::Vector{Symbol} = collect(keys(m.observables)),
-        pseudo_observables::Vector{Symbol} = collect(keys(m.pseudo_observables)),
-        cointegrating::Vector{Symbol} = collect(keys(m.cointegrating)),
-        states::Vector{Symbol} = vcat(collect(keys(m.endogenou_states)),
-                                      collect(keys(m.endogenous_states_augmented)))
-        shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
-        zero_DD = false, zero_DD_pseudo = false)
+observables::Vector{Symbol} = collect(keys(m.observables)),
+pseudo_observables::Vector{Symbol} = collect(keys(m.pseudo_observables)),
+cointegrating::Vector{Symbol} = collect(keys(m.cointegrating)),
+states::Vector{Symbol} = vcat(collect(keys(m.endogenou_states)),
+collect(keys(m.endogenous_states_augmented)))
+shocks::Vector{Symbol} = collect(keys(m.exogenous_shocks)),
+zero_DD = false, zero_DD_pseudo = false)
 ```
 computes the corresponding transition and measurement
 equations specified by the keywords (e.g. `states`, `pseudo_observables`)
@@ -696,23 +720,23 @@ must specify the EE matrix after applying compute_system.
 
 ### Keywords
 * `observables`: variables that should be
-    entered into the new `ZZ` and `DD` matrices.
-    The `observables` can be both Observables and PseudoObservables,
-    but they must be an element of the system already.
+entered into the new `ZZ` and `DD` matrices.
+The `observables` can be both Observables and PseudoObservables,
+but they must be an element of the system already.
 * `pseudo_observables`: variables that should be
-    entered into the new `ZZ_pseudo` and `DD_pseudo` matrices.
-    The `observables` can be both Observables and PseudoObservables,
-    but they must be an element of the system already.
+entered into the new `ZZ_pseudo` and `DD_pseudo` matrices.
+The `observables` can be both Observables and PseudoObservables,
+but they must be an element of the system already.
 * `cointegrating`: variables that should be
-    entered into the new `ZZ` and `DD` matrices as cointegrating relationships.
-    The `observables` can be both Observables and PseudoObservables,
-    but they must be an element of the system already.
+entered into the new `ZZ` and `DD` matrices as cointegrating relationships.
+The `observables` can be both Observables and PseudoObservables,
+but they must be an element of the system already.
 * `states`: variables that should be
-    entered into the new `TTT` and `RRR` matrices as states.
-    They must be existing states.
+entered into the new `TTT` and `RRR` matrices as states.
+They must be existing states.
 * `shocks`: variables that should be
-    entered into the new `RRR` and `QQ` matrices as shocks.
-    They must be existing exogenous shocks.
+entered into the new `RRR` and `QQ` matrices as shocks.
+They must be existing exogenous shocks.
 """
 function compute_system(m::AbstractDSGEModel{S}, system::System;
                         observables::Vector{Symbol} = collect(keys(m.observables)),
@@ -782,10 +806,10 @@ function compute_system(m::AbstractDSGEModel{S}, system::System;
         for (i, pseudoobs) in enumerate(pseudo_observables)
             Zpseudoout[i, :], Dpseudoout[i] = if haskey(oid, pseudoobs)
                 system[:ZZ][oid[pseudoobs], which_states], zero_DD_pseudo ?
-                    zero(S) : system[:DD][oid[pseudoobs]]
+                zero(S) : system[:DD][oid[pseudoobs]]
             elseif haskey(pid, pseudoobs)
                 system[:ZZ_pseudo][pid[pseudoobs], which_states], zero_DD_pseudo ?
-                    zero(S) : system[:DD_pseudo][pid[pseudoobs]]
+                zero(S) : system[:DD_pseudo][pid[pseudoobs]]
             else
                 error("Observable/PseudoObservable $pseudoobs cannot be found in the DSGE model $m")
             end
@@ -844,7 +868,7 @@ end
 """
 ```
 function compute_DD_coint_add(m::AbstractDSGEVECMModel{S}, system::System,
-                              cointegrating_add::Vector{Symbol}) where {S <: Real}
+cointegrating_add::Vector{Symbol}) where {S <: Real}
 ```
 computes `DD_coint_add` for a `DSGEVECM` model. This vector
 holds additional cointegrating relationships that do not require
@@ -948,7 +972,7 @@ end
 """
 ```
 var_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, p; get_population_moments = false,
-    use_intercept = false) where {S<:Real}
+use_intercept = false) where {S<:Real}
 ```
 computes the VAR(p) approximation of the linear state space system
 
@@ -1039,15 +1063,15 @@ function var_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
     for rr = 1:p
         # 𝔼[yy,x(lag rr)]
         yyXXd[:, n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift] =
-            reshape(GAMM0[:, rr + 1], n_obs, n_obs) + DDDD
+        reshape(GAMM0[:, rr + 1], n_obs, n_obs) + DDDD
 
         # 𝔼[x(lag rr),x(lag ll)]
         for ll = rr:p
-            yyyydrrll = reshape(GAMM0[:, ll - rr + 1], n_obs, n_obs) + DDDD
-            XXXXd[n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift,
-                  n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift] = yyyydrrll
-            XXXXd[n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift,
-                  n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift] = yyyydrrll'
+        yyyydrrll = reshape(GAMM0[:, ll - rr + 1], n_obs, n_obs) + DDDD
+        XXXXd[n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift,
+              n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift] = yyyydrrll
+        XXXXd[n_obs * (ll - 1) + 1 + shift:n_obs * ll + shift,
+              n_obs * (rr - 1) + 1 + shift:n_obs * rr + shift] = yyyydrrll'
         end
     end
 
@@ -1065,8 +1089,8 @@ end
 """
 ```
 vecm_approx_state_space(TTT, RRR, QQQ, DD, ZZ, EE, MM, n_obs, p, n_coint,
-    n_coint, n_coint_add, DD_coint_add; get_population_moments = false,
-    use_intercept = false) where {S<:Real}
+n_coint, n_coint_add, DD_coint_add; get_population_moments = false,
+use_intercept = false) where {S<:Real}
 ```
 computes the VECM(p) approximation of the linear state space system
 
@@ -1088,8 +1112,8 @@ cov(ϵₜ, uₜ) = QQ * MM'.
 ### Outputs
 If `get_population_moments = false`:
 * `β`: VECM(p) coefficients. The first `n_coint + n_coint_add`
-    coefficients for each observable comprise the error correction terms,
-    while the following `1 + p * n_obs` terms are the VAR terms.
+coefficients for each observable comprise the error correction terms,
+while the following `1 + p * n_obs` terms are the VAR terms.
 * `Σ`: innovations variance-covariance matrix for the VECM(p) representation
 ```
 Δyₜ = eₜβₑ + Xₜβᵥ + μₜ
@@ -1182,7 +1206,7 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
         # 𝔼[x(const), x(lags)]
         XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * n_obs] = repeat(DD[1:n_obs]', 1, p)
         XXXXd[n_coint_all + 2:n_coint_all + 1 + p * n_obs, n_coint_all + 1] =
-            XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * n_obs]' # same as kron(ones(p), DD[1:n_obs]) but avoids calculation
+        XXXXd[n_coint_all + 1, n_coint_all + 2:n_coint_all + 1 + p * n_obs]' # same as kron(ones(p), DD[1:n_obs]) but avoids calculation
 
         # 𝔼[yy, x(n_coint)]
         yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:n_obs, n_obs + 1:n_obs + n_coint]
@@ -1195,7 +1219,7 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
         # 𝔼[x(n_coint), x(n_coint)]
         XXXXd[n_coint_add + 1:n_coint_all, n_coint_add + 1:n_coint_all] =
-            yyyyd_coint0[n_obs + 1:n_obs + n_coint, n_obs + 1:n_obs + n_coint]
+        yyyyd_coint0[n_obs + 1:n_obs + n_coint, n_obs + 1:n_obs + n_coint]
 
         # 𝔼[yy, x(n_coint)]
         yyXXd[:, n_coint_add + 1:n_coint_all] = yyyyd_coint1[1:n_obs, n_obs + 1:n_obs + n_coint]
@@ -1212,9 +1236,9 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
             # 𝔼[x(n_coint_add), x(n_coint)]
             XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all] =
-                DD_coint_add_div2 * DD[n_obs + 1: n_obs + n_coint]'
+            DD_coint_add_div2 * DD[n_obs + 1: n_obs + n_coint]'
             XXXXd[1 + n_coint_add:n_coint_all, 1:n_coint_add] =
-                XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
+            XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
 
             # 𝔼[x(n_coint_add), x(const)]
             XXXXd[1:n_coint_add, n_coint_all + 1] = DD_coint_add_div2
@@ -1228,9 +1252,9 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
 
             # 𝔼[x(n_coint_add), x(n_coint)]
             XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all] =
-                DD_coint_add_div2 * DD[n_obs + 1: n_obs + n_coint]'
+            DD_coint_add_div2 * DD[n_obs + 1: n_obs + n_coint]'
             XXXXd[1 + n_coint_add:n_coint_all, 1:n_coint_add] =
-                XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
+            XXXXd[1:n_coint_add, 1 + n_coint_add:n_coint_all]' # transpose of the previous line
         end
     end
 
@@ -1239,22 +1263,22 @@ function vecm_approx_state_space(TTT::AbstractMatrix{S}, RRR::AbstractMatrix{S},
         # 𝔼[yy, x(lag rr)]
         yyyyd_cointrr = reshape(GAMM0[:, rr + 1], n_obs + n_coint, n_obs + n_coint) + DDDD
         yyXXd[:, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift] =
-            yyyyd_cointrr[1:n_obs, 1:n_obs]
+        yyyyd_cointrr[1:n_obs, 1:n_obs]
 
         if n_coint_add > 0
             # 𝔼[x(n_coint_add), x(lag rr)]
             XXXXd[1:n_coint_add, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift] =
-                DD_coint_add_div2 * DD[1:n_obs]'
+            DD_coint_add_div2 * DD[1:n_obs]'
             XXXXd[n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift, 1:n_coint_add] =
-                XXXXd[1:n_coint_add, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift]'
+            XXXXd[1:n_coint_add, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift]'
         end
 
         # 𝔼[x(n_coint), x(lag rr)]
         yyyyd_cointrr1 = reshape(GAMM0[:, rr], n_obs + n_coint, n_obs + n_coint) + DDDD
         XXXXd[n_coint_add + 1:n_coint_all, n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift] =
-            yyyyd_cointrr1[n_obs + 1:n_obs + n_coint, 1:n_obs]
+        yyyyd_cointrr1[n_obs + 1:n_obs + n_coint, 1:n_obs]
         XXXXd[n_coint_all + 1 + n_obs * (rr - 1) + shift:n_coint_all + n_obs * rr + shift, n_coint_add + 1:n_coint_all] =
-            yyyyd_cointrr1[n_obs + 1:n_obs + n_coint, 1:n_obs]'
+        yyyyd_cointrr1[n_obs + 1:n_obs + n_coint, 1:n_obs]'
 
         # 𝔼[x(lag rr), x(lag ll)]
         for ll = rr:p
@@ -1303,14 +1327,24 @@ unnecessary computations.
 """
 function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
                                       TTTs::Vector{<: AbstractMatrix}, CCCs::Vector{<: AbstractVector},
-                                      t::Int, k::Int, permanent_t::Int = length(TTTs))
+                                      t::Int, k::Int, permanent_t::Int = length(TTTs);
+                                      integ_series::Bool = false)
 
     if isempty(TTTs) || isempty(CCCs)
         Tᵏ = TTT^k
         if all(CCC .≈ 0.)
             return Tᵏ, CCC
         else
-            Tᵏsum = (I - TTT) \ (I - Tᵏ)
+            if integ_series
+                T_memo = Dict{Int, typeof(TTT)}()
+                T_memo[1] = TTT
+                for i in 2:k
+                    T_memo[i] = T_memo[i - 1] * TTT
+                end
+                Tᵏsum = sum([T_memo[j] for j in 1:k])
+            else
+                Tᵏsum = (I - TTT) \ (I - Tᵏ)
+            end
             return Tᵏ, Tᵏsum * CCC
         end
     else
@@ -1334,14 +1368,22 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
                 return TTTs[permanent_t]^k, CCCs[permanent_t]
             else
                 Tᵏₜ₊₁ = TTTs[permanent_t]^k
-                Tᵏsum = (I - TTTs[permanent_t]) \ (I - Tᵏₜ₊₁)
-
+                if integ_series
+                    T_memo = Dict{Int, eltype(TTTs)}()
+                    T_memo[1] = TTTs[permanent_t]
+                    for i in 2:k
+                        T_memo[i] = T_memo[i - 1] * TTTs[permanent_t]
+                    end
+                    Tᵏsum = sum([T_memo[j] for j in 1:k])
+                else
+                    Tᵏsum = (I - TTTs[permanent_t]) \ (I - Tᵏₜ₊₁)
+                end
                 return Tᵏₜ₊₁, Tᵏsum * CCCs[permanent_t]
             end
         else
             # Computation time can be saved by realizing some matrices are not time-varying
             h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
-            Tᵏ⁻ʰₜ₊ₕ₊₁ = TTTs[permanent_t]^(k - h)
+            Tᵏ⁻ʰₜ₊ₕ₊₁ = (k == h) ? Diagonal(ones(length(CCCs[permanent_t]))) : TTTs[permanent_t]^(k - h)
 
             T_memo = Dict{Int, eltype(TTTs)}()
             if h > 0
@@ -1354,16 +1396,29 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
                 T_accum = Tᵏ⁻ʰₜ₊ₕ₊₁
             end
 
-            C_accum = deepcopy(CCCs[t + h])
-            for i in 1:(h - 1)
-                C_accum .+= T_memo[i + 1] * CCCs[t + i]
+            if h == 0 # Nothing to accumulate from the past
+                C_accum = zeros(size(T_accum, 1))
+            else
+                C_accum = deepcopy(CCCs[t + h])
+                for i in 1:(h - 1)
+                    C_accum .+= T_memo[i + 1] * CCCs[t + i]
+                end
+                C_accum .= Tᵏ⁻ʰₜ₊ₕ₊₁ * C_accum
             end
-            C_accum .= Tᵏ⁻ʰₜ₊ₕ₊₁ * C_accum
 
             if all(CCCs[permanent_t] .≈ 0.)
                 return T_accum, C_accum
             else
-                Tᵏ⁻ᵐsum   = (I - TTTs[permanent_t]) \ (I - Tᵏ⁻ʰₜ₊ₕ₊₁)
+                if integ_series
+                    T_memo = Dict{Int, eltype(TTTs)}()
+                    T_memo[1] = TTTs[permanent_t]
+                    for i in 2:(k - h - 1)
+                        T_memo[i] = T_memo[i - 1] * TTTs[permanent_t]
+                    end
+                    Tᵏ⁻ᵐsum = sum([T_memo[j] for j in 1:(k - h - 1)]) + I
+                else
+                    Tᵏ⁻ᵐsum = (I - TTTs[permanent_t]) \ (I - Tᵏ⁻ʰₜ₊ₕ₊₁)
+                end
                 C_accum .+= Tᵏ⁻ᵐsum * CCCs[permanent_t]
                 return T_accum, C_accum
             end
@@ -1398,7 +1453,18 @@ unnecessary computations.
 """
 function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                                        TTTs::Vector{<: AbstractMatrix}, CCCs::Vector{<: AbstractVector},
-                                       t::Int, k::Int, permanent_t::Int = length(TTTs))
+                                       t::Int, k::Int, permanent_t::Int = length(TTTs);
+                                       integ_series::Bool = false)
+
+    if integ_series # Do this by directly summing the k-periods ahead expectations. Not fully efficient but also not the typical case
+        T_accum = Vector{eltype(TTTs)}(undef, k)
+        C_accum = Vector{eltype(CCCs)}(undef, k)
+        for i in 1:k
+            T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
+                                                                  integ_series = integ_series)
+        end
+        return sum(T_accum), sum(C_accum)
+    end
 
     if isempty(TTTs) || isempty(CCCs)
         Tᵏsum = (I - TTT) \ (TTT - TTT^(k + 1))
@@ -1419,7 +1485,8 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
 
             for i in 1:k
-                tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t)
+                tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
+                                                          integ_series = integ_series)
                 total_Tsum .+= tmp1
                 total_Csum .+= tmp2
             end
@@ -1443,56 +1510,174 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             T_accum = Vector{eltype(TTTs)}(undef, k)
             C_accum = Vector{eltype(CCCs)}(undef, k)
             for i in 1:k
-                T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i)
-            end
-            return sum(T_accum), sum(C_accum)
-#=            h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
-
-            Tₜ₊ₕ₊₁_memo = Vector{eltype(TTTs)}(undef, k - h)
-            Tₜ₊ₕ₊₁_memo[1] = TTTs[permanent_t] # maps j to Tₜ₊ₕ₊₁ʲ⁻ʰ for j in (h + 1):k or Tₜ₊ₕ₊₁ʲ for j in 1:(k-h)
-            for j in 2:(k - h)
-                Tₜ₊ₕ₊₁_memo[j] = TTTs[permanent_t] * Tₜ₊ₕ₊₁_memo[j - 1]
-            end
-
-            Tₜ₊ₕ₊₁ʲsum = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t] ^ (k - h + 1)) # ∑ⱼ₌₁ᵏ⁻ʰ Tₜ₊ₕ₊₁ʲ
-
-            TC_memo = Vector{eltype(TTTs)}(undef, h) # matrices to be used for both accumulated TTT and CCC
-            TC_memo[h] = TTTs[t + h] # maps i to ∏ⱼ₌ᵢʰ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ, T_memo[h-1] = Tₜ₊ₕ * Tₜ₊ₕ₋₁, ...
-            for i in (h-1):-1:1
-                TC_memo[i] = TC_memo[i + 1] * TTTs[t + i]
-            end
-
-            T1_term = Vector{eltype(TTTs)}(undef, h) # first part of the accumulated TTT matrix
-            T1_term[1] = TTTs[t + 1] # maps i to ∏ⱼ₌₁ⁱ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ * ⋯  * Tₜ₊₁
-            for i in 2:(h - 1)
-                T1_term[i] = TTTs[t + i] * T1_term[i - 1]
-            end
-            T1_term[h] = TC_memo[1] # This one was calculated already
-
-            # second part of the accumulated TTT matrix
-            # maps j to Tₜ₊ₕ₊₁ʲ ∏ᵣ₌₁ʰ Tₜ₊ᵣ, so T_memo[h] = Tₜ₊ₕ * ⋯  * Tₜ₊₁
-            T2_term = [Tₜ₊ₕ₊₁_memo[j] * T1_term[h] for j in 1:(k - h)]
-
-            T_accum = sum(T1_term) + sum(T2_term) # calculated accumulated matrix
-
-            # Calculate final portions of accumulated CCC vector first
-            I₊Tʲ = (I + Tₜ₊ₕ₊₁ʲsum)
-            C_accum   = I₊Tʲ * CCCs[t + h]
-            if any(.!(CCCs[permanent_t] .≈ 0.))
-                C_accum .+= (I + (k - h - 1) .* I₊Tʲ) * CCCs[permanent_t]
-            end
-            if h > 1
-                C1_term = Vector{eltype(TTTs)}(undef, h - 1)
-                C2_term = Vector{eltype(TTTs)}(undef, h - 1)
-
-                for q in 1:(h - 1)
-                    C1_term[q] = sum([prod([TTTs[t + m] for m in (q + 1):j]) for j in (q + 1):h])
-                    C2_term[q] = sum([Tₜ₊ₕ₊₁_memo[j] * TC_memo[q + 1] for j in 1:(k - h)])
-                end
-                C_accum .+= sum([(I + C1_term[q] + C2_term[q]) * CCCs[t + q] for q in 1:(h - 1)])
-            end=#
-
-            return T_accum, C_accum
+            T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
+                                                                  integ_series = integ_series)
         end
+        return sum(T_accum), sum(C_accum)
+
+        # This code seems to work (match directly adding each k_period_ahead_expectations)
+        # but sometimes causes mild numerical differences,
+        # so we calculate the expected sum by adding each k_period_ahead_expectations.
+        #=            h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
+
+        Tₜ₊ₕ₊₁_memo = Vector{eltype(TTTs)}(undef, k - h)
+        Tₜ₊ₕ₊₁_memo[1] = TTTs[permanent_t] # maps j to Tₜ₊ₕ₊₁ʲ⁻ʰ for j in (h + 1):k or Tₜ₊ₕ₊₁ʲ for j in 1:(k-h)
+        for j in 2:(k - h)
+        Tₜ₊ₕ₊₁_memo[j] = TTTs[permanent_t] * Tₜ₊ₕ₊₁_memo[j - 1]
+        end
+
+        Tₜ₊ₕ₊₁ʲsum = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t] ^ (k - h + 1)) # ∑ⱼ₌₁ᵏ⁻ʰ Tₜ₊ₕ₊₁ʲ
+
+        TC_memo = Vector{eltype(TTTs)}(undef, h) # matrices to be used for both accumulated TTT and CCC
+        TC_memo[h] = TTTs[t + h] # maps i to ∏ⱼ₌ᵢʰ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ, T_memo[h-1] = Tₜ₊ₕ * Tₜ₊ₕ₋₁, ...
+        for i in (h-1):-1:1
+        TC_memo[i] = TC_memo[i + 1] * TTTs[t + i]
+        end
+
+        T1_term = Vector{eltype(TTTs)}(undef, h) # first part of the accumulated TTT matrix
+        T1_term[1] = TTTs[t + 1] # maps i to ∏ⱼ₌₁ⁱ Tₜ₊ⱼ, so T_memo[h] = Tₜ₊ₕ * ⋯  * Tₜ₊₁
+        for i in 2:(h - 1)
+        T1_term[i] = TTTs[t + i] * T1_term[i - 1]
+        end
+        T1_term[h] = TC_memo[1] # This one was calculated already
+
+        # second part of the accumulated TTT matrix
+        # maps j to Tₜ₊ₕ₊₁ʲ ∏ᵣ₌₁ʰ Tₜ₊ᵣ, so T_memo[h] = Tₜ₊ₕ * ⋯  * Tₜ₊₁
+        T2_term = [Tₜ₊ₕ₊₁_memo[j] * T1_term[h] for j in 1:(k - h)]
+
+        T_accum = sum(T1_term) + sum(T2_term) # calculated accumulated matrix
+
+        # Calculate final portions of accumulated CCC vector first
+        I₊Tʲ = (I + Tₜ₊ₕ₊₁ʲsum)
+        C_accum   = I₊Tʲ * CCCs[t + h]
+        if any(.!(CCCs[permanent_t] .≈ 0.))
+        C_accum .+= (I + (k - h - 1) .* I₊Tʲ) * CCCs[permanent_t]
+        end
+        if h > 1
+        C1_term = Vector{eltype(TTTs)}(undef, h - 1)
+        C2_term = Vector{eltype(TTTs)}(undef, h - 1)
+
+        for q in 1:(h - 1)
+        C1_term[q] = sum([prod([TTTs[t + m] for m in (q + 1):j]) for j in (q + 1):h])
+        C2_term[q] = sum([Tₜ₊ₕ₊₁_memo[j] * TC_memo[q + 1] for j in 1:(k - h)])
+        end
+        C_accum .+= sum([(I + C1_term[q] + C2_term[q]) * CCCs[t + q] for q in 1:(h - 1)])
+        end=#
+
+        return T_accum, C_accum
+    end
+end
+end
+
+"""
+```
+compute_tvis_system(m; apply_altpolicy = false, verbose = :high)
+```
+
+Given the current model parameters, compute the regime-switching
+state-space system corresponding to model `m` with time-varying
+information sets.
+
+Aside from settings required for regime-switching,
+additional required settings that must exist in `m` are:
+- `:tvis_information_set`: Vector of `UnitRange{Int}` specifying
+which regimes should be included in the information set
+corresponding each regime.
+- `:tvis_regime_eqcond_info`: Vector of `regime_eqcond_info`
+to specify different sets of equilibrium conditions, which
+generate different state space systems (usually).
+- `:tvis_select_system`: Vector of `Int` to specify which
+state space system to use when calculating the measurement
+and pseudo measurement equations. These state space systems
+correspond to different sets of equilibrium conditions (usually).
+"""
+function compute_tvis_system(m::AbstractDSGEModel{T}; verbose::Symbol = :high) where {T <: Real}
+
+    # TODO: update this compute_tvis_system to compute the average over forward-looking variables
+    #       when using uncertain altpol and uncertain zlb. This means that, for each
+    #       vector of transition equations, we need to compute the associated average of measurement equations,
+    #       which requires us to calculate the perfect credibility solutions for each vector of transition equations
+    #       that are meant to have uncertainty in them.
+
+    @assert get_setting(m, :solution_method) ==
+        :gensys "Currently, the solution method must be :gensys to calculate a state-space system with time-varying information sets"
+
+    @assert haskey(get_settings(m), :replace_eqcond) "The setting :replace_eqcond must be true to calculate a state-space system with time-varying information sets"
+
+    # :regime_dates should have the same number of possible regimes. Any differences in eqcond
+    # should be specified by tvis_regime_eqcond_info
+    tvis_infoset            = get_setting(m, :tvis_information_set)
+    tvis_regime_eqcond_info = get_setting(m, :tvis_regime_eqcond_info)
+    tvis_select             = get_setting(m, :tvis_select_system)
+    regime_switching        = get_setting(m, :regime_switching)
+
+    n_tvis         = length(tvis_regime_eqcond_info)
+    n_regimes      = regime_switching && haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
+    n_hist_regimes = regime_switching && haskey(get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
+
+    apply_altpolicy = any(.!isempty.(tvis_regime_eqcond_info)) ||
+        haskey(get_settings(m), :regime_eqcond_info) || (haskey(get_settings(m), :alternative_policy) &&
+        get_setting(m, :alternative_policy).key != :historical)
+
+    # Solve model
+    transitions = Vector{Vector{Transition{T}}}(undef, n_tvis)
+    TTTs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+    RRRs_vec    = Vector{Vector{Matrix{T}}}(undef, n_tvis)
+    CCCs_vec    = Vector{Vector{Vector{T}}}(undef, n_tvis)
+
+    for (i, regime_eqcond_info) in enumerate(tvis_regime_eqcond_info) # For each set of equilibrium conditions,
+        # Update regime_eqcond_info and compute implied gensys/gensys2 regimes
+        if apply_altpolicy
+            m <= Setting(:regime_eqcond_info, regime_eqcond_info) # calculate the implied regime-switching system
+            first_gensys2_regime = minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
+        else
+            first_gensys2_regime = n_hist_regimes + 1
+        end
+        last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ?
+            first_gensys2_regime + get_setting(m, :temporary_zlb_length) : n_regimes
+        if get_setting(m, :gensys2)
+            gensys_regimes = [1:first_gensys2_regime-1]
+            if last_gensys2_regime != n_regimes
+                append!(gensys_regimes, [last_gensys2_regime+1:n_regimes])
+            end
+        else
+            gensys_regimes = [1:n_regimes]
+        end
+        gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
+
+        TTTs_vec[i], RRRs_vec[i], CCCs_vec[i] = solve(m; regime_switching = regime_switching,
+                                                      regimes = collect(1:n_regimes),
+                                                      gensys_regimes = gensys_regimes,
+                                                      gensys2_regimes = gensys2_regimes, verbose = verbose)
+        transitions[i] = Vector{Transition{T}}(undef, n_regimes)
+        for j in 1:n_regimes # Compute vector of Transition for constructing the TimeVaryingInformationSetSystem
+            transitions[i][j] = Transition(TTTs_vec[i][j], RRRs_vec[i][j], CCCs_vec[i][j])
+        end
+    end
+
+    # Infer which measurement and pseudo-measurement equations to use
+    measurement_eqns = Vector{Measurement{T}}(undef,       n_regimes)
+    has_pseudo       = hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+    if has_pseudo # Only calculate PseudoMeasurement equation if the method exists
+        pseudo_measurement_eqns = Vector{PseudoMeasurement{T}}(undef, n_regimes)
+    end
+
+    for (reg, i) in enumerate(tvis_select)
+        measurement_eqns[reg] = measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg],
+                                            reg = reg, TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
+                                            information_set = tvis_infoset[reg])
+
+        if has_pseudo
+            pseudo_measurement_eqns[reg] = pseudo_measurement(m, TTTs_vec[i][reg], RRRs_vec[i][reg], CCCs_vec[i][reg], reg = reg,
+                                                              TTTs = TTTs_vec[i], CCCs = CCCs_vec[i],
+                                                              information_set = tvis_infoset[reg])
+        end
+    end
+
+    if has_pseudo
+        return TimeVaryingInformationSetSystem(transitions, measurement_eqns, pseudo_measurement_eqns,
+                                               tvis_infoset, tvis_select)
+    else
+        return TimeVaryingInformationSetSystem(transitions, measurement_eqns, tvis_infoset, tvis_select)
     end
 end

@@ -22,7 +22,11 @@ function augment_states(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
 
     for p in m.parameters
         if !isempty(p.regimes)
-            p = ModelConstructors.toggle_regime!(p, reg)
+            if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
+                ModelConstructors.toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
+            else
+                ModelConstructors.toggle_regime!(para, reg)
+            end
         end
     end
 

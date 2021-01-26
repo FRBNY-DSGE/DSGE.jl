@@ -169,6 +169,9 @@ function default_settings!(m::AbstractDSGEModel)
     settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false,
         "Whether or not to compute bands for shock decomposition. Setting to false saves " *
         "signficant storage space.")
+    settings[:time_varying_trends] = Setting(:time_varying_trends, true,
+        "Indicator for whether the trends (CCC and DD) in the state space system are potentially time-varying. If false, " *
+        "some functions will use shortcuts for non-time-varying trends.")
 
 	# Sequential Monte Carlo
     settings[:n_particles] = Setting(:n_particles, 2000,
@@ -210,6 +213,7 @@ function default_settings!(m::AbstractDSGEModel)
         "The old data vintage to start SMC from when time tempering.")
 
     # Alternative policy
+    ## TODO: delete this once alternative policies have been completely ported to using regime_eqcond_info
     baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
     settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
 

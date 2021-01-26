@@ -44,6 +44,11 @@ Estimate the DSGE parameter posterior distribution.
 -  `run_csminwel::Bool`: by default, csminwel is run after a SMC estimation finishes
     to recover the true mode of the posterior. Set to false to avoid this step
     (csminwel can take hours for medium-scale DSGE models).
+-  `toggle::Bool`: when regime-switching, several functions assume regimes
+    are toggled to regime 1. If the likelihood function is not
+    written to toggle to regime 1 when done, then regime-switching estimation
+    will not work properly. Set to `false` to reduce computation time if the
+    user is certain that the likelihood is written properly.
 """
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   verbose::Symbol = :low,
@@ -56,14 +61,15 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   intermediate_stage_increment::Int = 10,
                   save_intermediate::Bool = false,
                   tempered_update_prior_weight::Float64 = 0.,
-                  run_csminwel::Bool = true)
+                  run_csminwel::Bool = true,
+                  toggle::Bool = true)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              intermediate_stage_increment = intermediate_stage_increment,
              save_intermediate = save_intermediate,
              tempered_update_prior_weight = tempered_update_prior_weight,
-             run_csminwel = run_csminwel)
+             run_csminwel = run_csminwel, toggle = toggle)
 end
 
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
@@ -77,7 +83,8 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
                   tempered_update_prior_weight::Float64 = 0.,
-                  run_csminwel::Bool = true)
+                  run_csminwel::Bool = true,
+                  toggle::Bool = true)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
@@ -85,8 +92,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
              intermediate_stage_increment = intermediate_stage_increment,
 	         save_intermediate = save_intermediate,
              tempered_update_prior_weight = tempered_update_prior_weight,
-
-             run_csminwel = run_csminwel)
+             run_csminwel = run_csminwel, toggle = toggle)
 end
 
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractArray;
@@ -100,13 +106,17 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
                   tempered_update_prior_weight::Float64 = 0.,
-                  run_csminwel::Bool = true)
+                  run_csminwel::Bool = true,
+                  toggle::Bool = true)
 
     if !(get_setting(m, :sampling_method) in [:SMC, :MH])
         error("method must be :SMC or :MH")
     else
         method = get_setting(m, :sampling_method)
     end
+
+    regime_switching = haskey(get_settings(m), :regime_switching) &&
+        get_setting(m, :regime_switching)
 
     ########################################################################################
     ### Step 1: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
@@ -139,8 +149,8 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
                                method = get_setting(m, :optimization_method),
                                ftol = ftol, grtol = gtol, xtol = xtol,
                                iterations = n_iterations, show_trace = true, step_size = step_size,
-                               verbose = verbose,
-                               mle = mle)
+                               mle = mle, toggle = toggle, verbose = verbose)
+
 
             attempts += 1
             total_iterations += out.iterations
@@ -151,7 +161,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
             println(verbose, :low, @sprintf "Optimization time elapsed: %5.2f\n" optimization_time += end_time)
 
             # Write params to file after every `n_iterations` iterations
-            params = map(θ -> θ.value, get_parameters(m))
+            params = ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)
             h5open(rawpath(m, "estimate", "paramsmode.h5"),"w") do file
                 file["params"] = params
             end
@@ -163,7 +173,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
         end
     end
 
-    params = map(θ -> θ.value, get_parameters(m))
+    params = ModelConstructors.get_values(get_parameters(m); regime_switching = regime_switching)
 
     # Sampling does not make sense if mle=true
     if mle || !sampling
@@ -184,7 +194,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
         hessian = if calculate_hessian(m)
             println(verbose, :low, "Recalculating Hessian...")
 
-            hessian, _ = hessian!(m, params, data; verbose=verbose)
+            hessian, _ = hessian!(m, params, data; toggle = toggle, verbose = verbose)
 
             h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
                 file["hessian"] = hessian
@@ -244,8 +254,8 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
         cc0 = get_setting(m, :mh_cc0)
         cc  = get_setting(m, :mh_cc)
 
-        metropolis_hastings(propdist, m, data, cc0, cc; verbose = verbose,
-                            filestring_addl = filestring_addl);
+        metropolis_hastings(propdist, m, data, cc0, cc; regime_switching = regime_switching,
+                            toggle = toggle, verbose = verbose, filestring_addl = filestring_addl);
 
     elseif get_setting(m, :sampling_method) == :SMC
         ########################################################################################
@@ -262,7 +272,8 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
              save_intermediate = save_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
              run_csminwel = run_csminwel,
-             tempered_update_prior_weight = tempered_update_prior_weight)
+             tempered_update_prior_weight = tempered_update_prior_weight,
+             regime_switching = regime_switching)
     end
 
     ########################################################################################

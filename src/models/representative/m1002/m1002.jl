@@ -53,7 +53,7 @@ equilibrium conditions.
   filepath computation.
 
 * `subspec::String`: The model subspecification number, indicating that
-  some parameters from the original model spec (\"ss30\") are initialized
+  some parameters from the original model spec (\"ss10\") are initialized
   differently. Cached here for filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
@@ -217,17 +217,10 @@ function init_model_indices!(m::Model1002)
     if haskey(get_settings(m), :add_pgap) ? get_setting(m, :add_pgap) : false
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_pgap], equilibrium_conditions)...)
-        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
-            push!(exogenous_shocks, setdiff([:pgap_sh], exogenous_shocks)...)
-        end
     end
     if haskey(get_settings(m), :add_ygap) ? get_setting(m, :add_ygap) : false
         push!(endogenous_states, setdiff([:ygap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_ygap], equilibrium_conditions)...)
-        if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
-            get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
-            push!(exogenous_shocks, setdiff([:ygap_sh], exogenous_shocks)...)
-        end
     end
     if haskey(get_settings(m), :add_altpolicy_pgap) ? get_setting(m, :add_altpolicy_pgap) : false
         push!(endogenous_states, setdiff([:pgap_t], endogenous_states)...)
@@ -236,6 +229,9 @@ function init_model_indices!(m::Model1002)
     if haskey(get_settings(m), :add_altpolicy_ygap) ? get_setting(m, :add_altpolicy_ygap) : false
         push!(endogenous_states, setdiff([:ygap_t], endogenous_states)...)
         push!(equilibrium_conditions, setdiff([:eq_ygap], equilibrium_conditions)...)
+    end
+    if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
+        push!(exogenous_shocks, setdiff([:pgap_sh, :ygap_sh], exogenous_shocks)...)
     end
     if haskey(get_settings(m), :add_rw) ? get_setting(m, :add_rw) : false
         push!(endogenous_states, setdiff([:rw_t, :Rref_t], endogenous_states)...)
@@ -254,6 +250,12 @@ function init_model_indices!(m::Model1002)
         push!(exogenous_shocks, :gdpexp_sh)
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        push!(endogenous_states_augmented, :e_condcorepce_t)
+        push!(exogenous_shocks, :condcorepce_sh)
+    end
+
     # Observables
     observables = keys(m.observable_mappings)
 
@@ -270,7 +272,7 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(pseudo_observables);          m.pseudo_observables[k]          = i end
 end
 
-function Model1002(subspec::String = "ss30";
+function Model1002(subspec::String = "ss10";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
@@ -596,25 +598,25 @@ buted to steady-state inflation.",
                    tex_label="\\sigma_{gdi}")
 
     if subspec(m) in ["ss59", "ss60", "ss61"]
-        m <= parameter(:ρ_ziid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+        m <= parameter(:ρ_ziid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_ziid: AR(1) coefficient in the iid component of the technology process.",
                        tex_label="\\rho_{z, iid}")
         m <= parameter(:σ_ziid, 0., (0., 1000.), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2. * (5.)^2 ./ 5., sqrt((5.)^2 + 5.)), fixed=false,
+                       RootInverseGamma(2. * (5.)^2 ./ 5., sqrt((5.)^2 + .1)), fixed=false,
                        description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
                        tex_label="\\sigma_{z, iid}")
-        m <= parameter(:ρ_biidc, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+        m <= parameter(:ρ_biidc, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_biidc: AR(1) coefficient in the iid component of the preference process.",
-                       tex_label="\\rho_{z, iid}")
+                       tex_label="\\rho_{b, iid, c}")
         m <= parameter(:σ_biidc, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2. * (4.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=false, # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2), with mode M given by ν (τ² - M²) = 2 * M²
+                       RootInverseGamma(2. * (4.)^2 ./ 4., sqrt((4.)^2  + .1)), fixed=false, # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2), with mode M given by ν (τ² - M²) = 2 * M²
                        description="σ_biidc: The standard deviation of the process describing the iid component of preferences.",
-                       tex_label="\\sigma_{z, iid}")
-        m <= parameter(:ρ_φ, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       tex_label="\\sigma_{b, iid, c}")
+        m <= parameter(:ρ_φ, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_φ: AR(1) coefficient in the labor supply preference process.",
                        tex_label="\\rho_{\\varphi}")
         m <= parameter(:σ_φ, 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2 * (400.0)^2 ./ 1., sqrt(1. + (400.0)^2)), fixed=false,
+                       RootInverseGamma(2 * (400.0)^2 ./ (400. * 10), sqrt(1. + (400.0)^2)), fixed=false,
                        description="σ_φ: The standard deviation of the process describing the labor supply preference.",
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
     end
@@ -622,10 +624,10 @@ buted to steady-state inflation.",
     if haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
         get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false
         m <= parameter(:σ_pgap, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=false,
+                       RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=true,
                        tex_label="\\sigma_{pgap}")
         m <= parameter(:σ_ygap, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
-                       RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=false,
+                       RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=true,
                        tex_label="\\sigma_{ygap}")
     end
 
@@ -649,17 +651,29 @@ buted to steady-state inflation.",
                        tex_label="\\sigma_{gdpexp}")
     end
 
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        m <= parameter(:ρ_condcorepce, 0., (-0.999, 0.999), (-0.999, 0.999),
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{cond corepce}")
+        m <= parameter(:σ_condcorepce, 0.0999, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+                       RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{cond corepce}")
+    end
+
     for key in get_setting(m, :proportional_antshocks)
+        propant_tex_label = DSGE.detexify(key) == key ? string(key) : "\\" * string(DSGE.detexify(key))
         m <= parameter(Symbol(:σ_, key, :_prop), 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 1.), fixed=false,
                        description="σ_$(key)_prop: proportional of anticipated shock to contemporaneous shock to $key",
-                       tex_label="\\sigma_{\\$(DSGE.detexify(key))}^{prop}")
+                       tex_label="\\sigma_{$(propant_tex_label)}^{prop}")
     end
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_mon_anticipated_shocks_padding(m)
         if i <= n_mon_anticipated_shocks(m)
-            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), ModelConstructors.Exponential(),
+                           RootInverseGamma(4, .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
@@ -670,10 +684,12 @@ buted to steady-state inflation.",
     end
 
     for (sh, ant_num) in get_setting(m, :antshocks)
+        ant_tex_label = DSGE.detexify(sh) == sh ? string(sh) : "\\" * string(DSGE.detexify(sh))
         for i in 1:ant_num
-            m <= parameter(Symbol("σ_$(sh)$i"), 0., (0., 1e3), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2), fixed=false,
+            m <= parameter(Symbol("σ_$(sh)$i"), 0., (0., 1e3), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2),
+                           fixed=false,
                            description="σ_$(sh)$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
-                           tex_label=@sprintf("\\sigma_{ant%d}",i))
+                           tex_label="\\sigma_{$(ant_tex_label), ant$(i)}")
         end
     end
 
@@ -927,12 +943,15 @@ function model_settings!(m::Model1002)
     end
 
     # Add AIT for 2020-Q3 on
+    m <= Setting(:flexible_ait_policy_change_date, Date(2020, 9, 30))
     if subspec(m) in ["ss30", "ss59", "ss60", "ss61"]
-        m <= Setting(:flexible_ait_2020Q3_policy_change, true, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
+        m <= Setting(:flexible_ait_policy_change, false,
+                     "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, true)
         m <= Setting(:add_ygap, true)
     else
-        m <= Setting(:flexible_ait_2020Q3_policy_change, false, "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
+        m <= Setting(:flexible_ait_policy_change, false,
+                     "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, false)
         m <= Setting(:add_ygap, false)
     end
@@ -971,18 +990,41 @@ function parameter_groupings(m::Model1002)
                   :ρ_gdpvar, :σ_gdp, :σ_gdi, :σ_lr, :σ_tfp, :σ_gdpdef, :σ_corepce]
 
     all_keys     = Vector[policy, sticky, other_endo, financial, processes, error]
-    all_params   = map(keys -> [m[θ]::Parameter for θ in keys], all_keys)
     descriptions = ["Policy Parameters", "Nominal Rigidities Parameters",
                     "Other Endogenous Propagation and Steady State Parameters",
                     "Financial Frictions Parameters", "Exogenous Process Parameters",
                     "Measurement Error Parameters"]
 
-    groupings = OrderedDict{String, Vector{Parameter}}(zip(descriptions, all_params))
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        covid = [:σ_ziid, :σ_biidc, :σ_φ]
+        for (sh, ant_num) in get_setting(m, :antshocks)
+            for i in 1:ant_num
+                push!(covid, Symbol("σ_$(sh)$i"))
+            end
+        end
+        for key in get_setting(m, :proportional_antshocks)
+            push!(covid, Symbol(:σ_, key, :_prop))
+        end
+        push!(all_keys, covid)
+        push!(descriptions, "COVID-19 Parameters")
+    end
+
+    all_params = map(keys -> [m[θ]::Parameter for θ in keys], all_keys)
+    groupings  = OrderedDict{String, Vector{Parameter}}(zip(descriptions, all_params))
 
     # Ensure no parameters missing
-    incl_params = vcat(collect(values(groupings))...)
-    excl_params = [m[θ] for θ in vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
-                                      [Symbol("σ_r_m$i") for i=n_mon_anticipated_shocks(m)+1:n_mon_anticipated_shocks_padding(m)])]
+    incl_params    = vcat(collect(values(groupings))...)
+    excl_params_sym = vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
+                           [Symbol("σ_r_m$i") for i=n_mon_anticipated_shocks(m)+1:n_mon_anticipated_shocks_padding(m)])
+    if subspec(m) in ["ss59", "ss60", "ss61"]
+        push!(excl_params_sym, :ρ_ziid, :ρ_biidc, :ρ_φ)
+    end
+    if haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
+        get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false
+        push!(excl_params_sym, :σ_pgap, :σ_ygap)
+    end
+    excl_params = [m[θ] for θ in excl_params_sym]
+
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings
@@ -1012,7 +1054,7 @@ function shock_groupings(m::Model1002)
         mei = ShockGroup("mu", [:μ_sh], :cyan)
         if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
             get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
-            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :condgdp_sh],
+            mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :condgdp_sh, :condcorepce_sh],
                              RGB(0.0, 0.8, 0.0))
         elseif haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
             get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
@@ -1023,7 +1065,7 @@ function shock_groupings(m::Model1002)
         end
         zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
         det = ShockGroup("dt", [:dettrend], :gray40)
-        oth = ShockGroup("other", [:dettrend, :g_sh, :π_star_sh, :μ_sh], :gray40)
+        oth = ShockGroup("other", [:dettrend, :g_sh, :π_star_sh, :μ_sh], :gray40) # :dettrend
 
         # COVID-19 Shocks
         betcovid = ShockGroup("biidc", haskey(m.exogenous_shocks, :biidc_shl1) ? [:biidc_sh, :biidc_shl1] : [:biidc_sh],
@@ -1032,9 +1074,22 @@ function shock_groupings(m::Model1002)
         φcovid   = ShockGroup("phi", [:φ_sh], RGB(0.5, 0.5, 0.))
         ocovid   = ShockGroup("Other COVID", [:ziid_sh, :φ_sh], RGB(0., 0.5, 0.5))
 
+        if haskey(m.exogenous_shocks, :pgap_sh)
+            push!(ocovid.shocks, :pgap_sh)
+        end
+        if haskey(m.exogenous_shocks, :ygap_sh)
+            push!(ocovid.shocks, :ygap_sh)
+        end
+
+        # Time-varying CCC, e.g. from temporary ZLB
+        if haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
+            st = ShockGroup("States Trend", [:StatesTrend], :darkgreen) # :dettrend
+            return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth, st]
+        else
+            return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth]
+        end
         # return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
         # return [betcovid, zcovid, φcovid, bet, fin, tfp, pmu, pol, mea, oth]
-       return [betcovid, ocovid, bet, fin, tfp, pmu, pol, mea, oth]
     elseif subspec(m) != "ss12"
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
         bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))

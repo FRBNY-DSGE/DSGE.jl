@@ -49,3 +49,129 @@ function AltPolicy(key::Symbol, eqcond_fcn::Function, solve_fcn::Function;
 end
 
 Base.string(a::AltPolicy) = string(a.key)
+
+function altpolicy_replace_eq_entries(key::Symbol)
+    if key == :flexible_ait
+        return flexible_ait_replace_eq_entries
+    elseif key == :zero_rate
+        return zero_rate_replace_eq_entries
+    elseif key == :smooth_ait_gdp_alt
+        smooth_ait_gdp_alt_replace_eq_entries
+    elseif key == :smooth_ait_gdp
+        smooth_ait_gdp_replace_eq_entries
+    elseif key == :ait
+        ait_replace_eq_entries
+    elseif key == :ngdp
+        ngdp_replace_eq_entries
+    elseif key == :rw_zero_rate
+        rw_zero_rate_replace_eq_entries
+    elseif key == :rw
+        rw_replace_eq_entries
+    else
+        error("AltPolicy $(key) has not been added to `altpolicy_replace_eq_entries` as having a method for replacing equilibrium conditions")
+    end
+end
+
+"""
+```
+mutable struct EqcondEntry
+```
+
+Type to hold the entries in the regime_eqcond_info dictionary for
+alternative policies, regime switching, and imperfect awareness.
+"""
+mutable struct EqcondEntry
+    alternative_policy::Union{AltPolicy, Missing}
+    weights::Union{Array{Float64, 1}, Missing}
+end
+
+function EqcondEntry()
+    return EqcondEntry(missing, missing)
+end
+
+function EqcondEntry(altpol::AltPolicy)
+    return EqcondEntry(altpol, missing)
+end
+
+"""
+```
+setup_permanent_altpol!(m::AbstractDSGEModel, altpol::AltPolicy;
+    cond_type::Symbol = :none, remove_extra_eqcond_entry::Bool = true)
+```
+
+sets up `m` to implement a permanent alternative policy via exogenous regime-switching.
+This function assumes that the settings `:date_forecast_start` and/or
+`:date_conditional_end` are properly set. The latter setting only matters
+if the keyword `cond_type` is set to `:semi` or `:full`.
+
+The keyword `remove_extra_eqcond_entry` removes any `EqcondEntry`
+entries in the setting `:regime_eqcond_info` after the
+regime implementing the alternative policy, i.e. regimes in the forecast horizon.
+If `false`, we will perform this step.
+"""
+function setup_permanent_altpol!(m::AbstractDSGEModel, altpol::AltPolicy;
+                                 cond_type::Symbol = :none, remove_extra_eqcond_entry::Bool = true)
+
+    # Figure out the date of the regime switch to the alt policy
+    altpol_date = cond_type == :none ? date_forecast_start(m) : iterate_quarters(date_conditional_end(m), 1)
+
+    # Add regime-switching setting
+    if !haskey(get_settings(m), :regime_switching) ||
+        (haskey(get_settings(m), :regime_switching) && !get_setting(m, :regime_switching))
+        @warn "The setting :regime_switching is either missing or false. Changing it to true"
+        m <= Setting(:regime_switching, true)
+    end
+
+    # Update regime dates
+    if haskey(get_settings(m), :regime_dates)
+        n_regs      = length(get_setting(m, :regime_dates)) # calculate length here rather than n_regimes in case
+                                                            # setup_regime_switching_inds! has not been called already
+        counter     = 0
+        reg_missing = true                                  # if false, then altpol date is already in regime_dates
+        reg_dates   = get_setting(m, :regime_dates)
+        for reg in 1:n_regs
+            if reg_dates[reg] > altpol_date
+                break
+            elseif reg_dates[reg] == altpol_date
+                reg_missing = false
+                break
+            end
+            counter += 1
+        end
+        if counter == n_regs # Case where all regimes occur in history
+            altpol_reg = n_regs + 1
+            reg_dates[altpol_reg] = altpol_date
+        elseif reg_missing
+            altpol_reg = counter + 1 # add 1 to get the regime for the alternative policy
+            for reg in altpol_reg:(n_regs - 1)
+                reg_dates[reg + 1] = reg_dates[reg] # shift all dates up by one
+            end
+            reg_dates[n_regs + 1] = reg_dates[n_regs] # add extra regime for new date
+            reg_dates[altpol_reg] = altpol_date
+        else
+            altpol_reg = counter + 1 # just need to set the regime number
+        end
+    else
+        altpol_reg = 2
+        m <= Setting(:regime_dates, Dict{Int64, Date}(1 => date_presample_start(m), altpol_reg => altpol_date))
+    end
+
+    # Call setup_regime_switching_inds! to update indices
+    setup_regime_switching_inds!(m; cond_type = cond_type)
+
+    # Update regime_eqcond_info
+    m <= Setting(:replace_eqcond, true)
+    if haskey(get_settings(m), :regime_eqcond_info)
+        reg_eqcond_info = get_setting(m, :regime_eqcond_info)
+        reg_eqcond_info[altpol_reg] = EqcondEntry(altpol)
+        if remove_extra_eqcond_entry # Remove any extra EqcondEntry values
+            for reg in (altpol_reg + 1):get_setting(m, :n_regimes) # go to n_regimes b/c called setup_regime_switching_inds! already
+                delete!(reg_eqcond_info, reg)
+            end
+        end
+    else
+        m <= Setting(:regime_eqcond_info, Dict{Int, EqcondEntry}(altpol_reg => EqcondEntry(altpol)))
+    end
+
+    return m
+end
