@@ -1,4 +1,4 @@
-using DSGE, Test, DelimitedFiles, JLD2
+using DSGE, Test, DelimitedFiles, JLD2, ModelConstructors, Random, FileIO
 import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_states
 
 # What do you want to do?
@@ -12,6 +12,8 @@ check_likelihood = true
 write_likelihood = false
 
 path = dirname(@__FILE__)
+
+addtl_save_str = VERSION == v"1.5" ? "_1.5" : ""
 
 m = HetDSGEGovDebt(testing_gamma = true, ref_dir = HETDSGEGOVDEBT)
 m <= Setting(:steady_state_only, true)
@@ -535,7 +537,7 @@ if check_steady_state_calibrate || write_steady_state_calibrate
     steadystate!(m)
 
     if write_steady_state_calibrate
-        JLD2.jldopen("$path/reference/steady_state_calibration.jld2", "w") do file
+        JLD2.jldopen("$path/reference/steady_state_calibration$(addtl_save_str).jld2", "w") do file
             file["c"]    = m[:cstar].value
             file["m"]    = m[:μstar].value
             file["mpc"]  = m[:mpc].value
@@ -545,7 +547,7 @@ if check_steady_state_calibrate || write_steady_state_calibrate
     end
 
     if check_steady_state_calibrate
-        file = jldopen("$path/reference/steady_state_calibration.jld2", "r")
+        file = jldopen("$path/reference/steady_state_calibration$(addtl_save_str).jld2", "r")
         saved_c    = read(file, "c")
         saved_μ    = read(file, "m")
         saved_mpc  = read(file, "mpc")
@@ -569,13 +571,13 @@ if check_likelihood || write_likelihood
 
     if write_likelihood
         println("Overwriting likelihood...")
-        JLD2.jldopen("$path/reference/likelihood_reduce_ell.jld2", true, true,
+        JLD2.jldopen("$path/reference/likelihood_reduce_ell$(addtl_save_str).jld2", true, true,
                      true, IOStream) do file
             file["likelihood"] = likelihood(m, data)
         end
     end
     if check_likelihood
-        lik_save = load("$path/reference/likelihood_reduce_ell.jld2", "likelihood")
+        lik_save = load("$path/reference/likelihood_reduce_ell$(addtl_save_str).jld2", "likelihood")
 
         @testset "Checking Likelihood output" begin
             @test likelihood(m, data) ≈ lik_save
