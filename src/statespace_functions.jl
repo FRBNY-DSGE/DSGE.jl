@@ -65,7 +65,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
         !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
         (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy) || (!has_uncertain_zlb && !has_uncertain_altpolicy)
 
-        ## TODO: Setting names should change once refactoring done
         if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy
             if has_regime_eqcond_info
                 m <= Setting(:regime_eqcond_info, regime_info_copy)
@@ -91,22 +90,9 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
 
     m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
 
-    # TODO: THIS BLOCK OF CODE IS INEFFICIENT. The problem is this. We want to compute the perfect credibility
-    # state space system for each possible alternative policy when there is imperfect awareness/policy uncertainty.
-    # This code does it by setting the credibility of different policies to 1 and looping. HOWEVER,
-    # this code incurs unnecessary costs b/c we compute the transition matrices every loop for all alternative policies
-    # and calculate the implied transition equations given the weights vector. What we really want to do is calculate
-    # the transition equations w/out the uncertain_altpolicy thing on at all and just use the correct replace_eqcond_func_dict
-    # or solve/eqcond functions.
-    #
-    # To avoid this problem, currently, we are hard-coding that there are only two alternative policies, the desired one
-    # and the historical one, which we assume to be the transition equations when there is no regime-switching,
-    # i.e. the system_taylor calculated above.
-    for i in 1:n_altpolicies # loop over alternative policies, noting that we've already computed the historical policy
-        ## With alternative policy weights = [1., 0.] in all forecast regimes for given altpolicy
-        #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
-        #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
-        #  It is more efficient to find a way to compute each altpolicy individually ONCE.
+
+    for i in 1:n_altpolicies # loop over alternative policies
+        ## With uncertain_altpolicy off (so only calculating  1 alternative policy).
         if i > 1 && get_setting(m, :alternative_policies)[i-1].key == :taylor_rule
             m <= Setting(:gensys2, false)
             replace_eq_copy = copy(get_setting(m, :regime_eqcond_info))
