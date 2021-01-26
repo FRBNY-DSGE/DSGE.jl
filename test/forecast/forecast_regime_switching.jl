@@ -71,7 +71,7 @@ Random.seed!(1793)
     @test Tcal[1] ≈ sys_temp[1][3][1:n_endo, 1:n_endo]
 
     # Then when start recrusion with rule, should get same TTTs in every perod
-    t, r, c = ngdp_solve(m, regime_switching = false, regimes = Int[3])
+    t, r, c = DSGE.ngdp_solve(m, regime_switching = false, regimes = Int[3])
 
     get_setting(m, :regime_eqcond_info)[n_reg_temp].alternative_policy = DSGE.ngdp()
     Γ0s[end], Γ1s[end], Cs[end], Ψs[end], Πs[end] = eqcond(m, n_reg_temp)
