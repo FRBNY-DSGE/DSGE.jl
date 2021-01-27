@@ -6,7 +6,7 @@ fn = dirname(@__FILE__)
 # plots and figures to analyze
 # estimation, forecast, and impulse response results.
 # This script also serves as an example of how we recommend
-# structuring "master" files for running forecasts, i.e.
+# structuring specification or "spec" files for running forecasts, i.e.
 # this file has a recommended workflow for the
 # entirety of a forecast.
 

@@ -67,7 +67,7 @@ calculate second-order perturbations.
 
 To set up a temporary alternative policy, a user first needs to specify
 alternative policy using the type `AltPolicy`. For instance, this code implements a
-[Nominal GDP targeting policy](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/altpolicy/ngdp_target.jl),
+[Nominal GDP targeting policy](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/altpolicy/ngdp_target.jl),
 and the `AltPolicy` is constructed by calling `DSGE.ngdp()`, or equivalently
 
 ```
@@ -102,7 +102,7 @@ The user also needs to complete the following steps to apply temporary alternati
   which the `eqcond` function differs from the default.
 
 To see an example of using temporary alternative policies, see the
-[example script for regime-switching](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
+[example script for regime-switching](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/regime_switching.jl).
 
 ## [Alternative Policy Uncertainty and Imperfect Awareness](@ref uncertainaltpol)
 Click on the section header for details on how to add policy uncertainty or

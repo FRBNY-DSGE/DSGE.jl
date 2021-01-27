@@ -5,7 +5,7 @@ The DSGE.jl package provides several example models:
 - A simple three-equation DSGE model from [An and Schorfheide (2006)](https://sites.sas.upenn.edu/schorf/files/er-final.pdf)
 - The well-known [Smets and Wouters (2007)](https://www.aeaweb.org/articles?id=10.1257/aer.97.3.586) model
 - The New York Fed DSGE model (version 990.2), which was introduced in [this blog post](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html)
-- The New York Fed DSGE model (version 1002.9), which is documented [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf)
+- The New York Fed DSGE model (version 1002.9), which is documented [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/docs/DSGE_Model_Documentation_1002.pdf)
 - The New York Fed DSGE model (version 1010.18)
 - Several methods for model averaging over two models from [Del Negro et al. (2016)](https://www.sciencedirect.com/science/article/pii/S0304407616300094#f000005) through the concrete type `PoolModel`.
 
@@ -14,14 +14,14 @@ were to implement another model using DSGE.jl, these procedures can also be used
 estimate those models.
 
 Please see
-[examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples) on the GitHub
+[examples/](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples) on the GitHub
 or the equivalent folder inside your Julia packages directory for example scripts we have created.
 
 For getting started, see these two scripts.
 - `run_default.jl`: a simple example of the standard workflow with DSGE.jl
 - `make_packet.jl`: auto-generate a packet of plots and figures which
   help the user analyze estimation, forecast, and impulse response results. This script
-  also provides an example of how we recommend structuring "master" files that launch
+  also provides an example of how we recommend structuring "main" files that launch
   a forecast and generate results with one "click."
 
 For more advanced usage, see
@@ -38,7 +38,7 @@ For more advanced usage, see
 
 To estimate and forecast in Julia, simply create an instance of the model object
 and call `estimate` and `forecast_all`. A minimal
-[example](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples/run_default.jl)
+[example](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples/run_default.jl)
 is reproduced below.
 
 ```julia

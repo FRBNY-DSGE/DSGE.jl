@@ -1,6 +1,6 @@
 # The DSGE MATLAB to Julia Transition: Improvements and Challenges
 
-*Zac Cranko, Pearl Li, Spencer Lyon, Erica Moszkowski, Micah Smith, Pablo Winant*  
+*Zac Cranko, Pearl Li, Spencer Lyon, Erica Moszkowski, Micah Smith, Pablo Winant*
 
 *December 3, 2015*
 
@@ -114,7 +114,7 @@ the type system is offset by savings in core programs.
 A type-based approach allows us to take advantage of method dispatch in Julia by
 defining different model types for different model specifications. As detailed
 in the
-[README file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/README.md),
+[README file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/README.md),
 changes to the model's equilibrium conditions and measurement equation are
 referred to as changes in a model's "specification."  In the Julia code, model
 specifications have a 1:1 correspondence with concrete types.  Where necessary,

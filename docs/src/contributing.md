@@ -33,8 +33,8 @@ the existing code from the community. Some examples could be:
 ### Git Recommendations For Pull Requests
 These are adapted from JuliaLang.
 
- - Avoid working from the `master` branch of your fork, creating a new branch
-   will make it easier if DSGE's `master` changes and you need to update your
+ - Avoid working from the `main` branch of your fork, creating a new branch
+   will make it easier if DSGE's `main` changes and you need to update your
    pull request.
  - Try to
    [squash](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)
@@ -42,7 +42,7 @@ These are adapted from JuliaLang.
    code so your pull request is easier to review, and Julia's history won't
    have any broken intermediate commits. A reasonable number of separate
    well-factored commits is fine, especially for larger changes.
- - If any conflicts arise due to changes in DSGE's `master`, prefer updating
+ - If any conflicts arise due to changes in DSGE's `main`, prefer updating
    your pull request branch with `git rebase` versus `git merge` or `git pull`,
    since the latter will introduce merge commits that clutter the git history
    with noise that makes your changes more difficult to review.
@@ -60,8 +60,8 @@ These are adapted from JuliaLang.
  - Whitespace can be automatically removed from existing commits with `git rebase`.
    - To remove whitespace for the previous commit, run
      `git rebase --whitespace=fix HEAD~1`.
-   - To remove whitespace relative to the `master` branch, run
-     `git rebase --whitespace=fix master`.
+   - To remove whitespace relative to the `main` branch, run
+     `git rebase --whitespace=fix main`.
 
 ## DSGE Julia Style Guide
 
