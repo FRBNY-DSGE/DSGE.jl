@@ -86,7 +86,7 @@ end
 
 """
 ```
-ngdp_eqcond(m::AbstractDSGEModel)
+ngdp_eqcond(m::AbstractDSGEModel, reg::Int = 1)
 ```
 
 Solves for the transition equation of `m` under a price level
@@ -98,7 +98,7 @@ function ngdp_eqcond(m::AbstractDSGEModel, reg::Int = 1)
     old_eqs    = sort!(collect(values(m.equilibrium_conditions)))
 
     # Get equilibrium condition matrices
-    Γ0_noaltpol, Γ1_noaltpol, C_noaltpol, Ψ_noaltpol, Π_noaltpol  = eqcond(m, reg)
+    Γ0_noaltpol, Γ1_noaltpol, C_noaltpol, Ψ_noaltpol, Π_noaltpol = eqcond(m, reg)
 
     # check to make sure this state hasn't already been added, then:
     # 1. add the pgap state to the model

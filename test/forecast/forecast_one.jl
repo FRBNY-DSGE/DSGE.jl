@@ -128,18 +128,23 @@ end
 
 @testset "Test forecast_one_draw" begin
     if !skip_forecast_one_draw
+        m <= Setting(:regime_switching, true)
         for input_type in [:mode, :full]
             params = if input_type == :mode
                 load_draws(m, input_type)
             else
                 load_draws(m, input_type)[1, :]
             end
-            m <= Setting(:alternative_policy, AltPolicy(:historical, eqcond, solve))
-            @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
+            setup_permanent_altpol!(m, AltPolicy(:historical, eqcond, solve))
+            @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df;
+                                                regime_switching = get_setting(m, :regime_switching),
+                                                n_regimes = get_setting(m, :n_regimes))) == Dict{Symbol, Array{Float64}}
 
             # Test with alternative policy
-            m <= Setting(:alternative_policy, AltPolicy(:taylor93, eqcond, solve))
-            @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df)) == Dict{Symbol, Array{Float64}}
+            setup_permanent_altpol!(m, AltPolicy(:taylor93, eqcond, solve))
+            @test typeof(DSGE.forecast_one_draw(m, input_type, :none, output_vars, params, df;
+                                                regime_switching = get_setting(m, :regime_switching),
+                                                n_regimes = get_setting(m, :n_regimes))) == Dict{Symbol, Array{Float64}}
         end
     end
 end

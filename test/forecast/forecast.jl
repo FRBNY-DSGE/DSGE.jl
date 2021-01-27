@@ -1,3 +1,4 @@
+using DSGE, Test, JLD2, ModelConstructors, Dates
 path = dirname(@__FILE__)
 
 # Set up arguments
@@ -63,10 +64,11 @@ shocks[ind_r_sh, :] .= -10.
     @test all(x -> x != -10.,                 shocks[ind_r_sh, :])
 end
 
-
 @testset "Test that forecasting and populating shocks under alternative policy works" begin
-    m <= Setting(:alternative_policy, AltPolicy(:taylor93, eqcond, solve))
+    m <= Setting(:regime_switching, true)
+    setup_permanent_altpol!(m, AltPolicy(:taylor93, eqcond, solve))
     @test typeof(forecast(m, system, z0; draw_shocks = true)) == NTuple{4, Array{Float64, 2}}
+    delete!(get_settings(m), :regime_switching)
 end
 
 @testset "Enforce ZLB as a temporary alternative policy" begin
@@ -80,15 +82,13 @@ end
                                                 3 => Date(2020, 6, 30)))
     m <= Setting(:forecast_horizons, 12)
     shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m))
-    shocks[m.exogenous_shocks[:b_sh], 1] = -.3 # suppose massive negative shock to spreads -> MP should drop!
-    m <= Setting(:replace_eqcond, false)
+    shocks[m.exogenous_shocks[:b_sh], 1] = -0.6 # suppose massive negative shock to spreads -> MP should drop!
     m <= Setting(:gensys2, false)
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m)
     m <= Setting(:pgap_value, 12.)
     m <= Setting(:pgap_type, :ngdp)
-    m <= Setting(:alternative_policy, AltPolicy(:ngdp, DSGE.ngdp_eqcond, DSGE.ngdp_solve,
-                                                forecast_init = DSGE.ngdp_forecast_init))
+    setup_permanent_altpol!(m, DSGE.ngdp(); cond_type = :none)
     system = compute_system(m)
     z0 = zeros(n_states_augmented(m))
 
@@ -105,15 +105,14 @@ end
                                                 4 => Date(2020, 9, 30)))
     m <= Setting(:forecast_horizons, 12)
     shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m; cond_type = :full))
-    shocks[m.exogenous_shocks[:b_sh], 1] = -0.3 # suppose massive negative shock to spreads -> MP should drop!
+    shocks[m.exogenous_shocks[:b_sh], 1] = -0.6 # suppose massive negative shock to spreads -> MP should drop!
     m <= Setting(:replace_eqcond, false)
     m <= Setting(:gensys2, false)
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m)
     m <= Setting(:pgap_value, 12.)
     m <= Setting(:pgap_type, :ngdp)
-    m <= Setting(:alternative_policy, AltPolicy(:ngdp, DSGE.ngdp_eqcond, DSGE.ngdp_solve,
-                                                forecast_init = DSGE.ngdp_forecast_init))
+    setup_permanent_altpol!(m, DSGE.ngdp(); cond_type = :full)
     system = compute_system(m)
     z0 = zeros(n_states_augmented(m))
 
