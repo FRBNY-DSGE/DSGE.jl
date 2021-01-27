@@ -123,20 +123,18 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         println("uncertain_altpolicy: " *
                 string(haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false))
         println("uncertain_zlb: " * string(haskey(get_settings(m), :uncertain_zlb) ? get_setting(m, :uncertain_zlb) : false))
-        println("time-varying credibility: " * string(haskey(get_settings(m), :imperfect_awareness_varying_weights)))
+        println("time-varying credibility: " * string(any([!ismissing(v.weights) for v in values(get_setting(m, :regime_eqcond_info))])))
         if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
             println("Desired policy rule: " *
                     string(haskey(get_settings(m), :regime_eqcond_info) ?
-                           get_setting(m,
-                                       :regime_eqcond_info)[minimum(collect(keys(get_setting(m,
-                                                                                                   :regime_eqcond_info))))] :
+                           get_setting(m, :regime_eqcond_info)[maximum(collect(keys(get_setting(m, :regime_eqcond_info))))] :
                            get_setting(m, :alternative_policy).key))
             println("Other policy rules: " * join([string(x.key) for x in get_setting(m, :alternative_policies)], ", "))
-            if haskey(get_settings(m), :imperfect_awareness_varying_weights)
-                weights_dict = get_setting(m, :imperfect_awareness_varying_weights)
-                println("Credibility weights: ", OrderedDict(reg => weights_dict[reg] for reg in first_replace_reg:last_replace_reg))
-            else
+            if haskey(get_settings(m), :imperfect_awareness_weights) # does not work currently, need to update
                 println("Credibility weights: ", get_setting(m, :imperfect_awareness_weights))
+            else
+                sorted_eqcond_info_regs = sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+                println("Credbility weights: ", OrderedDict(reg => get_setting(m, :regime_eqcond_info)[reg].weights for reg in sorted_eqcond_info_regs))
             end
         end
         if haskey(get_settings(m), :temporary_zlb_length)
