@@ -67,8 +67,8 @@ The type assertions for the arrays and keywords are not strictly necessary but a
 See [Regime-Switching Forecasts](@ref) for guidance on how to do this.
 
 For 1 and 2, we recommend conferring with the implementation of regime-switching for Model 1002.
-See the [equilibrium conditions here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
-and the [measurement equation here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/measurement.jl).
+See the [equilibrium conditions here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/models/representative/m1002/eqcond.jl)
+and the [measurement equation here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/models/representative/m1002/measurement.jl).
 
 Temporary alternative policies are slightly more complicated. They leverage the same machinery
 as exogenous and unanticipated regime-switching, so steps 1 and 2 above are required still.
@@ -86,7 +86,7 @@ DSGE.gensys2
 ```
 
 See [Alternative Policies](@ref)
-and the regime-switching [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl)
+and the regime-switching [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/regime_switching.jl)
 for guidance on how to use temporary alternative policies.
 
 

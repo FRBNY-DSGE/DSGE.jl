@@ -10,4 +10,4 @@ Separate from the standard [Forecasting](@ref forecast-step) routines, we have a
 DSGE.decompose_forecast
 ```
 
-For an example of how to use this functionality, see [decompose_forecast.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples) on the Github page (or directly inside the directory where DSGE.jl has been downloaded).
+For an example of how to use this functionality, see [decompose_forecast.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples) on the Github page (or directly inside the directory where DSGE.jl has been downloaded).

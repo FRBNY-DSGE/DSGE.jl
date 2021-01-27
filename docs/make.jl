@@ -43,7 +43,7 @@ deploydocs(
     repo = "github.com/FRBNY-DSGE/DSGE.jl.git",
     target = "build",
     deps = nothing,
-    devbranch = "master",
+    devbranch = "main",
     branch = "gh-pages",
     # versions = "v#",
     # julia = "0.7",

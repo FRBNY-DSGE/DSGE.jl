@@ -38,7 +38,7 @@ Below, we describe several important settings for package usage.
 
 For more details on implementation and usage of settings, see [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
-See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults.jl) for the complete description of default settings.
+See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.jl) for the complete description of default settings.
 
 #### General
 
@@ -221,11 +221,11 @@ See [Regime-Switching](@ref solveregswitch) for more details on the solution alg
 In this section, we will go over the interface for running
 regime-switching forecasts and discuss some details of the implementation.
 It is useful to also look at the posted
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl) for regime-switching.
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/regime_switching.jl) for regime-switching.
 To understand how to implement your own regime-switching model, we recommend
 examining the implementation of [regime-switching
-equilibrium conditions](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/models/representative/m1002/eqcond.jl)
-for `Model1002` and how it is integrated with our [solvers](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/solve/solve.jl).
+equilibrium conditions](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/models/representative/m1002/eqcond.jl)
+for `Model1002` and how it is integrated with our [solvers](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/solve/solve.jl).
 For a guide to running permanent and/or temporary alternative policies, please see [Alternative Policies](@ref).
 
 ### Preparing a Model's Settings for Regime-Switching
@@ -272,7 +272,7 @@ using `forecast_one` or `usual_model_forecast`, it is necessary to manually
 construct the matrix of parameter draws and pass them as an input with the keyword `params`.
 Currently, we have not fully implemented loading parameters from a saved estimation file.
 For an example about how to do this, see this
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl).
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/regime_switching.jl).
 
 ### [Time-Varying Information Sets](@id tvis)
 In many applications with regime-switching, changes in information sets may occur.
@@ -308,12 +308,12 @@ DSGE.k_periods_ahead_expectations
 DSGE.k_periods_ahead_expected_sums
 ```
 
-See the [measurement equation for Model 1002](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/model/representative/m1002/measurement.jl)
+See the [measurement equation for Model 1002](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/model/representative/m1002/measurement.jl)
 for an example of how these functions are used.
 
 For details on how we implement a state space system with time-varying information sets,
 see [The `TimeVaryingInformationSetSystem` Type](@ref tvistype). For guidance on how to use this type,
-e.g. calculating forecats, see this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/tvis_system.jl).
+e.g. calculating forecats, see this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/tvis_system.jl).
 
 ### Available Types of Regime Switching
 
@@ -324,12 +324,12 @@ There are three cases involving regime switching that are implemented in DSGE.jl
 - Time-varying information sets
 
 To implement regime-switching parameters or use temporary alternative policies, see this
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/regime_switching.jl) for regime-switching forecasts.
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/regime_switching.jl) for regime-switching forecasts.
 This [documentation on temporary alternative policies](@ref tempaltpol-procedure) will also be helpful.
 For further details on regime-switching parameters, see
 the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 To implement time-varying information sets, see
-this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/examples/tvis_system.jl).
+this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/tvis_system.jl).
 
 Once the regime-switching settings are properly created, the syntax for running a forecast
 is the same as when there is no regime-switching. See [Forecasting](@ref).
@@ -344,9 +344,9 @@ separate regime in which anticipated monetary policy shocks become "alive" and h
 standard deviations. However, this second form of the ZLB is not implemented
 as a separate regime. The reason is the only difference in the "pre-ZLB" and "post-ZLB"
 regimes is whether or not anticipated monetary policy shocks are non-zero. For an example, see
-the [smoothing code](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/forecast/smooth.jl)
+the [smoothing code](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/forecast/smooth.jl)
 as well as the auxiliary functions `zlb_regime_matrices` and `zlb_regime_indices`
-in this [file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/estimate/kalman.jl).
+in this [file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/estimate/kalman.jl).
 
 This approach saves computational time. Rather than creating redundant matrices,
 we directly zero/un-zero the appropriate entries in the pre- and post-ZLB `QQ` matrices.
@@ -365,7 +365,7 @@ We model imperfect awareness by assuming there are ``n`` possible alternative po
 that may occur tomorrow and ``n`` probability weights assigned to each policy. Further, it is believed
 that the alternative policy which occurs tomorrow will be permanent. One of the policies is
 the alternative policy which is actually implemented. The function
-[`gensys_uncertain_altpol`](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/src/solve/gensys_uncertain_altpol.jl)
+[`gensys_uncertain_altpol`](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/src/solve/gensys_uncertain_altpol.jl)
 calculates the state space transition equation implied by these beliefs.
 A typical application is assuming that with probability ``p`` some alternative policy occurs tomorrow
 and with probability ``1-p`` the historical policy occurs tomorrow.
@@ -437,7 +437,7 @@ then it is assumed that all regimes in `get_setting(m, :regime_eqcond_info)` exc
 are ZLB regimes. This assumption can be wrong, for example, if credibility changes after the ZLB ends.
 
 For further guidance on adding imperfect awareness, please see the script
-[uncertain_altpolicy_zlb.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/examples/uncertain_altpolicy_zlb.jl).
+[uncertain_altpolicy_zlb.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples/uncertain_altpolicy_zlb.jl).
 
 ### Forward-Looking Variables in the Measurement and Pseudo-Measurement Equations
 The measurement and pseudo-measurement equations often include "forward-looking" observables, such as
@@ -559,7 +559,7 @@ measurement equations necessitate the creation of a new subtype of `AbstractMode
 
 To create a new model object, we recommend doing the following:
 
-1. Duplicate the `m990` directory within the [models](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/src/models) directory. Name the new
+1. Duplicate the `m990` directory within the [models](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/src/models) directory. Name the new
    directory `mXXX.jl`, where `XXX` is your chosen model specification number or string.
    Rename `m990.jl` in this directory to `mXXX.jl`.
 2. In the `mXXX/` directory, change all references to `Model990` to `ModelXXX`.
