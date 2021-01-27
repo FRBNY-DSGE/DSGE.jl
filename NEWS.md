@@ -1,3 +1,7 @@
+# DSGE.jl 1.2.2
+## Bug fixes
++ Fix print statements when using `forecast_one` and `verbose = :high`
+
 # DSGE.jl 1.2.1
 ## Miscellaneous
 + Fix docs
