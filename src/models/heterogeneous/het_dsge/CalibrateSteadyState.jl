@@ -144,7 +144,7 @@ end
 
 np = 100
 sH_by_sL_grid = linspace(3.,9.,np)
-zlo_grid      = linspace(0.+eps(), 0.8-eps(), np)
+zlo_grid      = linspace(0. + eps(), 0.8 - eps(), np)
 # tic()
 # varlinc_target  = 0.7
 # vardlinc_target = 0.23

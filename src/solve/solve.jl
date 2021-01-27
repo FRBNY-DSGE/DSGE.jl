@@ -415,7 +415,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
         if nzlb != ng2
-            # TODO: either generalize or remove this code block (remove b/c solve_non_gensys2 should work)
+            # TODO: generalize this code block
             # It is currently assumed that ffreg is the first regime w/ZLB (and cannot be another temporary altpolicy),
             # so ffreg + nzlb is the first regime w/out ZLB. Starting from nzlb + 1 ensures we populate the lift-off
             # regime correctly, as the lift-off is no longer the final regime, and won't be covered by
@@ -434,21 +434,29 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                 RRR_gensys = real(RRR_gensys)
                 CCC_gensys = real(CCC_gensys)
 
-                if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
-                    if haskey(get_settings(m), :regime_eqcond_info) ? haskey(get_setting(m, :regime_eqcond_info), reg) : false
-                        weights = get_setting(m, :regime_eqcond_info)[reg].weights
-                        altpols = get_setting(m, :alternative_policies)
+                if haskey(get_settings(m), :regime_eqcond_info) ? haskey(get_setting(m, :regime_eqcond_info), reg) : false
+                    weights = get_setting(m, :regime_eqcond_info)[reg].weights
+                    altpols = get_setting(m, :alternative_policies)
 
-                        TTT_gensys, RRR_gensys, CCC_gensys =
-                        gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true, TTT = TTT_gensys,
-                                                regime_switching = true, regimes = Int[reg])
-                    end
+                    TTT_gensys, RRR_gensys, CCC_gensys =
+                    gensys_uncertain_altpol(m, weights, altpols; apply_altpolicy = true, TTT = TTT_gensys,
+                                            regime_switching = true, regimes = Int[reg])
                 end
 
                 Tcal[ical] = TTT_gensys
                 Rcal[ical] = RRR_gensys
                 Ccal[ical] = CCC_gensys
             end
+        end
+
+        if uncertain_altpolicy
+            Tcal[end] = TTT_final_weighted
+            Rcal[end] = RRR_final_weighted
+            Ccal[end] = CCC_final_weighted
+        else
+            Tcal[end] = TTT_final
+            Rcal[end] = RRR_final
+            Ccal[end] = CCC_final
         end
 
         if uncertain_altpolicy

@@ -244,7 +244,11 @@ function load_data_levels(m::AbstractDSGEModel; verbose::Symbol=:low,
         else
             # If series not found, use all missings
             addl_data = DataFrame(fill(missing, (size(df,1), length(mnemonics))))
-            names!(addl_data, mnemonics)
+            if isdefined(DataFrames, :rename!)
+                rename!(addl_data, mnemonics)
+            else
+                names!(addl_data, mnemonics)
+            end
             df = hcat(df, addl_data)
             @warn "$file was not found; missings used"
         end

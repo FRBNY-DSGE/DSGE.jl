@@ -56,8 +56,7 @@ function gensys2(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Float64
 end
 
 function gensys2(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s::Vector{Matrix{Float64}},
-                 Cs::Vector{Vector{Float64}},
-                 Ψs::Vector{Matrix{Float64}}, Πs::Vector{Matrix{Float64}},
+                 Cs::Vector{Vector{Float64}}, Ψs::Vector{Matrix{Float64}}, Πs::Vector{Matrix{Float64}},
                  TTT::Matrix{Float64}, RRR::Matrix{Float64},
                  CCC::Vector{Float64}; T_switch::Int = get_setting(m, :n_rule_periods) + 1)
 

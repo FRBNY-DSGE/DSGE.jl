@@ -13,7 +13,7 @@ x = zeros(Float64, n_vars)
 # Set up SDE
 f(u,p,t) = T*u
 g(u,p,t) = R
-dt = 1./90 # daily frequency when one period is one month
+dt = 1. / 90 # daily frequency when one period is one month
 tspan = (0.0,4. * 50.) # 50 years of data
 u0 = reshape(basis * x, size(inverse_basis, 2), 1)
 W = WienerProcess(0.0, 0., 0.)

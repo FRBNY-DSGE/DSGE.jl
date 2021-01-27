@@ -1,6 +1,6 @@
 # New York Fed DSGE Model (Version 1002)
 [![Build Status](https://travis-ci.org/FRBNY-DSGE/DSGE.jl.svg)](https://travis-ci.org/FRBNY-DSGE/DSGE.jl)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://frbny-dsge.github.io/DSGE.jl/latest)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://frbny-dsge.github.io/DSGE.jl/dev)
 [![Coverage Status](https://coveralls.io/repos/github/FRBNY-DSGE/DSGE.jl/badge.svg?branch=master)](https://coveralls.io/github/FRBNY-DSGE/DSGE.jl?branch=master)
 
 The `DSGE.jl` package implements the New York Fed dynamic stochastic general equilibrium (DSGE) model and provides general code to estimate many user-specified DSGE models. The package is introduced in the Liberty Street Economics blog post
@@ -11,7 +11,7 @@ This Julia-language implementation mirrors the MATLAB code included in the
 Liberty Street Economics blog post
 [The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
 
-Documentation for the *code* can be accessed by clicking on the `docs|latest` button above. For documentation about the most recent *model version*, read this [pdf](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
+Documentation for the *code* can be accessed by clicking on the `docs|dev` button above. For documentation about the most recent *model version*, read this [pdf](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
 
 The New York Fed DSGE team is currently extending the code to solve and estimate heterogeneous agent models. Filtering and smoothing algorithms are available in the registered package [StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl).
 An implementation of Sequential Monte Carlo (SMC) sampling, used for the estimation of DSGE models, can be found in the registered package [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl). The foundational `AbstractModel` type, from which the `AbstractDSGEModel` type derives, is defined in the registered package [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).

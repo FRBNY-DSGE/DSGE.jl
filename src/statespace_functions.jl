@@ -24,56 +24,16 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                                                                   get_setting(m, :alternative_policy).key != :historical)
 
     if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching)
-        # Set regime_eqcond_info if alternative_policy but no regime_eqcond_info
-        fcast_reg = haskey(m.settings, :reg_post_conditional_end) ?
-            max(get_setting(m, :reg_post_conditional_end), get_setting(m, :reg_forecast_start)) :
-            get_setting(m, :reg_forecast_start) # Errors if no reg_forecast_start key in settings
-
-#=        if apply_altpolicy && (!haskey(m.settings, :regime_eqcond_info) ||
-                               !haskey(get_setting(m, :regime_eqcond_info), fcast_reg)) &&
-                               haskey(m.settings, :alternative_policy) && get_setting(m, :alternative_policy).key != :historical
-
-            if !haskey(m.settings, :regime_eqcond_info)
-                m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}())
-            end
-
-            m <= Setting(:replace_eqcond, true) # Turn this setting on b/c an alt policy was requested
-
-            # Fixing regime_dates to account for adding fcast_reg if necessary
-            cond_date = haskey(m.settings, :date_conditional_end) ?
-                DSGE.iterate_quarters(get_setting(m, :date_conditional_end), 1) : get_setting(m, :date_forecast_start)
-            fcast_date = max(get_setting(m, :date_forecast_start), cond_date)
-
-            if !(fcast_reg in keys(get_setting(m, :regime_dates)))
-                get_setting(m, :regime_dates)[fcast_reg] = fcast_date
-            elseif get_setting(m, :regime_dates)[fcast_reg] != fcast_date
-                regime_dated = copy(get_setting(m, :regime_dates))
-
-                get_setting(m, :regime_dates)[fcast_reg] = fcast_date
-                for k in keys(get_setting(m, :regime_dates))
-                    if k >= fcast_reg
-                        get_setting(m, :regime_dates)[k+1] = regime_dated[k]
-                    end
-                end
-            end
-
-            alt_pol_length = haskey(m.settings, :alternative_policies) ?
-                length(get_setting(m, :alternative_policies)) : 1
-            for reg in fcast_reg:get_setting(m, :n_regimes)
-                get_setting(m, :regime_eqcond_info)[reg] = DSGE.EqcondEntry(get_setting(m, :alternative_policy),
-                                                                            vcat([1.], zeros(alt_pol_length)))
-            end
-        end # Do for regime_dates and remove apply_altpolicy from solve.=#
-
         # Grab these settings
-        has_uncertain_altpolicy = haskey(m.settings, :uncertain_altpolicy)
-        has_uncertain_zlb = haskey(m.settings, :uncertain_zlb)
-        has_regime_eqcond_info = haskey(m.settings, :regime_eqcond_info)
+        has_uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy)
+        has_uncertain_zlb = haskey(get_settings(m), :uncertain_zlb)
+        has_regime_eqcond_info = haskey(get_settings(m), :regime_eqcond_info)
         uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
         uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
-        gensys2 = haskey(m.settings, :gensys2) && get_setting(m, :gensys2)
+        is_gensys2 = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
-        regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, DSGE.EqcondEntry}()
+        # Grab regime info dictionary, if one exists
+        regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, EqcondEntry}()
 
         # Set replace_eqcond to nothing if !apply_altpolicy
         if !apply_altpolicy && has_regime_eqcond_info
@@ -119,10 +79,11 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
         !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
         (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy) || (!has_uncertain_zlb && !has_uncertain_altpolicy)
 
-        ## TODO: Setting names should change once refactoring done
-        if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy && has_regime_eqcond_info
-            m <= Setting(:regime_eqcond_info, regime_info_copy)
-            m <= Setting(:gensys2, gensys2)
+        if haskey(m.settings, :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy
+            if has_regime_eqcond_info
+                m <= Setting(:regime_eqcond_info, regime_info_copy)
+            end
+            m <= Setting(:gensys2, is_gensys2)
         end
 
         return system_main
@@ -143,29 +104,16 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
 
     m <= Setting(:regime_switching, true) # turn back on, but still keep uncertain_altpolicy, uncertain_zlb off => perfect credibility
 
-    # TODO: THIS BLOCK OF CODE IS INEFFICIENT. The problem is this. We want to compute the perfect credibility
-    # state space system for each possible alternative policy when there is imperfect awareness/policy uncertainty.
-    # This code does it by setting the credibility of different policies to 1 and looping. HOWEVER,
-    # this code incurs unnecessary costs b/c we compute the transition matrices every loop for all alternative policies
-    # and calculate the implied transition equations given the weights vector. What we really want to do is calculate
-    # the transition equations w/out the uncertain_altpolicy thing on at all and just use the correct replace_eqcond_func_dict
-    # or solve/eqcond functions.
-    #
-    # To avoid this problem, currently, we are hard-coding that there are only two alternative policies, the desired one
-    # and the historical one, which we assume to be the transition equations when there is no regime-switching,
-    # i.e. the system_taylor calculated above.
-    for i in 1:n_altpolicies # loop over alternative policies, noting that we've already computed the historical policy
-        ## With alternative policy weights = [1., 0.] in all forecast regimes for given altpolicy
-        #  Commented out here b/c uncertain_altpolicy is already off, so no need to bother with this.
-        #  In general, we don't even want this approach b/c it involves calculating all alternative policies multiple times.
-        #  It is more efficient to find a way to compute each altpolicy individually ONCE.
+
+    for i in 1:n_altpolicies # loop over alternative policies
+        ## With uncertain_altpolicy off (so only calculating  1 alternative policy).
         if i > 1 && get_setting(m, :alternative_policies)[i-1].key == :taylor_rule
             m <= Setting(:gensys2, false)
             replace_eq_copy = copy(get_setting(m, :regime_eqcond_info))
             delete!(m.settings, :regime_eqcond_info)
             system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = false, tvis = tvis, verbose = verbose)
             m <= Setting(:regime_eqcond_info, replace_eq_copy)
-            m <= Setting(:gensys2, gensys2)
+            m <= Setting(:gensys2, is_gensys2)
         elseif i > 1
             m <= Setting(:alternative_policy, get_setting(m, :alternative_policies)[i-1])
             system_altpolicies[i] = compute_system_helper(m; apply_altpolicy = apply_altpolicy, tvis = tvis, verbose = verbose)
@@ -188,24 +136,10 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
     if has_pseudo
         has_fwd_looking_pseudo = haskey(get_settings(m), :forward_looking_pseudo_observables)
     end
-#=
-    function get_meas(system::AbstractSystem, reg::Int; pseudo = false)
-        if typeof(system) == System{Float64} && !pseudo
-            return system.measurement
-        elseif typeof(system) == System{Float64} && pseudo
-            return system.pseudo_measurement
-        elseif typeof(system) == RegimeSwitchingSystem{Float64} && !pseudo
-            return system.measurements[reg]
-        elseif typeof(system) == RegimeSwitchingSystem{Float64} && pseudo
-            return system.pseudo_measurements[reg]
-        else
-            error("Incorrect System Type")
-        end
-    end
-=#
+
     ## Correct the measurement equations for anticipated observables via convex combination
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-        new_wt = get_setting(m, :regime_eqcond_info)[reg].weights
+        new_wt = regime_eqcond_info[reg].weights
 
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
@@ -215,7 +149,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                     sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:DD][m.observables[k]] for i in 1:length(new_wt)])
             end
         else
-            # TODO: This needs to be updated
             system_main.measurements[reg][:ZZ] .=
                 sum([new_wt[i] .* system_altpolicies[i].measurements[reg][:ZZ] for i in 1:length(new_wt)])
             system_main.measurements[reg][:DD] .=
@@ -233,7 +166,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Sy
                              for i in 1:length(new_wt)])
                 end
             else
-                # TODO: This needs to be updated
                 system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
                 sum([new_wt[i] .* system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo] for i in 1:length(new_wt)])
                 system_main.pseudo_measurements[reg][:DD_pseudo] .=

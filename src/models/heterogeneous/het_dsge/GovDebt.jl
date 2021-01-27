@@ -29,14 +29,14 @@ function tauchen86(μ::AbstractFloat,ρ::AbstractFloat,σ::AbstractFloat,n::Int6
         xprob[i,1] = normcdf(m[1])
         xprob[i,n] = 1 - normcdf(m[n-1])
     end
-    xprob = xprob./sum(xprob,2) # make sure the rows sum to 1
+    xprob = xprob ./ sum(xprob,2) # make sure the rows sum to 1
     return ( xgrid,xprob, xscale )
 end
 
 function trunc_lognpdf(x, UP, LO, mu, sig)
     # truncated log normal pdf
     logn = LogNormal(mu, sig)
-    return (x-LO.>=-eps()).*(x-UP.<=eps()).*pdf.(logn,x)/(cdf.(logn,UP)-cdf.(logn,LO))
+    return (x-LO.>=-eps()) .* (x-UP.<=eps()).*pdf.(logn,x)/(cdf.(logn,UP)-cdf.(logn,LO))
 end
 
 
@@ -48,7 +48,7 @@ r = 0.01                        # 4 percent steady state annual real interest ra
 α = 0.3                         # capital share
 H = 1.0                         # aggregate hours worked
 δ  = 0.03                       # depreciation
-sH_over_sL = 1.2/0.8
+sH_over_sL = 1.2 / 0.8
 pLH = 0.1                       # prob of going from low to high persistent skill
 pHL = 0.1                      # prob of going fom
 γ = 0.#0.004                       # TFP growth
@@ -58,7 +58,7 @@ g = 1/(1-GoverY)                # steady state value of g_t, where G_t/Y_t = (1-
 In    = 0.443993816237631       # normalizing constant for the mollifier
 na = 300                         # cash on hand ditn grid points - set to smaller numbers for debugging
 ns = 2# 5                         # skill distribution grid points
-zlo =  1./3.                      # second income shock to mollify actual income
+zlo =  1. / 3.                      # second income shock to mollify actual income
 zhi = 2. - zlo                       # upper bound on this process
 BoverY = 0.26
 
@@ -102,11 +102,11 @@ T = Rk*k*ℯ^(-γ) - x - (1-(1/g))*y - ((1+r)*ℯ^(-γ)-1)*bg        # net trans
 function persistent_skill_process(sH_over_sL::AbstractFloat, pLH::AbstractFloat, pHL::AbstractFloat, ns::Int)
     f1 = [[1-pLH pLH];[pHL 1-pHL]] # f1[i,j] is prob of going from i to j
     ss_skill_distr = [pHL/(pLH+pHL); pLH/(pLH+pHL)]
-    slo = 1./(ss_skill_distr'*[1;sH_over_sL])
+    slo = 1. / (ss_skill_distr'*[1;sH_over_sL])
     sgrid = slo*[1;sH_over_sL]
     sscale = sgrid[2] - sgrid[1]
     swts     = (sscale/ns)*ones(ns) #quadrature weights
-    f = f1./repmat(swts',ns,1)
+    f = f1 ./ repmat(swts',ns,1)
     return (f, sgrid, swts)
 end
 (f, sgrid, swts) = persistent_skill_process(sH_over_sL, pLH, pHL, ns)
@@ -176,7 +176,7 @@ function dmollifier(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
     In = 0.443993816237631
     if x<ehi && x>elo
         temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
-        out  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
+        out  = -(2*temp ./ ((1 - temp.^2).^2)) .* (2/(ehi-elo)).*mollifier(x, ehi, elo)
     else
         out = 0.0
     end
@@ -186,7 +186,7 @@ end
 
 qp(z) = dmollifier(z,zhi,zlo)
 
-Win = 1./(5.+0.02*(repeat(agrid,ns)-5))
+Win = 1 ./ (5. + 0.02*(repeat(agrid,ns)-5))
 Win = 2*ones(na*ns)/(ahi+alo)
 aswts = kron(swts,awts)
 
@@ -245,7 +245,7 @@ function parameterized_expectations(na::Int,ns::Int, β::AbstractFloat, R::Abstr
             sumn = 0.0
             for isp=1:ns
                 for iap=1:na
-                    sumn += (aswts[na*(isp-1)+iap]/c[na*(isp-1)+iap])*qfunction((agrid[iap] - R*(ℯ^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./sgrid[isp]
+                    sumn += (aswts[na*(isp-1)+iap]/c[na*(isp-1)+iap])*qfunction((agrid[iap] - R*(ℯ^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp] ./ sgrid[isp]
                 end
             end
             l_out[na*(iss-1)+ia] = (β*R*(ℯ^(-γ))/ω*H)*sumn
@@ -263,7 +263,7 @@ function kolmogorov_fwd(na::Int, ns::Int, ω::AbstractFloat,
         for ia=1:na
             for isp=1:ns
                 for iap=1:na
-                    tr[na*(isp-1)+iap,na*(iss-1)+ia] = qfunction((agrid[iap] - R*(ℯ^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp]./(ω*H*sgrid[isp])
+                    tr[na*(isp-1)+iap,na*(iss-1)+ia] = qfunction((agrid[iap] - R*(ℯ^(-γ))*bp[na*(iss-1)+ia] - T)/(ω*H*sgrid[isp]))*f[iss,isp] ./ (ω*H*sgrid[isp])
                 end
             end
         end
@@ -319,7 +319,7 @@ function findss(na::Int, ns::Int, βlo::AbstractFloat,
         end
         m = real(V[:,1]) #Pick the eigen vecor associated with the largest eigenvalue and moving it back to values
         m = m/(aswts'*m) #Scale of eigenvectors not determinate: rescale to integrate to exactly 1
-        excess = (aswts'*(m.*bp))[1] - bg  #compute excess supply of savings, which is a fn of w
+        excess = (aswts'*(m .* bp))[1] - bg  #compute excess supply of savings, which is a fn of w
                 # bisection
         println([βlo β βhi])
         println(excess)

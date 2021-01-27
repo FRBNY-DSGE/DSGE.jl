@@ -28,15 +28,6 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
         @test RRR ≈ R_prs
         @test CCC ≈ C_prs
 
-        m <= Setting(:alternative_policy_weights, prob_vec)
-        m <= Setting(:uncertain_altpolicy, true)
-        TTT, RRR, CCC = solve(m) # check automatic calculation
-        m <= Setting(:uncertain_altpolicy, false) # to make DSGE.gensys_uncertain_altpol above work
-
-        @test TTT ≈ T_prs
-        @test RRR ≈ R_prs
-        @test CCC ≈ C_prs
-
         if regen && i == 2
             h5open(joinpath(rp, "gensys_uncertain_altpol.h5"), "w") do file
                 write(file, "T", T_prs)
@@ -74,6 +65,11 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     setup_regime_switching_inds!(m)
 
     m <= Setting(:alternative_policies, AltPolicy[hist_rule])
+<<<<<<< HEAD
+=======
+#    m <= Setting(:imperfect_awareness_varying_weights,
+#                 Dict(i => [.5, .5] for i in 2:5))
+>>>>>>> master
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:regime_eqcond_info, Dict(i => DSGE.EqcondEntry(DSGE.ngdp(), [.5, .5]) for i in 2:5))
     m <= Setting(:uncertain_altpolicy, true)
@@ -89,6 +85,11 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
         @test CCCs[i] == CCCs[2]
     end
 
+<<<<<<< HEAD
+=======
+#    m <= Setting(:imperfect_awareness_varying_weights,
+#                 Dict(i => [1., 0.] for i in 2:5))
+>>>>>>> master
     for i in 2:5
         get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
     end

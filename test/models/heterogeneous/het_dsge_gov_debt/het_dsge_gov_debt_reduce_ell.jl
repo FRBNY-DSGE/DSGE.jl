@@ -13,7 +13,7 @@ write_likelihood = false
 
 path = dirname(@__FILE__)
 
-addtl_save_str = VERSION == v"1.5" ? "_1.5" : ""
+addtl_save_str = VERSION >= v"1.5" ? "_1.5" : ""
 
 m = HetDSGEGovDebt(testing_gamma = true, ref_dir = HETDSGEGOVDEBT)
 m <= Setting(:steady_state_only, true)
