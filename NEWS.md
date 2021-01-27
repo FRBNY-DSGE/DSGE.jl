@@ -1,4 +1,9 @@
-# DSGE.jl 1.2
+# DSGE.jl 1.2.1
+## Miscellaneous
++ Fix docs
++ Change default branch from master to main
+
+# DSGE.jl 1.2.0
 ## Version Restrictions
 + Minimum CSV version is v0.8
 + Minimum ModelConstructors version is v0.2.4
