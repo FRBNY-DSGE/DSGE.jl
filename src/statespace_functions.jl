@@ -31,17 +31,17 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     if haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
         # Grab these settings
         has_uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy)
-        has_uncertain_zlb = haskey(get_settings(m), :uncertain_zlb)
+        has_uncertain_temp_altpol = haskey(get_settings(m), :uncertain_temp_altpol)
         has_regime_eqcond_info = haskey(get_settings(m), :regime_eqcond_info)
         uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
-        uncertain_zlb = has_uncertain_zlb && get_setting(m, :uncertain_zlb)
+        uncertain_temp_altpol = has_uncertain_temp_altpol && get_setting(m, :uncertain_temp_altpol)
         is_gensys2 = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
         # Grab regime info dictionary, if one exists
         regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, EqcondEntry}()
 
-        # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
-        if has_uncertain_zlb && !uncertain_zlb && has_regime_eqcond_info
+        # If uncertain_temp_altpol is false, want to make sure temp altpol period is treated as certain.
+        if has_uncertain_temp_altpol && !uncertain_temp_altpol && has_regime_eqcond_info
             for reg in keys(regime_eqcond_info)
                 if regime_eqcond_info[reg].alternative_policy.key == :zero_rate
                     altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
@@ -68,14 +68,14 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     system_main = compute_system_helper(m; tvis = tvis, verbose = verbose)
 
     # If correcting measurement eqs for anticipated (pseudo) observables is unnecessary
-    # (eg. running Taylor or no regime switching or no uncertainty in ZLB or altpolicy or
+    # (eg. running Taylor or no regime switching or no uncertainty in temp altpol or altpolicy or
     # either perfect or zero credibility - invariant perfect or zero credibility in the case of time varying),
     # then return system now.
     # The !apply_altpolicy check may be problematic after refactoring altpolicy.
     if !apply_altpolicy || !haskey(get_settings(m), :regime_switching) || !get_setting(m, :regime_switching) ||
         !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
-        (has_uncertain_zlb && !uncertain_zlb && has_uncertain_altpolicy && !uncertain_altpolicy) ||
-        (!has_uncertain_zlb && !has_uncertain_altpolicy)
+        (has_uncertain_temp_altpol && !uncertain_temp_altpol && has_uncertain_altpolicy && !uncertain_altpolicy) ||
+        (!has_uncertain_temp_altpol && !has_uncertain_altpolicy)
 
         if haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy
             if has_regime_eqcond_info
@@ -89,7 +89,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
 
     # Turn off these settings temporarily to get historical policy
     m <= Setting(:uncertain_altpolicy, false)
-    m <= Setting(:uncertain_zlb, false)
+    m <= Setting(:uncertain_temp_altpol, false)
 
     if !haskey(get_settings(m), :alternative_policies)
         m <= Setting(:alternative_policies, [DSGE.taylor_rule()]) # Maybe use the "default" policy here
@@ -143,7 +143,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     m <= Setting(:regime_eqcond_info, orig_regime_eqcond_info)
     m <= Setting(:gensys2, is_gensys2)
     m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
-    m <= Setting(:uncertain_zlb, uncertain_zlb)
+    m <= Setting(:uncertain_temp_altpol, uncertain_temp_altpol)
     if !isnothing(orig_altpol)
         m <= Setting(:alternative_policy, orig_altpol)
     end
@@ -263,8 +263,8 @@ function compute_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verb
                     GensysError("No equilibrium conditions in any regime are being temporarily replaced, " *
                                 "but the setting :gensys2 is true.")
                 end
-                last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ?
-                min(first_gensys2_regime + get_setting(m, :temporary_zlb_length), n_regimes) : n_regimes #NOTE removed a +1 here--if tests start failing, check here first
+                last_gensys2_regime = haskey(get_settings(m), :temporary_altpol_length) ?
+                min(first_gensys2_regime + get_setting(m, :temporary_altpol_length), n_regimes) : n_regimes #NOTE removed a +1 here--if tests start failing, check here first
 
                 gensys_regimes = UnitRange{Int}[1:(first_gensys2_regime - 1)]
                 if last_gensys2_regime != n_regimes
@@ -1593,8 +1593,8 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; verbose::Symbol = :high) w
         else
             first_gensys2_regime = n_hist_regimes + 1
         end
-        last_gensys2_regime = haskey(get_settings(m), :temporary_zlb_length) ?
-            first_gensys2_regime + get_setting(m, :temporary_zlb_length) : n_regimes
+        last_gensys2_regime = haskey(get_settings(m), :temporary_altpol_length) ?
+            first_gensys2_regime + get_setting(m, :temporary_altpol_length) : n_regimes
         if get_setting(m, :gensys2)
             gensys_regimes = [1:first_gensys2_regime-1]
             if last_gensys2_regime != n_regimes

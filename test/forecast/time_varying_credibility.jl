@@ -98,7 +98,7 @@ m <= Setting(:skip_altpolicy_state_init, true)
 m <= Setting(:gensys2, true)
 
 # Set up credibility for ZLB and alternative policy, if applicable
-m <= Setting(:uncertain_zlb, true)
+m <= Setting(:uncertain_temp_altpol, true)
 m <= Setting(:uncertain_altpolicy, true)
 gensys2_first_regime = get_setting(m, :n_regimes) + 1
 get_setting(m, :regime_dates)[gensys2_first_regime] = start_zlb_date
@@ -132,7 +132,7 @@ m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime -
 # output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo, :forecaststates]
 output_vars = [:forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
-@assert !haskey(m.settings, :temporary_zlb_length)
+@assert !haskey(m.settings, :temporary_altpol_length)
 outp0 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                      regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 for i in keys(get_setting(m, :regime_eqcond_info))
@@ -154,7 +154,7 @@ m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime -
                                          [i:get_setting(m, :n_regimes) for i in
                                           gensys2_first_regime:get_setting(m, :n_regimes)]))
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
-m <= Setting(:temporary_zlb_length, n_zlb_reg)
+m <= Setting(:temporary_altpol_length, n_zlb_reg)
 for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [.33, 1-.33]
 end
@@ -190,14 +190,14 @@ for i in keys(get_setting(m, :regime_eqcond_info))
 end
 credvec = ones(17)
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]]
     end
 end
 out_temp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-m <= Setting(:uncertain_zlb, false)
+m <= Setting(:uncertain_temp_altpol, false)
 m <= Setting(:uncertain_altpolicy, false)
 
 credvec = collect(range(0., stop = 1., length = 17))
@@ -211,12 +211,12 @@ out_perm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 # Check perfectly credible ZLB match permanent equivalent
-m <= Setting(:uncertain_zlb, false)
+m <= Setting(:uncertain_temp_altpol, false)
 m <= Setting(:uncertain_altpolicy, true)
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) ) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length))], 1. - credvec[i - (get_setting(m, :temporary_zlb_length))]]
+    if (get_setting(m, :temporary_altpol_length) ) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length))], 1. - credvec[i - (get_setting(m, :temporary_altpol_length))]]
     end
 end
 
@@ -224,15 +224,15 @@ out_credzlb = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params,
                                      regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 m <= Setting(:uncertain_altpolicy, true)
-m <= Setting(:uncertain_zlb, true)
+m <= Setting(:uncertain_temp_altpol, true)
 for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
 end
 credvec = collect(range(0., stop = 1., length = 17))
 
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length)) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length))], 1. - credvec[i - (get_setting(m, :temporary_zlb_length))]]
+    if (get_setting(m, :temporary_altpol_length)) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length))], 1. - credvec[i - (get_setting(m, :temporary_altpol_length))]]
     else
         firsted = 1.0
         get_setting(m, :regime_eqcond_info)[k].weights = [firsted, 1.0 - firsted]
@@ -255,8 +255,8 @@ for i in keys(get_setting(m, :regime_eqcond_info))
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]]
     end
 end
 out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
@@ -300,9 +300,9 @@ for i in keys(get_setting(m, :regime_eqcond_info))
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
-                                                          1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 0.0]
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)], 0.0]
     end
 end
 
@@ -320,14 +320,41 @@ for i in keys(get_setting(m, :regime_eqcond_info))
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
-                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)])/2.0,
-                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)])/2.0]
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)])/2.0,
+                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)])/2.0]
     end
 end
 
 out_mult = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+# Test if Uncertain Temp Altpol runs (in place of ZLB)
+# Set up regime_eqcond_info
+m <= Setting(:uncertain_temp_altpol, true)
+m <= Setting(:replace_eqcond, true)
+reg_dates = deepcopy(get_setting(m, :regime_dates))
+regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
+for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_regime), # See comments starting at line 57
+                          DSGE.quarter_range(reg_dates[gensys2_first_regime],
+                                             DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
+    reg_dates[regind] = date
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.ngdp(), [0.5, 0.5])
+end
+reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
+regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.33, 0.67])
+nreg0 = length(reg_dates)
+m <= Setting(:regime_dates,             reg_dates)
+m <= Setting(:regime_eqcond_info, regime_eqcond_info)
+
+# Set up regime indices and extra regimes for parameters
+setup_regime_switching_inds!(m; cond_type = :full)
+set_regime_vals_fnct(m, get_setting(m, :n_regimes))
+
+# Just checking it runs
+out_temp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
 
 nothing

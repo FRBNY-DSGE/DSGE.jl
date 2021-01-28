@@ -382,7 +382,6 @@ the entire sequence of transition equations under the temporary alternative poli
 perfect credibility. Once this sequence is available, we can then treat
 the temporary alternative policy as the alternative policy which is actually implemented
 and apply the same calculations described in the previous paragraph to each period of the temporary alternative policy.
-\emph{Note, however, that this functionality is currently available only for temporary ZLBs}.
 
 ### Implementation
 
@@ -423,18 +422,18 @@ Finally, before solving for the state space system or running forecasts, the use
 m <= Seting(:uncertain_altpolicy, true)
 ```
 
-To use imperfect awareness with a temporary ZLB, the user needs to also add the following lines to
+To use imperfect awareness with a temporary altpolicy (eg. ZLB), the user needs to also add the following lines to
 the model's setup:
 
 ```
-m <= Setting(:uncertain_zlb, true)
-m <= Setting(:temporary_zlb_length, n_zlb_regs)
+m <= Setting(:uncertain_temp_altpol, true)
+m <= Setting(:temporary_altpol_length, n_zlb_regs)
 ```
 
-The first line tells that a temporary ZLB with imperfect awareness should apply.
-The second line indicates the number of regimes for which the ZLB occurs. If the second line is not specified,
+The first line tells that a temporary altpolicy with imperfect awareness should apply.
+The second line indicates the number of regimes for which the temporary altpolicy occurs. If the second line is not specified,
 then it is assumed that all regimes in `get_setting(m, :regime_eqcond_info)` except the last one
-are ZLB regimes. This assumption can be wrong, for example, if credibility changes after the ZLB ends.
+are temporary altpolicy regimes. This assumption can be wrong, for example, if credibility changes after the temporary altpolicy ends.
 
 For further guidance on adding imperfect awareness, please see the script
 [uncertain_altpolicy_zlb.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples/uncertain_altpolicy_zlb.jl).

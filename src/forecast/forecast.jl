@@ -445,7 +445,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
         orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
-        orig_temp_zlb     = haskey(get_settings(m), :temporary_zlb_length) ? get_setting(m, :temporary_zlb_length) : nothing
+        orig_temp_zlb     = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
 
         for iter in 0:(size(obs, 2) - 3)
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
@@ -453,7 +453,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # that this is necessary anyway but not always, especially depending on the drawn shocks
             n_total_regimes = first_zlb_regime + iter + 1 # plus 1 for lift off
 
-            m <= Setting(:temporary_zlb_length, iter + 1) # 1 for first_zlb_regime, iter for each additional regime
+            m <= Setting(:temporary_altpol_length, iter + 1) # 1 for first_zlb_regime, iter for each additional regime
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
             if is_regime_switch # Add historical regimes
@@ -577,9 +577,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
             # restore original temp zlb length
             if isnothing(orig_temp_zlb)
-                delete!(get_settings(m), :temporary_zlb_length)
+                delete!(get_settings(m), :temporary_altpol_length)
             else
-                m <= Setting(:temporary_zlb_length, orig_temp_zlb)
+                m <= Setting(:temporary_altpol_length, orig_temp_zlb)
             end
 
             # Successful endogenous bounding?

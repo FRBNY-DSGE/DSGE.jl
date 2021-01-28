@@ -141,7 +141,7 @@ for j in 1:length(prob_vecs)
 
     # Automatic calculation
     m <= Setting(:uncertain_altpolicy, true)
-    m <= Setting(:uncertain_zlb, true)
+    m <= Setting(:uncertain_temp_altpol, true)
     autoTs[j], autoRs[j], autoCs[j] = solve(m; regime_switching = true,
                                             gensys_regimes = [1:get_setting(m, :n_hist_regimes) + 1],
                                             gensys2_regimes =
@@ -151,7 +151,7 @@ for j in 1:length(prob_vecs)
                                             df_full; regime_switching = true, n_regimes =
                                             get_setting(m, :n_regimes))
     m <= Setting(:uncertain_altpolicy, false) # Need to turn these off afterward
-    m <= Setting(:uncertain_zlb, false)
+    m <= Setting(:uncertain_temp_altpol, false)
 
     # Onto the manual calculation
 
@@ -190,7 +190,7 @@ for j in 1:length(prob_vecs)
     # TTTs_uzlb[inreg] is the same size as Tcal though b/c TTTs_uzbl[inreg[end]] is just Tcal[end], etc.
     inreg = gensys2_regimes[2:end]
     TTTs_uzlb[inreg], RRRs_uzlb[inreg], CCCs_uzlb[inreg] =
-        DSGE.gensys_uncertain_zlb(prob_vecs[j], Th[1:n_states(m), 1:n_states(m)],
+        DSGE.gensys2_uncertain_altpol(prob_vecs[j], Th[1:n_states(m), 1:n_states(m)],
                                   Ch[1:n_states(m)], Tcal[2:end], Rcal[2:end], Ccal[2:end],
                                   Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
     for li in inreg

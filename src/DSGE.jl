@@ -215,7 +215,7 @@ module DSGE
     include("solve/gensys.jl")
     include("solve/gensys2.jl")
     # include("solve/gensys_uncertain_altpol.jl") # Included after altpolicy code b/c this file uses the AltPolicy type
-    include("solve/gensys_uncertain_zlb.jl")
+    include("solve/gensys2_uncertain_altpol.jl")
     include("solve/solve.jl")
     include("solve/klein.jl")
 

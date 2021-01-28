@@ -172,7 +172,7 @@ if zlb_altpolicy
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # The gensys2 algo replaces eqcond matrices, so this step is required
-    m <= Setting(:temporary_zlb_length, n_tempZLB_regimes - 2) # specifies number of ZLB regimes; required if there is
+    m <= Setting(:temporary_altpol_length, n_tempZLB_regimes - 2) # specifies number of ZLB regimes; required if there is
                                                                # further regime-switching after the ZLB ends (aside from
                                                                # the extra regime for the "lift-off" from ZLB)
     credvec = range(0., stop = 1., length = n_tempZLB_regimes - 2) # Credibility of ZLB increases as time goes on
