@@ -1,9 +1,13 @@
+abstract type AbstractAltPolicy end
+
+Base.string(a::AbstractAltPolicy) = string(a.key)
+
 """
 ```
 mutable struct AltPolicy
 ```
 
-Type defining an alternative policy rule.
+Types defining an alternative policy rule.
 
 ### Fields
 
@@ -29,9 +33,8 @@ Type defining an alternative policy rule.
 
 - `linestyle::Symbol`: line style for forecast plots under this alternative
   policy. See options from `Plots.jl`. Defaults to `:solid`.
-
 """
-mutable struct AltPolicy
+mutable struct AltPolicy <: AbstractAltPolicy
     key::Symbol
     eqcond::Function
     solve::Function
@@ -47,8 +50,6 @@ function AltPolicy(key::Symbol, eqcond_fcn::Function, solve_fcn::Function;
 
     AltPolicy(key, eqcond_fcn, solve_fcn, forecast_init, color, linestyle)
 end
-
-Base.string(a::AltPolicy) = string(a.key)
 
 function altpolicy_replace_eq_entries(key::Symbol)
     if key == :flexible_ait
@@ -72,6 +73,7 @@ function altpolicy_replace_eq_entries(key::Symbol)
     end
 end
 
+
 """
 ```
 mutable struct EqcondEntry
@@ -91,6 +93,60 @@ end
 
 function EqcondEntry(altpol::AltPolicy)
     return EqcondEntry(altpol, missing)
+end
+
+"""
+```
+mutable struct MultiPeriodAltPolicy
+```
+
+Types defining an alternative policy rule.
+
+### Fields
+
+- `key::Symbol`: alternative policy identifier
+
+- `regime_eqcond_info::AbstractDict{Int64, EqcondEntry}`: a dictionary mapping
+    regimes to equilibrium conditions which replace the default ones in a
+    given regime.
+
+- `gensys2::Bool`: if true, the multi-period alternative policy needs
+    to call `gensys2` instead of `gensys` to work.
+
+- `infoset::Union{Vector{UnitRange{Int64}}, Nothing}`: either a vector specifying
+    the information set used for expectations in the measurement equation or
+    `nothing` to indicate myopia in expectations across regimes.
+
+- `forecast_init::Function`: a function that initializes forecasts under the
+  alternative policy rule. Specifically, it accepts a model, an `nshocks` x
+  `n_forecast_periods` matrix of shocks to be applied in the forecast, and a
+  vector of initial states for the forecast. It must return a new matrix of
+  shocks and a new initial state vector. If no adjustments to shocks or initial
+  state vectors are necessary under the policy rule, this field may be omitted.
+
+- `color::Colorant`: color to plot this alternative policy in. Defaults to blue.
+
+- `linestyle::Symbol`: line style for forecast plots under this alternative
+  policy. See options from `Plots.jl`. Defaults to `:solid`.
+
+"""
+mutable struct MultiPeriodAltPolicy{S <: AbstractDict{Int64, EqcondEntry}} <: AbstractAltPolicy
+    key::Symbol
+    regime_eqcond_info::S
+    gensys2::Bool
+    infoset::Union{Vector{UnitRange{Int64}}, Nothing}
+    forecast_init::Function
+    color::Colorant
+    linestyle::Symbol
+end
+
+function MultiPeriodAltPolicy(key::Symbol, regime_eqcond_info::AbstractDict{Int64, EqcondEntry}, is_gensys2::Bool;
+                              infoset::Union{Vector{UnitRange{Int64}}, Nothing} = nothing,
+                              forecast_init::Function = identity,
+                              color::Colorant = RGB(0., 0., 1.),
+                              linestyle::Symbol = :solid)
+
+    MultiPeriodAltPolicy(key, regime_eqcond_info, is_gensys2, infoset, forecast_init, color, linestyle)
 end
 
 """

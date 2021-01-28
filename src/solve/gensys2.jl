@@ -100,19 +100,14 @@ function gensys2(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s::Vect
     Rcal[end] = RRR
     Ccal[end] = CCC
 
-    #cond_vec = zeros(T_switch-1)
     for t = 1:(T_switch-1)
         Tcal[end-t] = (Γ2_tils[end-t]*TTT + Γ0_tils[end-t])\Γ1_tils[end-t]
         Rcal[end-t] = (Γ2_tils[end-t]*TTT + Γ0_tils[end-t])\Ψ_tils[end-t]
         Ccal[end-t] = (Γ2_tils[end-t]*TTT + Γ0_tils[end-t])\(C_tils[end-t] - Γ2_tils[end-t]*CCC)
 
-        #cond_vec[t] = LinearAlgebra.cond(Γ2_tils[end-t]*TTT + Γ0_tils[end-t])
-
         TTT = Tcal[end-t]
         CCC = Ccal[end-t]
         RRR = Rcal[end-t]
-
-        #save("cplus_mat_$(get_setting(m, :alternative_policy_weights)[1]).jld2", Dict("TTT$(t)" => LinearAlgebra.cond(TTT), "RRR$(t)" => LinearAlgebra.cond(RRR), "CCC$(t)" => LinearAlgebra.cond(CCC), "Gam0_til$(t)" => LinearAlgebra.cond(Γ0_tils[end-t]), "Gam1_til$(t)" => LinearAlgebra.cond(Γ1_tils[end-t]), "Gam2_tils$(t)" => LinearAlgebra.cond(Γ2_tils[end-t]), "Psi_tils$(t)" => LinearAlgebra.cond(Ψ_tils[end-t]), "C_tils$(t)" => LinearAlgebra.cond(C_tils[end-t])))
     end
 
     return Tcal, Rcal, Ccal

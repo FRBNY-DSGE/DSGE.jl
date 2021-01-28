@@ -100,7 +100,6 @@ m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
                                             6 => Date(2021, 6, 30)))
 m <= Setting(:date_forecast_start, Date(2020, 6, 30))
 m <= Setting(:date_conditional_end, Date(2020, 6, 30))
-m <= Setting(:alternative_policy, DSGE.flexible_ait())
 m <= Setting(:tvis_information_set, [1:1, 2:2, 3:6, 4:6, 5:6, 6:6])
 m <= Setting(:replace_eqcond, true)
 m <= Setting(:gensys2, true)

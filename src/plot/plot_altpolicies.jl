@@ -83,7 +83,7 @@ function plot_altpolicies(models::Vector{T}, vars::Vector{Symbol}, class::Symbol
         if isempty(altpol_string)
             error("Must provide nonempty altpol_key if plotting multiple alternative policies")
         else
-            altpol = get_setting(models[1], :alternative_policy)
+            altpol = alternative_policy(models[1])
             old_key = altpol.key
             altpol.key = Symbol(altpol_string)
         end

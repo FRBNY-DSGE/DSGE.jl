@@ -85,7 +85,9 @@ end
     @test DSGE.n_shockdec_periods(m)    == DSGE.index_shockdec_end(m) - DSGE.index_shockdec_start(m) + 1
 
     # Interface for alternative policy settings
+    m <= Setting(:alternative_policy, DSGE.default_policy())
     @test DSGE.alternative_policy(m) == get_setting(m, :alternative_policy)
+    delete!(DSGE.get_settings(m), :alternative_policy)
 end
 
 @testset "Check automatic calculation of settings for regime switching forecasts" begin

@@ -206,7 +206,7 @@ end
 # From an augmented state space with integrated series (e.g. unit root),
 # get indices corresponding to stationary states
 function inds_states_no_integ_series(m::AbstractDSGEModel)
-    if haskey(m.settings, :integrated_series)
+    if haskey(get_settings(m), :integrated_series)
         inds = map(i -> m.endogenous_states_augmented[i],
                    get_setting(m, :integrated_series))
         return setdiff(1:n_states_augmented(m), inds)
@@ -222,7 +222,7 @@ get_parameters(m::AbstractDSGEModel) = m.parameters
 get_rng(m::AbstractDSGEModel) = m.rng
 
 # Interface for accessing settings dictionary
-get_settings(m::AbstractDSGEModel) = m.settings
+get_settings(m::AbstractDSGEModel) = hasproperty(m, :testing) ? (m.testing ? m.test_settings : m.settings) : m.settings
 
 # Interface for accessing observables dictionary
 get_observables(m::AbstractDSGEModel) = m.observables
@@ -266,9 +266,24 @@ forecast_zlb_value(m::AbstractDSGEModel)    = get_setting(m, :forecast_zlb_value
 impulse_response_horizons(m::AbstractDSGEModel) = get_setting(m, :impulse_response_horizons)
 n_shockdec_periods(m::AbstractDSGEModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
 
-# Interface for alternative policy settings
-alternative_policy(m::AbstractDSGEModel) = haskey(m.settings, :regime_eqcond_info) &&
-haskey(m.settings, :n_regimes) && haskey(get_setting(m, :regime_eqcond_info), get_setting(m, :n_regimes)) ? get_setting(m, :regime_eqcond_info)[get_setting(m, :n_regimes)].alternative_policy : haskey(m.settings, :alternative_policy) ? get_setting(m, :alternative_policy) : AltPolicy(:historical, eqcond, solve)
+# Function for getting the alternative policy. Note that, in the case of imperfect awareness,
+# i.e. when uncertain_altpolicy is true, this function will return the policy that is actually implemented,
+# instead of other potential alternative policies which households believe could occur.
+#
+# Furthermore, do NOT delete the backup cases when regime_eqcond_info is not defined, namely
+# the check for whether :alternative_policy is a Setting. This last check is necessary for
+# the scenarios code to continue working.
+#
+# Finally, the check for :regime_eqcond_info MUST come first, or else the regime-switching code
+# will not work as intended, namely that :regime_eqcond_info specifies equilibrium conditions
+# which differ from the default ones and thus should determine the "final" permanent policy
+# that is believed to hold until "the end of time" (i.e. forever since it is an infinite horizon model).
+alternative_policy(m::AbstractDSGEModel) = haskey(get_settings(m), :regime_eqcond_info) && # no check for n_regimes b/c if it is not there, then
+    haskey(get_setting(m, :regime_eqcond_info), get_setting(m, :n_regimes)) ?              # it is better to throw an error since regime_eqcond_info
+    get_setting(m, :regime_eqcond_info)[get_setting(m, :n_regimes)].alternative_policy :   # will not work in general anyway.
+    (haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : AltPolicy(:historical, eqcond, solve))
+
+# Some additional date settings related to forecasts
 function date_forecast_end(m::AbstractDSGEModel)
     if haskey(get_settings(m), :date_forecast_end)
         return get_setting(m, :date_forecast_end)
@@ -579,6 +594,7 @@ function setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = 
     # If conditional forecasting occurs and the rule occurs afterward, we need to subtract n_cond_regimes.
     # If rule occurs during the conditional forecast horizon or before, then we need to add
     # extra periods to n_rule_periods
+    # TODO: Update this temp_altpolicy_in_cond_regimes to reflect regime_eqcond_info (may no longer be needed)
     cond_adj = if temp_altpolicy_in_cond_regimes
         haskey(get_settings(m), :gensys2_first_regime) ?
             (get_setting(m, :gensys2_first_regime) - get_setting(m, :n_hist_regimes) - 1) : 0
@@ -612,7 +628,7 @@ value will give the same result).
 function setup_param_regimes!(m::AbstractDSGEModel, param_mat::Array{Int, 2} = Matrix{Int}(undef, 0, 0))
 
     param_reg   = Dict{Symbol, Dict{Int, Int}}()
-    nmodel_regs = haskey(m.settings, :n_regimes) ? get_setting(m, :n_regimes) : 1
+    nmodel_regs = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
 
     if isempty(param_mat)
         param_mat = ones(n_parameters(m), nmodel_regs)

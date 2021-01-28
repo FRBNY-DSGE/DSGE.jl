@@ -103,10 +103,7 @@ DSGE.default_settings!(m)
     @test get_setting(m, :previous_data_vintage) == Dates.format(now(), DSGE.DSGE_DATE_FORMAT)
 
     # Alternative policy
-    @test get_setting(m, :alternative_policy).key == :historical &&
-        get_setting(m, :alternative_policy).eqcond == DSGE.eqcond &&
-        get_setting(m, :alternative_policy).solve == DSGE.solve &&
-        get_setting(m, :alternative_policy).forecast_init == identity
+    @test !haskey(DSGE.get_settings(m), :alternative_policy)
 end
 
 m = AnSchorfheide(testing = true)

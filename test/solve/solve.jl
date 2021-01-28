@@ -1,6 +1,4 @@
-using HDF5
-using Test
-using DSGE
+using HDF5, Test, DSGE, ModelConstructors
 
 path = dirname(@__FILE__)
 
@@ -19,31 +17,47 @@ TTT, RRR, CCC = solve(m)
 end
 
 m = Model1002("ss10")
-m <= Setting(:alternative_policy, taylor93())
+m <= Setting(:alternative_policy, taylor93()) # check w/out using regime-switching set up
 TTT_alt93, RRR_alt93, CCC_alt93 = solve(m)
+m <= Setting(:regime_switching, true) # check w/using regime-switching
+setup_permanent_altpol!(m, taylor93())
+TTT_alt93rs, RRR_alt93rs, CCC_alt93rs = solve(m; regime_switching = true, regimes = collect(1:2), gensys_regimes = [1:2])
 file = "$path/../reference/solve_alt.h5"
 TTT_alt_expected93 = h5read(file, "TTT_alt93")
 CCC_alt_expected93 = h5read(file, "CCC_alt93")
 RRR_alt_expected93 = h5read(file, "RRR_alt93")
 
 @testset "Check state-space system with altpolicy matches reference for Taylor93" begin
+    @test @test_matrix_approx_eq TTT_alt_expected93 TTT_alt93rs[2]
+    @test @test_matrix_approx_eq RRR_alt_expected93 RRR_alt93rs[2]
+    @test @test_matrix_approx_eq CCC_alt_expected93 CCC_alt93rs[2]
     @test @test_matrix_approx_eq TTT_alt_expected93 TTT_alt93
     @test @test_matrix_approx_eq RRR_alt_expected93 RRR_alt93
     @test @test_matrix_approx_eq CCC_alt_expected93 CCC_alt93
+    @test maximum(abs.(TTT_alt_expected93 - TTT_alt93rs[1])) > 1e-6
+    @test maximum(abs.(RRR_alt_expected93 - RRR_alt93rs[1])) > 1e-6
 end
 
 m = Model1002("ss10")
 m <= Setting(:alternative_policy, taylor99())
 TTT_alt99, RRR_alt99, CCC_alt99 = solve(m)
+m <= Setting(:regime_switching, true)
+setup_permanent_altpol!(m, taylor99())
+TTT_alt99rs, RRR_alt99rs, CCC_alt99rs = solve(m; regime_switching = true, regimes = collect(1:2), gensys_regimes = [1:2])
 file = "$path/../reference/solve_alt.h5"
 TTT_alt_expected99 = h5read(file, "TTT_alt99")
 CCC_alt_expected99 = h5read(file, "CCC_alt99")
 RRR_alt_expected99 = h5read(file, "RRR_alt99")
 
 @testset "Check state-space system with altpolicy matches reference for Taylor99" begin
+    @test @test_matrix_approx_eq TTT_alt_expected99 TTT_alt99rs[2]
+    @test @test_matrix_approx_eq RRR_alt_expected99 RRR_alt99rs[2]
+    @test @test_matrix_approx_eq CCC_alt_expected99 CCC_alt99rs[2]
     @test @test_matrix_approx_eq TTT_alt_expected99 TTT_alt99
     @test @test_matrix_approx_eq RRR_alt_expected99 RRR_alt99
     @test @test_matrix_approx_eq CCC_alt_expected99 CCC_alt99
+    @test maximum(abs.(TTT_alt_expected99 - TTT_alt99rs[1])) > 1e-6
+    @test maximum(abs.(RRR_alt_expected99 - RRR_alt99rs[1])) > 1e-6
 end
 
 nothing

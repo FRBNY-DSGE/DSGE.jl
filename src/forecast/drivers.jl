@@ -106,11 +106,10 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
         println("replace_eqcond: " * string(replace_eqcond))
         if replace_eqcond
-            replace_regs = collect(keys(get_setting(m, :regime_eqcond_info)))
-            first_replace_reg = minimum(replace_regs)
-            last_replace_reg = maximum(replace_regs)
+            replace_regs = sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+            println("regime_eqcond_info: ", OrderedDict(k => get_setting(m, :regime_eqcond_info)[k] for k in replace_regs))
         end
-        hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
+#=        hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
             (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false) ||
             (haskey(m.settings, :regime_eqcond_info) && (findfirst([haskey(get_setting(m, :regime_eqcond_info), i) for i in 1:get_setting(m, :n_regimes)]) -
              get_setting(m, :reg_post_conditional_end) >= 0))
@@ -118,7 +117,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
         g2fr = haskey(get_settings(m), :gensys2_first_regime) ? get_setting(m, :gensys2_first_regime) :
             get_setting(m, :reg_forecast_start)
-        println("gensys2_first_regime = $(g2fr + n_no_alt_reg)")
+        println("gensys2_first_regime = $(g2fr + n_no_alt_reg)")=#
 
         println("uncertain_altpolicy: " *
                 string(haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false))
@@ -128,7 +127,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             println("Desired policy rule: " *
                     string(haskey(get_settings(m), :regime_eqcond_info) ?
                            get_setting(m, :regime_eqcond_info)[maximum(collect(keys(get_setting(m, :regime_eqcond_info))))] :
-                           get_setting(m, :alternative_policy).key))
+                           alternative_policy(m).key))
             println("Other policy rules: " * join([string(x.key) for x in get_setting(m, :alternative_policies)], ", "))
             if haskey(get_settings(m), :imperfect_awareness_weights) # does not work currently, need to update
                 println("Credibility weights: ", get_setting(m, :imperfect_awareness_weights))
@@ -1030,7 +1029,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 @show forecaststates[m.endogenous_states[:R_t], :]
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             elseif zlb_method == :temporary_altpolicy
-                altpolicy = get_setting(m, :alternative_policy).key
+                altpolicy = alternative_policy(m).key
                 @assert altpolicy in [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt,
                                       :flexible_ait] "altpolicy must be permanent " *
                     "and among [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] for this method of enforcing the ZLB."

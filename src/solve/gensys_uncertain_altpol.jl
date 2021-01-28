@@ -1,7 +1,6 @@
 function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{S},
-                                 altpolicies::Vector{AltPolicy} = [get_setting(m, :alternative_policy)];
-                                 apply_altpolicy::Bool = false, regime_switching::Bool = false,
-                                 regimes::Vector{Int} = Int[1],
+                                 altpolicies::Vector{AltPolicy} = [default_policy()];
+                                 regime_switching::Bool = false, regimes::Vector{Int} = Int[1],
                                  TTT::Matrix{S} = Matrix{S}(undef, 0, 0),
                                  Γ0s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
                                  Γ1s::Vector{Matrix{S}} = Vector{Matrix{S}}(undef, 0),
@@ -18,10 +17,10 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
     if regime_switching
         if length(regimes) == 1
-            Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ? (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
-                                                                              get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
-                                                                              eqcond(m, regimes[1])) :
-                                                                              eqcond(m, regimes[1])
+            Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ?
+                (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
+                 get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
+                 eqcond(m, regimes[1])) : eqcond(m, regimes[1])
 
             if isempty(TTT)
                 assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
@@ -36,8 +35,9 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             Cd = Vector{Vector{S}}(undef, length(prob_vec))
             Td[1] = TTT[inds, inds]
             Cd[1] = C[inds]
+
             for (i, altpolicy) in enumerate(altpolicies)
-                j = i + 1 # may refactor to directly use solve(m; apply_altpolicy = true) by updating the alternative policy
+                j = i + 1
                 tmpT, _, tmpC = altpolicy.solve(m; regime_switching = regime_switching, regimes = regimes)
                 Td[j] = tmpT[inds, inds]
                 Cd[j] = tmpC[inds]
@@ -57,14 +57,12 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             if isempty(Γ0s) || isempty(Γ1s) || isempty(Cs) || isempty(Ψs) || isempty(Πs)
                 # If any of these are empty, we recompute the relevant matrices
                 for fcast_reg in regimes
-                    Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =  haskey(get_settings(m), :regime_eqcond_info) ?
-                                                                              (haskey(get_setting(m, :regime_eqcond_info), fcast_reg) ?
-                                                                               get_setting(m, :regime_eqcond_info)[fcast_reg].alternative_policy.eqcond(m, fcast_reg) :
-                                                                              eqcond(m, fcast_reg)) :
-                                                                              eqcond(m, fcast_reg)
+                    Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =
+                        haskey(get_settings(m), :regime_eqcond_info) ?
+                        (haskey(get_setting(m, :regime_eqcond_info), fcast_reg) ?
+                         get_setting(m, :regime_eqcond_info)[fcast_reg].alternative_policy.eqcond(m, fcast_reg) :
+                         eqcond(m, fcast_reg)) : eqcond(m, fcast_reg)
                 end
-
-                # ALSO NEED TO ADD THE APPLY ALTPOLICY OPTION
             end
 
             # Solve model for creating the "default" matrices in each period
@@ -92,8 +90,8 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             Cd[1, :] = CCCs_gensys
             for fcast_reg in regimes
                 for (i, altpolicy) in enumerate(altpolicies)
-                    j = i + 1 # may refactor to directly use solve(m; apply_altpolicy = true) by updating the alternative policy
-                    tmpT, _, tmpC = altpolicy.solve(m) # no regime switching for now ; regime_switching = regime_switching, regimes = regimes)
+                    j = i + 1
+                    tmpT, _, tmpC = altpolicy.solve(m; regime_switching = regime_switching, regimes = regimes)
                     Td[j, fcast_reg] = tmpT
                     Cd[j, fcast_reg] = tmpC
                 end
@@ -116,10 +114,10 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             return Tcals, Rcals, Ccals
         end
     else
-        Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ? (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
-                                                                          get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
-                                                                          eqcond(m, regimes[1])) :
-                                                                          eqcond(m, regimes[1])
+        Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ?
+            (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
+             get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
+             eqcond(m, regimes[1])) : eqcond(m, regimes[1])
 
         if isempty(TTT)
             assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
@@ -135,8 +133,8 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
         Td[1] = TTT[inds, inds]
         Cd[1] = C[inds]
         for (i, altpolicy) in enumerate(altpolicies)
-            j = i + 1 # may refactor to directly use solve(m; apply_altpolicy = true) by updating the alternative policy
-            tmpT, _, tmpC = altpolicy.solve(m) # no regime switching for now ; regime_switching = regime_switching, regimes = regimes)
+            j = i + 1 # TODO: may want to comment out the regime-switching kwargs in altpolicy.solve below . . . (if tests break)
+            tmpT, _, tmpC = altpolicy.solve(m; regime_switching = regime_switching, regimes = regimes)
             Td[j] = tmpT[inds, inds]
             Cd[j] = tmpC[inds]
         end

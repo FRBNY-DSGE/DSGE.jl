@@ -6,22 +6,24 @@ regen = false
 m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
 hist_rule = DSGE.taylor_rule()
 m <= Setting(:alternative_policies, AltPolicy[hist_rule])
-m <= Setting(:alternative_policy, DSGE.ngdp())
+ngdp_altpol = DSGE.ngdp()
 m <= Setting(:pgap_type, :ngdp)
 m <= Setting(:pgap_value, 12.)
-T_ngdp, R_ngdp, C_ngdp = get_setting(m, :alternative_policy).solve(m)
+T_ngdp, R_ngdp, C_ngdp = ngdp_altpol.solve(m)
 T_hist, R_hist, C_hist = hist_rule.solve(m)
 rp = joinpath(dirname(@__FILE__), "../reference/")
 
 @testset "Gensys when alternative policies are not credible" begin
+    m <= Setting(:regime_switching, true)
+    setup_permanent_altpol!(m, DSGE.ngdp())
     for (i, prob_vec) in enumerate([[1., 0.], [.5, .5], [.999, .001]])
-        m <= Setting(:regime_eqcond_info, Dict(1 => DSGE.EqcondEntry(DSGE.ngdp(), prob_vec)))
-        T_prs, R_prs, C_prs = DSGE.gensys_uncertain_altpol(m, prob_vec, DSGE.AltPolicy[hist_rule],
-                                                           apply_altpolicy = true)
+        get_setting(m, :regime_eqcond_info)[2].weights = prob_vec
+        T_prs, R_prs, C_prs = DSGE.gensys_uncertain_altpol(m, prob_vec, AltPolicy[hist_rule];
+                                                           regime_switching = true, regimes = [2])
         T_prs, R_prs, C_prs = DSGE.augment_states(m, T_prs, R_prs, C_prs)
 
         m <= Setting(:uncertain_altpolicy, true)
-        TTT, RRR, CCC = solve(m) # check automatic calculation
+        TTT, RRR, CCC = solve(m; regime_switching = true, regimes = [2], gensys_regimes = [1:2]) # check automatic calculation
         m <= Setting(:uncertain_altpolicy, false) # to make DSGE.gensys_uncertain_altpol above work
 
         @test TTT ≈ T_prs
@@ -65,11 +67,6 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
     setup_regime_switching_inds!(m)
 
     m <= Setting(:alternative_policies, AltPolicy[hist_rule])
-<<<<<<< HEAD
-=======
-#    m <= Setting(:imperfect_awareness_varying_weights,
-#                 Dict(i => [.5, .5] for i in 2:5))
->>>>>>> master
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:regime_eqcond_info, Dict(i => DSGE.EqcondEntry(DSGE.ngdp(), [.5, .5]) for i in 2:5))
     m <= Setting(:uncertain_altpolicy, true)
@@ -85,11 +82,6 @@ rp = joinpath(dirname(@__FILE__), "../reference/")
         @test CCCs[i] == CCCs[2]
     end
 
-<<<<<<< HEAD
-=======
-#    m <= Setting(:imperfect_awareness_varying_weights,
-#                 Dict(i => [1., 0.] for i in 2:5))
->>>>>>> master
     for i in 2:5
         get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
     end

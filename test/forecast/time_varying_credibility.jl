@@ -91,7 +91,6 @@ m <= Setting(:pgap_type, :flexible_ait)
 m <= Setting(:ygap_value, θ[:ygap])
 m <= Setting(:ygap_type, :flexible_ait)
 m <= Setting(:flexible_ait_ρ_smooth, θ[:ρ_smooth])
-m <= Setting(:alternative_policy, DSGE.flexible_ait())
 m <= Setting(:alternative_policies, AltPolicy[θ[:historical_policy]])
 m <= Setting(:skip_altpolicy_state_init, true)
 
@@ -144,7 +143,6 @@ end
 outp33 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                 regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 sysp33 = compute_system(m; tvis = true)
-
 for i in nreg0:(nreg0 + 15)
     reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
     regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.flexible_ait(), [.33, 1-.33])
@@ -186,10 +184,7 @@ outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, d
 
 end
 
-
 # Compare perfect credibility to permanent case
-# m <= Setting(:imperfect_awareness_varying_weights,
-#              Dict(k => [1., 0.] for k in keys(get_setting(m, :regime_eqcond_info))))
 for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
 end
@@ -202,7 +197,6 @@ end
 out_temp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-# Add imperfect_awareness_varying_weights here for better test
 m <= Setting(:uncertain_zlb, false)
 m <= Setting(:uncertain_altpolicy, false)
 
@@ -235,14 +229,6 @@ for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
 end
 credvec = collect(range(0., stop = 1., length = 17))
-# credvec = ones(17)
-#=
-for (i, k) in enumerate(sort!(collect(keys(get_setting(m, :regime_eqcond_info)))))
-    if regime_eqcond_info[k] != DSGE.zero_rate_replace_eq_entries && i <= length(credvec)
-        get_setting(m, :imperfect_awareness_varying_weights)[k] = [credvec[i], 1.0 - credvec[i]]
-    end
-end
-=#
 
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     if (get_setting(m, :temporary_zlb_length)) < i
@@ -276,9 +262,6 @@ end
 out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-# Commented out below because expectations don't match realization
-## in imperfect credibility
-
 if !regenerate_reference_forecasts
     inds = vcat(1:9, 12:13)
     @testset "Compare TV Credibility to Reference Forecast" begin
@@ -291,12 +274,6 @@ end
 
 
 if regenerate_reference_forecasts
-#=    tvtestfcast_othervers = if VERSION >= v"1.5"
-        h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "tvforecastobs")
-    else
-        h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "tvforecastobs_1p5")
-    end
-=#
     h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_meas_fix_forecast.h5"), "w") do file
         write(file, "para", θ10)
         write(file, "forecastobs", outp33[:forecastobs])
@@ -309,11 +286,9 @@ if regenerate_reference_forecasts
             write(file, "forecastobs_fixed0", outp0[:forecastobs])
             write(file, "forecastobs_fixed100", out_temp[:forecastobs])
             write(file, "forecastobs_tv0to1_ZLBcred_1", out_credzlb[:forecastobs])
-            # write(file, "tvforecastobs_1p5", tvtestfcast_othervers)
         end
     end
 end
-
 
 # Test if Multiple altpolicies case runs
 ## no test for correctness
@@ -326,7 +301,8 @@ end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 0.0]
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 0.0]
     end
 end
 
@@ -337,81 +313,21 @@ for k in keys(out1)
     @test out1[k] ≈ out1_mult[k]
 end
 
+# Following chunk of code just tests it all runs
 m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.ngdp()])
 for i in keys(get_setting(m, :regime_eqcond_info))
-    #get_setting(m, :regime_eqcond_info)[i].alternative_policy = [DSGE.taylor_rule(), DSGE.ngdp()]
     get_setting(m, :regime_eqcond_info)[i].weights = [0.33, 0.5, 0.17]
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)])/2.0, (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)])/2.0]
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
+                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)])/2.0,
+                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)])/2.0]
     end
 end
 
 out_mult = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-#=
-
-
-m <= Setting(:imperfect_awareness_varying_weights,
-             Dict(k => [0., 1.] for k in keys(get_setting(m, :regime_eqcond_info))))
-credvec = collect(range(0., stop = .5, length = 17))
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :imperfect_awareness_varying_weights)[k] = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
-    end
-end
-out2 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-m <= Setting(:imperfect_awareness_varying_weights,
-             Dict(k => [0., 1.] for k in keys(get_setting(m, :regime_eqcond_info))))
-credvec = collect(range(0., stop = .25, length = 17))
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :imperfect_awareness_varying_weights)[k] = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
-    end
-end
-out3 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-m <= Setting(:imperfect_awareness_varying_weights,
-             Dict(k => [0., 1.] for k in keys(get_setting(m, :regime_eqcond_info))))
-credvec = collect(range(0., stop = 1.0, length = 17))
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :imperfect_awareness_varying_weights)[k] = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
-    end
-end
-out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-plot_dict = Dict()
-for k in [:obs_gdp, :obs_corepce, :obs_nominalrate, :obs_pgap, :obs_ygap, :obs_longinflation, :obs_longrate]
-    adj = k in [:obs_gdp, :obs_corepce, :obs_nominalrate] ? 4. : 1.
-    plot_dict[k] = plot()
-    plot!(1:30, adj * outp0[:forecastobs][m.observables[k], 1:30], label = "Fixed Cred = 0%", linewidth = 2,
-          legend = :topright)
-    plot!(1:30, adj * out3[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
-    plot!(1:30, adj * out2[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
-    plot!(1:30, adj * out1[:forecastobs][m.observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, adj * outp33[:forecastobs][m.observables[k], 1:30], label = "System Replication", linewidth = 2)
-end
-for k in [:NaturalRate, :OutputGap, :Expected10YearRateGap, :Expected10YearRate, :Expected10YearNaturalRate]
-    plot_dict[k] = plot()
-    plot!(1:30, outp0[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "Fixed Cred = 0%", linewidth = 2,
-          legend = :bottomright)
-    plot!(1:30, out3[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 25%", linewidth = 2)
-    plot!(1:30, out2[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 50%", linewidth = 2)
-    plot!(1:30, out1[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "TV Cred to 100%", linewidth = 2)
-    plot!(1:30, outp33[:forecastpseudo][m.pseudo_observables[k], 1:30], label = "System Replication", linewidth = 2)
-end
-=#
-# mkdir("tvcred_meas_fix_figs")
-#for (k, v) in plot_dict
-#    savefig(v, "tvcred_meas_fix_figs/$(k).pdf")
-#end
 
 nothing
