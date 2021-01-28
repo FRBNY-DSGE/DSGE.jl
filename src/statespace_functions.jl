@@ -105,34 +105,50 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
     orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
 
-    m <= Setting(:regime_eqcond_info, Dict{Int64, EqcondEntry}())
+    # m <= Setting(:regime_eqcond_info, Dict{Int64, EqcondEntry}()) # TODO: maybe also delete this setting
+    delete!(get_settings(m), :regime_eqcond_info)
     delete!(get_settings(m), :alternative_policy)   # does nothing if alternative_policy is not a key in get_settings(m)
     delete!(get_settings(m), :tvis_information_set) # does nothing if tvis_information_set is not a key in get_settings(m)
     for i in 2:n_altpolicies # loop over alternative policies
         ## With uncertain_altpolicy off (so only calculating 1 alternative policy).
         new_altpol = get_setting(m, :alternative_policies)[i - 1]
-        if new_altpol.key == :taylor_rule # temporary: right now, we assume the Taylor Rule corresponds to the default solution
-            m <= Setting(:gensys2, false) # can probably use the approach in the next block
-            delete!(get_settings(m), :regime_eqcond_info)
-            if !isnothing(orig_tvis_infoset)
-                m <= Setting(:tvis_information_set, orig_tvis_infoset)
-            end
-            system_altpolicies[i] = compute_system_helper(m; tvis = tvis, verbose = verbose)
-        elseif isa(new_altpol, AltPolicy) # If AltPolicy, we assume that the user only wants the permanent altpolicy system,
-            m <= Setting(:alternative_policy, new_altpol)
-            m <= Setting(:regime_switching, false) # which does not require regime-switching
-            system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
-            m <= Setting(:regime_switching, true) # needs to be turned back on for other policies
-            delete!(get_settings(m), :alternative_policy)
-        elseif isa(new_altpol, MultiPeriodAltPolicy) # If MultiPeriodAltPolicy, then the user wants to
-            m <= Setting(:regime_eqcond_info, new_altpol.regime_eqcond_info)
-            m <= Setting(:gensys2, new_altpol.gensys2)
-            if isnothing(new_altpol.infoset)
-                delete!(get_settings(m), :tvis_information_set) # if :tvis_information_set not there, then nothing happens
+        if isa(new_altpol, AltPolicy)
+            # If AltPolicy, we assume that the user only wants the permanent altpolicy system
+            # AND there is no parameter regime-switching that affects the TTT matrix or CCC vector.
+            # If there is parameter regime-switching or other kinds of regime-switching
+            # that affect the TTT matrix/CCC vector in the alternative policies which
+            # people are using to form expectations, then the user needs to pass a
+            # MultiPeriodAltPolicy type (and set the gensys2 field to false if
+            # calling gensys2 is unnecessary)
+            if new_altpol.key == :default_policy # in this case, we can save some extra time
+                m <= Setting(:regime_switching, false) # turn off regime-switching
+                delete!(get_settings(m), :regime_eqcond_info)
                 system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
+                m <= Setting(:regime_switching, true) # turn off regime-switching
             else
-                m <= Setting(:tvis_information_set, new_altpol.infoset)
-                system_altpolicies[i] = compute_system_helper(m; tvis = true, verbose = verbose)
+                m <= Setting(:alternative_policy, new_altpol)
+                m <= Setting(:regime_switching, false) # which does not require regime-switching
+                system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
+                m <= Setting(:regime_switching, true) # needs to be turned back on for other policies
+                delete!(get_settings(m), :alternative_policy)
+            end
+        elseif isa(new_altpol, MultiPeriodAltPolicy) # If MultiPeriodAltPolicy, then the user wants to
+            if new_altpol.key == :default_policy # in this case, we can save some extra time
+                delete!(get_settings(m), :regime_eqcond_info)
+                if !isnothing(orig_tvis_infoset)
+                    m <= Setting(:tvis_information_set, orig_tvis_infoset)
+                end
+                system_altpolicies[i] = compute_system_helper(m; tvis = tvis, verbose = verbose)
+            else
+                m <= Setting(:regime_eqcond_info, new_altpol.regime_eqcond_info)
+                m <= Setting(:gensys2, new_altpol.gensys2)
+                if isnothing(new_altpol.infoset)
+                    delete!(get_settings(m), :tvis_information_set) # if :tvis_information_set not there, then nothing happens
+                    system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
+                else
+                    m <= Setting(:tvis_information_set, new_altpol.infoset)
+                    system_altpolicies[i] = compute_system_helper(m; tvis = true, verbose = verbose)
+                end
             end
         else
             error("Every element in get_setting(m, :alternative_policies) must be an AltPolicy or a MultiPeriodAltPolicy")

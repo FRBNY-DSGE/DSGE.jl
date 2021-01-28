@@ -256,8 +256,9 @@ for i in keys(get_setting(m, :regime_eqcond_info))
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_altpol_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)], 1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]]
+    if (get_setting(m, :temporary_zlb_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
     end
 end
 out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
@@ -291,12 +292,10 @@ if regenerate_reference_forecasts
     end
 end
 
-# Test if Multiple altpolicies case runs
-## no test for correctness
+# Test if multiple altpolicies matches two altpolicies when placing zero credibility on third altpolicy
 m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.ngdp()])
 
 for i in keys(get_setting(m, :regime_eqcond_info))
-    # get_setting(m, :regime_eqcond_info)[i].alternative_policy = [DSGE.taylor_rule(), DSGE.ngdp()]
     get_setting(m, :regime_eqcond_info)[i].weights = [0.0, 1.0, 0.0]
 end
 credvec = collect(range(0., stop = 1., length = 17))
@@ -307,29 +306,72 @@ for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     end
 end
 
-out1_mult = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+out_mult = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 for k in keys(out1)
-    @test out1[k] ≈ out1_mult[k]
+    @test out1[k] ≈ out_mult[k]
 end
 
-# Following chunk of code just tests it all runs
-m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.ngdp()])
+# Now check that, if the third altpolicy matches the second altpolicy, then
+# the forecast is also the same
+m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.taylor_rule()])
 for i in keys(get_setting(m, :regime_eqcond_info))
-    get_setting(m, :regime_eqcond_info)[i].weights = [0.33, 0.5, 0.17]
+    get_setting(m, :regime_eqcond_info)[i].weights = [0., 0.5, 0.5]
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_altpol_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
-                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)])/2.0,
-                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)])/2.0]
+    if (get_setting(m, :temporary_zlb_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 0.0]
+    end
+end
+out_taylor_taylor = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                           regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+m <= Setting(:alternative_policies, [DSGE.default_policy(), DSGE.default_policy()]) # check that default policy works
+out_default_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df, # (and in principle should be faster)
+                                             regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+for i in keys(get_setting(m, :regime_eqcond_info))
+    get_setting(m, :regime_eqcond_info)[i].weights = [0.33, 0.5, 0.17]
+end
+for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
+    if (get_setting(m, :temporary_zlb_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
+                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]) / 2.,
+                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]) / 2.]
+    end
+end
+m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.ngdp()])
+out_taylor_ngdp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                         regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+m <= Setting(:alternative_policies, [DSGE.default_policy(), DSGE.ngdp()])
+out_default_ngdp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                          regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+if regenerate_reference_forecasts
+    h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_multialtpol_reference.h5"), "w") do file
+        write(file, "forecastobs", out_taylor_ngdp[:forecastobs])
+        write(file, "forecastpseudo", out_taylor_ngdp[:forecastpseudo])
     end
 end
 
-out_mult = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+@testset "Imperfect awareness wth multiple alternative policies" begin
+    for k in keys(out1)
+        @test out1[k] ≈ out_taylor_taylor[k]
+        @test out1[k] ≈ out_default_default[k]
+    end
+
+    @test out_taylor_ngdp[:forecastobs] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                          "reference", "tvcred_multialtpol_reference.h5"), "forecastobs")
+    @test out_taylor_ngdp[:forecastpseudo] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                             "reference", "tvcred_multialtpol_reference.h5"), "forecastpseudo")
+    @test out_default_ngdp[:forecastobs] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                           "reference", "tvcred_multialtpol_reference.h5"), "forecastobs")
+    @test out_default_ngdp[:forecastpseudo] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                              "reference", "tvcred_multialtpol_reference.h5"), "forecastpseudo")
+end
 
 # Test if Uncertain Temp Altpol runs (in place of ZLB)
 # Set up regime_eqcond_info

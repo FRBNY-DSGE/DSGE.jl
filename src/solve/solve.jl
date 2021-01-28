@@ -41,7 +41,7 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
             if !apply_altpolicy
 
                 # Get equilibrium condition matrices
-                Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+                Γ0, Γ1, C, Ψ, Π = eqcond(m)
 
                 # Solve model
                 TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
@@ -72,6 +72,7 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                 weights = get_setting(m, :regime_eqcond_info)[1].weights
                 altpols = get_setting(m, :alternative_policies)
                 inds = 1:n_states(m)
+
                 TTT_gensys, RRR_gensys, CCC_gensys = gensys_uncertain_altpol(m, weights, altpols; TTT = TTT[inds, inds])
 
                 # Augment states
@@ -311,9 +312,8 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
         if uncertain_altpol && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg)
             weights = get_setting(m, :regime_eqcond_info)[reg].weights
             if !isempty(weights)
-                first_altpol_regime = minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
-                altpols = get_setting(m, :alternative_policies)
                 # Time-varying credibility weights for the regime reg
+                altpols = get_setting(m, :alternative_policies)
                 TTT_gensys, RRR_gensys, CCC_gensys =
                 gensys_uncertain_altpol(m, weights, altpols; TTT = TTT_gensys,
                                         regime_switching = true, regimes = Int[reg])
@@ -328,6 +328,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
         TTTs[reg], RRRs[reg], CCCs[reg] =
             augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys, reg = reg)
     end
+
     return TTTs, RRRs, CCCs
 end
 

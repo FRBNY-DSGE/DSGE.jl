@@ -63,10 +63,6 @@ Solves for the transition equation of `m` under a Taylor Rule.
 """
 function taylor_rule_eqcond(m::AbstractDSGEModel, reg::Int = 1)
 
-    # get the old indices
-    old_states = sort!(collect(values(m.endogenous_states)))
-    old_eqs    = sort!(collect(values(m.equilibrium_conditions)))
-
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π = eqcond(m, reg)
 

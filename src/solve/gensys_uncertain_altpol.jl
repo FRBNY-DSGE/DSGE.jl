@@ -14,13 +14,12 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
     altpolicies = altpolicies[prob_vec[2:end] .> 0.0]
     prob_vec = vcat(prob_vec[1], prob_vec[2:end][prob_vec[2:end] .> 0.0])
-
     if regime_switching
         if length(regimes) == 1
-            Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) ?
-                (haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
-                 get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
-                 eqcond(m, regimes[1])) : eqcond(m, regimes[1])
+            Γ0, Γ1, C, Ψ, Π = haskey(get_settings(m), :regime_eqcond_info) &&
+                haskey(get_setting(m, :regime_eqcond_info), regimes[1]) ?
+                get_setting(m, :regime_eqcond_info)[regimes[1]].alternative_policy.eqcond(m, regimes[1]) :
+                eqcond(m, regimes[1])
 
             if isempty(TTT)
                 assert_cond = haskey(get_settings(m), :uncertain_altpolicy) ? !get_setting(m, :uncertain_altpolicy) : true
@@ -36,21 +35,36 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             Td[1] = TTT[inds, inds]
             Cd[1] = C[inds]
 
+            # Turn off uncertain altpolicy b/c when computing the state space system under alternative policies,
+            # we want to treat these alternative policies as perfectly credible.
+            is_uncertain_altpol = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+            if is_uncertain_altpol
+                m <= Setting(:uncertain_altpolicy, false)
+            end
+
+            # Solve each alternative policy
             for (i, altpolicy) in enumerate(altpolicies)
                 j = i + 1
-                tmpT, _, tmpC = altpolicy.solve(m; regime_switching = regime_switching, regimes = regimes)
+                tmpT, _, tmpC = if altpolicy.solve == solve      # if solve is being called for gensys_uncertain_altpol
+                    altpolicy.solve(m; regime_switching = false) # then it is interpreted as the "default" policy, and
+                else                                             # it is further assumed that we can safely ignore regime-switching
+                    altpolicy.solve(m; regime_switching = regime_switching, regimes = regimes)
+                end
                 Td[j] = tmpT[inds, inds]
                 Cd[j] = tmpC[inds]
             end
 
+            # Turn uncertain_altpolicy back on
+            if is_uncertain_altpol
+                m <= Setting(:uncertain_altpolicy, true)
+            end
+
             T̄ = sum([p .* Td[i] for (i, p) in enumerate(prob_vec)])
             C̄ = sum([p .* Cd[i] for (i, p) in enumerate(prob_vec)])
-
             Lmat = (Γ2_til * T̄ + Γ0_til)
             Tcal = Lmat \ Γ1_til
             Rcal = Lmat \ Ψ_til
             Ccal = Lmat \ (C_til - Γ2_til * C̄)
-
             return Tcal, Rcal, Ccal
         else
             error("Regime switching for multiple regimes has not been completed for gensys_uncertain_altpol")
@@ -127,16 +141,28 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
 
+        # Turn off uncertain altpolicy b/c when computing the state space system under alternative policies,
+        # we want to treat these alternative policies as perfectly credible.
+        is_uncertain_altpol = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+        if is_uncertain_altpol
+            m <= Setting(:uncertain_altpolicy, false)
+        end
+
         inds = 1:n_states(m) # Don't want augmented states
         Td = Vector{Matrix{S}}(undef, length(prob_vec))
         Cd = Vector{Vector{S}}(undef, length(prob_vec))
         Td[1] = TTT[inds, inds]
         Cd[1] = C[inds]
         for (i, altpolicy) in enumerate(altpolicies)
-            j = i + 1 # TODO: may want to comment out the regime-switching kwargs in altpolicy.solve below . . . (if tests break)
-            tmpT, _, tmpC = altpolicy.solve(m; regime_switching = regime_switching, regimes = regimes)
+            j = i + 1
+            tmpT, _, tmpC = altpolicy.solve(m) # regime_switching is false, so it is assumed that it is unnecessary here
             Td[j] = tmpT[inds, inds]
             Cd[j] = tmpC[inds]
+        end
+
+        # Turn uncertain_altpolicy back on
+        if is_uncertain_altpol
+            m <= Setting(:uncertain_altpolicy, true)
         end
 
         T̄ = sum([p .* Td[i] for (i, p) in enumerate(prob_vec)])
