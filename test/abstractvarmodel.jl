@@ -88,7 +88,9 @@ m = DSGEVAR(AnSchorfheide(), [:z_sh])
     DSGE.get_forecast_input_file(m, :mode) == DSGE.get_forecast_input_file(m.dsge, :mode)
 
     # Interface for alternative policy settings
+    m.dsge <= Setting(:alternative_policy, DSGE.default_policy())
     @test alternative_policy(m) == get_setting(m, :alternative_policy)
+    delete!(m.dsge.settings, :alternative_policy)
 
     @test date_forecast_end(m) == Dates.lastdayofquarter(date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1)))
 

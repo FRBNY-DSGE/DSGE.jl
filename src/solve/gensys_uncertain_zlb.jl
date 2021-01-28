@@ -15,7 +15,7 @@ calculates the transition matrices when there is uncertainty about whether a ZLB
 - the `Th` and `Ch` are the "historical" matrices associated with policy the central bank
   no longer wants to use (but agents believe may still be occurring); in the case Th is a vector of matrices
   and Ch a vector of vectors, they are the matrices associated with all policies except the
-  :alternative_policy that agents believe may occur.
+  alternative_policy that agents believe may occur.
 - the `til` matrices are the predictable form of the gensys matrices under the
   policy the central bank claims to implement;
 - `Tzlbs`, `Rzlbs`, and `Czlbs` are the gensys2 matrices with a temporary ZLB imposed over

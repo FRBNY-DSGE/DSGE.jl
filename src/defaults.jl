@@ -214,8 +214,8 @@ function default_settings!(m::AbstractDSGEModel)
 
     # Alternative policy
     ## TODO: delete this once alternative policies have been completely ported to using regime_eqcond_info
-    baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
-    settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
+    # baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
+    # settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
 
     return settings
 end

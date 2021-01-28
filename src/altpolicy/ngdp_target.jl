@@ -7,7 +7,7 @@ creates a permanent alternative policy of "Nominal GDP Targeting".
 To run this permanent policy, a user needs to run the following code:
 
 ```
-m <= Setting(:alternative_policy, ngdp())
+setup_permanent_altpolicy!(m, ngdp())
 m <= Setting(:pgap_type, :ngdp)
 m <= Setting(:pgap_value, 12.)
 ```

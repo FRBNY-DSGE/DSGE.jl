@@ -269,6 +269,10 @@ n_shockdec_periods(m::AbstractDSGEModel)    = index_shockdec_end(m) - index_shoc
 # Function for getting the alternative policy. Note that, in the case of imperfect awareness,
 # i.e. when uncertain_altpolicy is true, this function will return the policy that is actually implemented,
 # instead of other potential alternative policies which households believe could occur.
+#
+# Furthermore, do NOT delete the backup cases when regime_eqcond_info is not defined, namely
+# the check for whether :alternative_policy is a Setting. This last check is necessary for
+# the scenarios code to continue working.
 alternative_policy(m::AbstractDSGEModel) = haskey(get_settings(m), :regime_eqcond_info) && haskey(get_settings(m), :n_regimes) &&
     haskey(get_setting(m, :regime_eqcond_info), get_setting(m, :n_regimes)) ?
     get_setting(m, :regime_eqcond_info)[get_setting(m, :n_regimes)].alternative_policy :

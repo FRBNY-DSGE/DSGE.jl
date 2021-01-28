@@ -68,7 +68,7 @@ end
     m <= Setting(:regime_switching, true)
     setup_permanent_altpol!(m, AltPolicy(:taylor93, eqcond, solve))
     @test typeof(forecast(m, system, z0; draw_shocks = true)) == NTuple{4, Array{Float64, 2}}
-    delete!(get_settings(m), :regime_switching)
+    delete!(DSGE.get_settings(m), :regime_switching)
 end
 
 @testset "Enforce ZLB as a temporary alternative policy" begin

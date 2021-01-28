@@ -7,7 +7,7 @@ creates a permanent alternative policy of "Average Inflation Targeting".
 To run this permanent policy, a user needs to run the following code:
 
 ```
-m <= Setting(:alternative_policy, ait())
+setup_permanent_altpolicy!(m, ait())
 m <= Setting(:pgap_type, :ait)
 m <= Setting(:pgap_value, 0.)
 ```

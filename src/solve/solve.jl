@@ -26,7 +26,11 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                regimes::Vector{Int} = Int[1],
                verbose::Symbol = :high) where {T <: Real}
 
-    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) || haskey(get_settings(m), :alternative_policy)
+    # do NOT delete the second part of the Boolean for apply_altpolicy; it is needed for
+    # the scenarios code, which continues to use :alternative_policy as a Setting,
+    # AND for implementing imperfect awareness via uncertain_altpolicy
+    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) ||
+        (haskey(get_settings(m), :alternative_policy) && get_setting(m, :alternative_policy).key != :historical)
     altpolicy_solve = alternative_policy(m).solve
     uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
 
@@ -56,6 +60,12 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                 # Augment states
                 TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
             else
+                # do NOT delete this else block; it is needed for
+                # the scenarios code, which continues to use :alternative_policy as a Setting
+                # and the original method for implementing alternative policies
+                # (when DSGE.jl was created in 2015)
+                # AND for implementing imperfect awareness via uncertain_altpolicy
+
                 # Change the policy rule
                 TTT, RRR, CCC = altpolicy_solve(m)
             end
@@ -231,7 +241,10 @@ end
 function solve_one_regime(m::AbstractDSGEModel{T}; regime::Int = 1, uncertain_altpolicy::Bool = false,
                           verbose::Symbol = :high) where {T <: Real}
 
-    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) || haskey(get_settings(m), :alternative_policy)
+    # do NOT delete the second part of the Boolean for apply_altpolicy; it is needed for
+    # the scenarios code, which continues to use :alternative_policy as a Setting
+    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) ||
+        (haskey(get_settings(m), :alternative_policy) && get_setting(m, :alternative_policy).key != :historical)
     altpolicy_solve = alternative_policy(m).solve
 
     if altpolicy_solve == solve || !apply_altpolicy
@@ -300,7 +313,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
         if uncertain_altpol && haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg)
             weights = get_setting(m, :regime_eqcond_info)[reg].weights
             if !isempty(weights)
-                first_altpol_regime = min(collect(keys(get_setting(m, :regime_eqcond_info)))...)
+                first_altpol_regime = minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
                 altpols = get_setting(m, :alternative_policies)
                 # Time-varying credibility weights for the regime reg
                 TTT_gensys, RRR_gensys, CCC_gensys =
