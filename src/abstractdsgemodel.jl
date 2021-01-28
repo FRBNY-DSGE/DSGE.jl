@@ -273,9 +273,14 @@ n_shockdec_periods(m::AbstractDSGEModel)    = index_shockdec_end(m) - index_shoc
 # Furthermore, do NOT delete the backup cases when regime_eqcond_info is not defined, namely
 # the check for whether :alternative_policy is a Setting. This last check is necessary for
 # the scenarios code to continue working.
-alternative_policy(m::AbstractDSGEModel) = haskey(get_settings(m), :regime_eqcond_info) && haskey(get_settings(m), :n_regimes) &&
-    haskey(get_setting(m, :regime_eqcond_info), get_setting(m, :n_regimes)) ?
-    get_setting(m, :regime_eqcond_info)[get_setting(m, :n_regimes)].alternative_policy :
+#
+# Finally, the check for :regime_eqcond_info MUST come first, or else the regime-switching code
+# will not work as intended, namely that :regime_eqcond_info specifies equilibrium conditions
+# which differ from the default ones and thus should determine the "final" permanent policy
+# that is believed to hold until "the end of time" (i.e. forever since it is an infinite horizon model).
+alternative_policy(m::AbstractDSGEModel) = haskey(get_settings(m), :regime_eqcond_info) && # no check for n_regimes b/c if it is not there, then
+    haskey(get_setting(m, :regime_eqcond_info), get_setting(m, :n_regimes)) ?              # it is better to throw an error since regime_eqcond_info
+    get_setting(m, :regime_eqcond_info)[get_setting(m, :n_regimes)].alternative_policy :   # will not work in general anyway.
     (haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : AltPolicy(:historical, eqcond, solve))
 
 # Some additional date settings related to forecasts

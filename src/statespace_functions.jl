@@ -25,8 +25,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     # do NOT delete the second part of the Boolean for apply_altpolicy; it is needed for
     # the scenarios code, which continues to use :alternative_policy as a Setting
     # AND for implementing imperfect awareness via uncertain_altpolicy
-    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) || (haskey(get_settings(m), :alternative_policy) &&
-                                                                       get_setting(m, :alternative_policy).key != :historical)
+    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) || haskey(get_settings(m), :alternative_policy)
 
     # When regime-switching, we need to do some extra work
     if haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
@@ -40,14 +39,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
 
         # Grab regime info dictionary, if one exists
         regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, EqcondEntry}()
-
-#=        # Get rid of regime_eqcond_info (temporarily) if !apply_altpolicy # TODO: delete this block, never happens
-        if !apply_altpolicy && has_regime_eqcond_info
-            regime_info_copy = copy(get_setting(m, :regime_eqcond_info))
-            delete!(get_settings(m), :regime_eqcond_info)
-            has_regime_eqcond_info = false
-            m <= Setting(:gensys2, false)
-        end=#
 
         # If uncertain_zlb is false, want to make sure ZLB period is treated as certain.
         if has_uncertain_zlb && !uncertain_zlb && has_regime_eqcond_info
@@ -104,7 +95,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
         m <= Setting(:alternative_policies, [DSGE.taylor_rule()]) # Maybe use the "default" policy here
     end
 
-    orig_altpol = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing # TODO: delete this
     n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
     system_altpolicies = Vector{AbstractSystem}(undef, n_altpolicies)
 
@@ -112,9 +102,11 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
 
     # Save these elements. No need to deepcopy b/c we replace their values in the get_settings(m) dict with different instances
     orig_regime_eqcond_info = get_setting(m, :regime_eqcond_info)
+    orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
     orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
 
     m <= Setting(:regime_eqcond_info, Dict{Int64, EqcondEntry}())
+    delete!(get_settings(m), :alternative_policy)   # does nothing if alternative_policy is not a key in get_settings(m)
     delete!(get_settings(m), :tvis_information_set) # does nothing if tvis_information_set is not a key in get_settings(m)
     for i in 2:n_altpolicies # loop over alternative policies
         ## With uncertain_altpolicy off (so only calculating 1 alternative policy).
@@ -127,9 +119,11 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
             end
             system_altpolicies[i] = compute_system_helper(m; tvis = tvis, verbose = verbose)
         elseif isa(new_altpol, AltPolicy) # If AltPolicy, we assume that the user only wants the permanent altpolicy system,
+            m <= Setting(:alternative_policy, new_altpol)
             m <= Setting(:regime_switching, false) # which does not require regime-switching
             system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
             m <= Setting(:regime_switching, true) # needs to be turned back on for other policies
+            delete!(get_settings(m), :alternative_policy)
         elseif isa(new_altpol, MultiPeriodAltPolicy) # If MultiPeriodAltPolicy, then the user wants to
             m <= Setting(:regime_eqcond_info, new_altpol.regime_eqcond_info)
             m <= Setting(:gensys2, new_altpol.gensys2)
@@ -150,7 +144,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     m <= Setting(:gensys2, is_gensys2)
     m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
     m <= Setting(:uncertain_zlb, uncertain_zlb)
-    if !isnothing(orig_altpol) # TODO: delete this
+    if !isnothing(orig_altpol)
         m <= Setting(:alternative_policy, orig_altpol)
     end
     if !isnothing(orig_tvis_infoset)

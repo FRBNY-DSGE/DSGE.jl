@@ -26,21 +26,19 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                regimes::Vector{Int} = Int[1],
                verbose::Symbol = :high) where {T <: Real}
 
-    # do NOT delete the second part of the Boolean for apply_altpolicy; it is needed for
-    # the scenarios code, which continues to use :alternative_policy as a Setting,
-    # AND for implementing imperfect awareness via uncertain_altpolicy
-    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) ||
-        (haskey(get_settings(m), :alternative_policy) && get_setting(m, :alternative_policy).key != :historical)
-    altpolicy_solve = alternative_policy(m).solve
-    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
-
+    uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
     if regime_switching
         return solve_regime_switching(m; gensys_regimes = gensys_regimes,
                                       gensys2_regimes = gensys2_regimes, regimes = regimes,
-                                      uncertain_altpolicy = uncertain_altpolicy, verbose = verbose)
+                                      uncertain_altpolicy = uncertain_altpolicy,
+                                      verbose = verbose)
     else
+        # do NOT delete this Boolean for apply_altpolicy; it is needed for
+        # the scenarios code, which continues to use :alternative_policy as a Setting,
+        # AND for implementing imperfect awareness via uncertain_altpolicy
+        apply_altpolicy = haskey(get_settings(m), :alternative_policy) && get_setting(m, :alternative_policy).solve != solve
         if get_setting(m, :solution_method) == :gensys
-            if altpolicy_solve == solve || !apply_altpolicy
+            if !apply_altpolicy
 
                 # Get equilibrium condition matrices
                 Γ0, Γ1, C, Ψ, Π  = eqcond(m)
@@ -67,7 +65,7 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                 # AND for implementing imperfect awareness via uncertain_altpolicy
 
                 # Change the policy rule
-                TTT, RRR, CCC = altpolicy_solve(m)
+                TTT, RRR, CCC = get_setting(m, :alternative_policy).solve(m)
             end
 
             if uncertain_altpolicy && apply_altpolicy
