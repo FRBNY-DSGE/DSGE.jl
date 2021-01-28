@@ -99,6 +99,7 @@ m <= Setting(:gensys2, true)
 
 # Set up credibility for ZLB and alternative policy, if applicable
 m <= Setting(:uncertain_temp_altpol, true)
+# m <= Setting(:temporary_altpolicy, :zero_rate)
 m <= Setting(:uncertain_altpolicy, true)
 gensys2_first_regime = get_setting(m, :n_regimes) + 1
 get_setting(m, :regime_dates)[gensys2_first_regime] = start_zlb_date
@@ -342,6 +343,8 @@ for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_re
     reg_dates[regind] = date
     regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.ngdp(), [0.5, 0.5])
 end
+m <= Setting(:temporary_altpolicy, :ngdp)
+
 reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
 regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.33, 0.67])
 nreg0 = length(reg_dates)
@@ -352,6 +355,7 @@ m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = :full)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 
+m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
 # Just checking it runs
 out_temp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))

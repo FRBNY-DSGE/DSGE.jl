@@ -43,7 +43,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
         # If uncertain_temp_altpol is false, want to make sure temp altpol period is treated as certain.
         if has_uncertain_temp_altpol && !uncertain_temp_altpol && has_regime_eqcond_info
             for reg in keys(regime_eqcond_info)
-                if regime_eqcond_info[reg].alternative_policy.key == :zero_rate
+                if regime_eqcond_info[reg].alternative_policy.key == get_setting(m, :temporary_altpolicy)
                     altpol_vec = zeros(length(regime_eqcond_info[reg].weights))
                     altpol_vec[1] = 1.0
                     regime_eqcond_info[reg].weights = altpol_vec
@@ -253,7 +253,7 @@ function compute_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verb
             if haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
                 if haskey(get_settings(m), :regime_eqcond_info)
                     sorted_eqcond = sort!(collect(get_setting(m, :regime_eqcond_info)), by=x->x[1])
-                    first_gensys2_ind = findfirst(x->x[2].alternative_policy.key == :zero_rate, sorted_eqcond)
+                    first_gensys2_ind = findfirst(x->x[2].alternative_policy.key == get_setting(m, :temporary_altpolicy), sorted_eqcond)
                     first_gensys2_regime = !isnothing(first_gensys2_ind) ? sorted_eqcond[first_gensys2_ind][1] : nothing
                 else
                     first_gensys2_regime = nothing

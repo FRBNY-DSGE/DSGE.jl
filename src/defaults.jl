@@ -217,6 +217,9 @@ function default_settings!(m::AbstractDSGEModel)
     # baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
     # settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
 
+    # Temporary alternative policy defaults to zero rate
+    settings[:temporary_altpolicy] = Setting(:temporary_altpolicy, :zero_rate)
+
     return settings
 end
 
