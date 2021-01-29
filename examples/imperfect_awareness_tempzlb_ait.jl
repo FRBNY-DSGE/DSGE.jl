@@ -4,13 +4,14 @@ GR.inline("pdf")
 fn = dirname(@__FILE__)
 
 # This script shows how to use regime-switching
-# to enact an uncertain ZLB, follwed by an
-# uncertain alternative policy (in this case, AIT).
+# to enact a temporary ZLB with imperfect awareness, followed by an
+# alternative policy with imperfect awareness (in this case, AIT).
+# We sometimes also call policies with imperfect awareness as "uncertain" policies.
 # This script demonstrates a specific case of the general regime switching code
 # demonstrated in regime_switching.jl.
 
 # What do you want to do?
-zlb_altpolicy     = true   # run a forecast with an uncertain ZLB, then a return to the historical rule
+zlb_altpolicy     = true   # run a forecast
 make_plots        = false  # Make plots
 save_plots        = false  # Save plots to figurespath(m, "forecast")
 add_workers       = false  # Run in parallel
@@ -120,30 +121,30 @@ output_vars = [:histpseudo, :histobs, :histstdshocks,
 
 if zlb_altpolicy
     Hbar = 4 # number of zlb regimes
-    n_tempZLB_regimes = 3+Hbar-1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
+    n_tempZLB_regimes = 3 + Hbar - 1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
     # Add parameter values for additional regimes
     for i in 3:(n_tempZLB_regimes+1)
-        ModelConstructors.set_regime_val!(m[:σ_g], i, m10[:σ_g].value)
-        ModelConstructors.set_regime_val!(m[:σ_b], i, m10[:σ_b].value)
-        ModelConstructors.set_regime_val!(m[:σ_μ], i, m10[:σ_μ].value)
-        ModelConstructors.set_regime_val!(m[:σ_ztil], i, m10[:σ_ztil].value)
-        ModelConstructors.set_regime_val!(m[:σ_λ_f], i, m10[:σ_λ_f].value)
-        ModelConstructors.set_regime_val!(m[:σ_λ_w], i, m10[:σ_λ_w].value)
-        ModelConstructors.set_regime_val!(m[:σ_r_m], i, m10[:σ_r_m].value)
-        ModelConstructors.set_regime_val!(m[:σ_σ_ω], i, m10[:σ_σ_ω].value)
-        ModelConstructors.set_regime_val!(m[:σ_μ_e], i, m10[:σ_μ_e].value)
-        ModelConstructors.set_regime_val!(m[:σ_γ], i, m10[:σ_γ].value)
-        ModelConstructors.set_regime_val!(m[:σ_π_star], i, m10[:σ_π_star].value)
-        ModelConstructors.set_regime_val!(m[:σ_lr], i, m10[:σ_lr].value)
-        ModelConstructors.set_regime_val!(m[:σ_z_p], i, m10[:σ_z_p].value)
-        ModelConstructors.set_regime_val!(m[:σ_tfp], i, m10[:σ_tfp].value)
-        ModelConstructors.set_regime_val!(m[:σ_gdpdef], i, m10[:σ_gdpdef].value)
-        ModelConstructors.set_regime_val!(m[:σ_corepce], i, m10[:σ_corepce].value)
-        ModelConstructors.set_regime_val!(m[:σ_gdp], i, m10[:σ_gdp].value)
-        ModelConstructors.set_regime_val!(m[:σ_gdi], i, m10[:σ_gdi].value)
+        set_regime_val!(m[:σ_g], i, m10[:σ_g].value)
+        set_regime_val!(m[:σ_b], i, m10[:σ_b].value)
+        set_regime_val!(m[:σ_μ], i, m10[:σ_μ].value)
+        set_regime_val!(m[:σ_ztil], i, m10[:σ_ztil].value)
+        set_regime_val!(m[:σ_λ_f], i, m10[:σ_λ_f].value)
+        set_regime_val!(m[:σ_λ_w], i, m10[:σ_λ_w].value)
+        set_regime_val!(m[:σ_r_m], i, m10[:σ_r_m].value)
+        set_regime_val!(m[:σ_σ_ω], i, m10[:σ_σ_ω].value)
+        set_regime_val!(m[:σ_μ_e], i, m10[:σ_μ_e].value)
+        set_regime_val!(m[:σ_γ], i, m10[:σ_γ].value)
+        set_regime_val!(m[:σ_π_star], i, m10[:σ_π_star].value)
+        set_regime_val!(m[:σ_lr], i, m10[:σ_lr].value)
+        set_regime_val!(m[:σ_z_p], i, m10[:σ_z_p].value)
+        set_regime_val!(m[:σ_tfp], i, m10[:σ_tfp].value)
+        set_regime_val!(m[:σ_gdpdef], i, m10[:σ_gdpdef].value)
+        set_regime_val!(m[:σ_corepce], i, m10[:σ_corepce].value)
+        set_regime_val!(m[:σ_gdp], i, m10[:σ_gdp].value)
+        set_regime_val!(m[:σ_gdi], i, m10[:σ_gdi].value)
 
         for j = 1:DSGE.n_mon_anticipated_shocks(m)
-            ModelConstructors.set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m10[Symbol("σ_r_m$(j)")].value)
+            set_regime_val!(m[Symbol("σ_r_m$(j)")], i, m10[Symbol("σ_r_m$(j)")].value)
         end
     end
 
@@ -162,7 +163,7 @@ if zlb_altpolicy
 
     # Following two settings turn imperfect awareness
     m <= Setting(:uncertain_altpolicy, true) # turns imperfect awareness on
-    m <= Setting(:uncertain_zlb, true) # needed to allow a temporary ZLB with imperfect awareness
+    m <= Setting(:uncertain_temp_altpol, true) # needed to allow a temporary alternative policy with imperfect awareness
 
     # set the "alternative" rule for imperfect awareness
     # taylor_rule corresponds to the default monetary policy rule we use,

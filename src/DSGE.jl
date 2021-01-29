@@ -199,6 +199,22 @@ module DSGE
     include("util.jl")
     include("grids.jl")
 
+    include("altpolicy/altpolicy.jl")
+    include("altpolicy/default_policy.jl")
+    include("altpolicy/taylor93.jl")
+    include("altpolicy/taylor99.jl")
+    include("altpolicy/taylor_rule.jl")
+    include("altpolicy/alt_inflation.jl")
+    include("altpolicy/ait.jl")
+    include("altpolicy/ngdp_target.jl")
+    include("altpolicy/smooth_ait_gdp.jl")
+    include("altpolicy/smooth_ait_gdp_alt.jl")
+    include("altpolicy/flexible_ait.jl")
+    include("altpolicy/zero_rate.jl")
+    include("altpolicy/rw.jl")
+    include("altpolicy/rw_zero_rate.jl")
+    include("solve/gensys_uncertain_altpol.jl")
+
     include("benchmark/util.jl")
     include("benchmark/benchmark.jl")
     include("benchmark/io.jl")
@@ -211,10 +227,9 @@ module DSGE
     include("data/util.jl")
     include("data/simulate_data.jl")
 
-
     include("solve/gensys.jl")
     include("solve/gensys2.jl")
-    # include("solve/gensys_uncertain_altpol.jl") # Included after altpolicy code b/c this file uses the AltPolicy type
+    include("solve/gensys_uncertain_altpol.jl") # Included after altpolicy code b/c this file uses the AltPolicy type
     include("solve/gensys2_uncertain_altpol.jl")
     include("solve/solve.jl")
     include("solve/klein.jl")
@@ -273,22 +288,6 @@ module DSGE
     include("decomp/drivers.jl")
     include("decomp/io.jl")
     include("decomp/meansbands.jl")
-
-    include("altpolicy/altpolicy.jl")
-    include("altpolicy/default_policy.jl")
-    include("altpolicy/taylor93.jl")
-    include("altpolicy/taylor99.jl")
-    include("altpolicy/taylor_rule.jl")
-    include("altpolicy/alt_inflation.jl")
-    include("altpolicy/ait.jl")
-    include("altpolicy/ngdp_target.jl")
-    include("altpolicy/smooth_ait_gdp.jl")
-    include("altpolicy/smooth_ait_gdp_alt.jl")
-    include("altpolicy/flexible_ait.jl")
-    include("altpolicy/zero_rate.jl")
-    include("altpolicy/rw.jl")
-    include("altpolicy/rw_zero_rate.jl")
-    include("solve/gensys_uncertain_altpol.jl")
 
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")

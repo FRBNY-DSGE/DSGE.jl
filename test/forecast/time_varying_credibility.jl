@@ -256,9 +256,9 @@ for i in keys(get_setting(m, :regime_eqcond_info))
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
-                                                          1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]]
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]]
     end
 end
 out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
@@ -321,9 +321,9 @@ for i in keys(get_setting(m, :regime_eqcond_info))
 end
 credvec = collect(range(0., stop = 1., length = 17))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
-                                                          1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)], 0.0]
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)], 0.0]
     end
 end
 out_taylor_taylor = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
@@ -337,10 +337,10 @@ for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [0.33, 0.5, 0.17]
 end
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_zlb_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_zlb_length) - 1)],
-                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]) / 2.,
-                                                          (1. - credvec[i - (get_setting(m, :temporary_zlb_length) - 1)]) / 2.]
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]) / 2.,
+                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]) / 2.]
     end
 end
 m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.ngdp()])

@@ -26,9 +26,9 @@ a Taylor-style rule, and the `til` matrices correspond to the predictable form o
 The `T_alts`, `R_alts`, and `C_alts` include temporary switches to a ZLB specified by the `regime_eqcond_info`.
 """
 function gensys2_uncertain_altpol(prob_vec::AbstractVector{S}, Th::Matrix{S}, Ch::Vector{S},
-                              T_alts::Vector{Matrix{S}}, R_alts::Vector{Matrix{S}}, C_alts::Vector{Vector{S}},
-                              Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
-                              C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
+                                  T_alts::Vector{Matrix{S}}, R_alts::Vector{Matrix{S}}, C_alts::Vector{Vector{S}},
+                                  Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
+                                  C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
     Tbars = Vector{Matrix{S}}(undef, length(T_alts) + 1)
     Cbars = Vector{Vector{S}}(undef, length(T_alts) + 1)
@@ -85,7 +85,6 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, Th::AbstractMatri
 end
 
 # Same 2 functions as above but where Th and Ch are vectors of matrices/vectors.
-
 function gensys2_uncertain_altpol(prob_vec::AbstractVector{S},
                               Th::Vector{Matrix{Float64}}, Ch::Vector{Vector{Float64}},
                               T_alts::Vector{Matrix{S}}, R_alts::Vector{Matrix{S}}, C_alts::Vector{Vector{S}},

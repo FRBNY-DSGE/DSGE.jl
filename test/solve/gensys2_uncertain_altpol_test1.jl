@@ -191,8 +191,8 @@ for j in 1:length(prob_vecs)
     inreg = gensys2_regimes[2:end]
     TTTs_uzlb[inreg], RRRs_uzlb[inreg], CCCs_uzlb[inreg] =
         DSGE.gensys2_uncertain_altpol(prob_vecs[j], Th[1:n_states(m), 1:n_states(m)],
-                                  Ch[1:n_states(m)], Tcal[2:end], Rcal[2:end], Ccal[2:end],
-                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+                                      Ch[1:n_states(m)], Tcal[2:end], Rcal[2:end], Ccal[2:end],
+                                      Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
     for li in inreg
         TTTs_uzlb[li], RRRs_uzlb[li], CCCs_uzlb[li] = DSGE.augment_states(m, TTTs_uzlb[li], RRRs_uzlb[li], CCCs_uzlb[li])
     end
