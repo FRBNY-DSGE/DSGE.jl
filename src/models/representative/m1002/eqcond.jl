@@ -437,9 +437,11 @@ function eqcond(m::Model1002, reg::Int)
     Ψ[eq[:eq_λ_w1], exo[:λ_w_sh]]   = 1.
 
     # Monetary policy shock
+    noant = haskey(m.settings, :remove_rm_shocks) &&
+        reg >= get_setting(m, :remove_rm_shocks) ? 0.0 : 1.0
     Γ0[eq[:eq_rm], endo[:rm_t]] = 1.
-    Γ1[eq[:eq_rm], endo[:rm_t]] = m[:ρ_rm]
-    Ψ[eq[:eq_rm], exo[:rm_sh]]  = 1.
+    Γ1[eq[:eq_rm], endo[:rm_t]] = noant * m[:ρ_rm]
+    Ψ[eq[:eq_rm], exo[:rm_sh]]  = noant
 
     # Labor preference shock
     if subspec(m) in ["ss59", "ss60", "ss61"]
@@ -482,15 +484,15 @@ function eqcond(m::Model1002, reg::Int)
         # will hit in two periods), and the equations are set up so that rm_tl2 last period
         # will feed into rm_tl1 this period (and so on for other numbers), and last period's
         # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
-        Γ1[eq[:eq_rm], endo[:rm_tl1]]   = 1.
+        Γ1[eq[:eq_rm], endo[:rm_tl1]]   = noant
         Γ0[eq[:eq_rml1], endo[:rm_tl1]] = 1.
-        Ψ[eq[:eq_rml1], exo[:rm_shl1]]  = 1.
+        Ψ[eq[:eq_rml1], exo[:rm_shl1]]  = noant
 
         if n_mon_anticipated_shocks(m) > 1
             for i = 2:n_mon_anticipated_shocks(m)
-                Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = 1.
+                Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = noant
                 Γ0[eq[Symbol("eq_rml$i")], endo[Symbol("rm_tl$i")]]     = 1.
-                Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
+                Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = noant
             end
 
             #=if (haskey(m.settings, :flexible_ait_policy_change) ? get_setting(m, :flexible_ait_policy_change) : false)

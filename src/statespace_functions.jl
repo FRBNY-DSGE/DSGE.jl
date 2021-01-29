@@ -25,7 +25,8 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     # do NOT delete the second part of the Boolean for apply_altpolicy; it is needed for
     # the scenarios code, which continues to use :alternative_policy as a Setting
     # AND for implementing imperfect awareness via uncertain_altpolicy
-    apply_altpolicy = haskey(get_settings(m), :regime_eqcond_info) || haskey(get_settings(m), :alternative_policy)
+    apply_altpolicy = haskey(get_settings(m), :alternative_policy) ||
+        (haskey(get_settings(m), :regime_eqcond_info) && length(first(values(get_setting(m, :regime_eqcond_info))).weights) > 1)
 
     # When regime-switching, we need to do some extra work
     if haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
@@ -39,6 +40,7 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
 
         # Grab regime info dictionary, if one exists
         regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, EqcondEntry}()
+        regime_info_copy = deepcopy(regime_eqcond_info)
 
         # If uncertain_temp_altpol is false, want to make sure temp altpol period is treated as certain.
         if has_uncertain_temp_altpol && !uncertain_temp_altpol && has_regime_eqcond_info

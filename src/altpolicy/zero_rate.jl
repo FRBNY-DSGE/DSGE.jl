@@ -15,7 +15,7 @@ function zero_rate_replace_eq_entries(m::AbstractDSGEModel,
     Γ0[eq[:eq_mp], :] .= 0.
     Γ1[eq[:eq_mp], :] .= 0.
     Γ0[eq[:eq_mp], endo[:R_t]] = 1.0
-    C[eq[:eq_mp]] = 0.0 / 4. - m[:Rstarn]
+    C[eq[:eq_mp]] = 0.1 / 4. - m[:Rstarn]
 
     return Γ0, Γ1, C, Ψ, Π
 end
