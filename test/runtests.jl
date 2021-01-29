@@ -67,6 +67,7 @@ my_tests = [
             "forecast/automatic_tempalt_zlb",
             "forecast/forecast_regime_switching",
             "forecast/time_varying_credibility",
+            "forecast/multiple_altpol_imperfect_awareness",
             "forecast/util",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",

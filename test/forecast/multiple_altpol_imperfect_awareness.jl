@@ -96,16 +96,13 @@ m <= Setting(:skip_altpolicy_state_init, true)
 
 ## Set up temporary ZLB
 m <= Setting(:gensys2, true)
-
-# Set up credibility for ZLB and alternative policy, if applicable
 m <= Setting(:uncertain_temp_altpol, true)
-# m <= Setting(:temporary_altpolicy, :zero_rate)
 m <= Setting(:uncertain_altpolicy, true)
+
+# Set regime_dates and regime_eqcond_info for temp ZLB to flexible AIT
 gensys2_first_regime = get_setting(m, :n_regimes) + 1
 get_setting(m, :regime_dates)[gensys2_first_regime] = start_zlb_date
 n_zlb_reg = DSGE.subtract_quarters(end_zlb_date, start_zlb_date) + 1
-
-# Set up regime_eqcond_info
 m <= Setting(:replace_eqcond, true)
 reg_dates = deepcopy(get_setting(m, :regime_dates))
 regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
@@ -120,8 +117,17 @@ regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.fle
 nreg0 = length(reg_dates)
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
+setup_regime_switching_inds!(m; cond_type = :full)
+set_regime_vals_fnct(m, get_setting(m, :n_regimes))
+m <= Setting(:temporary_altpol_length, n_zlb_reg)
 
-# Set up regime indices and extra regimes for parameters
+# Now add additional regimes of flexible AIT to allow time-varying credibility
+for i in nreg0:(nreg0 + 15)
+    reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
+    regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0., 1.])
+end
+m <= Setting(:regime_dates,             reg_dates)
+m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = :full)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 
@@ -130,169 +136,133 @@ m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime -
                                          [i:get_setting(m, :n_regimes) for i in
                                           gensys2_first_regime:get_setting(m, :n_regimes)]))
 
-# output_vars = [:histobs, :histpseudo, :forecastobs, :forecastpseudo, :forecaststates]
+# Now add linearly increasing time-varying credibility
+credvec = collect(range(0., stop = 1., length = 17))
+for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]]
+    end
+end
+
+# Run forecast with 2 policies!
 output_vars = [:forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
-@assert !haskey(m.settings, :temporary_altpol_length)
-outp0 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                     regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-for i in keys(get_setting(m, :regime_eqcond_info))
-    get_setting(m, :regime_eqcond_info)[i].weights = [θ[:cred], 1. - θ[:cred]]
-end
-
-# Compare fixed vs. time-varying credibility
-outp33 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-sysp33 = compute_system(m; tvis = true)
-for i in nreg0:(nreg0 + 15)
-    reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
-    regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.flexible_ait(), [.33, 1-.33])
-end
-m <= Setting(:regime_dates,             reg_dates)
-m <= Setting(:regime_eqcond_info, regime_eqcond_info)
-setup_regime_switching_inds!(m; cond_type = :full)
-m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
-                                         [i:get_setting(m, :n_regimes) for i in
-                                          gensys2_first_regime:get_setting(m, :n_regimes)]))
-set_regime_vals_fnct(m, get_setting(m, :n_regimes))
-m <= Setting(:temporary_altpol_length, n_zlb_reg)
-for i in keys(get_setting(m, :regime_eqcond_info))
-    get_setting(m, :regime_eqcond_info)[i].weights = [.33, 1-.33]
-end
-sysp33_tv = compute_system(m; tvis = true)
-outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-@testset "Compare Fixed to Time-Varying Credibility" begin
-    for reg in 1:n_regimes(sysp33)
-        @test sysp33[reg, :TTT] ≈ sysp33_tv[reg, :TTT]
-        @test sysp33[reg, :RRR] ≈ sysp33_tv[reg, :RRR]
-        @test sysp33[reg, :CCC] ≈ sysp33_tv[reg, :CCC]
-        @test sysp33[reg, :QQ] ≈ sysp33_tv[reg, :QQ]
-        @test sysp33[reg, :ZZ] ≈ sysp33_tv[reg, :ZZ]
-        @test sysp33[reg, :DD] ≈ sysp33_tv[reg, :DD]
-    end
-    for k in keys(outp33)
-        @test outp33[k] ≈ outp33_tv[k]
-    end
-
-    if !regenerate_reference_forecasts
-        testfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_meas_fix_forecast.h5"), "forecastobs")
-        inds = vcat(1:9, 12:13, 20:21)  # ignore k-periods ahead observables, reference data generated when a bug existed
-        @test maximum(abs.(testfcast[inds, :] -
-                           outp33[:forecastobs][inds, :])) < 1.1e-3#5e-4 # some numerical differences b/c fixes to calculations
-    end
-
-end
-
-# Compare perfect credibility to permanent case
-for i in keys(get_setting(m, :regime_eqcond_info))
-    get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
-end
-credvec = ones(17)
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_altpol_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
-                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]]
-    end
-end
-out_temp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-m <= Setting(:uncertain_temp_altpol, false)
-m <= Setting(:uncertain_altpolicy, false)
-
-credvec = collect(range(0., stop = 1., length = 17))
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if i <= length(credvec)
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i], 1.0 - credvec[i]]
-    end
-end
-
-out_perm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-# Check perfectly credible ZLB match permanent equivalent
-m <= Setting(:uncertain_temp_altpol, false)
-m <= Setting(:uncertain_altpolicy, true)
-credvec = collect(range(0., stop = 1., length = 17))
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_altpol_length) ) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length))],
-                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length))]]
-    end
-end
-
-out_credzlb = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                     regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-m <= Setting(:uncertain_altpolicy, true)
-m <= Setting(:uncertain_temp_altpol, true)
-for i in keys(get_setting(m, :regime_eqcond_info))
-    get_setting(m, :regime_eqcond_info)[i].weights = [1., 0.]
-end
-credvec = collect(range(0., stop = 1., length = 17))
-
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_altpol_length)) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length))],
-                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length))]]
-    else
-        firsted = 1.0
-        get_setting(m, :regime_eqcond_info)[k].weights = [firsted, 1.0 - firsted]
-    end
-end
-
-out_temp_credzlb = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                          regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
-
-if !regenerate_reference_forecasts
-    @testset "Compare Perfect Credibility to Permanent Alternative Policy" begin
-        @test out_temp[:forecastobs] ≈ out_perm[:forecastobs]
-        @test out_temp_credzlb[:forecastobs] ≈ out_credzlb[:forecastobs]
-    end
-end
-
-for i in keys(get_setting(m, :regime_eqcond_info))
-    get_setting(m, :regime_eqcond_info)[i].weights = [0., 1.]
-end
-credvec = collect(range(0., stop = 1., length = 17))
-for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
-    if (get_setting(m, :temporary_altpol_length) - 1) < i
-        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
-                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]]
-    end
-end
 out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-if !regenerate_reference_forecasts
-    inds = vcat(1:9, 12:13)
-    @testset "Compare TV Credibility to Reference Forecast" begin
-        tvtestfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"),
-                             VERSION >= v"1.5" ? "tvforecastobs_1p5" : "tvforecastobs")
-        @test maximum(abs.(out1[:forecastobs][inds, :] - tvtestfcast[inds, :])) < 1e-3
+# Test if multiple altpolicies matches two altpolicies when placing zero credibility on third altpolicy
+m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.ngdp()])
+
+for i in keys(get_setting(m, :regime_eqcond_info))
+    get_setting(m, :regime_eqcond_info)[i].weights = [0.0, 1.0, 0.0]
+end
+credvec = collect(range(0., stop = 1., length = 17))
+for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)], 0.0]
     end
 end
 
+out_mult = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
+# Now check that, if the third altpolicy matches the second altpolicy, then
+# the forecast is also the same
+m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.taylor_rule()])
+for i in keys(get_setting(m, :regime_eqcond_info))
+    get_setting(m, :regime_eqcond_info)[i].weights = [0., 0.5, 0.5]
+end
+credvec = collect(range(0., stop = 1., length = 17))
+for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)], 0.0]
+    end
+end
+out_taylor_taylor = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                           regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+m <= Setting(:alternative_policies, [DSGE.default_policy(), DSGE.default_policy()]) # check that default_policy function works
+out_default_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df, # (and in principle should be faster)
+                                             regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+for i in keys(get_setting(m, :regime_eqcond_info))
+    get_setting(m, :regime_eqcond_info)[i].weights = [0.33, 0.5, 0.17]
+end
+for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
+    if (get_setting(m, :temporary_altpol_length) - 1) < i
+        get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i - (get_setting(m, :temporary_altpol_length) - 1)],
+                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]) / 2.,
+                                                          (1. - credvec[i - (get_setting(m, :temporary_altpol_length) - 1)]) / 2.]
+    end
+end
+
+# Now run forecast w/nontrivial weights on nontrivial third policy
+m <= Setting(:alternative_policies, [DSGE.taylor_rule(), DSGE.ngdp()])
+out_taylor_ngdp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                         regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+m <= Setting(:alternative_policies, [DSGE.default_policy(), DSGE.ngdp()])
+out_default_ngdp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                          regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 if regenerate_reference_forecasts
-    h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_meas_fix_forecast.h5"), "w") do file
-        write(file, "para", θ10)
-        write(file, "forecastobs", outp33[:forecastobs])
-        if VERSION >= v"1.5"
-            write(file, "tvforecastobs", tvtestfcast_othervers)
-            write(file, "tvforecastobs_1p5", out1[:forecastobs])
-        else
-            write(file, "forecastobs_tv0to1", out1[:forecastobs])
-            write(file, "forecastobs_fixed33", outp33[:forecastobs])
-            write(file, "forecastobs_fixed0", outp0[:forecastobs])
-            write(file, "forecastobs_fixed100", out_temp[:forecastobs])
-            write(file, "forecastobs_tv0to1_ZLBcred_1", out_credzlb[:forecastobs])
-        end
+    h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_multialtpol_reference.h5"), "w") do file
+        write(file, "forecastobs", out_taylor_ngdp[:forecastobs])
+        write(file, "forecastpseudo", out_taylor_ngdp[:forecastpseudo])
     end
 end
+
+@testset "Imperfect awareness wth multiple alternative policies" begin
+
+    for k in keys(out1)
+        @test out1[k] ≈ out_mult[k]
+    end
+
+    for k in keys(out1)
+        @test out1[k] ≈ out_taylor_taylor[k]
+        @test out1[k] ≈ out_default_default[k]
+    end
+
+    @test out_taylor_ngdp[:forecastobs] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                          "reference", "tvcred_multialtpol_reference.h5"), "forecastobs")
+    @test out_taylor_ngdp[:forecastpseudo] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                             "reference", "tvcred_multialtpol_reference.h5"), "forecastpseudo")
+    @test out_default_ngdp[:forecastobs] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                           "reference", "tvcred_multialtpol_reference.h5"), "forecastobs")
+    @test out_default_ngdp[:forecastpseudo] ≈ h5read(joinpath(dirname(@__FILE__), "..",
+                                                              "reference", "tvcred_multialtpol_reference.h5"), "forecastpseudo")
+end
+
+# Test if Uncertain Temp Altpol runs (in place of ZLB)
+# Set up regime_eqcond_info
+m <= Setting(:uncertain_temp_altpol, true)
+m <= Setting(:replace_eqcond, true)
+reg_dates = deepcopy(get_setting(m, :regime_dates))
+regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
+for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_regime), # See comments starting at line 57
+                          DSGE.quarter_range(reg_dates[gensys2_first_regime],
+                                             DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
+    reg_dates[regind] = date
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.ngdp(), [0.5, 0.5])
+end
+m <= Setting(:temporary_altpolicy, :ngdp)
+
+reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
+regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.33, 0.67])
+nreg0 = length(reg_dates)
+m <= Setting(:regime_dates,             reg_dates)
+m <= Setting(:regime_eqcond_info, regime_eqcond_info)
+
+# Set up regime indices and extra regimes for parameters
+setup_regime_switching_inds!(m; cond_type = :full)
+set_regime_vals_fnct(m, get_setting(m, :n_regimes))
+
+m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
+# Just checking it runs
+out_temp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
 
 nothing
