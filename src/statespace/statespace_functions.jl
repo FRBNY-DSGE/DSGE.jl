@@ -487,13 +487,28 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
 
     # Now augment the state space of TTTs_alt, RRRs_alt, and CCCs_alt to compute
     # the perfect credibility measurement equations
-    n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
+    n_altpolicies = length(TTTs_alt)#length(first(values(get_setting(m, :regime_eqcond_info))).weights)
     system_altpolicies = Vector{AbstractSystem}(undef, n_altpolicies)
 
     for i in 1:length(TTTs_alt)
         if i > 1 && is_altpol[i - 1]
             TTTs_alt[i], RRRs_alt[i], CCCs_alt[i] = augment_states(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
-            system_altpolicies[i] = RegimeSwitchingSystem(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i], n_regimes, tvis)
+ 
+            transition_equation = Transition(TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
+            measurement_equation = measurement(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
+
+            type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
+            has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
+                hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+            if hasmethod(pseudo_measurement, type_tuple)
+                # Solve pseudo-measurement equation
+                pseudo_measurement_equation = pseudo_measurement(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
+                system_altpolicies[i] = System(transition_equation, measurement_equation, pseudo_measurement_equation)
+            else
+                system_altpolicies[i] = System(transition_equation, measurement_equation)
+            end
+            # system_altpolicies[i] = RegimeSwitchingSystem(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i],
+            #                                               n_regimes, false)
         else
             for j in 1:length(TTTs_alt[i])
                 TTTs_alt[i][j], RRRs_alt[i][j], CCCs_alt[i][j] =
@@ -519,8 +534,8 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     perfect_cred_meas = Vector{Union{Measurement, Vector{Measurement}}}(undef, length(TTTs_alt))
 
     # Form measurement and pseudo-measurement equations for imperfect awareness state space system
-    n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
-    system_altpolicies = Vector{AbstractSystem}(undef, n_altpolicies)
+    # n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
+    # system_altpolicies = Vector{AbstractSystem}(undef, n_altpolicies)
 
     TTTs, RRRs, CCCs = solve_uncertain_multiperiod_altpolicy(m, TTTs_alt, CCCs_alt, is_altpol;
                                                              gensys_regimes = gensys_regimes, gensys2_regimes = gensys2_regimes,
