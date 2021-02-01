@@ -144,3 +144,31 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}},Th::Vector{Matrix{
 
     return Tout, Rout, Cout
 end
+function gensys2_uncertain_altpol_VARY(prob_vec::Vector{Vector{S}}, Th::Vector{Matrix{S}}, Ch::Vector{Vector{S}},
+                              T_alts::Vector{Matrix{S}}, R_alts::Vector{Matrix{S}}, C_alts::Vector{Vector{S}},
+                              Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
+                              C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
+
+    Tbars = Vector{Matrix{S}}(undef, length(T_alts) + 1)
+    Cbars = Vector{Vector{S}}(undef, length(T_alts) + 1)
+    Tout  = Vector{Matrix{S}}(undef, length(T_alts) + 1)
+    Rout  = Vector{Matrix{S}}(undef, length(T_alts) + 1)
+    Cout  = Vector{Vector{S}}(undef, length(T_alts) + 1)
+
+    # Calculate "uncertain" temporary altpolicy matrices and back out the transition equation
+    for i in 1:length(T_alts)
+        Tbars[i] = prob_vec[i][1] * T_alts[i] + (1.0-prob_vec[i][1]) * Th[i] # it is assumed T_alts is a vector of the T_{t + 1}^{(temporary altpolicy)} matrices
+        Cbars[i] = prob_vec[i][1] * C_alts[i] + (1.0-prob_vec[i][1]) * Ch[i]
+
+        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
+        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
+        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
+    end
+
+    # Add terminal condition
+    Tout[end] = T_alts[end]
+    Rout[end] = R_alts[end]
+    Cout[end] = C_alts[end]
+
+    return Tout, Rout, Cout
+end

@@ -294,6 +294,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
                                     altpolicy_solve::Function = solve,
                                     verbose::Symbol = :high) where {S <: Real}
 
+
     uncertain_altpol = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
     if uncertain_altpol
         altpols = get_setting(m, :alternative_policies)
@@ -381,9 +382,19 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         end
 
         if length(altpols) == 1
-            Talt, _, Calt = altpols[1].solve(m)
-            Talt = Talt[1:n_endo,1:n_endo]
-            Calt = Calt[1:n_endo]
+            if altpols[1] == :taylor_rule
+                Talt, _, Calt = altpols[1].solve(m)
+                Talt = Talt[1:n_endo,1:n_endo]
+                Calt= Calt[1:n_endo]
+            else
+                Talt, _, Calt = altpols[1].solve(m, regimes = gensys2_regimes)
+                for i in 1:get_setting(m, :n_regimes)
+
+                    Talt[i] = Talt[i][1:n_endo,1:n_endo]
+                    Calt[i] = Calt[i][1:n_endo]
+                end
+            end
+
         else
             Talt = Vector{Matrix{Float64}}(undef, length(altpols))
             Calt = Vector{Vector{Float64}}(undef, length(altpols))
@@ -418,10 +429,18 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
         # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
         # Then, if nzlb = 1, Tcal should have length 2, and you only need the lift-off matrix
-        Tcal[1:(1 + nzlb)], Rcal[1:(1 + nzlb)], Ccal[1:(1 + nzlb)] =
+        if altpols[1] == :taylor_rule
+            Tcal[1:(1 + nzlb)], Rcal[1:(1 + nzlb)], Ccal[1:(1 + nzlb)] =
             gensys2_uncertain_altpol(weights, Talt, Calt,
-                                 Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
-                                 Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+                                     Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
+                                     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+        else
+            Tcal[1:(1 + nzlb)], Rcal[1:(1 + nzlb)], Ccal[1:(1 + nzlb)] =
+            gensys2_uncertain_altpol_VARY(weights, Talt[6:(5+length(gensys2_regimes))], Calt[6:(5+length(gensys2_regimes))],
+                                     Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
+                                     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+        end
+
 
         if nzlb != ng2
             # TODO: generalize this code block
@@ -502,4 +521,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     end
 
     return TTTs, RRRs, CCCs
+
+
 end
