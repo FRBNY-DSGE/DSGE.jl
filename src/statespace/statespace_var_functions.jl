@@ -235,29 +235,6 @@ end
 
 """
 ```
-compute_system(m::PoolModel{T})
-```
-
-Given the current model parameters, compute the state-space system
-corresponding to the PoolModel model `m`.
-
-Outputs
-
-```
-Φ: state transition function
-Ψ: likelihood function, given weights on underlying models (the states) and predictive densities
-F_ϵ: structural shock distribution
-F_u: likelihood function measurement error distribution
-F_λ: initial distribution of λ for state transition function
-"""
-function compute_system(m::PoolModel{T}; tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
-    Φ, F_ϵ, F_λ = transition(m)
-    Ψ, F_u = measurement(m)
-    return Φ, Ψ, F_ϵ, F_u, F_λ
-end
-
-"""
-```
 compute_system(m::AbstractDSGEModel, system::System;
 observables::Vector{Symbol} = collect(keys(m.observables)),
 pseudo_observables::Vector{Symbol} = collect(keys(m.pseudo_observables)),
