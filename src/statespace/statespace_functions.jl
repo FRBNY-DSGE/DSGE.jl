@@ -493,7 +493,7 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     for i in 1:length(TTTs_alt)
         if i > 1 && is_altpol[i - 1]
             TTTs_alt[i], RRRs_alt[i], CCCs_alt[i] = augment_states(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
- 
+
             transition_equation = Transition(TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
             measurement_equation = measurement(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
 
@@ -515,8 +515,13 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
                     augment_states(m, TTTs_alt[i][j], RRRs_alt[i][j], CCCs_alt[i][j];
                                    regime_switching = true, reg = j)
             end
-            system_altpolicies[i] = RegimeSwitchingSystem(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i],
+            if i == 1
+                system_altpolicies[i] = RegimeSwitchingSystem(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i],
+                                                          n_regimes, tvis)
+            else
+                system_altpolicies[i] = RegimeSwitchingSystem(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i],
                                                           n_regimes, get_setting(m,:alternative_policies)[i-1].infoset != nothing)
+            end
         end
     end
 
