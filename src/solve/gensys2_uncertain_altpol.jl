@@ -210,10 +210,10 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, gensys2_regimes::
         # hence Tbars will be a vector of T_t matrices
         Tbars[i] = prob_vec[i][1] * T_alt[1][reg] .+
             sum([prob_vec[i][j+1] .* (is_altpol[j] ? T_alt[j] : T_alt[j][reg])
-                 for j in 1:n_alt])
+                 for j in 2:n_alt])
         Cbars[i] = prob_vec[i][1] * C_alt[1][reg] .+
             sum([prob_vec[i][j+1] .* (is_altpol[j] ? C_alt[j] : C_alt[j][reg])
-                 for j in 1:n_alt])
+                 for j in 2:n_alt])
 
         Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
         Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
