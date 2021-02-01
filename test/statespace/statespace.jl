@@ -130,7 +130,7 @@ end
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
                                   4; get_population_moments = false, use_intercept = true)
 
-    expmat = load("reference/exp_var_approx_state_space.jld2")
+    expmat = load("../reference/exp_var_approx_state_space.jld2")
     @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]
     @test @test_matrix_approx_eq xxyyd expmat["xxyyd"][2:end, :]
     @test @test_matrix_approx_eq xxxxd expmat["xxxxd"][2:end, 2:end]
@@ -191,7 +191,7 @@ end
                                        :add_NominalWageGrowth =>
                                        Setting(:add_NominalWageGrowth, true)))
     dsgevar = DSGEVAR(m)
-    jlddata = load(joinpath(dirname(@__FILE__), "reference/test_dsgevar_lambda_irfs.jld2"))
+    jlddata = load(joinpath(dirname(@__FILE__), "../reference/test_dsgevar_lambda_irfs.jld2"))
     DSGE.update!(dsgevar, shocks = collect(keys(m.exogenous_shocks)),
                  observables = [:obs_hours, :obs_gdpdeflator, :laborshare_t, :NominalWageGrowth],
                  lags = 4, λ = Inf)
@@ -216,14 +216,14 @@ end
     β, Σ = compute_system(dsgevar, data)
 
     if writing_output
-        JLD2.jldopen("reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2",
+        JLD2.jldopen("../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2",
             true, true, true, IOStream) do file
             write(file, "exp_data_beta", β)
             write(file, "exp_data_sigma", Σ)
         end
     end
 
-    file = jldopen("reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2", "r")
+    file = jldopen("../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2", "r")
     saved_β = read(file, "exp_data_beta")
     saved_Σ = read(file, "exp_data_sigma")
     close(file)
@@ -233,7 +233,7 @@ end
 end
 
 @testset "VECM approximation of state space" begin
-    matdata = load("reference/vecm_approx_state_space.jld2")
+    matdata = load("../reference/vecm_approx_state_space.jld2")
     nobs = Int(matdata["nvar"])
     p = Int(matdata["nlags"])
     coint = Int(matdata["coint"])
@@ -442,7 +442,7 @@ end
     m <= Setting(:forecast_horizons, 12)
 
     fp = dirname(@__FILE__)
-    df = load(joinpath(fp, "reference", "regime_switch_data.jld2"), "regime_switch_df_none")
+    df = load(joinpath(fp, "../reference", "regime_switch_data.jld2"), "regime_switch_df_none")
 
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(

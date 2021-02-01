@@ -129,8 +129,8 @@ module DSGE
         decompose_forecast, decomposition_means,
 
         # altpolicy/
-        AltPolicy, EqcondEntry, setup_permanent_altpol!, default_policy, taylor93, taylor99, taylor_rule,
-        alt_inflation, ait, ngdp, zero_rate, flexible_ait, smooth_ait_gdp_alt,
+        AltPolicy, EqcondEntry, MultiPeriodAltPolicy, setup_permanent_altpol!, default_policy,
+        taylor93, taylor99, taylor_rule, alt_inflation, ait, ngdp, zero_rate, flexible_ait, smooth_ait_gdp_alt,
 
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
@@ -194,8 +194,10 @@ module DSGE
     include("abstractvarmodel.jl")
     include("defaults.jl")
     include("models/poolmodel/poolmodel.jl")
-    include("statespace_types.jl")
-    include("statespace_functions.jl")
+    include("statespace/statespace_types.jl")
+    include("statespace/util.jl")
+    include("statespace/statespace_functions.jl")
+    include("statespace/statespace_var_functions.jl")
     include("util.jl")
     include("grids.jl")
 

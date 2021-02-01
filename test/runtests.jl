@@ -11,7 +11,7 @@ my_tests = [
             "defaults",
             "parameters",
             "util",
-            "statespace",
+            "statespace/statespace",
 
             "data/fred_data",
             "data/load_data",
