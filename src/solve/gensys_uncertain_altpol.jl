@@ -176,3 +176,38 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
         return Tcal, Rcal, Ccal
     end
 end
+
+function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{S}, regime::Int, TTT::Matrix{S},
+                                 TTTs_alt::Vector{Matrix{S}}, CCCs_alt::Vector{Vector{S}},
+                                 is_altpol::Vector{Bool}) where {S <: Real}
+
+    @assert sum(prob_vec) == 1. "The vector of probabilities must sum to 1"
+
+    @assert length(TTTs_alt) == length(prob_vec) - 1
+
+    has_pos_prob = findall((@view prob_vec[2:end]) .> 0.) # Note that has_pos_prob has 1 less length than prob_vec
+
+    Γ0, Γ1, C, Ψ, Π = haskey(get_setting(m, :regime_eqcond_info), regime) ?
+        get_setting(m, :regime_eqcond_info)[regime].alternative_policy.eqcond(m, regime) :
+            eqcond(m, regime)
+
+    Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
+
+    T̅, C̅ = prob_vec[1] == 0. ? (zero(TTT), zero(C)) : (prob_vec[1] .* TTT, prob_vec[1] .* C)
+    for i in has_pos_prob
+        if is_altpol[i]
+            T̅ .+= prob_vec[i + 1] * TTTs_alt[i]
+            C̅ .+= prob_vec[i + 1] * CCCs_alt[i]
+        else
+            T̅ .+= prob_vec[i + 1] * TTTs_alt[i][regime]
+            C̅ .+= prob_vec[i + 1] * CCCs_alt[i][regime]
+        end
+    end
+
+    Lmat = (Γ2_til * T̅ + Γ0_til)
+    Tcal = Lmat \ Γ1_til
+    Rcal = Lmat \ Ψ_til
+    Ccal = Lmat \ (C_til - Γ2_til * C̅)
+
+    return Tcal, Rcal, Ccal
+end

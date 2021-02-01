@@ -91,7 +91,7 @@ m <= Setting(:pgap_type, :flexible_ait)
 m <= Setting(:ygap_value, θ[:ygap])
 m <= Setting(:ygap_type, :flexible_ait)
 m <= Setting(:flexible_ait_ρ_smooth, θ[:ρ_smooth])
-m <= Setting(:alternative_policies, AltPolicy[θ[:historical_policy]])
+m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[θ[:historical_policy]])
 m <= Setting(:skip_altpolicy_state_init, true)
 
 ## Set up temporary ZLB
@@ -148,7 +148,7 @@ end
 # Run forecast with 2 policies!
 output_vars = [:forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
-out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+#=out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 # Test if multiple altpolicies matches two altpolicies when placing zero credibility on third altpolicy
@@ -234,35 +234,47 @@ end
     @test out_default_ngdp[:forecastpseudo] ≈ h5read(joinpath(dirname(@__FILE__), "..",
                                                               "reference", "tvcred_multialtpol_reference.h5"), "forecastpseudo")
 end
+=#
+# Test multiple alternative policies with multi-period altpolicies and temporary policies
 
-# Test if Uncertain Temp Altpol runs (in place of ZLB)
-# Set up regime_eqcond_info
-m <= Setting(:uncertain_temp_altpol, true)
-m <= Setting(:replace_eqcond, true)
-reg_dates = deepcopy(get_setting(m, :regime_dates))
-regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
-for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_regime), # See comments starting at line 57
-                          DSGE.quarter_range(reg_dates[gensys2_first_regime],
-                                             DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
-    reg_dates[regind] = date
-    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.ngdp(), [0.5, 0.5])
+## First start with fake temporary policy
+temp_taylor_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
+temp_default_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
+for k in keys(temp_taylor_regime_eqcond_info)
+    temp_taylor_regime_eqcond_info[k] = DSGE.EqcondEntry(taylor_rule())
+    temp_default_regime_eqcond_info[k] = DSGE.EqcondEntry(default_policy())
 end
-m <= Setting(:temporary_altpolicy, :ngdp)
+temp_taylor = MultiPeriodAltPolicy(:temporary_taylor, temp_taylor_regime_eqcond_info, gensys2 = true,
+                                   temporary_altpolicy_names = [:taylor_rule],
+                                   temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
+                                   infoset = copy(get_setting(m, :tvis_information_set))) # also test w/ tvis and w/out
+temp_default = MultiPeriodAltPolicy(:temporary_default, temp_default_regime_eqcond_info,
+                                    gensys2 = false, temporary_altpolicy_names = [:default]) # also check without gensys2 on
 
-reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
-regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.33, 0.67])
-nreg0 = length(reg_dates)
-m <= Setting(:regime_dates,             reg_dates)
-m <= Setting(:regime_eqcond_info, regime_eqcond_info)
+m <= Setting(:alternative_policies, [DSGE.taylor_rule(), temp_taylor])
+out_taylor_temp_taylor = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+@assert false
+m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_default])
+out_default_temp_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-# Set up regime indices and extra regimes for parameters
-setup_regime_switching_inds!(m; cond_type = :full)
-set_regime_vals_fnct(m, get_setting(m, :n_regimes))
+## Now add nontrivial temporary policy
+temp_flexible_ait_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
+for k in keys(temp_taylor_regime_eqcond_info)
+    if get_setting(m, :regime_eqcond_info)[k].alternative_policy.key == :zero_rate
+        temp_flexible_ait_regime_eqcond_info[k] = DSGE.EqcondEntry(flexible_ait()) # temporary flexible ait during ZLB periods
+    else
+        temp_flexible_ait_regime_eqcond_info[k] = DSGE.EqcondEntry(taylor_rule()) # followed by Taylor rule in the end
+    end
+end
+temp_flexible_ait = MultiPeriodAltPolicy(:temporary_flexible_ait, temp_flexible_ait_regime_eqcond_info, gensys2 = true,
+                                         temporary_altpolicy_names = [:flexible_ait],
+                                         temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
+                                         infoset = copy(get_setting(m, :tvis_information_set))) # also test w/ tvis and w/out
 
-m <= Setting(:alternative_policies, [DSGE.taylor_rule()])
-# Just checking it runs
-out_temp = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
+m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_flexible_ait])
+out_default_temp_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 nothing

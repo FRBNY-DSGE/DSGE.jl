@@ -134,19 +134,26 @@ mutable struct MultiPeriodAltPolicy{S <: AbstractDict{Int64, EqcondEntry}} <: Ab
     key::Symbol
     regime_eqcond_info::S
     gensys2::Bool
+    temporary_altpolicy_names::Union{Vector{Symbol}, Nothing}
+    temporary_altpolicy_length::Int
     infoset::Union{Vector{UnitRange{Int64}}, Nothing}
     forecast_init::Function
     color::Colorant
     linestyle::Symbol
 end
 
-function MultiPeriodAltPolicy(key::Symbol, regime_eqcond_info::AbstractDict{Int64, EqcondEntry}, is_gensys2::Bool;
+function MultiPeriodAltPolicy(key::Symbol, regime_eqcond_info::AbstractDict{Int64, EqcondEntry};
+                              gensys2::Bool = false,
+                              temporary_altpolicy_names::Union{Vector{Symbol}, Nothing} = nothing,
+                              temporary_altpolicy_length::Int =  # default assumes the last regime is a
+                              length(regime_eqcond_info) - 1, # lift-off regime, and all others are temporary ones.
                               infoset::Union{Vector{UnitRange{Int64}}, Nothing} = nothing,
                               forecast_init::Function = identity,
                               color::Colorant = RGB(0., 0., 1.),
                               linestyle::Symbol = :solid)
 
-    MultiPeriodAltPolicy(key, regime_eqcond_info, is_gensys2, infoset, forecast_init, color, linestyle)
+    MultiPeriodAltPolicy(key, regime_eqcond_info, gensys2, temporary_altpolicy_names,
+                         temporary_altpolicy_length, infoset, forecast_init, color, linestyle)
 end
 
 """

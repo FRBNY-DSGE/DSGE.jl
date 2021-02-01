@@ -38,9 +38,6 @@ Random.seed!(1793)
     m <= Setting(:gensys2, true)
     # Replace eqcond with temp rule
     m <= Setting(:replace_eqcond, true)
-    # Tell model that the gensys2 regimes should be
-    # treated as temporary alt policies
-    # m <= Setting(:temporary_altpolicy, true)
     # Which rule to replace with in which periods
     replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
     for i in 3:(n_reg_temp - 1)
@@ -133,7 +130,6 @@ end
     m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:gensys2, true)
     m <= Setting(:replace_eqcond, true)
-    m <= Setting(:temporary_altpolicy, true)
     replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
     for i in 3:5
         replace_eqcond[i] = DSGE.EqcondEntry(zero_rate(), [1., 0.])
@@ -183,7 +179,6 @@ end
     date_ind = findfirst(df[!, :date] .== Date(2020, 6, 30))
     df[date_ind, :obs_nominalrate] = .3 / 4.
     m <= Setting(:replace_eqcond, true)
-    m <= Setting(:temporary_altpolicy, true)
     m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(3 => DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])))
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:pgap_value, 12.0)
@@ -436,8 +431,6 @@ end
     m <= Setting(:gensys2, true)
     # Replace eqcond with temp rule
     m <= Setting(:replace_eqcond, true)
-    # Treat temporary rule as altpolicy
-    m <= Setting(:temporary_altpolicy, true)
     # Which rule to replace with inn nwhich periods
     replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
     for i in 4:n_reg_temp-1
