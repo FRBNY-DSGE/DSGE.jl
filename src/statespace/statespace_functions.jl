@@ -487,15 +487,21 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
 
     # Now augment the state space of TTTs_alt, RRRs_alt, and CCCs_alt to compute
     # the perfect credibility measurement equations
+    n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
+    system_altpolicies = Vector{AbstractSystem}(undef, n_altpolicies)
+
     for i in 1:length(TTTs_alt)
         if i > 1 && is_altpol[i - 1]
             TTTs_alt[i], RRRs_alt[i], CCCs_alt[i] = augment_states(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
+            system_altpolicies[i] = RegimeSwitchingSystem(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i], n_regimes, tvis)
         else
             for j in 1:length(TTTs_alt[i])
                 TTTs_alt[i][j], RRRs_alt[i][j], CCCs_alt[i][j] =
                     augment_states(m, TTTs_alt[i][j], RRRs_alt[i][j], CCCs_alt[i][j];
                                    regime_switching = true, reg = j)
             end
+            system_altpolicies[i] = RegimeSwitchingSystem(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i],
+                                                          n_regimes, get_setting(m,:alternative_policies)[i-1].infoset != nothing)
         end
     end
 
@@ -521,8 +527,8 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
                                                              regimes = collect(1:n_regimes), verbose = verbose)
     system_main = RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, n_regimes, tvis) ## Change Ts, Rs, Cs to be augmented
 
-    system_altpolicies[1] = compute_system_helper(m, tvis = tvis, verbose = verbose)
-
+    # system_altpolicies[1] = compute_system_helper(m, tvis = tvis, verbose = verbose)
+#=
     # Save these elements. No need to deepcopy b/c we replace their values in the get_settings(m) dict with different instances
     orig_regime_eqcond_info = get_setting(m, :regime_eqcond_info)
     orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
@@ -589,7 +595,7 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     if !isnothing(orig_temp_altpol_names)
         m <= Setting(:temporary_altpolicy_names, orig_temp_altpol_names)
     end
-
+=#
 
     # Correct the measurement equations for anticipated observables via weighted average
     for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
