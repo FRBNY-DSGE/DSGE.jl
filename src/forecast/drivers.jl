@@ -109,20 +109,11 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             replace_regs = sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
             println("regime_eqcond_info: ", OrderedDict(k => get_setting(m, :regime_eqcond_info)[k] for k in replace_regs))
         end
-#=        hist_gensys2_regimes_gap = (get_setting(m, :alternative_policy).key != :historical) ||
-            (haskey(get_settings(m), :gensys2_separate_cond_regimes) ? get_setting(m, :gensys2_separate_cond_regimes) : false) ||
-            (haskey(m.settings, :regime_eqcond_info) && (findfirst([haskey(get_setting(m, :regime_eqcond_info), i) for i in 1:get_setting(m, :n_regimes)]) -
-             get_setting(m, :reg_post_conditional_end) >= 0))
-        n_no_alt_reg = hist_gensys2_regimes_gap ?
-            (get_setting(m, :n_fcast_regimes) - get_setting(m, :n_rule_periods) - 1) : 0
-        g2fr = haskey(get_settings(m), :gensys2_first_regime) ? get_setting(m, :gensys2_first_regime) :
-            get_setting(m, :reg_forecast_start)
-        println("gensys2_first_regime = $(g2fr + n_no_alt_reg)")=#
 
         println("uncertain_altpolicy: " *
                 string(haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false))
         println("uncertain_temp_altpol: " * string(haskey(get_settings(m), :uncertain_temp_altpol) ? get_setting(m, :uncertain_temp_altpol) : false))
-        println("time-varying credibility: " * string(any([!ismissing(v.weights) for v in values(get_setting(m, :regime_eqcond_info))])))
+        println("time-varying credibility: " * string(any(v -> !ismissing(v.weights), values(get_setting(m, :regime_eqcond_info)))))
         if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
             println("Desired policy rule: " *
                     string(haskey(get_settings(m), :regime_eqcond_info) ?
@@ -155,6 +146,8 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             println("initial pgap = ", get_setting(m, :pgap_value))
             println("initial ygap = ", get_setting(m, :ygap_value))
         end
+
+        # TODO: print out the forecast_zlb_value used by zero_rate
         println("") # add some space
     end
 
