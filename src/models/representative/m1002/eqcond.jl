@@ -437,8 +437,9 @@ function eqcond(m::Model1002, reg::Int)
     Ψ[eq[:eq_λ_w1], exo[:λ_w_sh]]   = 1.
 
     # Monetary policy shock
-    noant = haskey(m.settings, :remove_rm_shocks) &&
-        reg >= get_setting(m, :remove_rm_shocks) ? 0.0 : 1.0
+    noant = haskey(m.settings, :remove_rm_t_shocks) &&
+            reg >= get_setting(m, :remove_rm_t_shocks) ? 0.0 : 1.0
+
     Γ0[eq[:eq_rm], endo[:rm_t]] = 1.
     Γ1[eq[:eq_rm], endo[:rm_t]] = noant * m[:ρ_rm]
     Ψ[eq[:eq_rm], exo[:rm_sh]]  = noant
@@ -478,6 +479,9 @@ function eqcond(m::Model1002, reg::Int)
 
     # Anticipated policy shocks
     if n_mon_anticipated_shocks(m) > 0
+
+        noant = haskey(m.settings, :remove_rm_shocks) &&
+            reg >= get_setting(m, :remove_rm_shocks) ? 0.0 : 1.0
 
         # This section adds the anticipated shocks. There is one state for all the
         # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
