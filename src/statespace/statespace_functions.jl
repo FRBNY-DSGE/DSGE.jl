@@ -477,7 +477,7 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     end
 
     # First calculate the perfectly credible transition matrices for the policy actually being implemented
-    TTTs_alt, RRRs_alt, CCCs_alt, is_altpol = perfect_cred_multiperiod_altpolicy_transition_matrices(m; n_regimes, verbose = verbose)
+    TTTs_alt, RRRs_alt, CCCs_alt, is_altpol = perfect_cred_multiperiod_altpolicy_transition_matrices(m; n_regimes = n_regimes, verbose = verbose)
 
     # Now compute the imperfect awareness solution
     gensys_regimes, gensys2_regimes = compute_gensys_gensys2_regimes(m)

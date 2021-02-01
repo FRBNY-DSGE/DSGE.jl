@@ -751,9 +751,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
 
     system = compute_system(m; tvis = tvis)
-    #=JLD2.jldopen("saved_tworule_system.jld2", true, true, true, IOStream) do file
-        write(file, "sys", system)
-    end=#
 
     # Initialize output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()

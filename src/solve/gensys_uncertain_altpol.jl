@@ -177,13 +177,13 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
     end
 end
 
-function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{S}, regime::Int, TTT::Matrix{S},
+function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{S}, regime::Int,
                                  TTTs_alt::Vector{Matrix{S}}, CCCs_alt::Vector{Vector{S}},
                                  is_altpol::Vector{Bool}) where {S <: Real}
 
     @assert sum(prob_vec) == 1. "The vector of probabilities must sum to 1"
 
-    @assert length(TTTs_alt) == length(prob_vec) - 1
+    @assert length(TTTs_alt) == length(prob_vec)
 
     has_pos_prob = findall((@view prob_vec[2:end]) .> 0.) # Note that has_pos_prob has 1 less length than prob_vec
 
@@ -193,7 +193,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
 
-    T̅, C̅ = prob_vec[1] == 0. ? (zero(TTT), zero(C)) : (prob_vec[1] .* TTT, prob_vec[1] .* C)
+    T̅, C̅ = prob_vec[1] == 0. ? (zero(TTTs_alt[1]), zero(C)) : (prob_vec[1] .* TTTs_alt[1], prob_vec[1] .* C)
     for i in has_pos_prob
         if is_altpol[i]
             T̅ .+= prob_vec[i + 1] * TTTs_alt[i]

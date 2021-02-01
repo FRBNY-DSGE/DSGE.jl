@@ -215,7 +215,6 @@ module DSGE
     include("altpolicy/zero_rate.jl")
     include("altpolicy/rw.jl")
     include("altpolicy/rw_zero_rate.jl")
-    include("altpolicy/taylor_two_rule.jl")
     include("solve/gensys_uncertain_altpol.jl")
 
     include("benchmark/util.jl")
