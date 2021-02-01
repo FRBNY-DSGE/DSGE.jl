@@ -645,13 +645,13 @@ function perfect_cred_multiperiod_altpolicy_transition_matrices(m::AbstractDSGEM
                                                                 verbose::Symbol = :high) where {T <: Real}
 
     # Set up
-    m            <= Setting(:uncertain_altpolicy,   false)
-    m            <= Setting(:uncertain_temp_altpol, false)
-    is_altpol     = [isa(x, AltPolicy) for x in get_setting(m, :alternative_policies)] # used later on
-    n_altpolicies = length(get_setting(m, :alternative_policies)) + 1 # + 1 for the implemented policy
-    TTTs = Vector{Union{Matrix{T}, Vector{Matrix{T}}}}(undef, n_altpolicies)
-    RRRs = Vector{Union{Matrix{T}, Vector{Matrix{T}}}}(undef, n_altpolicies)
-    CCCs = Vector{Union{Vector{T}, Vector{Vector{T}}}}(undef, n_altpolicies)
+    m        <= Setting(:uncertain_altpolicy,   false)
+    m        <= Setting(:uncertain_temp_altpol, false)
+    is_altpol = [isa(x, AltPolicy) for x in get_setting(m, :alternative_policies)] # used later on
+    n_tot_pol = length(get_setting(m, :alternative_policies)) + 1 # + 1 for the implemented policy
+    TTTs = Vector{Union{Matrix{T}, Vector{Matrix{T}}}}(undef, n_tot_pol)
+    RRRs = Vector{Union{Matrix{T}, Vector{Matrix{T}}}}(undef, n_tot_pol)
+    CCCs = Vector{Union{Vector{T}, Vector{Vector{T}}}}(undef, n_tot_pol)
 
     gensys_regimes, gensys2_regimes = compute_gensys_gensys2_regimes(m)
     TTTs[1], RRRs[1], CCCs[1] = solve(m; regime_switching = true, gensys_regimes = gensys_regimes,
@@ -665,6 +665,7 @@ function perfect_cred_multiperiod_altpolicy_transition_matrices(m::AbstractDSGEM
     orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
     # orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
     orig_temp_altpol_names  = haskey(get_settings(m), :temporary_altpolicy_names) ? get_setting(m, :temporary_altpolicy_names) : nothing
+    is_gensys2              = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
     # m <= Setting(:regime_eqcond_info, Dict{Int64, EqcondEntry}()) # TODO: maybe also delete this setting
     delete!(get_settings(m), :regime_eqcond_info)
@@ -672,9 +673,9 @@ function perfect_cred_multiperiod_altpolicy_transition_matrices(m::AbstractDSGEM
     # delete!(get_settings(m), :tvis_information_set) # does nothing if tvis_information_set is not a key in get_settings(m)
     delete!(get_settings(m), :temporary_altpolicy_names) # does nothing if temporary_altpolicy_names is not a key in get_settings(m)
 
-    for i in 2:(n_altpolicies + 1)
-        new_altpol = get_setting(m, :alternative_policies)[i - 1]
-        if is_altpol[i]
+    for i in 2:n_tot_pol # want to populate TTTs, RRRs, and CCCs, and there are n_tot_pol total policies
+        new_altpol = get_setting(m, :alternative_policies)[i - 1] # decrement by 1 b/c :alternative_policies only includes
+        if is_altpol[i - 1]                                       # policies which aren't being implemented, as is the case for is_altpol
             # If AltPolicy, we assume that the user only wants the permanent altpolicy system
             # AND there is no parameter regime-switching that affects the TTT matrix or CCC vector.
             # If there is parameter regime-switching or other kinds of regime-switching
