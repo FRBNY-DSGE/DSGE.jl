@@ -488,7 +488,7 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     # Now augment the state space of TTTs_alt, RRRs_alt, and CCCs_alt to compute
     # the perfect credibility measurement equations
     for i in 1:length(TTTs_alt)
-        if is_altpol[i]
+        if i > 1 && is_altpol[i - 1]
             TTTs_alt[i], RRRs_alt[i], CCCs_alt[i] = augment_states(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
         else
             for j in 1:length(TTTs_alt[i])
@@ -710,8 +710,8 @@ function perfect_cred_multiperiod_altpolicy_transition_matrices(m::AbstractDSGEM
     # Now add original settings back
     m <= Setting(:regime_eqcond_info, orig_regime_eqcond_info)
     m <= Setting(:gensys2, is_gensys2)
-    m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
-    m <= Setting(:uncertain_temp_altpol, uncertain_temp_altpol)
+    m <= Setting(:uncertain_altpolicy, true)
+    m <= Setting(:uncertain_temp_altpol, true)
     if !isnothing(orig_altpol)
         m <= Setting(:alternative_policy, orig_altpol)
     end

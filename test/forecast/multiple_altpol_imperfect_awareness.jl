@@ -241,6 +241,7 @@ end
 temp_taylor_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
 temp_default_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
 for k in keys(temp_taylor_regime_eqcond_info)
+    get_setting(m, :regime_eqcond_info)[k].weights = [0., 1., 0.] # update the weights vector length
     temp_taylor_regime_eqcond_info[k] = DSGE.EqcondEntry(taylor_rule())
     temp_default_regime_eqcond_info[k] = DSGE.EqcondEntry(default_policy())
 end

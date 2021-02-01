@@ -205,14 +205,15 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, gensys2_regimes::
 
     # Calculate "uncertain" temporary altpolicy matrices and back out the transition equation
     n_alt = length(prob_vec[1])
+    inds = 1:n_states(m)
     for (i, reg) in enumerate(gensys2_regimes[1:end - 1])
         # it is assumed T_impl is a vector of the T_{t + 1}^{(temporary altpolicy)} matrices,
         # hence Tbars will be a vector of T_t matrices
-        Tbars[i] = prob_vec[i][1] * T_alt[1][reg] .+
-            sum([prob_vec[i][j+1] .* (is_altpol[j] ? T_alt[j] : T_alt[j][reg])
+        Tbars[i] = prob_vec[i][1] * (@view T_alt[1][reg][inds, inds]) .+
+            sum([prob_vec[i][j+1] .* (is_altpol[j] ? (@view T_alt[j][inds, inds]) : (@view T_alt[j][reg][inds, inds]))
                  for j in 2:n_alt])
-        Cbars[i] = prob_vec[i][1] * C_alt[1][reg] .+
-            sum([prob_vec[i][j+1] .* (is_altpol[j] ? C_alt[j] : C_alt[j][reg])
+        Cbars[i] = prob_vec[i][1] * (@view C_alt[1][reg][inds]) .+
+            sum([prob_vec[i][j+1] .* (is_altpol[j] ? (@view C_alt[j][inds]) : (@view C_alt[j][reg][inds]))
                  for j in 2:n_alt])
 
         Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til

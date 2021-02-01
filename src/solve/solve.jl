@@ -594,7 +594,8 @@ end
 ```
 """
 # TODO: TTTs_alt and CCCs_alt INCLUDE the perfectly credible desired policy
-function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T}, TTTs_alt::Vector{Matrix{T}}, CCCs_alt::Vector{Vector{T}},
+function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T}, TTTs_alt::Vector{Union{Matrix{T}, Vector{Matrix{T}}}},
+                                               CCCs_alt::Vector{Union{Vector{T}, Vector{Vector{T}}}},
                                                is_altpol::Vector{Bool};
                                                gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
                                                gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int}}(undef, 0),
@@ -631,8 +632,6 @@ function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T}, TTTs_alt
             solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
                            TTTs, RRRs, CCCs, TTTs_alt, CCCs_alt, is_altpol;
                            gensys2_regimes = collect(reg_range),
-                           uncertain_temp_altpol = uncertain_temp_altpol,
-                           use_augment_states = use_augment_states,
                            verbose = verbose)
             # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
             #       any temporary policy
@@ -646,17 +645,28 @@ end
 function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
                                     Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                                     TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
-                                    TTTs_alt::Vector{Matrix{S}}, RRRs_alt::Vector{Matrix{S}}, CCCs_alt::Vector{Vector{S}},
+                                    TTTs_alt::Vector{Union{Vector{Matrix{S}}, Matrix{S}}},
+                                    CCCs_alt::Vector{Union{Vector{Vector{S}}, Vector{S}}},
                                     is_altpol::Vector{Bool}; regimes::Vector{Int} = Int[1],
                                     verbose::Symbol = :high) where {S <: Real}
 
     for reg in regimes
-        if haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg)
+        if haskey(get_settings(m), :regime_eqcond_info) && haskey(get_setting(m, :regime_eqcond_info), reg) &&
+            !isempty(get_setting(m, :regime_eqcond_info)[reg].weights)
+
             weights = get_setting(m, :regime_eqcond_info)[reg].weights
-            if !isempty(weights)
-                # Time-varying credibility weights for the regime reg
-                TTT_gensys, RRR_gensys, CCC_gensys =
+
+            # Time-varying credibility weights for the regime reg
+            TTT_gensys, RRR_gensys, CCC_gensys =
                 gensys_uncertain_altpol(m, weights, reg, TTTs_alt, CCCs_alt, is_altpol)
+        else
+            TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
+                       1+1e-6, verbose = verbose)
+
+            # Check for LAPACK exception, existence and uniqueness
+            if eu[1] != 1 || eu[2] != 1
+                throw(GensysError("Error in Gensys, Regime $reg"))
             end
         end
 
@@ -675,7 +685,8 @@ end
 function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
                         Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                         TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
-                        TTTs_alt::Vector{Matrix{S}}, RRRs_alt::Vector{Matrix{S}}, CCCs_alt::Vector{Vector{S}},
+                        TTTs_alt::Vector{Union{Vector{Matrix{S}}, Matrix{S}}},
+                        CCCs_alt::Vector{Union{Vector{Vector{S}}, Vector{S}}},
                         is_altpol::Vector{Bool};
                         gensys2_regimes::Vector{Int} = Vector{Int}(undef, 0),
                         verbose::Symbol = :high) where {S <: Real}
