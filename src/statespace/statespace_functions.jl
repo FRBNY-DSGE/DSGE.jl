@@ -564,8 +564,8 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
 
 end
 
-function perfect_cred_multiperiod_altpolicy_transition_matrices(m::AbstractDSGEModel; n_regimes::Int = get_setting(m, :n_regimes),
-                                                                verbose::Symbol = :high)
+function perfect_cred_multiperiod_altpolicy_transition_matrices(m::AbstractDSGEModel{T}; n_regimes::Int = get_setting(m, :n_regimes),
+                                                                verbose::Symbol = :high) where {T <: Real}
 
     # Set up
     m            <= Setting(:uncertain_altpolicy,   false)
