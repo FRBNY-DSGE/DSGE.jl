@@ -402,7 +402,7 @@ end
     end
 end
 
-@testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering" begin
+@testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering and conditional data" begin
     n_reg_temp = 8
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
@@ -431,9 +431,9 @@ end
     m <= Setting(:gensys2, true)
     # Replace eqcond with temp rule
     m <= Setting(:replace_eqcond, true)
-    # Which rule to replace with inn nwhich periods
+    # Which rule to replace with in which periods
     replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
-    for i in 4:n_reg_temp-1
+    for i in 3:n_reg_temp-1
         replace_eqcond[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
     end
     replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
@@ -449,10 +449,18 @@ end
     df[end, :obs_hours] = NaN
     df[end, :obs_wages] = NaN
     df[end, :obs_consumption] = NaN
-    m <= Setting(:forecast_smoother, :hamilton)
+    df[end, :obs_nominalrate] = NaN
+    m <= Setting(:forecast_smoother, :durbin_koopman)
     histstates, _, _, _ = smooth(m, df, sys; cond_type = :full, draw_states = false)
     kal = DSGE.filter(m, df, sys; cond_type = :full)
+    condobs = sys[3, :ZZ] * histstates[:, end] + sys[3, :DD]
     @test histstates[:, end] ≈ kal[:s_T]
+
+    # Now check the implied observables matches conditional data
+    @test condobs[1] ≈ df[end, :obs_gdp]
+    @test condobs[4] ≈ df[end, :obs_gdpdeflator]
+    @test condobs[5] ≈ df[end, :obs_corepce]
+    @test condobs[8] ≈ df[end, :obs_investment]
 end
 
 nothing
