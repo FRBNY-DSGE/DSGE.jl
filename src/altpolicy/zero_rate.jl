@@ -15,7 +15,11 @@ function zero_rate_replace_eq_entries(m::AbstractDSGEModel,
     Γ0[eq[:eq_mp], :] .= 0.
     Γ1[eq[:eq_mp], :] .= 0.
     Γ0[eq[:eq_mp], endo[:R_t]] = 1.0
-    C[eq[:eq_mp]] = 0.1 / 4. - m[:Rstarn]
+    # TODO: generalize this to change depending on the regime so that the zero rate value can depend on the regime
+    #       and for now, let's do it via settings rather than using regime-switching parameters
+    #       (to avoid adding too many extra dimensions to parameter output)
+    C[eq[:eq_mp]] = (haskey(get_settings(m), :zero_rate_zlb_value) ? get_setting(m, :zero_rate_zlb_value) / 4. :
+                     0.1 / 4.) - m[:Rstarn]
 
     return Γ0, Γ1, C, Ψ, Π
 end

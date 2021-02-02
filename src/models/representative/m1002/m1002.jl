@@ -927,7 +927,6 @@ function model_settings!(m::Model1002)
         m <= Setting(:laborshare_base_period, DSGE.quartertodate("1964-Q1"), "Base year for labor share series to provide an initial condition")
     end
 
-
     # Forecast
     m <= Setting(:use_population_forecast, true,
                  "Whether to use population forecasts as data")
@@ -955,6 +954,9 @@ function model_settings!(m::Model1002)
         m <= Setting(:add_pgap, false)
         m <= Setting(:add_ygap, false)
     end
+
+    # ZLB via zero-rate
+    m <= Setting(:zero_rate_zlb_value, 0.)
 
     # Additional pseudo-observables and integrated series
     m <= Setting(:add_laborshare_measurement, false)
