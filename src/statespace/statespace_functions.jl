@@ -542,7 +542,7 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     # n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
     # system_altpolicies = Vector{AbstractSystem}(undef, n_altpolicies)
 
-    TTTs, RRRs, CCCs = solve_uncertain_multiperiod_altpolicy(m, TTTs_alt, CCCs_alt, is_altpol;
+    TTTs, RRRs, CCCs = solve_uncertain_multiperiod_altpolicy(m, TTTs_alt, RRRs_alt, CCCs_alt, is_altpol;
                                                              gensys_regimes = gensys_regimes, gensys2_regimes = gensys2_regimes,
                                                              regimes = collect(1:n_regimes), verbose = verbose)
     system_main = RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, n_regimes, tvis) ## Change Ts, Rs, Cs to be augmented
@@ -618,7 +618,8 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
 =#
 
     # Correct the measurement equations for anticipated observables via weighted average
-    for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+    regime_eqcond_info = get_setting(m, :regime_eqcond_info)
+    for reg in sort!(collect(keys(regime_eqcond_info)))
         new_wt = regime_eqcond_info[reg].weights
         which_is_sys = [isa(sys, System) for sys in system_altpolicies]
 
