@@ -255,7 +255,7 @@ temp_default = MultiPeriodAltPolicy(:temporary_default, temp_default_regime_eqco
 m <= Setting(:alternative_policies, [DSGE.taylor_rule(), temp_taylor])
 out_taylor_temp_taylor = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                                 regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-@assert false
+# @assert false
 m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_default])
 out_default_temp_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
