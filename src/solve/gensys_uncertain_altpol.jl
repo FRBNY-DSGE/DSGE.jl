@@ -198,7 +198,7 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
     # to infer the initial values of T̅, C̅
     inds = 1:n_states(m)
     T̅, C̅ = (prob_vec[1] == 0.) ? (zeros(size(Γ0_til)), zeros(size(C))) :
-        (prob_vec[1] .* (@view TTTs_alt[1][1][inds, inds]), prob_vec[1] .* (@view CCCs_alt[1][1][inds]))
+        (prob_vec[1] .* (@view TTTs_alt[1][regime][inds, inds]), prob_vec[1] .* (@view CCCs_alt[1][regime][inds]))
     for i in has_pos_prob
         if is_altpol[i]
             T̅ .+= prob_vec[i + 1] * (@view TTTs_alt[i + 1][inds, inds])
