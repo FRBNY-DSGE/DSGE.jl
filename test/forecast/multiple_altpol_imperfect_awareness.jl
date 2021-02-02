@@ -161,7 +161,8 @@ temp_taylor_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
 temp_default_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
 for k in keys(temp_taylor_regime_eqcond_info)
     get_setting(m, :regime_eqcond_info)[k].weights =
-        vcat(get_setting(m, :regime_eqcond_info)[k].weights, 0.) # update the weights vector length
+        [get_setting(m, :regime_eqcond_info)[k].weights[1], get_setting(m, :regime_eqcond_info)[k].weights[2] / 2.,
+         get_setting(m, :regime_eqcond_info)[k].weights[2] / 2.] # update the weights vector length
     temp_taylor_regime_eqcond_info[k] = DSGE.EqcondEntry(taylor_rule())
     temp_default_regime_eqcond_info[k] = DSGE.EqcondEntry(default_policy())
 end
@@ -182,19 +183,6 @@ sys_default = compute_system(m; tvis = true)
 out_default_temp_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
-for k in 1:get_setting(m, :n_regimes)
-    @show k
-    @test sys_2pol[k, :TTT] ≈ sys_taylor[k, :TTT]
-    @test sys_2pol[k, :TTT] ≈ sys_default[k, :TTT]
-    @test sys_2pol[k, :RRR] ≈ sys_taylor[k, :RRR]
-    @test sys_2pol[k, :RRR] ≈ sys_default[k, :RRR]
-    @test sys_2pol[k, :CCC] ≈ sys_taylor[k, :CCC]
-    @test sys_2pol[k, :CCC] ≈ sys_default[k, :CCC]
-    @test sys_2pol[k, :ZZ] ≈ sys_taylor[k, :ZZ]
-    @test sys_2pol[k, :ZZ] ≈ sys_default[k, :ZZ]
-    @test sys_2pol[k, :DD] ≈ sys_taylor[k, :DD]
-    @test sys_2pol[k, :DD] ≈ sys_default[k, :DD]
-end
 for k in keys(out_taylor_temp_taylor)
     @test out_taylor_temp_taylor[k] ≈ out_default_temp_default[k]
     @test out_taylor_temp_taylor[k] ≈ out1[k]

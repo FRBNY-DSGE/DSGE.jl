@@ -208,7 +208,7 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, gensys2_regimes::
 
     # Calculate "uncertain" temporary altpolicy matrices and back out the transition equation
     n_alt = length(prob_vec[1])
-    for (i, reg) in enumerate(gensys2_regimes[1:end - 1])
+    for (i, reg) in enumerate(gensys2_regimes[2:end]) # gensys2_regimes includes 1 extra regime at beginning for boundary condition
         # it is assumed T_impl is a vector of the T_{t + 1}^{(temporary altpolicy)} matrices,
         # hence Tbars will be a vector of T_t matrices
         Tbars[i] = prob_vec[i][1] * (@view T_alt[1][reg + 1][inds, inds]) .+ # use reg + 1 b/c want T_{t + 1}

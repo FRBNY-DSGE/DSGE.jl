@@ -486,7 +486,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                    Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                    TTT_final, RRR_final, CCC_final,
-                                   T_switch = length(gensys2_regimes)-1)
+                                   T_switch = length(gensys2_regimes) - 1)
         Tcal[end] = TTT_final
         Rcal[end] = RRR_final
         Ccal[end] = CCC_final
@@ -506,9 +506,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         # Then, if nzlb = 1, Tcal should have length 2, and you only need the lift-off matrix
         Tcal[1:(1 + nzlb)], Rcal[1:(1 + nzlb)], Ccal[1:(1 + nzlb)] =
             gensys2_uncertain_altpol(weights, Talt, Calt,
-                                 Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
-                                 Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
-
+                                     Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
+                                     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
         if nzlb != ng2
             @warn "This code block should not be reached. Bugs remain in the source code for solve."
             # TODO: delete this block when we're sure it's no longer needed
