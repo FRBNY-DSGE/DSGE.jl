@@ -329,7 +329,7 @@ end
     m <= Setting(:tvis_select_system, vcat(ones(Int, reg_2018Q1), fill(2, get_setting(m, :n_regimes) - reg_2018Q1)))
     m <= Setting(:tvis_information_set, vcat([1:1], [i:reg_2020Q1 for i in 2:reg_2018Q1],
                                              [i:get_setting(m, :n_regimes) for i in (reg_2018Q1 + 1):get_setting(m, :n_regimes)]))
-    m <= Setting(:forecast_smoother, :carter_kohn)
+    m <= Setting(:forecast_smoother, :durbin_koopman)
     system = compute_system(m; tvis = true)
     histstates, _, _, _ = smooth(m, df, system; cond_type = :full)
     obs = zeros(n_observables(m), size(histstates, 2))
