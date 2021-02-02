@@ -191,38 +191,6 @@ m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_flexait_zlb])
 sys_flexait = compute_system(m; tvis = true)
 out_flexait_zlb_temp_flexait_zlb = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                                           regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-for k in 1:get_setting(m, :n_regimes)
-    if !(sys_2pol[k, :TTT] ≈ sys_flexait[k, :TTT])
-        @show k
-    end
-    if !(sys_2pol[k, :TTT] ≈ sys_flexait[k, :RRR])
-        @show k
-    end
-    if !(sys_2pol[k, :ZZ] ≈ sys_flexait[k, :ZZ])
-        @show k
-    end
-    if !(sys_2pol[k, :CCC] ≈ sys_flexait[k, :CCC])
-        @show k
-    end
-    if !(sys_2pol[k, :DD] ≈ sys_flexait[k, :DD])
-        @show k
-    end
-    if !(sys_2pol[k, :TTT] ≈ sys_default[k, :TTT])
-        @show k
-    end
-    if !(sys_2pol[k, :TTT] ≈ sys_default[k, :RRR])
-        @show k
-    end
-    if !(sys_2pol[k, :ZZ] ≈ sys_default[k, :ZZ])
-        @show k
-    end
-    if !(sys_2pol[k, :CCC] ≈ sys_default[k, :CCC])
-        @show k
-    end
-    if !(sys_2pol[k, :DD] ≈ sys_default[k, :DD])
-        @show k
-    end
-end
 
 ## Now add nontrivial temporary policy that is different from implemented policy
 temp_flexible_ait_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
@@ -239,8 +207,15 @@ temp_flexible_ait = MultiPeriodAltPolicy(:temporary_flexible_ait, temp_flexible_
                                          infoset = copy(get_setting(m, :tvis_information_set))) # also test w/ tvis and w/out
 
 m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_flexible_ait])
-out_default_temp_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+out_temp_flexible_ait = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
+                                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+
+if regenerate_reference_forecasts
+    h5open(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output.h5"), "w") do file
+        write(file, "forecastobs", out_temp_flexible_ait[:forecastobs])
+        write(file, "forecastpseudo", out_temp_flexible_ait[:forecastpseudo])
+    end
+end
 
 @testset "Multiple alternative policies, incl. MultiPeriodAltPolicy, with imperfect awareness" begin
 
@@ -248,6 +223,8 @@ out_default_temp_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, 
         @test out_taylor_temp_taylor[k] ≈ out1[k] # with 2 alternative policies and imperfect awareness
         @test out_default_temp_default[k] ≈ out1[k]
         @test out_flexait_zlb_temp_flexait_zlb[k] ≈ out1[k]
+        @test out_temp_flexible_ait[k] ≈
+            h5read(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output.h5"), string(k))
     end
 
 end
