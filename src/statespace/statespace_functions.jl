@@ -493,14 +493,12 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     for i in 1:length(TTTs_alt)
         if i > 1 && is_altpol[i - 1]
             TTTs_alt[i], RRRs_alt[i], CCCs_alt[i] = augment_states(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
-
             transition_equation = Transition(TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
             measurement_equation = measurement(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
-
             type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
             has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
                 hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
-            if has_pseudo
+            if has_pseudo # TODO: need a separate if-else block for when pseudo_measurement acts on a regime-switching version
                 # Solve pseudo-measurement equation
                 pseudo_measurement_equation = pseudo_measurement(m, TTTs_alt[i], RRRs_alt[i], CCCs_alt[i])
                 system_altpolicies[i] = System(transition_equation, measurement_equation, pseudo_measurement_equation)
@@ -550,9 +548,9 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
 
     # Correct the measurement equations for anticipated observables via weighted average
     regime_eqcond_info = get_setting(m, :regime_eqcond_info)
+    which_is_sys = [isa(sys, System) for sys in system_altpolicies]
     for reg in sort!(collect(keys(regime_eqcond_info)))
         new_wt = regime_eqcond_info[reg].weights
-        which_is_sys = [isa(sys, System) for sys in system_altpolicies]
 
         if has_fwd_looking_obs
             for k in get_setting(m, :forward_looking_observables)
@@ -597,7 +595,7 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
         end
     end
 
-return system_main
+    return system_main
 end
 
 function perfect_cred_multiperiod_altpolicy_transition_matrices(m::AbstractDSGEModel{T}; n_regimes::Int = get_setting(m, :n_regimes),

@@ -346,8 +346,8 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
                 # Time-varying credibility weights for the regime reg
                 altpols = get_setting(m, :alternative_policies)
                 TTT_gensys, RRR_gensys, CCC_gensys =
-                gensys_uncertain_altpol(m, weights, altpols; TTT = TTT_gensys,
-                                        regime_switching = true, regimes = Int[reg])
+                    gensys_uncertain_altpol(m, weights, altpols; TTT = TTT_gensys,
+                                            regime_switching = true, regimes = Int[reg])
             end
         end
 
