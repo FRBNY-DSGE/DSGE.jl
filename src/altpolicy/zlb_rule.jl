@@ -1,11 +1,11 @@
-function zero_rate()
-    AltPolicy(:zero_rate, zero_rate_eqcond, zero_rate_solve,
-              forecast_init = zero_rate_forecast_init,
+function zlb_rule()
+    AltPolicy(:zlb_rule, zlb_rule_eqcond, zlb_rule_solve,
+              forecast_init = zlb_rule_forecast_init,
               color = RGB(0., 0., 0.5430)) # dark blue
 end
 
 
-function zero_rate_replace_eq_entries(m::AbstractDSGEModel,
+function zlb_rule_replace_eq_entries(m::AbstractDSGEModel,
                                       Γ0::Matrix{Float64}, Γ1::Matrix{Float64},
                                       C::Vector{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64}, reg::Int)
 
@@ -20,12 +20,12 @@ function zero_rate_replace_eq_entries(m::AbstractDSGEModel,
     Γ0[eq[:eq_mp], endo[:R_t]] = 1.0
     # NOTE: For now, let's do it via settings rather than using regime-switching parameters
     #       (to avoid adding too many extra dimensions to parameter output)
-    C[eq[:eq_mp]] = (haskey(get_settings(m), :zero_rate_zlb_values) ? get_setting(m, :zero_rate_zlb_values)[reg] / 4. :
-                     (haskey(get_settings(m), :zero_rate_zlb_value) ? get_setting(m, :zero_rate_zlb_value) / 4. :
+    C[eq[:eq_mp]] = (haskey(get_settings(m), :zlb_rule_values) ? get_setting(m, :zlb_rule_values)[reg] / 4. :
+                     (haskey(get_settings(m), :zlb_rule_value) ? get_setting(m, :zlb_rule_value) / 4. :
                       0.1 / 4.)) - m[:Rstarn]
 
-    if haskey(get_settings(m), :zero_rate_remove_mon_anticipated_shocks) &&
-        get_setting(m, :zero_rate_remove_mon_anticipated_shocks)
+    if haskey(get_settings(m), :zlb_rule_remove_mon_anticipated_shocks) &&
+        get_setting(m, :zlb_rule_remove_mon_anticipated_shocks)
         Γ1[eq[:eq_rm], endo[:rm_tl1]]   = 0.
         Γ0[eq[:eq_rml1], endo[:rm_tl1]] = 1.
         Ψ[eq[:eq_rml1], exo[:rm_shl1]]  = 0.
@@ -39,39 +39,40 @@ function zero_rate_replace_eq_entries(m::AbstractDSGEModel,
         end
     end
 
+
     return Γ0, Γ1, C, Ψ, Π
 end
 
 """
 ```
-zero_rate_eqcond(m::AbstractDSGEModel)
+zlb_rule_eqcond(m::AbstractDSGEModel)
 ```
 
 Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
-function zero_rate_eqcond(m::AbstractDSGEModel, reg::Int = 1)
+function zlb_rule_eqcond(m::AbstractDSGEModel, reg::Int = 1)
 
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π = eqcond(m, reg)
-    Γ0, Γ1, C, Ψ, Π = zero_rate_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π, reg)
+    Γ0, Γ1, C, Ψ, Π = zlb_rule_replace_eq_entries(m, Γ0, Γ1, C, Ψ, Π, reg)
 
     return Γ0, Γ1, C, Ψ, Π
 end
 
 """
 ```
-zero_rate_solve(m::AbstractDSGEModel)
+zlb_rule_solve(m::AbstractDSGEModel)
 ```
 
 Solves for the transition equation of `m` under a price level
 targeting rule (implemented by adding a price-gap state)
 """
-function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Vector{Int} = Int[1])
+function zlb_rule_solve(m::AbstractDSGEModel; regime_switching::Bool = false, regimes::Vector{Int} = Int[1])
 
     # Get equilibrium condition matrices
     if length(regimes) == 1
-        Γ0, Γ1, C, Ψ, Π  = zero_rate_eqcond(m, regimes[1])
+        Γ0, Γ1, C, Ψ, Π  = zlb_rule_eqcond(m, regimes[1])
 
         TTT_gensys, CCC_gensys, RRR_gensys, eu = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = :low)
 
@@ -95,7 +96,7 @@ function zero_rate_solve(m::AbstractDSGEModel; regime_switching::Bool = false, r
         Ψs = Vector{Matrix{Float64}}(undef, length(regimes))
         Πs = Vector{Matrix{Float64}}(undef, length(regimes))
         for reg in regimes
-            Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg]  = zero_rate_eqcond(m, reg)
+            Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg]  = zlb_rule_eqcond(m, reg)
         end
 
         n_regimes = length(regimes)
@@ -126,12 +127,12 @@ end
 
 """
 ```
-init_zero_rate_forecast(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T})
+init_zlb_rule_forecast(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T})
 ```
 
-Adjust shocks matrix and final state vector for forecasting under the ZERO_RATE rule
+Adjust shocks matrix and final state vector for forecasting under the ZLB_RULE rule
 """
-function zero_rate_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T};
+function zlb_rule_forecast_init(m::AbstractDSGEModel, shocks::Matrix{T}, final_state::Vector{T};
                                  cond_type::Symbol = :none) where {T<:AbstractFloat}
     return shocks, final_state
 end
