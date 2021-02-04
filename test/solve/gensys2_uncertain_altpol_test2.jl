@@ -193,7 +193,7 @@ for j in 1:length(prob_vecs)
     gensys2_regimes = (tempZLB_regimes[j][1] - 1):(tempZLB_regimes[j][end] + 1)
     Tcal, Rcal, Ccal = DSGE.gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                          Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                         TTT_gensys_final, RRR_gensys_final, CCC_gensys_final)
+                                         TTT_gensys_final, RRR_gensys_final, CCC_gensys_final, Hbar_vec[j] + 1)
     Tcal[end] = TTT_gensys_final
     Rcal[end] = RRR_gensys_final
     Ccal[end] = CCC_gensys_final

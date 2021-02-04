@@ -130,7 +130,7 @@ end
                                   zeros(size(system[:ZZ], 1), DSGE.n_shocks_exogenous(m)),
                                   4; get_population_moments = false, use_intercept = true)
 
-    expmat = load("../reference/exp_var_approx_state_space.jld2")
+    expmat = load(joinpath(dirname(@__FILE__), "../reference/exp_var_approx_state_space.jld2"))
     @test @test_matrix_approx_eq yyyyd expmat["yyyyd"]
     @test @test_matrix_approx_eq xxyyd expmat["xxyyd"][2:end, :]
     @test @test_matrix_approx_eq xxxxd expmat["xxxxd"][2:end, 2:end]
@@ -216,14 +216,14 @@ end
     β, Σ = compute_system(dsgevar, data)
 
     if writing_output
-        JLD2.jldopen("../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2",
+        JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2"),
             true, true, true, IOStream) do file
             write(file, "exp_data_beta", β)
             write(file, "exp_data_sigma", Σ)
         end
     end
 
-    file = jldopen("../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2", "r")
+    file = jldopen(joinpath(dirname(@__FILE__), "../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2"), "r")
     saved_β = read(file, "exp_data_beta")
     saved_Σ = read(file, "exp_data_sigma")
     close(file)
@@ -233,7 +233,7 @@ end
 end
 
 @testset "VECM approximation of state space" begin
-    matdata = load("../reference/vecm_approx_state_space.jld2")
+    matdata = load(joinpath(dirname(@__FILE__), "../reference/vecm_approx_state_space.jld2"))
     nobs = Int(matdata["nvar"])
     p = Int(matdata["nlags"])
     coint = Int(matdata["coint"])
@@ -878,7 +878,7 @@ end
     regime_eqcond_info[8] = DSGE.EqcondEntry(DSGE.flexible_ait(), [imperfect_cred_new, imperfect_cred_old])
     m <= Setting(:regime_dates, reg_dates)
     m <= Setting(:regime_eqcond_info, regime_eqcond_info)
-    setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
+    setup_regime_switching_inds!(m; cond_type = :full)
     m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
 
     sys_true = compute_system(m; tvis = true)
@@ -888,7 +888,7 @@ end
 
     m <= Setting(:date_forecast_start, Date(2020, 12, 31))
     m <= Setting(:date_conditional_end, Date(2020, 12, 31))
-    setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
+    setup_regime_switching_inds!(m; cond_type = :full)
     sys = compute_system(m; tvis = true)
     for i in 1:get_setting(m, :n_regimes)
         @test sys_true[i, :TTT] ≈ sys[i, :TTT]
@@ -944,7 +944,7 @@ end
     regime_eqcond_info_cp = deepcopy(regime_eqcond_info)
     m <= Setting(:regime_dates, reg_dates)
     m <= Setting(:regime_eqcond_info, regime_eqcond_info)
-    setup_regime_switching_inds!(m; cond_type = :full, temp_altpolicy_in_cond_regimes = true)
+    setup_regime_switching_inds!(m; cond_type = :full)
 # GET RID OF THIS I THINK    m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
 
     m <= Setting(:regime_switching, false)

@@ -98,7 +98,6 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         println("n_regimes = $(get_setting(m, :n_regimes))")
         println("reg_forecast_start = $(get_setting(m, :reg_forecast_start))")
         println("reg_post_conditional_end = $(get_setting(m, :reg_post_conditional_end))")
-        println("n_rule_periods = $(get_setting(m, :n_rule_periods))")
         println("time-varying information set: ", haskey(get_settings(m), :tvis_information_set) ?
                 get_setting(m, :tvis_information_set) : false)
 

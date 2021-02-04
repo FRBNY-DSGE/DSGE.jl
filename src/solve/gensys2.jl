@@ -2,7 +2,7 @@
 ```
 gensys2(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, C::Vector{Float64},
         Ψ::Matrix{Float64}, Π::Matrix{Float64}, TTT::Matrix{Float64}, RRR::Matrix{Float64},
-        CCC::Vector{Float64})
+        CCC::Vector{Float64}, T_switch::Int)
 ```
 
 calculates the state space transition matrices when a temporary alternative policy applies.
@@ -11,7 +11,7 @@ a second-order perturbation.
 """
 function gensys2(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, C::Vector{Float64},
                  Ψ::Matrix{Float64}, Π::Matrix{Float64}, TTT::Matrix{Float64}, RRR::Matrix{Float64},
-                 CCC::Vector{Float64}; T_switch::Int = get_setting(m, :n_rule_periods) + 1)
+                 CCC::Vector{Float64}, T_switch::Int)
 
     exp_eq_ind = sum(Π, dims = 2)
     Γ0_til = zeros(size(Γ0))
@@ -58,7 +58,7 @@ end
 function gensys2(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s::Vector{Matrix{Float64}},
                  Cs::Vector{Vector{Float64}}, Ψs::Vector{Matrix{Float64}}, Πs::Vector{Matrix{Float64}},
                  TTT::Matrix{Float64}, RRR::Matrix{Float64},
-                 CCC::Vector{Float64}; T_switch::Int = get_setting(m, :n_rule_periods) + 1)
+                 CCC::Vector{Float64}, T_switch::Int)
 
     Γ0_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
     Γ1_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
