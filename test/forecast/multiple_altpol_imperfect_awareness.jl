@@ -110,10 +110,10 @@ for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_re
                           DSGE.quarter_range(reg_dates[gensys2_first_regime],
                                              DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
     reg_dates[regind] = date
-    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), [0.5, .5])
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), [0.5, 0.5])
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
-regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.5, .5])
+regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.5, 0.5])
 nreg0 = length(reg_dates)
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
@@ -124,7 +124,7 @@ m <= Setting(:temporary_altpol_length, n_zlb_reg)
 # Now add additional regimes of flexible AIT to allow time-varying credibility
 for i in nreg0:(nreg0 + 15)
     reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
-    regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.5, .5])
+    regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.5, 0.5])
 end
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
@@ -139,7 +139,7 @@ m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime -
 # Run forecast with 2 policies as reference output
 output_vars = [:forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
-sys_2pol = compute_system(m; tvis = true)
+# sys_2pol = compute_system(m; tvis = true)
 out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
@@ -164,10 +164,11 @@ temp_default = MultiPeriodAltPolicy(:temporary_default, temp_default_regime_eqco
 
 delete!(DSGE.get_settings(m), :alternative_policies) # delete to update typing
 m <= Setting(:alternative_policies, [DSGE.taylor_rule(), temp_taylor])
+# sys_taylor = compute_system(m; tvis = true)
 out_taylor_temp_taylor = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                                 regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_default])
-sys_default = compute_system(m; tvis = true)
+# sys_default = compute_system(m; tvis = true)
 out_default_temp_default = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                                   regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
@@ -188,7 +189,7 @@ temp_flexait_zlb = MultiPeriodAltPolicy(:temporary_flexait_zlb, temp_flexait_zlb
                                         temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
                                         infoset = copy(get_setting(m, :tvis_information_set)))
 m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_flexait_zlb])
-sys_flexait = compute_system(m; tvis = true)
+# sys_flexait = compute_system(m; tvis = true)
 out_flexait_zlb_temp_flexait_zlb = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                                                           regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
@@ -216,6 +217,7 @@ if regenerate_reference_forecasts
         write(file, "forecastpseudo", out_temp_flexible_ait[:forecastpseudo])
     end
 end
+
 
 @testset "Multiple alternative policies, incl. MultiPeriodAltPolicy, with imperfect awareness" begin
 

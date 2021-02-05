@@ -177,14 +177,16 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
     end
 end
 
+# systems should be a vector of perfectly credible alternative policies, where
+# the first element is the implemented one, and the others are alternative policies
+# which agents believe may occur.
 function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{S}, regime::Int,
-                                 TTTs_alt::Vector{Union{Vector{Matrix{S}}, Matrix{S}}},
-                                 CCCs_alt::Vector{Union{Vector{Vector{S}}, Vector{S}}},
+                                 systems::Vector{Union{System, RegimeSwitchingSystem}},
                                  is_altpol::Vector{Bool}) where {S <: Real}
 
     @assert sum(prob_vec) == 1. "The vector of probabilities must sum to 1"
 
-    @assert length(TTTs_alt) == length(prob_vec)
+    @assert length(systems) == length(prob_vec)
 
     has_pos_prob = findall(x -> x > 0., (@view prob_vec[2:end])) # Note that has_pos_prob has 1 less length than prob_vec
 
@@ -194,18 +196,18 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
 
     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
 
-    # Use TTTs_alt[1][1], CCCs_alt[1][1] b/c regime 1 of perfect cred implemented policy
+    # Use systems[1] (b/c first element is perfect cred implemented policy)
     # to infer the initial values of T̅, C̅
     inds = 1:n_states(m)
     T̅, C̅ = (prob_vec[1] == 0.) ? (zeros(size(Γ0_til)), zeros(size(C))) :
-        (prob_vec[1] .* (@view TTTs_alt[1][regime][inds, inds]), prob_vec[1] .* (@view CCCs_alt[1][regime][inds]))
+        (prob_vec[1] .* (@view systems[1][regime, :TTT][inds, inds]), prob_vec[1] .* (@view systems[1][regime, :CCC][inds]))
     for i in has_pos_prob
         if is_altpol[i]
-            T̅ .+= prob_vec[i + 1] * (@view TTTs_alt[i + 1][inds, inds])
-            C̅ .+= prob_vec[i + 1] * (@view CCCs_alt[i + 1][inds])
+            T̅ .+= prob_vec[i + 1] * (@view systems[i + 1][:TTT][inds, inds])
+            C̅ .+= prob_vec[i + 1] * (@view systems[i + 1][:CCC][inds])
         else
-            T̅ .+= prob_vec[i + 1] * (@view TTTs_alt[i + 1][regime][inds, inds])
-            C̅ .+= prob_vec[i + 1] * (@view CCCs_alt[i + 1][regime][inds])
+            T̅ .+= prob_vec[i + 1] * (@view systems[i + 1][regime, :TTT][inds, inds])
+            C̅ .+= prob_vec[i + 1] * (@view systems[i + 1][regime, :CCC][inds])
         end
     end
 

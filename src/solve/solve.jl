@@ -416,68 +416,21 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         for (i, reg) in enumerate(gensys2_regimes[2]:gensys2_regimes[end])
             weights[i] = get_setting(m, :regime_eqcond_info)[reg].weights
         end
-
         if length(altpols) == 1
             Talt, _, Calt = altpols[1].solve(m)
             Talt = Talt[1:n_endo,1:n_endo]
             Calt = Calt[1:n_endo]
         else
             # TODO: remove the multi-period alt policy stuff; it'll be handled in its own separate way by compute_system.
-            altpol_types = isa.(altpols, AltPolicy)
+            @assert isa.(altpols, AltPolicy) "All policies in `get_setting(m, :alternative_policies)` should have type AltPolicy."
 
-            if all(altpol_types) # if all policies are just AltPolicy, then
-                Talt = Vector{Matrix{Float64}}(undef, length(altpols)) # can call a faster version
-                Calt = Vector{Vector{Float64}}(undef, length(altpols))
+            Talt = Vector{Matrix{Float64}}(undef, length(altpols)) # can call a faster version
+            Calt = Vector{Vector{Float64}}(undef, length(altpols))
 
-                for i in 1:length(altpols)
-                    Talt[i], _, Calt[i] = altpols[i].solve(m)
-                    Talt[i] = Talt[i][1:n_endo,1:n_endo]
-                    Calt[i] = Calt[i][1:n_endo]
-                end
-            else # Then some policies are MultiPeriodAltPolicy
-                Talt = Vector{Union{Matrix{Float64}, Vector{Matrix{Float64}}}}(undef, length(altpols))
-                Calt = Vector{Union{Vector{Float64}, Vector{Vector{Float64}}}}(undef, length(altpols))
-
-                all_regs = collect(1:get_setting(m, :n_regimes)) # avoid allocating repeatedly by allocating here
-                orig_regime_eqcond_info = get_setting(m, :regime_eqcond_info) # will need to update this setting to copy here
-                orig_tvis_infoset = haskey(get_settings(m), :tvis_information_set) ? # same as with regime_eqcond_info
-                    get_setting(m, :tvis_information_set) : nothing
-                for i in 1:length(altpols)
-                    if altpol_types[i] # Then altpols[i] is an AltPolicy
-                        Talt[i], _, Calt[i] = altpols[i].solve(m)
-                        Talt[i] = Talt[i][1:n_endo,1:n_endo]
-                        Calt[i] = Calt[i][1:n_endo]
-                    else
-                        m <= Setting(:regime_eqcond_info, altpols[i].regime_eqcond_info)
-                        if !isnothing(altpols[i].infoset)
-                            m <= Setting(:tvis_information_set, altpols[i].infoset)
-                        end
-                        if !isnothing(altpols[i].temporary_altpolicy_names)
-                            m <= Setting(:temporary_altpolicy_names, altpols[i].temporary_altpolicy_names)
-                        end
-                        m <= Setting(:temporary_altpolicy_length, altpols[i].temporary_altpolicy_length)
-                        m <= Setting(:gensys2, altpols[i].gensys2)
-
-                        altpol_gensys_regimes, altpol_gensys2_regimes = compute_gensys_gensys2_regimes(m)
-
-                        # NOTE: uncertain_altpolicy is still true! so the regime_eqcond_info weights
-                        # should be set to all ones if it is perfectly credible
-                        m <= Setting(:uncertain_temp_altpol, false) # need to set to false or a stack overflow will trigger
-                        Talt[i], _, Calt[i] = altpols[i].solve(m; regime_switching = true,
-                                                               gensys_regimes = altpol_gensys_regimes,
-                                                               gensys2_regimes = altpol_gensys2_regimes,
-                                                               regimes = all_regs,
-                                                               use_augment_states = false) # don't augment states b/c not needed
-                        m <= Setting(:uncertain_temp_altpol, true) # set back to true
-                    end
-                end
-
-                # Return original settings
-                m <= Setting(:regime_eqcond_info, orig_regime_eqcond_info)
-                m <= Setting(:gensys2, true) # gensys2 might get turned off in the loop above
-                if !isnothing(orig_tvis_infoset)
-                    m <= Setting(:tvis_information_set, orig_tvis_infoset)
-                end
+            for i in 1:length(altpols)
+                Talt[i], _, Calt[i] = altpols[i].solve(m)
+                Talt[i] = Talt[i][1:n_endo,1:n_endo]
+                Calt[i] = Calt[i][1:n_endo]
             end
         end
 
@@ -486,7 +439,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         Tcal, Rcal, Ccal = gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                    Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
                                    TTT_final, RRR_final, CCC_final,
-                                   T_switch = length(gensys2_regimes) - 1)
+                                   length(gensys2_regimes) - 1)
         Tcal[end] = TTT_final
         Rcal[end] = RRR_final
         Ccal[end] = CCC_final
@@ -508,6 +461,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             gensys2_uncertain_altpol(weights, Talt, Calt,
                                      Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
                                      Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+
         if nzlb != ng2
             @warn "This code block should not be reached. Bugs remain in the source code for solve."
             # TODO: delete this block when we're sure it's no longer needed
@@ -557,8 +511,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     else
         Tcal, Rcal, Ccal = gensys2(m, Γ0s[gensys2_regimes], Γ1s[gensys2_regimes],
                                    Cs[gensys2_regimes], Ψs[gensys2_regimes], Πs[gensys2_regimes],
-                                   TTT_final, RRR_final, CCC_final;
-                                   T_switch = length(gensys2_regimes)-1)
+                                   TTT_final, RRR_final, CCC_final,
+                                   length(gensys2_regimes) - 1)
 
         if uncertain_altpolicy
             Tcal[end] = TTT_final_weighted
@@ -590,12 +544,21 @@ end
 
 """
 ```
+solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T},
+                                      system_perfect_cred_totpolicies::Vector{Union{System, RegimeSwitchingSystem}},
+                                      is_altpol::Vector{Bool};
+                                      gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
+                                      gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int}}(undef, 0),
+                                      regimes::Vector{Int} = Int[1], use_augment_states::Bool = true,
+                                      verbose::Symbol = :high) where {T <: Real}
 ```
+
+computes the regime-switching state space transition matrices when agents have imperfect awareness
+about the policy being implemented and some of these policies are temporary policies
+(and thus spcified by `MultiPeriodAltPolicy`).
 """
-# TODO: TTTs_alt and CCCs_alt INCLUDE the perfectly credible desired policy
-function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T}, TTTs_alt::Vector{Union{Matrix{T}, Vector{Matrix{T}}}},
-                                               RRRs_alt::Vector{Union{Matrix{T}, Vector{Matrix{T}}}},
-                                               CCCs_alt::Vector{Union{Vector{T}, Vector{Vector{T}}}},
+function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T},
+                                               system_perfect_cred_totpolicies::Vector{Union{System, RegimeSwitchingSystem}},
                                                is_altpol::Vector{Bool};
                                                gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
                                                gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int}}(undef, 0),
@@ -621,16 +584,18 @@ function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T}, TTTs_alt
 
     for reg_range in gensys_regimes
         solve_non_gensys2_regimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs,
-                               TTTs_alt, CCCs_alt, is_altpol;
-                               regimes = collect(reg_range),
-                               verbose = verbose)
+                                   system_perfect_cred_totpolicies, is_altpol;
+                                   regimes = collect(reg_range),
+                                   verbose = verbose)
     end
 
     for reg_range in gensys2_regimes
         solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
-                   TTTs, RRRs, CCCs, TTTs_alt, RRRs_alt, CCCs_alt, is_altpol;
-                   gensys2_regimes = collect(reg_range),
-                   verbose = verbose)
+                       TTTs, RRRs, CCCs, system_perfect_cred_totpolicies, is_altpol;
+                       gensys2_regimes = collect(reg_range),
+                       verbose = verbose)
+        # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
+        #       any temporary policy
     end
 
     return TTTs, RRRs, CCCs
@@ -640,8 +605,7 @@ end
 function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
                                     Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                                     TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
-                                    TTTs_alt::Vector{Union{Vector{Matrix{S}}, Matrix{S}}},
-                                    CCCs_alt::Vector{Union{Vector{Vector{S}}, Vector{S}}},
+                                    system_perfect_cred_totpolicies::Vector{Union{System, RegimeSwitchingSystem}},
                                     is_altpol::Vector{Bool}; regimes::Vector{Int} = Int[1],
                                     verbose::Symbol = :high) where {S <: Real}
 
@@ -653,7 +617,8 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
 
             # Time-varying credibility weights for the regime reg
             TTT_gensys, RRR_gensys, CCC_gensys =
-                gensys_uncertain_altpol(m, weights, reg, TTTs_alt, CCCs_alt, is_altpol)
+                gensys_uncertain_altpol(m, weights, reg, system_perfect_cred_totpolicies, is_altpol)
+                # gensys_uncertain_altpol(m, weights, reg, TTTs_alt, CCCs_alt, is_altpol)
         else
             TTT_gensys, CCC_gensys, RRR_gensys, eu =
                 gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
@@ -680,24 +645,22 @@ end
 function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vector{Matrix{S}},
                         Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                         TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
-                        TTTs_alt::Vector{Union{Vector{Matrix{S}}, Matrix{S}}},
-                        RRRs_alt::Vector{Union{Vector{Matrix{S}}, Matrix{S}}},
-                        CCCs_alt::Vector{Union{Vector{Vector{S}}, Vector{S}}},
+                        system_perfect_cred_totpolicies::Vector{Union{System, RegimeSwitchingSystem}},
                         is_altpol::Vector{Bool};
                         gensys2_regimes::Vector{Int} = Vector{Int}(undef, 0),
                         verbose::Symbol = :high) where {S <: Real}
 
     # Solve for the final regime of the alternative rule
-    altpolicy_solve = alternative_policy(m).solve
-    TTT_final = TTTs_alt[1][gensys2_regimes[end]]
-    RRR_final = RRRs_alt[1][gensys2_regimes[end]]
-    CCC_final = CCCs_alt[1][gensys2_regimes[end]]
+    TTT_final = system_perfect_cred_totpolicies[1][gensys2_regimes[end], :TTT] # policy 1 is the perfectly credible version of the implemented policy
+    RRR_final = system_perfect_cred_totpolicies[1][gensys2_regimes[end], :RRR]
+    CCC_final = system_perfect_cred_totpolicies[1][gensys2_regimes[end], :CCC]
 
     # if we're using an uncertain alternative policy, we have to compute the
     # weighted final transition matrix
     weights = get_setting(m, :regime_eqcond_info)[last(gensys2_regimes)].weights
     TTT_final_weighted, RRR_final_weighted, CCC_final_weighted =
-        gensys_uncertain_altpol(m, weights, last(gensys2_regimes), TTTs_alt, CCCs_alt, is_altpol)
+        gensys_uncertain_altpol(m, weights, last(gensys2_regimes), system_perfect_cred_totpolicies, is_altpol)
+    # gensys_uncertain_altpol(m, weights, last(gensys2_regimes), TTTs_alt, CCCs_alt, is_altpol)
 
     TTT_final_weighted = real(TTT_final_weighted) # need to define this as different
     RRR_final_weighted = real(RRR_final_weighted) # from TTT_final, which is intended to
@@ -719,8 +682,10 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         weights[i] = get_setting(m, :regime_eqcond_info)[reg].weights
     end
     Tcal, Rcal, Ccal =
-        gensys2_uncertain_altpol(weights, gensys2_regimes, 1:n_states(m), TTTs_alt, RRRs_alt, CCCs_alt, is_altpol,
+        gensys2_uncertain_altpol(weights, gensys2_regimes, 1:n_states(m), system_perfect_cred_totpolicies, is_altpol,
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
+        # gensys2_uncertain_altpol(weights, gensys2_regimes, 1:n_states(m), TTTs_alt, RRRs_alt, CCCs_alt, is_altpol,
+    #                          Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
     ng2  = length(Tcal) - 1 # number of gensys2 regimes
     nzlb = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : ng2
