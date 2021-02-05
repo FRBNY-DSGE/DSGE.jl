@@ -278,7 +278,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
                              plotroot::String = "",
                              hist_start_date::Date = Date("0001-01-01", "yyyy-mm-dd"),
                              trend_nostates::DataFrame = DataFrame(),
-                             legend = :bottomleft, df_enddate = Date(2100,12,31))
+                             legend = :bottomright, df_enddate = Date(2100,12,31))
 
     # Output directory
     if isempty(plotroot)

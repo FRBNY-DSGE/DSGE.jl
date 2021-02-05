@@ -402,7 +402,7 @@ end
     end
 end
 
-#@testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering and conditional data" begin
+@testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering and conditional data" begin
     n_reg_temp = 8
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
@@ -451,7 +451,7 @@ end
     df[end, :obs_consumption] = NaN
     df[end, :obs_nominalrate] = NaN
     m <= Setting(:forecast_smoother, :koopman)
-    histstates, _, _, _ = smooth(m, df, sys; cond_type = :full, draw_states = false)
+    histstates, histshocks, _, _ = smooth(m, df, sys; cond_type = :full, draw_states = false)
     kal = DSGE.filter(m, df, sys; cond_type = :full)
     condobs = sys[3, :ZZ] * histstates[:, end] + sys[3, :DD]
     @test histstates[:, end] ≈ kal[:s_T]
@@ -461,6 +461,6 @@ end
     @test condobs[4] ≈ df[end, :obs_gdpdeflator]
     @test condobs[5] ≈ df[end, :obs_corepce]
     @test condobs[8] ≈ df[end, :obs_investment]
-#end
+end
 
 nothing

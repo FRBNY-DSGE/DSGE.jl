@@ -203,7 +203,7 @@ end
 
 function forecast(system::System{S}, z0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
-    ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
+    ind_r_sh::Int = -1, zlb_value::S = 0.1/4) where {S<:AbstractFloat}
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
@@ -258,7 +258,7 @@ end
 
 function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Vector{S},
     shocks::Matrix{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false, ind_r::Int = -1,
-    ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
+    ind_r_sh::Int = -1, zlb_value::S = 0.1/4) where {S<:AbstractFloat}
 
     # Determine how many regimes occur in the forecast, depending
     # on whether we need to subtract conditional forecast regimes or not
@@ -465,7 +465,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # Ensure we don't accidentally tell the code to forecast beyond the forecast horizon
             altpol_reg_range = start_altpol_reg:n_total_regimes
             if length(altpol_reg_range) > n_altpol_reg_qtrrange
-                if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol) # Ensure we do not accidentally
+                if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :forecast_zlb_value) + tol) # Ensure we do not accidentally
                     obs[get_observables(m)[:obs_nominalrate], 1] = tol - 2. # assume success at enforcing ZLB (should be negative)
                 end
                 break
