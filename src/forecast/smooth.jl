@@ -181,7 +181,18 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
     end
 
     # Call smoother
-    smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
+    sym_fcast_smoother = forecast_smoother(m)
+    smoother = if sym_fcast_smoother == :durbin_koopman
+        durbin_koopman_smoother
+    elseif sym_fcast_smoother == :carter_kohn
+        carter_kohn_smoother
+    elseif sym_fcast_smoother == :koopman
+        koopman_smoother
+    elseif sym_fcast_smoother == :hamilton
+        hamilton_smoother
+    else
+        error("Smoother $(sym_fcast_smoother) not supported.")
+    end
 
     if draw_states && smoother in [hamilton_smoother, koopman_smoother]
         @warn "$smoother called with draw_states = true"
