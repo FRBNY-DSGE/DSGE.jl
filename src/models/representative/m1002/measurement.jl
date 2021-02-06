@@ -42,7 +42,7 @@ function measurement(m::Model1002{T},
 
     for para in m.parameters
         if !isempty(para.regimes)
-            if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
+            if haskey(get_settings(m), :model2para_regime) && haskey(get_setting(m, :model2para_regime), para.key)
                 ModelConstructors.toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
             else
                 ModelConstructors.toggle_regime!(para, reg)
@@ -52,8 +52,8 @@ function measurement(m::Model1002{T},
 
     # Set up for calculating k-periods ahead expectations and expected sums
     permanent_t = length(information_set[findfirst(information_set .== reg):end]) - 1 + reg
-    flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_policy_change) ?
-        get_setting(m, :flexible_ait_policy_change) : false
+    flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_policy_change) &&
+        get_setting(m, :flexible_ait_policy_change)
 
     # With flexible_ait_policy_change: there is a regime-break in 2020:Q3, so before 2020:Q2,
     # the final regime should be considered to be the regime corresponding to 2020:Q2, namely for regimes
@@ -222,7 +222,7 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]         = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]         = m[:σ_gdi]^2
 
-    if subspec(m) in ["ss59", "ss60", "ss61"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
         QQ[exo[:ziid_sh], exo[:ziid_sh]]   = m[:σ_ziid]^2
         QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
         QQ[exo[:φ_sh], exo[:φ_sh]]         = m[:σ_φ]^2

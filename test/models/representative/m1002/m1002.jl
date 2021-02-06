@@ -1,5 +1,6 @@
+using DSGE, ModelConstructors, HDF5, Test, Dates
 path = dirname(@__FILE__)
-
+#=
 ### Model
 model = Model1002("ss10")
 
@@ -110,4 +111,42 @@ end
 
     @test @test_matrix_approx_eq pseudo_meas[:ZZ_pseudo] Z_pseudo_exp[1:21, :] # Test files had been generated w/extra pseudo-obs
     @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp[1:21, :] # Test files had been generated w/extra pseudo-obs
+end
+=#
+# Check ss62 works
+m = Model1002("ss62")
+for (i, d) in enumerate([date_presample_start(m), Date(2020, 3, 31), Date(2020, 6, 30), Date(2020, 9, 30),
+                         Date(2020, 12, 31), Date(2021, 3, 31)])
+    @test get_setting(m, :regime_dates)[i] == d
+end
+sys = compute_system(m)
+exo = m.exogenous_shocks
+inds1 = 1:24 # standard shock indices
+inds2 = vcat(1:14, 17:24) # standard shock indices excluding measurement error
+inds3 = 25:30 # covid shock indices
+for i in 2:get_setting(m, :n_regimes)
+    @test sys[1, :TTT] ≈ sys[i, :TTT]
+    # @test sys[1, :RRR] ≈ sys[i, :RRR]
+    @test sys[1, :CCC] ≈ sys[i, :CCC]
+    @test sys[1, :ZZ]  ≈ sys[i, :ZZ]
+    @test sys[1, :DD]  ≈ sys[i, :DD]
+
+    if i >= 5
+        @test sys[1, :QQ][inds1, inds1] ≈ sys[i, :QQ][inds1, inds1]
+    end
+    if i >= 4
+        @test sys[1, :QQ][inds2, inds2] ≈ sys[i, :QQ][inds2, inds2]
+    end
+    if 2 <= i <= 5
+        @test sys[i, :QQ][exo[:biidc_sh], exo[:biidc_sh]] == 16
+        @test sys[i, :QQ][exo[:ziid_sh], exo[:ziid_sh]] == 25.
+        @test sys[i, :QQ][exo[:φ_sh], exo[:φ_sh]] == 160000.
+    end
+    @test sys[i, :QQ][exo[:ziid_shl1], exo[:ziid_shl1]] == 0.
+    @test sys[i, :QQ][exo[:φ_shl1], exo[:φ_shl1]] == 0.
+    if 2 <= i <= 3 || i == 6
+        @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 0.
+    else
+        @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 16.
+    end
 end
