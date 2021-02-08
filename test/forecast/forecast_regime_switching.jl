@@ -8,11 +8,12 @@ else
 end
 
 Random.seed!(1793)
-
+#=
 @testset "Test regime switching" begin
     n_reg_temp = 14
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
+    m <= Setting(:forecast_smoother, :koopman)
     m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
     m <= Setting(:regime_switching, true)
@@ -82,6 +83,7 @@ end
 @testset "Test regime switching IRFs match Forward Guidance method IRFs" begin
     horizon = 60
     m = Model1002("ss10")
+    m <= Setting(:forecast_smoother, :koopman)
     m <= Setting(:date_forecast_start, Date(2020, 6, 30))
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
     m <= Setting(:replace_eqcond, false)
@@ -161,6 +163,7 @@ end
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap =>
                                                                   Setting(:add_altpolicy_pgap, true)))
+    m <= Setting(:forecast_smoother, :koopman)
 
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -216,6 +219,7 @@ end
 
 @testset "Calculation of regime indices" begin
     m = AnSchorfheide("ss0")
+    m <= Setting(:forecast_smoother, :koopman)
 
     rss = Vector{Dict{Int, Date}}(undef, 0)
     fss = Vector{Date}(undef, 0)
@@ -274,6 +278,7 @@ end
     # Now we check regime switching properly draws shocks
     mtest = AnSchorfheide(;testing = true)
     m = Model1002("ss10")
+    # m <= Setting(:forecast_smoother, :koopman)
     m <= Setting(:saveroot, saveroot(mtest))
     m <= Setting(:dataroot, dataroot(mtest))
     m <= Setting(:regime_switching, true)
@@ -401,8 +406,8 @@ end
         end
     end
 end
-
-@testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering and conditional data" begin
+=#
+#@testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering and conditional data" begin
     n_reg_temp = 8
 
     m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
@@ -450,7 +455,7 @@ end
     df[end, :obs_wages] = NaN
     df[end, :obs_consumption] = NaN
     df[end, :obs_nominalrate] = NaN
-    m <= Setting(:forecast_smoother, :koopman)
+    m <= Setting(:forecast_smoother, :carter_kohn)
     histstates, histshocks, _, _ = smooth(m, df, sys; cond_type = :full, draw_states = false)
     kal = DSGE.filter(m, df, sys; cond_type = :full)
     condobs = sys[3, :ZZ] * histstates[:, end] + sys[3, :DD]
@@ -461,6 +466,6 @@ end
     @test condobs[4] ≈ df[end, :obs_gdpdeflator]
     @test condobs[5] ≈ df[end, :obs_corepce]
     @test condobs[8] ≈ df[end, :obs_investment]
-end
+#end
 
 nothing
