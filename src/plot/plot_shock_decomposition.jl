@@ -39,11 +39,11 @@ function plot_shock_decomposition(m::AbstractDSGEModel, var::Symbol, class::Symb
                                   input_type::Symbol, cond_type::Symbol;
                                   title = "", file_ext = "", four_quarter_avg = false,
                                   trend_nostates::DataFrame = DataFrame(), df_enddate::Date = Date(2100,12,31),
-                                  kwargs...)
+                                  groups::Vector{ShockGroup} = shock_groupings(m), kwargs...)
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
                                      titles = isempty(title) ? String[] : [title], file_ext = file_ext,
                                      four_quarter_avg = four_quarter_avg, trend_nostates = trend_nostates,
-                                     df_enddate = df_enddate, kwargs...)
+                                     df_enddate = df_enddate, groups = groups, kwargs...)
     return plots[var]
 end
 
