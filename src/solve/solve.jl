@@ -23,7 +23,7 @@ S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
 function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
                gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int}}(undef, 0),
-               regimes::Vector{Int} = Int[1], use_augment_states::Bool = true,
+               regimes::Vector{Int} = Int[1],
                verbose::Symbol = :high) where {T <: Real}
 
     uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
@@ -31,7 +31,6 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
         return solve_regime_switching(m; gensys_regimes = gensys_regimes,
                                       gensys2_regimes = gensys2_regimes, regimes = regimes,
                                       uncertain_altpolicy = uncertain_altpolicy,
-                                      use_augment_states = use_augment_states,
                                       verbose = verbose)
     else
         # do NOT delete this Boolean for apply_altpolicy; it is needed for
@@ -57,13 +56,7 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                 CCC_gensys = real(CCC_gensys)
 
                 # Augment states
-                if use_augment_states
-                    TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-                else
-                    TTT = TTT_gensys
-                    RRR = RRR_gensys
-                    CCC = CCC_gensys
-                end
+                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
             else
                 # do NOT delete this else block; it is needed for
                 # the scenarios code, which continues to use :alternative_policy as a Setting
@@ -72,21 +65,7 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                 # AND for implementing imperfect awareness via uncertain_altpolicy
 
                 # Change the policy rule
-                TTT, RRR, CCC = try
-                    get_setting(m, :alternative_policy).solve(m; use_augment_states = use_augment_states)
-                catch e
-                    if isa(e, MethodError)
-                        if use_augment_states
-                            get_setting(m, :alternative_policy).solve(m)
-                        else
-                            inds = 1:n_states(m)
-                            TTT_tmp, RRR_tmp, CCC_tmp = get_setting(m, :alternative_policy).solve(m)
-                            TTT_tmp[inds, inds], RRR_tmp[inds, :], CCC_tmp[inds]
-                        end
-                    else
-                        rethrow(e)
-                    end
-                end
+                TTT, RRR, CCC = get_setting(m, :alternative_policy).solve(m)
             end
 
             if uncertain_altpolicy && apply_altpolicy
@@ -94,16 +73,10 @@ function solve(m::AbstractDSGEModel{T}; regime_switching::Bool = false,
                 altpols = get_setting(m, :alternative_policies)
 
                 TTT_gensys, RRR_gensys, CCC_gensys =
-                    gensys_uncertain_altpol(m, weights, altpols; TTT = use_augment_states ? TTT : TTT[inds, inds])
+                    gensys_uncertain_altpol(m, weights, altpols; TTT = TTT[inds, inds])
 
                 # Augment states
-                if use_augment_states
-                    TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-                else
-                    TTT = TTT_gensys
-                    RRR = RRR_gensys
-                    CCC = CCC_gensys
-                end
+                TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
             end
         elseif get_setting(m, :solution_method) == :klein
             TTT_jump, TTT_state = klein(m)
@@ -210,7 +183,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
                                 uncertain_altpolicy::Bool = false,
                                 gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
                                 gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int64}}(undef, 0),
-                                regimes::Vector{Int} = Int[1], use_augment_states::Bool = true,
+                                regimes::Vector{Int} = Int[1],
                                 verbose::Symbol = :high) where {T <: Real}
 
     altpolicy_solve = alternative_policy(m).solve
@@ -245,7 +218,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
                 solve_non_gensys2_regimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs;
                                            regimes = collect(reg_range),
                                            uncertain_altpolicy = uncertain_altpolicy,
-                                           use_augment_states = use_augment_states,
                                            verbose = verbose)
             end
 
@@ -255,7 +227,6 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
                                    TTTs, RRRs, CCCs; gensys2_regimes = collect(reg_range),
                                    uncertain_altpolicy = uncertain_altpolicy,
                                    uncertain_temp_altpol = uncertain_temp_altpol,
-                                   use_augment_states = use_augment_states,
                                    verbose = verbose)
                     # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
                     #       any temporary policy
@@ -322,7 +293,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
                                     Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                                     TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                                     regimes::Vector{Int} = Int[1], uncertain_altpolicy::Bool = false,
-                                    altpolicy_solve::Function = solve, use_augment_states::Bool = true,
+                                    altpolicy_solve::Function = solve,
                                     verbose::Symbol = :high) where {S <: Real}
 
     uncertain_altpol = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
@@ -356,14 +327,8 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
         CCC_gensys = real(CCC_gensys)
 
         # Populate the TTTs, etc., for regime `reg`
-        if use_augment_states
-            TTTs[reg], RRRs[reg], CCCs[reg] =
-                augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys, reg = reg)
-        else
-            TTTs[reg] = TTT_gensys
-            RRRs[reg] = RRR_gensys
-            CCCs[reg] = CCC_gensys
-        end
+        TTTs[reg], RRRs[reg], CCCs[reg] =
+            augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys, reg = reg)
     end
 
     return TTTs, RRRs, CCCs
@@ -374,7 +339,6 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                         TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                         gensys2_regimes::Vector{Int} = Vector{Int}(undef, 0),
                         uncertain_altpolicy::Bool = false, uncertain_temp_altpol::Bool = false,
-                        use_augment_states::Bool = true,
                         verbose::Symbol = :high) where {S <: Real}
 
     # Solve for the final regime of the alternative rule
@@ -417,9 +381,18 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             weights[i] = get_setting(m, :regime_eqcond_info)[reg].weights
         end
         if length(altpols) == 1
+            if altpols[1].solve == solve && haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+                revert_unc_altpol = true # Need to make sure uncertain_altpolicy is off if we're using the default solve function
+                m <= Setting(:uncertain_altpolicy, false) # since this altpols[1].solve should solve for a perfectly credible policy
+            else
+                revert_unc_altpol = false
+            end
             Talt, _, Calt = altpols[1].solve(m)
             Talt = Talt[1:n_endo,1:n_endo]
             Calt = Calt[1:n_endo]
+            if revert_unc_altpol
+                m <= Setting(:uncertain_altpolicy, true)
+            end
         else
             # TODO: remove the multi-period alt policy stuff; it'll be handled in its own separate way by compute_system.
             @assert isa.(altpols, AltPolicy) "All policies in `get_setting(m, :alternative_policies)` should have type AltPolicy."
@@ -527,16 +500,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
     # only need to populate regimes during which a temporary altpolicy holds
     populate_reg = gensys2_regimes[2:end]
-    if use_augment_states
-        for (i, reg) in enumerate(populate_reg)
-            TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i], reg = reg)
-        end
-    else
-        for (i, reg) in enumerate(populate_reg)
-            TTTs[reg] = Tcal[i]
-            RRRs[reg] = Rcal[i]
-            CCCs[reg] = Ccal[i]
-        end
+    for (i, reg) in enumerate(populate_reg)
+        TTTs[reg], RRRs[reg], CCCs[reg] = augment_states(m, Tcal[i], Rcal[i], Ccal[i], reg = reg)
     end
 
     return TTTs, RRRs, CCCs
@@ -549,7 +514,7 @@ solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T},
                                       is_altpol::Vector{Bool};
                                       gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
                                       gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int}}(undef, 0),
-                                      regimes::Vector{Int} = Int[1], use_augment_states::Bool = true,
+                                      regimes::Vector{Int} = Int[1],
                                       verbose::Symbol = :high) where {T <: Real}
 ```
 
@@ -562,7 +527,7 @@ function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T},
                                                is_altpol::Vector{Bool};
                                                gensys_regimes::Vector{UnitRange{Int64}} = UnitRange{Int64}[1:1],
                                                gensys2_regimes::Vector{UnitRange{Int64}} = Vector{UnitRange{Int}}(undef, 0),
-                                               regimes::Vector{Int} = Int[1], use_augment_states::Bool = true,
+                                               regimes::Vector{Int} = Int[1],
                                                verbose::Symbol = :high) where {T <: Real}
 
     Γ0s = Vector{Matrix{Float64}}(undef, length(regimes))
