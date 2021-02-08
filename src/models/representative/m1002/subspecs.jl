@@ -1507,6 +1507,11 @@ function ss62!(m::Model1002)
             set_regime_fixed!(m[pk], 2, true)
         end
 
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].fixed = true
+        end
+
         # Flexible AIT shocks (to initialize the pgap and ygap values)
         m <= Setting(:model2para_regime, m2p)
     end
