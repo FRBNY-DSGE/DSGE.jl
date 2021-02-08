@@ -583,7 +583,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             end
 
             # Successful endogenous bounding?
-            if all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
+            if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
                 # Restore the original number of regimes and regime dates
                 if isempty(orig_regime_dates)
                     delete!(get_settings(m), :regime_dates)
