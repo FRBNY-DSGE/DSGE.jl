@@ -1491,6 +1491,22 @@ function ss62!(m::Model1002)
             set_regime_fixed!(m[pk], 2, false)
         end
 
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
         # Flexible AIT shocks (to initialize the pgap and ygap values)
         m <= Setting(:model2para_regime, m2p)
     end

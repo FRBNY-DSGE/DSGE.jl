@@ -943,6 +943,8 @@ function model_settings!(m::Model1002)
     if subspec(m) in ["ss62"]
         m <= Setting(:add_pseudo_gdp, true),
         m <= Setting(:add_pseudo_corepce, true)
+        m <= Setting(:add_anticipated_obs_gdp, true)
+        m <= Setting(:n_anticipated_obs_gdp, 1)
         m <= Setting(:filename_anticipated_obs_gdp, "MEDIANANTGDP")
         m <= Setting(:contemporaneous_and_proportional_antshocks, Symbol[:biidc])
         m <= Setting(:meas_err_anticipated_obs_gdp, 1.)
