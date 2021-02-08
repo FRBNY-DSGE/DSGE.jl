@@ -619,21 +619,19 @@ function solve_uncertain_multiperiod_altpolicy(m::AbstractDSGEModel{T}, TTTs_alt
     RRRs = Vector{Matrix{Float64}}(undef, length(regimes))
     CCCs = Vector{Vector{Float64}}(undef, length(regimes))
 
-    # Solve model for gensys regimes
-    for reg_range in gensys_regimes
-        solve_non_gensys2_regimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs,
+    for reg_range in 1:(maximum(maximum(vcat(gensys_regimes, gensys2_regimes))))
+        if reg_range in gensys_regimes
+            solve_non_gensys2_regimes!(m, Γ0s, Γ1s, Cs, Ψs, Πs, TTTs, RRRs, CCCs,
                                    TTTs_alt, CCCs_alt, is_altpol;
                                    regimes = collect(reg_range),
                                    verbose = verbose)
-    end
-
-    for reg_range in gensys2_regimes
-        solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
+        end
+        if reg_range in gensys2_regimes
+            solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
                        TTTs, RRRs, CCCs, TTTs_alt, RRRs_alt, CCCs_alt, is_altpol;
                        gensys2_regimes = collect(reg_range),
                        verbose = verbose)
-        # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
-        #       any temporary policy
+        end
     end
 
     return TTTs, RRRs, CCCs
