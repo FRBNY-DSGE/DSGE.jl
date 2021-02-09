@@ -175,6 +175,144 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     end
 end
 
+# Get Shock Decompositions with an old system and a bar that gives
+## effet of using new system compared to old.
+function shock_decompositions(m::AbstractDSGEModel{S},
+                              system::RegimeSwitchingSystem{S}, old_system::Int,
+                              histshocks::Matrix{S},
+                              start_date::Dates.Date = date_presample_start(m),
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
+                              cond_type::Symbol = :none) where {S<:AbstractFloat}
+    # Set up dates
+    horizon     = forecast_horizons(m; cond_type = cond_type)
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
+
+    # Set up regime indices. Note that we do not need to account
+    # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
+    # in the pre-ZLB periods.
+    regime_inds = regime_indices(m, start_date, end_date)
+    if regime_inds[1][1] < 1 # remove periods occuring before desired start date
+        regime_inds[1] = 1:regime_inds[1][end]
+    end
+
+    shock_decompositions(m, system, old_system, horizon, histshocks, start_index, end_index, regime_inds, cond_type)
+end
+
+function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
+                              old_system::Int,
+                              forecast_horizons::Int, histshocks::Matrix{S},
+                              start_index::Int, end_index::Int,
+                              regime_inds::Vector{UnitRange{Int}},
+                              cond_type::Symbol) where {S<:AbstractFloat}
+
+    # Setup
+    nshocks     = size(system[1, :RRR], 2)
+    nstates     = size(system[1, :TTT], 2)
+    nobs        = size(system[1, :ZZ], 1)
+    npseudo     = size(system[1, :ZZ_pseudo], 1)
+    histperiods = size(histshocks, 2)
+    allperiods  = histperiods + forecast_horizons
+
+    states = zeros(S, nstates, allperiods, nshocks)
+    obs    = zeros(S, nobs,    allperiods, nshocks)
+    pseudo = zeros(S, npseudo, allperiods, nshocks)
+    shocks = zeros(S, nshocks, histperiods)
+
+    # Old System Values
+    old_states = zeros(S, nstates, allperiods, nshocks)
+    old_obs    = zeros(S, nobs,    allperiods, nshocks)
+    old_pseudo = zeros(S, npseudo, allperiods, nshocks)
+
+    # Check dates
+    if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
+        throw(DomainError("At least one of forecast_horizons, the index for the start date of the shock decomposition, and the index for the end date of the shock decomposition is outside the permissible range."))
+    end
+
+    # Set constant system matrices to 0 and start at stationary steady state
+    system = zero_system_constants(system)
+    z0     = zeros(S, nstates)
+
+    fcast_shocks = zeros(S, nshocks, forecast_horizons) # these are always zero
+    for i = 1:nshocks
+        # Isolate single shock
+        shocks[i, :] = histshocks[i, :]
+
+        # Old System Values
+        # init_state_old = zeros(S, nstates)
+        # old_states[:,1:histperiods,i], old_obs[:,1:histperiods,i], old_pseudo[:,1:histperiods,i], _ =
+        #     forecast(old_system, init_state_old, shocks[:, 1:histperiods])
+
+        counts = 1
+        # Looping through each historical regime
+        for (reg_num, reg_ind) in enumerate(regime_inds)
+            if reg_ind[end] > histperiods
+                break
+            end
+            init_state = (reg_num == 1) ? zeros(S, nstates) : states[:, reg_ind[1] - 1, i] # update initial state
+
+            states[:, reg_ind, i], obs[:, reg_ind, i], pseudo[:, reg_ind, i], _ =
+                forecast(system[reg_num], init_state, shocks[:, reg_ind])
+
+            # Old System Values
+            if reg_ind[end] < old_system
+                old_system2 = system[reg_num]
+                counts = reg_num
+            else
+                old_system2 = system[1]#system[counts]
+            end
+            init_state_old = (reg_num == 1) ? zeros(S, nstates) : old_states[:, reg_ind[1] - 1, i]
+            old_states[:, reg_ind, i], old_obs[:, reg_ind, i], old_pseudo[:, reg_ind, i], _ =
+                forecast(old_system2, init_state_old, shocks[:,reg_ind])
+        end
+
+        # Run forecast using regime-switching forecast
+        if allperiods > histperiods
+            fcast_inds = (histperiods + 1):allperiods
+            states[:, fcast_inds, i], obs[:, fcast_inds, i], pseudo[:, fcast_inds, i], _ =
+                forecast(m, system, states[:, histperiods, i], fcast_shocks, cond_type = cond_type)
+
+            # Old System Values
+            old_system2 = system[1]#system[counts]
+            old_states[:, fcast_inds, i], old_obs[:, fcast_inds, i], old_pseudo[:, fcast_inds, i], _ =
+                forecast(old_system2, old_states[:, histperiods, i], fcast_shocks)
+        end
+
+        # zero out shocks b/c want effects of single shocks
+        shocks[i, :] .= 0.
+    end
+
+    # Add new system as shock to old system
+    old_states = cat(old_states, zeros(size(old_states[:,:,1])), dims = 3)
+
+    for i in 1:size(states,1)
+        for j in 1:size(states,2)
+            old_states[i,j,end] = sum([states[i,j,k] for k in 1:size(states,3)]) - sum([old_states[i,j,k] for k in 1:size(states,3)])
+        end
+    end
+
+    for i in 1:size(obs,1)
+        for j in 1:size(obs,2)
+            old_obs[i,j,end] = sum([obs[i,j,k] for k in 1:size(obs,3)]) - sum([old_obs[i,j,k] for k in 1:size(obs,3)])
+        end
+    end
+
+    for i in 1:size(pseudo,1)
+        for j in 1:size(pseudo,2)
+            old_pseudo[i,j,end] = sum([pseudo[i,j,k] for k in 1:size(pseudo,3)]) - sum([old_pseudo[i,j,k] for k in 1:size(pseudo,3)])
+        end
+    end
+
+    # Return shock decompositions in appropriate range
+    if start_index == 1 && end_index == allperiods
+        return old_states, old_obs, old_pseudo
+    else
+        range = start_index:end_index
+        return old_states[:, range, :], old_obs[:, range, :], old_pseudo[:, range, :]
+    end
+end
+
+
 """
 ```
 deterministic_trends(m, system, z0)

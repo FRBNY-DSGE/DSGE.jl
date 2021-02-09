@@ -1157,9 +1157,22 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         else
             prev_quarter(date_forecast_start(m)) # this is the end date of history period
         end
-        shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
-            shock_decompositions(m, system, histshocks_shockdec, start_date, end_date, cond_type) :
-            shock_decompositions(m, system, histshocks_shockdec)
+
+        if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+            # Must be using TV cred system
+            old_system = 0
+            for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zero_rate
+                    old_system = regime_indices(m, start_date, end_date)[i][1]
+                    break
+                end
+            end
+            shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, old_system, histshocks_shockdec, start_date, end_date, cond_type)
+        else
+            shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
+                shock_decompositions(m, system, histshocks_shockdec, start_date, end_date, cond_type) :
+                shock_decompositions(m, system, histshocks_shockdec)
+        end
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
