@@ -376,7 +376,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         # Setup
         ffreg = first(gensys2_regimes) + 1
         altpols = get_setting(m, :alternative_policies)
-        weights = Vector{Vector{Float64}}(undef, length(gensys2_regimes) -1)
+        weights = Vector{Vector{Float64}}(undef, length(gensys2_regimes) - 1)
         for (i, reg) in enumerate(gensys2_regimes[2]:gensys2_regimes[end])
             weights[i] = get_setting(m, :regime_eqcond_info)[reg].weights
         end
@@ -394,16 +394,26 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                 m <= Setting(:uncertain_altpolicy, true)
             end
         else
-            # TODO: remove the multi-period alt policy stuff; it'll be handled in its own separate way by compute_system.
             @assert isa.(altpols, AltPolicy) "All policies in `get_setting(m, :alternative_policies)` should have type AltPolicy."
 
             Talt = Vector{Matrix{Float64}}(undef, length(altpols)) # can call a faster version
             Calt = Vector{Vector{Float64}}(undef, length(altpols))
 
+            if altpols[1].solve == solve && haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+                revert_unc_altpol = true # Need to make sure uncertain_altpolicy is off if we're using the default solve function
+                m <= Setting(:uncertain_altpolicy, false) # since this altpols[1].solve should solve for a perfectly credible policy
+            else
+                revert_unc_altpol = false
+            end
+
             for i in 1:length(altpols)
                 Talt[i], _, Calt[i] = altpols[i].solve(m)
                 Talt[i] = Talt[i][1:n_endo,1:n_endo]
                 Calt[i] = Calt[i][1:n_endo]
+            end
+
+            if revert_unc_altpol
+                m <= Setting(:uncertain_altpolicy, true)
             end
         end
 

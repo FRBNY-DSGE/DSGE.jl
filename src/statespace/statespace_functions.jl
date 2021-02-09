@@ -589,6 +589,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_r
     orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
     orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
     orig_temp_altpol_names  = haskey(get_settings(m), :temporary_altpolicy_names) ? get_setting(m, :temporary_altpolicy_names) : nothing
+    orig_temp_altpol_len    = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
     is_gensys2              = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
     ## Now calculate the perfectly credible transition matrices for all alternative policies
@@ -626,6 +627,9 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_r
             if !isnothing(new_altpol.temporary_altpolicy_names)
                 m <= Setting(:temporary_altpolicy_names, new_altpol.temporary_altpolicy_names)
             end
+            if !isnothing(new_altpol.temporary_altpolicy_length)
+                m <= Setting(:temporary_altpol_length, new_altpol.temporary_altpolicy_length)
+            end
             if !isnothing(new_altpol.infoset)
                 m <= Setting(:tvis_information_set, new_altpol.infoset)
                 sys_totpolicies[i] = compute_system(m; tvis = true, verbose = verbose)
@@ -648,6 +652,9 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_r
     end
     if !isnothing(orig_temp_altpol_names)
         m <= Setting(:temporary_altpolicy_names, orig_temp_altpol_names)
+    end
+    if !isnothing(orig_temp_altpol_len)
+        m <= Setting(:temporary_altpol_length, orig_temp_altpol_len)
     end
     m <= Setting(:uncertain_altpolicy,   true)
     m <= Setting(:uncertain_temp_altpol, true)

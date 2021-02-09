@@ -384,7 +384,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                   set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                  tol::S = -1e-8, rerun_smoother::Bool = false,
+                  tol::S = -1e-5, rerun_smoother::Bool = false,
                   df = nothing, draw_states::Bool = false,
                   histstates::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   histshocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
@@ -438,15 +438,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         end
 
         # Setup for loop enforcing zero rate
-        states = similar(states)
-        pseudo = similar(pseudo)
-        obs = copy(obs) # This way, we don't overwrite the underlying obs matrix
-
-        # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
         orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
         orig_temp_zlb     = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
 
+        # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         for iter in 0:(size(obs, 2) - 3)
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
@@ -486,6 +482,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             m <= Setting(:replace_eqcond, true)
             m <= Setting(:gensys2, true)
             replace_eqcond = deepcopy(original_eqcond_dict) # Which rule to replace with in which periods
+            # TODO: add a check for making sure weights are properly set (e.g. enough regimes with weights to avoid error)
             for regind in first_zlb_regime:(n_total_regimes - 1)
                 if !haskey(replace_eqcond, regind)
                     weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) : 1)
@@ -505,23 +502,27 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 DSGE.smooth_ait_gdp_alt # Add permanent smooth AIT-GDP (alternative specification) regime
             elseif altpolicy == :flexible_ait
                 DSGE.flexible_ait() # Add Flexible AIT
-            end # If none of these conditions apply, then the plain eqcond is used
+            else
+                # If none of these conditions apply, then we use the default policy
+                DSGE.default_policy()
+            end
 
-            if !isnothing(final_eqcond)
-                if !haskey(replace_eqcond, n_total_regimes)
-                    weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) : 1)
-                    weights[1] = 1.
-                    replace_eqcond[n_total_regimes] = DSGE.EqcondEntry(final_eqcond, weights)
-                else
-                    replace_eqcond[n_total_regimes].alternative_policy = final_eqcond
-                end
-                # NOTE: the following assumes there is only one temporary altpol
-                if haskey(m.settings, :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
-                    for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
-                        replace_eqcond[z].alternative_policy = final_eqcond
-                    end
+            if !haskey(replace_eqcond, n_total_regimes)
+                weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) : 1)
+                weights[1] = 1.
+                replace_eqcond[n_total_regimes] = DSGE.EqcondEntry(final_eqcond, weights)
+            else
+                replace_eqcond[n_total_regimes].alternative_policy = final_eqcond
+            end
+
+            # NOTE: the following assumes there is only one temporary altpol
+            if final_eqcond.key != :default &&
+                haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
+                for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
+                    replace_eqcond[z].alternative_policy = final_eqcond
                 end
             end
+
             m <= Setting(:regime_eqcond_info, replace_eqcond)
             # Set up parameters if there are switching parameter values.
             #
@@ -539,22 +540,22 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_zlb_regime)
            # end
 
-            tvis = haskey(get_settings(m), :tvis_information_set) ? !isempty(get_setting(m, :tvis_information_set)) : false
+            tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
 
             # Recompute to account for new regimes
             system = compute_system(m; tvis = tvis)
 
-
-
-            if rerun_smoother
+            if rerun_smoother # if state space changes, then the smoothed states will also change generally
                 histstates, histshocks, histpseudo, initial_states =
                     smooth(m, df, system; cond_type = cond_type, draw_states = draw_states)
                 z0 = histstates[:, end]
             end
 
-            # Forecast!
-            states[:, :], obs[:, :], pseudo[:, :] = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
-
+            # Forecast! Note that since forecast(m, system, z0) allocates new matrices for states, obs, and pseudo,
+            # this step merely changes to which matrices the local variables states, obs, and pseudo point
+            # w/in this function's closure. Thus, the matrices states, obs, and pseudo which are first
+            # passed into this function will not be over-written.
+            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
             # in forecast_one will not work.
