@@ -198,7 +198,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::RegimeSwitchingSyst
         @warn "$smoother called with draw_states = true"
     end
 
-    testing = try #states, shocks, conded = try
+    testing = try #states, shocks, conded = try # TODO: fix this
         if smoother == hamilton_smoother
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0)
