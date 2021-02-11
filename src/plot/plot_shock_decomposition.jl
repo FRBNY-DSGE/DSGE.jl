@@ -39,11 +39,11 @@ function plot_shock_decomposition(m::AbstractDSGEModel, var::Symbol, class::Symb
                                   input_type::Symbol, cond_type::Symbol;
                                   title = "", file_ext = "", four_quarter_avg = false,
                                   trend_nostates::DataFrame = DataFrame(), df_enddate::Date = Date(2100,12,31),
-                                  groups::Vector{ShockGroup} = shock_groupings(m), kwargs...)
+                                  groups::Vector{ShockGroup} = shock_groupings(m), ylim_dict = Dict(), kwargs...)
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
                                      titles = isempty(title) ? String[] : [title], file_ext = file_ext,
                                      four_quarter_avg = four_quarter_avg, trend_nostates = trend_nostates,
-                                     df_enddate = df_enddate, groups = groups, kwargs...)
+                                     df_enddate = df_enddate, groups = groups, ylim_dict, kwargs...)
     return plots[var]
 end
 
@@ -55,7 +55,7 @@ function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, cl
                                   titles::Vector{String} = String[],
                                   file_ext::String = "", four_quarter_avg = false,
                                   trend_nostates::DataFrame = DataFrame(), verbose::Symbol = :low,
-                                  df_enddate::Date = Date(2100,12,31),
+                                  df_enddate::Date = Date(2100,12,31), ylim_dict = Dict(),
                                   kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
@@ -80,9 +80,17 @@ function plot_shock_decomposition(m::AbstractDSGEModel, vars::Vector{Symbol}, cl
 
         # Call recipe
         ylabs = trend_nostates == DataFrame() ? "\n(deviations from mean)" : ""
-        plots[var] = shockdec(var, mbs..., groups;
+
+        # Change ylims based on variable
+        if ylim_dict != Dict() && var in keys(ylim_dict)
+            plots[var] = shockdec(var, mbs..., groups;
+                              ylabel = series_ylabel(m, var, class) * ylabs, ylim = ylim_dict[var],
+                              title = title, trend_nostates = trend_nostates, df_enddate = df_enddate, kwargs...)
+        else
+            plots[var] = shockdec(var, mbs..., groups;
                               ylabel = series_ylabel(m, var, class) * ylabs,
                               title = title, trend_nostates = trend_nostates, df_enddate = df_enddate, kwargs...)
+        end
 
         # Save plot
         if !isempty(plotroot)

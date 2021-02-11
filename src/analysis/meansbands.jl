@@ -751,6 +751,8 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     # Group shocks if desired
     nperiods = size(df, 1)
     v0 = zeros(nperiods)
+
+    rm_shocks = []
     for group in groups
         # Sum shock values for each group
         shock_vectors = [df[!,shock] for shock in group.shocks]
@@ -758,8 +760,10 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         df[!,Symbol(group.name)] = shock_sum
 
         # Delete original (ungrouped) shocks from df
-        select!(df, Not(setdiff(group.shocks, [Symbol(group.name)])))
+        rm_shocks = vcat(rm_shocks, setdiff(group.shocks, [Symbol(group.name)]))
+        # select!(df, Not(setdiff(group.shocks, [Symbol(group.name)])))
     end
+    select!(df, Not(unique(rm_shocks)))
 
     # Remove Unicode characters from shock names
     if detexify_shocks

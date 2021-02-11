@@ -469,7 +469,9 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       rerun_smoother::Bool = false, catch_smoother_lapack::Bool = false,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                       show_failed_percent::Bool = false, only_filter::Bool = false,
-                      verbose::Symbol = :low, testing_carter_kohn::Bool = false)
+                      verbose::Symbol = :low, testing_carter_kohn::Bool = false,
+                      trend_nostates_obs = Array{(0,0)}, trend_nostates_pseudo = Array{(0,0)},
+                      full_shock_decomp::Bool = true)
 
     ### Common Setup
 
@@ -516,7 +518,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
                                                 rerun_smoother = rerun_smoother, catch_smoother_lapack = catch_smoother_lapack,
-                                                testing_carter_kohn = testing_carter_kohn)
+                                                testing_carter_kohn = testing_carter_kohn, trend_nostates_obs = trend_nostates_obs,
+                                                trend_nostates_pseudo = trend_nostates_pseudo, full_shock_decomp = full_shock_decomp)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -723,7 +726,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            filter_smooth::Bool = false, rerun_smoother::Bool = false,
                            catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false,
-                           return_loglh::Bool = false)
+                           return_loglh::Bool = false, trend_nostates_obs = Array{(0,0)},
+                           trend_nostates_pseudo = Array{(0,0)}, full_shock_decomp::Bool = false)
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -1167,7 +1171,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     break
                 end
             end
-            shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, old_system, histshocks_shockdec, start_date, end_date, cond_type)
+            shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, old_system, histshocks_shockdec, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp)
         else
             shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
                 shock_decompositions(m, system, histshocks_shockdec, start_date, end_date, cond_type) :
@@ -1204,6 +1208,13 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:trendstates] = trendstates
         forecast_output[:trendobs]    = trendobs
         forecast_output[:trendpseudo] = trendpseudo
+
+        if trend_nostates_obs != Array{(0,0)}
+            forecast_output[:trendobs] = trend_nostates_obs
+        end
+        if trend_nostates_pseudo != Array{(0,0)}
+            forecast_output[:trendpseudo] = trend_nostates_pseudo
+        end
     end
 
 
@@ -1219,8 +1230,23 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             else
                 prev_quarter(date_forecast_start(m)) # this is the end date of history period
             end
-            dettrendstates, dettrendobs, dettrendpseudo =
-                deterministic_trends(m, system, initial_states, start_date, end_date, cond_type)
+
+            if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs) && full_shock_decomp
+                # Must be using TV cred system
+                old_system = 0
+                for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+                    # TODO: Generalize beyond zero_rate to any temporary or permant alternative policy
+                    if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zero_rate
+                        old_system = regime_indices(m, start_date, end_date)[i][1]
+                        break
+                    end
+                end
+                dettrendstates, dettrendobs, dettrendpseudo =
+                    deterministic_trends(m, system, old_system, initial_states, start_date, end_date, cond_type)
+            else
+                dettrendstates, dettrendobs, dettrendpseudo =
+                    deterministic_trends(m, system, initial_states, start_date, end_date, cond_type)
+            end
         else
             dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
         end
