@@ -418,17 +418,15 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
                                  get_setting(m, :forecast_zlb_value))
 
+    altpol = get_setting(m, :alternative_policy)
     # Check replace_eqcond_func_dict if any regimes use the zero rate rule
-    num_zero_rate_regs = 0
     for (reg, v) in original_eqcond_dict
         if v.alternative_policy.key == :zero_rate
-            @warn "Regime $reg of regime_eqcond_info uses zero_rate."
-            num_zero_rate_regs += 1
+            @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
+            v.alternative_policy == altpol
         end
     end
-    if num_zero_rate_regs > 1
-        @warn "Setting regime_eqcond_info has more than one regime of zero_rate. This may result in a Gensys error due to non consecutive periods of zero_rate after the endogenous zlb inference."
-    end
+    m <= Setting(:temporary_altpol_length, 0)
 
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
         first_zlb_regime += n_hist_regimes
