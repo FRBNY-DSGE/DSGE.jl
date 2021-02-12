@@ -440,7 +440,7 @@ conditional data case given by `cond_type`.
 - `set_regime_vals_altpolicy::Function`: `Function` that adds new regimes to parameters when
     using temporary alternative policies (if needed). Defaults to identity (which does nothing)
     This function should take as inputs the model object `m` and the total number of regimes
-    (after adding the required temporary regimes). It should then
+    (after adding the required temporary regimes), i.e. `set_regime_vals_altpolicy(m, n)`. It should then
     set up regime-switching parameters for these new additional regimes.
 - `set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set`: `Function` that automatically updates
     the `tvis_information_set`, e.g. when `zlb_method = :temporary_altpolicy`.
