@@ -419,11 +419,15 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                                  get_setting(m, :forecast_zlb_value))
 
     # Check replace_eqcond_func_dict if any regimes use the zero rate rule
+    num_zero_rate_regs = 0
     for (reg, v) in original_eqcond_dict
-        if v == zero_rate_replace_eq_entries
-            @warn "The setting replace_eqcond_func_dict has a regime with zero_rate_replace_eq_entries, which will cause Gensys error. Please remove these regimes or otherwise avoid having zero_rate_replace_eq_entries in regimes."
-            break
+        if v.alternative_policy.key == :zero_rate
+            @warn "Regime $reg of regime_eqcond_info uses zero_rate."
+            num_zero_rate_regs += 1
         end
+    end
+    if num_zero_rate_regs > 1
+        @warn "Setting regime_eqcond_info has more than one regime of zero_rate. This may result in a Gensys error due to non consecutive periods of zero_rate after the endogenous zlb inference."
     end
 
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
