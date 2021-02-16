@@ -98,7 +98,7 @@ function smooth(m::AbstractDSGEModel, df::DataFrame, system::System{S},
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0)
         elseif smoother == koopman_smoother
-            kal = filter(m, data, system, cond_type = cond_type)
+            kal = filter(m, data, system)
             smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
                      s_0, P_0, kal[:s_pred], kal[:P_pred])
         elseif smoother == carter_kohn_smoother

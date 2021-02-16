@@ -418,12 +418,13 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
                                  get_setting(m, :forecast_zlb_value))
 
-    altpol = get_setting(m, :alternative_policy)
+    altpol = alternative_policy(m)
+
     # Check replace_eqcond_func_dict if any regimes use the zero rate rule
     for (reg, v) in original_eqcond_dict
         if v.alternative_policy.key == :zero_rate
             @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
-            v.alternative_policy == altpol
+            v.alternative_policy = altpol
         end
     end
     m <= Setting(:temporary_altpol_length, 0)
@@ -605,18 +606,23 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         states .= fill(NaN, size(states))
         obs    .= fill(NaN, size(obs))
         pseudo .= fill(NaN, size(pseudo))
-        if !isnothing(first_zlb_regime)
-            m <= Setting(:regime_dates, orig_regime_dates)
-            setup_regime_switching_inds!(m; cond_type = cond_type)
-        end
     end
 
     # Restore original settings
     m <= Setting(:regime_switching, is_regime_switch)
+    m <= Setting(:regime_dates, orig_regime_dates)
+    if !isempty(orig_regime_dates)
+        setup_regime_switching_inds!(m; cond_type = cond_type)
+    end
     m <= Setting(:replace_eqcond,   is_replace_eqcond)
     m <= Setting(:gensys2,          is_gensys2)
     if !is_replace_eqcond
         delete!(get_settings(m), :regime_eqcond_info)
+    end
+    if isempty(original_eqcond_dict)
+        delete!(get_settings(m), :regime_eqcond_info)
+    else
+        m <= Setting(:regime_eqcond_info, original_eqcond_dict)
     end
 
     if rerun_smoother

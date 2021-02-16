@@ -16,18 +16,21 @@ function compute_gensys_gensys2_regimes(m::AbstractDSGEModel)
         end
 
         if isnothing(first_gensys2_regime)
-            throw(GensysError("No equilibrium conditions in any regime are being temporarily replaced, " *
-                              "but the setting :gensys2 is true."))
-        end
-        last_gensys2_regime = haskey(get_settings(m), :temporary_altpol_length) ?
-            min(first_gensys2_regime + get_setting(m, :temporary_altpol_length), n_regimes) :
-            n_regimes # NOTE removed a +1 here--if tests start failing, check here first
+            # throw(GensysError("No equilibrium conditions in any regime are being temporarily replaced, " *
+            #                   "but the setting :gensys2 is true."))
+            gensys2_regimes = Vector{UnitRange{Int}}(undef, 0)
+            gensys_regimes  = UnitRange{Int}[1:n_regimes]
+        else
+            last_gensys2_regime = haskey(get_settings(m), :temporary_altpol_length) ?
+                min(first_gensys2_regime + get_setting(m, :temporary_altpol_length), n_regimes) :
+                n_regimes # NOTE removed a +1 here--if tests start failing, check here first
 
-        gensys_regimes = UnitRange{Int}[1:(first_gensys2_regime - 1)]
-        if last_gensys2_regime != n_regimes
-            append!(gensys_regimes, [(last_gensys2_regime + 1):n_regimes])
+            gensys_regimes = UnitRange{Int}[1:(first_gensys2_regime - 1)]
+            if last_gensys2_regime != n_regimes
+                append!(gensys_regimes, [(last_gensys2_regime + 1):n_regimes])
+            end
+            gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
         end
-        gensys2_regimes = [first_gensys2_regime-1:last_gensys2_regime]
     else
         gensys2_regimes = Vector{UnitRange{Int}}(undef, 0)
         gensys_regimes  = UnitRange{Int}[1:n_regimes]
