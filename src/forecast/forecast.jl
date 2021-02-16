@@ -537,7 +537,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 set_zlb_regime_vals(m, n_total_regimes)
             end
 
-            # set up the information sets
+            # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
             #if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
              #   set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, first_zlb_regime)
            # else
@@ -619,18 +619,14 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     else
         m <= Setting(:regime_eqcond_info, original_eqcond_dict)
     end
-    # restore original info set
     if haskey(get_settings(m), :tvis_information_set)
         m <= Setting(:tvis_information_set, original_info_set)
     end
-
-    # restore original temp zlb length
-    #=if isnothing(orig_temp_zlb)
+    if isnothing(orig_temp_zlb)
         delete!(get_settings(m), :temporary_altpol_length)
     else
         m <= Setting(:temporary_altpol_length, orig_temp_zlb)
-    end=#
-
+    end
 
     if rerun_smoother
         return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
