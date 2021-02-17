@@ -451,6 +451,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
             n_total_regimes = first_zlb_regime + iter + 1 # plus 1 for lift off
+            m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
             m <= Setting(:temporary_altpol_length, iter + 1) # 1 for first_zlb_regime, iter for each additional regime
             # Set up regime dates
@@ -488,7 +489,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # TODO: add a check for making sure weights are properly set (e.g. enough regimes with weights to avoid error)
             for regind in first_zlb_regime:(n_total_regimes - 1)
                 if !haskey(replace_eqcond, regind)
-                    weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) : 1)
+                    weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
                     weights[1] = 1.
                     replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), weights)
                 end
@@ -511,7 +512,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             end
 
             if !haskey(replace_eqcond, n_total_regimes)
-                weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) : 1)
+                weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
                 weights[1] = 1.
                 replace_eqcond[n_total_regimes] = DSGE.EqcondEntry(final_eqcond, weights)
             else
@@ -574,18 +575,6 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 end
             end
 
-            # restore original info set
-            if haskey(get_settings(m), :tvis_information_set)
-                m <= Setting(:tvis_information_set, original_info_set)
-            end
-
-            # restore original temp zlb length
-            if isnothing(orig_temp_zlb)
-                delete!(get_settings(m), :temporary_altpol_length)
-            else
-                m <= Setting(:temporary_altpol_length, orig_temp_zlb)
-            end
-
             # Successful endogenous bounding?
             if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
                 # Restore the original number of regimes and regime dates
@@ -599,6 +588,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                 break
             end
         end
+    else
+        return states, obs, pseudo
     end
 
     if !all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
@@ -624,6 +615,18 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     else
         m <= Setting(:regime_eqcond_info, original_eqcond_dict)
     end
+    # restore original info set
+    if haskey(get_settings(m), :tvis_information_set)
+        m <= Setting(:tvis_information_set, original_info_set)
+    end
+
+    # restore original temp zlb length
+    #=if isnothing(orig_temp_zlb)
+        delete!(get_settings(m), :temporary_altpol_length)
+    else
+        m <= Setting(:temporary_altpol_length, orig_temp_zlb)
+    end=#
+
 
     if rerun_smoother
         return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states

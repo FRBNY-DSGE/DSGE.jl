@@ -530,18 +530,18 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
             for k in get_setting(m, :forward_looking_observables)
                 system_main.measurements[reg][:ZZ][m.observables[k], :] =
                     sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ][m.observables[k], :] :
-                                       system_perfect_cred_totpolicies[i].measurements[reg][:ZZ][m.observables[k], :]) for i in 1:length(new_wt)])
+                                       system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:ZZ][m.observables[k], :]) for i in 1:length(new_wt)])
                 system_main.measurements[reg][:DD][m.observables[k]] =
                     sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD][m.observables[k]] :
-                                       system_perfect_cred_totpolicies[i].measurements[reg][:DD][m.observables[k]]) for i in 1:length(new_wt)])
+                                       system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:DD][m.observables[k]]) for i in 1:length(new_wt)])
             end
         else
             system_main.measurements[reg][:ZZ] .=
                 sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ] :
-                                   system_perfect_cred_totpolicies[i].measurements[reg][:ZZ]) for i in 1:length(new_wt)])
+                                   system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:ZZ]) for i in 1:length(new_wt)])
             system_main.measurements[reg][:DD] .=
                 sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD] :
-                                   system_perfect_cred_totpolicies[i].measurements[reg][:DD]) for i in 1:length(new_wt)])
+                                   system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:DD]) for i in 1:length(new_wt)])
         end
 
         if has_pseudo
@@ -549,21 +549,21 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
                 for k in get_setting(m, :forward_looking_pseudo_observables)
                     system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
                         sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ_pseudo][m.pseudo_observables[k], :] :
-                                           system_perfect_cred_totpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :])
+                                           system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:ZZ_pseudo][m.pseudo_observables[k], :])
                              for i in 1:length(new_wt)])
                     system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
                         sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD_pseudo][m.pseudo_observables[k]] :
-                                           system_perfect_cred_totpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]])
+                                           system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:DD_pseudo][m.pseudo_observables[k]])
                              for i in 1:length(new_wt)])
                 end
             else
                 system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
                     sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ_pseudo] :
-                                       system_perfect_cred_totpolicies[i].pseudo_measurements[reg][:ZZ_pseudo])
+                                       system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:ZZ_pseudo])
                          for i in 1:length(new_wt)])
                 system_main.pseudo_measurements[reg][:DD_pseudo] .=
                         sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD_pseudo] :
-                                           system_perfect_cred_totpolicies[i].pseudo_measurements[reg][:DD_pseudo])
+                                           system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:DD_pseudo])
                              for i in 1:length(new_wt)])
             end
         end
@@ -585,6 +585,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_r
     # Save the following elements.
     # Note deepcopy is necessary for regime_eqcond_info b/c weights will be updated to [1., 0., ...]
     # when we compute the perfectly credible implemented policy
+    orig_n_regimes          = get_setting(m, :n_regimes)
     orig_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
     orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
     orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
@@ -622,6 +623,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_r
                 delete!(get_settings(m), :alternative_policy)
             end
         else # Then it's a MultiPeriodAltPolicy
+            m <= Setting(:n_regimes, new_altpol.n_regimes)
             m <= Setting(:regime_eqcond_info, new_altpol.regime_eqcond_info)
             m <= Setting(:gensys2, new_altpol.gensys2)
             if !isnothing(new_altpol.temporary_altpolicy_names)
@@ -640,6 +642,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_r
     end
 
     # Now add original settings back
+    m <= Setting(:n_regimes, orig_n_regimes)
     m <= Setting(:regime_eqcond_info, orig_regime_eqcond_info)
     m <= Setting(:gensys2, is_gensys2)
     m <= Setting(:uncertain_altpolicy, true)

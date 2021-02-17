@@ -204,10 +204,10 @@ function gensys2_uncertain_altpol(prob_vec::AbstractVector{S}, gensys2_regimes::
         # it is assumed T_impl is a vector of the T_{t + 1}^{(temporary altpolicy)} matrices,
         # hence Tbars will be a vector of T_t matrices
         Tbars[i] = prob_vec[1] * (@view systems[1][reg + 1, :TTT][inds, inds]) .+
-            sum([prob_vec[j] .* (is_altpol[j - 1] ? (@view systems[j][:TTT][inds, inds]) : (@view systems[j][reg + 1, :TTT][inds, inds]))
+        sum([prob_vec[j] .* (is_altpol[j - 1] ? (@view systems[j][:TTT][inds, inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :TTT][inds, inds]))
                  for j in 2:n_alt])
         Cbars[i] = prob_vec[1] * (@view systems[1][reg + 1, :CCC][inds]) .+
-            sum([prob_vec[j] .* (is_altpol[j - 1] ? (@view systems[j][:CCC][inds]) : (@view systems[j][reg + 1, :CCC][inds]))
+        sum([prob_vec[j] .* (is_altpol[j - 1] ? (@view systems[j][:CCC][inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :CCC][inds]))
                  for j in 2:n_alt])
 
         Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
@@ -243,10 +243,10 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, gensys2_regimes::
         # it is assumed T_impl is a vector of the T_{t + 1}^{(temporary altpolicy)} matrices,
         # hence Tbars will be a vector of T_t matrices
         Tbars[i] = prob_vec[i][1] * (@view systems[1][reg + 1, :TTT][inds, inds]) .+
-            sum([prob_vec[i][j] .* (is_altpol[j - 1] ? (@view systems[j][:TTT][inds, inds]) : (@view systems[j][reg + 1, :TTT][inds, inds]))
+        sum([prob_vec[i][j] .* (is_altpol[j - 1] ? (@view systems[j][:TTT][inds, inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :TTT][inds, inds]))
                  for j in 2:n_alt])
         Cbars[i] = prob_vec[i][1] * (@view systems[1][reg + 1, :CCC][inds]) .+
-            sum([prob_vec[i][j] .* (is_altpol[j - 1] ? (@view systems[j][:CCC][inds]) : (@view systems[j][reg + 1, :CCC][inds]))
+        sum([prob_vec[i][j] .* (is_altpol[j - 1] ? (@view systems[j][:CCC][inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :CCC][inds]))
                  for j in 2:n_alt])
 
         Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til

@@ -206,8 +206,8 @@ function gensys_uncertain_altpol(m::AbstractDSGEModel, prob_vec::AbstractVector{
             T̅ .+= prob_vec[i + 1] * (@view systems[i + 1][:TTT][inds, inds])
             C̅ .+= prob_vec[i + 1] * (@view systems[i + 1][:CCC][inds])
         else
-            T̅ .+= prob_vec[i + 1] * (@view systems[i + 1][regime, :TTT][inds, inds])
-            C̅ .+= prob_vec[i + 1] * (@view systems[i + 1][regime, :CCC][inds])
+            T̅ .+= prob_vec[i + 1] * (@view systems[i + 1][min(length(systems[i+1].transitions), regime), :TTT][inds, inds])
+            C̅ .+= prob_vec[i + 1] * (@view systems[i + 1][min(length(systems[i+1].transitions), regime), :CCC][inds])
         end
     end
 

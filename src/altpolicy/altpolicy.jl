@@ -132,6 +132,7 @@ Types defining an alternative policy rule.
 """
 mutable struct MultiPeriodAltPolicy{S <: AbstractDict{Int64, EqcondEntry}} <: AbstractAltPolicy
     key::Symbol
+    n_regimes::Int64
     regime_eqcond_info::S
     gensys2::Bool
     temporary_altpolicy_names::Union{Vector{Symbol}, Nothing}
@@ -142,7 +143,7 @@ mutable struct MultiPeriodAltPolicy{S <: AbstractDict{Int64, EqcondEntry}} <: Ab
     linestyle::Symbol
 end
 
-function MultiPeriodAltPolicy(key::Symbol, regime_eqcond_info::AbstractDict{Int64, EqcondEntry};
+function MultiPeriodAltPolicy(key::Symbol, n_regimes::Int64, regime_eqcond_info::AbstractDict{Int64, EqcondEntry};
                               gensys2::Bool = false,
                               temporary_altpolicy_names::Union{Vector{Symbol}, Nothing} = nothing,
                               temporary_altpolicy_length::Int =  # default assumes the last regime is a
@@ -152,7 +153,7 @@ function MultiPeriodAltPolicy(key::Symbol, regime_eqcond_info::AbstractDict{Int6
                               color::Colorant = RGB(0., 0., 1.),
                               linestyle::Symbol = :solid)
 
-    MultiPeriodAltPolicy(key, regime_eqcond_info, gensys2, temporary_altpolicy_names,
+    MultiPeriodAltPolicy(key, n_regimes, regime_eqcond_info, gensys2, temporary_altpolicy_names,
                          temporary_altpolicy_length, infoset, forecast_init, color, linestyle)
 end
 
