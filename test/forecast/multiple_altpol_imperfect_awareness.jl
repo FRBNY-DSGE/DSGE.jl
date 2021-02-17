@@ -155,11 +155,11 @@ for k in keys(temp_taylor_regime_eqcond_info)
     temp_taylor_regime_eqcond_info[k] = DSGE.EqcondEntry(taylor_rule())
     temp_default_regime_eqcond_info[k] = DSGE.EqcondEntry(default_policy())
 end
-temp_taylor = MultiPeriodAltPolicy(:temporary_taylor, temp_taylor_regime_eqcond_info, gensys2 = true,
+temp_taylor = MultiPeriodAltPolicy(:temporary_taylor, get_setting(m, :n_regimes), temp_taylor_regime_eqcond_info, gensys2 = true,
                                    temporary_altpolicy_names = [:taylor_rule],
                                    temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
                                    infoset = copy(get_setting(m, :tvis_information_set))) # also test w/ tvis and w/out
-temp_default = MultiPeriodAltPolicy(:temporary_default, temp_default_regime_eqcond_info,
+temp_default = MultiPeriodAltPolicy(:temporary_default, get_setting(m, :n_regimes), temp_default_regime_eqcond_info,
                                     gensys2 = false, temporary_altpolicy_names = [:default]) # also check without gensys2 on
 
 delete!(DSGE.get_settings(m), :alternative_policies) # delete to update typing
@@ -184,7 +184,7 @@ for k in keys(temp_taylor_regime_eqcond_info)
         temp_flexait_zlb_regime_eqcond_info[k] = EqcondEntry(flexible_ait())
     end
 end
-temp_flexait_zlb = MultiPeriodAltPolicy(:temporary_flexait_zlb, temp_flexait_zlb_regime_eqcond_info, gensys2 = true,
+temp_flexait_zlb = MultiPeriodAltPolicy(:temporary_flexait_zlb, get_setting(m, :n_regimes), temp_flexait_zlb_regime_eqcond_info, gensys2 = true,
                                         temporary_altpolicy_names = [:zero_rate],
                                         temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
                                         infoset = copy(get_setting(m, :tvis_information_set)))
@@ -202,7 +202,7 @@ for k in keys(temp_taylor_regime_eqcond_info)
         temp_flexible_ait_regime_eqcond_info[k] = DSGE.EqcondEntry(taylor_rule()) # followed by Taylor rule in the end
     end
 end
-temp_flexible_ait = MultiPeriodAltPolicy(:temporary_flexible_ait, temp_flexible_ait_regime_eqcond_info, gensys2 = true,
+temp_flexible_ait = MultiPeriodAltPolicy(:temporary_flexible_ait, get_setting(m, :n_regimes), temp_flexible_ait_regime_eqcond_info, gensys2 = true,
                                          temporary_altpolicy_names = [:flexible_ait],
                                          temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
                                          infoset = copy(get_setting(m, :tvis_information_set))) # also test w/ tvis and w/out
