@@ -589,7 +589,11 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             end
         end
     else
-        return states, obs, pseudo
+        if rerun_smoother
+            return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
+        else
+            return states, obs, pseudo
+        end
     end
 
     if !all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
