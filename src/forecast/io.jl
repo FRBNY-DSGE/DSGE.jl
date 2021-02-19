@@ -103,7 +103,6 @@ function get_forecast_filename(directory::String, filestring_base::Vector{String
 
     # Base file name
     file_name = String("$output_var.$fileformat")
-
     # Gather all of the file strings into an array
     filestring_addl = get_forecast_filestring_addl(input_type, cond_type,
                                                    forecast_string = forecast_string)

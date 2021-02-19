@@ -93,6 +93,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol,
                                     skipnan = skipnan, pseudo2data = pseudo2data,
                                     variable_names = variable_names,
                                     verbose = verbose,
+                                    bdd_fcast = bdd_fcast,
                                     kwargs...)
             GC.gc()
         end
@@ -115,6 +116,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                             pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             variable_names::Vector{Symbol} = Vector{Symbol}(undef, 0),
                             verbose::Symbol = :none,
+                            bdd_fcast::Bool = true,
                             kwargs...)
 
     # Determine class and product
@@ -144,12 +146,14 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                                                variable_names[i], df; pop_growth = pop_growth,
                                                forecast_string = forecast_string,
                                                skipnan = skipnan, pseudo2data = pseudo2data,
+                                               bdd_fcast = bdd_fcast,
                                                kwargs...)
             end
         else
             mb_vec = map_fcn(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                                             pop_growth = pop_growth, forecast_string = forecast_string,
                                                             pseudo2data = pseudo2data,
+                                                            bdd_fcast = bdd_fcast,
                                                             skipnan = skipnan, kwargs...),
                              variable_names)
         end
@@ -175,7 +179,7 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
             mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullables.Nullable(shock_name),
                                                          forecast_string = forecast_string,
-                                                         skipnan = skipnan, pseudo2data = pseudo2data, kwargs...),
+                                                         skipnan = skipnan, pseudo2data = pseudo2data, bdd_fcast = bdd_fcast, kwargs...),
                           variable_names)
 
             # Re-assemble pmap outputs
@@ -218,7 +222,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false,
                             pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
-                            compute_shockdec_bands::Bool = false)
+                            compute_shockdec_bands::Bool = false,
+                            bdd_fcast::Bool = true)
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -328,6 +333,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                             skipnan::Bool = false, ndraws::Int = 20000,
                             pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             verbose::Symbol = :low,
+                            bdd_fcast::Bool = true,
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -339,7 +345,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
     end
     elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
-        output_vars = add_requisite_output_vars(output_vars)
+        output_vars = add_requisite_output_vars(output_vars, bdd_fcast=bdd_fcast)
         if input_types[1] == :prior
             output_vars = setdiff(output_vars, [:bddforecastobs])
         end
@@ -373,6 +379,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                                     skipnan = skipnan, ndraws = ndraws,
                                     pseudo2data = pseudo2data,
                                     verbose = verbose,
+                                    bdd_fcast = bdd_fcast,
                                     kwargs...)
             GC.gc()
         end
@@ -400,6 +407,7 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                             skipnan::Bool = false, ndraws::Int = 20000,
                             pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
                             verbose::Symbol = :none,
+                            bdd_fcast::Bool = true,
                             kwargs...)
 
     # Determine class and product
@@ -430,14 +438,16 @@ function compute_meansbands(models::Vector{<: AbstractDSGEModel},
                                                forecast_strings = forecast_strings,
                                                weights = weights, skipnan = skipnan,
                                                pseudo2data = pseudo2data,
-                                               ndraws = ndraws, kwargs...)
+                                               ndraws = ndraws, bdd_fcast = bdd_fcast,
+                                               kwargs...)
             end
         else
             mb_vec = pmap(var_name -> compute_meansbands(models, input_types, cond_types, output_var, var_name, df;
                                                          pop_growth = pop_growth,
                                                          forecast_strings = forecast_strings, weights = weights,
                                                          skipnan = skipnan, ndraws = ndraws,
-                                                         pseudo2data = pseudo2data, kwargs...),
+                                                         pseudo2data = pseudo2data,
+                                                         bdd_fcast = bdd_fcast, kwargs...),
                           variable_names)
         end
 
@@ -514,7 +524,8 @@ function compute_meansbands(models::Vector,
                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                             minimize::Bool = false, skipnan::Bool = false,
                             compute_shockdec_bands::Bool = false, ndraws::Int = 20000,
-                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}())
+                            pseudo2data::AbstractDict{Symbol, Symbol} = Dict{Symbol, Symbol}(),
+                            bdd_fcast::Bool = true)
 
     # Return only one set of bands if we read in only one draw
     if input_types[1] in [:init, :mode, :mean]
@@ -563,7 +574,7 @@ function compute_meansbands(models::Vector,
                                               pop_growth = pop_growth,  use_data = haskey(pseudo2data, var_name))
 
     # Handle NaNs
-    if skipnan && !(output_var in [:histobs, :hist4qobs]) && any(isnan.(transformed_series))
+    if skipnan && !(output_var in [:histobs, :hist4qobs]) && (ismissing(any(isnan.(transformed_series))) ? false : any(isnan.(transformed_series)))
         # Remove rows with NaNs
         nanrows = vec(mapslices(x -> all(isnan.(x)), transformed_series, dims = Int[2]))
         transformed_series = transformed_series[.!nanrows, :]

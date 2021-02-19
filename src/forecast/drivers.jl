@@ -234,7 +234,6 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
     # Load full distribution
     elseif input_type == :full
 
-        @show input_file_name
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
@@ -628,6 +627,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
 
 
             forecast_output = assemble_block_outputs(forecast_outputs; show_failed_percent = show_failed_percent)
+            #@show forecast_output.keys
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable(block),
                                    verbose = block_verbose, block_inds = block_inds_thin[block],
