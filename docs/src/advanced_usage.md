@@ -261,7 +261,6 @@ which will automatically compute the (required) settings
 - `:n_hist_regimes`: Number of regimes in the history
 - `:n_fcast_regimes`: Number of regimes in the forecast horizon (including the conditional forecast)
 - `:n_cond_regimes`: Number of regimes in the conditional forecast
-- `:n_rule_periods`: Number of regimes when using a temporary alternative policy
 
 These settings will generally depend on whether the forecast is conditional or not,
 so the user needs to pass in `cond_type = :full` or `cond_type = :semi` to `setup_regime_switching_inds!`
