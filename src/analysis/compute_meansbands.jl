@@ -578,6 +578,7 @@ function compute_meansbands(models::Vector,
 
     # Handle NaNs
     if skipnan && !(output_var in [:histobs, :hist4qobs]) && (ismissing(any(isnan.(transformed_series))) ? true : any(isnan.(transformed_series)))
+    # if skipnan && !(output_var in [:histobs, :hist4qobs]) && any(isnan.(transformed_series)) # TODO: figure out why missings occur
         # Remove rows with NaNs
         nanrows = vec(mapslices(x -> ismissing(all(isnan.(x))) ? all(ismissing.(x)) : all(isnan.(x)), transformed_series, dims = Int[2]))
         transformed_series = transformed_series[.!nanrows, :]
