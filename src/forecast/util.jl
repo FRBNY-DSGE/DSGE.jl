@@ -113,6 +113,28 @@ function forecast_block_inds(m::AbstractDSGEModel, input_type::Symbol; subset_in
     end
     block_inds[end]      = (current_draw+jstep):jstep:end_ind
     block_inds_thin[end] = (current_draw_thin+1):end_ind_thin
+
+    # Check that block indices are all nonempty
+    empty_blocks      = Int64[]
+    empty_blocks_thin = Int64[]
+    for (i, block_ind) in enumerate(block_inds)
+        if isempty(block_ind)
+            push!(empty_blocks, i)
+        end
+    end
+    for (i, block_ind) in enumerate(block_inds_thin)
+        if isempty(block_ind)
+            push!(empty_blocks_thin, i)
+        end
+    end
+
+    if !isempty(empty_blocks)
+        block_inds = block_inds[empty_blocks]
+    end
+    if !isempty(empty_blocks_thin)
+        block_inds_thin = block_inds_thin[empty_blocks_thin]
+    end
+
     return block_inds, block_inds_thin
 end
 
