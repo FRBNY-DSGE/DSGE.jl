@@ -627,7 +627,6 @@ function forecast_one(m::AbstractDSGEModel{Float64},
 
 
             forecast_output = assemble_block_outputs(forecast_outputs; show_failed_percent = show_failed_percent)
-            #@show forecast_output.keys
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable(block),
                                    verbose = block_verbose, block_inds = block_inds_thin[block],
