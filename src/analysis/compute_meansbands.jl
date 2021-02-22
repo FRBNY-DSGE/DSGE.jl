@@ -556,6 +556,7 @@ function compute_meansbands(models::Vector,
     end
     # data = class == :obs && product != :irf ? Float64.(collect(Missings.replace(df[:,var_name], NaN))) : fill(NaN, size(df, 1))
 
+
     fcast_series = Matrix{Float64}(undef, 0, size(fcast_seriess[1], 2))
     if all(map(x->size(x, 1) > 1, fcast_seriess))
         for i in 1:length(models)
@@ -574,9 +575,9 @@ function compute_meansbands(models::Vector,
                                               pop_growth = pop_growth,  use_data = haskey(pseudo2data, var_name))
 
     # Handle NaNs
-    if skipnan && !(output_var in [:histobs, :hist4qobs]) && (ismissing(any(isnan.(transformed_series))) ? false : any(isnan.(transformed_series)))
+    if skipnan && !(output_var in [:histobs, :hist4qobs]) && (ismissing(any(isnan.(transformed_series))) ? true : any(isnan.(transformed_series)))
         # Remove rows with NaNs
-        nanrows = vec(mapslices(x -> all(isnan.(x)), transformed_series, dims = Int[2]))
+        nanrows = vec(mapslices(x -> ismissing(all(isnan.(x))) ? true : all(isnan.(x)), transformed_series, dims = Int[2]))
         transformed_series = transformed_series[.!nanrows, :]
     end
 
