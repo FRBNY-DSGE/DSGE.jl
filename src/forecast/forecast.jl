@@ -587,11 +587,10 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # If more ZLB necessary
             if !endo_success
                 if iter == first_zlb_regime
-                    # Try minimum(iter + 3, max_zlb_regimes)
+                    iter = minimum(iter+3, max_zlb_regimes)
                 elseif iter == max_zlb_regimes
                     # Return Fixed ZLB
 
-                    # Make sure to add the following lines before any break in the ifelse!!!
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
                         delete!(get_settings(m), :regime_dates)
@@ -602,13 +601,12 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     end
                     break
                 elseif iter == first_zlb_regime + 3
-                    # Try max_zlb_regimes
+                    iter = max_zlb_regimes
                 elseif iter == first_zlb_regime + 1
-                    # Try first_zlb_regime + 2
+                    iter = first_zlb_regime + 2
                 elseif iter == first_zlb_regime + 2
                     # Return first_zlb_regime + 3 answer
 
-                    # Make sure to add the following lines before any break in the ifelse!!!
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
                         delete!(get_settings(m), :regime_dates)
@@ -619,11 +617,10 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     end
                     break
                 elseif iter == first_zlb_regime - 2
-                    # Try first_zlb_regime - 1
+                    iter = first_zlb_regime - 1
                 elseif iter == first_zlb_regime - 1
                     # Return first_zlb_regime
 
-                    # Make sure to add the following lines before any break in the ifelse!!!
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
                         delete!(get_settings(m), :regime_dates)
@@ -639,14 +636,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             else
                 # If ZLB works (no negative rates)
                 if iter == first_zlb_regime
-                    # Try maximum(first_zlb_regime - 2, start)
+                    iter = maximum(first_zlb_regime - 2, n_hist_regimes + 1)
                 elseif iter == first_zlb_regime - 2
-                    # Try start
+                    iter = n_hist_regimes + 1
                 elseif iter == n_hist_regimes + 1
                     ## Note start is forecast_reg so ZLB in historical always there. Can change by using zlb_at_first instead
                     # Return start
 
-                    # Make sure to add the following lines before any break in the ifelse!!!
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
                         delete!(get_settings(m), :regime_dates)
@@ -659,7 +655,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif iter == first_zlb_regime - 1
                     # Return first_zlb_regime - 1
 
-                    # Make sure to add the following lines before any break in the ifelse!!!
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
                         delete!(get_settings(m), :regime_dates)
@@ -672,7 +667,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif iter == first_zlb_regime + 1
                     # Return first_zlb_regime + 1
 
-                    # Make sure to add the following lines before any break in the ifelse!!!
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
                         delete!(get_settings(m), :regime_dates)
@@ -685,7 +679,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif iter == first_zlb_regime + 2
                     # Return first_zlb_regime + 2
 
-                    # Make sure to add the following lines before any break in the ifelse!!!
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
                         delete!(get_settings(m), :regime_dates)
@@ -696,7 +689,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     end
                     break
                 elseif iter == first_zlb_regime + 3
-                    # Try first_zlb_regime + 1
+                    iter = first_zlb_regime + 1
                 elseif iter == max_zlb_regimes
                     # Continue Binary Search on [first_zlb_regime + 4, max_zlb_regime]
                 else
