@@ -606,15 +606,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     iter = minimum(iter+3, max_zlb_regimes)
                 elseif iter == max_zlb_regimes
                     # Return Fixed ZLB
-
-                    # Restore the original number of regimes and regime dates
-                    if isempty(orig_regime_dates)
-                        delete!(get_settings(m), :regime_dates)
-                        delete!(get_settings(m), :n_regimes)
-                    else
-                        m <= Setting(:regime_dates, orig_regime_dates)
-                        setup_regime_switching_inds!(m; cond_type = cond_type)
-                    end
                     break
                 elseif iter == first_zlb_regime + 3
                     iter = max_zlb_regimes
@@ -639,52 +630,16 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     iter = n_hist_regimes + 1
                 elseif iter == n_hist_regimes + 1
                     ## Note start is forecast_reg so ZLB in historical always there. Can change by using zlb_at_first instead
-                    # Return this (start)
-
-                    # Restore the original number of regimes and regime dates
-                    if isempty(orig_regime_dates)
-                        delete!(get_settings(m), :regime_dates)
-                        delete!(get_settings(m), :n_regimes)
-                    else
-                        m <= Setting(:regime_dates, orig_regime_dates)
-                        setup_regime_switching_inds!(m; cond_type = cond_type)
-                    end
+                    # Return start
                     break
                 elseif iter == first_zlb_regime - 1
-                    # Return this (first_zlb_regime - 1)
-
-                    # Restore the original number of regimes and regime dates
-                    if isempty(orig_regime_dates)
-                        delete!(get_settings(m), :regime_dates)
-                        delete!(get_settings(m), :n_regimes)
-                    else
-                        m <= Setting(:regime_dates, orig_regime_dates)
-                        setup_regime_switching_inds!(m; cond_type = cond_type)
-                    end
+                    # Return first_zlb_regime - 1
                     break
                 elseif iter == first_zlb_regime + 1
-                    # Return this (first_zlb_regime + 1)
-
-                    # Restore the original number of regimes and regime dates
-                    if isempty(orig_regime_dates)
-                        delete!(get_settings(m), :regime_dates)
-                        delete!(get_settings(m), :n_regimes)
-                    else
-                        m <= Setting(:regime_dates, orig_regime_dates)
-                        setup_regime_switching_inds!(m; cond_type = cond_type)
-                    end
+                    # Return first_zlb_regime + 1
                     break
                 elseif iter == first_zlb_regime + 2
-                    # Return this (first_zlb_regime + 2)
-
-                    # Restore the original number of regimes and regime dates
-                    if isempty(orig_regime_dates)
-                        delete!(get_settings(m), :regime_dates)
-                        delete!(get_settings(m), :n_regimes)
-                    else
-                        m <= Setting(:regime_dates, orig_regime_dates)
-                        setup_regime_switching_inds!(m; cond_type = cond_type)
-                    end
+                    # Return first_zlb_regime + 2
                     break
                 elseif iter == first_zlb_regime + 3
                     iter = first_zlb_regime + 1
