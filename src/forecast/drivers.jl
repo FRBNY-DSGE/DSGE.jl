@@ -446,6 +446,18 @@ conditional data case given by `cond_type`.
     set up regime-switching parameters for these new additional regimes.
 - `set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set`: `Function` that automatically updates
     the `tvis_information_set`, e.g. when `zlb_method = :temporary_altpolicy`.
+- `update_regime_eqcond_info!::Function = (x1, x2, x3, x4) ->
+    default_update_regime_eqcond_info(x1, x2, x3, x4, alternative_policy(m)`: `Function` that automatically
+    updates the setting `:regime_eqcond_info`. The arguments of `update_regime_eqcond_info!` should be (in order)
+    `m::AbstractDSGEModel`, `eqcond_dict::AbstractDict{Int64, EqcondEntry}`, `zlb_start_regime::Int64`,
+    and `liftoff_regime::Int64`. The last two arguments are the regime numbers of the first regime for which
+    the ZLB applies and the regime after the ZLB ends, respectively.
+    The `eqcond_dict` argument should specify the `EqcondEntry` during the historical/conditional horizon regime
+    (if it is desired) but can otherwise be empty. This function should then update `eqcond_dict`
+    in place to implement a temporary ZLB and any other permanent alternative policies/regime-switching
+    in the forecast horizon (after the conditional horizon).
+    The user should also be careful and make sure `update_regime_eqcond_info!` handles imperfect awareness properly
+    if they want to implement an imperfectly credible ZLB. For an example, see `?default_update_regime_eqcond_info`.
 - `show_failed_percent::Bool = false`: prints out the number of failed forecasts, which are returned as NaNs.
     These may occur when the ZLB is not enforced, for example.
 - `pegFFR::Bool = false`: peg the nominal FFR at the value specified by `FFRpeg`
@@ -468,6 +480,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       bdd_fcast::Bool = true, params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
                       set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
+                      update_regime_eqcond_info!::Function =
+                      (a, b, c, d) -> default_update_regime_eqcond_info!(a, b, c, d, alternative_policy(m)),
                       rerun_smoother::Bool = false, nan_endozlb_failures::Bool = false,
                       catch_smoother_lapack::Bool = false,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
@@ -519,6 +533,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 n_regimes = n_regimes, zlb_method = zlb_method,
                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
+                                                update_regime_eqcond_info! = update_regime_eqcond_info!,
                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
                                                 rerun_smoother = rerun_smoother, nan_endozlb_failures = nan_endozlb_failures,
                                                 catch_smoother_lapack = catch_smoother_lapack,
@@ -614,6 +629,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  n_regimes = n_regimes, zlb_method = zlb_method,
                                                                  set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                                  set_info_sets_altpolicy = set_info_sets_altpolicy,
+                                                                 update_regime_eqcond_info! = update_regime_eqcond_info!,
                                                                  pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
                                                                  rerun_smoother = rerun_smoother,
                                                                  nan_endozlb_failures = nan_endozlb_failures,
@@ -726,6 +742,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            shock_var_value::Float64 = 0.0, zlb_method::Symbol = :shock,
                            set_regime_vals_altpolicy::Function = identity,
                            set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
+                           update_regime_eqcond_info!::Function =
+                           (a, b, c, d) -> default_update_regime_eqcond_info!(a, b, c, d, alternative_policy(m)),
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            filter_smooth::Bool = false, rerun_smoother::Bool = false,
@@ -1032,11 +1050,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 @show forecaststates[m.endogenous_states[:R_t], :]
                 @show forecastobs[m.observables[:obs_nominalrate], :]
             elseif zlb_method == :temporary_altpolicy
-                altpolicy = alternative_policy(m).key
-                @assert altpolicy in [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt,
-                                      :flexible_ait] "altpolicy must be permanent " *
-                    "and among [:historical, :ait, :ngdp, :smooth_ait_gdp, :smooth_ait_gdp_alt] for this method of enforcing the ZLB."
-
                 # Run the unbounded forecast if they haven't already been computed
                 if isempty(intersect(output_vars, unbddforecast_vars))
                     forecaststates, forecastobs, forecastpseudo, forecastshocks =
@@ -1047,10 +1060,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 # Now run the ZLB enforcing forecast
                 if rerun_smoother
                     zlb_enforced_output =
-                        forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks;
+                        forecast(m, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks;
                                  cond_type = cond_type,
                                  set_zlb_regime_vals = set_regime_vals_altpolicy,
                                  set_info_sets_altpolicy = set_info_sets_altpolicy,
+                                 update_regime_eqcond_info! = update_regime_eqcond_info!,
                                  rerun_smoother = rerun_smoother, df = df,
                                  nan_failures = nan_endozlb_failures,
                                  draw_states = uncertainty,
@@ -1089,10 +1103,11 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                     end
                 else
                     forecaststates, forecastobs, forecastpseudo =
-                        forecast(m, altpolicy, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks;
+                        forecast(m, s_T, forecaststates, forecastobs, forecastpseudo, forecastshocks;
                                  cond_type = cond_type,
                                  set_zlb_regime_vals = set_regime_vals_altpolicy,
-                                 set_info_sets_altpolicy = set_info_sets_altpolicy)
+                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
+                                 update_regime_eqcond_info! = update_regime_eqcond_info!)
                 end
             else
                 forecaststates, forecastobs, forecastpseudo, forecastshocks =

@@ -95,7 +95,7 @@ end
     # First test with unconditional
     ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :none)
     @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
-    ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, :ngdp, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :none)
+    ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :none)
     @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
 
     # Now test a conditional forecast with regime switching in the forecast
@@ -118,7 +118,7 @@ end
 
     ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :full)
     @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
-    ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, :ngdp, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :full)
+    ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :full)
     @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
 end
 

@@ -3,7 +3,7 @@
 forecast(m, system, z0; cond_type = :none,
     enforce_zlb = false, shocks = Matrix{S}(undef, 0,0))
 
-forecast(m, altpolicy, z0, shocks)
+forecast(m, altpolicy, z0, states, obs, pseudo, shocks)
 
 forecast(system, z0, shocks; enforce_zlb = false)
 
@@ -302,7 +302,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 
     # Define our iteration function
     check_zero_rate = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
-    (:zero_rate in map(x->x.alternative_policy.key, collect(values(get_setting(m, :regime_eqcond_info)))))
+        (:zero_rate in map(x -> x.alternative_policy.key, collect(values(get_setting(m, :regime_eqcond_info)))))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
@@ -380,10 +380,12 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 end
 
 # Automatic enforcing of the ZLB as a temporary alternative policy
-function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states::AbstractMatrix{S},
+function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S},
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                   set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
+                  update_regime_eqcond_info!::Function =
+                  (a, b, c, d) -> default_update_regime_eqcond_info!(a, b, c, d, alternative_policy(m)),
                   tol::S = -1e-5, rerun_smoother::Bool = false,
                   df = nothing, draw_states::Bool = false,
                   nan_failures::Bool = false,
@@ -398,10 +400,10 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
     original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : UnitRange{Int64}[]
     original_eqcond_dict = haskey(get_settings(m), :regime_eqcond_info) ? get_setting(m, :regime_eqcond_info) :
-        Dict{Int, DSGE.EqcondEntry}()
+        Dict{Int, EqcondEntry}()
 
     # Grab some information about the forecast
-    n_hist_regimes = haskey(DSGE.get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
+    n_hist_regimes = haskey(get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     has_reg_dates = haskey(get_settings(m), :regime_dates) # calculate dates of first & last regimes we need to add for the alt policy
     if has_reg_dates && length(get_setting(m, :regime_dates)) > 1
         start_altpol_reg  = get_setting(m, :reg_forecast_start)
@@ -448,8 +450,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
 
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
-            get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
-        local system
+            (get_setting(m, :max_temporary_altpol_length) - 1) : (size(obs, 2) - 3) # subtract 1 b/c will add 1 later (see line 459)
         for iter in 0:max_zlb_regimes
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
@@ -489,69 +490,47 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # Set up replace_eqcond entries
             m <= Setting(:replace_eqcond, true)
             m <= Setting(:gensys2, true)
-            replace_eqcond = deepcopy(original_eqcond_dict) # Which rule to replace with in which periods
-            # TODO: add a check for making sure weights are properly set (e.g. enough regimes with weights to avoid error)
-            for regind in first_zlb_regime:(n_total_regimes - 1)
-                if !haskey(replace_eqcond, regind)
-                    weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
-                    weights[1] = 1.
-                    replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), weights)
-                end
-                replace_eqcond[regind].alternative_policy = DSGE.zero_rate() # Temp ZLB rule in this regimes
-            end
 
-            final_eqcond = if altpolicy == :ait
-                DSGE.ait() # Add permanent AIT regime
-            elseif altpolicy == :ngdp
-                DSGE.ngdp() # Add permanent NGDP regime
-            elseif altpolicy == :smooth_ait_gdp
-                DSGE.smooth_ait_gdp() # Add permanent smooth AIT-GDP regime
-            elseif altpolicy == :smooth_ait_gdp_alt
-                DSGE.smooth_ait_gdp_alt # Add permanent smooth AIT-GDP (alternative specification) regime
-            elseif altpolicy == :flexible_ait
-                DSGE.flexible_ait() # Add Flexible AIT
-            else
-                # If none of these conditions apply, then we use the default policy
-                DSGE.default_policy()
-            end
+            # In general, the update_regime_eqcond_info! function should not change the
+            # EqcondEntry during historical/conditional horizon regimes, but any other
+            # regimes in the forecast horizon should be/can be set.
+            #
+            # From above, we also assume that no ZLBs occur in the eqcond_dict that
+            # is passed to update_regime_eqcond_info! and assume that
+            # if there is a particular sequence of alternative policies the user
+            # wants to occur after the ZLB, then the user will have incorporated
+            # code that implements that sequence in their own update_regime_eqcond_info!
+            # function. In the default DSGE policy, the regimes after the ZLB ends
+            # are updated only if there is time-varying credibility
+            # (specified by the Setting :cred_vary_until).
+            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_zlb_regime, n_total_regimes)
 
-            if !haskey(replace_eqcond, n_total_regimes)
-                weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
-                weights[1] = 1.
-                replace_eqcond[n_total_regimes] = DSGE.EqcondEntry(final_eqcond, weights)
-            else
-                replace_eqcond[n_total_regimes].alternative_policy = final_eqcond
-            end
-
-            # NOTE: the following assumes there is only one temporary altpol
-            if final_eqcond.key != :default &&
-                haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
-                for z in n_total_regimes:(get_setting(m, :cred_vary_until) + 1)
-                    replace_eqcond[z].alternative_policy = final_eqcond
-                end
-            end
-
-            m <= Setting(:regime_eqcond_info, replace_eqcond)
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
             # and the total number of regimes (after adding the required temporary regimes),
             # and sets up regime-switching parameters for these new additional regimes.
-            if set_zlb_regime_vals != identity# && (!haskey(get_settings(m), :cred_vary_until) || n_total_regimes > get_setting(m, :cred_vary_until))
+#=            if set_zlb_regime_vals != identity &&
+                (!haskey(get_settings(m), :cred_vary_until) || n_total_regimes > get_setting(m, :cred_vary_until))
+                set_zlb_regime_vals(m, n_total_regimes)
+            end=#
+            if set_zlb_regime_vals != identity
                 set_zlb_regime_vals(m, n_total_regimes)
             end
 
             # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
-            #if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
-             #   set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, first_zlb_regime)
-           # else
+            set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_zlb_regime)
+            #=if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
+                set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, first_zlb_regime)
+            else
                 set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_zlb_regime)
-           # end
+            end=#
 
-            tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
+            # TODO: maybe delete tvis, since tvis should always be on given the fact we always run set_info_sets
+            # tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
 
             # Recompute to account for new regimes
-            system = compute_system(m; tvis = tvis)
+            system = compute_system(m; tvis = true)
 
             if rerun_smoother # if state space system changes, then the smoothed states will also change generally
                 histstates, histshocks, histpseudo, initial_states =
@@ -679,4 +658,55 @@ function auto_temp_altpolicy_info_set(m::AbstractDSGEModel, n_regimes::Int, firs
         end
     end
     m <= Setting(:tvis_information_set, tvis_infoset)
+end
+
+# eqcond_dict should be a dictionary whose historical/conditional horizon regimes
+# should already be set (and won't be affected by this function.
+# The regimes which will be altered are those for which the temporary ZLB will apply
+# (according to `zlb_start_regime` and `liftoff_regime`), and if there is
+# time-varying credibility, forecast regimes past the ZLB.
+#
+# In general, the update_regime_eqcond_info! function should not change the
+# EqcondEntry during historical/conditional horizon regimes, but any other
+# regimes in the forecast horizon should be/can be set.
+function default_update_regime_eqcond_info!(m::AbstractDSGEModel, eqcond_dict::AbstractDict{Int64, EqcondEntry},
+                                            zlb_start_regime::Int64, liftoff_regime::Int64, liftoff_policy::AltPolicy)
+
+    # TODO: add a check for making sure weights are properly set (e.g. enough regimes with weights to avoid error)
+    # Populate eqcond_dict for regimes in which the ZLB should apply and update the weights as appropriate
+    for regind in zlb_start_regime:(liftoff_regime - 1)
+        if haskey(eqcond_dict, regind)
+            # If regime index exists already, just directly change the
+            # alternative_policy (which leaves the credibility weights unchanged)
+            eqcond_dict[regind].alternative_policy = zero_rate() # Temp ZLB rule in this regimes
+        else
+            # If the regime index doesn't already exist, then add an EqcondEntry
+            # for a ZLB that is perfectly credible
+            weights = zeros(haskey(get_settings(m), :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
+            weights[1] = 1.
+            eqcond_dict[regind] = EqcondEntry(zero_rate(), weights)
+        end
+    end
+
+    # Set the liftoff regime's EqcondEntry, using same logic as above
+    if haskey(eqcond_dict, liftoff_regime)
+        eqcond_dict[liftoff_regime].alternative_policy = liftoff_policy
+    else
+        weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
+        weights[1] = 1.
+        eqcond_dict[liftoff_regime] = EqcondEntry(liftoff_policy, weights)
+    end
+
+    # NOTE: the following block assumes there is only one temporary altpol
+    # Update eqcond_dict to use the lift-off policy for any regimes between (inclusive)
+    # the liftoff regime and the first regime for which credibility stops varying.
+    if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= liftoff_regime
+        for z in liftoff_regime:(get_setting(m, :cred_vary_until) + 1)
+            eqcond_dict[z].alternative_policy = liftoff_policy
+        end
+    end
+
+    m <= Setting(:regime_eqcond_info, eqcond_dict)
+
+    return m
 end

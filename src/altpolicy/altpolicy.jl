@@ -51,25 +51,36 @@ function AltPolicy(key::Symbol, eqcond_fcn::Function, solve_fcn::Function;
     AltPolicy(key, eqcond_fcn, solve_fcn, forecast_init, color, linestyle)
 end
 
-function altpolicy_replace_eq_entries(key::Symbol)
-    if key == :flexible_ait
-        return flexible_ait_replace_eq_entries
+"""
+```
+get_altpolicy(key::Symbol)
+```
+
+returns the `AltPolicy` for a alternative policy identified by `key`.
+"""
+function get_altpolicy(key::Symbol)
+    altpol = if key == :flexible_ait
+        flexible_ait()
     elseif key == :zero_rate
-        return zero_rate_replace_eq_entries
+        zero_rate()
+    elseif key == :default_policy
+        default_policy()
+    elseif key == :taylor_rule
+        taylor_rule()
     elseif key == :smooth_ait_gdp_alt
-        smooth_ait_gdp_alt_replace_eq_entries
+        smooth_ait_gdp_alt()
     elseif key == :smooth_ait_gdp
-        smooth_ait_gdp_replace_eq_entries
+        smooth_ait_gdp()
     elseif key == :ait
-        ait_replace_eq_entries
+        ait()
     elseif key == :ngdp
-        ngdp_replace_eq_entries
+        ngdp()
     elseif key == :rw_zero_rate
-        rw_zero_rate_replace_eq_entries
+        rw_zero_rate()
     elseif key == :rw
-        rw_replace_eq_entries
+        rw()
     else
-        error("AltPolicy $(key) has not been added to `altpolicy_replace_eq_entries` as having a method for replacing equilibrium conditions")
+        error("AltPolicy $(key) has not been added to `get_altpolicy` as having a method for replacing equilibrium conditions")
     end
 end
 
