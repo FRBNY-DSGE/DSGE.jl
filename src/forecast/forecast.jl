@@ -302,7 +302,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 
     # Define our iteration function
     check_zero_rate = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
-    (DSGE.zero_rate() in collect(values(get_setting(m, :regime_eqcond_info))))
+    (:zero_rate in map(x->x.alternative_policy.key, collect(values(get_setting(m, :regime_eqcond_info)))))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
