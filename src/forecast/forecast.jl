@@ -419,7 +419,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
     # Start imposing ZLB at the quarter before liftoff quarter
     ##TODO: Generalize to ZLB starting later in the forecast
-    first_zlb_regime = maximum(findfirst(obs[get_observables(m)[:obs_nominalrate], :] .>
+    first_zlb_regime = max(findfirst(obs[get_observables(m)[:obs_nominalrate], :] .>
                                  get_setting(m, :forecast_zlb_value)) - 1, 1)
 
     altpol = alternative_policy(m)
@@ -453,6 +453,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             key_sort = sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
             zlb_at_first = key_sort[findfirst([get_setting(m, :regime_eqcond_info)[i].alternative_policy.key .== :zero_rate for i in key_sort])] ##TODO: Generalize to cases where we have ZLB+AIT+ZLB in regime_eqcond_info and we want start of second ZLB
             m <= Setting(:temporary_altpol_length, first_zlb_regime - zlb_at_first + 1)
+        else
+            zlb_at_first = haskey(m.settings, :reg_post_conditional_end) ? get_setting(m, :reg_post_conditional_end) : get_setting(m, :reg_forecast_start)
         end
 
         # Setup for loop enforcing zero rate
@@ -539,9 +541,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
 
             # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
-            set_info_sets_altpolicy(m, get_setting(m, :n_regimes), zlb_at_start)
+            set_info_sets_altpolicy(m, get_setting(m, :n_regimes), zlb_at_first)
             #=if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
-                set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, zlb_at_start)
+                set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, zlb_at_first)
             else
                 set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_zlb_regime)
             end=#
@@ -564,6 +566,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # passed into this function will not be over-written.
             states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
+            # Successful endogenous bounding?
+            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
+
+            if !endo_success && iter == max_zlb_regimes
+                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
+            end
+
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
             # in forecast_one will not work.
             if set_zlb_regime_vals != identity
@@ -577,9 +586,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     end
                 end
             end
-
-            # Successful endogenous bounding?
-            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
 
             if to_return ## We ran this iteration to return the answer.
                 @assert endo_success "Code is wrong that it wants to return when endo_success is false"
@@ -605,7 +611,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # If more ZLB necessary
             if !endo_success
                 if iter == first_zlb_regime
-                    iter = minimum(iter+3, max_zlb_regimes)
+                    iter = min(iter+3, max_zlb_regimes)
                 elseif iter == max_zlb_regimes
                     # Return Fixed ZLB
                     break
@@ -624,12 +630,12 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 else
                     # Continue Binary Search
                     low = iter + 1
-                    iter = floor((low+high)/2)
+                    iter = Int(floor((low+high)/2))
                 end
             else
                 # If ZLB works (no negative rates)
                 if iter == first_zlb_regime
-                    iter = maximum(first_zlb_regime - 2, n_hist_regimes + 1)
+                    iter = max(first_zlb_regime - 2, n_hist_regimes + 1)
                 elseif iter == first_zlb_regime - 2
                     iter = n_hist_regimes + 1
                 elseif iter == n_hist_regimes + 1
@@ -650,14 +656,14 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif hi == low || iter == low
                     # Return this
                 elseif iter == max_zlb_regimes
-                    # Continue Binary Search on [first_zlb_regime + 4, max_zlb_regime]
-                    iter = floor((max_zlb_regime + first_zlb_regime + 4) / 2)
+                    # Continue Binary Search on [first_zlb_regime + 4, max_zlb_regimes]
+                    iter = Int(floor((max_zlb_regimes + first_zlb_regime + 4) / 2))
                     hi = max_zlb_regimes
                     low = first_zlb_regime + 4
                 else
                     # Continue Binary Search
                     hi = iter
-                    iter = floor((hi + low)/2)
+                    iter = Int(floor((hi + low)/2))
                 end
             end
         end
