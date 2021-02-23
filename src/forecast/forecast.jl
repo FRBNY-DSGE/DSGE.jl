@@ -466,6 +466,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
 
         iter = first_zlb_regime
+        to_return = false
+
         while true ## Binary search
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
@@ -473,7 +475,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             n_total_regimes = iter + 1 # plus 1 for lift off
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
-	    m <= Setting(:temporary_altpol_length, iter + 1) # 1 for first_zlb_regime, iter for each additional regime
+	        m <= Setting(:temporary_altpol_length, iter + 1) # 1 for first_zlb_regime, iter for each additional regime
             # Test if more/less ZLB Needed
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
@@ -577,6 +579,20 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # Successful endogenous bounding?
             endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
 
+            if to_return ## We ran this iteration to return the answer.
+                @assert endo_success "Code is wrong that it wants to return when endo_success is false"
+
+                # Restore the original number of regimes and regime dates
+                if isempty(orig_regime_dates)
+                    delete!(get_settings(m), :regime_dates)
+                    delete!(get_settings(m), :n_regimes)
+                else
+                    m <= Setting(:regime_dates, orig_regime_dates)
+                    setup_regime_switching_inds!(m; cond_type = cond_type)
+                end
+                break
+            end
+
             ## Note in below 2 is really :endogenous_zlb_lookback and 3 is :endogenous_zlb_lookahead
             ## Reset temporary_altpol_length in each case
             ## Return here refers to "break"
@@ -605,31 +621,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif iter == first_zlb_regime + 1
                     iter = first_zlb_regime + 2
                 elseif iter == first_zlb_regime + 2
-                    # Return first_zlb_regime + 3 answer
-
-                    # Restore the original number of regimes and regime dates
-                    if isempty(orig_regime_dates)
-                        delete!(get_settings(m), :regime_dates)
-                        delete!(get_settings(m), :n_regimes)
-                    else
-                        m <= Setting(:regime_dates, orig_regime_dates)
-                        setup_regime_switching_inds!(m; cond_type = cond_type)
-                    end
-                    break
+                    iter = first_zlb_regime + 3
+                    to_return = true
                 elseif iter == first_zlb_regime - 2
                     iter = first_zlb_regime - 1
                 elseif iter == first_zlb_regime - 1
-                    # Return first_zlb_regime
-
-                    # Restore the original number of regimes and regime dates
-                    if isempty(orig_regime_dates)
-                        delete!(get_settings(m), :regime_dates)
-                        delete!(get_settings(m), :n_regimes)
-                    else
-                        m <= Setting(:regime_dates, orig_regime_dates)
-                        setup_regime_switching_inds!(m; cond_type = cond_type)
-                    end
-                    break
+                    iter = first_zlb_regime
+                    to_return = true
                 else
                     # Continue Binary Search
                 end
@@ -641,7 +639,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     iter = n_hist_regimes + 1
                 elseif iter == n_hist_regimes + 1
                     ## Note start is forecast_reg so ZLB in historical always there. Can change by using zlb_at_first instead
-                    # Return start
+                    # Return this (start)
 
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
@@ -653,7 +651,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     end
                     break
                 elseif iter == first_zlb_regime - 1
-                    # Return first_zlb_regime - 1
+                    # Return this (first_zlb_regime - 1)
 
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
@@ -665,7 +663,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     end
                     break
                 elseif iter == first_zlb_regime + 1
-                    # Return first_zlb_regime + 1
+                    # Return this (first_zlb_regime + 1)
 
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
@@ -677,7 +675,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     end
                     break
                 elseif iter == first_zlb_regime + 2
-                    # Return first_zlb_regime + 2
+                    # Return this (first_zlb_regime + 2)
 
                     # Restore the original number of regimes and regime dates
                     if isempty(orig_regime_dates)
