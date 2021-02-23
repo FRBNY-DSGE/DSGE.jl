@@ -386,6 +386,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
                   set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
                   tol::S = -1e-5, rerun_smoother::Bool = false,
                   df = nothing, draw_states::Bool = false,
+                  nan_failures::Bool = false,
                   histstates::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   histshocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
@@ -446,7 +447,9 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         orig_temp_zlb     = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
 
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
-        for iter in 0:(size(obs, 2) - 3)
+        max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
+            get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
+        for iter in 0:max_zlb_regimes
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
@@ -549,7 +552,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
             # Recompute to account for new regimes
             system = compute_system(m; tvis = tvis)
 
-            if rerun_smoother # if state space changes, then the smoothed states will also change generally
+            if rerun_smoother # if state space system changes, then the smoothed states will also change generally
                 histstates, histshocks, histpseudo, initial_states =
                     smooth(m, df, system; cond_type = cond_type, draw_states = draw_states)
                 z0 = histstates[:, end]
@@ -597,10 +600,14 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     end
 
     if !all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
-        @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
-        states .= fill(NaN, size(states))
-        obs    .= fill(NaN, size(obs))
-        pseudo .= fill(NaN, size(pseudo))
+        if nan_failures
+            @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
+            states .= NaN
+            obs    .= NaN
+            pseudo .= NaN
+        else
+            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
+        end
     end
 
     # Restore original settings
@@ -629,6 +636,8 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
     end
 
     if rerun_smoother
+        # Need to return histstates, etc., to update the histstates, etc.,
+        # which are returned in the forecast_output dictionary
         return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
     else
         return states, obs, pseudo

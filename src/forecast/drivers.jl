@@ -436,6 +436,9 @@ conditional data case given by `cond_type`.
 
 - `rerun_smoother::Bool = false`: if true, rerun the conditional forecast when automatically enforcing
     the ZLB as a temporary alternative policy.
+- `nan_endozlb_failures::Bool = false`: if true, failures of an endogenous ZLB (when implemented
+    as a temporary policy) will be handled by throwing NaNs instead of using
+    unanticipated monetary policy shocks.
 - `set_regime_vals_altpolicy::Function`: `Function` that adds new regimes to parameters when
     using temporary alternative policies (if needed). Defaults to identity (which does nothing)
     This function should take as inputs the model object `m` and the total number of regimes
@@ -465,7 +468,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       bdd_fcast::Bool = true, params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
                       set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                      rerun_smoother::Bool = false, catch_smoother_lapack::Bool = false,
+                      rerun_smoother::Bool = false, nan_endozlb_failures::Bool = false,
+                      catch_smoother_lapack::Bool = false,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                       show_failed_percent::Bool = false, only_filter::Bool = false,
                       verbose::Symbol = :low, testing_carter_kohn::Bool = false,
@@ -516,7 +520,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 set_regime_vals_altpolicy = set_regime_vals_altpolicy,
                                                 set_info_sets_altpolicy = set_info_sets_altpolicy,
                                                 pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
-                                                rerun_smoother = rerun_smoother, catch_smoother_lapack = catch_smoother_lapack,
+                                                rerun_smoother = rerun_smoother, nan_endozlb_failures = nan_endozlb_failures,
+                                                catch_smoother_lapack = catch_smoother_lapack,
                                                 testing_carter_kohn = testing_carter_kohn, trend_nostates_obs = trend_nostates_obs,
                                                 trend_nostates_pseudo = trend_nostates_pseudo, full_shock_decomp = full_shock_decomp)
 
@@ -611,6 +616,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  set_info_sets_altpolicy = set_info_sets_altpolicy,
                                                                  pegFFR = pegFFR, FFRpeg = FFRpeg, H = H, only_filter = only_filter,
                                                                  rerun_smoother = rerun_smoother,
+                                                                 nan_endozlb_failures = nan_endozlb_failures,
                                                                  catch_smoother_lapack = catch_smoother_lapack,
                                                                  testing_carter_kohn = testing_carter_kohn),
                                       params_for_map)
@@ -723,6 +729,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            filter_smooth::Bool = false, rerun_smoother::Bool = false,
+                           nan_endozlb_failures::Bool = false,
                            catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false,
                            return_loglh::Bool = false, trend_nostates_obs = Array{(0,0)},
                            trend_nostates_pseudo = Array{(0,0)}, full_shock_decomp::Bool = false)
@@ -1045,6 +1052,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                                  set_zlb_regime_vals = set_regime_vals_altpolicy,
                                  set_info_sets_altpolicy = set_info_sets_altpolicy,
                                  rerun_smoother = rerun_smoother, df = df,
+                                 nan_failures = nan_endozlb_failures,
                                  draw_states = uncertainty,
                                  histstates = histstates, histshocks = histshocks, histpseudo = histpseudo,
                                  initial_states = initial_states)
