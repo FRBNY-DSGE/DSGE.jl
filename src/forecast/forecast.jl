@@ -449,6 +449,7 @@ function forecast(m::AbstractDSGEModel, altpolicy::Symbol, z0::Vector{S}, states
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
             get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
+        local system
         for iter in 0:max_zlb_regimes
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
