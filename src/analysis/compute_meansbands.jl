@@ -574,10 +574,12 @@ function compute_meansbands(models::Vector,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth,  use_data = haskey(pseudo2data, var_name))
 
+    replace!(transformed_series, missing=>NaN)
+
     # Handle NaNs
     if skipnan && !(output_var in [:histobs, :hist4qobs]) && (ismissing(any(isnan.(transformed_series))) ? true : any(isnan.(transformed_series)))
         # Remove rows with NaNs
-        nanrows = vec(mapslices(x -> ismissing(all(isnan.(x))) ? true : all(isnan.(x)), transformed_series, dims = Int[2]))
+        nanrows = vec(mapslices(x -> ismissing(all(isnan.(x))) ? all(ismissing.(x)) : all(isnan.(x)), transformed_series, dims = Int[2]))
         transformed_series = transformed_series[.!nanrows, :]
     end
 
