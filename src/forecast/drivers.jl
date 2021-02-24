@@ -446,12 +446,12 @@ conditional data case given by `cond_type`.
     set up regime-switching parameters for these new additional regimes.
 - `set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set`: `Function` that automatically updates
     the `tvis_information_set`, e.g. when `zlb_method = :temporary_altpolicy`.
-- `update_regime_eqcond_info!::Function = default_update_regime_eqcond_info`: `Function` that automatically
+- `update_regime_eqcond_info!::Function = (x1, x2, x3, x4) ->
+    default_update_regime_eqcond_info(x1, x2, x3, x4, alternative_policy(m)`: `Function` that automatically
     updates the setting `:regime_eqcond_info`. The arguments of `update_regime_eqcond_info!` should be (in order)
     `m::AbstractDSGEModel`, `eqcond_dict::AbstractDict{Int64, EqcondEntry}`, `zlb_start_regime::Int64`,
-    `liftoff_regime::Int64`, and `liftoff_policy::AltPolicy`. The third/fourth arguments are the regime
-    numbers of the first regime for which the ZLB applies and the regime after the ZLB ends, respectively.
-    The last argument specifies the policy which applies once lift-off occurs.
+    and `liftoff_regime::Int64`. The last two arguments are the regime numbers of the first regime for which
+    the ZLB applies and the regime after the ZLB ends, respectively.
     The `eqcond_dict` argument should specify the `EqcondEntry` during the historical/conditional horizon regime
     (if it is desired) but can otherwise be empty. This function should then update `eqcond_dict`
     in place to implement a temporary ZLB and any other permanent alternative policies/regime-switching
@@ -480,7 +480,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       bdd_fcast::Bool = true, params::AbstractArray{Float64} = Vector{Float64}(undef, 0),
                       zlb_method::Symbol = :shock, set_regime_vals_altpolicy::Function = identity,
                       set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                      update_regime_eqcond_info!::Function = default_update_regime_eqcond_info!,
+                      update_regime_eqcond_info!::Function =
+                      (a, b, c, d) -> default_update_regime_eqcond_info!(a, b, c, d, alternative_policy(m)),
                       rerun_smoother::Bool = false, nan_endozlb_failures::Bool = false,
                       catch_smoother_lapack::Bool = false,
                       pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
@@ -741,7 +742,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            shock_var_value::Float64 = 0.0, zlb_method::Symbol = :shock,
                            set_regime_vals_altpolicy::Function = identity,
                            set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                           update_regime_eqcond_info!::Function = default_update_regime_eqcond_info!,
+                           update_regime_eqcond_info!::Function =
+                           (a, b, c, d) -> default_update_regime_eqcond_info!(a, b, c, d, alternative_policy(m)),
                            pegFFR::Bool = false, FFRpeg::Float64 = -0.25/4, H::Int = 4,
                            regime_switching::Bool = false, n_regimes::Int = 1, only_filter::Bool = false,
                            filter_smooth::Bool = false, rerun_smoother::Bool = false,
