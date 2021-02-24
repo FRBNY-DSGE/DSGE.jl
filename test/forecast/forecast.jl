@@ -72,9 +72,9 @@ end
 end
 
 @testset "Enforce ZLB as a temporary alternative policy" begin
-
     # Set up model for forecast and permanent NGDP
-    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
+    m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true),
+                                                                  :add_ygap => Setting(:add_ygap, true)))
     m <= Setting(:date_forecast_start,  Date(2020, 6, 30))
     m <= Setting(:date_conditional_end, Date(2020, 6, 30))
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -82,21 +82,23 @@ end
                                                 3 => Date(2020, 6, 30)))
     m <= Setting(:forecast_horizons, 12)
     shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m))
-    shocks[m.exogenous_shocks[:b_sh], 1] = -0.6 # suppose massive negative shock to spreads -> MP should drop!
+    shocks[m.exogenous_shocks[:b_sh], 1] = -0.5 # suppose massive negative shock to spreads -> MP should drop!
     m <= Setting(:gensys2, false)
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m)
-    m <= Setting(:pgap_value, 12.)
-    m <= Setting(:pgap_type, :ngdp)
-    setup_permanent_altpol!(m, DSGE.ngdp(); cond_type = :none)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 2.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    setup_permanent_altpol!(m, flexible_ait(); cond_type = :none)
     system = compute_system(m)
     z0 = zeros(n_states_augmented(m))
 
     # First test with unconditional
-    ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :none)
-    @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
-    ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :none)
-    @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
+    flexait_states, flexait_obs, flexait_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :none)
+    @test !all(flexait_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
+    flexait_states, flexait_obs, flexait_pseudo = forecast(m, z0, flexait_states, flexait_obs, flexait_pseudo, shocks; cond_type = :none)
+    @test all(flexait_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
 
     # Now test a conditional forecast with regime switching in the forecast
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -105,21 +107,23 @@ end
                                                 4 => Date(2020, 9, 30)))
     m <= Setting(:forecast_horizons, 12)
     shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m; cond_type = :full))
-    shocks[m.exogenous_shocks[:b_sh], 1] = -0.6 # suppose massive negative shock to spreads -> MP should drop!
+    shocks[m.exogenous_shocks[:b_sh], 1] = -0.5 # suppose massive negative shock to spreads -> MP should drop!
     m <= Setting(:replace_eqcond, false)
     m <= Setting(:gensys2, false)
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m)
-    m <= Setting(:pgap_value, 12.)
-    m <= Setting(:pgap_type, :ngdp)
-    setup_permanent_altpol!(m, DSGE.ngdp(); cond_type = :full)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 2.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    setup_permanent_altpol!(m, flexible_ait(); cond_type = :full)
     system = compute_system(m)
     z0 = zeros(n_states_augmented(m))
 
-    ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :full)
-    @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
-    ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :full)
-    @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
+    flexait_states, flexait_obs, flexait_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :full)
+    @test !all(flexait_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
+    flexait_states, flexait_obs, flexait_pseudo = forecast(m, z0, flexait_states, flexait_obs, flexait_pseudo, shocks; cond_type = :full)
+    @test all(flexait_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
 end
 
 nothing
