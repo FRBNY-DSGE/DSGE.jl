@@ -630,7 +630,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     to_return = true
                 else
                     # Continue Binary Search
-                    iter = Int(floor((low+high)/2))
+                    iter = Int(floor((low+hi)/2))
                 end
             else
                 # If ZLB works (no negative rates)
