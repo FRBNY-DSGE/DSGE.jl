@@ -403,7 +403,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         Dict{Int, EqcondEntry}()
 
     # Information set - start of awareness of ZLB
-    first_aware = findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
+    if haskey(get_settings(m), :tvis_information_set)
+        first_aware = findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
+    elseif haskey(get_settings(m), :regime_eqcond_info)
+        first_aware = findfirst([original_info_set[i].key == :zero_rate for i in keys(original_info_set)])
+    else
+        first_aware = nothing
+    end
 
     # Grab some information about the forecast
     n_hist_regimes = haskey(get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
@@ -450,6 +456,11 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
         end
 
+        # Update first awareness period if nothing before
+        if isnothing(first_aware)
+            first_aware = zlb_at_first
+        end
+
         ## The temporary_altpol_length is the no. of regimes
         ## immediately before the ZLB regime that are ZLB.
         m <= Setting(:temporary_altpol_length, first_zlb_regime - zlb_at_first + 1)
@@ -470,6 +481,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         low = n_hist_regimes + 1
 
         while true ## Binary search
+            @show iter
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
@@ -523,7 +535,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # function. In the default DSGE policy, the regimes after the ZLB ends
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
-            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_aware, n_total_regimes)
+            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), zlb_at_first, n_total_regimes)
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
@@ -538,7 +550,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
 
             # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
-            set_info_sets_altpolicy(m, get_setting(m, :n_regimes), zlb_at_first)
+            set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_aware)
             #=if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
                 set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, zlb_at_first)
             else
