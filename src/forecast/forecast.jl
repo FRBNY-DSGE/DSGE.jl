@@ -578,7 +578,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
 
             if !endo_success && iter == max_zlb_regimes
-                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
+                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true, zlb_value = get_setting(m, :forecast_zlb_value) / 4.0)
             end
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
