@@ -471,7 +471,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # Ensure we don't accidentally tell the code to forecast beyond the forecast horizon
             altpol_reg_range = start_altpol_reg:n_total_regimes
             if length(altpol_reg_range) > n_altpol_reg_qtrrange
-                if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :forecast_zlb_value) + tol) # Ensure we do not accidentally
+                if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :forecast_zlb_value) / 4.0 + tol) # Ensure we do not accidentally
                     obs[get_observables(m)[:obs_nominalrate], 1] = tol - 2. # assume success at enforcing ZLB (should be negative)
                 end
                 break
