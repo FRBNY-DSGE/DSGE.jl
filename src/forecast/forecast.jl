@@ -385,7 +385,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                   set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
                   update_regime_eqcond_info!::Function =
-                  (a, b, c, d) -> default_update_regime_eqcond_info!(a, b, c, d, alternative_policy(m)),
+                  (a, b, c, d, altpols) -> default_update_regime_eqcond_info!(a, b, c, d, altpols),
                   tol::S = -1e-5, rerun_smoother::Bool = false,
                   df = nothing, draw_states::Bool = false,
                   nan_failures::Bool = false,
@@ -479,9 +479,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         to_return = false
         hi = max_zlb_regimes
         low = n_hist_regimes + 1
+        system = nothing
 
         while true ## Binary search
-            @show iter
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
@@ -535,7 +535,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # function. In the default DSGE policy, the regimes after the ZLB ends
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
-            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), zlb_at_first, n_total_regimes)
+            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), zlb_at_first, n_total_regimes, altpol)
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
