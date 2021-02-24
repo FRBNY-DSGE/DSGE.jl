@@ -436,6 +436,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     end
 
 
+    system = nothing
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
         first_zlb_regime += n_hist_regimes
         if cond_type != :none && first_zlb_regime <= n_hist_regimes+1
@@ -463,12 +464,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
             get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
-
-
-        iter = first_zlb_regime
-        to_return = false
-
-        while true ## Binary search
+        for iter in 0:max_zlb_regimes
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
@@ -548,8 +544,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
 
             # Recompute to account for new regimes
-            system = compute_system(m; tvis = true)
-
+            system = compute_system(m; tvis = tvis)
             if rerun_smoother # if state space system changes, then the smoothed states will also change generally
                 histstates, histshocks, histpseudo, initial_states =
                     smooth(m, df, system; cond_type = cond_type, draw_states = draw_states)
@@ -658,14 +653,27 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         end
     end
 
-    if !all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
+    if !all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
         if nan_failures
             @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
             states .= NaN
             obs    .= NaN
             pseudo .= NaN
         else
-            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
+            @warn "Unable to enforce the ZLB. Using unant shocks to enforce ZLB."
+            try
+                if isnothing(system)
+                    tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
+                    system = compute_system(m; tvis = tvis)
+                end
+                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
+            catch e
+                println(e)
+                @warn "Mystery error, NaNing forecasts."
+                states .= NaN
+                obs .= NaN
+                pseudo .=NaN
+            end
         end
     end
 
