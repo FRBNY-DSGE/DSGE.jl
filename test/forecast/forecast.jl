@@ -71,7 +71,7 @@ end
     delete!(DSGE.get_settings(m), :regime_switching)
 end
 
-@testset "Enforce ZLB as a temporary alternative policy" begin
+#@testset "Enforce ZLB as a temporary alternative policy" begin
 
     # Set up model for forecast and permanent NGDP
     m = Model1002("ss10"; custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
@@ -95,6 +95,7 @@ end
     # First test with unconditional
     ngdp_states, ngdp_obs, ngdp_pseudo, _ = forecast(m, system, z0; shocks = shocks, cond_type = :none)
     @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
+@show "Starting"
     ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :none)
     @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
 
@@ -120,6 +121,6 @@ end
     @test !all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
     ngdp_states, ngdp_obs, ngdp_pseudo = forecast(m, z0, ngdp_states, ngdp_obs, ngdp_pseudo, shocks; cond_type = :full)
     @test all(ngdp_obs[m.observables[:obs_nominalrate], :] .> -1e-14)
-end
+#end
 
 nothing
