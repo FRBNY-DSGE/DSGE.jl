@@ -310,8 +310,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         if enforce_zlb
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
-                continue_enforce = check_zero_rate ? abs.(Z[ind_r, :]' * R[:, ind_r_sh]) > 1e-4 : true
-
+                continue_enforce = check_zero_rate ? abs.(Z[ind_r, :]' * R[:, ind_r_sh]) > 1e-4 : true # make sure we don't actually divide by zero (which may occur if R[:, ind_r_sh] .== 0.
                 if continue_enforce
                     # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
                     ϵ_t[ind_r_sh] = 0. # get forecast when MP shock
@@ -384,8 +383,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                   obs::AbstractMatrix{S}, pseudo::AbstractMatrix{S}, shocks::AbstractMatrix{S};
                   cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                   set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
-                  update_regime_eqcond_info!::Function =
-                  (a, b, c, d, altpols) -> default_update_regime_eqcond_info!(a, b, c, d, altpols),
+                  update_regime_eqcond_info!::Function = default_update_regime_eqcond_info!,
                   tol::S = -1e-5, rerun_smoother::Bool = false,
                   df = nothing, draw_states::Bool = false,
                   nan_failures::Bool = false,
@@ -395,6 +393,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                   initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
 
     # Grab "original" settings" so they can be restored later
+    altpol = alternative_policy(m)
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
@@ -429,9 +428,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     # Start imposing ZLB at the quarter before liftoff quarter
     first_zlb_regime = findlast(obs[get_observables(m)[:obs_nominalrate], :] .<= get_setting(m, :forecast_zlb_value) / 4.0)
 
-    altpol = alternative_policy(m)
-
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
+
+        endo_success = false
 
         # Check original_eqcond_dict if any regimes use the zero rate rule.
         for (reg, v) in original_eqcond_dict
@@ -473,7 +472,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
             get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
-
 
         iter = first_zlb_regime
         to_return = false
@@ -536,6 +534,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
             update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), zlb_at_first, n_total_regimes, altpol)
+
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
@@ -576,7 +575,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
             # Successful endogenous bounding?
-            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4.0 + tol)
+            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
 
             if !endo_success && iter == max_zlb_regimes
                 states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
@@ -599,14 +598,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             if to_return || (endo_success && (first_zlb_regime - 1 <= iter <= first_zlb_regime + 2)) ## We ran this iteration to return the answer.
                 @assert endo_success "Code is wrong that it wants to return when endo_success is false"
 
-                # Restore the original number of regimes and regime dates
-                if isempty(orig_regime_dates)
-                    delete!(get_settings(m), :regime_dates)
-                    delete!(get_settings(m), :n_regimes)
-                else
-                    m <= Setting(:regime_dates, orig_regime_dates)
-                    setup_regime_switching_inds!(m; cond_type = cond_type)
-                end
                 break
             end
 
@@ -677,6 +668,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
         end
     else
+        endo_success = true
+
         if rerun_smoother
             return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
         else
@@ -684,15 +677,11 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         end
     end
 
-    if !all(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
-        if nan_failures
-            @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
-            states .= NaN
-            obs    .= NaN
-            pseudo .= NaN
-        else
-            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
-        end
+    if nan_failures && !endo_success
+        @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
+        states .= NaN
+        obs    .= NaN
+        pseudo .= NaN
     end
 
     # Restore original settings
