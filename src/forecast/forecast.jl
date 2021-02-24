@@ -419,7 +419,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
     # Start imposing ZLB instead at the quarter before liftoff quarter
     first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
-                                 get_setting(m, :forecast_zlb_value))
+                                 get_setting(m, :forecast_zlb_value) / 4.0)
 
     altpol = alternative_policy(m)
 
