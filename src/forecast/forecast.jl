@@ -531,7 +531,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
 
             # Recompute to account for new regimes
-            system = compute_system(m; tvis = tvis)
+            system = compute_system(m; tvis = true)
             if rerun_smoother # if state space system changes, then the smoothed states will also change generally
                 histstates, histshocks, histpseudo, initial_states =
                     smooth(m, df, system; cond_type = cond_type, draw_states = draw_states)
@@ -542,7 +542,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # this step merely changes to which matrices the local variables states, obs, and pseudo point
             # w/in this function's closure. Thus, the matrices states, obs, and pseudo which are first
             # passed into this function will not be over-written.
-            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
+            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = (iter == max_zlb_regimes))
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
             # in forecast_one will not work.
