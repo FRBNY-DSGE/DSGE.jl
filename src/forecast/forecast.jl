@@ -419,24 +419,24 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
     # Start imposing ZLB at the quarter before liftoff quarter
     ##TODO: Generalize to ZLB starting later in the forecast
-    first_zlb_regime = max(findfirst(obs[get_observables(m)[:obs_nominalrate], :] .>
-                                 get_setting(m, :forecast_zlb_value) / 4.0) - 1, 1)
+    first_zlb_regime = findlast(obs[get_observables(m)[:obs_nominalrate], :] .<= get_setting(m, :forecast_zlb_value) / 4.0)
 
     altpol = alternative_policy(m)
 
-    # Check replace_eqcond_func_dict if any regimes use the zero rate rule
-    for (reg, v) in original_eqcond_dict
-        if v.alternative_policy.key == :zero_rate && reg > first_zlb_regime + n_hist_regimes
-            @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
-            v.alternative_policy = altpol
-        end
-        if reg <= first_zlb_regime + n_hist_regimes && v.alternative_policy.key != :zero_rate
-            v.alternative_policy = DSGE.zero_rate()
-        end
-    end
-
-
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
+
+        # Check original_eqcond_dict if any regimes use the zero rate rule.
+        for (reg, v) in original_eqcond_dict
+            if v.alternative_policy.key == :zero_rate &&
+                (reg >= (cond_type == :none ? get_setting(m, :reg_forecast_start) : get_setting(m, :reg_post_conditional_end)))
+                @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
+                v.alternative_policy = altpol
+            end
+            #=        if reg <= first_zlb_regime + n_hist_regimes && v.alternative_policy.key != :zero_rate
+            v.alternative_policy = DSGE.zero_rate()
+            end=#
+        end
+
         first_zlb_regime += n_hist_regimes
         if cond_type != :none && first_zlb_regime <= n_hist_regimes+1
             if is_regime_switch
@@ -449,12 +449,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
         ## The temporary_altpol_length is not 0 but the no. of regimes
         ## immediately before the ZLB regime that are ZLB (including historical).
-        if haskey(m.settings, :regime_eqcond_info) ## Temporary_altpol_length doesn't matter otherwise
+        if haskey(get_settings(m), :regime_eqcond_info) ## Temporary_altpol_length doesn't matter otherwise
             key_sort = sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
             zlb_at_first = key_sort[findfirst([get_setting(m, :regime_eqcond_info)[i].alternative_policy.key .== :zero_rate for i in key_sort])] ##TODO: Generalize to cases where we have ZLB+AIT+ZLB in regime_eqcond_info and we want start of second ZLB
             m <= Setting(:temporary_altpol_length, first_zlb_regime - zlb_at_first + 1)
         else
-            zlb_at_first = haskey(m.settings, :reg_post_conditional_end) ? get_setting(m, :reg_post_conditional_end) : get_setting(m, :reg_forecast_start)
+            zlb_at_first = haskey(get_settings(m), :reg_post_conditional_end) ?
+                get_setting(m, :reg_post_conditional_end) : get_setting(m, :reg_forecast_start)
         end
 
         # Setup for loop enforcing zero rate
@@ -526,7 +527,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
             update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), zlb_at_first, n_total_regimes)
-
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
