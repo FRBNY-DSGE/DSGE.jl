@@ -475,7 +475,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
         iter = first_zlb_regime
         to_return = false
-        hi = max_zlb_regimes
+        high = max_zlb_regimes
         low = n_hist_regimes + 1
         system = nothing
 
@@ -634,7 +634,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 end
             else
                 # If ZLB works (no negative rates)
-                hi = iter
+                high = iter
                 if iter == first_zlb_regime
                     iter = max(first_zlb_regime - 2, zlb_at_first)
                 elseif iter == first_zlb_regime - 2
@@ -654,16 +654,16 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     break
                 elseif iter == first_zlb_regime + 3
                     iter = first_zlb_regime + 1
-                elseif hi == low || iter == low
+                elseif high == low || iter == low
                     # Return this
                 elseif iter == max_zlb_regimes
                     # Continue Binary Search on [first_zlb_regime + 4, max_zlb_regimes]
                     iter = Int(floor((max_zlb_regimes + first_zlb_regime + 4) / 2))
-                    hi = max_zlb_regimes
+                    high = max_zlb_regimes
                     low = first_zlb_regime + 4
                 else
                     # Continue Binary Search
-                    iter = Int(floor((hi + low)/2))
+                    iter = Int(floor((high + low)/2))
                 end
             end
         end
