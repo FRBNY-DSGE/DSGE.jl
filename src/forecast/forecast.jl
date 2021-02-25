@@ -478,6 +478,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
             get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
         max_zlb_regimes += pre_fcast_regimes # so max_zlb_regimes is the regime number
+        last_zlb_regime += pre_fcast_regimes
         iter = min(last_zlb_regime, max_zlb_regimes)
         to_return = false
         high = max_zlb_regimes
@@ -540,8 +541,12 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # function. In the default DSGE policy, the regimes after the ZLB ends
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
+            try
             update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_zlb_regime, n_total_regimes, altpol)
-
+            catch e
+                @show first_zlb_regime, n_total_regimes
+                throw(e)
+            end
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
@@ -605,7 +610,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 end
             end
 
-            if to_return || (endo_success &&
+            if (to_return && !endo_success) || (endo_success &&
                              (last_zlb_regime - 1 <= iter <= last_zlb_regime + 2)) ## We ran this iteration to return the answer.
                 @assert endo_success "Binary search for endo ZLB is breaking even though endo_success is false"
 
