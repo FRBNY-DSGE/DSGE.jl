@@ -473,7 +473,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
             get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
 
-        iter = first_zlb_regime
+        iter = min(first_zlb_regime, max_zlb_regimes)
         to_return = false
         high = max_zlb_regimes
         low = n_hist_regimes + 1
@@ -483,6 +483,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
+            @show iter
             n_total_regimes = iter + 1 # plus 1 for lift off
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
@@ -578,7 +579,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
 
             if !endo_success && iter == max_zlb_regimes
-                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true, zlb_value = get_setting(m, :forecast_zlb_value) / 4.0)
+                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)# zlb_value = get_setting(m, :forecast_zlb_value) / 4.0)
+                endo_success = true
+                break
             end
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
@@ -611,6 +614,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # If more ZLB necessary
             if !endo_success
                 low = iter + 1
+                iter_old = iter
                 if iter == first_zlb_regime
                     iter = min(iter+3, max_zlb_regimes)
                 elseif iter == max_zlb_regimes
@@ -631,6 +635,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 else
                     # Continue Binary Search
                     iter = Int(floor((low+high)/2))
+                end
+                if iter == iter_old
+                    iter = iter+1
                 end
             else
                 # If ZLB works (no negative rates)
@@ -656,6 +663,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     iter = first_zlb_regime + 1
                 elseif high == low || iter == low
                     # Return this
+                    break
                 elseif iter == max_zlb_regimes
                     # Continue Binary Search on [first_zlb_regime + 4, max_zlb_regimes]
                     iter = Int(floor((max_zlb_regimes + first_zlb_regime + 4) / 2))
