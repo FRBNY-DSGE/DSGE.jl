@@ -516,7 +516,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 altpol_regime_dates[regind] = date
             end
 
-            if haskey(get_settings(m), :cred_vary_until) && isempty(altpol_reg_range) ? true : get_setting(m, :cred_vary_until) >= maximum(altpol_reg_range)
+            if haskey(get_settings(m), :cred_vary_until) ? (isempty(altpol_reg_range) ? true : get_setting(m, :cred_vary_until) >= maximum(altpol_reg_range)) : false
                 m <= Setting(:regime_switching, true)
             else
                 m <= Setting(:regime_dates, altpol_regime_dates)
