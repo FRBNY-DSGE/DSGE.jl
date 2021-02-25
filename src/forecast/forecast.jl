@@ -402,12 +402,12 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         Dict{Int, EqcondEntry}()
 
     # Information set - start of awareness of ZLB
-    if haskey(get_settings(m), :tvis_information_set)
-        first_aware = findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
+    first_aware = if haskey(get_settings(m), :tvis_information_set)
+        findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
     elseif haskey(get_settings(m), :regime_eqcond_info)
-        first_aware = findfirst([original_info_set[i].key == :zero_rate for i in keys(original_info_set)])
+        findfirst([original_info_set[i].key == :zero_rate for i in keys(original_info_set)])
     else
-        first_aware = nothing
+        nothing
     end
 
     # Grab some information about the forecast
@@ -426,9 +426,10 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     n_altpol_reg_qtrrange = length(altpol_reg_qtrrange)
 
     # Start imposing ZLB at the quarter before liftoff quarter
-    first_zlb_regime = findlast(obs[get_observables(m)[:obs_nominalrate], :] .<= get_setting(m, :forecast_zlb_value) / 4.0)
+    has_neg_rates    = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m) / 4.
+    last_zlb_regime  = findlast(has_neg_rates)
 
-    if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
+    if !isnothing(last_zlb_regime) # Then there are ZLB regimes to enforce
 
         endo_success = false
 
@@ -441,28 +442,30 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
         end
 
-        first_zlb_regime += n_hist_regimes
-        zlb_at_first = n_hist_regimes + 1
-        if cond_type != :none && first_zlb_regime <= n_hist_regimes+1
+        # Update first_zlb_regime to actually be a regime number, rather than index of forecasted obs
+        pre_fcast_regimes = n_hist_regimes
+        if cond_type != :none
             if is_regime_switch
-                first_zlb_regime += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
-                zlb_at_first += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
+                pre_fcast_regimes += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
             else
-                first_zlb_regime += subtract_quarters(get_setting(m, :date_conditional_end),
-                                                      get_setting(m, :date_forecast_start)) + 1
-                zlb_at_first += subtract_quarters(get_setting(m, :date_conditional_end),
+                pre_fcast_regimes += subtract_quarters(get_setting(m, :date_conditional_end),
                                                       get_setting(m, :date_forecast_start)) + 1
             end
         end
 
+        # TODO: check if this behavior is really what we want, rather than imposing the ZLB regime
+        # in the first period for which negative rates appear, i.e.
+        # first_zlb_regime = findfirst(has_neg_rates)
+        first_zlb_regime = pre_fcast_regimes + 1 # we start the ZLB after the history/conditional horizon
+
         # Update first awareness period if nothing before
         if isnothing(first_aware)
-            first_aware = zlb_at_first
+            first_aware = first_zlb_regime
         end
 
-        ## The temporary_altpol_length is the no. of regimes
-        ## immediately before the ZLB regime that are ZLB.
-        m <= Setting(:temporary_altpol_length, first_zlb_regime - zlb_at_first + 1)
+        # The temporary_altpol_length is the no. of regimes
+        # in the history/conditional horizon that are ZLB.
+        m <= Setting(:temporary_altpol_length, last_zlb_regime - first_zlb_regime + 1)
 
         # Setup for loop enforcing zero rate
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
@@ -470,16 +473,18 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         orig_temp_zlb     = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
 
         # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
+
+        # Set up for binary search
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
             get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
-
-        iter = min(first_zlb_regime, max_zlb_regimes)
+        max_zlb_regimes += pre_fcast_regimes # so max_zlb_regimes is the regime number
+        iter = last_zlb_regime
         to_return = false
         high = max_zlb_regimes
-        low = n_hist_regimes + 1
-        system = nothing
+        low = pre_fcast_regimes
 
-        while true ## Binary search
+        ## Binary search for correct number of zlb
+        while true
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
@@ -487,8 +492,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             n_total_regimes = iter + 1 # plus 1 for lift off
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
-            ##TODO: Handle edge case where no. of ZLB needed is 0
-	        m <= Setting(:temporary_altpol_length, iter - zlb_at_first + 1) # 1 for first_zlb_regime, iter for each additional regime
+            ## TODO: Handle edge case where no. of ZLB needed is 0
+	        m <= Setting(:temporary_altpol_length, iter - first_zlb_regime + 1) # 1 for first_zlb_regime, iter for each additional regime
             # Test if more/less ZLB Needed
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
@@ -501,7 +506,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # Ensure we don't accidentally tell the code to forecast beyond the forecast horizon
             altpol_reg_range = start_altpol_reg:n_total_regimes
             if length(altpol_reg_range) > n_altpol_reg_qtrrange
-                if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :forecast_zlb_value) / 4.0 + tol) # Ensure we do not accidentally
+                if all(obs[get_observables(m)[:obs_nominalrate], :] .>
+                       forecast_zlb_value(m) / 4.0 + tol) # Ensure we do not accidentally
                     obs[get_observables(m)[:obs_nominalrate], 1] = tol - 2. # assume success at enforcing ZLB (should be negative)
                 end
                 break
@@ -579,9 +585,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
 
             if !endo_success && iter == max_zlb_regimes
-                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)# zlb_value = get_setting(m, :forecast_zlb_value) / 4.0)
-                endo_success = true
-                break
+                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
+                                               enforce_zlb = true, zlb_value = forecast_zlb_value(m) / 4.0)
             end
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
@@ -598,8 +603,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 end
             end
 
-            if to_return || (endo_success && (first_zlb_regime - 1 <= iter <= first_zlb_regime + 2)) ## We ran this iteration to return the answer.
-                @assert endo_success "Code is wrong that it wants to return when endo_success is false"
+            if to_return || (endo_success &&
+                             (last_zlb_regime - 1 <= iter <= last_zlb_regime + 2)) ## We ran this iteration to return the answer.
+                @assert endo_success "Binary search for endo ZLB is breaking even though endo_success is false"
 
                 break
             end
@@ -612,66 +618,110 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             ### at reg_post_conditional_end instead of reg_forecast_start.
 
             # If more ZLB necessary
+            @show iter, low, high, first_zlb_regime, last_zlb_regime, pre_fcast_regimes
             if !endo_success
-                low = iter + 1
+#=                low = iter + 1
                 iter_old = iter
                 if iter == first_zlb_regime
-                    iter = min(iter+3, max_zlb_regimes)
+                    iter = min(iter+3, max_zlb_regimes)=#
+                low = iter + 1 # Set low to iter + 1 if endo_success fails
+                if iter == last_zlb_regime
+                    # Our initial guess of last_zlb_regime failed.
+                    # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
+                    iter = min(iter + 3, max_zlb_regimes)
                 elseif iter == max_zlb_regimes
-                    # Return Fixed ZLB
+                    # We have hit the max number of allowed regimes for ZLB, so
+                    # run Fixed ZLB with unanticipated shocks to enforce ZLB
                     break
-                elseif iter == first_zlb_regime + 3
+                elseif iter == last_zlb_regime + 3
+                    # Guessing 3 periods after last_zlb_regime failed,
+                    # so let's try max_zlb_regimes
                     iter = max_zlb_regimes
-                elseif iter == first_zlb_regime + 1
-                    iter = first_zlb_regime + 2
-                elseif iter == first_zlb_regime + 2
-                    iter = first_zlb_regime + 3
-                    to_return = true
-                elseif iter == first_zlb_regime - 2
-                    iter = first_zlb_regime - 1
-                elseif iter == first_zlb_regime - 1
-                    iter = first_zlb_regime
-                    to_return = true
+                elseif iter == last_zlb_regime + 1
+                    # Increment by one period b/c while
+                    # last_zlb_regime doesn't enforce, max_zlb_regime or
+                    # last_zlb_regime + 3 definitely do
+                    iter = last_zlb_regime + 2
+                elseif iter == last_zlb_regime + 2
+                    # Increment by one period b/c while
+                    # last_zlb_regime doesn't enforce,
+                    # max_zlb_regime definitely does
+                    iter = last_zlb_regime + 3
+                    to_return = true # Return b/c last_zlb_regime + 3 will work
+                elseif iter == last_zlb_regime - 2
+                    # Increment by one period b/c while
+                    # low = pre_fcast_regimes doesn't work
+                    # but last_zlb_regime does
+                    iter = last_zlb_regime - 1
+                elseif iter == last_zlb_regime - 1
+                    iter = last_zlb_regime
+                    to_return = true # Return b/c last_zlb_regime will work
                 else
                     # Continue Binary Search
-                    iter = Int(floor((low+high)/2))
+                    new_iter = floor(Int64, (low + high) / 2)
+                    if iter == new_iter
+                        # Set to high b/c high must be working
+                        # but low isn't (e.g high = low + 1)
+                        iter = high
+                        to_return = true
+                        break
+                    else
+                        iter = new_iter
+                    end
                 end
                 if iter == iter_old
                     iter = iter+1
                 end
             else
-                # If ZLB works (no negative rates)
-                high = iter
-                if iter == first_zlb_regime
-                    iter = max(first_zlb_regime - 2, zlb_at_first)
-                elseif iter == first_zlb_regime - 2
-                    iter = zlb_at_first
-                elseif iter == zlb_at_first
-                    ## Note start is forecast_reg so ZLB in historical always there. Can change by using zlb_at_first instead
-                    # Return start
+                # If ZLB works (no negative rates w/out using unanticipated mp shocks)
+                high = iter # Set high to iter so we search for ZLB regimes less than or equal to iter
+                if iter == last_zlb_regime
+                    # Let's try a final ZLB regime 2 before last_zlb_regime, but above first_zlb_regime as bound
+                    iter = max(last_zlb_regime - 2, first_zlb_regime)
+                elseif iter == last_zlb_regime - 2
+                    # If last_zlb_regime - 2 works, let's try the first possible ZLB regime value
+                    iter = first_zlb_regime
+                elseif iter == first_zlb_regime
+                    # Minimal number of ZLB works, so we break here
+                    # and use iter = first_zlb_regime
                     break
-                elseif iter == first_zlb_regime - 1
-                    # Return first_zlb_regime - 1
+                elseif iter == last_zlb_regime - 1
+                    # If this is true, we must have tried last_zlb_regime successfully,
+                    # but values below or equal to last_zlb_regime - 2 failed.
+                    # We will use last_zlb_regime - 1
                     break
-                elseif iter == first_zlb_regime + 1
-                    # Return first_zlb_regime + 1
+                elseif iter == last_zlb_regime + 1
+                    # last_zlb_regime had failed, but last_zlb_regime + 3 worked,
+                    # so we use last_zlb_regime + 1
                     break
-                elseif iter == first_zlb_regime + 2
-                    # Return first_zlb_regime + 2
+                elseif iter == last_zlb_regime + 2
+                    # last_zlb_regime had failed, but last_zlb_regime + 3 worked,
+                    # so we use last_zlb_regime + 2
                     break
-                elseif iter == first_zlb_regime + 3
-                    iter = first_zlb_regime + 1
+                elseif iter == last_zlb_regime + 3
+                    # last_zlb_regime had failed, but max_zlb_regimes + pre_fcast_regimes and this worked
+                    # so we will guess last_zlb_regime + 1 to check if it works
+                    iter = last_zlb_regime + 1
                 elseif high == low || iter == low
                     # Return this
                     break
                 elseif iter == max_zlb_regimes
-                    # Continue Binary Search on [first_zlb_regime + 4, max_zlb_regimes]
-                    iter = Int(floor((max_zlb_regimes + first_zlb_regime + 4) / 2))
+                    # Continue Binary Search on [last_zlb_regime + 4, max_zlb_regimes]
+                    iter = floor(Int64, (max_zlb_regimes + last_zlb_regime + 4) / 2)
                     high = max_zlb_regimes
-                    low = first_zlb_regime + 4
+                    low = last_zlb_regime + 4
                 else
                     # Continue Binary Search
-                    iter = Int(floor((high + low)/2))
+                    new_iter = floor(Int64, (low + high) / 2)
+                    if iter == new_iter
+                        # Set to high b/c high must be working
+                        # but low isn't (e.g high = low + 1)
+                        iter = high
+                        to_return = true
+                        break
+                    else
+                        iter = new_iter
+                    end
                 end
             end
         end
