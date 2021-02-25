@@ -394,6 +394,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                   histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
 
+
     # Grab "original" settings" so they can be restored later
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
@@ -424,13 +425,18 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     altpol = alternative_policy(m)
 
     # Check replace_eqcond_func_dict if any regimes use the zero rate rule
+    remaining_zlb_regs = 0
     for (reg, v) in original_eqcond_dict
         if v.alternative_policy.key == :zero_rate
-            @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
-            v.alternative_policy = altpol
+            if get_setting(m, :regime_dates)[reg] > get_setting(m, :date_conditional_end)
+                @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
+                v.alternative_policy = altpol
+            else
+                remaining_zlb_regs += 1
+            end
         end
     end
-    m <= Setting(:temporary_altpol_length, 0)
+    m <= Setting(:temporary_altpol_length, remaining_zlb_regs)
 
     system = nothing
     if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
@@ -459,7 +465,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             n_total_regimes = first_zlb_regime + iter + 1 # plus 1 for lift off
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
-            m <= Setting(:temporary_altpol_length, iter + 1) # 1 for first_zlb_regime, iter for each additional regime
+            m <= Setting(:temporary_altpol_length, orig_temp_zlb + iter + 1) # 1 for first_zlb_regime, iter for each additional regime
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
             if is_regime_switch # Add historical regimes
@@ -559,7 +565,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
 
             # Successful endogenous bounding?
-            if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
+            if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol) || iter == max_zlb_regimes
                 # Restore the original number of regimes and regime dates
                 if isempty(orig_regime_dates)
                     delete!(get_settings(m), :regime_dates)
@@ -579,13 +585,18 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         end
     end
 
-    if !all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol)
-        if nan_failures
+    if !all(obs[get_observables(m)[:obs_nominalrate], :] .>  tol)
+        ind_fail = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
+        @show ind_fail
+        @show obs[get_observables(m)[:obs_nominalrate], ind_fail]
+
+
+        #if nan_failures
             @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
             states .= NaN
             obs    .= NaN
             pseudo .= NaN
-        else
+       #= else
             @warn "Unable to enforce the ZLB. Using unant shocks to enforce ZLB."
             try
                 if isnothing(system)
@@ -600,7 +611,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 obs .= NaN
                 pseudo .=NaN
             end
-        end
+        end=#
     end
 
     # Restore original settings
