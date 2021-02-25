@@ -465,7 +465,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
         # The temporary_altpol_length is the no. of regimes
         # in the history/conditional horizon that are ZLB.
-        m <= Setting(:temporary_altpol_length, last_zlb_regime - first_zlb_regime + 1)
+        # m <= Setting(:temporary_altpol_length, last_zlb_regime - first_zlb_regime + 1)
 
         # Setup for loop enforcing zero rate
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
@@ -478,7 +478,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
             get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
         max_zlb_regimes += pre_fcast_regimes # so max_zlb_regimes is the regime number
-        iter = last_zlb_regime
+        iter = min(last_zlb_regime, max_zlb_regimes)
         to_return = false
         high = max_zlb_regimes
         low = pre_fcast_regimes
@@ -540,7 +540,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # function. In the default DSGE policy, the regimes after the ZLB ends
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
-            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), zlb_at_first, n_total_regimes, altpol)
+            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_zlb_regime, n_total_regimes, altpol)
 
             # Set up parameters if there are switching parameter values.
             #
