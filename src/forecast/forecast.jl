@@ -629,7 +629,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     # Our initial guess of last_zlb_regime failed.
                     # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
                     iter = min(iter + 3, max_zlb_regimes)
-                elseif iter == max_zlb_regimes
+                elseif iter == max_zlb_regimes || low == high ## Second or is redundant
                     # We have hit the max number of allowed regimes for ZLB, so
                     # run Fixed ZLB with unanticipated shocks to enforce ZLB
                     break
@@ -668,9 +668,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     else
                         iter = new_iter
                     end
-                end
-                if iter == iter_old
-                    iter = iter+1
                 end
             else
                 # If ZLB works (no negative rates w/out using unanticipated mp shocks)
