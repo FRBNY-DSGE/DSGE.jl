@@ -89,7 +89,7 @@ end
 @testset "Test read_mb" begin
     # just make sure they run
     read_mb(m, :full, :none, :forecastobs)
-    read_mb(m, :full, :none, :forecastobs, bdd_and_unbdd = true)
+    read_mb(m, :full, :none, :forecastobs, use_bdd = :bdd_and_unbdd)
     DSGE.get_mb_metadata(m, :full, :none, :forecastobs)
     DSGE.get_mb_metadata(m, :full, :none, :irfobs)
 end
