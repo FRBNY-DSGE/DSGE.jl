@@ -88,12 +88,11 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
             end
         end
 
-        if uncertain_altpolicy && any(x -> isa(x, MultiPeriodAltPolicy), get_setting(m, :alternative_policies))
-
+        system_main = if uncertain_altpolicy
             # Handle this special case on its own
-            return compute_multiperiod_altpolicy_system_helper(m; tvis = tvis, verbose = verbose)
+            compute_uncertain_altpolicy_system_helper(m; tvis = tvis, verbose = verbose)
         else
-            system_main = compute_system_helper(m; tvis = tvis, verbose = verbose)
+            compute_system_helper(m; tvis = tvis, verbose = verbose)
         end
     else
         system_main = compute_system_helper(m; tvis = tvis, verbose = verbose)
@@ -114,142 +113,6 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
                 m <= Setting(:regime_eqcond_info, regime_info_copy)
             end
             m <= Setting(:gensys2, is_gensys2)
-        end
-
-        return system_main
-    end
-
-    # Turn off these settings temporarily to get historical policy
-    m <= Setting(:uncertain_altpolicy, false)
-    m <= Setting(:uncertain_temp_altpol, false)
-
-    n_altpolicies = length(first(values(get_setting(m, :regime_eqcond_info))).weights)
-    system_altpolicies = Vector{AbstractSystem}(undef, n_altpolicies)
-
-    system_altpolicies[1] = compute_system_helper(m; tvis = tvis, verbose = verbose)
-
-    # Save these elements. No need to deepcopy b/c we replace their values in the get_settings(m) dict with different instances
-    orig_regime_eqcond_info = get_setting(m, :regime_eqcond_info)
-    orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
-    orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
-    orig_temp_altpol_names  = haskey(get_settings(m), :temporary_altpolicy_names) ? get_setting(m, :temporary_altpolicy_names) : nothing
-
-    # m <= Setting(:regime_eqcond_info, Dict{Int64, EqcondEntry}()) # TODO: maybe also delete this setting
-    delete!(get_settings(m), :regime_eqcond_info)
-    delete!(get_settings(m), :alternative_policy)   # does nothing if alternative_policy is not a key in get_settings(m)
-    delete!(get_settings(m), :tvis_information_set) # does nothing if tvis_information_set is not a key in get_settings(m)
-    delete!(get_settings(m), :temporary_altpolicy_names) # does nothing if temporary_altpolicy_names is not a key in get_settings(m)
-    for i in 2:n_altpolicies # loop over alternative policies
-        ## With uncertain_altpolicy off (so only calculating 1 alternative policy).
-        new_altpol = get_setting(m, :alternative_policies)[i - 1]
-        if isa(new_altpol, AltPolicy)
-            # If AltPolicy, we assume that the user only wants the permanent altpolicy system
-            # AND there is no parameter regime-switching that affects the TTT matrix or CCC vector.
-            # If there is parameter regime-switching or other kinds of regime-switching
-            # that affect the TTT matrix/CCC vector in the alternative policies which
-            # people are using to form expectations, then the user needs to pass a
-            # MultiPeriodAltPolicy type (and set the gensys2 field to false if
-            # calling gensys2 is unnecessary)
-            if new_altpol.key == :default_policy # in this case, we can save some extra time
-                m <= Setting(:regime_switching, false) # turn off regime-switching
-                delete!(get_settings(m), :regime_eqcond_info)
-                system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
-                m <= Setting(:regime_switching, true) # turn off regime-switching
-            else
-                m <= Setting(:alternative_policy, new_altpol)
-                m <= Setting(:regime_switching, false) # which does not require regime-switching
-                system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
-                m <= Setting(:regime_switching, true) # needs to be turned back on for other policies
-                delete!(get_settings(m), :alternative_policy)
-            end
-        elseif isa(new_altpol, MultiPeriodAltPolicy)
-            m <= Setting(:regime_eqcond_info, new_altpol.regime_eqcond_info)
-            m <= Setting(:gensys2, new_altpol.gensys2)
-            if !isnothing(new_altpol.temporary_altpolicy_names)
-                m <= Setting(:temporary_altpolicy_names, new_altpol.temporary_altpolicy_names)
-            end
-            if isnothing(new_altpol.infoset)
-                delete!(get_settings(m), :tvis_information_set) # if :tvis_information_set not there, then nothing happens
-                system_altpolicies[i] = compute_system_helper(m; tvis = false, verbose = verbose)
-            else
-                m <= Setting(:tvis_information_set, new_altpol.infoset)
-                system_altpolicies[i] = compute_system_helper(m; tvis = true, verbose = verbose)
-            end
-        else
-            error("Every element in get_setting(m, :alternative_policies) must be an AltPolicy or a MultiPeriodAltPolicy")
-        end
-    end
-
-    # Now add original settings back
-    m <= Setting(:regime_eqcond_info, orig_regime_eqcond_info)
-    m <= Setting(:gensys2, is_gensys2)
-    m <= Setting(:uncertain_altpolicy, uncertain_altpolicy)
-    m <= Setting(:uncertain_temp_altpol, uncertain_temp_altpol)
-    if !isnothing(orig_altpol)
-        m <= Setting(:alternative_policy, orig_altpol)
-    end
-    if !isnothing(orig_tvis_infoset)
-        m <= Setting(:tvis_information_set, orig_tvis_infoset)
-    end
-    if !isnothing(orig_temp_altpol_names)
-        m <= Setting(:temporary_altpolicy_names, orig_temp_altpol_names)
-    end
-
-    # Checks if pseudo measurement is required
-    type_tuple = (typeof(m), Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
-    has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
-    hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
-
-    has_fwd_looking_obs = haskey(get_settings(m), :forward_looking_observables)
-    if has_pseudo
-        has_fwd_looking_pseudo = haskey(get_settings(m), :forward_looking_pseudo_observables)
-    end
-
-    # Correct the measurement equations for anticipated observables via weighted average
-    for reg in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-        new_wt = regime_eqcond_info[reg].weights
-        which_is_sys = [isa(sys, System) for sys in system_altpolicies]
-
-        if has_fwd_looking_obs
-            for k in get_setting(m, :forward_looking_observables)
-                system_main.measurements[reg][:ZZ][m.observables[k], :] =
-                    sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:ZZ][m.observables[k], :] :
-                                       system_altpolicies[i].measurements[reg][:ZZ][m.observables[k], :]) for i in 1:length(new_wt)])
-                system_main.measurements[reg][:DD][m.observables[k]] =
-                    sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:DD][m.observables[k]] :
-                                       system_altpolicies[i].measurements[reg][:DD][m.observables[k]]) for i in 1:length(new_wt)])
-            end
-        else
-            system_main.measurements[reg][:ZZ] .=
-                sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:ZZ] :
-                                   system_altpolicies[i].measurements[reg][:ZZ]) for i in 1:length(new_wt)])
-            system_main.measurements[reg][:DD] .=
-                sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:DD] :
-                                   system_altpolicies[i].measurements[reg][:DD]) for i in 1:length(new_wt)])
-        end
-
-        if has_pseudo
-            if has_fwd_looking_pseudo
-                for k in get_setting(m, :forward_looking_pseudo_observables)
-                    system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
-                        sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:ZZ_pseudo][m.pseudo_observables[k], :] :
-                                           system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :])
-                             for i in 1:length(new_wt)])
-                    system_main.pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]] =
-                        sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:DD_pseudo][m.pseudo_observables[k]] :
-                                           system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo][m.pseudo_observables[k]])
-                             for i in 1:length(new_wt)])
-                end
-            else
-                system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
-                    sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:ZZ_pseudo] :
-                                       system_altpolicies[i].pseudo_measurements[reg][:ZZ_pseudo])
-                         for i in 1:length(new_wt)])
-                system_main.pseudo_measurements[reg][:DD_pseudo] .=
-                        sum([new_wt[i] .* (which_is_sys[i] ? system_altpolicies[i][:DD_pseudo] :
-                                           system_altpolicies[i].pseudo_measurements[reg][:DD_pseudo])
-                             for i in 1:length(new_wt)])
-            end
         end
     end
 
@@ -446,30 +309,27 @@ end
 
 """
 ```
-compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
+compute_uncertain_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
 ```
 
-calculates a state-space system with imperfect awareness and multi-period alternative policies. This calculation is performed
-separately to ensure computational efficiency.
+calculates a state-space system with imperfect awareness and possibly multi-period alternative policies.
+This calculation is performed separately to ensure computational efficiency.
 
 Note that the endogenous states across all policies (implemented and alternative) must be the same, and any augmentations
 to the state space after calling `gensys`/`gensys2` should be done within the default `augment_states` function. The user
 can typically add if-else conditions within `augment_states` to handle state space augmentations for different alternative policy.
 """
-function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verbose::Symbol = :high) where {T <: Real}
+function compute_uncertain_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false,
+                                                   verbose::Symbol = :high) where {T <: Real}
 
     # Set up
     solution_method = get_setting(m, :solution_method)
     @assert solution_method == :gensys "No solution algorithm except gensys is allowed with multi-period alternative policies"
 
-    assert_str = "To use imperfect awareness with MultiPeriodAltPolicy, " *
-        "the settings :uncertain_temp_altpol and :replace_eqcond must be true, and " *
+    assert_str = "To use imperfect awareness, " *
+        "the setting :replace_eqcond must be true, and " *
         "either regime_eqcond_info or tvis_regime_eqcond_info is a setting"
-    # Note that compute_multiperiod_altpolicy system_helper will be triggered if
-    # only if uncertain_altpolicy is true and at least one element in
-    # get_setting(m, :alternative_policies) is a MultiPeriodAltPolicy
-    @assert haskey(get_settings(m), :uncertain_temp_altpol) &&
-        get_setting(m, :uncertain_temp_altpol) && haskey(get_settings(m), :replace_eqcond) &&
+    @assert haskey(get_settings(m), :replace_eqcond) &&
         get_setting(m, :replace_eqcond) && (haskey(get_settings(m), :regime_eqcond_info) ||
                                             haskey(get_settings(m), :tvis_regime_eqcond_info)) assert_str
 
@@ -500,7 +360,12 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     end
 
     # First calculate the perfectly credible transition matrices for the policy actually being implemented
-    system_perfect_cred_totpolicies, is_altpol = perfect_cred_multiperiod_altpolicy_systems(m; n_regimes = n_regimes, verbose = verbose)
+    is_altpol = [isa(x, AltPolicy) for x in get_setting(m, :alternative_policies)]
+    if all(is_altpol)
+        system_perfect_cred_totpolicies = perfect_cred_altpolicy_systems(m; verbose = verbose)
+    else
+        system_perfect_cred_totpolicies = perfect_cred_multiperiod_altpolicy_systems(m, is_altpol; verbose = verbose)
+    end
     n_tot_policies = length(system_perfect_cred_totpolicies)
 
     # Checks if pseudo measurement is required
@@ -515,9 +380,9 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
 
     # Form measurement and pseudo-measurement equations for imperfect awareness state space system
     gensys_regimes, gensys2_regimes = compute_gensys_gensys2_regimes(m)
-    TTTs, RRRs, CCCs = solve_uncertain_multiperiod_altpolicy(m, system_perfect_cred_totpolicies, is_altpol;
-                                                             gensys_regimes = gensys_regimes, gensys2_regimes = gensys2_regimes,
-                                                             regimes = collect(1:n_regimes), verbose = verbose)
+    TTTs, RRRs, CCCs = solve_uncertain_altpolicy(m, system_perfect_cred_totpolicies, is_altpol;
+                                                 gensys_regimes = gensys_regimes, gensys2_regimes = gensys2_regimes,
+                                                 regimes = collect(1:n_regimes), verbose = verbose)
     system_main = RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, n_regimes, tvis)
 
     # Correct the measurement equations for anticipated observables via weighted average
@@ -572,13 +437,76 @@ function compute_multiperiod_altpolicy_system_helper(m::AbstractDSGEModel{T}; tv
     return system_main
 end
 
-function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_regimes::Int = get_setting(m, :n_regimes),
+function perfect_cred_altpolicy_systems(m::AbstractDSGEModel{T}; verbose::Symbol = :high) where {T <: Real}
+
+    # Set up
+    m <= Setting(:uncertain_altpolicy,   false)
+    if haskey(get_settings(m), :uncertain_temp_altpol) && get_setting(m, :uncertain_temp_altpol)
+        m <= Setting(:uncertain_temp_altpol, false)
+        orig_temp_altpol = true
+    else
+        orig_temp_altpol = false
+    end
+    n_totpol = length(get_setting(m, :alternative_policies)) + 1 # + 1 for the implemented policy
+    sys_totpolicies = Vector{Union{RegimeSwitchingSystem, System}}(undef, n_totpol)
+
+    # Save the following elements.
+    # Note deepcopy is necessary for regime_eqcond_info b/c weights will be updated to [1., 0., ...]
+    # when we compute the perfectly credible implemented policy
+    orig_n_regimes          = get_setting(m, :n_regimes)
+    orig_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
+    orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
+    is_gensys2              = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
+
+    ## Now calculate the perfectly credible transition matrices for all alternative policies
+    sys_totpolicies[1] = compute_system(m; tvis = haskey(get_settings(m), :tvis_information_set), verbose = verbose)
+
+    # m <= Setting(:regime_eqcond_info, Dict{Int64, EqcondEntry}()) # TODO: maybe also delete this setting
+    delete!(get_settings(m), :regime_eqcond_info)
+    delete!(get_settings(m), :alternative_policy)   # does nothing if alternative_policy is not a key in get_settings(m)
+
+    for i in 2:n_totpol # want to populate TTTs, RRRs, and CCCs, and there are n_totpol total policies
+        new_altpol = get_setting(m, :alternative_policies)[i - 1] # decrement by 1 b/c :alternative_policies only includes
+        # We assume that the user only wants the permanent altpolicy system
+        # AND there is no parameter regime-switching that affects the TTT matrix or CCC vector.
+        # If there is parameter regime-switching or other kinds of regime-switching
+        # that affect the TTT matrix/CCC vector in the alternative policies which
+        # people are using to form expectations, then the user needs to pass a
+        # MultiPeriodAltPolicy type (and set the gensys2 field to false if
+        # calling gensys2 is unnecessary)
+        m <= Setting(:regime_switching, false) # turn off regime-switching
+        delete!(get_settings(m), :regime_eqcond_info)
+        if new_altpol.key != :default_policy # in this case, we can save some extra time
+            m <= Setting(:alternative_policy, new_altpol)
+        end
+        sys_totpolicies[i] = compute_system(m; verbose = verbose)
+        m <= Setting(:regime_switching, true) # turn off regime-switching
+        if new_altpol.key != :default_policy
+            delete!(get_settings(m), :alternative_policy)
+        end
+    end
+
+    # Now add original settings back
+    m <= Setting(:n_regimes, orig_n_regimes)
+    m <= Setting(:regime_eqcond_info, orig_regime_eqcond_info)
+    m <= Setting(:gensys2, is_gensys2)
+    m <= Setting(:uncertain_altpolicy, true)
+    if !isnothing(orig_altpol)
+        m <= Setting(:alternative_policy, orig_altpol)
+    end
+    if haskey(get_settings(m), :uncertain_temp_altpol) && orig_temp_altpol
+        m <= Setting(:uncertain_temp_altpol, orig_temp_altpol)
+    end
+
+    return sys_totpolicies
+end
+
+function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_altpol::Vector{Bool};
                                                     verbose::Symbol = :high) where {T <: Real}
 
     # Set up
     m        <= Setting(:uncertain_altpolicy,   false)
     m        <= Setting(:uncertain_temp_altpol, false)
-    is_altpol = [isa(x, AltPolicy) for x in get_setting(m, :alternative_policies)] # used later on
     n_totpol = length(get_setting(m, :alternative_policies)) + 1 # + 1 for the implemented policy
     sys_totpolicies = Vector{Union{System, RegimeSwitchingSystem}}(undef, n_totpol)
 
@@ -662,8 +590,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}; n_r
     m <= Setting(:uncertain_altpolicy,   true)
     m <= Setting(:uncertain_temp_altpol, true)
 
-    # return TTTs, RRRs, CCCs, is_altpol
-    return sys_totpolicies, is_altpol
+    return sys_totpolicies
 end
 
 """
