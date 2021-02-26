@@ -610,12 +610,12 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 end
             end
 
-            if (to_return && !endo_success) || (endo_success &&
-                             (last_zlb_regime - 1 <= iter <= last_zlb_regime + 2)) ## We ran this iteration to return the answer.
+            #=if (to_return && !endo_success) #|| (endo_success &&
+                             #(last_zlb_regime - 1 <= iter <= last_zlb_regime + 2)) ## We ran this iteration to return the answer.
                 @assert endo_success "Binary search for endo ZLB is breaking even though endo_success is false"
 
                 break
-            end
+            end =#
 
             ## Note in below 2 is really :endogenous_zlb_lookback and 3 is :endogenous_zlb_lookahead
             ## Reset temporary_altpol_length in each case
@@ -654,7 +654,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     # last_zlb_regime doesn't enforce,
                     # max_zlb_regime definitely does
                     iter = last_zlb_regime + 3
-                    to_return = true # Return b/c last_zlb_regime + 3 will work
+                    #to_return = true # Return b/c last_zlb_regime + 3 will work
                 elseif iter == last_zlb_regime - 2
                     # Increment by one period b/c while
                     # low = pre_fcast_regimes doesn't work
@@ -663,6 +663,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif iter == last_zlb_regime - 1
                     iter = last_zlb_regime
                     to_return = true # Return b/c last_zlb_regime will work
+                                     # if we're approaching it from below
                 else
                     # Continue Binary Search
                     new_iter = floor(Int64, (low + high) / 2)
@@ -680,8 +681,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 # If ZLB works (no negative rates w/out using unanticipated mp shocks)
                 high = iter # Set high to iter so we search for ZLB regimes less than or equal to iter
                 if iter == last_zlb_regime
-                    # Let's try a final ZLB regime 2 before last_zlb_regime, but above first_zlb_regime as bound
-                    iter = max(last_zlb_regime - 2, first_zlb_regime)
+                    # If we only needed one period of zlb, then we can break here
+                    if first_zlb_regime == last_zlb_regime
+                        break
+                    else
+                    # Otherwise, let's try a final ZLB regime 2 before last_zlb_regime, but above first_zlb_regime as bound
+                        iter = max(last_zlb_regime - 2, first_zlb_regime)
+                    end
                 elseif iter == last_zlb_regime - 2
                     # If last_zlb_regime - 2 works, let's try the first possible ZLB regime value
                     iter = first_zlb_regime
