@@ -429,73 +429,89 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     has_neg_rates    = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m) / 4.
     last_zlb_regime  = findlast(has_neg_rates)
 
+    # Determine the number of regimes before the start of the forecast (used to adjust
+    # indexing)
+    pre_fcast_regimes = n_hist_regimes
+    if cond_type != :none
+        if is_regime_switch
+            pre_fcast_regimes += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
+        else
+            pre_fcast_regimes += subtract_quarters(get_setting(m, :date_conditional_end),
+                                                  get_setting(m, :date_forecast_start)) + 1
+        end
+    end
+
     if !isnothing(last_zlb_regime) # Then there are ZLB regimes to enforce
 
         endo_success = false
+        # Start the search from the first regime post conditional data
+        search_start_reg = pre_fcast_regimes + 1
+        # If we're using a minimum temporary altpol length, start the search after the end
+        # of the min temp altpol
+        # NOTE: it is assumed that the regime_eqcond_info already details this temporary altpol
+        if haskey(m.settings, :min_temporary_altpol_length)
+            search_start_reg = max(search_start_reg, get_setting(m, :reg_forecast_start) + get_setting(m, :min_temporary_altpol_length)+1)
+        end
 
-        # Check original_eqcond_dict if any regimes use the zero rate rule.
+        # Check original_eqcond_dict if any regimes use the zero rate rule. Keep track of
+        # the number of existing zlb regs for the temp altpol length (necessary if
+        # we have temporary_altpol regs in the history)
+        temp_altpol_length = 0
         for (reg, v) in original_eqcond_dict
-            if v.alternative_policy.key == :zero_rate &&
-                (reg >= (cond_type == :none ? get_setting(m, :reg_forecast_start) : get_setting(m, :reg_post_conditional_end)))
-                @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
-                v.alternative_policy = altpol
+            if v.alternative_policy.key == :zero_rate
+                if reg >= search_start_reg
+                    @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
+                    v.alternative_policy = altpol
+                else
+                    temp_altpol_length += 1
+                end
             end
         end
+        m <= Setting(:temporary_altpol_length, temp_altpol_length)
+        @show temp_altpol_length
 
-        # Update first_zlb_regime to actually be a regime number, rather than index of forecasted obs
-        pre_fcast_regimes = n_hist_regimes
-        if cond_type != :none
-            if is_regime_switch
-                pre_fcast_regimes += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
-            else
-                pre_fcast_regimes += subtract_quarters(get_setting(m, :date_conditional_end),
-                                                      get_setting(m, :date_forecast_start)) + 1
-            end
-        end
-
-        # TODO: check if this behavior is really what we want, rather than imposing the ZLB regime
+        # TODO: Currently, we start our search from the first reg in the forecast --
+        # check if this behavior is really what we want, rather than imposing the ZLB regime
         # in the first period for which negative rates appear, i.e.
         # first_zlb_regime = findfirst(has_neg_rates)
-        first_zlb_regime = pre_fcast_regimes + 1 # we start the ZLB after the history/conditional horizon
 
         # Update first awareness period if nothing before
         if isnothing(first_aware)
-            first_aware = first_zlb_regime
+            first_aware = search_start_reg
         end
-
-        # The temporary_altpol_length is the no. of regimes
-        # in the history/conditional horizon that are ZLB.
-        # m <= Setting(:temporary_altpol_length, last_zlb_regime - first_zlb_regime + 1)
 
         # Setup for loop enforcing zero rate
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
         orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
         orig_temp_zlb     = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
 
-        # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
-
         # Set up for binary search
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
-            get_setting(m, :max_temporary_altpol_length) - 1 : size(obs, 2) - 3 # subtract 1 b/c will add 1 later (see line 459)
+            get_setting(m, :max_temporary_altpol_length) : size(obs, 2) - 3
         max_zlb_regimes += pre_fcast_regimes # so max_zlb_regimes is the regime number
         last_zlb_regime += pre_fcast_regimes
-        iter = min(last_zlb_regime, max_zlb_regimes)
         to_return = false
         high = max_zlb_regimes
-        low = pre_fcast_regimes
+        low = search_start_reg
+        iter = min(last_zlb_regime, max_zlb_regimes)
 
+        # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
         ## Binary search for correct number of zlb
         while true
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
             @show iter
+            @show search_start_reg
             n_total_regimes = iter + 1 # plus 1 for lift off
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
             ## TODO: Handle edge case where no. of ZLB needed is 0
-	        m <= Setting(:temporary_altpol_length, iter - first_zlb_regime + 1) # 1 for first_zlb_regime, iter for each additional regime
+            m <= Setting(:temporary_altpol_length, orig_temp_zlb + iter + 1 - search_start_reg)
+
+
             # Test if more/less ZLB Needed
+
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
             if is_regime_switch # Add historical regimes
@@ -541,12 +557,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # function. In the default DSGE policy, the regimes after the ZLB ends
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
-            try
-            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_zlb_regime, n_total_regimes, altpol)
-            catch e
-                @show first_zlb_regime, n_total_regimes
-                throw(e)
-            end
+            @show search_start_reg, n_total_regimes
+            @show get_setting(m, :temporary_altpol_length)
+            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), search_start_reg, n_total_regimes, altpol)
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
@@ -625,13 +638,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             ### at reg_post_conditional_end instead of reg_forecast_start.
 
             # If more ZLB necessary
-            @show iter, low, high, first_zlb_regime, last_zlb_regime, pre_fcast_regimes
+            @show iter, low, high, search_start_reg, last_zlb_regime, pre_fcast_regimes
             if !endo_success
-#=                low = iter + 1
-                iter_old = iter
-                if iter == first_zlb_regime
-                    iter = min(iter+3, max_zlb_regimes)=#
-                low = iter + 1 # Set low to iter + 1 if endo_success fails
+                low = iter + 1
                 if iter == last_zlb_regime
                     # Our initial guess of last_zlb_regime failed.
                     # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
@@ -682,16 +691,16 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 high = iter # Set high to iter so we search for ZLB regimes less than or equal to iter
                 if iter == last_zlb_regime
                     # If we only needed one period of zlb, then we can break here
-                    if first_zlb_regime == last_zlb_regime
+                    if search_start_reg == last_zlb_regime
                         break
                     else
                     # Otherwise, let's try a final ZLB regime 2 before last_zlb_regime, but above first_zlb_regime as bound
-                        iter = max(last_zlb_regime - 2, first_zlb_regime)
+                    iter = max(last_zlb_regime - 2, search_start_reg)
                     end
                 elseif iter == last_zlb_regime - 2
                     # If last_zlb_regime - 2 works, let's try the first possible ZLB regime value
-                    iter = first_zlb_regime
-                elseif iter == first_zlb_regime
+                    iter = search_start_reg
+                elseif iter == search_start_reg
                     # Minimal number of ZLB works, so we break here
                     # and use iter = first_zlb_regime
                     break
