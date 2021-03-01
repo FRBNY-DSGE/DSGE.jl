@@ -411,7 +411,10 @@ end
 # @testset "Test smoothing with regime switching and gensys2 matches plain Kalman filtering and conditional data" begin
     n_reg_temp = 16
 
-    m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_altpolicy_pgap => Setting(:add_altpolicy_pgap, true)))
+    m = Model1002("ss10", custom_settings = Dict{Symbol, Setting}(:add_pgap => Setting(:add_pgap, true),
+                                                                  :add_ygap => Setting(:add_ygap, true),
+                                                                  :add_anticipated_obs_gdp => Setting(:add_anticipated_obs_gdp, true),
+                                                                  :n_anticipated_obs_gdp => Setting(:n_anticipated_obs_gdp, true)))
     m <= Setting(:date_forecast_start, Date(2020, 3, 31))
     m <= Setting(:date_conditional_end, Date(2020, 3, 31))
     m <= Setting(:regime_switching, true)
@@ -443,17 +446,21 @@ end
 # TODO: add loop over probability weights
     for i in 3:n_reg_temp-1
         replace_eqcond[i] = DSGE.EqcondEntry(zero_rate(), [1., 0.])
+        # replace_eqcond[i] = DSGE.EqcondEntry(zero_rate(), [.5, .5])
     end
-    replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(default_policy(), [1., 0.])
+    replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(flexible_ait(), [1., 0.])
+# replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(flexible_ait(), [.5, .5])
     m <= Setting(:regime_eqcond_info, replace_eqcond)
 
-m <= Setting(:uncertain_altpolicy, false)
-m <= Setting(:uncertain_temp_altpol, false)
-# m <= Setting(:alternative_policies, [DSGE.default_policy()])
-# m <= Setting(:remove_rm_shocks, 3)
-# m <= Setting(:temporary_altpol_length, (n_reg_temp - 1 - 3 + 1))
-    m <= Setting(:pgap_value, 12.0 : 0.0)
-    m <= Setting(:pgap_type, :ngdp)
+#=m <= Setting(:uncertain_altpolicy, true)
+m <= Setting(:uncertain_temp_altpol, true)
+m <= Setting(:alternative_policies, [DSGE.default_policy()])
+m <= Setting(:remove_rm_shocks, 3)
+m <= Setting(:temporary_altpol_length, (n_reg_temp - 1 - 3 + 1))=#
+    m <= Setting(:pgap_value, 0.0)
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+    m <= Setting(:ygap_type, :flexible_ait)
     m = setup_regime_switching_inds!(m; cond_type = :full)
     m <= Setting(:tvis_information_set, [1:1, 2:2, [i:get_setting(m, :n_regimes) for i in 3:get_setting(m, :n_regimes)]...])
 
@@ -463,6 +470,7 @@ m <= Setting(:uncertain_temp_altpol, false)
     df[end, :obs_wages] = NaN
     df[end, :obs_consumption] = NaN
     df[end - 3:end, :obs_nominalrate] = NaN
+    df[!, :obs_gdp1] .= NaN
 
     data = df_to_matrix(m, df; cond_type = :full)
     regime_inds, i_zlb_start, splice_zlb_regime = DSGE.zlb_plus_regime_indices(m, data, date_presample_start(m))
@@ -474,7 +482,9 @@ m <= Setting(:uncertain_temp_altpol, false)
     # Add anticipated data to df
     df[!, :obs_longinflation] = convert(Vector{Union{Float64, Missing}}, df[!, :obs_longinflation])
     df[!, :obs_longrate] = convert(Vector{Union{Float64, Missing}}, df[!, :obs_longrate])
-    df[!, :obs_nominalrate1] = convert(Vector{Union{Float64, Missing}}, df[!, :obs_nominalrate1])
+for i in 1:6
+    df[!, Symbol("obs_nominalrate$i")] = convert(Vector{Union{Float64, Missing}}, df[!, Symbol("obs_nominalrate$i")])
+end
     df[end, :obs_longinflation] = .5
     df[end, :obs_longrate] = .5
     # df[end - 5, :obs_longinflation] = .5 # this fails. Note that ZLB begins in end - 3 period
@@ -482,8 +492,21 @@ m <= Setting(:uncertain_temp_altpol, false)
     df[end - 10, :obs_longinflation] = .5
     df[end - 6, :obs_longrate] = .5 # this doesn't fail
     df[end - 10, :obs_longrate] = .5 # this doesn't fail
+    df[end - 5, :obs_nominalrate1] = .5475
     df[end - 10, :obs_nominalrate1] = .5475
     df[end - 11, :obs_nominalrate1] = .2
+    df[end - 11, :obs_nominalrate2] = .2
+    df[end - 12, :obs_nominalrate3] = .25
+    df[end - 13, :obs_nominalrate4] = .22
+    df[end - 14, :obs_nominalrate5] = .18
+    df[end - 15, :obs_nominalrate6] = .19
+df[end - 10, :obs_gdp1] = .65
+df[end, :obs_gdp1] = -.5
+# df[end - 1, :obs_gdp1] = -1. # this fails
+# df[end - 2, :obs_gdp1] = .3 # this fails
+# df[end - 3, :obs_gdp1] = .3 # this fails
+# df[end - 4, :obs_gdp1] = .3 # this fails
+df[end - 5, :obs_gdp1] = .5 # this doesn't fail
 
     histstates = Dict()
     histobs = Dict()
