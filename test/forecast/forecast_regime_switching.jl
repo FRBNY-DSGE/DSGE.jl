@@ -487,9 +487,12 @@ for i in 1:6
 end
     df[end, :obs_longinflation] = .5
     df[end, :obs_longrate] = .5
-    # df[end - 5, :obs_longinflation] = .5 # this fails. Note that ZLB begins in end - 3 period
+    # df[end - 1, :obs_longinflation] = .5 # this fails. Note that ZLB begins in end - 3 period
+    df[end - 5, :obs_longinflation] = .5 # this doesn't fail
     df[end - 6, :obs_longinflation] = .5 # this doesn't fail
-    df[end - 10, :obs_longinflation] = .5
+    df[end - 10, :obs_longinflation] = .5 # this doesn't fail
+    # df[end - 4, :obs_longrate] = .5 # this fails
+    df[end - 5, :obs_longrate] = .5 # this doesn't fail
     df[end - 6, :obs_longrate] = .5 # this doesn't fail
     df[end - 10, :obs_longrate] = .5 # this doesn't fail
     df[end - 5, :obs_nominalrate1] = .5475
