@@ -4,8 +4,7 @@ plot_history_and_forecast(m, var, class, input_type, cond_type;
     title = "", plot_handle = plot(), kwargs...)
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false,
-    bdd_and_bdd::Bool = false,
+    forecast_string = "", use_bdd = :unbdd,
     plotroot = figurespath(m, \"forecast\"), titles = [],
     plot_handles = fill(plot(), length(vars)), verbose = :low,
     kwargs...)
@@ -26,8 +25,11 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 ### Keyword Arguments
 
 - `forecast_string::String`
-- `use_bdd::Symbol`: if :bdd_and_unbdd, then unbounded means and bounded bands are plotted
-    else if :bdd, then bounded means and bounded bands are plotted
+- `use_bdd::Symbol = :unbdd`: specifies which combination of means and bands to use
+    a. `:bdd` -> bounded bands and bounded means (from `:bddforecastobs`, etc.)
+    b. `:bdd_and_unbdd` -> bounded bands (from `:bddforecastobs`, etc.) and unbounded means (from `:forecastobs`, etc.)
+    c. `:unbdd` -> unbounded bands and unbounded means (from `:forecastobs`, etc.)
+- TODO: add `use_modal_line` kwarg
 - `untrans::Bool`: whether to plot untransformed (model units) history and forecast
 - `fourquarter::Bool`: whether to plot four-quarter history and forecast
 - `plotroot::String`: if nonempty, plots will be saved in that directory
@@ -177,6 +179,7 @@ histforecast
                    label_bands = false,
                    transparent_bands = true,
                    tick_size = 2)
+
     # Error checking
     if length(hf.args) != 3 || typeof(hf.args[1]) != Symbol ||
         typeof(hf.args[2]) != MeansBands || typeof(hf.args[3]) != MeansBands
