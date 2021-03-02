@@ -105,7 +105,6 @@ function save_plot(output_file::String = ""; verbose::Symbol = :low)
     if !isempty(output_file)
         output_dir = dirname(output_file)
         !isdir(output_dir) && mkpath(output_dir)
-        @show output_file
         Plots.savefig(output_file)
 
         println(verbose, :low, "Saved $output_file")
@@ -116,7 +115,6 @@ function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :l
     if !isempty(output_file)
         output_dir = dirname(output_file)
         !isdir(output_dir) && mkpath(output_dir)
-        @show output_file
         Plots.savefig(p, output_file)
 
         println(verbose, :low, "Saved $output_file")
