@@ -5,7 +5,6 @@ plot_history_and_forecast(m, var, class, input_type, cond_type;
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false,
-    bdd_and_bdd::Bool = false,
     plotroot = figurespath(m, \"forecast\"), titles = [],
     plot_handles = fill(plot(), length(vars)), verbose = :low,
     kwargs...)
@@ -26,8 +25,10 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 ### Keyword Arguments
 
 - `forecast_string::String`
-- `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
-- `bdd_and_bdd::Bool`: if true, then bounded means and bounded bands are plotted
+- `bdd_and_unbdd::Bool`: if true, then unbounded means (from `:forecastobs`, etc.)
+    and bounded bands (from `:bddforecastobs`, etc.) are plotted. Otherwise
+    then we report the unbounded means and bands.
+-  `bdd_and_bdd::Bool`: if true, then bounded means and bands are used.
 - `untrans::Bool`: whether to plot untransformed (model units) history and forecast
 - `fourquarter::Bool`: whether to plot four-quarter history and forecast
 - `plotroot::String`: if nonempty, plots will be saved in that directory
@@ -73,8 +74,16 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
         if bdd_and_unbdd
             error("Only one of bdd_and_unbdd and bdd_and_bdd can be true")
         end
-        hist_prod  = :hist
-        fcast_prod = :bddforecast
+        if fourquarter
+            hist_prod  = :hist4q
+            fcast_prod = :bddforecast4q
+        elseif untrans
+            hist_prod  = :histut
+            fcast_prod = :bddforecastut
+        else
+            hist_prod  = :hist
+            fcast_prod = :bddforecast
+        end
     elseif untrans
         hist_prod  = :histut
         fcast_prod = :forecastut
