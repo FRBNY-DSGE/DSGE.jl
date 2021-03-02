@@ -642,7 +642,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     # Our initial guess of first_guess failed.
                     # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
                     iter = min(iter + lookahead, max_zlb_regimes)
-                elseif iter == max_zlb_regimes || low == high ## Second or is redundant
+                elseif iter == max_zlb_regimes || (low-1) == high ## Second or is redundant
                     # We have hit the max number of allowed regimes for ZLB, so
                     # run Fixed ZLB with unanticipated shocks to enforce ZLB
                     break
@@ -660,16 +660,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     iter = iter + 1
                 else
                     # Continue Binary Search
-                    new_iter = floor(Int64, (low + high) / 2)
-                    if iter == new_iter
-                        # Set to high b/c high must be working
-                        # but low isn't (e.g high = low + 1)
-                        iter = high
-                        to_return = true
-                        break
-                    else
-                        iter = new_iter
-                    end
+                    iter = floor(Int64, (low + high) / 2)
                 end
             else
                 # If ZLB works (no negative rates w/out using unanticipated mp shocks)
@@ -714,16 +705,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     low = min(first_guess + lookahead + 1, max_zlb_regimes)
                 else
                     # Continue Binary Search
-                    new_iter = floor(Int64, (low + high) / 2)
-                    if iter == new_iter
-                        # Set to high b/c high must be working
-                        # but low isn't (e.g high = low + 1)
-                        iter = high
-                        to_return = true
-                        break
-                    else
-                        iter = new_iter
-                    end
+                    iter = floor(Int64, (low + high) / 2)
                 end
             end
         end
