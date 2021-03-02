@@ -24,25 +24,24 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 
 ### Keyword Arguments
 
-- `forecast_string::String`
+- `forecast_string::String = ""`
 - `use_bdd::Symbol = :unbdd`: specifies which combination of means and bands to use
     a. `:bdd` -> bounded bands and bounded means (from `:bddforecastobs`, etc.)
     b. `:bdd_and_unbdd` -> bounded bands (from `:bddforecastobs`, etc.) and unbounded means (from `:forecastobs`, etc.)
     c. `:unbdd` -> unbounded bands and unbounded means (from `:forecastobs`, etc.)
-- TODO: add `use_modal_line` kwarg
-- `untrans::Bool`: whether to plot untransformed (model units) history and forecast
-- `fourquarter::Bool`: whether to plot four-quarter history and forecast
-- `plotroot::String`: if nonempty, plots will be saved in that directory
-- `title::String` or `titles::Vector{String}`
+- `modal_line::Bool = false`: if true, the modal line is plotted instead of the mean.
+- `untrans::Bool = false`: whether to plot untransformed (model units) history and forecast
+- `fourquarter::Bool = false`: whether to plot four-quarter history and forecast
+- `plotroot::String = figurespath(m, "forecast")`: if nonempty, plots will be saved in that directory
+- `title::String = ""` or `titles::Vector{String} = []`
 - `plot_handle::Plot` or `plot_handles::Vector{Plot}`: existing plot(s) on which
   to overlay new forecast plot(s)
-- `verbose::Symbol`
+- `verbose::Symbol = :low`
 
 See `?histforecast` for additional keyword arguments, all of which can be passed
 into `plot_history_and_forecast`.
 
 ### Output
-
 - `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
 function plot_history_and_forecast(m::AbstractDSGEModel, var::Symbol, class::Symbol,
@@ -71,12 +70,6 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
     # Determine output_vars
     if untrans && fourquarter
         error("Only one of untrans or fourquarter can be true")
-    #=elseif use_bdd == :bdd
-        # if bdd_and_unbdd
-        #    error("Only one of bdd_and_unbdd and bdd_and_bdd can be true")
-        # end
-        hist_prod  = :hist
-        fcast_prod = :bddforecast=#
     elseif untrans
         hist_prod  = :histut
         fcast_prod = :forecastut
