@@ -633,7 +633,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             ### at reg_post_conditional_end instead of reg_forecast_start.
 
             # If more ZLB necessary
-            @show iter, low, high, search_start_reg, first_guess, pre_fcast_regimes
+            @show iter, low, high, search_start_reg, first_guess, pre_fcast_regimes, max_zlb_regimes
             lookback = haskey(m.settings, :endogenous_zlb_lookback) ? get_setting(m, :endogenous_zlb_lookback) : 2
             lookahead = haskey(m.settings, :endogenous_zlb_lookahead) ? get_setting(m, :endogenous_zlb_lookahead) : 3
             if !endo_success
@@ -674,7 +674,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             else
                 # If ZLB works (no negative rates w/out using unanticipated mp shocks)
                 high = iter # Set high to iter so we search for ZLB regimes less than or equal to iter
-                if iter == first_guess
+                if low == high || iter == low
+                    break
+                elseif iter == first_guess
                     # If we only needed one period of zlb, then we can break here
                     if search_start_reg == first_guess
                         break
@@ -704,9 +706,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     # stepwise from first_guess (lookahead regimes) to find the first
                     # length that works
                     iter = first_guess + 1
-                elseif high == low || iter == low
-                    # Return this
-                    break
                 elseif iter == max_zlb_regimes
                     # Continue Binary Search on [first_guess + lookahead + 1,
                     # max_zlb_regimes]
