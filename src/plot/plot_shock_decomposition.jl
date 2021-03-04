@@ -44,7 +44,7 @@ function plot_shock_decomposition(m::AbstractDSGEModel, var::Symbol, class::Symb
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
                                      titles = isempty(title) ? String[] : [title], file_ext = file_ext,
                                      four_quarter_avg = four_quarter_avg, trend_nostates = trend_nostates,
-                                     df_enddate = df_enddate, groups = groups, ylim_dict, kwargs...)
+                                     df_enddate = df_enddate, groups = groups, ylim_dict = ylim_dict, kwargs...)
     return plots[var]
 end
 
