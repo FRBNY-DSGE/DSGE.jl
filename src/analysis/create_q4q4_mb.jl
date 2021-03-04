@@ -8,8 +8,8 @@ returns a `MeansBands` object with only Q4 observations.
 """
 function create_q4q4_mb(mb::MeansBands)
     prod = mb.metadata[:product]
-    if !(prod in [:hist4q, :histforecast4q, :forecast4q, :bddforecast4q])
-        error("Must pass in MeansBands with product in [:hist4q, :histforecast4q, :forecast4q, :bddforecast4q] to create_forecastq4q4")
+    if !(prod in [:hist4q, :histforecast4q, :forecast4q, :bddforecast4q, :bddhistforecast4q])
+        error("Must pass in MeansBands with product in [:hist4q, :histforecast4q, :forecast4q, :bddforecast4q, :bddhistforecast4q] to create_forecastq4q4")
     end
 
     isq4(date::Date) = Dates.quarterofyear(date) == 4
