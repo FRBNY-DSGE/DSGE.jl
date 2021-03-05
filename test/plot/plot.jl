@@ -39,7 +39,7 @@ if haskey(ENV, "FRED_API_KEY")
                               verbose = :none)
 
     plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
-                              use_bdd = :bdd_and_unbdd, bdd_and_bdd = true,
+                              use_bdd = :bdd_and_unbdd, #bdd_and_bdd = true,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none)
 
@@ -110,7 +110,7 @@ if haskey(ENV, "FRED_API_KEY")
                              start_date = DSGE.quartertodate("2007-Q1"),
                              verbose = :none, plotroot = tmp_saveroot)
     plot_history_and_forecast(m, :y_t, :pseudo, :full, :none,
-                              use_bdd = :unbdd, bdd_and_bdd = true,
+                              use_bdd = :unbdd, #bdd_and_bdd = true,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none, plotroot = tmp_saveroot)
     plot_shock_decomposition(m, :y_t, :pseudo, :full, :none, verbose = :none, plotroot = tmp_saveroot)

@@ -600,8 +600,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             if !endo_success && iter == max_zlb_regimes
                 states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
                                                enforce_zlb = true)
-                endo_success = true
-                break
+                #endo_success = true
             end
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
@@ -633,7 +632,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             ### at reg_post_conditional_end instead of reg_forecast_start.
 
             # If more ZLB necessary
-            @show iter, low, high, search_start_reg, first_guess, pre_fcast_regimes, max_zlb_regimes
+            #@show iter, low, high, search_start_reg, first_guess, pre_fcast_regimes, max_zlb_regimes
             lookback = haskey(m.settings, :endogenous_zlb_lookback) ? get_setting(m, :endogenous_zlb_lookback) : 2
             lookahead = haskey(m.settings, :endogenous_zlb_lookahead) ? get_setting(m, :endogenous_zlb_lookahead) : 3
             if !endo_success
@@ -642,9 +641,15 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     # Our initial guess of first_guess failed.
                     # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
                     iter = min(iter + lookahead, max_zlb_regimes)
-                elseif iter == max_zlb_regimes || (low-1) == high ## Second or is redundant
-                    # We have hit the max number of allowed regimes for ZLB, so
+                elseif iter == max_zlb_regimes
+                    # We have hit the max number of allowed regimes for ZLB, so we've
                     # run Fixed ZLB with unanticipated shocks to enforce ZLB
+                    endo_success = true
+                    break
+                elseif low-1 == high
+                    # We should never reach this point with endo_success false or the
+                    # forecast unenforced with unant shocks, but just in case...
+                    # (if we do end up here, the forecast will be NaNed)
                     break
                 elseif iter == first_guess + lookahead
                     # Guessing 3 periods after first_guess failed,
