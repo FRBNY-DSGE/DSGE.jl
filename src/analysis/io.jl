@@ -366,7 +366,7 @@ function write_meansbands_tables_timeseries(dirname::String, filestring_base::Ve
                                             mb::MeansBands;
                                             tablevars::Vector{Symbol} = Symbol[],
                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true),
-                                            forecast_string::String = mb.metadata[:forecast_string])
+                                            forecast_string::String = mb.metadata[:forecast_string], use_bdd::Symbol = :bdd)
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
                                                  # shocks = columnvars)
@@ -497,7 +497,7 @@ write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
 """
 function write_meansbands_table(dirname::String, filestring_base::Vector{String},
                                 mb::MeansBands, df::DataFrame, tablevar::Symbol;
-                                forecast_string::String = mb.metadata[:forecast_string])
+                                forecast_string::String = mb.metadata[:forecast_string], use_bdd::Symbol = :bdd)
     # Extract metadata
     prod = get_product(mb)
     para = get_para(mb)
