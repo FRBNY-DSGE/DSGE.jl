@@ -426,8 +426,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     n_altpol_reg_qtrrange = length(altpol_reg_qtrrange)
 
     # Start imposing ZLB at the quarter before liftoff quarter
-    has_neg_rates    = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m) / 4.
-    first_guess  = findlast(has_neg_rates)
+    has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m)
+    first_guess   = findlast(has_neg_rates)
 
     # Determine the number of regimes before the start of the forecast (used to adjust
     # indexing)
@@ -521,7 +521,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             altpol_reg_range = start_altpol_reg:n_total_regimes
             if length(altpol_reg_range) > n_altpol_reg_qtrrange
                 if all(obs[get_observables(m)[:obs_nominalrate], :] .>
-                       forecast_zlb_value(m) / 4.0 + tol) # Ensure we do not accidentally
+                       forecast_zlb_value(m) + tol) # Ensure we do not accidentally
                     obs[get_observables(m)[:obs_nominalrate], 1] = tol - 2. # assume success at enforcing ZLB (should be negative)
                 end
                 break
