@@ -214,6 +214,7 @@ module DSGE
     include("altpolicy/flexible_ait.jl")
     include("altpolicy/zlb_rule.jl")
     include("altpolicy/zero_rate.jl")
+    include("altpolicy/zlb_rule.jl")
     include("altpolicy/rw.jl")
     include("altpolicy/rw_zero_rate.jl")
     include("solve/gensys_uncertain_altpol.jl")
