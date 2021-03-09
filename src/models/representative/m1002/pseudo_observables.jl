@@ -54,12 +54,22 @@ function init_pseudo_observable_mappings!(m::Model1002)
             push!(pseudo_names, :zp)
         end
     end
-    if haskey(get_settings(m), :add_altpolicy_pgap) || haskey(get_settings(m), :add_pgap)
+    if haskey(get_settings(m), :add_pgap)
+        if get_setting(m, :add_pgap)
+            push!(pseudo_names, :pgap)
+        end
+    end
+    if haskey(get_settings(m), :add_ygap)
+        if get_setting(m, :add_ygap)
+            push!(pseudo_names, :ygap)
+        end
+    end
+    if haskey(get_settings(m), :add_altpolicy_pgap)
         if get_setting(m, :add_altpolicy_pgap)
             push!(pseudo_names, :pgap)
         end
     end
-    if haskey(get_settings(m), :add_altpolicy_ygap) || haskey(get_settings(m), :add_ygap)
+    if haskey(get_settings(m), :add_altpolicy_ygap)
         if get_setting(m, :add_altpolicy_ygap)
             push!(pseudo_names, :ygap)
         end
