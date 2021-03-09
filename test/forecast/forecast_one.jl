@@ -182,7 +182,7 @@ regime_dates_dicts = [Dict{Int, Date}(1 => DSGE.quartertodate("1959-Q3"),
 
 # Read in the expected outputs for all the regimes except when the first one,
 # which we use to test for shockdec and irf outputs. Those cases are handled separately
-exp_out_dict = JLD2.jldopen("$path/../reference/forecast_one_out_rs1.jld2", "r") do file
+exp_out_dict = JLD2.jldopen("$path/../reference/forecast_one_out_rs1_version=" * ver * ".jld2", "r") do file
     read(file, "exp_out_regime_switch_cases")
 end
 
