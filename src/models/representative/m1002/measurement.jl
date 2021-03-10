@@ -51,7 +51,7 @@ function measurement(m::Model1002{T},
     end
 
     # Set up for calculating k-periods ahead expectations and expected sums
-    permanent_t = length(information_set[findfirst(information_set .== reg):end]) - 1 + reg
+    permanent_t = length(information_set[findfirst(x -> x == reg, information_set):end]) - 1 + reg
     flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_policy_change) &&
         get_setting(m, :flexible_ait_policy_change)
 
@@ -178,8 +178,8 @@ function measurement(m::Model1002{T},
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1) + CCC10[endo[:π_t]]
 
     ## Long Rate
-    ZZ_long_rate = ZZ[6, :]'
-    ZZ[obs[:obs_longrate], :]                 = ZZ_long_rate * TTT10
+    ZZ_long_rate = ZZ[obs[:obs_nominalrate], :]'
+    ZZ[obs[:obs_longrate], :]                 = ZZ_long_rate * TTT10 # TODO: this is slightly inefficient, do what we do with long inflation
     ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
     DD[obs[:obs_longrate]]                    = m[:Rstarn] + ZZ_long_rate * CCC10
 
