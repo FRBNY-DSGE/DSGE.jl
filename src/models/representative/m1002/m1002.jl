@@ -634,7 +634,7 @@ buted to steady-state inflation.",
     if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
         m <= parameter(:ρ_condgdp, 0., (-0.999, 0.999), (-0.999, 0.999),
-                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=true,
                        tex_label="\\rho_{cond gdp}")
         m <= parameter(:σ_condgdp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
@@ -644,7 +644,7 @@ buted to steady-state inflation.",
     if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_anticipated_obs_gdp_meas_err) : false
         m <= parameter(:ρ_gdpexp, 0., (-0.999, 0.999), (-0.999, 0.999),
-                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=true,
                        tex_label="\\rho_{gdpexp}")
         m <= parameter(:σ_gdpexp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
@@ -654,7 +654,7 @@ buted to steady-state inflation.",
     if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
         get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
         m <= parameter(:ρ_condcorepce, 0., (-0.999, 0.999), (-0.999, 0.999),
-                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=true,
                        tex_label="\\rho_{cond corepce}")
         m <= parameter(:σ_condcorepce, 0.0999, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
