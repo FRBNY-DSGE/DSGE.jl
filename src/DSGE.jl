@@ -130,7 +130,7 @@ module DSGE
 
         # altpolicy/
         AltPolicy, EqcondEntry, MultiPeriodAltPolicy, setup_permanent_altpol!, default_policy,
-        taylor93, taylor99, taylor_rule, alt_inflation, ait, ngdp, zero_rate, flexible_ait, smooth_ait_gdp_alt,
+        taylor93, taylor99, taylor_rule, alt_inflation, ait, ngdp, zlb_rule, zero_rate, flexible_ait, smooth_ait_gdp_alt,
 
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
@@ -212,6 +212,7 @@ module DSGE
     include("altpolicy/smooth_ait_gdp.jl")
     include("altpolicy/smooth_ait_gdp_alt.jl")
     include("altpolicy/flexible_ait.jl")
+    include("altpolicy/zlb_rule.jl")
     include("altpolicy/zero_rate.jl")
     include("altpolicy/rw.jl")
     include("altpolicy/rw_zero_rate.jl")
