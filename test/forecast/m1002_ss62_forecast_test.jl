@@ -165,6 +165,25 @@ tworule = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eq
 delete!(DSGE.get_settings(m), :alternative_policies)
 m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule])
 
+sys1 = compute_system(m; tvis = true)
+using BenchmarkTools
+@btime begin
+    sys1 = compute_system(m; tvis = true)
+    nothing
+end
+m <= Setting(:perfect_cred_regime_mapping, Dict(i => 18 for i in 18:29))
+tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
+                                temporary_altpolicy_names = [:zero_rate],
+                                temporary_altpolicy_length = 6,
+                                perfect_cred_regime_mapping = Dict(i => 11 for i in 11:29),
+                                infoset = copy(get_setting(m, :tvis_information_set)))
+m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule2])
+sys2 = compute_system(m; tvis = true)
+@btime begin
+    sys2 = compute_system(m; tvis = true)
+    nothing
+end
+@assert false
 fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, df,
                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 

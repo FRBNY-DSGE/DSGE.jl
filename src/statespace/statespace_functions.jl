@@ -440,7 +440,7 @@ end
 function perfect_cred_altpolicy_systems(m::AbstractDSGEModel{T}; verbose::Symbol = :high) where {T <: Real}
 
     # Set up
-    m <= Setting(:uncertain_altpolicy,   false)
+    m <= Setting(:uncertain_altpolicy, false)
     if haskey(get_settings(m), :uncertain_temporary_altpolicy) && get_setting(m, :uncertain_temporary_altpolicy)
         m <= Setting(:uncertain_temporary_altpolicy, false)
         orig_temp_altpol = true
@@ -519,6 +519,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
     orig_temp_altpol_names  = haskey(get_settings(m), :temporary_altpolicy_names) ? get_setting(m, :temporary_altpolicy_names) : nothing
     orig_temp_altpol_len    = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
+    orig_perf_cred_reg_map  = haskey(get_settings(m), :perfect_cred_regime_mapping) ? get_setting(m, :perfect_cred_regime_mapping) : nothing
     is_gensys2              = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
     ## Now calculate the perfectly credible transition matrices for all alternative policies
@@ -529,6 +530,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     delete!(get_settings(m), :alternative_policy)   # does nothing if alternative_policy is not a key in get_settings(m)
     delete!(get_settings(m), :tvis_information_set) # does nothing if tvis_information_set is not a key in get_settings(m)
     delete!(get_settings(m), :temporary_altpolicy_names) # does nothing if temporary_altpolicy_names is not a key in get_settings(m)
+    delete!(get_settings(m), :perfect_cred_regime_mapping) # does nothing if temporary_altpolicy_names is not a key in get_settings(m)
 
     for i in 2:n_totpol # want to populate TTTs, RRRs, and CCCs, and there are n_totpol total policies
         new_altpol = get_setting(m, :alternative_policies)[i - 1] # decrement by 1 b/c :alternative_policies only includes
@@ -560,6 +562,9 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
             if !isnothing(new_altpol.temporary_altpolicy_length)
                 m <= Setting(:temporary_altpolicy_length, new_altpol.temporary_altpolicy_length)
             end
+            if !isnothing(new_altpol.perfect_cred_regime_mapping)
+                m <= Setting(:perfect_cred_regime_mapping, new_altpol.perfect_cred_regime_mapping)
+            end
             if !isnothing(new_altpol.infoset)
                 m <= Setting(:tvis_information_set, new_altpol.infoset)
                 sys_totpolicies[i] = compute_system(m; tvis = true, verbose = verbose)
@@ -586,6 +591,9 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     end
     if !isnothing(orig_temp_altpol_len)
         m <= Setting(:temporary_altpolicy_length, orig_temp_altpol_len)
+    end
+    if !isnothing(orig_perf_cred_reg_map)
+        m <= Setting(:perfect_cred_regime_mapping, orig_perf_cred_reg_map)
     end
     m <= Setting(:uncertain_altpolicy,           true)
     m <= Setting(:uncertain_temporary_altpolicy, true)

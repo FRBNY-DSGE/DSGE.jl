@@ -293,18 +293,29 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
                                     Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                                     TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                                     regimes::Vector{Int} = Int[1], uncertain_altpolicy::Bool = false,
-                                    altpolicy_solve::Function = solve,
                                     verbose::Symbol = :high) where {S <: Real}
 
     uncertain_altpol = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
+    has_perf_cred_map = haskey(get_settings(m), :perfect_cred_regime_mapping)
+    if has_perf_cred_map
+        perf_cred_map = get_setting(m, :perfect_cred_regime_mapping)
+    end
     if uncertain_altpol
         altpols = get_setting(m, :alternative_policies)
     end
 
     for reg in regimes
-        TTT_gensys, CCC_gensys, RRR_gensys, eu =
-            gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
-                   1+1e-6, verbose = verbose)
+        if !uncertain_altpolicy && has_perf_cred_map && haskey(perf_cred_map, reg) && perf_cred_map[reg] != reg
+            TTTs[reg] = TTTs[perf_cred_map[reg]]
+            RRRs[reg] = RRRs[perf_cred_map[reg]]
+            CCCs[reg] = CCCs[perf_cred_map[reg]]
+
+            continue
+        else
+            TTT_gensys, CCC_gensys, RRR_gensys, eu =
+                gensys(Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg],
+                       1+1e-6, verbose = verbose)
+        end
 
         # Check for LAPACK exception, existence and uniqueness
         if eu[1] != 1 || eu[2] != 1
