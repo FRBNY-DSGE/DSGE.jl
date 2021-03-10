@@ -622,6 +622,10 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     # Our initial guess of first_guess failed.
                     # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
                     iter = min(iter + lookahead, max_zlb_regimes)
+                elseif iter == max_zlb_regimes
+                    # We have hit the max number of allowed regimes for ZLB, so we've
+                    # run Fixed ZLB with unanticipated shocks to enforce ZLB
+                    to_return = true
                 elseif low-1 == high
                     # We should never reach this point with endo_success false or the
                     # forecast unenforced with unant shocks, but just in case...
@@ -691,7 +695,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
 
             if to_return
-                @show "RETURNING"
                 # if we're returning the forecast, rerun with enforce_zlb = true
                 # to handle future regimes where rates dip below zlb
                 if !endo_success
