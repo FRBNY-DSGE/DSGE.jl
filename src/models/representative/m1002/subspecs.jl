@@ -1472,9 +1472,9 @@ function ss62!(m::Model1002)
                 set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
                 set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
             end
-            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (4.)^2 / 40., sqrt(1. + 4.)^2))
-            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(2. * (.04)^2 / .01, sqrt((.04)^2  + .01)))
-            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(2. * (.05)^2 / .01, sqrt((.05)^2 + .01)))
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
         end
 
         # Anticipated shocks proportional to today's contemporaneous shock
@@ -1507,6 +1507,10 @@ function ss62!(m::Model1002)
             # Fix shocks to 0 in para regime 1
             set_regime_fixed!(m[pk], 1, true)
             set_regime_fixed!(m[pk], 2, false)
+
+            # Set prior
+            m[pk].prior = m[:σ_biidc].prior
+            #set_regime_prior!(m[pk], 2, m[:σ_biidc].prior)
         end
 
         # pgap and ygap initialization shocks
