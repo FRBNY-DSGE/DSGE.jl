@@ -973,7 +973,7 @@ function model_settings!(m::Model1002)
     end
 
     # ZLB via zero-rate
-    m <= Setting(:zero_rate_zlb_value, 0.)
+    m <= Setting(:zlb_rule_value, 0.)
 
     # Additional pseudo-observables and integrated series
     m <= Setting(:add_laborshare_measurement, false)

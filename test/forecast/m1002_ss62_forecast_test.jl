@@ -101,7 +101,7 @@ for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_re
                           DSGE.quarter_range(reg_dates[gensys2_first_regime],
                                                 iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
     reg_dates[regind] = date
-    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), weights)
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zlb_rule(), weights)
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
 regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(flexible_ait(), weights)
@@ -144,7 +144,7 @@ for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     end
 end
 
-m <= Setting(:zero_rate_zlb_value, 0.1)
+m <= Setting(:zlb_rule_value, 0.1)
 
 # Run forecasts
 output_vars = [:histobs, :histpseudo, :forecastpseudo, :forecastobs]
@@ -159,7 +159,7 @@ for (reg, eq_entry) in tworule_eqcond_info
     tworule_eqcond_info[reg].weights = [1.]
 end
 tworule = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
-                               temporary_altpolicy_names = [:zero_rate],
+                               temporary_altpolicy_names = [:zlb_rule],
                                temporary_altpolicy_length = 6,
                                infoset = copy(get_setting(m, :tvis_information_set)))
 delete!(DSGE.get_settings(m), :alternative_policies)

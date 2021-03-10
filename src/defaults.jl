@@ -218,7 +218,7 @@ function default_settings!(m::AbstractDSGEModel)
     # settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
 
     # Temporary alternative policy defaults to zero rate
-    settings[:temporary_altpolicy_names] = Setting(:temporary_altpolicy_names, Symbol[:zero_rate])
+    settings[:temporary_altpolicy_names] = Setting(:temporary_altpolicy_names, Symbol[:zlb_rule])
 
     return settings
 end

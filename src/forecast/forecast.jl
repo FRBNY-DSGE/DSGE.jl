@@ -302,7 +302,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 
     # Define our iteration function
     check_zero_rate = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
-        (:zero_rate in map(x -> x.alternative_policy.key, collect(values(get_setting(m, :regime_eqcond_info)))))
+        (:zlb_rule in map(x -> x.alternative_policy.key, collect(values(get_setting(m, :regime_eqcond_info)))))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
@@ -408,7 +408,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     first_aware = if haskey(get_settings(m), :tvis_information_set)
         findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
     elseif haskey(get_settings(m), :regime_eqcond_info)
-        findfirst([original_info_set[i].key == :zero_rate for i in keys(original_info_set)])
+        findfirst([original_info_set[i].key == :zlb_rule for i in keys(original_info_set)])
     else
         nothing
     end
@@ -461,9 +461,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # we have temporary_altpol regs in the history)
         temp_altpol_length = 0
         for (reg, v) in original_eqcond_dict
-            if v.alternative_policy.key == :zero_rate
+            if v.alternative_policy.key == :zlb_rule || v.alternative_policy.key == :zero_rate
                 if reg >= search_start_reg
-                    @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
+                    @warn "Regime $reg of regime_eqcond_info used zero rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
                     v.alternative_policy = altpol
                 else
                     temp_altpol_length += 1
@@ -597,7 +597,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
             # Successful endogenous bounding?
-            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
+            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zlb_rule_value) / 4. + tol)
 
             if !endo_success && iter == max_zlb_regimes
                 states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
@@ -842,13 +842,13 @@ function default_update_regime_eqcond_info!(m::AbstractDSGEModel, eqcond_dict::A
         if haskey(eqcond_dict, regind)
             # If regime index exists already, just directly change the
             # alternative_policy (which leaves the credibility weights unchanged)
-            eqcond_dict[regind].alternative_policy = zero_rate() # Temp ZLB rule in this regimes
+            eqcond_dict[regind].alternative_policy = zlb_rule() # Temp ZLB rule in this regimes
         else
             # If the regime index doesn't already exist, then add an EqcondEntry
             # for a ZLB that is perfectly credible
             weights = zeros(haskey(get_settings(m), :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
             weights[1] = 1.
-            eqcond_dict[regind] = EqcondEntry(zero_rate(), weights)
+            eqcond_dict[regind] = EqcondEntry(zlb_rule(), weights)
         end
     end
 

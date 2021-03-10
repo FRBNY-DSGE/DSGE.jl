@@ -63,6 +63,8 @@ function get_altpolicy(key::Symbol)
         flexible_ait()
     elseif key == :zero_rate
         zero_rate()
+    elseif key == :zlb_rule
+        zlb_rule()
     elseif key == :default_policy
         default_policy()
     elseif key == :taylor_rule

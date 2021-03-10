@@ -1189,7 +1189,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             # Must be using TV cred system
             old_system = 0
             for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zero_rate
+                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zlb_rule
                     old_system = regime_indices(m, start_date, end_date)[i][1]
                     break
                 end
@@ -1259,7 +1259,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                 old_system = 0
                 for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
                     # TODO: Generalize beyond zero_rate to any temporary or permant alternative policy
-                    if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zero_rate
+                    if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zlb_rule
                         old_system = regime_indices(m, start_date, end_date)[i][1]
                         break
                     end
