@@ -29,28 +29,28 @@ println("The following warning is expected test behavior:")
 # Plot history and forecast
 if haskey(ENV, "FRED_API_KEY")
     plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
-                              bdd_and_unbdd = true,
+                              use_bdd = :bdd_and_unbdd,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none)
 
     plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
-                              bdd_and_unbdd = false,
+                              use_bdd = :bdd_and_unbdd,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none)
 
     plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
-                              bdd_and_unbdd = false, bdd_and_bdd = true,
+                              use_bdd = :bdd_and_unbdd, #bdd_and_bdd = true,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none)
 
     # Plot forecast comparison
     plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
-                             bdd_and_unbdd = true,
+                             use_bdd = :bdd_and_unbdd,
                              start_date = DSGE.quartertodate("2007-Q1"),
                              verbose = :none)
 
     plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
-                             bdd_and_unbdd = false,
+                             use_bdd = :unbdd,
                              start_date = DSGE.quartertodate("2007-Q1"),
                              verbose = :none)
 
@@ -94,23 +94,23 @@ if haskey(ENV, "FRED_API_KEY")
     tmp_saveroot = saveroot(m)
     m <= Setting(:saveroot, "$path/../reference")
     plot_history_and_forecast(m, :y_t, :pseudo, :full, :none,
-                              bdd_and_unbdd = true,
+                              use_bdd = :bdd_and_unbdd,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none, plotroot = tmp_saveroot)
     plot_forecast_comparison(m, m, :y_t, :pseudo, :full, :none,
-                             bdd_and_unbdd = true,
+                             use_bdd = :bdd_and_unbdd,
                              start_date = DSGE.quartertodate("2007-Q1"),
                              verbose = :none, plotroot = tmp_saveroot)
     plot_history_and_forecast(m, :y_t, :pseudo, :full, :none,
-                              bdd_and_unbdd = false,
+                              use_bdd = :unbdd,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none, plotroot = tmp_saveroot)
     plot_forecast_comparison(m, m, :y_t, :pseudo, :full, :none,
-                             bdd_and_unbdd = false,
+                             use_bdd = :unbdd,
                              start_date = DSGE.quartertodate("2007-Q1"),
                              verbose = :none, plotroot = tmp_saveroot)
     plot_history_and_forecast(m, :y_t, :pseudo, :full, :none,
-                              bdd_and_unbdd = false, bdd_and_bdd = true,
+                              use_bdd = :unbdd, #bdd_and_bdd = true,
                               start_date = DSGE.quartertodate("2007-Q1"),
                               verbose = :none, plotroot = tmp_saveroot)
     plot_shock_decomposition(m, :y_t, :pseudo, :full, :none, verbose = :none, plotroot = tmp_saveroot)

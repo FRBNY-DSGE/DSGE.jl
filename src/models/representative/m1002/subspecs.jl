@@ -1376,10 +1376,13 @@ function ss62!(m::Model1002)
     # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
 
     ## Set up regime-switching parameters
+
+    # Need to allow a zero value for sigma_z_p
     m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
                    tex_label="\\sigma_{z^p}")
 
+    # Populate model2para_regime if it wasn't passed as a custom_setting
     if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
         m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
 
@@ -1439,7 +1442,8 @@ function ss62!(m::Model1002)
 
         # Contemporaneous COVID-19 shocks
         for pk in [:σ_φ, :σ_ziid, :σ_biidc]
-            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q4 to para regime 2
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
             for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
                 m2p[pk][i] = 1
             end
@@ -1448,15 +1452,29 @@ function ss62!(m::Model1002)
             set_regime_val!(m[pk], 1, 0.)
             if pk == :σ_φ
                 set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
             elseif pk == :σ_ziid
                 set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
             else
                 set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
             end
 
             # Fix shocks to 0 in para regime 1
             set_regime_fixed!(m[pk], 1, true)
             set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (4.)^2 / 40., sqrt(1. + 4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(2. * (.04)^2 / .01, sqrt((.04)^2  + .01)))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(2. * (.05)^2 / .01, sqrt((.05)^2 + .01)))
         end
 
         # Anticipated shocks proportional to today's contemporaneous shock
@@ -1515,4 +1533,6 @@ function ss62!(m::Model1002)
         # Flexible AIT shocks (to initialize the pgap and ygap values)
         m <= Setting(:model2para_regime, m2p)
     end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
 end

@@ -21,94 +21,104 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_covid_pseudoobs)
+    if haskey(get_settings(m), :add_covid_pseudoobs)
         if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
             push!(pseudo_names, :ziid, :varphiiid, :biidc)
         end
     end
 
-    if haskey(m.settings, :add_pseudo_gdp)
+    if haskey(get_settings(m), :add_pseudo_gdp)
         if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
             push!(pseudo_names, :PseudoGDP)
         end
     end
 
-    if haskey(m.settings, :add_pseudo_corepce)
+    if haskey(get_settings(m), :add_pseudo_corepce)
         if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
             push!(pseudo_names, :PseudoCorePCE)
         end
     end
 
-    if haskey(m.settings, :add_NominalWageGrowth)
+    if haskey(get_settings(m), :add_NominalWageGrowth)
         if get_setting(m, :add_NominalWageGrowth)
             push!(pseudo_names, :NominalWageGrowth)
         end
     end
-    if haskey(m.settings, :add_ztil)
+    if haskey(get_settings(m), :add_ztil)
         if get_setting(m, :add_ztil)
             push!(pseudo_names, :ztil)
         end
     end
-    if haskey(m.settings, :add_zp)
+    if haskey(get_settings(m), :add_zp)
         if get_setting(m, :add_zp)
             push!(pseudo_names, :zp)
         end
     end
-    if haskey(m.settings, :add_altpolicy_pgap)
+    if haskey(get_settings(m), :add_pgap)
+        if get_setting(m, :add_pgap)
+            push!(pseudo_names, :pgap)
+        end
+    end
+    if haskey(get_settings(m), :add_ygap)
+        if get_setting(m, :add_ygap)
+            push!(pseudo_names, :ygap)
+        end
+    end
+    if haskey(get_settings(m), :add_altpolicy_pgap)
         if get_setting(m, :add_altpolicy_pgap)
             push!(pseudo_names, :pgap)
         end
     end
-    if haskey(m.settings, :add_altpolicy_ygap)
+    if haskey(get_settings(m), :add_altpolicy_ygap)
         if get_setting(m, :add_altpolicy_ygap)
             push!(pseudo_names, :ygap)
         end
     end
 
-    if haskey(m.settings, :add_urhat)
+    if haskey(get_settings(m), :add_urhat)
         if get_setting(m, :add_urhat)
             push!(pseudo_names, :urhat)
         end
     end
 
-    if haskey(m.settings, :add_rw)
+    if haskey(get_settings(m), :add_rw)
         if get_setting(m, :add_rw)
             push!(pseudo_names, :rw)
             push!(pseudo_names, :Rref)
         end
     end
 
-    if haskey(m.settings, :add_laborshare_measurement)
+    if haskey(get_settings(m), :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
             push!(pseudo_names, :laborshare_t)
         end
     end
 
-    if haskey(m.settings, :add_laborproductivity_measurement)
+    if haskey(get_settings(m), :add_laborproductivity_measurement)
         if get_setting(m, :add_laborproductivity_measurement)
             push!(pseudo_names, :laborproductivity)
         end
     end
 
-    if haskey(m.settings, :add_nominalgdp_level)
+    if haskey(get_settings(m), :add_nominalgdp_level)
         if get_setting(m, :add_nominalgdp_level)
             push!(pseudo_names, :NominalGDPLevel)
         end
     end
 
-    if haskey(m.settings, :add_nominalgdp_growth)
+    if haskey(get_settings(m), :add_nominalgdp_growth)
         if get_setting(m, :add_nominalgdp_growth)
             push!(pseudo_names, :NominalGDPGrowth)
         end
     end
 
-    if haskey(m.settings, :add_flexible_price_growth)
+    if haskey(get_settings(m), :add_flexible_price_growth)
         if get_setting(m, :add_flexible_price_growth)
             push!(pseudo_names, :FlexibleGDPGrowth, :FlexibleConsumptionGrowth, :FlexibleInvestmentGrowth)
         end
     end
 
-    if haskey(m.settings, :add_cumulative)
+    if haskey(get_settings(m), :add_cumulative)
         if get_setting(m, :add_cumulative)
             push!(pseudo_names, :AccumOutputGap, :GDPLevel,
                   :TechnologyLevel, :FlexibleGDPLevel, :ConsumptionLevel,
@@ -117,13 +127,13 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+    if haskey(get_settings(m), :add_laborproductivitygrowth_nome_measurement)
         if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
             push!(pseudo_names, :LaborProductivityGrowthNoME)
         end
     end
 
-    if haskey(m.settings, :add_Epi_t_measurement)
+    if haskey(get_settings(m), :add_Epi_t_measurement)
         if get_setting(m, :add_Epi_t_measurement)
             push!(pseudo_names, :Epi_t)
         end
@@ -280,35 +290,35 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_NominalWageGrowth)
+    if haskey(get_settings(m), :add_NominalWageGrowth)
         if get_setting(m, :add_NominalWageGrowth)
             pseudo[:NominalWageGrowth].name = "Nominal Wage Growth"
             pseudo[:NominalWageGrowth].longname = "Nominal Wage Growth"
         end
     end
 
-    if haskey(m.settings, :add_laborshare_measurement)
+    if haskey(get_settings(m), :add_laborshare_measurement)
         if get_setting(m, :add_laborshare_measurement)
             pseudo[:laborshare_t].name     = "Log Labor Share"
             pseudo[:laborshare_t].longname = "Log Labor Share"
         end
     end
 
-    if haskey(m.settings, :add_nominalgdp_level)
+    if haskey(get_settings(m), :add_nominalgdp_level)
         if get_setting(m, :add_nominalgdp_level)
             pseudo[:NominalGDPLevel].name     = "Nominal GDP Level"
             pseudo[:NominalGDPLevel].longname = "Nominal GDP Level"
         end
     end
 
-    if haskey(m.settings, :add_nominalgdp_growth)
+    if haskey(get_settings(m), :add_nominalgdp_growth)
         if get_setting(m, :add_nominalgdp_growth)
             pseudo[:NominalGDPGrowth].name     = "Nominal GDP Growth"
             pseudo[:NominalGDPGrowth].longname = "Nominal GDP Growth"
         end
     end
 
-    if haskey(m.settings, :add_cumulative)
+    if haskey(get_settings(m), :add_cumulative)
         if get_setting(m, :add_cumulative)
             pseudo[:AccumOutputGap].name     = "Accumulated Output Gap"
             pseudo[:AccumOutputGap].longname = "Accumulated Output Gap"
@@ -329,7 +339,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_flexible_price_growth)
+    if haskey(get_settings(m), :add_flexible_price_growth)
         if get_setting(m, :add_flexible_price_growth)
             pseudo[:FlexibleGDPGrowth].name     = "Flexible GDP Level"
             pseudo[:FlexibleGDPGrowth].longname = "Flexible GDP Growth"
@@ -340,42 +350,42 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_ztil)
+    if haskey(get_settings(m), :add_ztil)
         if get_setting(m, :add_ztil)
             pseudo[:ztil].name     = "ztil"
             pseudo[:ztil].longname = "ztil"
         end
     end
 
-    if haskey(m.settings, :add_zp)
+    if haskey(get_settings(m), :add_zp)
         if get_setting(m, :add_zp)
             pseudo[:zp].name     = "zp"
             pseudo[:zp].longname = "zp"
         end
     end
 
-    if haskey(m.settings, :add_altpolicy_pgap)
+    if haskey(get_settings(m), :add_altpolicy_pgap)
         if get_setting(m, :add_altpolicy_pgap)
             pseudo[:pgap].name     = "pgap"
             pseudo[:pgap].longname = "pgap"
         end
     end
 
-    if haskey(m.settings, :add_altpolicy_ygap)
+    if haskey(get_settings(m), :add_altpolicy_ygap)
         if get_setting(m, :add_altpolicy_ygap)
             pseudo[:ygap].name     = "ygap"
             pseudo[:ygap].longname = "ygap"
         end
     end
 
-    if haskey(m.settings, :add_urhat)
+    if haskey(get_settings(m), :add_urhat)
         if get_setting(m, :add_urhat)
             pseudo[:urhat].name     = "urhat"
             pseudo[:urhat].longname = "urhat"
         end
     end
 
-    if haskey(m.settings, :add_rw)
+    if haskey(get_settings(m), :add_rw)
         if get_setting(m, :add_rw)
             pseudo[:rw].name     = "rw"
             pseudo[:rw].longname = "rw"
@@ -384,7 +394,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_covid_pseudoobs)
+    if haskey(get_settings(m), :add_covid_pseudoobs)
         if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
             pseudo[:ziid].name     = "ziid"
             pseudo[:ziid].longname = "ziid"
@@ -395,7 +405,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_pseudo_gdp)
+    if haskey(get_settings(m), :add_pseudo_gdp)
         if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
             pseudo[:PseudoGDP].name     = "GDP Growth Pseudo-observable"
             pseudo[:PseudoGDP].longname = "GDP Growth Pseudo-observable"
@@ -403,7 +413,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_pseudo_corepce)
+    if haskey(get_settings(m), :add_pseudo_corepce)
         if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
             pseudo[:PseudoCorePCE].name     = "Core PCE Pseudo-observable"
             pseudo[:PseudoCorePCE].longname = "Core PCE Pseudo-observable"
@@ -411,21 +421,21 @@ function init_pseudo_observable_mappings!(m::Model1002)
         end
     end
 
-    if haskey(m.settings, :add_laborproductivity_measurement)
+    if haskey(get_settings(m), :add_laborproductivity_measurement)
         if get_setting(m, :add_laborproductivity_measurement)
             pseudo[:laborproductivity].name     = "Log Labor Productivity"
             pseudo[:laborproductivity].longname = "Log Labor Productivity"
         end
     end
 
-    if haskey(m.settings, :add_laborproductivitygrowth_nome_measurement)
+    if haskey(get_settings(m), :add_laborproductivitygrowth_nome_measurement)
         if get_setting(m, :add_laborproductivitygrowth_nome_measurement)
             pseudo[:LaborProductivityGrowthNoME].name     = "Labor Productivity Growth (No ME)"
             pseudo[:LaborProductivityGrowthNoME].longname = "Labor Productivity Growth (No ME)"
         end
     end
 
-    if haskey(m.settings, :add_Epi_t_measurement)
+    if haskey(get_settings(m), :add_Epi_t_measurement)
         if get_setting(m, :add_Epi_t_measurement)
             pseudo[:Epi_t].name     = "Short-term Inflation Expectations"
             pseudo[:Epi_t].longname = "Short-term Inflation Expectations"

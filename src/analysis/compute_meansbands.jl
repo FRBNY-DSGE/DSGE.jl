@@ -254,6 +254,8 @@ function compute_meansbands(m::AbstractDSGEModel, input_type::Symbol, cond_type:
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth, use_data = haskey(pseudo2data, var_name))
 
+    replace!(transformed_series, missing=>NaN)
+
     # Handle NaNs
     if skipnan && !(output_var in [:histobs, :hist4qobs]) && any(isnan.(transformed_series))
         # Remove rows with NaNs

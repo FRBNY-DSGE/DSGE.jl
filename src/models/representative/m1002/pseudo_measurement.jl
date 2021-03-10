@@ -46,8 +46,6 @@ function pseudo_measurement(m::Model1002{T},
 
     # Handle integrated series
     no_integ_inds = inds_states_no_integ_series(m)
-
-    no_integ_inds = inds_states_no_integ_series(m)
     if ((haskey(get_settings(m), :add_altpolicy_pgap) && haskey(get_settings(m), :pgap_type)) ?
         (get_setting(m, :add_altpolicy_pgap) && get_setting(m, :pgap_type) == :ngdp) : false) ||
         (haskey(get_settings(m), :ait_Thalf) ? (exp(log(0.5) / get_setting(m, :ait_Thalf)) ≈ 0.) : false)
@@ -365,6 +363,18 @@ function pseudo_measurement(m::Model1002{T},
     if haskey(m.settings, :add_zp)
         if get_setting(m, :add_zp)
             ZZ_pseudo[pseudo[:zp], endo[:zp_t]] = 1.
+        end
+    end
+
+    if haskey(m.settings, :add_pgap)
+        if get_setting(m, :add_pgap)
+            ZZ_pseudo[pseudo[:pgap], endo[:pgap_t]] = 1.
+        end
+    end
+
+    if haskey(m.settings, :add_ygap)
+        if get_setting(m, :add_ygap)
+            ZZ_pseudo[pseudo[:ygap], endo[:ygap_t]] = 1.
         end
     end
 

@@ -6,7 +6,7 @@ plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
 plot_forecast_comparison(m_old, m_new, vars, class, input_type, cond_type;
     input_type_old = input_type, cond_type_old = cond_type,
     forecast_string = "", forecast_string_old = forecast_string,
-    bdd_and_unbdd = false, bands_pcts = [\"90.0%\"],
+    use_bdd = :unbdd, bands_pcts = [\"90.0%\"],
     old_names = Dict(:hist => "", :forecast => \"Old Forecast\"),
     new_names = Dict(:hist => "", :forecast => \"New Forecast\"),
     old_colors = Dict(:hist => :grey, :forecast => :blue, :bands => :blue),
@@ -36,7 +36,7 @@ Plot forecasts from `m_old` and `m_new` of `var` or `vars`.
 - `cond_type_old::Symbol`
 - `forecast_string::String`
 - `forecast_string_old::String`
-- `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
+- `use_bdd::Symbol`: if :bdd_and_unbdd, then unbounded means and bounded bands are plotted
 - `bands_pcts::Vector{String}`: which bands to plot
 - `old_names::Dict{Symbol, String}`: maps keys `[:hist, :forecast, :bands]` to
   labels for old forecast
@@ -77,7 +77,7 @@ function plot_forecast_comparison(m_old::AbstractDSGEModel, m_new::AbstractDSGEM
                                   cond_type_old::Symbol = cond_type,
                                   forecast_string::String = "",
                                   forecast_string_old::String = forecast_string,
-                                  bdd_and_unbdd::Bool = false,
+                                  use_bdd::Symbol = :unbdd,
                                   bands_pcts::Vector{String} = ["90.0%"],
                                   old_names = Dict(:hist => "", :forecast => "Old Forecast"),
                                   new_names = Dict(:hist => "", :forecast => "New Forecast"),
@@ -95,11 +95,11 @@ function plot_forecast_comparison(m_old::AbstractDSGEModel, m_new::AbstractDSGEM
     histold = read_mb(m_old, input_type_old, cond_type_old, Symbol(:hist, class),
                       forecast_string = forecast_string_old)
     forecastold = read_mb(m_old, input_type_old, cond_type_old, Symbol(:forecast, class),
-                       forecast_string = forecast_string_old, bdd_and_unbdd = bdd_and_unbdd)
+                       forecast_string = forecast_string_old, use_bdd = use_bdd)
     histnew = read_mb(m_new, input_type, cond_type, Symbol(:hist, class),
                       forecast_string = forecast_string)
     forecastnew = read_mb(m_new, input_type, cond_type, Symbol(:forecast, class),
-                       forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
+                       forecast_string = forecast_string, use_bdd = use_bdd)
 
     # Get titles if not provided
     if isempty(titles)

@@ -22,7 +22,7 @@ function zlb_rule_replace_eq_entries(m::AbstractDSGEModel,
     #       (to avoid adding too many extra dimensions to parameter output)
     C[eq[:eq_mp]] = (haskey(get_settings(m), :zlb_rule_values) ? get_setting(m, :zlb_rule_values)[reg] / 4. :
                      (haskey(get_settings(m), :zlb_rule_value) ? get_setting(m, :zlb_rule_value) / 4. :
-                      0.1 / 4.)) - m[:Rstarn]
+                      forecast_zlb_value(m))) - m[:Rstarn]
 
     if haskey(get_settings(m), :zlb_rule_remove_mon_anticipated_shocks) &&
         get_setting(m, :zlb_rule_remove_mon_anticipated_shocks)
@@ -38,7 +38,6 @@ function zlb_rule_replace_eq_entries(m::AbstractDSGEModel,
             end
         end
     end
-
 
     return Γ0, Γ1, C, Ψ, Π
 end

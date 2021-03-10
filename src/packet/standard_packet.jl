@@ -345,7 +345,7 @@ function make_forecast_plots(m::AbstractDSGEModel, input_type::Symbol, cond_type
     elseif product == :bddforecast
         plot_history_and_forecast(m, varnames, class, input_type, cond_type,
                                   forecast_string = forecast_string,
-                                  bdd_and_unbdd = false, bdd_and_bdd = true,
+                                  bdd_and_unbdd = false, #bdd_and_bdd = true,
                                   plotroot = plotroot,
                                   start_date = start_date,
                                   names = Dict(:hist => hist_label, :forecast => forecast_label),

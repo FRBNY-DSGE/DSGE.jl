@@ -136,7 +136,7 @@ read_mb(fn::String)
 read_mb(fn1::String, fn2::String)
 
 read_mb(m, input_type, cond_type, output_var; forecast_string = "",
-    bdd_and_unbdd = false, modal_line = false, directory = workpath(m, \"forecast\"))
+    use_bdd = :unbdd, modal_line = false, directory = workpath(m, \"forecast\"))
 ```
 
 Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
@@ -180,7 +180,7 @@ end
 function read_mb(m::Union{AbstractDSGEModel,AbstractVARModel},
                  input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
-                 bdd_and_unbdd::Bool = false, modal_line::Bool = false,
+                 use_bdd::Symbol = :unbdd, modal_line::Bool = false,
                  directory::String = workpath(m, "forecast"))
 
     mb_file = get_meansbands_output_file(m, input_type, cond_type, output_var;
@@ -190,14 +190,17 @@ function read_mb(m::Union{AbstractDSGEModel,AbstractVARModel},
                                                          forecast_string = forecast_string,
                                                          directory = directory) : ""
 
-    if bdd_and_unbdd
+    if use_bdd in [:bdd, :bdd_and_unbdd]
         @assert get_product(output_var) in [:forecast, :forecast4q]
         bdd_output_var = Symbol(:bdd, output_var)
         bdd_file = get_meansbands_output_file(m, input_type, cond_type, bdd_output_var;
                                               forecast_string = forecast_string,
                                               directory = directory)
-
-        read_bdd_and_unbdd_mb(bdd_file, modal_line ? modal_file : mb_file, modal_line = modal_line)
+        if use_bdd == :bdd
+            read_mb(bdd_file, modal_file)
+        else
+            read_bdd_and_unbdd_mb(bdd_file, modal_line ? modal_file : mb_file, modal_line = modal_line)
+        end
     else
         read_mb(mb_file, modal_file)
     end
@@ -207,7 +210,7 @@ end
 #=
 function read_mb_4q(m::AbstractDSGEModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
-                 bdd_and_unbdd::Bool = false,
+                 use_bdd::Symbol = :unbdd,
                  directory::String = workpath(m, "forecast"))
 
     unbdd_file = get_meansbands_output_file(m, input_type, cond_type, output_var;
@@ -313,7 +316,7 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
 function write_meansbands_tables_timeseries(m::AbstractDSGEModel, input_type::Symbol,
                                             cond_type::Symbol, output_var::Symbol;
                                             forecast_string::String = "",
-                                            bdd_and_unbdd::Bool = false,
+                                            use_bdd::Symbol = :unbdd,
                                             read_dirname::String = workpath(m, "forecast"),
                                             write_dirname::String = tablespath(m, "forecast"),
                                             kwargs...)
@@ -342,12 +345,12 @@ function write_meansbands_tables_timeseries(m::AbstractDSGEModel, input_type::Sy
         mb_hist  = read_mb(m, input_type, cond_type, Symbol(hist_prod, class),
                            forecast_string = forecast_string, directory = read_dirname)
         mb_fcast = read_mb(m, input_type, cond_type, Symbol(fcast_prod, class),
-                           forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd,
+                           forecast_string = forecast_string, use_bdd = use_bdd,
                            directory = read_dirname)
         mb = cat(mb_hist, mb_fcast)
     else
         mb = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string,
-                     bdd_and_unbdd = bdd_and_unbdd, directory = read_dirname)
+                     use_bdd = use_bdd, directory = read_dirname)
     end
 
     # Call second method
@@ -414,7 +417,7 @@ write_means_tables_shockdec(write_dirname, filestring_base, mb_shockdec,
 **Method 1 only:**
 
 - `forecast_string::String`
-- `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
+- `use_bdd::Symbol`: whether to use unbounded means and bounded
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
 - `read_dirname::String`: directory from which `MeansBands` are read in
 - `write_dirname::String`: directory to which tables are saved

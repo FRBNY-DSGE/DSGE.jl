@@ -403,6 +403,15 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     original_eqcond_dict = haskey(get_settings(m), :regime_eqcond_info) ? get_setting(m, :regime_eqcond_info) :
         Dict{Int, EqcondEntry}()
 
+    # Information set - start of awareness of ZLB
+    first_aware = if haskey(get_settings(m), :tvis_information_set)
+        findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
+    elseif haskey(get_settings(m), :regime_eqcond_info)
+        findfirst([original_info_set[i].key == :zero_rate for i in keys(original_info_set)])
+    else
+        nothing
+    end
+
     # Grab some information about the forecast
     n_hist_regimes = haskey(get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     has_reg_dates = haskey(get_settings(m), :regime_dates) # calculate dates of first & last regimes we need to add for the alt policy
@@ -418,36 +427,58 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     altpol_reg_qtrrange   = quarter_range(start_altpol_date, end_altpol_date)
     n_altpol_reg_qtrrange = length(altpol_reg_qtrrange)
 
-    # Start imposing ZLB instead at the quarter before liftoff quarter
-    first_zlb_regime = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .<
-                                 get_setting(m, :forecast_zlb_value) / 4.0)
+    # Start imposing ZLB at the quarter before liftoff quarter
+    has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m)
+    first_guess   = findlast(has_neg_rates)
 
-    altpol = alternative_policy(m)
-
-    # Check replace_eqcond_func_dict if any regimes use the zero rate rule
-    remaining_zlb_regs = 0
-    for (reg, v) in original_eqcond_dict
-        if v.alternative_policy.key == :zero_rate
-            if get_setting(m, :regime_dates)[reg] > get_setting(m, :date_conditional_end)
-                @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
-                v.alternative_policy = altpol
-            else
-                remaining_zlb_regs += 1
-            end
+    # Determine the number of regimes before the start of the forecast (used to adjust
+    # indexing)
+    pre_fcast_regimes = n_hist_regimes
+    if cond_type != :none
+        if is_regime_switch
+            pre_fcast_regimes += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
+        else
+            pre_fcast_regimes += subtract_quarters(get_setting(m, :date_conditional_end),
+                                                  get_setting(m, :date_forecast_start)) + 1
         end
     end
-    m <= Setting(:temporary_altpol_length, remaining_zlb_regs)
 
-    system = nothing
-    if !isnothing(first_zlb_regime) # Then there are ZLB regimes to enforce
-        first_zlb_regime += n_hist_regimes
-        if cond_type != :none
-            if is_regime_switch
-                first_zlb_regime += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
-            else
-                first_zlb_regime += subtract_quarters(get_setting(m, :date_conditional_end),
-                                                      get_setting(m, :date_forecast_start)) + 1
+    if !isnothing(first_guess) # Then there are ZLB regimes to enforce
+
+        endo_success = false
+        # Start the search from the first regime post conditional data
+        search_start_reg = pre_fcast_regimes + 1
+        # If we're using a minimum temporary altpol length, start the search after the end
+        # of the min temp altpol
+        # NOTE: it is assumed that the regime_eqcond_info already details this temporary altpol
+        if haskey(m.settings, :min_temporary_altpol_length)
+            search_start_reg = max(search_start_reg, get_setting(m, :reg_forecast_start) + get_setting(m, :min_temporary_altpol_length)+1)
+        end
+
+        # Check original_eqcond_dict if any regimes use the zero rate rule. Keep track of
+        # the number of existing zlb regs for the temp altpol length (necessary if
+        # we have temporary_altpol regs in the history)
+        temp_altpol_length = 0
+        for (reg, v) in original_eqcond_dict
+            if v.alternative_policy.key == :zero_rate
+                if reg >= search_start_reg
+                    @warn "Regime $reg of regime_eqcond_info used zero_rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
+                    v.alternative_policy = altpol
+                else
+                    temp_altpol_length += 1
+                end
             end
+        end
+        m <= Setting(:temporary_altpol_length, temp_altpol_length)
+
+        # TODO: Currently, we start our search from the first reg in the forecast --
+        # check if this behavior is really what we want, rather than imposing the ZLB regime
+        # in the first period for which negative rates appear, i.e.
+        # first_zlb_regime = findfirst(has_neg_rates)
+
+        # Update first awareness period if nothing before
+        if isnothing(first_aware)
+            first_aware = search_start_reg
         end
 
         # Setup for loop enforcing zero rate
@@ -455,17 +486,31 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
         orig_temp_zlb     = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
 
-        # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
+        # Set up for binary search
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
-            (get_setting(m, :max_temporary_altpol_length) - 1) : (size(obs, 2) - 3) # subtract 1 b/c will add 1 later (see line 459)
-        for iter in 0:max_zlb_regimes
+            get_setting(m, :max_temporary_altpol_length) : size(obs, 2) - 3
+        max_zlb_regimes += pre_fcast_regimes # so max_zlb_regimes is the regime number
+        first_guess += pre_fcast_regimes
+        to_return = false
+        high = max_zlb_regimes
+        low = search_start_reg
+        iter = min(first_guess, max_zlb_regimes)
+
+        # Now iteratively impose ZLB periods until there are no negative rates in the forecast horizon
+        ## Binary search for correct number of zlb
+        while true
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
             n_total_regimes = first_zlb_regime + iter + 1 # plus 1 for lift off
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
-            m <= Setting(:temporary_altpol_length, orig_temp_zlb + iter + 1) # 1 for first_zlb_regime, iter for each additional regime
+            ## TODO: Handle edge case where no. of ZLB needed is 0
+            m <= Setting(:temporary_altpol_length, orig_temp_zlb + iter + 1 - search_start_reg)
+
+
+            # Test if more/less ZLB Needed
+
             # Set up regime dates
             altpol_regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
             if is_regime_switch # Add historical regimes
@@ -477,7 +522,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # Ensure we don't accidentally tell the code to forecast beyond the forecast horizon
             altpol_reg_range = start_altpol_reg:n_total_regimes
             if length(altpol_reg_range) > n_altpol_reg_qtrrange
-                if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :forecast_zlb_value) / 4.0 + tol) # Ensure we do not accidentally
+                if all(obs[get_observables(m)[:obs_nominalrate], :] .>
+                       forecast_zlb_value(m) + tol) # Ensure we do not accidentally
                     obs[get_observables(m)[:obs_nominalrate], 1] = tol - 2. # assume success at enforcing ZLB (should be negative)
                 end
                 break
@@ -486,7 +532,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 altpol_regime_dates[regind] = date
             end
 
-            if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= maximum(altpol_reg_range)
+            if haskey(get_settings(m), :cred_vary_until) ? (isempty(altpol_reg_range) ? true : get_setting(m, :cred_vary_until) >= maximum(altpol_reg_range)) : false
                 m <= Setting(:regime_switching, true)
             else
                 m <= Setting(:regime_dates, altpol_regime_dates)
@@ -510,8 +556,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # function. In the default DSGE policy, the regimes after the ZLB ends
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
-            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_zlb_regime, n_total_regimes)
-
+            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), search_start_reg, n_total_regimes, altpol)
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
@@ -548,7 +593,16 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # this step merely changes to which matrices the local variables states, obs, and pseudo point
             # w/in this function's closure. Thus, the matrices states, obs, and pseudo which are first
             # passed into this function will not be over-written.
-            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = (iter == max_zlb_regimes))
+            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
+
+            # Successful endogenous bounding?
+            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
+
+            if !endo_success && iter == max_zlb_regimes
+                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
+                                               enforce_zlb = true)
+                #endo_success = true
+            end
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
             # in forecast_one will not work.
@@ -564,15 +618,100 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 end
             end
 
-            # Successful endogenous bounding?
-            if all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value)/4. + tol) || iter == max_zlb_regimes
-                # Restore the original number of regimes and regime dates
-                if isempty(orig_regime_dates)
-                    delete!(get_settings(m), :regime_dates)
-                    delete!(get_settings(m), :n_regimes)
+            #=if (to_return && !endo_success) #|| (endo_success &&
+                             #(first_guess - 1 <= iter <= first_guess + 2)) ## We ran this iteration to return the answer.
+                @assert endo_success "Binary search for endo ZLB is breaking even though endo_success is false"
+
+                break
+            end =#
+
+            ## Note in below 2 is really :endogenous_zlb_lookback and 3 is :endogenous_zlb_lookahead
+            ## Reset temporary_altpol_length in each case
+            ## Return here refers to "break"
+            ## TODO: Conditional period included here b/c we NaN out conditional nominal rates
+            ### in setup_flexait_tempzlb! This contradicts the earlier setup where we start
+            ### at reg_post_conditional_end instead of reg_forecast_start.
+
+            # If more ZLB necessary
+            #@show iter, low, high, search_start_reg, first_guess, pre_fcast_regimes, max_zlb_regimes
+            lookback = haskey(m.settings, :endogenous_zlb_lookback) ? get_setting(m, :endogenous_zlb_lookback) : 2
+            lookahead = haskey(m.settings, :endogenous_zlb_lookahead) ? get_setting(m, :endogenous_zlb_lookahead) : 3
+            if !endo_success
+                low = iter + 1
+                if iter == first_guess
+                    # Our initial guess of first_guess failed.
+                    # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
+                    iter = min(iter + lookahead, max_zlb_regimes)
+                elseif iter == max_zlb_regimes
+                    # We have hit the max number of allowed regimes for ZLB, so we've
+                    # run Fixed ZLB with unanticipated shocks to enforce ZLB
+                    endo_success = true
+                    break
+                elseif low-1 == high
+                    # We should never reach this point with endo_success false or the
+                    # forecast unenforced with unant shocks, but just in case...
+                    # (if we do end up here, the forecast will be NaNed)
+                    break
+                elseif iter == first_guess + lookahead
+                    # Guessing 3 periods after first_guess failed,
+                    # so let's try max_zlb_regimes
+                    iter = max_zlb_regimes
+                elseif iter > first_guess && iter < min(first_guess + lookahead, max_zlb_regimes)
+                    # If our initial guess didn't work but lookahead did, check ahead
+                    # stepwise
+                    iter = iter + 1
+                elseif iter < first_guess && iter >= first_guess - lookback
+                    # If our initial guess did work but lookback didn't, check ahead
+                    # stepwise
+                    iter = iter + 1
                 else
-                    m <= Setting(:regime_dates, orig_regime_dates)
-                    setup_regime_switching_inds!(m; cond_type = cond_type)
+                    # Continue Binary Search
+                    iter = floor(Int64, (low + high) / 2)
+                end
+            else
+                # If ZLB works (no negative rates w/out using unanticipated mp shocks)
+                high = iter # Set high to iter so we search for ZLB regimes less than or equal to iter
+                if low == high || iter == low
+                    break
+                elseif iter == first_guess
+                    # If we only needed one period of zlb, then we can break here
+                    if search_start_reg == first_guess
+                        break
+                    else
+                    # Otherwise, let's try a final ZLB regime 2 before first_guess, but above first_zlb_regime as bound
+                    iter = max(first_guess - lookback, search_start_reg)
+                    end
+                elseif iter == first_guess - lookback
+                    # If first_guess - 2 works, let's try the first possible ZLB regime value
+                    iter = search_start_reg
+                elseif iter == search_start_reg
+                    # Minimal number of ZLB works, so we break here
+                    # and use iter = first_zlb_regime
+                    break
+                elseif iter < first_guess  && iter > first_guess - lookback
+                    # if we're in this block, last_zlb_reg worked but first_guess -
+                    # lookback didn't, so we're proceeding stepwise forward and pick the
+                    # first regime that works
+                    break
+                elseif iter > first_guess && iter < min(first_guess + lookahead, max_zlb_regimes)
+                    # first_guess didn't work, and first_guess + lookahead did
+                    # so we're proceeding stepwise from first_guess and pick the first
+                    # working reg
+                    break
+                elseif iter == first_guess + lookahead
+                    # first_guess failed, but this succeeded, so we proceed ahead
+                    # stepwise from first_guess (lookahead regimes) to find the first
+                    # length that works
+                    iter = first_guess + 1
+                elseif iter == max_zlb_regimes
+                    # Continue Binary Search on [first_guess + lookahead + 1,
+                    # max_zlb_regimes]
+                    iter = floor(Int64, (max_zlb_regimes + first_guess + lookahead + 1) / 2)
+                    high = max_zlb_regimes
+                    low = min(first_guess + lookahead + 1, max_zlb_regimes)
+                else
+                    # Continue Binary Search
+                    iter = floor(Int64, (low + high) / 2)
                 end
                 break
             end
