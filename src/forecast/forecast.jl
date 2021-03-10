@@ -597,36 +597,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
             # Successful endogenous bounding?
-            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zlb_rule_value) / 4. + tol)
+            liftoff = obs[get_observables(m)[:obs_nominalrate], iter - pre_fcast_regimes] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol
+            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
 
-            if !endo_success && iter == max_zlb_regimes
-                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
-                                               enforce_zlb = true)
-            end
-
-            # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
-            # in forecast_one will not work.
-            if set_zlb_regime_vals != identity
-                for p in m.parameters
-                    if haskey(p.regimes, :value)
-                        if length(p.regimes[:value]) > orig_regimes
-                            for i in (orig_regimes + 1):length(p.regimes[:value])
-                                delete!(p.regimes[:value], i)
-                            end
-                        end
-                    end
-                end
-            end
-
-            #=if (to_return && !endo_success) #|| (endo_success &&
-                             #(first_guess - 1 <= iter <= first_guess + 2)) ## We ran this iteration to return the answer.
-                @assert endo_success "Binary search for endo ZLB is breaking even though endo_success is false"
-
-                break
-            end =#
-
-            ## Note in below 2 is really :endogenous_zlb_lookback and 3 is :endogenous_zlb_lookahead
-            ## Reset temporary_altpolicy_length in each case
             ## Return here refers to "break"
             ## TODO: Conditional period included here b/c we NaN out conditional nominal rates
             ### in setup_flexait_tempzlb! This contradicts the earlier setup where we start
@@ -635,7 +608,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # If more ZLB necessary
             lookback = haskey(m.settings, :endogenous_zlb_lookback) ? get_setting(m, :endogenous_zlb_lookback) : 2
             lookahead = haskey(m.settings, :endogenous_zlb_lookahead) ? get_setting(m, :endogenous_zlb_lookahead) : 3
-            if !endo_success
+            if !liftoff
                 low = iter + 1
                 if iter == first_guess
                     # Our initial guess of first_guess failed.
@@ -644,13 +617,12 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif iter == max_zlb_regimes
                     # We have hit the max number of allowed regimes for ZLB, so we've
                     # run Fixed ZLB with unanticipated shocks to enforce ZLB
-                    endo_success = true
-                    break
+                    to_return = true
                 elseif low-1 == high
                     # We should never reach this point with endo_success false or the
                     # forecast unenforced with unant shocks, but just in case...
                     # (if we do end up here, the forecast will be NaNed)
-                    break
+                    to_return = true
                 elseif iter == first_guess + lookahead
                     # Guessing 3 periods after first_guess failed,
                     # so let's try max_zlb_regimes
@@ -671,11 +643,11 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 # If ZLB works (no negative rates w/out using unanticipated mp shocks)
                 high = iter # Set high to iter so we search for ZLB regimes less than or equal to iter
                 if low == high || iter == low
-                    break
+                    to_return = true
                 elseif iter == first_guess
                     # If we only needed one period of zlb, then we can break here
                     if search_start_reg == first_guess
-                        break
+                        to_return = true
                     else
                     # Otherwise, let's try a final ZLB regime 2 before first_guess, but above first_zlb_regime as bound
                     iter = max(first_guess - lookback, search_start_reg)
@@ -686,17 +658,17 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 elseif iter == search_start_reg
                     # Minimal number of ZLB works, so we break here
                     # and use iter = first_zlb_regime
-                    break
+                    to_return = true
                 elseif iter < first_guess  && iter > first_guess - lookback
                     # if we're in this block, last_zlb_reg worked but first_guess -
                     # lookback didn't, so we're proceeding stepwise forward and pick the
                     # first regime that works
-                    break
+                    to_return = true
                 elseif iter > first_guess && iter < min(first_guess + lookahead, max_zlb_regimes)
                     # first_guess didn't work, and first_guess + lookahead did
                     # so we're proceeding stepwise from first_guess and pick the first
                     # working reg
-                    break
+                    to_return = true
                 elseif iter == first_guess + lookahead
                     # first_guess failed, but this succeeded, so we proceed ahead
                     # stepwise from first_guess (lookahead regimes) to find the first
@@ -712,6 +684,33 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     # Continue Binary Search
                     iter = floor(Int64, (low + high) / 2)
                 end
+            end
+
+            if to_return
+                # if we're returning the forecast, rerun with enforce_zlb = true
+                # to handle future regimes where rates dip below zlb
+                if !endo_success
+                    states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
+                                                   enforce_zlb = true)
+                    #endo_success = true
+                end
+            end
+
+            # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
+            # in forecast_one will not work.
+            if set_zlb_regime_vals != identity
+                for p in m.parameters
+                    if haskey(p.regimes, :value)
+                        if length(p.regimes[:value]) > orig_regimes
+                            for i in (orig_regimes + 1):length(p.regimes[:value])
+                                delete!(p.regimes[:value], i)
+                            end
+                        end
+                    end
+                end
+            end
+
+            if to_return
                 break
             end
         end
@@ -727,29 +726,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         ind_fail = findfirst(obs[get_observables(m)[:obs_nominalrate], :] .> tol)
         @show ind_fail
         @show obs[get_observables(m)[:obs_nominalrate], ind_fail]
+        @assert false
 
 
-        #if nan_failures
-            @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
-            states .= NaN
-            obs    .= NaN
-            pseudo .= NaN
-       #= else
-            @warn "Unable to enforce the ZLB. Using unant shocks to enforce ZLB."
-            try
-                if isnothing(system)
-                    tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
-                    system = compute_system(m; tvis = tvis)
-                end
-                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks, enforce_zlb = true)
-            catch e
-                println(e)
-                @warn "Mystery error, NaNing forecasts."
-                states .= NaN
-                obs .= NaN
-                pseudo .=NaN
-            end
-        end=#
+        @warn "Unable to enforce the ZLB. Throwing NaN for forecasts"
+        states .= NaN
+        obs    .= NaN
+        pseudo .= NaN
     end
 
     # Restore original settings
