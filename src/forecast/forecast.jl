@@ -394,7 +394,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                   histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
 
-
+@show "FORECAST"
     # Grab "original" settings" so they can be restored later
     altpol = alternative_policy(m)
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
@@ -461,7 +461,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # we have temporary_altpol regs in the history)
         temp_altpol_length = 0
         for (reg, v) in original_eqcond_dict
-            if v.alternative_policy.key == :zlb_rule || v.alternative_policy.key == :zero_rate
+            if v.alternative_policy.key == :zlb_rule
                 if reg >= search_start_reg
                     @warn "Regime $reg of regime_eqcond_info used zero rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
                     v.alternative_policy = altpol
@@ -492,6 +492,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             get_setting(m, :max_temporary_altpolicy_length) : size(obs, 2) - 3
         max_zlb_regimes += pre_fcast_regimes # so max_zlb_regimes is the regime number
         first_guess += pre_fcast_regimes
+        first_guess = min(first_guess, max_zlb_regimes)
         to_return = false
         high = max_zlb_regimes
         low = search_start_reg
@@ -597,7 +598,10 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks)
 
             # Successful endogenous bounding?
-            liftoff = obs[get_observables(m)[:obs_nominalrate], iter - pre_fcast_regimes] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol
+            @show low, high, iter, search_start_reg, max_zlb_regimes, first_guess
+            @show iter - pre_fcast_regimes + 1
+            liftoff = obs[get_observables(m)[:obs_nominalrate], iter - pre_fcast_regimes + 1] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol
+            @show liftoff
             endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
 
             ## Return here refers to "break"
@@ -610,14 +614,14 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             lookahead = haskey(m.settings, :endogenous_zlb_lookahead) ? get_setting(m, :endogenous_zlb_lookahead) : 3
             if !liftoff
                 low = iter + 1
-                if iter == first_guess
-                    # Our initial guess of first_guess failed.
-                    # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
-                    iter = min(iter + lookahead, max_zlb_regimes)
-                elseif iter == max_zlb_regimes
+                if iter == max_zlb_regimes
                     # We have hit the max number of allowed regimes for ZLB, so we've
                     # run Fixed ZLB with unanticipated shocks to enforce ZLB
                     to_return = true
+                elseif iter == first_guess
+                    # Our initial guess of first_guess failed.
+                    # We will try guessing 3 periods ahead (assuming we don't exceed max_zlb_regimes)
+                    iter = min(iter + lookahead, max_zlb_regimes)
                 elseif low-1 == high
                     # We should never reach this point with endo_success false or the
                     # forecast unenforced with unant shocks, but just in case...
@@ -687,6 +691,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
 
             if to_return
+                @show "RETURNING"
                 # if we're returning the forecast, rerun with enforce_zlb = true
                 # to handle future regimes where rates dip below zlb
                 if !endo_success
