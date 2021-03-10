@@ -452,8 +452,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # If we're using a minimum temporary altpol length, start the search after the end
         # of the min temp altpol
         # NOTE: it is assumed that the regime_eqcond_info already details this temporary altpol
-        if haskey(m.settings, :min_temporary_altpol_length)
-            search_start_reg = max(search_start_reg, get_setting(m, :reg_forecast_start) + get_setting(m, :min_temporary_altpol_length)+1)
+        if haskey(m.settings, :min_temporary_altpolicy_length)
+            search_start_reg = max(search_start_reg, get_setting(m, :reg_forecast_start) + get_setting(m, :min_temporary_altpolicy_length)+1)
         end
 
         # Check original_eqcond_dict if any regimes use the zero rate rule. Keep track of
@@ -470,7 +470,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 end
             end
         end
-        m <= Setting(:temporary_altpol_length, temp_altpol_length)
+        m <= Setting(:temporary_altpolicy_length, temp_altpol_length)
 
         # TODO: Currently, we start our search from the first reg in the forecast --
         # check if this behavior is really what we want, rather than imposing the ZLB regime
@@ -485,11 +485,11 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # Setup for loop enforcing zero rate
         orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
         orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
-        orig_temp_zlb     = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
+        orig_temp_zlb     = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
 
         # Set up for binary search
-        max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpol_length) ?
-            get_setting(m, :max_temporary_altpol_length) : size(obs, 2) - 3
+        max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpolicy_length) ?
+            get_setting(m, :max_temporary_altpolicy_length) : size(obs, 2) - 3
         max_zlb_regimes += pre_fcast_regimes # so max_zlb_regimes is the regime number
         first_guess += pre_fcast_regimes
         to_return = false
@@ -507,7 +507,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
             ## TODO: Handle edge case where no. of ZLB needed is 0
-            m <= Setting(:temporary_altpol_length, orig_temp_zlb + iter + 1 - search_start_reg)
+            m <= Setting(:temporary_altpolicy_length, orig_temp_zlb + iter + 1 - search_start_reg)
 
 
             # Test if more/less ZLB Needed
@@ -627,7 +627,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end =#
 
             ## Note in below 2 is really :endogenous_zlb_lookback and 3 is :endogenous_zlb_lookahead
-            ## Reset temporary_altpol_length in each case
+            ## Reset temporary_altpolicy_length in each case
             ## Return here refers to "break"
             ## TODO: Conditional period included here b/c we NaN out conditional nominal rates
             ### in setup_flexait_tempzlb! This contradicts the earlier setup where we start
@@ -774,9 +774,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         m <= Setting(:tvis_information_set, original_info_set)
     end
     if isnothing(orig_temp_zlb)
-        delete!(get_settings(m), :temporary_altpol_length)
+        delete!(get_settings(m), :temporary_altpolicy_length)
     else
-        m <= Setting(:temporary_altpol_length, orig_temp_zlb)
+        m <= Setting(:temporary_altpolicy_length, orig_temp_zlb)
     end
 
     if rerun_smoother

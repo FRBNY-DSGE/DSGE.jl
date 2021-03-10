@@ -119,7 +119,7 @@ m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = :full)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
-m <= Setting(:temporary_altpol_length, n_zlb_reg)
+m <= Setting(:temporary_altpolicy_length, n_zlb_reg)
 
 # Now add additional regimes of flexible AIT to allow time-varying credibility
 for i in nreg0:(nreg0 + 15)
@@ -157,7 +157,7 @@ for k in keys(temp_taylor_regime_eqcond_info)
 end
 temp_taylor = MultiPeriodAltPolicy(:temporary_taylor, get_setting(m, :n_regimes), temp_taylor_regime_eqcond_info, gensys2 = true,
                                    temporary_altpolicy_names = [:taylor_rule],
-                                   temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
+                                   temporary_altpolicy_length = get_setting(m, :temporary_altpolicy_length),
                                    infoset = copy(get_setting(m, :tvis_information_set))) # also test w/ tvis and w/out
 temp_default = MultiPeriodAltPolicy(:temporary_default, get_setting(m, :n_regimes), temp_default_regime_eqcond_info,
                                     gensys2 = false, temporary_altpolicy_names = [:default]) # also check without gensys2 on
@@ -186,7 +186,7 @@ for k in keys(temp_taylor_regime_eqcond_info)
 end
 temp_flexait_zlb = MultiPeriodAltPolicy(:temporary_flexait_zlb, get_setting(m, :n_regimes), temp_flexait_zlb_regime_eqcond_info, gensys2 = true,
                                         temporary_altpolicy_names = [:zero_rate],
-                                        temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
+                                        temporary_altpolicy_length = get_setting(m, :temporary_altpolicy_length),
                                         infoset = copy(get_setting(m, :tvis_information_set)))
 m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_flexait_zlb])
 # sys_flexait = compute_system(m; tvis = true)
@@ -204,7 +204,7 @@ for k in keys(temp_taylor_regime_eqcond_info)
 end
 temp_flexible_ait = MultiPeriodAltPolicy(:temporary_flexible_ait, get_setting(m, :n_regimes), temp_flexible_ait_regime_eqcond_info, gensys2 = true,
                                          temporary_altpolicy_names = [:flexible_ait],
-                                         temporary_altpolicy_length = get_setting(m, :temporary_altpol_length),
+                                         temporary_altpolicy_length = get_setting(m, :temporary_altpolicy_length),
                                          infoset = copy(get_setting(m, :tvis_information_set))) # also test w/ tvis and w/out
 
 m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_flexible_ait])

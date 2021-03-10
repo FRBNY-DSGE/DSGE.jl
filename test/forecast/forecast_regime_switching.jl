@@ -452,9 +452,9 @@ end
 
         if prob_weights[1] < .5
             m <= Setting(:uncertain_altpolicy, true)
-            m <= Setting(:uncertain_temp_altpol, true)
+            m <= Setting(:uncertain_temporary_altpolicy, true)
             m <= Setting(:alternative_policies, [DSGE.default_policy()])
-            m <= Setting(:temporary_altpol_length, (n_reg_temp - 1 - 3 + 1))
+            m <= Setting(:temporary_altpolicy_length, (n_reg_temp - 1 - 3 + 1))
         end
         m <= Setting(:remove_rm_shocks, 3)
         m <= Setting(:pgap_value, 0.0)

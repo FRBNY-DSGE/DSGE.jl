@@ -526,8 +526,7 @@ Base.showerror(io::IO, ex::SteadyStateConvergenceError) = print(io, ex.msg)
 
 """
 ```
-setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none,
-    temp_altpolicy_in_cond_regimes::Bool = false)
+setup_regime_switching_inds!(m::AbstractDSGEModel; cond_type::Symbol = :none)
 ```
 
 calculates the indices needed to solve and forecast a model with regime-switching.

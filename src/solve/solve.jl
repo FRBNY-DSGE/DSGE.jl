@@ -188,7 +188,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
 
     altpolicy_solve = alternative_policy(m).solve
     gensys2 = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
-    uncertain_temp_altpol = haskey(get_settings(m), :uncertain_temp_altpol) && get_setting(m, :uncertain_temp_altpol)
+    uncertain_temporary_altpolicy = haskey(get_settings(m), :uncertain_temporary_altpolicy) && get_setting(m, :uncertain_temporary_altpolicy)
     replace_eqcond = haskey(get_settings(m), :replace_eqcond) && get_setting(m, :replace_eqcond)
 
     if get_setting(m, :solution_method) == :gensys
@@ -226,7 +226,7 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
                     solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
                                    TTTs, RRRs, CCCs; gensys2_regimes = collect(reg_range),
                                    uncertain_altpolicy = uncertain_altpolicy,
-                                   uncertain_temp_altpol = uncertain_temp_altpol,
+                                   uncertain_temporary_altpolicy = uncertain_temporary_altpolicy,
                                    verbose = verbose)
                     # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
                     #       any temporary policy
@@ -338,7 +338,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                         Cs::Vector{Vector{S}}, Ψs::Vector{Matrix{S}}, Πs::Vector{Matrix{S}},
                         TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}};
                         gensys2_regimes::Vector{Int} = Vector{Int}(undef, 0),
-                        uncertain_altpolicy::Bool = false, uncertain_temp_altpol::Bool = false,
+                        uncertain_altpolicy::Bool = false, uncertain_temporary_altpolicy::Bool = false,
                         verbose::Symbol = :high) where {S <: Real}
 
     # Solve for the final regime of the alternative rule
@@ -371,7 +371,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     end
 
     # Populate TTTs, RRRs, CCCs matrices
-    if uncertain_temp_altpol
+    if uncertain_temporary_altpolicy
 
         # Setup
         ffreg = first(gensys2_regimes) + 1
@@ -436,7 +436,7 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
             gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
 
         ng2  = length(Tcal) - 1 # number of gensys2 regimes
-        nzlb = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : ng2
+        nzlb = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : ng2
 
         # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
         # Then, if nzlb = 1, Tcal should have length 2, and you only need the lift-off matrix
@@ -620,9 +620,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 
     ng2  = length(Tcal) - 1 # number of gensys2 regimes
-    nzlb = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : ng2
+    nzlb = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : ng2
 
-    @assert nzlb == ng2 "The setting :temporary_altpol_length does not match the number of gensys2 regimes."
+    @assert nzlb == ng2 "The setting :temporary_altpolicy_length does not match the number of gensys2 regimes."
 
     Tcal[end] = TTT_final_weighted
     Rcal[end] = RRR_final_weighted

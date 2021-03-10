@@ -78,7 +78,7 @@ end
 m <= Setting(:gensys2, true)
 
 # Set up credibility for ZLB and alternative policy, if applicable
-m <= Setting(:uncertain_temp_altpol, true)
+m <= Setting(:uncertain_temporary_altpolicy, true)
 m <= Setting(:uncertain_altpolicy, true)
 
 # Find the first regime in which gensys2 should apply
@@ -105,9 +105,9 @@ for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_re
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
 regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(flexible_ait(), weights)
-m <= Setting(:regime_dates,             reg_dates)
-m <= Setting(:regime_eqcond_info, regime_eqcond_info)
-m <= Setting(:temporary_altpol_length,     n_zlb_reg)
+m <= Setting(:regime_dates,               reg_dates)
+m <= Setting(:regime_eqcond_info,         regime_eqcond_info)
+m <= Setting(:temporary_altpolicy_length, n_zlb_reg)
 
 # Remove anticipated MP shocks upon entering ZLB
 m <= Setting(:remove_rm_shocks, gensys2_first_regime)

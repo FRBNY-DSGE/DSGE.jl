@@ -141,7 +141,7 @@ for j in 1:length(prob_vecs)
 
     # Automatic calculation
     m <= Setting(:uncertain_altpolicy, true)
-    m <= Setting(:uncertain_temp_altpol, true)
+    m <= Setting(:uncertain_temporary_altpolicy, true)
     autoTs[j], autoRs[j], autoCs[j] = solve(m; regime_switching = true,
                                             gensys_regimes = [1:get_setting(m, :n_hist_regimes) + 1],
                                             gensys2_regimes =
@@ -151,7 +151,7 @@ for j in 1:length(prob_vecs)
                                             df_full; regime_switching = true, n_regimes =
                                             get_setting(m, :n_regimes))
     m <= Setting(:uncertain_altpolicy, false) # Need to turn these off afterward
-    m <= Setting(:uncertain_temp_altpol, false)
+    m <= Setting(:uncertain_temporary_altpolicy, false)
 
     # Onto the manual calculation
 

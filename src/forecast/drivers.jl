@@ -111,7 +111,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
 
         println("uncertain_altpolicy: " *
                 string(haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false))
-        println("uncertain_temp_altpol: " * string(haskey(get_settings(m), :uncertain_temp_altpol) ? get_setting(m, :uncertain_temp_altpol) : false))
+        println("uncertain_temporary_altpolicy: " * string(haskey(get_settings(m), :uncertain_temporary_altpolicy) ? get_setting(m, :uncertain_temporary_altpolicy) : false))
         println("time-varying credibility: " * string(any(v -> !ismissing(v.weights), values(get_setting(m, :regime_eqcond_info)))))
         if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
             println("Desired policy rule: " *
@@ -126,8 +126,8 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
                 println("Credbility weights: ", OrderedDict(reg => get_setting(m, :regime_eqcond_info)[reg].weights for reg in sorted_eqcond_info_regs))
             end
         end
-        if haskey(get_settings(m), :temporary_altpol_length)
-            println("temporary altpol length = ", get_setting(m, :temporary_altpol_length))
+        if haskey(get_settings(m), :temporary_altpolicy_length)
+            println("temporary altpol length = ", get_setting(m, :temporary_altpolicy_length))
         end
         altkey = alternative_policy(m).key
         if altkey in [:smooth_ait_gdp_alt, :smooth_ait_gdp, :flexible_ait]

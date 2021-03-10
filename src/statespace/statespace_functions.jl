@@ -31,23 +31,23 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     if haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching)
         # Grab these settings
         has_uncertain_altpolicy = haskey(get_settings(m), :uncertain_altpolicy)
-        has_uncertain_temp_altpol = haskey(get_settings(m), :uncertain_temp_altpol)
+        has_uncertain_temporary_altpolicy = haskey(get_settings(m), :uncertain_temporary_altpolicy)
         has_regime_eqcond_info = haskey(get_settings(m), :regime_eqcond_info)
         uncertain_altpolicy = has_uncertain_altpolicy && get_setting(m, :uncertain_altpolicy)
-        uncertain_temp_altpol = has_uncertain_temp_altpol && get_setting(m, :uncertain_temp_altpol)
+        uncertain_temporary_altpolicy = has_uncertain_temporary_altpolicy && get_setting(m, :uncertain_temporary_altpolicy)
         is_gensys2 = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
         # Grab regime info dictionary, if one exists
         regime_eqcond_info = has_regime_eqcond_info ? get_setting(m, :regime_eqcond_info) : Dict{Int, EqcondEntry}()
 
         # Ensure :alternative_policies exists as a Setting
-        @assert (!uncertain_altpolicy && !uncertain_temp_altpol) ||
+        @assert (!uncertain_altpolicy && !uncertain_temporary_altpolicy) ||
             haskey(get_settings(m),
-                   :alternative_policies) "To use uncertain_altpolicy/uncertain_temp_altpol, the setting :alternative_policies must be set"
+                   :alternative_policies) "To use uncertain_altpolicy/uncertain_temporary_altpolicy, the setting :alternative_policies must be set"
 
-        # # If uncertain_temp_altpol is false, want to make sure temp altpol period is treated as certain
+        # # If uncertain_temporary_altpolicy is false, want to make sure temp altpol period is treated as certain
         # # in the case that uncertain_altpolicy is true (hence imperfect awareness is one
-        if has_uncertain_temp_altpol && !uncertain_temp_altpol && has_regime_eqcond_info
+        if has_uncertain_temporary_altpolicy && !uncertain_temporary_altpolicy && has_regime_eqcond_info
             for reg in keys(regime_eqcond_info)
                 if regime_eqcond_info[reg].alternative_policy.key in get_setting(m, :temporary_altpolicy_names)
                     if ismissing(regime_eqcond_info[reg].weights) && haskey(get_settings(m), :alternative_policies)
@@ -105,8 +105,8 @@ function compute_system(m::AbstractDSGEModel{T}; tvis::Bool = false,
     # The !apply_altpolicy check may be problematic after refactoring altpolicy.
     if !apply_altpolicy || !haskey(get_settings(m), :regime_switching) || !get_setting(m, :regime_switching) ||
         !has_regime_eqcond_info || # if regime_eqcond_info is not defined, then no alt policies occur
-        (has_uncertain_temp_altpol && !uncertain_temp_altpol && has_uncertain_altpolicy && !uncertain_altpolicy) ||
-        (!has_uncertain_temp_altpol && !has_uncertain_altpolicy)
+        (has_uncertain_temporary_altpolicy && !uncertain_temporary_altpolicy && has_uncertain_altpolicy && !uncertain_altpolicy) ||
+        (!has_uncertain_temporary_altpolicy && !has_uncertain_altpolicy)
 
         if haskey(get_settings(m), :regime_switching) && get_setting(m, :regime_switching) && !apply_altpolicy
             if has_regime_eqcond_info
@@ -441,8 +441,8 @@ function perfect_cred_altpolicy_systems(m::AbstractDSGEModel{T}; verbose::Symbol
 
     # Set up
     m <= Setting(:uncertain_altpolicy,   false)
-    if haskey(get_settings(m), :uncertain_temp_altpol) && get_setting(m, :uncertain_temp_altpol)
-        m <= Setting(:uncertain_temp_altpol, false)
+    if haskey(get_settings(m), :uncertain_temporary_altpolicy) && get_setting(m, :uncertain_temporary_altpolicy)
+        m <= Setting(:uncertain_temporary_altpolicy, false)
         orig_temp_altpol = true
     else
         orig_temp_altpol = false
@@ -494,8 +494,8 @@ function perfect_cred_altpolicy_systems(m::AbstractDSGEModel{T}; verbose::Symbol
     if !isnothing(orig_altpol)
         m <= Setting(:alternative_policy, orig_altpol)
     end
-    if haskey(get_settings(m), :uncertain_temp_altpol) && orig_temp_altpol
-        m <= Setting(:uncertain_temp_altpol, orig_temp_altpol)
+    if haskey(get_settings(m), :uncertain_temporary_altpolicy) && orig_temp_altpol
+        m <= Setting(:uncertain_temporary_altpolicy, orig_temp_altpol)
     end
 
     return sys_totpolicies
@@ -505,8 +505,8 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
                                                     verbose::Symbol = :high) where {T <: Real}
 
     # Set up
-    m        <= Setting(:uncertain_altpolicy,   false)
-    m        <= Setting(:uncertain_temp_altpol, false)
+    m        <= Setting(:uncertain_altpolicy,           false)
+    m        <= Setting(:uncertain_temporary_altpolicy, false)
     n_totpol = length(get_setting(m, :alternative_policies)) + 1 # + 1 for the implemented policy
     sys_totpolicies = Vector{Union{System, RegimeSwitchingSystem}}(undef, n_totpol)
 
@@ -518,7 +518,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     orig_altpol             = haskey(get_settings(m), :alternative_policy) ? get_setting(m, :alternative_policy) : nothing
     orig_tvis_infoset       = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : nothing
     orig_temp_altpol_names  = haskey(get_settings(m), :temporary_altpolicy_names) ? get_setting(m, :temporary_altpolicy_names) : nothing
-    orig_temp_altpol_len    = haskey(get_settings(m), :temporary_altpol_length) ? get_setting(m, :temporary_altpol_length) : nothing
+    orig_temp_altpol_len    = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
     is_gensys2              = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
     ## Now calculate the perfectly credible transition matrices for all alternative policies
@@ -558,7 +558,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
                 m <= Setting(:temporary_altpolicy_names, new_altpol.temporary_altpolicy_names)
             end
             if !isnothing(new_altpol.temporary_altpolicy_length)
-                m <= Setting(:temporary_altpol_length, new_altpol.temporary_altpolicy_length)
+                m <= Setting(:temporary_altpolicy_length, new_altpol.temporary_altpolicy_length)
             end
             if !isnothing(new_altpol.infoset)
                 m <= Setting(:tvis_information_set, new_altpol.infoset)
@@ -573,8 +573,8 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     m <= Setting(:n_regimes, orig_n_regimes)
     m <= Setting(:regime_eqcond_info, orig_regime_eqcond_info)
     m <= Setting(:gensys2, is_gensys2)
-    m <= Setting(:uncertain_altpolicy, true)
-    m <= Setting(:uncertain_temp_altpol, true)
+    m <= Setting(:uncertain_altpolicy,           true)
+    m <= Setting(:uncertain_temporary_altpolicy, true)
     if !isnothing(orig_altpol)
         m <= Setting(:alternative_policy, orig_altpol)
     end
@@ -585,10 +585,10 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
         m <= Setting(:temporary_altpolicy_names, orig_temp_altpol_names)
     end
     if !isnothing(orig_temp_altpol_len)
-        m <= Setting(:temporary_altpol_length, orig_temp_altpol_len)
+        m <= Setting(:temporary_altpolicy_length, orig_temp_altpol_len)
     end
-    m <= Setting(:uncertain_altpolicy,   true)
-    m <= Setting(:uncertain_temp_altpol, true)
+    m <= Setting(:uncertain_altpolicy,           true)
+    m <= Setting(:uncertain_temporary_altpolicy, true)
 
     return sys_totpolicies
 end
@@ -657,8 +657,8 @@ function compute_tvis_system(m::AbstractDSGEModel{T}; verbose::Symbol = :high) w
         else
             first_gensys2_regime = n_hist_regimes + 1
         end
-        last_gensys2_regime = haskey(get_settings(m), :temporary_altpol_length) ?
-            first_gensys2_regime + get_setting(m, :temporary_altpol_length) : n_regimes
+        last_gensys2_regime = haskey(get_settings(m), :temporary_altpolicy_length) ?
+            first_gensys2_regime + get_setting(m, :temporary_altpolicy_length) : n_regimes
         if get_setting(m, :gensys2)
             gensys_regimes = [1:first_gensys2_regime-1]
             if last_gensys2_regime != n_regimes

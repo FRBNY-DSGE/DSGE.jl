@@ -882,9 +882,9 @@ end
     m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
 
     sys_true = compute_system(m; tvis = true)
-    m <= Setting(:uncertain_temp_altpol, true)
+    m <= Setting(:uncertain_temporary_altpolicy, true)
     sys_true_unc = compute_system(m; tvis = true)
-    m <= Setting(:uncertain_temp_altpol, false)
+    m <= Setting(:uncertain_temporary_altpolicy, false)
 
     m <= Setting(:date_forecast_start, Date(2020, 12, 31))
     m <= Setting(:date_conditional_end, Date(2020, 12, 31))
@@ -895,7 +895,7 @@ end
         @test sys_true[i, :ZZ] ≈ sys[i, :ZZ]
     end
 
-    m <= Setting(:uncertain_temp_altpol, true)
+    m <= Setting(:uncertain_temporary_altpolicy, true)
     sys = compute_system(m; tvis = true)
     for i in 1:get_setting(m, :n_regimes)
         @test sys_true_unc[i, :TTT] ≈ sys[i, :TTT]
@@ -948,21 +948,21 @@ end
 # GET RID OF THIS I THINK    m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
 
     m <= Setting(:regime_switching, false)
-    m <= Setting(:uncertain_temp_altpol, false)
+    m <= Setting(:uncertain_temporary_altpolicy, false)
     m <= Setting(:uncertain_altpolicy, false)
     delete!(m.settings, :regime_eqcond_info)
     m <= Setting(:gensys2, false)
     sys_taylor = compute_system(m)
 
     m <= Setting(:regime_switching, true)
-    m <= Setting(:uncertain_temp_altpol, false)
+    m <= Setting(:uncertain_temporary_altpolicy, false)
     m <= Setting(:regime_eqcond_info, deepcopy(regime_eqcond_info_cp))
     m <= Setting(:uncertain_altpolicy, false)
     m <= Setting(:gensys2, true)
     sys_perfcred = compute_system(m)
 
     m <= Setting(:regime_eqcond_info, deepcopy(regime_eqcond_info_cp))
-    m <= Setting(:uncertain_temp_altpol, true)
+    m <= Setting(:uncertain_temporary_altpolicy, true)
     m <= Setting(:uncertain_altpolicy, true)
     sys_unczlb_uncalt = compute_system(m)
 

@@ -425,8 +425,8 @@ To use imperfect awareness with a temporary altpolicy (eg. ZLB), the user needs 
 the model's setup:
 
 ```
-m <= Setting(:uncertain_temp_altpol, true)
-m <= Setting(:temporary_altpol_length, n_zlb_regs)
+m <= Setting(:uncertain_temporary_altpolicy, true)
+m <= Setting(:temporary_altpolicy_length, n_zlb_regs)
 ```
 
 The first line tells that a temporary altpolicy with imperfect awareness should apply.
