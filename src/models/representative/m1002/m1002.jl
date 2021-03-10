@@ -598,24 +598,24 @@ buted to steady-state inflation.",
                    tex_label="\\sigma_{gdi}")
 
     if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
-        m <= parameter(:ρ_ziid, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
+        m <= parameter(:ρ_ziid, 0., (0., 0.999), (0., 0.999), ModelConstructors.Untransformed(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_ziid: AR(1) coefficient in the iid component of the technology process.",
                        tex_label="\\rho_{z, iid}")
-        m <= parameter(:σ_ziid, 0., (0., 1000.), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_ziid, 0., (0., 1e2), (0., 1e2), ModelConstructors.Exponential(),
                        RootInverseGamma(2. * (5.)^2 ./ 5., sqrt((5.)^2 + .1)), fixed=false,
                        description="σ_ziid: The standard deviation of the process describing the iid component of productivity.",
                        tex_label="\\sigma_{z, iid}")
-        m <= parameter(:ρ_biidc, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
+        m <= parameter(:ρ_biidc, 0., (0., 0.999), (0., 0.999), ModelConstructors.Untransformed(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_biidc: AR(1) coefficient in the iid component of the preference process.",
                        tex_label="\\rho_{b, iid, c}")
-        m <= parameter(:σ_biidc, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_biidc, 0., (0., 1e2), (0., 1e2), ModelConstructors.Exponential(),
                        RootInverseGamma(2. * (4.)^2 ./ 4., sqrt((4.)^2  + .1)), fixed=false, # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2), with mode M given by ν (τ² - M²) = 2 * M²
                        description="σ_biidc: The standard deviation of the process describing the iid component of preferences.",
                        tex_label="\\sigma_{b, iid, c}")
-        m <= parameter(:ρ_φ, 0., (0., 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
+        m <= parameter(:ρ_φ, 0., (0., 0.999), (0., 0.999), ModelConstructors.Untransformed(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_φ: AR(1) coefficient in the labor supply preference process.",
                        tex_label="\\rho_{\\varphi}")
-        m <= parameter(:σ_φ, 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_φ, 0., (0., 1e3), (0., 1e3), ModelConstructors.Exponential(),
                        RootInverseGamma(2 * (400.0)^2 ./ (400. * 10), sqrt(1. + (400.0)^2)), fixed=false,
                        description="σ_φ: The standard deviation of the process describing the labor supply preference.",
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
@@ -623,10 +623,10 @@ buted to steady-state inflation.",
 
     if haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
         get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false
-        m <= parameter(:σ_pgap, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_pgap, 0., (0., 1e2), (0., 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=true,
                        tex_label="\\sigma_{pgap}")
-        m <= parameter(:σ_ygap, 0., (0., 1e2), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_ygap, 0., (0., 1e2), (0., 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2. * (20.)^2 ./ .1, sqrt((4.)^2  + .1)), fixed=true,
                        tex_label="\\sigma_{ygap}")
     end
@@ -636,7 +636,7 @@ buted to steady-state inflation.",
         m <= parameter(:ρ_condgdp, 0., (-0.999, 0.999), (-0.999, 0.999),
                        ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=true,
                        tex_label="\\rho_{cond gdp}")
-        m <= parameter(:σ_condgdp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_condgdp, 0.1, (0., 5.), (0., 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
                        tex_label="\\sigma_{cond gdp}")
     end
@@ -646,7 +646,7 @@ buted to steady-state inflation.",
         m <= parameter(:ρ_gdpexp, 0., (-0.999, 0.999), (-0.999, 0.999),
                        ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=true,
                        tex_label="\\rho_{gdpexp}")
-        m <= parameter(:σ_gdpexp, 0.1, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_gdpexp, 0.1, (0., 5.), (0., 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
                        tex_label="\\sigma_{gdpexp}")
     end
@@ -656,14 +656,14 @@ buted to steady-state inflation.",
         m <= parameter(:ρ_condcorepce, 0., (-0.999, 0.999), (-0.999, 0.999),
                        ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=true,
                        tex_label="\\rho_{cond corepce}")
-        m <= parameter(:σ_condcorepce, 0.0999, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(),
+        m <= parameter(:σ_condcorepce, 0.0999, (0., 5.), (0., 5.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 0.10), fixed=false,
                        tex_label="\\sigma_{cond corepce}")
     end
 
     for key in get_setting(m, :proportional_antshocks)
         propant_tex_label = DSGE.detexify(key) == key ? string(key) : "\\" * string(DSGE.detexify(key))
-        m <= parameter(Symbol(:σ_, key, :_prop), 0., (0., 1e3), (1e-8, 0.), ModelConstructors.Exponential(),
+        m <= parameter(Symbol(:σ_, key, :_prop), 0., (0., 1e3), (0., 0.), ModelConstructors.Exponential(),
                        RootInverseGamma(2, 1.), fixed=false,
                        description="σ_$(key)_prop: proportional of anticipated shock to contemporaneous shock to $key",
                        tex_label="\\sigma_{$(propant_tex_label)}^{prop}")
@@ -686,7 +686,7 @@ buted to steady-state inflation.",
     for (sh, ant_num) in get_setting(m, :antshocks)
         ant_tex_label = DSGE.detexify(sh) == sh ? string(sh) : "\\" * string(DSGE.detexify(sh))
         for i in 1:ant_num
-            m <= parameter(Symbol("σ_$(sh)$i"), 0., (0., 1e3), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, .2),
+            m <= parameter(Symbol("σ_$(sh)$i"), 0., (0., 1e3), (0., 1e3), ModelConstructors.Exponential(), RootInverseGamma(4, .2),
                            fixed=false,
                            description="σ_$(sh)$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label="\\sigma_{$(ant_tex_label), ant$(i)}")

@@ -1508,9 +1508,12 @@ function ss62!(m::Model1002)
             set_regime_fixed!(m[pk], 1, true)
             set_regime_fixed!(m[pk], 2, false)
 
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
             # Set prior
-            m[pk].prior = m[:σ_biidc].prior
-            #set_regime_prior!(m[pk], 2, m[:σ_biidc].prior)
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
         end
 
         # pgap and ygap initialization shocks
