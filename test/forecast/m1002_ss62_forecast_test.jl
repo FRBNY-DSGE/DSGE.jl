@@ -117,8 +117,8 @@ setup_regime_switching_inds!(m; cond_type = cond_type)
 
 # Set up TVIS information set
 m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
-                                         [i:get_setting(m, :n_regimes) for i in
-                                          gensys2_first_regime:get_setting(m, :n_regimes)]))
+                                         [i:17 for i in gensys2_first_regime:17],
+                                         [i:i for i in 18:get_setting(m, :n_regimes)]))
 
 tvcred_dates = (start_zlb_date, DSGE.iterate_quarters(start_zlb_date, tvcred_n_qtrs))
 n_tvcred_reg = DSGE.subtract_quarters(tvcred_dates[2], tvcred_dates[1]) + 1 # number of regimes for time-varying credibility
@@ -135,8 +135,11 @@ m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = cond_type)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
+                                         [i:17 for i in gensys2_first_regime:17],
+                                         [i:i for i in 18:get_setting(m, :n_regimes)]))
+#=m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
                                          [i:get_setting(m, :n_regimes) for i in
-                                          gensys2_first_regime:get_setting(m, :n_regimes)]))
+                                          gensys2_first_regime:get_setting(m, :n_regimes)]))=#
 credvec = collect(range(start_tvcred_level, stop = end_tvcred_level, length = n_tvcred_reg))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     if tvcred_dates[1] <= reg_dates[k] <= tvcred_dates[2]
