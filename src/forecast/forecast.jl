@@ -396,6 +396,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
 
     # Grab "original" settings" so they can be restored later
+    altpol = alternative_policy(m)
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
@@ -502,7 +503,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # Calculate the number of ZLB regimes. For now, we add in a separate regime for every
             # period b/n the first and last ZLB regime in the forecast horizon. It is typically the case
             # that this is necessary anyway but not always, especially depending on the drawn shocks
-            n_total_regimes = first_zlb_regime + iter + 1 # plus 1 for lift off
+            n_total_regimes = iter + 1 # plus 1 for lift off
             m <= Setting(:n_regimes, max(orig_regimes, n_total_regimes))
 
             ## TODO: Handle edge case where no. of ZLB needed is 0
@@ -556,7 +557,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             # function. In the default DSGE policy, the regimes after the ZLB ends
             # are updated only if there is time-varying credibility
             # (specified by the Setting :cred_vary_until).
-            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), search_start_reg, n_total_regimes, altpol)
+            update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), search_start_reg, n_total_regimes)
             # Set up parameters if there are switching parameter values.
             #
             # User needs to provide a function which takes in the model object `m`
@@ -571,7 +572,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             end
 
             # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
-            set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_zlb_regime)
+            set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_aware)
             #=if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= n_total_regimes
                 set_info_sets_altpolicy(m, get_setting(m, :cred_vary_until) + 1, first_zlb_regime)
             else
