@@ -11,6 +11,7 @@ function zlb_rule_replace_eq_entries(m::AbstractDSGEModel,
 
     eq             = m.equilibrium_conditions
     endo           = m.endogenous_states
+    exo            = m.exogenous_shocks
 
     # Zero out old MP rule
     Γ0[eq[:eq_mp], :] .= 0.
