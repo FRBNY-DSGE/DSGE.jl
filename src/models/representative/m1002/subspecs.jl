@@ -1378,7 +1378,7 @@ function ss62!(m::Model1002)
     ## Set up regime-switching parameters
 
     # Need to allow a zero value for sigma_z_p
-    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (1e-5, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
                    tex_label="\\sigma_{z^p}")
 
