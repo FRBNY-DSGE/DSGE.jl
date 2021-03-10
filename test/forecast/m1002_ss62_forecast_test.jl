@@ -143,6 +143,8 @@ for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     end
 end
 
+m <= Setting(:zlb_rule_value, 0.1)
+
 # Run forecasts
 output_vars = [:histobs, :histpseudo, :forecastpseudo, :forecastobs]
 modal_params = map(x -> x.value, m.parameters)

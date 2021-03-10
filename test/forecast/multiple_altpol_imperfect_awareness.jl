@@ -110,7 +110,7 @@ for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_re
                           DSGE.quarter_range(reg_dates[gensys2_first_regime],
                                              DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
     reg_dates[regind] = date
-    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), [0.5, 0.5])
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zlb_rule(), [0.5, 0.5])
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
 regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0.5, 0.5])
@@ -180,14 +180,14 @@ for k in keys(temp_taylor_regime_eqcond_info)
     get_setting(m, :regime_eqcond_info)[k].weights =
         [get_setting(m, :regime_eqcond_info)[k].weights[1] / 2., 2 * get_setting(m, :regime_eqcond_info)[k].weights[2],
          get_setting(m, :regime_eqcond_info)[k].weights[1] / 2.] # need to multiply by 2 b/c of how weights are set previously
-    if get_setting(m, :regime_eqcond_info)[k].alternative_policy.key == :zero_rate
-        temp_flexait_zlb_regime_eqcond_info[k] = EqcondEntry(zero_rate())
+    if get_setting(m, :regime_eqcond_info)[k].alternative_policy.key == :zlb_rule
+        temp_flexait_zlb_regime_eqcond_info[k] = EqcondEntry(zlb_rule())
     else
         temp_flexait_zlb_regime_eqcond_info[k] = EqcondEntry(flexible_ait())
     end
 end
 temp_flexait_zlb = MultiPeriodAltPolicy(:temporary_flexait_zlb, get_setting(m, :n_regimes), temp_flexait_zlb_regime_eqcond_info, gensys2 = true,
-                                        temporary_altpolicy_names = [:zero_rate],
+                                        temporary_altpolicy_names = [:zlb_rule],
                                         temporary_altpolicy_length = get_setting(m, :temporary_altpolicy_length),
                                         infoset = copy(get_setting(m, :tvis_information_set)))
 m <= Setting(:alternative_policies, [DSGE.default_policy(), temp_flexait_zlb])
@@ -198,7 +198,7 @@ out_flexait_zlb_temp_flexait_zlb = DSGE.forecast_one_draw(m, :mode, :full, outpu
 ## Now add nontrivial temporary policy that is different from implemented policy
 temp_flexible_ait_regime_eqcond_info = deepcopy(get_setting(m, :regime_eqcond_info))
 for k in keys(temp_taylor_regime_eqcond_info)
-    if get_setting(m, :regime_eqcond_info)[k].alternative_policy.key == :zero_rate
+    if get_setting(m, :regime_eqcond_info)[k].alternative_policy.key == :zlb_rule
         temp_flexible_ait_regime_eqcond_info[k] = DSGE.EqcondEntry(flexible_ait()) # temporary flexible ait during ZLB periods
     else
         temp_flexible_ait_regime_eqcond_info[k] = DSGE.EqcondEntry(taylor_rule()) # followed by Taylor rule in the end

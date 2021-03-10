@@ -100,7 +100,7 @@ m <= Setting(:gensys2, true)
 # Set up credibility for ZLB and alternative policy, if applicable
 m <= Setting(:uncertain_temporary_altpolicy, true)
 m <= Setting(:temporary_altpolicy_names, [:zero_rate])
-m <= Setting(:zero_rate_zlb_value, 0.)
+m <= Setting(:zlb_rule_value, 0.)
 m <= Setting(:uncertain_altpolicy, true)
 gensys2_first_regime = get_setting(m, :n_regimes) + 1
 get_setting(m, :regime_dates)[gensys2_first_regime] = start_zlb_date
