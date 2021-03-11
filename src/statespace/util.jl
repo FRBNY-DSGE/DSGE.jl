@@ -283,11 +283,14 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
             total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
 
-            for i in 1:k
-                tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
-                                                          integ_series = integ_series)
-                total_Tsum .+= tmp1
-                total_Csum .+= tmp2
+            T_accum = copy(TTTs[t+k])
+            C_accum = copy(CCCs[t+k])
+            for i in (k-1):-1:1
+                C_accum .+= T_accum * CCCs[t+i]
+                T_accum .*= TTTs[t+i]
+
+                total_Tsum .+= T_accum
+                total_Csum .+= C_accum
             end
 
             return total_Tsum, total_Csum
@@ -305,6 +308,29 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                 return Tᵏsum, (I + sum([(I - TTTs[permanent_t]) \ (I - TTTʲmemo[k - q + 1]) for q in 1:(k - 1)])) * CCCs[permanent_t]
             end
         else
+            total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
+            total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
+
+            C_accum = CCCs[end]
+            if all(C_accum .≈ 0.0)
+                T_accum = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t]^(t + k + 1 - permanent_t))
+            else
+                T_accum = TTTs[end]
+                for i in (t+k+1):-1:permanent_t
+                    C_accum .+= T_accum * CCCs[end]
+                    T_accum .*= TTTs[end]
+                end
+            end
+            for i in (permanent_t-1):-1:(t+1)
+                C_accum .+= T_accum * CCCs[i]
+                T_accum .*= TTTs[i]
+
+                total_Tsum .+= T_accum
+                total_Csum .+= C_accum
+            end
+
+            return total_Tsum, total_Csum
+#=
             # Computation time can be saved by realizing some matrices are not time-varying
             T_accum = Vector{eltype(TTTs)}(undef, k)
             C_accum = Vector{eltype(CCCs)}(undef, k)
@@ -313,7 +339,7 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                                                                       integ_series = integ_series)
             end
             return sum(T_accum), sum(C_accum)
-
+=#
             # This code seems to work (match directly adding each k_period_ahead_expectations)
             # but sometimes causes mild numerical differences,
             # so we calculate the expected sum by adding each k_period_ahead_expectations.
