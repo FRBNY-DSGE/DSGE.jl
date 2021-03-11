@@ -25,7 +25,9 @@ function zlb_rule_replace_eq_entries(m::AbstractDSGEModel,
                      (haskey(get_settings(m), :zlb_rule_value) ? get_setting(m, :zlb_rule_value) / 4. :
                       forecast_zlb_value(m))) - m[:Rstarn]
 
-    if haskey(get_settings(m), :zlb_rule_remove_mon_anticipated_shocks) &&
+    # Default behavior of ZLB rule is to remove anticipated monetary policy shocks,
+    # but this setting can turn it off.
+    if !haskey(get_settings(m), :zlb_rule_remove_mon_anticipated_shocks) ||
         get_setting(m, :zlb_rule_remove_mon_anticipated_shocks)
         Γ1[eq[:eq_rm], endo[:rm_tl1]]   = 0.
         Γ0[eq[:eq_rml1], endo[:rm_tl1]] = 1.
