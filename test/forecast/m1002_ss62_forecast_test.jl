@@ -108,9 +108,8 @@ regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(flexible
 m <= Setting(:regime_dates,               reg_dates)
 m <= Setting(:regime_eqcond_info,         regime_eqcond_info)
 m <= Setting(:temporary_altpolicy_length, n_zlb_reg)
-
-# Remove anticipated MP shocks upon entering ZLB
-m <= Setting(:remove_rm_shocks, gensys2_first_regime)
+m <= Setting(:zlb_rule_value,             .1)
+m <= Setting(:temporary_altpolicy_names,  [:zlb_rule])
 
 # Set up regime indices
 setup_regime_switching_inds!(m; cond_type = cond_type)
@@ -147,7 +146,8 @@ for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     end
 end
 
-m <= Setting(:zlb_rule_value, 0.1)
+# Remove anticipated MP shocks upon entering ZLB
+# m <= Setting(:remove_rm_shocks, gensys2_first_regime)
 
 # Run forecasts
 output_vars = [:histobs, :histpseudo, :forecastpseudo, :forecastobs]
@@ -182,6 +182,43 @@ tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_e
                                 infoset = copy(get_setting(m, :tvis_information_set)))
 m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule2])
 sys2 = compute_system(m; tvis = true)
+gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
+m <= Setting(:uncertain_altpolicy, false)
+m <= Setting(:uncertain_temporary_altpolicy, false)
+@btime begin # 50ms
+    TTTs, RRRs, CCCs = solve(m; regime_switching = true,
+                             regimes = collect(1:get_setting(m, :n_regimes)),
+                             gensys_regimes = gensys_regimes,
+                             gensys2_regimes = gensys2_regimes,
+                             verbose = :none)
+    nothing
+end
+
+TTTs, RRRs, CCCs = solve(m; regime_switching = true,
+                         regimes = collect(1:get_setting(m, :n_regimes)),
+                         gensys_regimes = gensys_regimes,
+                         gensys2_regimes = gensys2_regimes,
+                         verbose = :none)
+@btime begin
+    RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, get_setting(m, :n_regimes), true)
+    nothing
+end
+
+@btime begin # 1.5s
+    DSGE.perfect_cred_multiperiod_altpolicy_systems(m, [false], verbose = :none)
+    nothing
+end
+
+system_perfect_cred_totpolicies = DSGE.perfect_cred_multiperiod_altpolicy_systems(m, [false], verbose = :none)
+gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
+
+@btime begin # 50ms
+    TTTs, RRRs, CCCs = DSGE.solve_uncertain_altpolicy(m, system_perfect_cred_totpolicies, [false];
+                                                      gensys_regimes = gensys_regimes, gensys2_regimes = gensys2_regimes,
+                                                      regimes = collect(1:get_setting(m, :n_regimes)), verbose = :none)
+    nothing
+end
+
 @btime begin
     sys2 = compute_system(m; tvis = true)
     nothing
