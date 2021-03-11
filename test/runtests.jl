@@ -24,6 +24,7 @@ my_tests = [
             "data/util",
 
             "solve/gensys",
+            "solve/gensys2",
             "solve/solve",
             "solve/gensys_uncertain_altpol",
             "solve/gensys2_uncertain_altpol_test1",

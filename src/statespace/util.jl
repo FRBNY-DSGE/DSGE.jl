@@ -11,6 +11,8 @@ function compute_gensys_gensys2_regimes(m::AbstractDSGEModel)
             first_gensys2_ind = findfirst(x -> x[2].alternative_policy.key in # finds the first value (EqcondEntry) whose key
                                           get_setting(m, :temporary_altpolicy_names), sorted_eqcond) # is a temporary altpolicy
             first_gensys2_regime = !isnothing(first_gensys2_ind) ? sorted_eqcond[first_gensys2_ind][1] : nothing
+        elseif haskey(get_settings(m), :gensys_regimes) && haskey(get_settings(m), :gensys2_regimes)
+            return get_setting(m, :gensys_regimes), get_setting(m, :gensys2_regimes)
         else
             first_gensys2_regime = nothing
         end

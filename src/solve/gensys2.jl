@@ -20,20 +20,7 @@ function gensys2(m::AbstractDSGEModel, Γ0::Matrix{Float64}, Γ1::Matrix{Float64
     C_til = C
     Ψ_til = Ψ
 
-    for row in 1:length(exp_eq_ind)
-        if exp_eq_ind[row] == 0
-            # Not expectational equation
-            Γ1_til[row, :] = Γ1[row, :]
-            Γ0_til[row, :] = Γ0[row, :]
-            Γ2_til[row, :] .= 0.
-        else
-            # expectational equation
-            Γ0_til[row, findfirst(Γ1[row, :] .> 0)] = -1
-            Γ2_til[row, findfirst(Γ0[row, :] .> 0)] = 1
-        end
-    end
-
-#     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
+    Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til = gensys_to_predictable_form(Γ0, Γ1, C, Ψ, Π)
 
     Tcal = Vector{Matrix{Float64}}(undef, T_switch)
     Rcal = Vector{Matrix{Float64}}(undef, T_switch)
@@ -60,42 +47,24 @@ function gensys2(m::AbstractDSGEModel, Γ0s::Vector{Matrix{Float64}}, Γ1s::Vect
                  TTT::Matrix{Float64}, RRR::Matrix{Float64},
                  CCC::Vector{Float64}, T_switch::Int)
 
-    Γ0_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
-    Γ1_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
-    Γ2_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
-    C_tils = Vector{Vector{Float64}}(undef, length(Γ0s))
-    Ψ_tils = Vector{Matrix{Float64}}(undef, length(Γ0s))
+    ntil = length(Γ0s)
+    Γ0_tils = Vector{Matrix{Float64}}(undef, ntil)
+    Γ1_tils = Vector{Matrix{Float64}}(undef, ntil)
+    Γ2_tils = Vector{Matrix{Float64}}(undef, ntil)
+    C_tils = Vector{Vector{Float64}}(undef, ntil)
+    Ψ_tils = Vector{Matrix{Float64}}(undef, ntil)
 
     for i in 1:length(Γ0s)
-        exp_eq_ind = sum(Πs[i], dims = 2)
-        Γ0_tils[i] = zeros(size(Γ0s[i]))
-        Γ1_tils[i] = zeros(size(Γ1s[i]))
-        Γ2_tils[i] = zeros(size(Γ0s[i]))
-        C_tils[i] = Cs[i]
-        Ψ_tils[i] = Ψs[i]
-
-        for row in 1:length(exp_eq_ind)
-            if exp_eq_ind[row] == 0
-                # Not expectational equation
-                Γ1_tils[i][row, :] = Γ1s[i][row, :]
-                Γ0_tils[i][row, :] = Γ0s[i][row, :]
-                Γ2_tils[i][row, :] .= 0.
-            else
-                # expectational equation
-                Γ0_tils[i][row, findfirst(Γ1s[i][row, :] .> 0)] = -1
-                Γ2_tils[i][row, findfirst(Γ0s[i][row, :] .> 0)] = 1
-            end
-        end
-    end
-
-#=    for i in 1:length(Γ0s)
         Γ0_tils[i], Γ1_tils[i], Γ2_tils[i], C_tils[i], Ψ_tils[i] = gensys_to_predictable_form(Γ0s[i], Γ1s[i], Cs[i], Ψs[i], Πs[i])
-    end=#
+    end
 
     Tcal = Vector{Matrix{Float64}}(undef, T_switch)
     Rcal = Vector{Matrix{Float64}}(undef, T_switch)
     Ccal = Vector{Vector{Float64}}(undef, T_switch)
 
+    # maybe allocate sparse version of TTT b/c going to do a lot of calculations with it
+    # and also make sure to check for essentially zero terms.
+    # leave Gamma1_til as a full array. Only make Gamma2, Gamma0 sparse.
     Tcal[end] = TTT
     Rcal[end] = RRR
     Ccal[end] = CCC
