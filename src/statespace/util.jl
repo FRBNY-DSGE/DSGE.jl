@@ -167,8 +167,8 @@ function ForwardExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
     perm_memo = Dict{Int64, eltype(TTTs)}()
 
     # When the last time-varying period equals the first period in which the
-    # transition matrix is permanently imposed, we calculate the products
-    # of the time-varying matrices
+    # transition matrix is permanently imposed, we only calculate the products
+    # of the time-varying matrices and ignore the permanent matrix
     if last_tv_period == first_perm_period
         last_tv_period -= 1
     end
@@ -191,30 +191,41 @@ end
 
 mutable struct ForwardExpectedSumMemo{T}
     time_varying_memo::Dict{Int64, Dict{Int64, T}} # for products of time-varying TTT matrices
-    permanent_memo::Dict{Int64, Dict{Int64, T}} # for products of non time-varying TTT matrices
+    permanent_memo::Dict{Int64, T} # for products of non time-varying TTT matrices
 end
 
-function ForwardExpectedSum(TTTs::Vector{<: AbstractMatrix{S}},
+"""
+```
+ForwardExpectedSum(TTTs::Vector{<: AbstractMatrix{S}},
+                   first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
+                   first_perm_period::Int64, min_perm_power::Int64 = 0,
+                   max_perm_power::Int64 = 0) where {S <: Real}
+```
+"""
+function ForwardExpectedSumMemo(TTTs::Vector{<: AbstractMatrix{S}},
                             first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
                             first_perm_period::Int64, min_perm_power::Int64 = 0,
                             max_perm_power::Int64 = 0) where {S <: Real}
 
-    @assert first_tv_period <= last_tv_period
+    @assert first_tv_period <= min_last_tv_period <= max_last_tv_period
     @assert min_perm_power <= max_perm_power
-    @assert last_tv_period <= first_perm_period
+    @assert max_last_tv_period <= first_perm_period
 
-    tv_memo   = Dict{Int64, eltype(TTTs)}()
+    tv_memo   = Dict{Int64, Dict{Int64, eltype(TTTs)}}()
     perm_memo = Dict{Int64, eltype(TTTs)}()
 
-    # When the last time-varying period equals the first period in which the
-    # transition matrix is permanently imposed, we calculate the products
-    # of the time-varying matrices
-    if last_tv_period == first_perm_period
-        last_tv_period -= 1
-    end
-    tv_memo[last_tv_period] = TTTs[last_tv_period]
-    for k in (last_tv_period - 1):-1:(first_tv_period + 1)
-        tv_memo[k] = tv_memo[k + 1] * TTTs[k]
+    # Iterate over the length of the window of the forward-looking period
+    for window_len in min_last_tv_period:max_last_tv_period
+        tv_memo[window_len] = Dict{Int64, eltype(TTTs)}()
+
+        # When the last time-varying period equals the first period in which the
+        # transition matrix is permanently imposed, we only calculate the products
+        # of the time-varying matrices and ignore the permanent matrix
+        last_tv_period = window_len == first_perm_period ? window_len - 1 : window_len
+        tv_memo[window_len][last_tv_period] = TTTs[last_tv_period]
+        for k in (last_tv_period - 1):-1:(first_tv_period + 1)
+            tv_memo[window_len][k] = tv_memo[window_len][k + 1] * TTTs[k]
+        end
     end
 
     if !(min_perm_power == max_perm_power == 0)
@@ -225,9 +236,8 @@ function ForwardExpectedSum(TTTs::Vector{<: AbstractMatrix{S}},
         end
     end
 
-    return ForwardExpectationsMemo(tv_memo, perm_memo)
+    return ForwardExpectedSumMemo(tv_memo, perm_memo)
 end
-
 
 """
 ```
@@ -468,8 +478,18 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
         T_accum = Vector{eltype(TTTs)}(undef, k)
         C_accum = Vector{eltype(CCCs)}(undef, k)
         for i in 1:k
+            # Create ForwardExpectationsMemo corresponding for computing the states
+            # i-periods ahead from time t. We then take min(t + i, permanent_t)
+            # b/c each key of memo.time_varying_memo specifies the last time-varying period,
+            # with a minimum of permanent_t.
+            #
+            # Note that this construction is non-allocating b/c we're just wrapping
+            # precomputed dictionaries, so data shouldn't be copied.
+            ith_memo = isnothing(memo) ? nothing : ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
+                                                                           memo.permanent_memo)
             T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
-                                                                  integ_series = integ_series, memo = memo)
+                                                                  integ_series = integ_series,
+                                                                  memo = ith_memo)
         end
         return sum(T_accum), sum(C_accum)
     end
@@ -507,8 +527,10 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                 total_Csum .+= C_accum
             end
 #=            for i in 1:k
+                ith_memo = isnothing(memo) ? nothing : ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
+                                                                               memo.permanent_memo) # see comments above for why this is correct
                 tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
-                                                          integ_series = integ_series, memo = memo)
+                                                          integ_series = integ_series, memo = ith_memo)
                 total_Tsum .+= tmp1
                 total_Csum .+= tmp2
             end=#
@@ -572,8 +594,10 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             T_accum = Vector{eltype(TTTs)}(undef, k)
             C_accum = Vector{eltype(CCCs)}(undef, k)
             for i in 1:k
+                ith_memo = isnothing(memo) ? nothing : ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
+                                                                               memo.permanent_memo) # see comments above for why this is correct
                 T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
-                                                                      integ_series = integ_series, memo = memo)=#
+                                                                      integ_series = integ_series, memo = ith_memo)=#
             end
 
             return total_Tsum, total_Csum
