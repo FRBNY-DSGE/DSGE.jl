@@ -311,35 +311,31 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
             total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
 
-            C_accum = CCCs[end]
-            if all(C_accum .≈ 0.0)
-                T_accum = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t]^(t + k + 1 - permanent_t))
-            else
-                T_accum = TTTs[end]
-                for i in (t+k+1):-1:permanent_t
-                    C_accum .+= T_accum * CCCs[end]
-                    T_accum .*= TTTs[end]
-                end
+            T_memo = Dict{Int, eltype(TTTs)}()
+            T_memo[t+1] = copy(TTTs[t+1])
+            total_Tsum .+= T_memo[t+1]
+            for i in (t+2):(permanent_t-1)
+                T_memo[i] = T_memo[i-1] * TTTs[i]
+                total_Tsum .+= T_memo[i] + total_Tsum
             end
-            for i in (permanent_t-1):-1:(t+1)
-                C_accum .+= T_accum * CCCs[i]
-                T_accum .*= TTTs[i]
-
-                total_Tsum .+= T_accum
-                total_Csum .+= C_accum
+            for i in max(permanent_t, t+2):(t+k)
+                T_memo[i] = T_memo[i-1] * TTTs[permanent_t]
+                total_Tsum .+= T_memo[i] + total_Tsum
+            end
+            C_memo = Dict{Int, eltype(CCCs)}()
+            for i in (t+1):(permanent_t-1)
+                C_memo[i] = T_memo[i+1] * CCCs[i]
+                total_Csum .+= C_memo[i] + total_Csum
+            end
+            if !(all(CCCs[permanent_t] .≈ 0.0))
+                for i in permanent_t:(t+k)
+                    C_memo[i] = T_memo[i+1] * CCCs[permanent_t]
+                    total_Csum .+= C_memo[i] + total_Csum
+                end
             end
 
             return total_Tsum, total_Csum
-#=
-            # Computation time can be saved by realizing some matrices are not time-varying
-            T_accum = Vector{eltype(TTTs)}(undef, k)
-            C_accum = Vector{eltype(CCCs)}(undef, k)
-            for i in 1:k
-                T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
-                                                                      integ_series = integ_series)
-            end
-            return sum(T_accum), sum(C_accum)
-=#
+
             # This code seems to work (match directly adding each k_period_ahead_expectations)
             # but sometimes causes mild numerical differences,
             # so we calculate the expected sum by adding each k_period_ahead_expectations.
