@@ -475,28 +475,35 @@ function compute_uncertain_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis
     # Correct the measurement equations for anticipated observables via weighted average
     regime_eqcond_info = get_setting(m, :regime_eqcond_info)
     which_is_system = vcat(false, is_altpol) # need to add a false to the start of is_altpol for implemented policy
+    empty_meas_eqn = haskey(get_settings(m), :empty_measurement_equation) ?
+        get_setting(m, :empty_measurement_equation) : falses(n_regimes)
+    empty_pseudo_meas_eqn = haskey(get_settings(m), :empty_pseudo_measurement_equation) ?
+        get_setting(m, :empty_pseudo_measurement_equation) : falses(n_regimes)
     for reg in sort!(collect(keys(regime_eqcond_info)))
+
         new_wt = regime_eqcond_info[reg].weights
 
-        if has_fwd_looking_obs
-            for k in get_setting(m, :forward_looking_observables)
-                system_main.measurements[reg][:ZZ][m.observables[k], :] =
-                    sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ][m.observables[k], :] :
-                                       system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:ZZ][m.observables[k], :]) for i in 1:length(new_wt)])
-                system_main.measurements[reg][:DD][m.observables[k]] =
-                    sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD][m.observables[k]] :
-                                       system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:DD][m.observables[k]]) for i in 1:length(new_wt)])
+        if !empty_meas_eqn[reg]
+            if has_fwd_looking_obs
+                for k in get_setting(m, :forward_looking_observables)
+                    system_main.measurements[reg][:ZZ][m.observables[k], :] =
+                        sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ][m.observables[k], :] :
+                                           system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:ZZ][m.observables[k], :]) for i in 1:length(new_wt)])
+                    system_main.measurements[reg][:DD][m.observables[k]] =
+                        sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD][m.observables[k]] :
+                                           system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:DD][m.observables[k]]) for i in 1:length(new_wt)])
+                end
+            else
+                system_main.measurements[reg][:ZZ] .=
+                    sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ] :
+                                       system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:ZZ]) for i in 1:length(new_wt)])
+                system_main.measurements[reg][:DD] .=
+                    sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD] :
+                                       system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:DD]) for i in 1:length(new_wt)])
             end
-        else
-            system_main.measurements[reg][:ZZ] .=
-                sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ] :
-                                   system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:ZZ]) for i in 1:length(new_wt)])
-            system_main.measurements[reg][:DD] .=
-                sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD] :
-                                   system_perfect_cred_totpolicies[i].measurements[min(length(system_perfect_cred_totpolicies[i].measurements), reg)][:DD]) for i in 1:length(new_wt)])
         end
 
-        if has_pseudo
+        if has_pseudo && !empty_pseudo_meas_eqn[reg]
             if has_fwd_looking_pseudo
                 for k in get_setting(m, :forward_looking_pseudo_observables)
                     system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
