@@ -498,6 +498,7 @@ end
     end
     regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     m <= Setting(:regime_eqcond_info, regime_eqcond_info)
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
     setup_regime_switching_inds!(m)
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
@@ -543,6 +544,37 @@ end
                                      sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * sys[3, :CCC])
     @test all(C_acc5 .≈ 0.)
 
+    # Create memo dictionary
+    memo = DSGE.ForwardExpectationsMemo(TTTs, 3, 7, 7, 1, 3)
+    @test !haskey(memo.time_varying_memo, 7)
+    @test memo.time_varying_memo[6] ≈ TTTs[6]
+    @test memo.time_varying_memo[5] ≈ TTTs[6] * TTTs[5]
+    @test memo.time_varying_memo[4] ≈ TTTs[6] * TTTs[5] * TTTs[4]
+    for k in 1:3
+        @test memo.permanent_memo[k] ≈ TTTs[1] ^ k
+    end
+    memo = DSGE.ForwardExpectationsMemo(TTTs, 1, 1, 7)
+    @test isempty(memo.permanent_memo)
+    memo1 = DSGE.ForwardExpectationsMemo(TTTs, 2, 2 + 3, 7)
+    memo2 = DSGE.ForwardExpectationsMemo(TTTs, 2, 6, 7, 1, 3)
+
+    T_acc_memo1, C_acc_memo1 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, memo = memo1)
+    T_acc_memo2, C_acc_memo2 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7, memo = memo1)
+    T_acc_memo3, C_acc_memo3 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 5, memo = memo2)
+    T_acc_memo4, C_acc_memo4 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7, memo = memo2)
+    T_acc_memo5, C_acc_memo5 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3, memo = memo2)
+
+    @test T_acc_memo1 ≈ T_acc1
+    @test C_acc_memo1 ≈ C_acc1
+    @test T_acc_memo2 ≈ T_acc2
+    @test C_acc_memo2 ≈ C_acc2
+    @test T_acc_memo3 ≈ T_acc3
+    @test C_acc_memo3 ≈ C_acc3
+    @test T_acc_memo4 ≈ T_acc4
+    @test C_acc_memo4 ≈ C_acc4
+    @test T_acc_memo5 ≈ T_acc5
+    @test C_acc_memo5 ≈ C_acc5
+
     CCCs = [sys[i, :CCC] .+ .1 for i in 1:7]
     T_acc1, C_acc1 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3)
     T_acc2, C_acc2 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7)
@@ -564,94 +596,22 @@ end
                                                                     sys[7, :TTT] * sys[6, :TTT] * sys[5, :TTT] * sys[4, :TTT] * CCCs[3])
     @test !all(C_acc5 .≈ 0.)
 
-    m = Model1002("ss10")
-    m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
-    sys_constant = compute_system(m; tvis = true)
-    m <= Setting(:date_forecast_start, Date(2020, 9, 30))
-    m <= Setting(:date_conditional_end, Date(2020, 9, 30))
-    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 9, 30),
-                                                3 => Date(2020, 12, 31), 4 => Date(2021, 3, 31),
-                                                5 => Date(2021, 6, 30), 6 => Date(2021, 9, 30), 7 => Date(2021, 12, 31)))
-    m <= Setting(:replace_eqcond, true)
-    m <= Setting(:gensys2, true)
-    m <= Setting(:regime_switching, true)
-    regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
-    for i in 2:6
-        regime_eqcond_info[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
-    end
-    regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
-    m <= Setting(:regime_eqcond_info, regime_eqcond_info)
-    setup_regime_switching_inds!(m)
-    sys = compute_system(m)
+    T_acc_memo1, C_acc_memo1 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3; memo = memo1)
+    T_acc_memo2, C_acc_memo2 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7; memo = memo1)
+    T_acc_memo3, C_acc_memo3 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 5; memo = memo2)
+    T_acc_memo4, C_acc_memo4 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7; memo = memo2)
+    T_acc_memo5, C_acc_memo5 = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3; memo = memo2)
 
-    T_acc1, C_acc1 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
-                                                        typeof(sys_constant[:CCC])[], 1, 3)
-    T_acc2, C_acc2 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
-                                                        typeof(sys_constant[:CCC])[], 1, 3, 3)
-    T_accum = Vector{typeof(sys_constant[:TTT])}(undef, 3)
-    C_accum = Vector{typeof(sys_constant[:CCC])}(undef, 3)
-    for i in 1:3
-        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys_constant[:TTT], sys_constant[:CCC], typeof(sys_constant[:TTT])[],
-                                                                   typeof(sys_constant[:CCC])[], 1, i)
-    end
-    T_accum = sum(T_accum)
-    C_accum = sum(C_accum)
-    @test T_acc1 ≈ T_accum
-    @test T_acc2 ≈ T_accum
-    @test C_acc1 ≈ C_accum
-    @test C_acc2 ≈ C_accum
-
-    T_acc3, C_acc3 = DSGE.k_periods_ahead_expected_sums(sys_constant[:TTT], sys_constant[:CCC] .+ .1, typeof(sys_constant[:TTT])[],
-                                                        typeof(sys_constant[:CCC])[], 1, 3)
-    C_accum = Vector{typeof(sys_constant[:CCC])}(undef, 3)
-    for i in 1:3
-        _, C_accum[i] = DSGE.k_periods_ahead_expectations(sys_constant[:TTT], sys_constant[:CCC] .+ .1, typeof(sys_constant[:TTT])[],
-                                                                   typeof(sys_constant[:CCC])[], 1, i)
-    end
-    @test T_acc3 ≈ T_accum
-    @test C_acc3 ≈ sum(C_accum)
-
-    TTTs = [sys[i, :TTT] for i in 1:7]
-    CCCs = [sys[i, :CCC] for i in 1:7]
-    T_acc1, C_acc1 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3)
-    T_acc2, C_acc2 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7)
-    T_acc3, C_acc3 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 5)
-    T_acc4, C_acc4 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7)
-    T_acc5, C_acc5 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3)
-
-    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 3)
-    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 3)
-    for i in 1:3
-        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
-    end
-    @test T_acc1 ≈ sum(T_accum)
-    @test T_acc2 ≈ sum(T_accum)
-    @test C_acc1 ≈ sum(C_accum)
-    @test C_acc2 ≈ sum(C_accum)
-
-    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 5)
-    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 5)
-    for i in 1:5
-        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
-    end
-    @test T_acc3 ≈ sum(T_accum)
-    @test C_acc3 ≈ sum(C_accum)
-
-    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 7)
-    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 7)
-    for i in 1:7
-        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
-    end
-    @test T_acc4 ≈ sum(T_accum)
-    @test C_acc4 ≈ sum(C_accum)
-
-    T_accum = Vector{typeof(sys[1, :TTT])}(undef, 3)
-    C_accum = Vector{typeof(sys[1, :CCC])}(undef, 3)
-    for i in 1:3
-        T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, i)
-    end
-    @test T_acc5 ≈ sum(T_accum)
-    @test C_acc5 ≈ sum(C_accum)
+    @test T_acc_memo1 ≈ T_acc1
+    @test C_acc_memo1 ≈ C_acc1
+    @test T_acc_memo2 ≈ T_acc2
+    @test C_acc_memo2 ≈ C_acc2
+    @test T_acc_memo3 ≈ T_acc3
+    @test C_acc_memo3 ≈ C_acc3
+    @test T_acc_memo4 ≈ T_acc4
+    @test C_acc_memo4 ≈ C_acc4
+    @test T_acc_memo5 ≈ T_acc5
+    @test C_acc_memo5 ≈ C_acc5
 
     # Test k-periods ahead expected sum
     m = Model1002("ss10")
@@ -670,6 +630,7 @@ end
     end
     regime_eqcond_info[7] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     m <= Setting(:regime_eqcond_info, regime_eqcond_info)
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
     setup_regime_switching_inds!(m)
     sys = compute_system(m)
 
@@ -685,6 +646,7 @@ end
     end
     T_accum = sum(T_accum)
     C_accum = sum(C_accum)
+
     @test T_acc1 ≈ T_accum
     @test T_acc2 ≈ T_accum
     @test C_acc1 ≈ C_accum
@@ -708,15 +670,33 @@ end
     T_acc4, C_acc4 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7)
     T_acc5, C_acc5 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3)
 
+    memo1 = DSGE.ForwardExpectationsMemo(TTTs, 2, 2 + 3, 7)
+    memo2 = DSGE.ForwardExpectationsMemo(TTTs, 2, 6, 7, 1, 3)
+
+    T_acc_memo1, C_acc_memo1 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3; memo = memo1)
+    T_acc_memo2, C_acc_memo2 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7; memo = memo1)
+    T_acc_memo3, C_acc_memo3 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 5; memo = memo2)
+    T_acc_memo4, C_acc_memo4 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7; memo = memo2)
+    T_acc_memo5, C_acc_memo5 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3; memo = memo2)
+
     T_accum = Vector{typeof(sys[1, :TTT])}(undef, 3)
     C_accum = Vector{typeof(sys[1, :CCC])}(undef, 3)
     for i in 1:3
         T_accum[i], C_accum[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i)
     end
+    T_accum_memo = Vector{typeof(sys[1, :TTT])}(undef, 3)
+    C_accum_memo = Vector{typeof(sys[1, :CCC])}(undef, 3)
+    for i in 1:3
+        T_accum_memo[i], C_accum_memo[i] = DSGE.k_periods_ahead_expectations(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, i, memo = memo1)
+    end
     @test T_acc1 ≈ sum(T_accum)
     @test T_acc2 ≈ sum(T_accum)
     @test C_acc1 ≈ sum(C_accum)
     @test C_acc2 ≈ sum(C_accum)
+    @test_broken T_acc1 ≈ T_acc_memo1 # breaks
+    @test_broken T_acc2 ≈ T_acc_memo2
+    @test_broken C_acc1 ≈ C_acc_memo1
+    @test_broken C_acc2 ≈ C_acc_memo1
 
     T_accum = Vector{typeof(sys[1, :TTT])}(undef, 5)
     C_accum = Vector{typeof(sys[1, :CCC])}(undef, 5)
@@ -725,6 +705,8 @@ end
     end
     @test T_acc3 ≈ sum(T_accum)
     @test C_acc3 ≈ sum(C_accum)
+    @test_broken T_acc3 ≈ T_acc_memo3
+    @test_broken C_acc3 ≈ C_acc_memo3
 
     T_accum = Vector{typeof(sys[1, :TTT])}(undef, 7)
     C_accum = Vector{typeof(sys[1, :CCC])}(undef, 7)
@@ -733,6 +715,8 @@ end
     end
     @test T_acc4 ≈ sum(T_accum)
     @test C_acc4 ≈ sum(C_accum)
+    @test_broken T_acc4 ≈ T_acc_memo4
+    @test_broken C_acc4 ≈ C_acc_memo4
 
     T_accum = Vector{typeof(sys[1, :TTT])}(undef, 3)
     C_accum = Vector{typeof(sys[1, :CCC])}(undef, 3)
@@ -741,6 +725,8 @@ end
     end
     @test T_acc5 ≈ sum(T_accum)
     @test C_acc5 ≈ sum(C_accum)
+    @test_broken T_acc5 ≈ T_acc_memo5
+    @test_broken C_acc5 ≈ C_acc_memo5
 end
 
 @testset "Time-Varying Information Set state space system" begin
