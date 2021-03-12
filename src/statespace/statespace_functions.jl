@@ -142,6 +142,7 @@ function compute_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verb
             @assert haskey(get_settings(m), :tvis_select_system) "The setting :tvis_select_system is not defined"
             tvis_sys = compute_tvis_system(m; verbose = verbose)
             transition_eqns = Transition{T}[tvis_sys[select, reg, :transition] for (reg, select) in enumerate(tvis_sys[:select])]
+
             return RegimeSwitchingSystem(transition_eqns, tvis_sys[:measurements], tvis_sys[:pseudo_measurements])
         end
     end
@@ -165,7 +166,22 @@ function compute_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verb
                                      gensys2_regimes = gensys2_regimes,
                                      verbose = verbose)
 
-            return RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, n_regimes, tvis) # handles formation of transition and measurement equations
+
+            if length(gensys2_regimes) > 1 && haskey(get_settings(m), :use_forward_expectations_memo) &&
+               get_setting(m, :use_forward_expectations_memo)
+                warn_str = "There are multiple gensys2 regimes. Double check that this should be the case." *
+                    " If so, note that the current implementation of use_forward_expectations_memo" *
+                    " may not be robust to having 2+ gensys2_regimes. In particular, it is assumed" *
+                    " that we only need to compute the memo once, but if the TVIS infoset" *
+                    " implies multiple gensys2_regimes, it is likely that you need to recompute the memo" *
+                    " to ensure the correct sequence of products of the TTTs is calculated"
+                @warn warn_str
+            end
+
+            memo_gensys2_regimes = isempty(gensys2_regimes) ? (1:1) : gensys2_regimes[1]
+
+            return RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, n_regimes, tvis;
+                                         gensys2_regimes = memo_gensys2_regimes) # handles formation of transition and measurement equations
         else
             error("Regime switching with solution algorithms other than gensys has not been implemented.")
         end
@@ -223,11 +239,33 @@ function compute_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verb
 end
 
 function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: AbstractMatrix{T}}, RRRs::Vector{<: AbstractMatrix{T}},
-                               CCCs::Vector{<: AbstractVector{T}}, n_regimes::Int, tvis::Bool) where {T <: Real}
+                               CCCs::Vector{<: AbstractVector{T}}, n_regimes::Int, tvis::Bool;
+                               gensys2_regimes::UnitRange{Int64} = 1:1) where {T <: Real}
 
     transition_equations = Vector{Transition{T}}(undef, n_regimes)
     for i = 1:n_regimes
         transition_equations[i] = Transition(TTTs[i], RRRs[i], CCCs[i])
+    end
+
+    # Compute memo for forward expectations if requested
+    # TODO: update use_forward_expectations_memo to construct multiple memos
+    # for different regimes to generalize and "pre-compute" the memos before
+    # the measurement equation
+    memo = if haskey(get_settings(m), :use_forward_expectations_memo) &&
+        get_setting(m, :use_forward_expectations_memo)
+        # TODO: hard-coding 40 b/c model 1002 but add a setting to specify the max window,
+        # say maximum_forward_expectations_memo_window
+        # TODO: make the declaration of the maximum t more flexible
+        ForwardExpectationsMemo(TTTs, gensys2_regimes[1], length(TTTs), length(TTTs),
+                                1, gensys2_regimes[end] + 40 + 1 - length(TTTs))
+    else
+        nothing
+    end
+    if !isnothing(memo)
+#=        @show maximum(collect(keys(memo.time_varying_memo)))
+        @show maximum(collect(keys(memo.permanent_memo)))
+        @show minimum(collect(keys(memo.time_varying_memo)))
+        @show minimum(collect(keys(memo.permanent_memo)))=#
     end
 
     # Infer which measurement and pseudo-measurement equations to use
@@ -235,44 +273,80 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
     type_tuple = (model_type, Vector{Matrix{T}}, Vector{Matrix{T}}, Vector{Vector{T}})
     has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
         hasmethod(pseudo_measurement, (model_type, Matrix{T}, Matrix{T}, Vector{T}))
+
+    # TODO: add option for forward expected sum memo vs. forward expectation memo
     if tvis
         if hasmethod(measurement, type_tuple)
-            measurement_equations = measurement(m, TTTs, RRRs, CCCs; information_set = get_setting(m, :tvis_information_set)[reg])
+            measurement_equations =
+                measurement(m, TTTs, RRRs, CCCs; information_set = get_setting(m, :tvis_information_set)[reg], memo = memo)
         else
+            empty_meas_eqn = haskey(get_settings(m), :empty_measurement_equation) ?
+                get_setting(m, :empty_measurement_equation) : falses(n_regimes)
+
             measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
             for reg in 1:n_regimes
-                measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
-                                                         TTTs = TTTs, CCCs = CCCs,
-                                                         information_set = get_setting(m, :tvis_information_set)[reg])
+                measurement_equations[reg] = if empty_meas_eqn[reg]
+                    Measurement(Matrix{T}(undef, 0, 0), Vector{T}(undef, 0),
+                                Matrix{T}(undef, 0, 0), Matrix{T}(undef, 0, 0))
+                else
+                    measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
+                                TTTs = TTTs, CCCs = CCCs,
+                                information_set = get_setting(m, :tvis_information_set)[reg], memo = memo)
+                end
             end
         end
 
         if hasmethod(pseudo_measurement, type_tuple)
-            pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+            pseudo_measurement_equations =
+                pseudo_measurement(m, TTTs, RRRs, CCCs;
+                                   information_set = get_setting(m, :tvis_information_set), memo = memo)
         elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+            empty_pseudo_meas_eqn = haskey(get_settings(m), :empty_pseudo_measurement_equation) ?
+                get_setting(m, :empty_pseudo_measurement_equation) : falses(n_regimes)
+
             pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
             for reg in 1:n_regimes
-                pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg],
-                                                                       reg = reg, TTTs = TTTs, CCCs = CCCs,
-                                                                       information_set = get_setting(m, :tvis_information_set)[reg])
+                pseudo_measurement_equations[reg] = if empty_pseudo_meas_eqn[reg]
+                    PseudoMeasurement(Matrix{T}(undef, 0, 0), Vector{T}(undef, 0))
+                else
+                    pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg];
+                                       reg = reg, TTTs = TTTs, CCCs = CCCs,
+                                       information_set = get_setting(m, :tvis_information_set)[reg], memo = memo)
+                end
             end
         end
     else
         if hasmethod(measurement, type_tuple)
-            measurement_equations = measurement(m, TTTs, RRRs, CCCs)
+            measurement_equations = measurement(m, TTTs, RRRs, CCCs; memo = memo)
         else
+            empty_meas_eqn = haskey(get_settings(m), :empty_measurement_equation) ?
+                get_setting(m, :empty_measurement_equation) : falses(n_regimes)
+
             measurement_equations = Vector{Measurement{T}}(undef, n_regimes)
             for reg in 1:n_regimes
-                measurement_equations[reg] = measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg)
+                measurement_equations[reg] = if empty_meas_eqn[reg]
+                    Measurement(Matrix{T}(undef, 0, 0), Vector{T}(undef, 0),
+                                Matrix{T}(undef, 0, 0), Matrix{T}(undef, 0, 0))
+                else
+                    measurement(m, TTTs[reg], RRRs[reg], CCCs[reg];
+                                reg = reg, memo = memo)
+                end
             end
         end
 
         if hasmethod(pseudo_measurement, type_tuple)
-            pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs)
+            pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs; memo = memo)
         elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
+            empty_pseudo_meas_eqn = haskey(get_settings(m), :empty_pseudo_measurement_equation) ?
+                get_setting(m, :empty_pseudo_measurement_equation) : falses(n_regimes)
+
             pseudo_measurement_equations = Vector{PseudoMeasurement{T}}(undef, n_regimes)
             for reg in 1:n_regimes
-                pseudo_measurement_equations[reg] = pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg)
+                pseudo_measurement_equations[reg] = if empty_pseudo_meas_eqn[reg]
+                    PseudoMeasurement(Matrix{T}(undef, 0, 0), Vector{T}(undef, 0))
+                else
+                    pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg]; reg = reg, memo = memo)
+                end
             end
         end
     end
@@ -383,7 +457,20 @@ function compute_uncertain_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis
     TTTs, RRRs, CCCs = solve_uncertain_altpolicy(m, system_perfect_cred_totpolicies, is_altpol;
                                                  gensys_regimes = gensys_regimes, gensys2_regimes = gensys2_regimes,
                                                  regimes = collect(1:n_regimes), verbose = verbose)
-    system_main = RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, n_regimes, tvis)
+
+    if length(gensys2_regimes) > 1 && haskey(get_settings(m), :use_forward_expectations_memo) &&
+        get_setting(m, :use_forward_expectations_memo)
+        warn_str = "There are multiple gensys2 regimes. Double check that this should be the case." *
+            " If so, note that the current implementation of use_forward_expectations_memo" *
+            " may not be robust to having 2+ gensys2_regimes. In particular, it is assumed" *
+            " that we only need to compute the memo once, but if the TVIS infoset" *
+            " implies multiple gensys2_regimes, it is likely that you need to recompute the memo" *
+            " to ensure the correct sequence of products of the TTTs is calculated"
+        @warn warn_str
+    end
+    memo_gensys2_regimes = isempty(gensys2_regimes) ? (1:1) : gensys2_regimes[1]
+    system_main = RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, n_regimes, tvis;
+                                        gensys2_regimes = memo_gensys2_regimes)
 
     # Correct the measurement equations for anticipated observables via weighted average
     regime_eqcond_info = get_setting(m, :regime_eqcond_info)
