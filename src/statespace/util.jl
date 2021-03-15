@@ -288,15 +288,17 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Tsum .+= T_accum
             total_Csum .+= C_accum
 
-            for i in (k-1):-1:1
-                C_accum .+= T_accum * CCCs[t+i]
-                T_accum .*= TTTs[t+i]
-
+            # Time-varying matrices so need to calculate in loop
+            for i in (t+2):(t+k)
+                T_accum = TTTs[i] * T_accum
                 total_Tsum .+= T_accum
+
+                C_accum = TTTs[i] * C_accum + CCCs[i]
                 total_Csum .+= C_accum
             end
 
             return total_Tsum, total_Csum
+
         elseif t == permanent_t
             # None of the matrices are time-varying anymore
             Tᵏsum = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t]^(k + 1))
@@ -314,40 +316,49 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
             total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
 
-            # T_memo and C_memo store the expectation of T and C at time i
-            ## T_memo[i] will store ∏_{j=t+1}^i T_j
-            ## C_memo[i] stores ∑_{q=t+1}^i C_q + ∑_{j=t+1}^q T_j C_q
-            # total_sum will stores sum over the expectations
-            T_memo = Dict{Int, eltype(TTTs)}()
-            C_memo = Dict{Int, eltype(CCCs)}()
-            T_memo[t+1] = copy(TTTs[t+1])
-            C_memo[t+1] = copy(CCCs[t+1])
-            total_Tsum .+= T_memo[t+1]
-            total_Csum .+= C_memo[t+1]
-
+            # Do we need to adjust for C after permanent_t?
             do_C = !(all(CCCs[permanent_t] .≈ 0.0))
 
-            for i in (t+2):permanent_t
-                T_memo[i] = TTTs[i] * T_memo[i-1]
-                total_Tsum .+= T_memo[i]
+            # T_accum and C_accum store the expectation of T and C at time i
+            ## So, T_accum at time i will store ∏_{j=t+1}^i T_j
+            ## C_memo at time i stores ∑_{q=t+1}^i C_q + ∑_{j=t+1}^q T_j C_q
+            # total_sum will stores sum over the expectations
+            # T_memo = Vector{eltype(TTTs)}(undef, min(permanent_t - t, k))
+            # C_memo = do_C ? Vector{eltype(CCCs)}(undef, k) : Vector{eltype(CCCs)}(undef, min(permanent_t - t, k))
 
-                C_memo[i] = TTTs[i] * C_memo[i-1] + CCCs[i]
-                total_Csum .+= C_memo[i]
+            # T_memo[1] = TTTs[t+1]
+            # C_memo[1] = CCCs[t+1]
+
+            T_accum = copy(TTTs[t+1])
+            C_accum = copy(CCCs[t+1])
+            total_Tsum .+= T_accum
+            total_Csum .+= C_accum
+
+            # Time-varying matrices so need to calculate in loop
+            for i in (t+2):permanent_t
+                T_accum = TTTs[i] * T_accum
+                total_Tsum .+= T_accum
+
+                C_accum = TTTs[i] * C_accum + CCCs[i]
+                total_Csum .+= C_accum
             end
 
+            # Post permanent_t, fixed matrices, so can compute here
             T_sums = (I - TTTs[permanent_t]) \ (TTTs[permanent_t] - TTTs[permanent_t]^(t+k-permanent_t+1))
-            total_Tsum .+= T_sums * T_memo[permanent_t]
+            total_Tsum .+= T_sums * T_accum
 
+            # If C unchanging after permanent_t, can compute with sum expression
+            ## else do for loop
             if !do_C
-                C_tmp = T_sums * C_memo[permanent_t]
+                C_tmp = T_sums * C_accum
                 total_Csum .+= C_tmp
             else
                 for i in (permanent_t+1):(t+k)
-                    C_memo[i] = TTTs[permanent_t] * C_memo[i-1] + CCCs[permanent_t]
-                    total_Csum .+= C_memo[i]
+                    C_accum = TTTs[permanent_t] * C_accum + CCCs[permanent_t]
+                    total_Csum .+= C_accum
                 end
             end
-#=
+
             if t == 6
                 # Testing code
                 T_accum2 = Vector{eltype(TTTs)}(undef, k)
@@ -367,7 +378,7 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                     write(file, "C_sum", total_Csum)
                 end
             end
-=#
+
             return total_Tsum, total_Csum
 
             # This code seems to work (match directly adding each k_period_ahead_expectations)
