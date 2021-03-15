@@ -443,7 +443,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     # Determine which quarters in the forecast have sub-zlb nominal rates
     has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m)
 
-    first_endo_zlb     = findfirst(has_neg_rates) + pre_forecast_regimes
+    first_endo_zlb     = findfirst(has_neg_rates) + pre_fcast_regimes
 
     #### Run Endogenous ZLB Forecast ####
 
@@ -469,15 +469,15 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             last_endo_zlb      = findfirst(.!has_neg_rates[first_endo_zlb:end])-1 + first_endo_zlb
             @show first_endo_zlb, last_endo_zlb
 
-            endozlb_forecast::Function = (reg_start, reg_end, unant_enforce_zlb) -> forecast_endozlb_helper(m, zlb_start, zlb_end, z0, states, shocks;
-                                       cond_type = cond_type, unant_enforce_zlb = unant_enforce_zlb,
-                                       set_zlb_regime_vals = set_zlb_regime_vals,
-                                       set_info_sets_altpolicy = set_info_sets_altpolicy,
-                                       update_regime_eqcond_info = update_regime_eqcond_info,
-                                       tol = tol, rerun_smoother = rerun_smoother, df = df,
-                                       draw_states = draw_states, histstates = histstates,
-                                       histshocks = histshocks, histpseudo = histpseudo,
-                                       initial_states = initial_states)
+            endozlb_forecast::Function = (zlb_start, zlb_end; unant_enforce_zlb = false) -> forecast_endozlb_helper(m, zlb_start, zlb_end, z0, states, shocks;
+                                                                                                            cond_type = cond_type, unant_enforce_zlb = unant_enforce_zlb,
+                                                                                                            set_zlb_regime_vals = set_zlb_regime_vals,
+                                                                                                            set_info_sets_altpolicy = set_info_sets_altpolicy,
+                                                                                                            update_regime_eqcond_info! = update_regime_eqcond_info!,
+                                                                                                            tol = tol, rerun_smoother = rerun_smoother, df = df,
+                                                                                                            draw_states = draw_states, histstates = histstates,
+                                                                                                            histshocks = histshocks, histpseudo = histpseudo,
+                                                                                                            initial_states = initial_states)
             # Ensure that the Eqcond Dict is correctly cleared for endo zlb
             temp_altpol_length = 0
             for (reg, v) in original_eqcond_dict
@@ -496,7 +496,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             states, obs, pseudo, histstates, histshocks, histshocks, histpseudo, initial_states =
             endozlb_forecast(first_endo_zlb, last_endo_zlb, unant_enforce_zlb = false)
             ## 3. Check if this forecast lifts off after the end of the two-rule zlb.
-            liftoff = obs[get_observables(m)[:obs_nominalrate], last_endo_zlb-pre_forecast_regimes+1] .> forecast_zlb_value(m)+tol
+            liftoff = obs[get_observables(m)[:obs_nominalrate], last_endo_zlb-pre_fcast_regimes+1] .> forecast_zlb_value(m)+tol
 
             ## If it does, binary search between min_zlb and last_endo_zlb to find the earliest liftoff
             if liftoff
@@ -510,7 +510,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     states, obs, pseudo, histstates, histshocks, histshocks, histpseudo, initial_states =
                     endozlb_forecast(first_endo_zlb, iter, unant_enforce_zlb = false)
                     ## 3. Check if this forecast lifts off after the end of the two-rule zlb.
-                    liftoff = obs[get_observables(m)[:obs_nominalrate], iter-pre_forecast_regimes+1] .> forecast_zlb_value(m)+tol
+                    liftoff = obs[get_observables(m)[:obs_nominalrate], iter-pre_fcast_regimes+1] .> forecast_zlb_value(m)+tol
 
 
                     if !liftoff
@@ -568,7 +568,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                     states, obs, pseudo, histstates, histshocks, histshocks, histpseudo, initial_states =
                     endozlb_forecast(first_endo_zlb, last_endo_zlb, unant_enforce_zlb = false)
                     ## 3. Check if this forecast lifts off after the end of the two-rule zlb.
-                    liftoff = obs[get_observables(m)[:obs_nominalrate], last_endo_zlb-pre_forecast_regimes+1] .> forecast_zlb_value(m)+tol
+                    liftoff = obs[get_observables(m)[:obs_nominalrate], last_endo_zlb-pre_fcast_regimes+1] .> forecast_zlb_value(m)+tol
                 end
             end
         end
@@ -604,6 +604,13 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
     @show "RUNNING HELPER"
     @show first_endo_zlb, last_endo_zlb, unant_enforce_zlb
 
+    altpol = alternative_policy(m)
+    is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
+    is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
+    is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
+    original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : UnitRange{Int64}[]
+    original_eqcond_dict = haskey(get_settings(m), :regime_eqcond_info) ? get_setting(m, :regime_eqcond_info) :
+    Dict{Int, EqcondEntry}()
     # Grab some information about the forecast
     n_hist_regimes = haskey(get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     has_reg_dates = haskey(get_settings(m), :regime_dates) # calculate dates of first & last regimes we need to add for the alt policy
@@ -1063,41 +1070,42 @@ else
 return states, obs, pseudo
 end
 end
+=#
 
 function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Symbol;
-start_index::Int = 0)
+                               start_index::Int = 0)
 
-fcast_post_cond_date = (cond_type == :none) ? date_forecast_start(m) : # If cond forecast, then we want to start forecasting
-max(date_forecast_start(m), iterate_quarters(date_conditional_end(m), 1)) # from the period after the conditional end period
-# last_date = iterate_quarters(fcast_post_cond_date, -1) # minus 1 to get one date before the forecast start
-last_date = fcast_post_cond_date
-last_ind = 1
+    fcast_post_cond_date = (cond_type == :none) ? date_forecast_start(m) : # If cond forecast, then we want to start forecasting
+    max(date_forecast_start(m), iterate_quarters(date_conditional_end(m), 1)) # from the period after the conditional end period
+    # last_date = iterate_quarters(fcast_post_cond_date, -1) # minus 1 to get one date before the forecast start
+    last_date = fcast_post_cond_date
+    last_ind = 1
 
-# Construct vector of time periods for each regime in the forecast periods after the conditional forecast
-start_reg   = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
-max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
-regime_inds = Vector{UnitRange{Int}}(undef, get_setting(m, :n_regimes) - start_reg + 1)
-for (rgi, i) in enumerate(start_reg:(get_setting(m, :n_regimes) - 1)) # Last regime handled separately
-qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i + 1], last_date)
-regime_inds[rgi] = (start_index + last_ind):(start_index + last_ind + qtr_diff - 1)
-last_ind += qtr_diff
-last_date = get_setting(m, :regime_dates)[i + 1]
-end
-regime_inds[end] = (start_index + last_ind):(start_index + horizon) # Covers case where final hist regime is also first (and only) forecast regime.
+    # Construct vector of time periods for each regime in the forecast periods after the conditional forecast
+    start_reg   = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
+    max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
+    regime_inds = Vector{UnitRange{Int}}(undef, get_setting(m, :n_regimes) - start_reg + 1)
+    for (rgi, i) in enumerate(start_reg:(get_setting(m, :n_regimes) - 1)) # Last regime handled separately
+        qtr_diff = subtract_quarters(get_setting(m, :regime_dates)[i + 1], last_date)
+        regime_inds[rgi] = (start_index + last_ind):(start_index + last_ind + qtr_diff - 1)
+        last_ind += qtr_diff
+        last_date = get_setting(m, :regime_dates)[i + 1]
+    end
+    regime_inds[end] = (start_index + last_ind):(start_index + horizon) # Covers case where final hist regime is also first (and only) forecast regime.
 
-return regime_inds
+    return regime_inds
 end
 
 function auto_temp_altpolicy_info_set(m::AbstractDSGEModel, n_regimes::Int, first_zlb_regime::Int)
-tvis_infoset = Vector{UnitRange{Int}}(undef, n_regimes)
-for r in 1:n_regimes
-if r < first_zlb_regime
-tvis_infoset[r] = r:r
-else
-tvis_infoset[r] = r:n_regimes
-end
-end
-m <= Setting(:tvis_information_set, tvis_infoset)
+    tvis_infoset = Vector{UnitRange{Int}}(undef, n_regimes)
+    for r in 1:n_regimes
+        if r < first_zlb_regime
+            tvis_infoset[r] = r:r
+        else
+            tvis_infoset[r] = r:n_regimes
+        end
+    end
+    m <= Setting(:tvis_information_set, tvis_infoset)
 end
 
 """
@@ -1119,43 +1127,43 @@ EqcondEntry during historical/conditional horizon regimes, but any other
 regimes in the forecast horizon should be/can be set.
 """
 function default_update_regime_eqcond_info!(m::AbstractDSGEModel, eqcond_dict::AbstractDict{Int64, EqcondEntry},
-zlb_start_regime::Int64, liftoff_regime::Int64, liftoff_policy::AltPolicy)
+                                            zlb_start_regime::Int64, liftoff_regime::Int64, liftoff_policy::AltPolicy)
 
-# TODO: add a check for making sure weights are properly set (e.g. enough regimes with weights to avoid error)
-# Populate eqcond_dict for regimes in which the ZLB should apply and update the weights as appropriate
-for regind in zlb_start_regime:(liftoff_regime - 1)
-if haskey(eqcond_dict, regind)
-# If regime index exists already, just directly change the
-# alternative_policy (which leaves the credibility weights unchanged)
-eqcond_dict[regind].alternative_policy = zlb_rule() # Temp ZLB rule in this regimes
-else
-# If the regime index doesn't already exist, then add an EqcondEntry
-# for a ZLB that is perfectly credible
-weights = zeros(haskey(get_settings(m), :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
-weights[1] = 1.
-eqcond_dict[regind] = EqcondEntry(zlb_rule(), weights)
-end
-end
+    # TODO: add a check for making sure weights are properly set (e.g. enough regimes with weights to avoid error)
+    # Populate eqcond_dict for regimes in which the ZLB should apply and update the weights as appropriate
+    for regind in zlb_start_regime:(liftoff_regime - 1)
+        if haskey(eqcond_dict, regind)
+            # If regime index exists already, just directly change the
+            # alternative_policy (which leaves the credibility weights unchanged)
+            eqcond_dict[regind].alternative_policy = zlb_rule() # Temp ZLB rule in this regimes
+        else
+            # If the regime index doesn't already exist, then add an EqcondEntry
+            # for a ZLB that is perfectly credible
+            weights = zeros(haskey(get_settings(m), :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
+            weights[1] = 1.
+            eqcond_dict[regind] = EqcondEntry(zlb_rule(), weights)
+        end
+    end
 
-# Set the liftoff regime's EqcondEntry, using same logic as above
-if haskey(eqcond_dict, liftoff_regime)
-eqcond_dict[liftoff_regime].alternative_policy = liftoff_policy
-else
-weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
-weights[1] = 1.
-eqcond_dict[liftoff_regime] = EqcondEntry(liftoff_policy, weights)
-end
+    # Set the liftoff regime's EqcondEntry, using same logic as above
+    if haskey(eqcond_dict, liftoff_regime)
+        eqcond_dict[liftoff_regime].alternative_policy = liftoff_policy
+    else
+        weights = zeros(haskey(m.settings, :alternative_policies) ? length(get_setting(m, :alternative_policies)) + 1 : 1)
+        weights[1] = 1.
+        eqcond_dict[liftoff_regime] = EqcondEntry(liftoff_policy, weights)
+    end
 
-# NOTE: the following block assumes there is only one temporary altpol
-# Update eqcond_dict to use the lift-off policy for any regimes between (inclusive)
-# the liftoff regime and the first regime for which credibility stops varying.
-if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= liftoff_regime
-for z in liftoff_regime:(get_setting(m, :cred_vary_until) + 1)
-eqcond_dict[z].alternative_policy = liftoff_policy
-end
-end
+    # NOTE: the following block assumes there is only one temporary altpol
+    # Update eqcond_dict to use the lift-off policy for any regimes between (inclusive)
+    # the liftoff regime and the first regime for which credibility stops varying.
+    if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= liftoff_regime
+        for z in liftoff_regime:(get_setting(m, :cred_vary_until) + 1)
+            eqcond_dict[z].alternative_policy = liftoff_policy
+        end
+    end
 
-m <= Setting(:regime_eqcond_info, eqcond_dict)
+    m <= Setting(:regime_eqcond_info, eqcond_dict)
 
-return m
-end =#
+    return m
+end
