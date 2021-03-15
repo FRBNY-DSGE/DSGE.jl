@@ -285,6 +285,9 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
 
             T_accum = copy(TTTs[t+k])
             C_accum = copy(CCCs[t+k])
+            total_Tsum .+= T_accum
+            total_Csum .+= C_accum
+
             for i in (k-1):-1:1
                 C_accum .+= T_accum * CCCs[t+i]
                 T_accum .*= TTTs[t+i]
