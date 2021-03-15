@@ -317,35 +317,33 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             T_memo = Dict{Int, eltype(TTTs)}()
             C_memo = Dict{Int, eltype(CCCs)}()
             T_memo[t+1] = copy(TTTs[t+1])
+            C_memo[t+1] = copy(CCCs[t+1])
             total_Tsum .+= T_memo[t+1]
+            total_Csum .+= C_memo[t+1]
 
             do_C = !(all(CCCs[permanent_t] .≈ 0.0))
 
             for i in (t+2):(permanent_t-1)
-                T_memo[i] = T_memo[i-1] * TTTs[i]
+                T_memo[i] = TTTs[i] * T_memo[i-1]
                 total_Tsum .+= T_memo[i]
 
-                C_memo[i-1] = T_memo[i] * CCCs[i-1] + CCCs[i]
-                total_Csum .+= C_memo[i-1]
+                C_memo[i] = TTTs[i] * C_memo[i-1] + CCCs[i]
+                total_Csum .+= C_memo[i]
             end
 
             for i in max(permanent_t, t+2):(t+k)
-                T_memo[i] = T_memo[i-1] * TTTs[permanent_t]
+                T_memo[i] = TTTs[permanent_t] * T_memo[i-1]
                 total_Tsum .+= T_memo[i]
 
                 if i == permanent_t
-                    C_memo[i-1] = T_memo[i] * CCCs[i-1] + CCCs[permanent_t]
-                    total_Csum .+= C_memo[i-1]
+                    C_memo[i] = TTTs[i] * C_memo[i-1] + CCCs[permanent_t]
+                    total_Csum .+= C_memo[i]
                 end
 
-                if do_C && i > permanent_t
-                    C_memo[i-1] = T_memo[i] * CCCs[permanent_t] + CCCs[permanent_t]
-                    total_Csum .+= C_memo[i-1]
+                if i > permanent_t
+                    C_memo[i] = TTTs[permanent_t] * C_memo[i-1] + CCCs[permanent_t]
+                    total_Csum .+= C_memo[i]
                 end
-            end
-            if do_C
-                C_memo[t+k] = CCCs[permanent_t]
-                total_Csum .+= C_memo[t+k]
             end
 
             if t == 6

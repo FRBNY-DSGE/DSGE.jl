@@ -169,7 +169,7 @@ m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule])
 using BenchmarkTools
 @btime begin
     sys1 = compute_system(m; tvis = true)
-    nothing
+   nothing
 end
 #=m <= Setting(:perfect_cred_regime_mapping, Dict(i => 19 for i in 19:29))
 tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
