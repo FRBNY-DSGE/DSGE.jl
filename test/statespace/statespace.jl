@@ -780,6 +780,7 @@ end
     regime_eqcond_info2 = deepcopy(regime_eqcond_info1)
     m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info1, regime_eqcond_info2])
     m <= Setting(:tvis_information_set, [1:1, 2:7, 3:7, 4:7, 5:7, 6:7, 7:7])
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
     m <= Setting(:tvis_select_system, ones(Int, 7))
     sys1 = DSGE.compute_tvis_system(m)
     m <= Setting(:tvis_select_system, fill(2, 7))
@@ -895,6 +896,7 @@ end
     m <= Setting(:regime_eqcond_info, regime_eqcond_info)
     setup_regime_switching_inds!(m; cond_type = :full)
     m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 
     sys_true = compute_system(m; tvis = true)
     m <= Setting(:uncertain_temporary_altpolicy, true)
@@ -960,7 +962,7 @@ end
     m <= Setting(:regime_dates, reg_dates)
     m <= Setting(:regime_eqcond_info, regime_eqcond_info)
     setup_regime_switching_inds!(m; cond_type = :full)
-# GET RID OF THIS I THINK    m <= Setting(:tvis_information_set, [1:1, 2:2, 3:3, [i:get_setting(m, :n_regimes) for i in 4:get_setting(m, :n_regimes)]...])
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 
     m <= Setting(:regime_switching, false)
     m <= Setting(:uncertain_temporary_altpolicy, false)
