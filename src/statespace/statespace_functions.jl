@@ -248,24 +248,59 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
     end
 
     # Compute memo for forward expectations if requested
-    # TODO: update use_forward_expectations_memo to construct multiple memos
-    # for different regimes to generalize and "pre-compute" the memos before
-    # the measurement equation
-    memo = if haskey(get_settings(m), :use_forward_expectations_memo) &&
-        get_setting(m, :use_forward_expectations_memo)
+    # TODO: replace forward_expectations_memo with renamed forward_expected_sum_memo,
+    # which should allow us to pre-compute once k-periods ahead expectations, starting
+    # from 1 period ahead to 6 periods ahead, starting at different times.
+    # Note that since the products of t go backward, what we don't need is
+    # t moving forward, just the ahead window going forward, and then a way to
+    # cleverly map the type to a ForwardExpectationsMemo, which should be done
+    # in statespace_functions, i.e. we still pass an actual ForwardExpectationsMemo
+    # to measurement/pseudo_measurement
+    lvl_memos = Dict()
+    for i in gensys2_regimes[2:end]
+        lvl_memos[i] = Dict()
+        if haskey(get_settings(m), :use_forward_expectations_memo) &&
+            get_setting(m, :use_forward_expectations_memo)
+            for j in 1:6
+                lvl_memos[i][j] = if i + j >= 17
+                    ForwardExpectationsMemo(TTTs, min(i, 17), 17, 17, 1, min(i + j + 1 - 17, 6))
+                else
+                    ForwardExpectationsMemo(TTTs, min(i, 17), i + j, 17)
+                end
+            end
+        else
+            for j in 1:6
+                lvl_memos[i][j] = nothing
+            end
+        end
+    end
+    for i in 1:gensys2_regimes[1]
+        lvl_memos[i] = Dict()
+        for j in 1:6
+            lvl_memos[i][j] = nothing
+        end
+    end
+    for i in gensys2_regimes[end] + 1:n_regimes
+        lvl_memos[i] = Dict()
+        for j in 1:6
+            lvl_memos[i][j] = nothing
+        end
+    end
+
+    sum_memo = if haskey(get_settings(m), :use_forward_expected_sum_memo) &&
+        get_setting(m, :use_forward_expected_sum_memo)
         # TODO: hard-coding 40 b/c model 1002 but add a setting to specify the max window,
         # say maximum_forward_expectations_memo_window
-        # TODO: make the declaration of the maximum t more flexible
-        ForwardExpectationsMemo(TTTs, gensys2_regimes[1], length(TTTs), length(TTTs),
-                                1, gensys2_regimes[end] + 40 + 1 - length(TTTs))
+        # TODO: generalize this to when you have time-varying information sets, e.g.
+        # instead of length(TTTs), you use gensys2_regimes[end]
+        # TODO: generalize this
+        # gensys2_regimes[1] is 1 before the end of the gensys2_regimes
+        # ForwardExpectedSumMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, length(TTTs), length(TTTs), 1, 40)
+        ForwardExpectedSumMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, 17, 17, 1, 40)
+        # max-powers may need to be updated . . . and may need to depend on the forecast horizon, for greatest efficiency,
+        # and should generally be 40.
     else
         nothing
-    end
-    if !isnothing(memo)
-#=        @show maximum(collect(keys(memo.time_varying_memo)))
-        @show maximum(collect(keys(memo.permanent_memo)))
-        @show minimum(collect(keys(memo.time_varying_memo)))
-        @show minimum(collect(keys(memo.permanent_memo)))=#
     end
 
     # Infer which measurement and pseudo-measurement equations to use
@@ -278,7 +313,8 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
     if tvis
         if hasmethod(measurement, type_tuple)
             measurement_equations =
-                measurement(m, TTTs, RRRs, CCCs; information_set = get_setting(m, :tvis_information_set)[reg], memo = memo)
+                measurement(m, TTTs, RRRs, CCCs; information_set = get_setting(m, :tvis_information_set)[reg],
+                            level_memo = lvl_memos, sum_memo = sum_memo)
         else
             empty_meas_eqn = haskey(get_settings(m), :empty_measurement_equation) ?
                 get_setting(m, :empty_measurement_equation) : falses(n_regimes)
@@ -291,7 +327,8 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
                 else
                     measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
                                 TTTs = TTTs, CCCs = CCCs,
-                                information_set = get_setting(m, :tvis_information_set)[reg], memo = memo)
+                                information_set = get_setting(m, :tvis_information_set)[reg],
+                                level_memo = lvl_memos[reg], sum_memo = sum_memo)
                 end
             end
         end
@@ -299,7 +336,8 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
         if hasmethod(pseudo_measurement, type_tuple)
             pseudo_measurement_equations =
                 pseudo_measurement(m, TTTs, RRRs, CCCs;
-                                   information_set = get_setting(m, :tvis_information_set), memo = memo)
+                                   information_set = get_setting(m, :tvis_information_set),
+                                   level_memo = lvl_memos, sum_memo = sum_memo)
         elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
             empty_pseudo_meas_eqn = haskey(get_settings(m), :empty_pseudo_measurement_equation) ?
                 get_setting(m, :empty_pseudo_measurement_equation) : falses(n_regimes)
@@ -311,13 +349,15 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
                 else
                     pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg];
                                        reg = reg, TTTs = TTTs, CCCs = CCCs,
-                                       information_set = get_setting(m, :tvis_information_set)[reg], memo = memo)
+                                       information_set = get_setting(m, :tvis_information_set)[reg],
+                                       level_memo = lvl_memos[reg], sum_memo = sum_memo)
                 end
             end
         end
     else
         if hasmethod(measurement, type_tuple)
-            measurement_equations = measurement(m, TTTs, RRRs, CCCs; memo = memo)
+            measurement_equations = measurement(m, TTTs, RRRs, CCCs;
+                                                level_memo = lvl_memos, sum_memo = sum_memo)
         else
             empty_meas_eqn = haskey(get_settings(m), :empty_measurement_equation) ?
                 get_setting(m, :empty_measurement_equation) : falses(n_regimes)
@@ -329,13 +369,13 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
                                 Matrix{T}(undef, 0, 0), Matrix{T}(undef, 0, 0))
                 else
                     measurement(m, TTTs[reg], RRRs[reg], CCCs[reg];
-                                reg = reg, memo = memo)
+                                reg = reg, level_memo = lvl_memos[reg], sum_memo = sum_memo)
                 end
             end
         end
 
         if hasmethod(pseudo_measurement, type_tuple)
-            pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs; memo = memo)
+            pseudo_measurement_equations = pseudo_measurement(m, TTTs, RRRs, CCCs; level_memo = lvl_memos, sum_memo = sum_memo)
         elseif hasmethod(pseudo_measurement, (typeof(m), Matrix{T}, Matrix{T}, Vector{T}))
             empty_pseudo_meas_eqn = haskey(get_settings(m), :empty_pseudo_measurement_equation) ?
                 get_setting(m, :empty_pseudo_measurement_equation) : falses(n_regimes)
@@ -345,7 +385,7 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
                 pseudo_measurement_equations[reg] = if empty_pseudo_meas_eqn[reg]
                     PseudoMeasurement(Matrix{T}(undef, 0, 0), Vector{T}(undef, 0))
                 else
-                    pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg]; reg = reg, memo = memo)
+                    pseudo_measurement(m, TTTs[reg], RRRs[reg], CCCs[reg]; reg = reg, level_memo = lvl_memos[reg], sum_memo = sum_memo)
                 end
             end
         end

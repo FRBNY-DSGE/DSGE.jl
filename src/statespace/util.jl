@@ -203,9 +203,9 @@ ForwardExpectedSum(TTTs::Vector{<: AbstractMatrix{S}},
 ```
 """
 function ForwardExpectedSumMemo(TTTs::Vector{<: AbstractMatrix{S}},
-                            first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
-                            first_perm_period::Int64, min_perm_power::Int64 = 0,
-                            max_perm_power::Int64 = 0) where {S <: Real}
+                                first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
+                                first_perm_period::Int64, min_perm_power::Int64 = 0,
+                                max_perm_power::Int64 = 0) where {S <: Real}
 
     @assert first_tv_period <= min_last_tv_period <= max_last_tv_period
     @assert min_perm_power <= max_perm_power
@@ -227,7 +227,6 @@ function ForwardExpectedSumMemo(TTTs::Vector{<: AbstractMatrix{S}},
             tv_memo[window_len][k] = tv_memo[window_len][k + 1] * TTTs[k]
         end
     end
-
     if !(min_perm_power == max_perm_power == 0)
         TTT_perm                  = TTTs[first_perm_period]
         perm_memo[min_perm_power] = TTT_perm ^ min_perm_power
@@ -336,7 +335,11 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
             if isnothing(memo)
                 return T_memo[1], C_accum
             elseif t_plus_k == permanent_t
-                return TTTs[permanent_t] * memo.time_varying_memo[t + 1], C_accum
+                if k == 1
+                    return TTTs[permanent_t], C_accum
+                else
+                    return TTTs[permanent_t] * memo.time_varying_memo[t + 1], C_accum
+                end
             else
                 return memo.time_varying_memo[t + 1], C_accum
             end
@@ -487,7 +490,7 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             # precomputed dictionaries, so data shouldn't be copied.
             ith_memo = isnothing(memo) ? nothing : ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
                                                                            memo.permanent_memo)
-            T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
+            T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
                                                                   integ_series = integ_series,
                                                                   memo = ith_memo)
         end
@@ -596,15 +599,15 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             for i in 1:k
                 ith_memo = isnothing(memo) ? nothing : ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
                                                                                memo.permanent_memo) # see comments above for why this is correct
-                T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
+                T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
                                                                       integ_series = integ_series, memo = ith_memo)=#
             end
 
             return total_Tsum, total_Csum
 
-            # This code seems to work (match directly adding each k_period_ahead_expectations)
+            # This code seems to work (match directly adding each k_periods_ahead_expectations)
             # but sometimes causes mild numerical differences,
-            # so we calculate the expected sum by adding each k_period_ahead_expectations.
+            # so we calculate the expected sum by adding each k_periods_ahead_expectations.
             #=            h = (permanent_t - 1) - t # last time of time-variation is permanent_t - 1
 
             Tₜ₊ₕ₊₁_memo = Vector{eltype(TTTs)}(undef, k - h)

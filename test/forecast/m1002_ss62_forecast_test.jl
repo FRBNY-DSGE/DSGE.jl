@@ -118,6 +118,8 @@ setup_regime_switching_inds!(m; cond_type = cond_type)
 m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
                                          [i:17 for i in gensys2_first_regime:17],
                                          [i:i for i in 18:get_setting(m, :n_regimes)]))
+#=m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
+                                         [i:get_setting(m, :n_regimes) for i in gensys2_first_regime:get_setting(m, :n_regimes)]))=#
 
 tvcred_dates = (start_zlb_date, DSGE.iterate_quarters(start_zlb_date, tvcred_n_qtrs))
 n_tvcred_reg = DSGE.subtract_quarters(tvcred_dates[2], tvcred_dates[1]) + 1 # number of regimes for time-varying credibility
@@ -183,9 +185,9 @@ tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_e
 m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule2])
 sys2 = compute_system(m; tvis = true)
 gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
-m <= Setting(:uncertain_altpolicy, false)
-m <= Setting(:uncertain_temporary_altpolicy, false)
-@btime begin # 50ms
+#=m <= Setting(:uncertain_altpolicy, false)
+m <= Setting(:uncertain_temporary_altpolicy, false)=#
+#=@btime begin # 50ms
     TTTs, RRRs, CCCs = solve(m; regime_switching = true,
                              regimes = collect(1:get_setting(m, :n_regimes)),
                              gensys_regimes = gensys_regimes,
@@ -199,11 +201,45 @@ TTTs, RRRs, CCCs = solve(m; regime_switching = true,
                          gensys_regimes = gensys_regimes,
                          gensys2_regimes = gensys2_regimes,
                          verbose = :none)
-@btime begin
+@btime begin # 700ms
     RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, get_setting(m, :n_regimes), true)
     nothing
 end
 
+m <= Setting(:use_forward_expectations_memo, true)
+@btime begin # 700ms
+    RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, get_setting(m, :n_regimes), true)
+    nothing
+end
+
+m <= Setting(:use_forward_expectations_memo, false)
+@btime begin # 30ms
+    reg = 5
+    measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
+                TTTs = TTTs, CCCs = CCCs,
+                information_set = get_setting(m, :tvis_information_set)[reg])
+end
+
+@btime begin # 1ms
+    reg = 20
+    measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
+                TTTs = TTTs, CCCs = CCCs,
+                information_set = get_setting(m, :tvis_information_set)[reg])
+end
+
+@btime begin # 374ms
+    for reg in 1:get_setting(m, :n_regimes)
+        measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
+                    TTTs = TTTs, CCCs = CCCs,
+                    information_set = get_setting(m, :tvis_information_set)[reg])
+    end
+end=#
+#=m <= Setting(:use_forward_expectations_memo, false)
+@btime begin # 1.5s
+    DSGE.perfect_cred_multiperiod_altpolicy_systems(m, [false], verbose = :none)
+    nothing
+end
+m <= Setting(:use_forward_expectations_memo, true)
 @btime begin # 1.5s
     DSGE.perfect_cred_multiperiod_altpolicy_systems(m, [false], verbose = :none)
     nothing
@@ -218,12 +254,29 @@ gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
                                                       regimes = collect(1:get_setting(m, :n_regimes)), verbose = :none)
     nothing
 end
-
-@btime begin
+=#
+#=@btime begin
     sys2 = compute_system(m; tvis = true)
     nothing
+end=#
+sys1 = compute_system(m; tvis = true)
+m <= Setting(:use_forward_expectations_memo, true)
+m <= Setting(:use_forward_expected_sum_memo, true)
+#=m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
+m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])=#
+sys2 = compute_system(m; tvis = true)
+for i in 1:get_setting(m, :n_regimes)
+    @show i
+    @show sys1[i, :TTT] ≈ sys2[i, :TTT]
+    @show sys1[i, :ZZ] ≈ sys2[i, :ZZ]
 end
-#@assert false
+@assert false
+#=@btime begin
+    sys2 = compute_system(m; tvis = true)
+    nothing
+end=#
+delete!(m.settings, :empty_measurement_equation)
+delete!(m.settings, :empty_pseudo_measurement_equation)
 fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, df,
                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 

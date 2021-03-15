@@ -18,7 +18,8 @@ function pseudo_measurement(m::Model1002{T},
                             TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                             CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
                             information_set::UnitRange = reg:reg,
-                            level_memo::Union{ForwardExpectationsMemo, Nothing} = nothing,
+                            # level_memo::Union{ForwardExpectationsMemo, Nothing} = nothing,
+                            level_memo = nothing,
                             sum_memo::Union{ForwardExpectedSumMemo, Nothing} = nothing) where {T <: AbstractFloat}
 
     endo      = m.endogenous_states
