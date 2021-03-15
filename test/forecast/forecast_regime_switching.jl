@@ -134,7 +134,7 @@ end
     m <= Setting(:replace_eqcond, true)
     replace_eqcond = Dict{Int, DSGE.EqcondEntry}()
     for i in 3:5
-        replace_eqcond[i] = DSGE.EqcondEntry(zero_rate(), [1., 0.])
+        replace_eqcond[i] = DSGE.EqcondEntry(zlb_rule(), [1., 0.])
     end
     m <= Setting(:regime_eqcond_info, replace_eqcond)
 
@@ -182,13 +182,13 @@ end
     date_ind = findfirst(df[!, :date] .== Date(2020, 6, 30))
     df[date_ind, :obs_nominalrate] = .3 / 4.
     m <= Setting(:replace_eqcond, true)
-    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(3 => DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])))
+    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(3 => DSGE.EqcondEntry(DSGE.zlb_rule(), [1., 0.])))
     m <= Setting(:pgap_type, :ngdp)
     m <= Setting(:pgap_value, 12.0)
     m <= Setting(:gensys2, true)
 
     # Check zero rate rule causes an error if specified in a conditional period
-    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(4 => DSGE.EqcondEntry(zero_rate(), [1., 0.]), 5 => DSGE.EqcondEntry(zero_rate(), [1., 0.])))
+    m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(4 => DSGE.EqcondEntry(zlb_rule(), [1., 0.]), 5 => DSGE.EqcondEntry(zlb_rule(), [1., 0.])))
     fcast = DSGE.forecast_one_draw(m, :mode, :full, output_vars, map(x -> x.value, m.parameters),
                                    df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     @test fcast[:forecastobs][m.observables[:obs_nominalrate], 1] > .01
@@ -445,7 +445,7 @@ end
 
     for prob_weights in [[1., 0.], [.5, .5]]
         for i in 3:n_reg_temp-1
-            replace_eqcond[i] = DSGE.EqcondEntry(zero_rate(), prob_weights)
+            replace_eqcond[i] = DSGE.EqcondEntry(zlb_rule(), prob_weights)
         end
         replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(flexible_ait(), prob_weights)
         m <= Setting(:regime_eqcond_info, replace_eqcond)

@@ -283,8 +283,9 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
             total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
 
-            T_accum = copy(TTTs[t+k])
-            C_accum = copy(CCCs[t+k])
+            # T_accum and C_accum store expected values in period i for some i
+            T_accum = TTTs[t+k]
+            C_accum = CCCs[t+k]
             total_Tsum .+= T_accum
             total_Csum .+= C_accum
 
@@ -323,14 +324,9 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             ## So, T_accum at time i will store ∏_{j=t+1}^i T_j
             ## C_memo at time i stores ∑_{q=t+1}^i C_q + ∑_{j=t+1}^q T_j C_q
             # total_sum will stores sum over the expectations
-            # T_memo = Vector{eltype(TTTs)}(undef, min(permanent_t - t, k))
-            # C_memo = do_C ? Vector{eltype(CCCs)}(undef, k) : Vector{eltype(CCCs)}(undef, min(permanent_t - t, k))
 
-            # T_memo[1] = TTTs[t+1]
-            # C_memo[1] = CCCs[t+1]
-
-            T_accum = copy(TTTs[t+1])
-            C_accum = copy(CCCs[t+1])
+            T_accum = TTTs[t+1]
+            C_accum = CCCs[t+1]
             total_Tsum .+= T_accum
             total_Csum .+= C_accum
 
@@ -356,26 +352,6 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                 for i in (permanent_t+1):(t+k)
                     C_accum = TTTs[permanent_t] * C_accum + CCCs[permanent_t]
                     total_Csum .+= C_accum
-                end
-            end
-
-            if t == 6
-                # Testing code
-                T_accum2 = Vector{eltype(TTTs)}(undef, k)
-                C_accum2 = Vector{eltype(CCCs)}(undef, k)
-                for i in 1:k
-                    T_accum2[i], C_accum2[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
-                                                                          integ_series = integ_series)
-                end
-                JLD2.jldopen("testing_accum_full.jld2", true, true, true, IOStream) do file
-                    write(file, "T_accum", T_accum2)
-                    write(file, "C_accum", C_accum2)
-                    write(file, "T_new", T_memo)
-                    write(file, "C_new", C_memo)
-                    write(file, "TTTs", TTTs)
-                    write(file, "CCCs", CCCs)
-                    write(file, "T_sum", total_Tsum)
-                    write(file, "C_sum", total_Csum)
                 end
             end
 
