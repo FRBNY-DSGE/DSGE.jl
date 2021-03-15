@@ -61,7 +61,13 @@ function measurement(m::MyDSGEModel, TTT::AbstractMatrix{T}, RRR::AbstractMatrix
                      CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
                      information_set::UnitRange = reg:reg) where {T <: Real}
 ```
-The type assertions for the arrays and keywords are not strictly necessary but are advised.
+The type assertions for the arrays and keywords are not strictly necessary but are advised. Alternatively,
+the user could simply set
+```
+function measurement(m::MyDSGEModel, TTT::AbstractMatrix{T}, RRR::AbstractMatrix{T}, CCC::AbstractVector{T};
+                     kwargs...) where {T <: Real}
+```
+to avoid problems with forgetting certain kwargs.
 
 3. Add the settings and indices required to ensure regime-switching is properly handled.
 See [Regime-Switching Forecasts](@ref) for guidance on how to do this.
