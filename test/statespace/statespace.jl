@@ -682,8 +682,8 @@ end
     T_acc4, C_acc4 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 7)
     T_acc5, C_acc5 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 7, 3)
 
-    # Test ForwardExpectedSumMemo
-    memo = DSGE.ForwardExpectedSumMemo(TTTs, 3, 4, 7, 7, 1, 3)
+    # Test ForwardMultipleExpectationsMemo
+    memo = DSGE.ForwardMultipleExpectationsMemo(TTTs, 3, 4, 7, 7, 1, 3)
     @test all([!haskey(memo.time_varying_memo, i) for i in 1:3])
     for i in 4:6
         @test !haskey(memo.time_varying_memo[i], 7)
@@ -699,12 +699,12 @@ end
         @test memo.permanent_memo[k] ≈ TTTs[1] ^ k
     end
     @test !haskey(memo.permanent_memo, 4)
-    memo = DSGE.ForwardExpectedSumMemo(TTTs, 1, 1, 1, 7)
+    memo = DSGE.ForwardMultipleExpectationsMemo(TTTs, 1, 1, 1, 7)
     @test isempty(memo.permanent_memo)
 
     # Now actually use the memo versions
-    memo1 = DSGE.ForwardExpectedSumMemo(TTTs, 2, 3, 7, 7)
-    memo2 = DSGE.ForwardExpectedSumMemo(TTTs, 2, 3, 7, 7, 1, 4)
+    memo1 = DSGE.ForwardMultipleExpectationsMemo(TTTs, 2, 3, 7, 7)
+    memo2 = DSGE.ForwardMultipleExpectationsMemo(TTTs, 2, 3, 7, 7, 1, 4)
 
     T_acc_memo1, C_acc_memo1 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3; memo = memo1)
     T_acc_memo2, C_acc_memo2 = DSGE.k_periods_ahead_expected_sums(sys[1, :TTT], sys[1, :CCC], TTTs, CCCs, 2, 3, 7; memo = memo1)
