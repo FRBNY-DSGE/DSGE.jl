@@ -189,20 +189,20 @@ function ForwardExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
 end
 
 
-mutable struct ForwardExpectedSumMemo{T}
+mutable struct ForwardMultipleExpectationsMemo{T}
     time_varying_memo::Dict{Int64, Dict{Int64, T}} # for products of time-varying TTT matrices
     permanent_memo::Dict{Int64, T} # for products of non time-varying TTT matrices
 end
 
 """
 ```
-ForwardExpectedSum(TTTs::Vector{<: AbstractMatrix{S}},
+ForwardMultipleExpectations(TTTs::Vector{<: AbstractMatrix{S}},
                    first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
                    first_perm_period::Int64, min_perm_power::Int64 = 0,
                    max_perm_power::Int64 = 0) where {S <: Real}
 ```
 """
-function ForwardExpectedSumMemo(TTTs::Vector{<: AbstractMatrix{S}},
+function ForwardMultipleExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
                                 first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
                                 first_perm_period::Int64, min_perm_power::Int64 = 0,
                                 max_perm_power::Int64 = 0) where {S <: Real}
@@ -235,7 +235,7 @@ function ForwardExpectedSumMemo(TTTs::Vector{<: AbstractMatrix{S}},
         end
     end
 
-    return ForwardExpectedSumMemo(tv_memo, perm_memo)
+    return ForwardMultipleExpectationsMemo(tv_memo, perm_memo)
 end
 
 """
@@ -284,6 +284,8 @@ function k_periods_ahead_expectations(TTT::AbstractMatrix, CCC::AbstractVector,
                                       t::Int, k::Int, permanent_t::Int = length(TTTs);
                                       integ_series::Bool = false,
                                       memo::Union{ForwardExpectationsMemo, Nothing} = nothing)
+# TODO: add a version that infers the case of a memo with kwarg type ForwardMultipleExpectationsMemo
+# and translate it to the correct ForwardExpectationsMemo based on t, k, permanent_t
 
     if isempty(TTTs) || isempty(CCCs)
         Tᵏ = TTT^k
@@ -460,14 +462,14 @@ unnecessary computations.
     that result in integrated series, in which case we cannot speed up
     computations by using left-divides.
 
-- `memo::Union{ForwardExpectedSumMemo, Nothing}`: pass a properly formed
+- `memo::Union{ForwardMultipleExpectationsMemo, Nothing}`: pass a properly formed
     `ForwardExpectationsMemo` to avoid calculating unnecessary products and powers of
     the matrices in `TTTs`. Typically, the memo you want to compute is
 
 ```
 # min_t is minimum t you will use, maximum_t is maximum t you will use, and
 # max_k is the maximum window for forward expectations.
-memo = ForwardExpectedSumMemo(TTTs, min_t, length(TTTs), length(TTTs), min_t + max_k - length(TTTs),
+memo = ForwardMultipleExpectationsMemo(TTTs, min_t, length(TTTs), length(TTTs), min_t + max_k - length(TTTs),
                                max_t + max_k + 1 - length(TTTs))
 ```
 """
@@ -475,7 +477,7 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
                                        TTTs::Vector{<: AbstractMatrix}, CCCs::Vector{<: AbstractVector},
                                        t::Int, k::Int, permanent_t::Int = length(TTTs);
                                        integ_series::Bool = false,
-                                       memo::Union{ForwardExpectedSumMemo, Nothing} = nothing)
+                                       memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing)
 
     if integ_series # Do this by directly summing the k-periods ahead expectations. Not fully efficient but also not the typical case
         T_accum = Vector{eltype(TTTs)}(undef, k)

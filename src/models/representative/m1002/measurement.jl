@@ -25,9 +25,7 @@ function measurement(m::Model1002{T},
                      TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                      CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
                      information_set::UnitRange = reg:reg,
-                     # level_memo::Union{ForwardExpectationsMemo, Nothing} = nothing,
-                     level_memo = nothing,
-                     sum_memo::Union{ForwardExpectedSumMemo, Nothing} = nothing) where {T <: AbstractFloat}
+                     memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
 
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
@@ -57,12 +55,16 @@ function measurement(m::Model1002{T},
     permanent_t = length(information_set[findfirst(x -> x == reg, information_set):end]) - 1 + reg
     if information_set[1] == information_set[end] # this condition is probably wrong
         # In this case, we do not need to pass the TTTs, CCCs in, so we redefine them as empty.
-        # This step is also necessary to ensure the level_memo is properly used.
+        # This step is also necessary to ensure the memo is properly used.
         TTTs = Matrix{T}[]
         CCCs = Vector{T}[]
 
+        if reg < 5
+            memo = nothing
+        end
+
         # TODO: maybe instead of emptying TTTs, CCCs, we add
-        # a step to recompute the level_memo since we will still likely be recalculating
+        # a step to recompute the memo since we will still likely be recalculating
         # products/powers of TTT multiple times that could be pre-computed.
     end
 
@@ -185,7 +187,7 @@ function measurement(m::Model1002{T},
 
     ## 10 yrs infl exp
     TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t;
-                                                 integ_series = integ_series, memo = sum_memo)
+                                                 integ_series = integ_series, memo = memo)
     TTT10        = TTT10 ./ 40. # divide by 40 to average across 10 years
     CCC10        = CCC10 ./ 40.
     ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
@@ -281,8 +283,9 @@ function measurement(m::Model1002{T},
     for i = 1:n_mon_anticipated_shocks(m)
         TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t;
                                                             integ_series = integ_series,
-                                                            memo = isnothing(level_memo) ? level_memo :
-                                                            level_memo[i])
+                                                            memo = isnothing(memo) ? memo :
+                                                            ForwardExpectationsMemo(memo.time_varying_memo[min(reg + i, permanent_t, 17)],
+                                                                                    memo.permanent_memo))
 
         ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ_obs_nomrate * TTT_accum
         DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn] + ZZ_obs_nomrate * CCC_accum
@@ -305,8 +308,9 @@ function measurement(m::Model1002{T},
             for i = 1:get_setting(m, :n_anticipated_obs_gdp)
                 TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t;
                                                                     integ_series = integ_series,
-                                                                    memo = isnothing(level_memo) ? level_memo :
-                                                                    level_memo[i])
+                                                                    memo = isnothing(memo) ? memo :
+                                                                    ForwardExpectationsMemo(memo.time_varying_memo[min(reg + i, permanent_t, 17)],
+                                                                                            memo.permanent_memo))
                 ZZ[obs[Symbol("obs_gdp$i")], :] = ZZ_obs_gdp * TTT_accum
                 DD[obs[Symbol("obs_gdp$i")]]    = 100. * (exp(m[:z_star]) - 1.) + ZZ_obs_gdp * CCC_accum
                 if haskey(get_settings(m), :add_iid_anticipated_obs_gdp_meas_err) ?

@@ -18,9 +18,7 @@ function pseudo_measurement(m::Model1002{T},
                             TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                             CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
                             information_set::UnitRange = reg:reg,
-                            # level_memo::Union{ForwardExpectationsMemo, Nothing} = nothing,
-                            level_memo = nothing,
-                            sum_memo::Union{ForwardExpectedSumMemo, Nothing} = nothing) where {T <: AbstractFloat}
+                            memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
 
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
@@ -77,7 +75,7 @@ function pseudo_measurement(m::Model1002{T},
 
     # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
     TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t;
-                                                 integ_series = integ_series, memo = sum_memo)
+                                                 integ_series = integ_series, memo = memo)
     TTT10        = TTT10./ 40. # divide by 40 to average across 10 years
     CCC10        = CCC10 ./ 40.
 

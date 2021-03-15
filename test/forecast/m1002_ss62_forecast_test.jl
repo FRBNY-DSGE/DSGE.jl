@@ -256,25 +256,24 @@ gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
 end
 =#
 #=@btime begin
-    sys2 = compute_system(m; tvis = true)
+    compute_system(m; tvis = true)
     nothing
 end=#
 sys1 = compute_system(m; tvis = true)
 m <= Setting(:use_forward_expectations_memo, true)
-m <= Setting(:use_forward_expected_sum_memo, true)
-#=m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
-m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])=#
+m <= Setting(:use_forward_multiple_expectations_memo, true)
 sys2 = compute_system(m; tvis = true)
 for i in 1:get_setting(m, :n_regimes)
-    @show i
-    @show sys1[i, :TTT] ≈ sys2[i, :TTT]
-    @show sys1[i, :ZZ] ≈ sys2[i, :ZZ]
+    @test sys1[i, :TTT] ≈ sys2[i, :TTT]
+    @test sys1[i, :ZZ] ≈ sys2[i, :ZZ]
 end
-@assert false
-#=@btime begin
-    sys2 = compute_system(m; tvis = true)
+
+m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
+m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
+@btime begin
+    compute_system(m; tvis = true)
     nothing
-end=#
+end
 delete!(m.settings, :empty_measurement_equation)
 delete!(m.settings, :empty_pseudo_measurement_equation)
 fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, df,
