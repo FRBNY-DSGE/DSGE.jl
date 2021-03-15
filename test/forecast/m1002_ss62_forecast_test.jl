@@ -171,9 +171,9 @@ using BenchmarkTools
     sys1 = compute_system(m; tvis = true)
     nothing
 end
-m <= Setting(:perfect_cred_regime_mapping, Dict(i => 19 for i in 19:29))
+#=m <= Setting(:perfect_cred_regime_mapping, Dict(i => 19 for i in 19:29))
 tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
-                                temporary_altpolicy_names = [:zero_rate],
+                                temporary_altpolicy_names = [:zlb_rule],
                                 temporary_altpolicy_length = 6,
                                 perfect_cred_regime_mapping = Dict(i => 12 for i in 12:29),
                                 infoset = copy(get_setting(m, :tvis_information_set)))
@@ -183,7 +183,7 @@ sys2 = compute_system(m; tvis = true)
     sys2 = compute_system(m; tvis = true)
     nothing
 end
-@assert false
+#@assert false
 fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, df,
                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
@@ -201,5 +201,5 @@ end
     @test fcast[:forecastpseudo] ≈ ref_out["forecastpseudo"]
     @test fcast[:histpseudo] ≈ ref_out["histpseudo"]
 end
-
+=#
 nothing

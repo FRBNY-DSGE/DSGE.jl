@@ -312,25 +312,56 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
 
             T_memo = Dict{Int, eltype(TTTs)}()
+            C_memo = Dict{Int, eltype(CCCs)}()
             T_memo[t+1] = copy(TTTs[t+1])
             total_Tsum .+= T_memo[t+1]
+
+            do_C = !(all(CCCs[permanent_t] .≈ 0.0))
+
             for i in (t+2):(permanent_t-1)
                 T_memo[i] = T_memo[i-1] * TTTs[i]
-                total_Tsum .+= T_memo[i] + total_Tsum
+                total_Tsum .+= T_memo[i]
+
+                C_memo[i-1] = T_memo[i] * CCCs[i-1] + CCCs[i]
+                total_Csum .+= C_memo[i-1]
             end
+
             for i in max(permanent_t, t+2):(t+k)
                 T_memo[i] = T_memo[i-1] * TTTs[permanent_t]
-                total_Tsum .+= T_memo[i] + total_Tsum
+                total_Tsum .+= T_memo[i]
+
+                if i == permanent_t
+                    C_memo[i-1] = T_memo[i] * CCCs[i-1] + CCCs[permanent_t]
+                    total_Csum .+= C_memo[i-1]
+                end
+
+                if do_C && i > permanent_t
+                    C_memo[i-1] = T_memo[i] * CCCs[permanent_t] + CCCs[permanent_t]
+                    total_Csum .+= C_memo[i-1]
+                end
             end
-            C_memo = Dict{Int, eltype(CCCs)}()
-            for i in (t+1):(permanent_t-1)
-                C_memo[i] = T_memo[i+1] * CCCs[i]
-                total_Csum .+= C_memo[i] + total_Csum
+            if do_C
+                C_memo[t+k] = CCCs[permanent_t]
+                total_Csum .+= C_memo[t+k]
             end
-            if !(all(CCCs[permanent_t] .≈ 0.0))
-                for i in permanent_t:(t+k)
-                    C_memo[i] = T_memo[i+1] * CCCs[permanent_t]
-                    total_Csum .+= C_memo[i] + total_Csum
+
+            if t == 6
+                # Testing code
+                T_accum2 = Vector{eltype(TTTs)}(undef, k)
+                C_accum2 = Vector{eltype(CCCs)}(undef, k)
+                for i in 1:k
+                    T_accum2[i], C_accum2[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i,
+                                                                          integ_series = integ_series)
+                end
+                JLD2.jldopen("testing_accum_full.jld2", true, true, true, IOStream) do file
+                    write(file, "T_accum", T_accum2)
+                    write(file, "C_accum", C_accum2)
+                    write(file, "T_new", T_memo)
+                    write(file, "C_new", C_memo)
+                    write(file, "TTTs", TTTs)
+                    write(file, "CCCs", CCCs)
+                    write(file, "T_sum", total_Tsum)
+                    write(file, "C_sum", total_Csum)
                 end
             end
 
@@ -384,8 +415,6 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             end
             C_accum .+= sum([(I + C1_term[q] + C2_term[q]) * CCCs[t + q] for q in 1:(h - 1)])
             end=#
-
-            return T_accum, C_accum
         end
     end
 end
