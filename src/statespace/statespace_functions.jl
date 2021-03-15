@@ -287,8 +287,9 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
         end
     end=#
 
-    memo = if haskey(get_settings(m), :use_forward_multiple_expectations_memo) &&
-        get_setting(m, :use_forward_multiple_expectations_memo)
+    use_fwd_exp_sum = haskey(get_settings(m), :use_forward_expected_sum_memo) && get_setting(m, :use_forward_expected_sum_memo)
+    use_fwd_exp     = haskey(get_settings(m), :use_forward_expectations_memo) && get_setting(m, :use_forward_expectations_memo)
+    memo = if use_fwd_exp_sum
         # TODO: hard-coding 40 b/c model 1002 but add a setting to specify the max window,
         # say maximum_forward_expectations_memo_window
         # TODO: generalize this to when you have time-varying information sets, e.g.
@@ -299,6 +300,8 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
         ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, 17, 17, 1, 40)
         # max-powers may need to be updated . . . and may need to depend on the forecast horizon, for greatest efficiency,
         # and should generally be 40.
+    elseif use_fwd_exp
+        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, 17, 17, 1, 6)
     else
         nothing
     end

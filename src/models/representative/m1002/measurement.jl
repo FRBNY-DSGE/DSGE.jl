@@ -67,6 +67,8 @@ function measurement(m::Model1002{T},
         # a step to recompute the memo since we will still likely be recalculating
         # products/powers of TTT multiple times that could be pre-computed.
     end
+    use_fwd_exp_sum = haskey(get_settings(m), :use_forward_expected_sum_memo) && get_setting(m, :use_forward_expected_sum_memo)
+    use_fwd_exp     = haskey(get_settings(m), :use_forward_expectations_memo) && get_setting(m, :use_forward_expectations_memo)
 
     flex_ait_2020Q3 = haskey(get_settings(m), :flexible_ait_policy_change) &&
         get_setting(m, :flexible_ait_policy_change)
@@ -187,7 +189,8 @@ function measurement(m::Model1002{T},
 
     ## 10 yrs infl exp
     TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t;
-                                                 integ_series = integ_series, memo = memo)
+                                                 integ_series = integ_series,
+                                                 memo = use_fwd_exp_sum ? memo : nothing)
     TTT10        = TTT10 ./ 40. # divide by 40 to average across 10 years
     CCC10        = CCC10 ./ 40.
     ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
@@ -283,7 +286,7 @@ function measurement(m::Model1002{T},
     for i = 1:n_mon_anticipated_shocks(m)
         TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t;
                                                             integ_series = integ_series,
-                                                            memo = isnothing(memo) ? memo :
+                                                            memo = (isnothing(memo) || !use_fwd_exp) ? nothing :
                                                             ForwardExpectationsMemo(memo.time_varying_memo[min(reg + i, permanent_t, 17)],
                                                                                     memo.permanent_memo))
 
@@ -308,7 +311,7 @@ function measurement(m::Model1002{T},
             for i = 1:get_setting(m, :n_anticipated_obs_gdp)
                 TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t;
                                                                     integ_series = integ_series,
-                                                                    memo = isnothing(memo) ? memo :
+                                                                    memo = (isnothing(memo) || !use_fwd_exp) ? nothing :
                                                                     ForwardExpectationsMemo(memo.time_varying_memo[min(reg + i, permanent_t, 17)],
                                                                                             memo.permanent_memo))
                 ZZ[obs[Symbol("obs_gdp$i")], :] = ZZ_obs_gdp * TTT_accum

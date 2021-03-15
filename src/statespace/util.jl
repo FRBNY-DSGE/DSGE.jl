@@ -526,19 +526,34 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
             # Time-varying matrices so need to calculate in loop
             for i in (t+2):(t+k)
                 T_accum = TTTs[i] * T_accum
+#=            if isnothing(memo)
+                total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
+                total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
+
+                T_accum = copy(TTTs[t+k])
+                C_accum = copy(CCCs[t+k])=#
                 total_Tsum .+= T_accum
 
                 C_accum = TTTs[i] * C_accum + CCCs[i]
                 total_Csum .+= C_accum
+
+#=                for i in (k-1):-1:1
+                    C_accum .+= T_accum * CCCs[t+i]
+                    T_accum .*= TTTs[t+i]
+
+                    total_Tsum .+= T_accum
+                    total_Csum .+= C_accum
+                end
+            else
+                for i in 1:k
+                    ith_memo = ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
+                                                       memo.permanent_memo) # see comments above for why this is correct
+                    tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
+                                                              integ_series = integ_series, memo = ith_memo)
+                    total_Tsum .+= tmp1
+                    total_Csum .+= tmp2
+                end=#
             end
-#=            for i in 1:k
-                ith_memo = isnothing(memo) ? nothing : ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
-                                                                               memo.permanent_memo) # see comments above for why this is correct
-                tmp1, tmp2 = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
-                                                          integ_series = integ_series, memo = ith_memo)
-                total_Tsum .+= tmp1
-                total_Csum .+= tmp2
-            end=#
 
             return total_Tsum, total_Csum
 
@@ -579,6 +594,53 @@ function k_periods_ahead_expected_sums(TTT::AbstractMatrix, CCC::AbstractVector,
 
                 C_accum = TTTs[i] * C_accum + CCCs[i]
                 total_Csum .+= C_accum
+#=            if isnothing(memo)
+                total_Tsum = zeros(eltype(TTTs[t]), size(TTTs[t]))
+                total_Csum = zeros(eltype(CCCs[t]), size(CCCs[t]))
+
+                T_memo = Dict{Int, eltype(TTTs)}()
+                C_memo = Dict{Int, eltype(CCCs)}()
+                T_memo[t+1] = copy(TTTs[t+1])
+                C_memo[t+1] = copy(CCCs[t+1])
+                total_Tsum .+= T_memo[t+1]
+                total_Csum .+= C_memo[t+1]
+
+                do_C = !(all(CCCs[permanent_t] .≈ 0.0))
+
+                for i in (t+2):(permanent_t-1)
+                    T_memo[i] = TTTs[i] * T_memo[i-1]
+                    total_Tsum .+= T_memo[i]
+
+                    C_memo[i] = TTTs[i] * C_memo[i-1] + CCCs[i]
+                    total_Csum .+= C_memo[i]
+                end
+
+                for i in max(permanent_t, t+2):(t+k)
+                    T_memo[i] = TTTs[permanent_t] * T_memo[i-1]
+                    total_Tsum .+= T_memo[i]
+
+                    if i == permanent_t
+                        C_memo[i] = TTTs[i] * C_memo[i-1] + CCCs[permanent_t]
+                        total_Csum .+= C_memo[i]
+                    end
+
+                    if i > permanent_t
+                        C_memo[i] = TTTs[permanent_t] * C_memo[i-1] + CCCs[permanent_t]
+                        total_Csum .+= C_memo[i]
+                    end
+                end
+            else
+                # Computation time can be saved by realizing some matrices are not time-varying
+                T_accum = Vector{eltype(TTTs)}(undef, k)
+                C_accum = Vector{eltype(CCCs)}(undef, k)
+                for i in 1:k
+                    ith_memo = isnothing(memo) ? nothing : ForwardExpectationsMemo(memo.time_varying_memo[min(t + i, permanent_t)],
+                                                                                   memo.permanent_memo) # see comments above for why this is correct
+                    T_accum[i], C_accum[i] = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, t, i, permanent_t,
+                                                                          integ_series = integ_series, memo = ith_memo)
+                end
+                total_Tsum = sum(T_accum)
+                total_Csum = sum(C_accum)=#
             end
 
             # Post permanent_t, fixed matrices, so can compute here

@@ -172,11 +172,11 @@ m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule])
 
 # sys1 = compute_system(m; tvis = true)
 using BenchmarkTools
-@btime begin
+#=@btime begin
     sys1 = compute_system(m; tvis = true)
    nothing
-end
-#=m <= Setting(:perfect_cred_regime_mapping, Dict(i => 19 for i in 19:29))
+end=#
+m <= Setting(:perfect_cred_regime_mapping, Dict(i => 19 for i in 19:29))
 tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
                                 temporary_altpolicy_names = [:zlb_rule],
                                 temporary_altpolicy_length = 6,
@@ -255,21 +255,23 @@ gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
     nothing
 end
 =#
-#=@btime begin
+m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
+m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
+sys1 = compute_system(m; tvis = true)
+@btime begin
     compute_system(m; tvis = true)
     nothing
-end=#
-sys1 = compute_system(m; tvis = true)
+end
+
 m <= Setting(:use_forward_expectations_memo, true)
-m <= Setting(:use_forward_multiple_expectations_memo, true)
+m <= Setting(:use_forward_expected_sum_memo, true)
 sys2 = compute_system(m; tvis = true)
+
 for i in 1:get_setting(m, :n_regimes)
     @test sys1[i, :TTT] ≈ sys2[i, :TTT]
     @test sys1[i, :ZZ] ≈ sys2[i, :ZZ]
 end
 
-m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
-m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
 @btime begin
     compute_system(m; tvis = true)
     nothing
@@ -293,5 +295,5 @@ end
     @test fcast[:forecastpseudo] ≈ ref_out["forecastpseudo"]
     @test fcast[:histpseudo] ≈ ref_out["histpseudo"]
 end
-=#
+
 nothing

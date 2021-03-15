@@ -54,6 +54,8 @@ function pseudo_measurement(m::Model1002{T},
         # a step to recompute the memo since we will still likely be recalculating
         # products/powers of TTT multiple times that could be pre-computed
     end
+    use_fwd_exp_sum = haskey(get_settings(m), :use_forward_expected_sum_memo) && get_setting(m, :use_forward_expected_sum_memo)
+    use_fwd_exp     = haskey(get_settings(m), :use_forward_expectations_memo) && get_setting(m, :use_forward_expectations_memo)
 
     # Handle integrated series
     no_integ_inds = inds_states_no_integ_series(m)
@@ -75,7 +77,8 @@ function pseudo_measurement(m::Model1002{T},
 
     # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
     TTT10, CCC10 = k_periods_ahead_expected_sums(TTT, CCC, TTTs, CCCs, reg, 40, permanent_t;
-                                                 integ_series = integ_series, memo = memo)
+                                                 integ_series = integ_series,
+                                                 memo = use_fwd_exp_sum ? memo : nothing)
     TTT10        = TTT10./ 40. # divide by 40 to average across 10 years
     CCC10        = CCC10 ./ 40.
 
