@@ -69,20 +69,20 @@ function gensys2_uncertain_altpol(prob_vec::AbstractVector{S}, T_alt::Matrix{S},
                                   Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
                                   C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
-    Tbars = Vector{Matrix{S}}(undef, length(T_impl) + 1)
-    Cbars = Vector{Vector{S}}(undef, length(T_impl) + 1)
     Tout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Rout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Cout  = Vector{Vector{S}}(undef, length(T_impl) + 1)
 
     # Calculate "uncertain" temporary altpolicy matrices and back out the transition equation
     for i in 1:length(T_impl)
-        Tbars[i] = prob_vec[1] * T_impl[i] + prob_vec[2] * T_alt # it is assumed T_impl is a vector of the
-        Cbars[i] = prob_vec[1] * C_impl[i] + prob_vec[2] * C_alt # T_{t + 1}^{(temporary altpolicy)} matrices
+        Tbars = prob_vec[1] * T_impl[i] + prob_vec[2] * T_alt # it is assumed T_impl is a vector of the
+        Cbars = prob_vec[1] * C_impl[i] + prob_vec[2] * C_alt # T_{t + 1}^{(temporary altpolicy)} matrices
+
         # hence Tbars will be a vector of T_t matrices
-        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
-        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
-        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
+        tmp     = Γ2_til * Tbars + Γ0_til
+        Tout[i] = tmp \ Γ1_til
+        Rout[i] = tmp \ Ψ_til
+        Cout[i] = tmp \ (C_til  - Γ2_til * Cbars)
     end
 
     # Add terminal condition
@@ -99,20 +99,20 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, T_alt::AbstractMa
                                   Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
                                   C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
-    Tbars = Vector{Matrix{S}}(undef, length(T_impl) + 1)
-    Cbars = Vector{Vector{S}}(undef, length(T_impl) + 1)
     Tout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Rout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Cout  = Vector{Vector{S}}(undef, length(T_impl) + 1)
 
     # Calculate "uncertain" temporary altpolicy matrices and back out the transition equation
     for i in 1:length(T_impl)
-        Tbars[i] = prob_vec[i][1] * T_impl[i] + (1.0-prob_vec[i][1]) * T_alt # it is assumed T_impl is a vector of the
-        Cbars[i] = prob_vec[i][1] * C_impl[i] + (1.0-prob_vec[i][1]) * C_alt # T_{t + 1}^{(temporary altpolicy)} matrices
+        Tbars = prob_vec[i][1] * T_impl[i] + (1.0-prob_vec[i][1]) * T_alt # it is assumed T_impl is a vector of the
+        Cbars = prob_vec[i][1] * C_impl[i] + (1.0-prob_vec[i][1]) * C_alt # T_{t + 1}^{(temporary altpolicy)} matrices
+
         # hence Tbars will be a vector of T_t matrices
-        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
-        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
-        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
+        tmp     = Γ2_til * Tbars + Γ0_til
+        Tout[i] = tmp \ Γ1_til
+        Rout[i] = tmp \ Ψ_til
+        Cout[i] = tmp \ (C_til  - Γ2_til * Cbars)
     end
 
     # Add terminal condition
@@ -130,20 +130,19 @@ function gensys2_uncertain_altpol(prob_vec::AbstractVector{S},
                                   Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
                                   C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
-    Tbars = Vector{Matrix{S}}(undef, length(T_impl) + 1)
-    Cbars = Vector{Vector{S}}(undef, length(T_impl) + 1)
     Tout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Rout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Cout  = Vector{Vector{S}}(undef, length(T_impl) + 1)
 
     # Calculate "uncertain" temporary altpolicy matrices and back out the transition equation
     for i in 1:length(T_impl)
-        Tbars[i] = prob_vec[1] * T_impl[i] .+ sum([prob_vec[j+1] .* T_alt[j] for j in 1:length(T_alt)]) # it is assumed T_impl is a vector of the
-        Cbars[i] = prob_vec[1] * C_impl[i] .+ sum([prob_vec[j+1] .* C_alt[j] for j in 1:length(C_alt)]) # T_{t + 1}^{(temporary altpolicy)} matrices
+        Tbars = prob_vec[1] * T_impl[i] .+ sum([prob_vec[j+1] .* T_alt[j] for j in 1:length(T_alt)]) # it is assumed T_impl is a vector of the
+        Cbars = prob_vec[1] * C_impl[i] .+ sum([prob_vec[j+1] .* C_alt[j] for j in 1:length(C_alt)]) # T_{t + 1}^{(temporary altpolicy)} matrices
 
-        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
-        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
-        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
+        tmp     = Γ2_til * Tbars + Γ0_til
+        Tout[i] = tmp \ Γ1_til
+        Rout[i] = tmp \ Ψ_til
+        Cout[i] = tmp \ (C_til  - Γ2_til * Cbars)
     end
 
     # Add terminal condition
@@ -160,20 +159,19 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, T_alt::Vector{Mat
                                   Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
                                   C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
-    Tbars = Vector{Matrix{S}}(undef, length(T_impl) + 1)
-    Cbars = Vector{Vector{S}}(undef, length(T_impl) + 1)
     Tout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Rout  = Vector{Matrix{S}}(undef, length(T_impl) + 1)
     Cout  = Vector{Vector{S}}(undef, length(T_impl) + 1)
 
     # Calculate "uncertain" temporary altpolicy matrices and back out the transition equation
     for i in 1:length(T_impl)
-        Tbars[i] = prob_vec[i][1] .* T_impl[i] .+ sum([prob_vec[i][j+1] .* T_alt[j] for j in 1:length(T_alt)]) # it is assumed T_impl is a vector of the
-        Cbars[i] = prob_vec[i][1] * C_impl[i] .+ sum([prob_vec[i][j+1] .* C_alt[j] for j in 1:length(C_alt)])  # T_{t + 1}^{(temporary altpolicy)} matrices
+        Tbars = prob_vec[i][1] .* T_impl[i] .+ sum([prob_vec[i][j+1] .* T_alt[j] for j in 1:length(T_alt)]) # it is assumed T_impl is a vector of the
+        Cbars = prob_vec[i][1] * C_impl[i] .+ sum([prob_vec[i][j+1] .* C_alt[j] for j in 1:length(C_alt)])  # T_{t + 1}^{(temporary altpolicy)} matr
 
-        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
-        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
-        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
+        tmp     = Γ2_til * Tbars + Γ0_til
+        Tout[i] = tmp \ Γ1_til
+        Rout[i] = tmp \ Ψ_til
+        Cout[i] = tmp \ (C_til  - Γ2_til * Cbars)
     end
 
     # Add terminal condition
@@ -192,8 +190,6 @@ function gensys2_uncertain_altpol(prob_vec::AbstractVector{S}, gensys2_regimes::
                                   Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
                                   C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
-    Tbars = Vector{Matrix{S}}(undef, length(gensys2_regimes) - 1)
-    Cbars = Vector{Vector{S}}(undef, length(gensys2_regimes) - 1)
     Tout  = Vector{Matrix{S}}(undef, length(gensys2_regimes) - 1)
     Rout  = Vector{Matrix{S}}(undef, length(gensys2_regimes) - 1)
     Cout  = Vector{Vector{S}}(undef, length(gensys2_regimes) - 1)
@@ -203,16 +199,17 @@ function gensys2_uncertain_altpol(prob_vec::AbstractVector{S}, gensys2_regimes::
     for (i, reg) in enumerate(gensys2_regimes[2:end - 1])
         # it is assumed T_impl is a vector of the T_{t + 1}^{(temporary altpolicy)} matrices,
         # hence Tbars will be a vector of T_t matrices
-        Tbars[i] = prob_vec[1] * (@view systems[1][reg + 1, :TTT][inds, inds]) .+
+        Tbars = prob_vec[1] * (@view systems[1][reg + 1, :TTT][inds, inds]) .+
         sum([prob_vec[j] .* (is_altpol[j - 1] ? (@view systems[j][:TTT][inds, inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :TTT][inds, inds]))
                  for j in 2:n_alt])
-        Cbars[i] = prob_vec[1] * (@view systems[1][reg + 1, :CCC][inds]) .+
+        Cbars = prob_vec[1] * (@view systems[1][reg + 1, :CCC][inds]) .+
         sum([prob_vec[j] .* (is_altpol[j - 1] ? (@view systems[j][:CCC][inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :CCC][inds]))
                  for j in 2:n_alt])
 
-        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
-        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
-        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
+        tmp     = Γ2_til * Tbars + Γ0_til
+        Tout[i] = tmp \ Γ1_til
+        Rout[i] = tmp \ Ψ_til
+        Cout[i] = tmp \ (C_til  - Γ2_til * Cbars)
     end
 
     # Add terminal condition
@@ -231,8 +228,6 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, gensys2_regimes::
                                   C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
 
-    Tbars = Vector{Matrix{S}}(undef, length(gensys2_regimes) - 1)
-    Cbars = Vector{Vector{S}}(undef, length(gensys2_regimes) - 1)
     Tout  = Vector{Matrix{S}}(undef, length(gensys2_regimes) - 1)
     Rout  = Vector{Matrix{S}}(undef, length(gensys2_regimes) - 1)
     Cout  = Vector{Vector{S}}(undef, length(gensys2_regimes) - 1)
@@ -242,16 +237,17 @@ function gensys2_uncertain_altpol(prob_vec::Vector{Vector{S}}, gensys2_regimes::
     for (i, reg) in enumerate(gensys2_regimes[2:end - 1]) # gensys2_regimes includes 1 extra regime at beginning for boundary condition
         # it is assumed T_impl is a vector of the T_{t + 1}^{(temporary altpolicy)} matrices,
         # hence Tbars will be a vector of T_t matrices
-        Tbars[i] = prob_vec[i][1] * (@view systems[1][reg + 1, :TTT][inds, inds]) .+
+        Tbars = prob_vec[i][1] * (@view systems[1][reg + 1, :TTT][inds, inds]) .+
         sum([prob_vec[i][j] .* (is_altpol[j - 1] ? (@view systems[j][:TTT][inds, inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :TTT][inds, inds]))
                  for j in 2:n_alt])
-        Cbars[i] = prob_vec[i][1] * (@view systems[1][reg + 1, :CCC][inds]) .+
+        Cbars = prob_vec[i][1] * (@view systems[1][reg + 1, :CCC][inds]) .+
         sum([prob_vec[i][j] .* (is_altpol[j - 1] ? (@view systems[j][:CCC][inds]) : (@view systems[j][min(length(systems[j].transitions), reg + 1), :CCC][inds]))
                  for j in 2:n_alt])
 
-        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
-        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
-        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
+        tmp     = Γ2_til * Tbars + Γ0_til
+        Tout[i] = tmp \ Γ1_til
+        Rout[i] = tmp \ Ψ_til
+        Cout[i] = tmp \ (C_til  - Γ2_til * Cbars)
     end
 
     # Add terminal condition
