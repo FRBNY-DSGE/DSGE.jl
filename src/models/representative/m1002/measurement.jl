@@ -59,10 +59,12 @@ function measurement(m::Model1002{T},
         TTTs = Matrix{T}[]
         CCCs = Vector{T}[]
 
-        if reg < 5
-            memo = nothing
-        end
-
+        # for now, assume that in this case, we do not want to use the memo.
+        # The complicating problem is that, in the historical regimes, we don't want to use the memo
+        # (at least, not the one that is currently being automatically constructed).
+        # But in the forecast regimes, we do want to use the memo if we ever reach a case where
+        # the information set becomes myopic.
+        memo = nothing
         # TODO: maybe instead of emptying TTTs, CCCs, we add
         # a step to recompute the memo since we will still likely be recalculating
         # products/powers of TTT multiple times that could be pre-computed.

@@ -50,6 +50,7 @@ function pseudo_measurement(m::Model1002{T},
         TTTs = Matrix{T}[]
         CCCs = Vector{T}[]
 
+        memo = nothing # see measurement
         # TODO: maybe instead of emptying TTTs, CCCs, we add
         # a step to recompute the memo since we will still likely be recalculating
         # products/powers of TTT multiple times that could be pre-computed

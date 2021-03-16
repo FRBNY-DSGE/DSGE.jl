@@ -248,60 +248,15 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
     end
 
     # Compute memo for forward expectations if requested
-    # TODO: replace forward_expectations_memo with renamed forward_expected_sum_memo,
-    # which should allow us to pre-compute once k-periods ahead expectations, starting
-    # from 1 period ahead to 6 periods ahead, starting at different times.
-    # Note that since the products of t go backward, what we don't need is
-    # t moving forward, just the ahead window going forward, and then a way to
-    # cleverly map the type to a ForwardExpectationsMemo, which should be done
-    # in statespace_functions, i.e. we still pass an actual ForwardExpectationsMemo
-    # to measurement/pseudo_measurement
-#=    lvl_memos = Dict()
-    for i in gensys2_regimes[2:end]
-        lvl_memos[i] = Dict()
-        if haskey(get_settings(m), :use_forward_expectations_memo) &&
-            get_setting(m, :use_forward_expectations_memo)
-            for j in 1:6
-                lvl_memos[i][j] = if i + j >= 17
-                    ForwardExpectationsMemo(TTTs, min(i, 17), 17, 17, 1, min(i + j + 1 - 17, 6))
-                else
-                    ForwardExpectationsMemo(TTTs, min(i, 17), i + j, 17)
-                end
-            end
-        else
-            for j in 1:6
-                lvl_memos[i][j] = nothing
-            end
-        end
-    end
-    for i in 1:gensys2_regimes[1]
-        lvl_memos[i] = Dict()
-        for j in 1:6
-            lvl_memos[i][j] = nothing
-        end
-    end
-    for i in gensys2_regimes[end] + 1:n_regimes
-        lvl_memos[i] = Dict()
-        for j in 1:6
-            lvl_memos[i][j] = nothing
-        end
-    end=#
-
     use_fwd_exp_sum = haskey(get_settings(m), :use_forward_expected_sum_memo) && get_setting(m, :use_forward_expected_sum_memo)
     use_fwd_exp     = haskey(get_settings(m), :use_forward_expectations_memo) && get_setting(m, :use_forward_expectations_memo)
     memo = if use_fwd_exp_sum
-        # TODO: hard-coding 40 b/c model 1002 but add a setting to specify the max window,
-        # say maximum_forward_expectations_memo_window
-        # TODO: generalize this to when you have time-varying information sets, e.g.
-        # instead of length(TTTs), you use gensys2_regimes[end]
-        # TODO: generalize this
-        # gensys2_regimes[1] is 1 before the end of the gensys2_regimes
-        # ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, length(TTTs), length(TTTs), 1, 40)
-        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, 17, 17, 1, 40)
-        # max-powers may need to be updated . . . and may need to depend on the forecast horizon, for greatest efficiency,
-        # and should generally be 40.
+        # TODO: update the hard-coded 40 to allow for other cases, but currently, the only use case
+        # requires power up to 40.
+        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, length(TTTs), length(TTTs), 1, 40)
     elseif use_fwd_exp
-        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, 17, 17, 1, 6)
+        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, length(TTTs),
+                                        length(TTTs), 1, n_mon_anticipated_shocks(m))
     else
         nothing
     end
@@ -312,7 +267,6 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
     has_pseudo = hasmethod(pseudo_measurement, type_tuple) ||
         hasmethod(pseudo_measurement, (model_type, Matrix{T}, Matrix{T}, Vector{T}))
 
-    # TODO: add option for forward expected sum memo vs. forward expectation memo
     if tvis
         if hasmethod(measurement, type_tuple)
             measurement_equations =
