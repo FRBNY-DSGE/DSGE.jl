@@ -178,10 +178,14 @@ using BenchmarkTools
 end=#
 
 m <= Setting(:perfect_credibility_identical_transitions, Dict(i => 19 for i in 19:29))
+tworule_iden_trans = deepcopy(get_setting(m, :perfect_credibility_identical_transitions))
+for i in 12:29
+    tworule_iden_trans[i] = 12
+end
 tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
                                 temporary_altpolicy_names = [:zlb_rule],
                                 temporary_altpolicy_length = 6,
-                                perfect_credibility_identical_transitions = Dict(i => 12 for i in 13:29),
+                                perfect_credibility_identical_transitions = tworule_iden_trans,
                                 infoset = copy(get_setting(m, :tvis_information_set)))
 m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule2])
 sys2 = compute_system(m; tvis = true)
@@ -257,7 +261,8 @@ gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
 end
 =#
 m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
-m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
+# m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
+m <= Setting(:empty_pseudo_measurement_equation, trues(get_setting(m, :n_regimes)))
 sys1 = compute_system(m; tvis = true)
 #=@btime begin
     compute_system(m; tvis = true)
