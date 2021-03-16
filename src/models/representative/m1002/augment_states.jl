@@ -191,7 +191,8 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     end
 
     # Expected inflation
-    TTT_aug[endo_new[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
+    # TTT_aug[endo_new[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
+    TTT_aug[endo_new[:Et_π_t], 1:n_endo] = view(TTT^2, endo[:π_t], :)
 
     # The 8th column of the addition to TTT corresponds to "v_lr" which is set equal to
     # e_lr – measurement errors for the two real wage observables built in
@@ -236,7 +237,8 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     ### RRR modfications
 
     # Expected inflation
-    RRR_aug[endo_new[:Et_π_t], :] = (TTT*RRR)[endo[:π_t], :]
+    # RRR_aug[endo_new[:Et_π_t], :] = (TTT*RRR)[endo[:π_t], :]
+    RRR_aug[endo_new[:Et_π_t], :] = view(TTT * RRR, endo[:π_t], :)
 
     # Measurement Error on long rate
     RRR_aug[endo_new[:e_lr_t], exo[:lr_sh]] = 1.0

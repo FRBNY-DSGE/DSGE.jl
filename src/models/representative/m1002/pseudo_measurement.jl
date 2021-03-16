@@ -225,7 +225,8 @@ function pseudo_measurement(m::Model1002{T},
     ZZ_pseudo[pseudo[:z_t], endo[:z_t]] = 1.
 
     ## Expected 10-Year Rate Gap
-    ZZ_pseudo[pseudo[:Expected10YearRateGap], :] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
+    # ZZ_pseudo[pseudo[:Expected10YearRateGap], :] = TTT10[endo[:R_t], :] - TTT10[endo[:r_f_t], :] - TTT10[endo[:Eπ_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearRateGap], :] = view(TTT10, endo[:R_t], :) - view(TTT10, endo[:r_f_t], :) - view(TTT10, endo[:Eπ_t], :)
     DD_pseudo[pseudo[:Expected10YearRateGap]]    = CCC10[endo[:R_t]] - CCC10[endo[:r_f_t]] - CCC10[endo[:Eπ_t]]
 
     ## Nominal FFR
@@ -233,11 +234,13 @@ function pseudo_measurement(m::Model1002{T},
     DD_pseudo[pseudo[:NominalFFR]] = m[:Rstarn]
 
     ## Expected 10-Year Interest Rate
-    ZZ_pseudo[pseudo[:Expected10YearRate], :] = TTT10[endo[:R_t], :]
+    # ZZ_pseudo[pseudo[:Expected10YearRate], :] = TTT10[endo[:R_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearRate], :] = view(TTT10, endo[:R_t], :)
     DD_pseudo[pseudo[:Expected10YearRate]]    = m[:Rstarn] + CCC10[endo[:R_t]]
 
     ## Expected 10-Year Natural Rate
-    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], :] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
+    # ZZ_pseudo[pseudo[:Expected10YearNaturalRate], :] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
+    ZZ_pseudo[pseudo[:Expected10YearNaturalRate], :] = view(TTT10, endo[:r_f_t], :) + view(TTT10, endo[:Eπ_t], :)
     DD_pseudo[pseudo[:Expected10YearNaturalRate]]    = m[:Rstarn] + CCC10[endo[:r_f_t]] + CCC10[endo[:Eπ_t]]
 
     ## Expected Nominal Natural Rate

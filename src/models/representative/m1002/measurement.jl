@@ -193,14 +193,17 @@ function measurement(m::Model1002{T},
                                                  memo = use_fwd_exp_sum ? memo : nothing)
     TTT10        = TTT10 ./ 40. # divide by 40 to average across 10 years
     CCC10        = CCC10 ./ 40.
-    ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
+    ZZ[obs[:obs_longinflation], :] = view(TTT10, endo[:π_t], :)
+    # ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1) + CCC10[endo[:π_t]]
 
     ## Long Rate
-    ZZ_long_rate = ZZ[obs[:obs_nominalrate], :]'
-    ZZ[obs[:obs_longrate], :]                 = ZZ_long_rate * TTT10 # TODO: this is slightly inefficient, do what we do with long inflation
+    # ZZ_long_rate = ZZ[obs[:obs_nominalrate], :]'
+    # ZZ[obs[:obs_longrate], :]                 = ZZ_long_rate * TTT10 # TODO: this is slightly inefficient, do what we do with long inflation
+    ZZ[obs[:obs_longrate], :]                 =  view(TTT10, endo[:R_t], :) # TODO: this is slightly inefficient, do what we do with long inflation
     ZZ[obs[:obs_longrate], endo_new[:e_lr_t]] = 1.0
-    DD[obs[:obs_longrate]]                    = m[:Rstarn] + ZZ_long_rate * CCC10
+    DD[obs[:obs_longrate]]                    = m[:Rstarn] + CCC10[endo[:R_t]]
+    # DD[obs[:obs_longrate]]                    = m[:Rstarn] + ZZ_long_rate * CCC10
 
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]] = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
@@ -282,7 +285,7 @@ function measurement(m::Model1002{T},
         get_setting(m, :measurement_use_current_regime_matrices) : true
 
     # Anticipated monetary policy shocks
-    ZZ_obs_nomrate = ZZ[obs[:obs_nominalrate], :]'
+    # ZZ_obs_nomrate = ZZ[obs[:obs_nominalrate], :]'
     for i = 1:n_mon_anticipated_shocks(m)
         TTT_accum, CCC_accum = k_periods_ahead_expectations(TTT, CCC, TTTs, CCCs, reg, i, permanent_t;
                                                             integ_series = integ_series,
@@ -290,8 +293,10 @@ function measurement(m::Model1002{T},
                                                             ForwardExpectationsMemo(memo.time_varying_memo[min(reg + i, permanent_t, 17)],
                                                                                     memo.permanent_memo))
 
-        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ_obs_nomrate * TTT_accum
-        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn] + ZZ_obs_nomrate * CCC_accum
+        # ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ_obs_nomrate * TTT_accum
+        ZZ[obs[Symbol("obs_nominalrate$i")], :] = view(TTT_accum, endo[:R_t], :)
+        # DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn] + ZZ_obs_nomrate * CCC_accum
+        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn] + CCC_accum[endo[:R_t]]
         if subspec(m) == "ss11"
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_mon_anticipated_shocks(m)
         else
