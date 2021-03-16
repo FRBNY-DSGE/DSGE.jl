@@ -204,10 +204,10 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
 
             do_replace_eqcond = haskey(get_settings(m), :replace_eqcond) && get_setting(m, :replace_eqcond) &&
                 haskey(get_settings(m), :regime_eqcond_info)
-            has_eqcond_reg_map = haskey(get_settings(m), :eqcond_regime_mapping)
+            has_eqcond_reg_map = haskey(get_settings(m), :identical_eqcond_regimes)
             for reg in regimes
-                if has_eqcond_reg_map && haskey(get_setting(m, :eqcond_regime_mapping), reg)
-                    reg_to_copy = get_setting(m, :eqcond_regime_mapping)[reg]
+                if has_eqcond_reg_map && haskey(get_setting(m, :identical_eqcond_regimes), reg)
+                    reg_to_copy = get_setting(m, :identical_eqcond_regimes)[reg]
                     Γ0s[reg] = copy(Γ0s[reg_to_copy])
                     Γ1s[reg] = copy(Γ1s[reg_to_copy])
                     Cs[reg]  = copy( Cs[reg_to_copy])
@@ -536,17 +536,17 @@ function solve_uncertain_altpolicy(m::AbstractDSGEModel{T},
 
     @assert haskey(get_settings(m), :regime_eqcond_info) "The setting :regime_eqcond_info must exist"
 
-    has_eqcond_reg_map = haskey(get_settings(m), :eqcond_regime_mapping)
+    has_eqcond_reg_map = haskey(get_settings(m), :identical_eqcond_regimes)
     for reg in regimes
-        if has_eqcond_reg_map && haskey(get_setting(m, :eqcond_regime_mapping), reg)
-            reg_to_copy = get_setting(m, :eqcond_regime_mapping)[reg]
+        if has_eqcond_reg_map && haskey(get_setting(m, :identical_eqcond_regimes), reg)
+            reg_to_copy = get_setting(m, :identical_eqcond_regimes)[reg]
             Γ0s[reg] = copy(Γ0s[reg_to_copy])
             Γ1s[reg] = copy(Γ1s[reg_to_copy])
             Cs[reg]  = copy( Cs[reg_to_copy])
             Ψs[reg]  = copy( Ψs[reg_to_copy])
             Πs[reg]  = copy( Πs[reg_to_copy])
         else
-            Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = do_replace_eqcond && haskey(get_setting(m, :regime_eqcond_info), reg) ?
+            Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = haskey(get_setting(m, :regime_eqcond_info), reg) ?
                 get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)
         end
     end
