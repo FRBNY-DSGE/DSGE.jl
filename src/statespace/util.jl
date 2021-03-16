@@ -110,7 +110,7 @@ end
 """
 ```
 ForwardExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
-                        first_tv_period::Int64, last_tv_period::Int64,
+                        current_regime::Int64, last_tv_period::Int64,
                         first_perm_period::Int64, min_perm_power::Int64 = 0,
                         max_perm_power::Int64 = 0) where {S <: Real}
 ```
@@ -119,7 +119,7 @@ for computing forward expectations of states and sums of states.
 
 ### Inputs
 - `TTTs`: complete sequence of time-varying transition matrices from regime 1 to the final regime
-- `first_tv_period`: the first period with time-varying matrices
+- `current_regime`: the current period's regime
 - `last_tv_period`: the last period in which the transition matrix is believed to have changed relative to the previous period.
 - `first_perm_period`: the first period in which the transition matrix in `TTTs` is permanently imposed. This period
     should be from the perspective of an omniscient econometrician rather than the agents' perspective.
@@ -155,11 +155,11 @@ memo = ForwardExpectationsMemo(TTTs, t, 7, 7, 1, t + k + 1 - 7)
 ```
 """
 function ForwardExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
-                                 first_tv_period::Int64, last_tv_period::Int64,
+                                 current_regime::Int64, last_tv_period::Int64,
                                  first_perm_period::Int64, min_perm_power::Int64 = 0,
                                  max_perm_power::Int64 = 0) where {S <: Real}
 
-    @assert first_tv_period <= last_tv_period
+    @assert current_regime <= last_tv_period
     @assert min_perm_power <= max_perm_power
     @assert last_tv_period <= first_perm_period
 
@@ -173,7 +173,7 @@ function ForwardExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
         last_tv_period -= 1
     end
     tv_memo[last_tv_period] = TTTs[last_tv_period]
-    for k in (last_tv_period - 1):-1:(first_tv_period + 1)
+    for k in (last_tv_period - 1):-1:(current_regime + 1)
         tv_memo[k] = tv_memo[k + 1] * TTTs[k]
     end
 
@@ -196,18 +196,64 @@ end
 
 """
 ```
-ForwardMultipleExpectations(TTTs::Vector{<: AbstractMatrix{S}},
-                   first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
-                   first_perm_period::Int64, min_perm_power::Int64 = 0,
-                   max_perm_power::Int64 = 0) where {S <: Real}
+ForwardMultipleExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
+                                current_regime::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
+                                first_perm_period::Int64, min_perm_power::Int64 = 0,
+                                max_perm_power::Int64 = 0) where {S <: Real}
 ```
+computes the memo dictionaries of the necessary products/powers of TTTs
+for computing forward expectations of states and sums of states for
+multiple different horizon lengths for the "forward-looking" window, i.e. variation
+in how many periods ahead for which expectations are taken. This approach
+avoids repeating computations that would be incurred if the user
+instead repeatedly created `ForwardExpectationsMemo` for each horizon length.
+
+### Inputs
+- `TTTs`: complete sequence of time-varying transition matrices from regime 1 to the final regime
+- `current_regime`: the current period's regime
+- `min_last_tv_period`: the minimum last period in which the transition matrix is believed to have changed relative to the previous period.
+- `max_last_tv_period`: the maximum last period in which the transition matrix is believed to have changed relative to the previous period.
+- `first_perm_period`: the first period in which the transition matrix in `TTTs` is permanently imposed. This period
+    should be from the perspective of an omniscient econometrician rather than the agents' perspective.
+- `min_perm_power`: minimum power of the permanent matrix to be calculated, i.e. we calculate at least `TTTs[first_perm_period] ^ min_perm_power`
+- `max_perm_power`: maximum power of the permanent matrix to be calculated, i.e. we calculate at most `TTTs[first_perm_period] ^ max_perm_power`
+
+### Notes
+- To clarify what `min_last_tv_period` and `max_last_tv_period` should be, first consider the meaning of input argument
+`last_tv_period` for `ForwardExpectationsMemo`.
+If every matrix in `TTTs` is time-varying, AND agents believe every matrix is time-varying, then `last_tv_period = length(TTTs)`.
+However, if agents are myopic and believe that the last time-varying matrix is the second to last one, then
+`last_tv_period = length(TTTs) - 1`. This flexibility allows the user to specify different degrees of awareness about `TTTs`.
+
+The argument `min_last_tv_period` and `max_last_tv_period` allow the user to construct one memo object for
+computing varying lengths of forward expectations. For example, suppose we want expectations of the nominal rate
+from 1 to 6 periods ahead in the measurement equation in the regime `t`. Then you should run
+
+```
+ForwardExpectationsMemo(TTTs, t, t + 1, t + 6, ...) # ellipsis omits the remaining input args
+```
+
+- Note that when `max_last_tv_period == first_perm_period`,
+
+```
+time_varying_memo[max_last_tv_period] = TTTs[first_perm_period] * TTTs[first_perm_period - 1] * ... TTTs[t + 1]
+```
+
+Instead, we calculate
+
+```
+time_varying_memo[max_last_tv_period] = TTTs[first_perm_period - 1] * ... TTTs[t + 1]
+```
+
+The reason is that it is more efficient to include that first `TTTs[first_perm_period]` in the powers of `TTT[first_perm_period]`
+computed for `permanent_memo`.
 """
 function ForwardMultipleExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
-                                first_tv_period::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
+                                current_regime::Int64, min_last_tv_period::Int64, max_last_tv_period::Int64,
                                 first_perm_period::Int64, min_perm_power::Int64 = 0,
                                 max_perm_power::Int64 = 0) where {S <: Real}
 
-    @assert first_tv_period <= min_last_tv_period <= max_last_tv_period
+    @assert current_regime <= min_last_tv_period <= max_last_tv_period
     @assert min_perm_power <= max_perm_power
     @assert max_last_tv_period <= first_perm_period
 
@@ -223,7 +269,7 @@ function ForwardMultipleExpectationsMemo(TTTs::Vector{<: AbstractMatrix{S}},
         # of the time-varying matrices and ignore the permanent matrix
         last_tv_period = window_len == first_perm_period ? window_len - 1 : window_len
         tv_memo[window_len][last_tv_period] = TTTs[last_tv_period]
-        for k in (last_tv_period - 1):-1:(first_tv_period + 1)
+        for k in (last_tv_period - 1):-1:(current_regime + 1)
             tv_memo[window_len][k] = tv_memo[window_len][k + 1] * TTTs[k]
         end
     end
