@@ -307,9 +307,9 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
     # TODO: the commented step below should be unnecessary?
     # uncertain_altpol = haskey(get_settings(m), :uncertain_altpolicy) && get_setting(m, :uncertain_altpolicy)
     uncertain_altpol = uncertain_altpolicy
-    has_perf_cred_map = haskey(get_settings(m), :perfect_cred_regime_mapping)
-    if has_perf_cred_map
-        perf_cred_map = get_setting(m, :perfect_cred_regime_mapping)
+    has_perf_cred_same_reg = haskey(get_settings(m), :perfect_credibility_identical_transitions)
+    if has_perf_cred_same_reg
+        perf_cred_same_reg = get_setting(m, :perfect_credibility_identical_transitions)
     end
     if uncertain_altpol
         altpols = get_setting(m, :alternative_policies)
@@ -318,10 +318,10 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
     for reg in regimes
         # Check if, in the case of perfect credibility, whether or not the current regime's gensys solution
         # is identical to another regime's that has already been computed
-        if !uncertain_altpol && has_perf_cred_map && haskey(perf_cred_map, reg) && perf_cred_map[reg] != reg
-            TTTs[reg] = TTTs[perf_cred_map[reg]]
-            RRRs[reg] = RRRs[perf_cred_map[reg]]
-            CCCs[reg] = CCCs[perf_cred_map[reg]]
+        if !uncertain_altpol && has_perf_cred_same_reg && haskey(perf_cred_same_reg, reg) && perf_cred_same_reg[reg] != reg
+            TTTs[reg] = TTTs[perf_cred_same_reg[reg]]
+            RRRs[reg] = RRRs[perf_cred_same_reg[reg]]
+            CCCs[reg] = CCCs[perf_cred_same_reg[reg]]
 
             continue # if so, skip the remaidner of this loop
         end

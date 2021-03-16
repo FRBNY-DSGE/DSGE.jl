@@ -130,6 +130,10 @@ Types defining an alternative policy rule.
     the information set used for expectations in the measurement equation or
     `nothing` to indicate myopia in expectations across regimes.
 
+- `perfect_credibility_identical_transitions::Union{Dict{Int64, Int64}, Nothing}`: if not a `Nothing`,
+    then this field specifies regimes which have identical transition equations
+    in the case of perfect credibility.
+
 - `forecast_init::Function`: a function that initializes forecasts under the
   alternative policy rule. Specifically, it accepts a model, an `nshocks` x
   `n_forecast_periods` matrix of shocks to be applied in the forecast, and a
@@ -151,7 +155,7 @@ mutable struct MultiPeriodAltPolicy{S <: AbstractDict{Int64, EqcondEntry}} <: Ab
     temporary_altpolicy_names::Union{Vector{Symbol}, Nothing}
     temporary_altpolicy_length::Int64
     infoset::Union{Vector{UnitRange{Int64}}, Nothing}
-    perfect_cred_regime_mapping::Union{Dict{Int64, Int64}, Nothing}
+    perfect_credibility_identical_transitions::Union{Dict{Int64, Int64}, Nothing}
     forecast_init::Function
     color::Colorant
     linestyle::Symbol
@@ -163,14 +167,14 @@ function MultiPeriodAltPolicy(key::Symbol, n_regimes::Int64, regime_eqcond_info:
                               temporary_altpolicy_length::Int =  # default assumes the last regime is a
                               length(regime_eqcond_info) - 1, # lift-off regime, and all others are temporary ones.
                               infoset::Union{Vector{UnitRange{Int64}}, Nothing} = nothing,
-                              perfect_cred_regime_mapping::Union{Dict{Int64, Int64}, Nothing} = nothing,
+                              perfect_credibility_identical_transitions::Union{Dict{Int64, Int64}, Nothing} = nothing,
                               forecast_init::Function = identity,
                               color::Colorant = RGB(0., 0., 1.),
                               linestyle::Symbol = :solid)
 
     MultiPeriodAltPolicy(key, n_regimes, regime_eqcond_info, gensys2, temporary_altpolicy_names,
                          temporary_altpolicy_length, infoset,
-                         perfect_cred_regime_mapping, forecast_init, color, linestyle)
+                         perfect_credibility_identical_transitions, forecast_init, color, linestyle)
 end
 
 """
