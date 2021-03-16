@@ -204,9 +204,19 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
 
             do_replace_eqcond = haskey(get_settings(m), :replace_eqcond) && get_setting(m, :replace_eqcond) &&
                 haskey(get_settings(m), :regime_eqcond_info)
+            has_eqcond_reg_map = haskey(get_settings(m), :eqcond_regime_mapping)
             for reg in regimes
-                Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = do_replace_eqcond && haskey(get_setting(m, :regime_eqcond_info), reg) ?
-                    get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)
+                if has_eqcond_reg_map && haskey(get_setting(m, :eqcond_regime_mapping), reg)
+                    reg_to_copy = get_setting(m, :eqcond_regime_mapping)[reg]
+                    Γ0s[reg] = copy(Γ0s[reg_to_copy])
+                    Γ1s[reg] = copy(Γ1s[reg_to_copy])
+                    Cs[reg]  = copy( Cs[reg_to_copy])
+                    Ψs[reg]  = copy( Ψs[reg_to_copy])
+                    Πs[reg]  = copy( Πs[reg_to_copy])
+                else
+                    Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = do_replace_eqcond && haskey(get_setting(m, :regime_eqcond_info), reg) ?
+                        get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)
+                end
             end
 
             TTTs = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -221,15 +231,14 @@ function solve_regime_switching(m::AbstractDSGEModel{T};
                                            verbose = verbose)
             end
 
-            if gensys2 # NEED TO ALLOW EMPTY VERSION
+            # Solve for gensys2 regimes
+            if gensys2
                 for reg_range in gensys2_regimes
                     solve_gensys2!(m, Γ0s, Γ1s, Cs, Ψs, Πs,
                                    TTTs, RRRs, CCCs; gensys2_regimes = collect(reg_range),
                                    uncertain_altpolicy = uncertain_altpolicy,
                                    uncertain_temporary_altpolicy = uncertain_temporary_altpolicy,
                                    verbose = verbose)
-                    # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
-                    #       any temporary policy
                 end
             end
 
@@ -307,12 +316,14 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
     end
 
     for reg in regimes
+        # Check if, in the case of perfect credibility, whether or not the current regime's gensys solution
+        # is identical to another regime's that has already been computed
         if !uncertain_altpol && has_perf_cred_map && haskey(perf_cred_map, reg) && perf_cred_map[reg] != reg
             TTTs[reg] = TTTs[perf_cred_map[reg]]
             RRRs[reg] = RRRs[perf_cred_map[reg]]
             CCCs[reg] = CCCs[perf_cred_map[reg]]
 
-            continue
+            continue # if so, skip the remaidner of this loop
         end
 
         TTT_gensys, CCC_gensys, RRR_gensys, eu =
@@ -446,7 +457,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         # for the ZLB, so we can just use ffreg to identify the correct set of
         # equilibrium conditions.
         Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
-            gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
+            gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg];
+                                       use_sparse = (haskey(get_settings(m), :gensys2_sparse_matrices) &&
+                                                     get_setting(m, :gensys2_sparse_matrices)))
 
         ng2  = length(Tcal) - 1 # number of gensys2 regimes
         nzlb = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : ng2
@@ -523,9 +536,19 @@ function solve_uncertain_altpolicy(m::AbstractDSGEModel{T},
 
     @assert haskey(get_settings(m), :regime_eqcond_info) "The setting :regime_eqcond_info must exist"
 
+    has_eqcond_reg_map = haskey(get_settings(m), :eqcond_regime_mapping)
     for reg in regimes
-        Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = haskey(get_setting(m, :regime_eqcond_info), reg) ?
-            get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)
+        if has_eqcond_reg_map && haskey(get_setting(m, :eqcond_regime_mapping), reg)
+            reg_to_copy = get_setting(m, :eqcond_regime_mapping)[reg]
+            Γ0s[reg] = copy(Γ0s[reg_to_copy])
+            Γ1s[reg] = copy(Γ1s[reg_to_copy])
+            Cs[reg]  = copy( Cs[reg_to_copy])
+            Ψs[reg]  = copy( Ψs[reg_to_copy])
+            Πs[reg]  = copy( Πs[reg_to_copy])
+        else
+            Γ0s[reg], Γ1s[reg], Cs[reg], Ψs[reg], Πs[reg] = do_replace_eqcond && haskey(get_setting(m, :regime_eqcond_info), reg) ?
+                get_setting(m, :regime_eqcond_info)[reg].alternative_policy.eqcond(m, reg) : eqcond(m, reg)
+        end
     end
 
     TTTs = Vector{Matrix{Float64}}(undef, length(regimes))
@@ -544,8 +567,6 @@ function solve_uncertain_altpolicy(m::AbstractDSGEModel{T},
                        TTTs, RRRs, CCCs, system_perfect_cred_totpolicies, is_altpol;
                        gensys2_regimes = collect(reg_range),
                        verbose = verbose)
-        # TODO: extend "uncertain ZLB" to "uncertain_gensys2" since it can in principle be used for
-        #       any temporary policy
     end
 
     return TTTs, RRRs, CCCs
@@ -620,7 +641,9 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
     # equilibrium conditions.
     ffreg = first(gensys2_regimes) + 1
     Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til =
-        gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg])
+        gensys_to_predictable_form(Γ0s[ffreg], Γ1s[ffreg], Cs[ffreg], Ψs[ffreg], Πs[ffreg];
+                                   use_sparse = (haskey(get_settings(m), :gensys2_sparse_matrices) &&
+                                                 get_setting(m, :gensys2_sparse_matrices)))
 
     # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
     # Then, if nzlb = 1, Tcal should have length 2, and you only need the lift-off matrix
