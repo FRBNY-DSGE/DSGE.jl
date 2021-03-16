@@ -176,11 +176,12 @@ using BenchmarkTools
     sys1 = compute_system(m; tvis = true)
    nothing
 end=#
-m <= Setting(:perfect_cred_regime_mapping, Dict(i => 19 for i in 19:29))
+
+m <= Setting(:perfect_credibility_identical_transitions, Dict(i => 19 for i in 19:29))
 tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
                                 temporary_altpolicy_names = [:zlb_rule],
                                 temporary_altpolicy_length = 6,
-                                perfect_cred_regime_mapping = Dict(i => 12 for i in 12:29),
+                                perfect_credibility_identical_transitions = Dict(i => 12 for i in 13:29),
                                 infoset = copy(get_setting(m, :tvis_information_set)))
 m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule2])
 sys2 = compute_system(m; tvis = true)
@@ -258,13 +259,14 @@ end
 m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
 m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
 sys1 = compute_system(m; tvis = true)
-@btime begin
+#=@btime begin
     compute_system(m; tvis = true)
     nothing
-end
+end=#
 
 m <= Setting(:use_forward_expectations_memo, true)
 m <= Setting(:use_forward_expected_sum_memo, true)
+m <= Setting(:memo_permanent_policy_regime, 17)
 sys2 = compute_system(m; tvis = true)
 
 for i in 1:get_setting(m, :n_regimes)
@@ -272,10 +274,10 @@ for i in 1:get_setting(m, :n_regimes)
     @test sys1[i, :ZZ] ≈ sys2[i, :ZZ]
 end
 
-@btime begin
+#=@btime begin
     compute_system(m; tvis = true)
     nothing
-end
+end=#
 delete!(m.settings, :empty_measurement_equation)
 delete!(m.settings, :empty_pseudo_measurement_equation)
 fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, df,

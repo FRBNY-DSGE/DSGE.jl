@@ -250,13 +250,15 @@ function RegimeSwitchingSystem(m::AbstractDSGEModel{T}, TTTs::Vector{<: Abstract
     # Compute memo for forward expectations if requested
     use_fwd_exp_sum = haskey(get_settings(m), :use_forward_expected_sum_memo) && get_setting(m, :use_forward_expected_sum_memo)
     use_fwd_exp     = haskey(get_settings(m), :use_forward_expectations_memo) && get_setting(m, :use_forward_expectations_memo)
-    memo = if use_fwd_exp_sum
+    perm_pol_reg    = haskey(get_settings(m), :memo_permanent_policy_regime) ?
+        get_setting(m, :memo_permanent_policy_regime) : gensys2_regimes[end] # make a guess that the permanent policy is gensys2_regimes[end]
+    memo = if use_fwd_exp_sum                                                # but this guess may not work
         # TODO: update the hard-coded 40 to allow for other cases, but currently, the only use case
         # requires power up to 40.
-        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, length(TTTs), length(TTTs), 1, 40)
+        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, perm_pol_reg, perm_pol_reg, 1, 40)
     elseif use_fwd_exp
-        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, length(TTTs),
-                                        length(TTTs), 1, n_mon_anticipated_shocks(m))
+        ForwardMultipleExpectationsMemo(TTTs, gensys2_regimes[1] + 1, gensys2_regimes[1] + 2, perm_pol_reg,
+                                        perm_pol_reg, 1, n_mon_anticipated_shocks(m))
     else
         nothing
     end
