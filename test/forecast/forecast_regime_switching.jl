@@ -137,6 +137,7 @@ end
         replace_eqcond[i] = DSGE.EqcondEntry(zlb_rule(), [1., 0.])
     end
     m <= Setting(:regime_eqcond_info, replace_eqcond)
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m),
@@ -449,6 +450,7 @@ end
         end
         replace_eqcond[n_reg_temp] = DSGE.EqcondEntry(flexible_ait(), prob_weights)
         m <= Setting(:regime_eqcond_info, replace_eqcond)
+        m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 
         if prob_weights[1] < .5
             m <= Setting(:uncertain_altpolicy, true)
