@@ -6,7 +6,7 @@ m = AnSchorfheide()
 
 # Data can be constructed automatically, i.e. calling estimate(m),
 # but for ease of example we will load in data
-@load "../../test/reference/smc.jld2" data
+@load "../test/reference/smc.jld2" data
 data = Matrix{Float64}(data) # may be loaded as Matrix{Union{Float64, Missing}}, but shouldn't have missing data, so we recast the type here.
 
 # SMC can take advantage of parallel computing resources, should
