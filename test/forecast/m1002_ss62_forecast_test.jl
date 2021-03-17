@@ -263,6 +263,7 @@ end
 m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
 # m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
 m <= Setting(:empty_pseudo_measurement_equation, trues(get_setting(m, :n_regimes)))
+m <= Setting(:identical_eqcond_regimes, Dict(3 => 1, 4 => 1, 6 => 5)) # regime 2 is different from 1, 3, and 4 b/c of the proportional anticipated shocks
 sys1 = compute_system(m; tvis = true)
 #=@btime begin
     compute_system(m; tvis = true)
@@ -283,6 +284,13 @@ end
     compute_system(m; tvis = true)
     nothing
 end=#
+
+m <= Setting(:use_forward_expected_sum_memo, false)
+#=@btime begin
+    compute_system(m; tvis = true)
+    nothing
+end=#
+
 delete!(m.settings, :empty_measurement_equation)
 delete!(m.settings, :empty_pseudo_measurement_equation)
 fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, df,
