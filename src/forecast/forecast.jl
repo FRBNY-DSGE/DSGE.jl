@@ -407,15 +407,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     orig_temp_zlb     = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
 
 
-    # Information set - start of awareness of ZLB
-    first_aware = if haskey(get_settings(m), :tvis_information_set)
-        findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
-    elseif haskey(get_settings(m), :regime_eqcond_info)
-        findfirst([original_info_set[i].key == :zlb_rule for i in keys(original_info_set)])
-    else
-        nothing
-    end
-
     # Grab some information about the forecast
     n_hist_regimes = haskey(get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     has_reg_dates = haskey(get_settings(m), :regime_dates) # calculate dates of first & last regimes we need to add for the alt policy
@@ -444,11 +435,18 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     end
 
     # Determine which quarters in the forecast have sub-zlb nominal rates
-    has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= get_setting(m, :zlb_rule_value) / 4. + tol
+    has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m)
 
     first_endo_zlb     = findfirst(has_neg_rates)
 
-
+    # Information set - start of awareness of ZLB
+    first_aware = if haskey(get_settings(m), :tvis_information_set)
+        findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
+    elseif haskey(get_settings(m), :regime_eqcond_info)
+        findfirst([original_info_set[i].key == :zlb_rule for i in keys(original_info_set)])
+    else
+        first_endo_zlb
+    end
 
     ## 1. Determine if we need to do anything (are there any further negative nominal rates)
     # If not, return the forecast as is
@@ -461,6 +459,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # If there are negative nominal rates in the forecast, we continue to computing the endogenous
         # zlb forecast
     else
+        min_zlb = haskey(m.settings, :min_temporary_altpolicy_length) ? get_setting(m, :min_temporary_altpolicy_length) : 0
+        first_endo_zlb = max(first_endo_zlb, min_zlb)
         last_endo_zlb = findfirst(.!has_neg_rates[first_endo_zlb:end])
         first_endo_zlb += pre_fcast_regimes
 
@@ -469,25 +469,32 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         max_zlb_regimes = haskey(get_settings(m), :max_temporary_altpolicy_length) ? get_setting(m, :max_temporary_altpolicy_length) : size(obs, 2) - 3
         last_endo_zlb = min(last_endo_zlb, max_zlb_regimes)
 
-        min_zlb = haskey(m.settings, :min_temporary_altpolicy_length) ? get_setting(m, :min_temporary_altpolicy_length) : 0
-        post_minzlb_reg = get_setting(m, :reg_forecast_start) + min_zlb + 1 # increment for liftoff
+
+        # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
+        if isnothing(first_aware)
+            first_aware = get_setting(m, :reg_forecast_start)
+        end
+        set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_aware)
 
 
         endozlb_forecast::Function = (zlb_start, zlb_end; unant_enforce_zlb = false) -> forecast_endozlb_helper(m, zlb_start, zlb_end, z0, states, shocks;
-                                                                                                                cond_type = cond_type, unant_enforce_zlb = unant_enforce_zlb,
-                                                                                                                set_zlb_regime_vals = set_zlb_regime_vals,
-                                                                                                                set_info_sets_altpolicy = set_info_sets_altpolicy,
-                                                                                                                update_regime_eqcond_info! = update_regime_eqcond_info!,
-                                                                                                                tol = tol, rerun_smoother = rerun_smoother, df = df,
-                                                                                                                draw_states = draw_states, histstates = histstates,
-                                                                                                                histshocks = histshocks, histpseudo = histpseudo,
-                                                                                                                initial_states = initial_states)
+            cond_type = cond_type, unant_enforce_zlb = unant_enforce_zlb,
+            set_zlb_regime_vals = set_zlb_regime_vals,
+            set_info_sets_altpolicy = set_info_sets_altpolicy,
+            update_regime_eqcond_info! = update_regime_eqcond_info!,
+            tol = tol, rerun_smoother = rerun_smoother, df = df,
+            draw_states = draw_states, histstates = histstates,
+            histshocks = histshocks, histpseudo = histpseudo,
+            initial_states = initial_states)
         ## 2. If we don't liftoff post minimum zlb, then enforce the rest of the contiguous zlb
         ##    intervals using two rule (zlb_rule alternative policy)
         if !has_neg_rates[min_zlb+1]
-            system = compute_system(m; tvis = true)
-            states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
-                                           enforce_zlb = true)
+            endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zlb_rule_value) / 4. + tol)
+            if !endo_success
+                system = compute_system(m; tvis = true)
+                states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
+                                               enforce_zlb = true)
+            end
             if rerun_smoother
                 return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
             else
@@ -588,7 +595,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         end
         ## 6. If we still have further noncontiguous periods of negative rates, run a forecast enforcing zlb over those remaining periods
         ##    using unanticipated monetary policy shocks.
-        endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zero_rate_zlb_value) / 4. + tol)
+        endo_success = all(obs[get_observables(m)[:obs_nominalrate], :] .> get_setting(m, :zlb_rule_value) / 4. + tol)
         if !endo_success
             states, obs, pseudo, histstates, histshocks, histpseudo, initial_states =
             endozlb_forecast(first_endo_zlb, last_endo_zlb+1, unant_enforce_zlb = true)
@@ -720,6 +727,9 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
         findfirst([original_info_set[i].key == :zlb_rule for i in keys(original_info_set)])
     else
         nothing
+    end
+    if isnothing(first_aware)
+        first_aware = first_endo_zlb
     end
     set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_aware)
 
