@@ -607,6 +607,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     orig_temp_altpol_names  = haskey(get_settings(m), :temporary_altpolicy_names) ? get_setting(m, :temporary_altpolicy_names) : nothing
     orig_temp_altpol_len    = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
     orig_perf_cred_same_reg = haskey(get_settings(m), :perfect_credibility_identical_transitions) ? get_setting(m, :perfect_credibility_identical_transitions) : nothing
+    orig_iden_eqcond_reg    = haskey(get_settings(m), :identical_eqcond_regimes) ? get_setting(m, :identical_eqcond_regimes) : nothing
     is_gensys2              = haskey(get_settings(m), :gensys2) && get_setting(m, :gensys2)
 
     ## Now calculate the perfectly credible transition matrices for all alternative policies
@@ -618,6 +619,7 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     delete!(get_settings(m), :tvis_information_set) # does nothing if tvis_information_set is not a key in get_settings(m)
     delete!(get_settings(m), :temporary_altpolicy_names) # does nothing if temporary_altpolicy_names is not a key in get_settings(m)
     delete!(get_settings(m), :perfect_credibility_identical_transitions) # does nothing if temporary_altpolicy_names is not a key in get_settings(m)
+    delete!(get_settings(m), :identical_eqcond_regimes) # does nothing if temporary_altpolicy_names is not a key in get_settings(m)
 
     for i in 2:n_totpol # want to populate TTTs, RRRs, and CCCs, and there are n_totpol total policies
         new_altpol = get_setting(m, :alternative_policies)[i - 1] # decrement by 1 b/c :alternative_policies only includes
@@ -649,6 +651,9 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
             if !isnothing(new_altpol.temporary_altpolicy_length)
                 m <= Setting(:temporary_altpolicy_length, new_altpol.temporary_altpolicy_length)
             end
+            if !isnothing(new_altpol.identical_eqcond_regimes)
+                m <= Setting(:identical_eqcond_regimes, new_altpol.identical_eqcond_regimes)
+            end
             if !isnothing(new_altpol.perfect_credibility_identical_transitions)
                 m <= Setting(:perfect_credibility_identical_transitions, new_altpol.perfect_credibility_identical_transitions)
             end
@@ -678,6 +683,9 @@ function perfect_cred_multiperiod_altpolicy_systems(m::AbstractDSGEModel{T}, is_
     end
     if !isnothing(orig_temp_altpol_len)
         m <= Setting(:temporary_altpolicy_length, orig_temp_altpol_len)
+    end
+    if !isnothing(orig_iden_eqcond_reg)
+        m <= Setting(:identical_eqcond_regimes, orig_iden_eqcond_reg)
     end
     if !isnothing(orig_perf_cred_same_reg)
         m <= Setting(:perfect_credibility_identical_transitions, orig_perf_cred_same_reg)
