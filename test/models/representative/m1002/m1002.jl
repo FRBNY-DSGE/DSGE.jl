@@ -127,7 +127,7 @@ inds3 = 25:30 # covid shock indices
 for k in [:σ_biidc, :σ_φ, :σ_ziid]
     @test haskey(m[k].regimes, :prior)
     @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 2)).ν
-    @test get(regime_prior(m[k], 1)).ν != get(regime_prior(m[k], 3)).ν
+    @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 3)).ν
     @test get(regime_prior(m[k], 1)).τ == get(regime_prior(m[k], 2)).τ
     @test get(regime_prior(m[k], 1)).τ != get(regime_prior(m[k], 3)).τ
 end
