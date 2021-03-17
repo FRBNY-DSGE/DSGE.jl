@@ -49,7 +49,6 @@ end
     @test Γ0_alt99[eq_mp, endo[:y_f_t]] == 1/4
 end
 
-
 # Testing
 @testset "Compare AltPolicy eqconds under hist and alt rules" begin
     @test Γ0_hist[eq_other, :] ≈ Γ0_alt93[eq_other, :]

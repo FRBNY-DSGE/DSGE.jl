@@ -315,6 +315,7 @@ end
     end
     regime_eqcond_info_shortzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     regime_eqcond_info_shortzlb[get_setting(m, :n_regimes)] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
+    m <= Setting(:zero_rate_zlb_value, 0.)
 
     regime_eqcond_info_longzlb = Dict()
     for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 1)
