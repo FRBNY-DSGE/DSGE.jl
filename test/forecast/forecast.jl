@@ -82,7 +82,7 @@ end
                                                 3 => Date(2020, 6, 30)))
     m <= Setting(:forecast_horizons, 12)
     shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m))
-    shocks[m.exogenous_shocks[:b_sh], 1] = -0.6 # suppose massive negative shock to spreads -> MP should drop!
+    shocks[m.exogenous_shocks[:b_sh], 1] = -0.8 # suppose massive negative shock to spreads -> MP should drop!
     m <= Setting(:gensys2, false)
     m <= Setting(:regime_switching, true)
     setup_regime_switching_inds!(m)
@@ -105,7 +105,7 @@ end
                                                 4 => Date(2020, 9, 30)))
     m <= Setting(:forecast_horizons, 12)
     shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m; cond_type = :full))
-    shocks[m.exogenous_shocks[:b_sh], 1] = -0.6 # suppose massive negative shock to spreads -> MP should drop!
+    shocks[m.exogenous_shocks[:b_sh], 1] = -0.8 # suppose massive negative shock to spreads -> MP should drop!
     m <= Setting(:replace_eqcond, false)
     m <= Setting(:gensys2, false)
     m <= Setting(:regime_switching, true)
