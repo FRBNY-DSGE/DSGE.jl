@@ -204,6 +204,48 @@ object's `settings` field. However, with the additional keyword argument
 m = Model990(custom_settings = custom_settings, testing = true)
 ```
 
+## [Accelerating Computation of Regime-Switching System](@id accel-regime-switch-statespace-comp)
+Regime-switching state space systems take more time to compute, which can
+severely slow down estimation and forecasting time. The interface for
+computing regime-switching systems is written to be easy to use and generic,
+but, as a result, its default behavior ignores information that could
+be used to accelerate computation time. We provide some settings
+that allow the user to specify such information about the state space system.
+
+- `perfect_credibility_identical_transitions::Dict{Int, Int}`: different regimes
+  may have the same transition equations (`TTT`, `RRR`, and `CCC` matrices,
+  also see [Solving the Model](@ef solving-dsge-doc)).
+  This setting tells the code to use another regime's transition equation rather than
+  recalculate the equation. The keys of this `Dict` are regime numbers,
+  and the values specify the regime to which the keys' regimes are identical.
+  For example, if the setting was `Dict(2 => 1, 3 => 1)`, then we are saying
+  that regimes 2 and 3 have the same transition equations as regime 1.
+
+- `identical_eqcond_regimes::Dict{Int, Int}`: different regimes
+  may have the same equilibrium conditions (see [Solving the Model](@ef solving-dsge-doc)).
+  This setting tells the code to copy another regime's equilibrium conditions
+  rather than recompute the gensys matrices. The keys of this `Dict` are regime numbers,
+  and the values specify the regime to which the keys' regimes are identical.
+  For example, if the setting was `Dict(2 => 1, 3 => 1)`, then we are saying
+  that regimes 2 and 3 have the same equilibrium conditions as regime 1.
+
+- `empty_measurement_equation::Vector{Bool}`: when using time-varying
+  information sets and forward-looking observables, you may need to calculate
+  the transition equations beyond the last period of available data.
+  By default, `compute_system` will also compute the measurement equation
+  for these regimes in the future, which is unnecessary if you are trying to
+  estimate the model. This setting specifies which regimes
+  can have an empty measurement equation (set to be a `Measurement` type
+  with undefined matrices for its fields). A `false` element in the vector
+  means that the measurement equation is nonempty, while a `true` element
+  means an empty measurement equation. The length of the vector
+  should be the same length as the number of regimes, and the indices
+  of the vector corresponding to the regime number.
+
+- `empty_pseudo_measurement_equation::Vector{Bool}`: same as `empty_measurement_equation`
+  but for the pseudo-measurement equation. For estimations, you can omit all
+  the pseudo-measurement equations since they are unnecessary.
+
 ## [Regime-Switching Forecasts](@id regime-switch-forecast)
 
 Forecasts can involve state-space systems with exogenous and unanticipated regime-switching
@@ -309,6 +351,8 @@ DSGE.k_periods_ahead_expected_sums
 
 See the [measurement equation for Model 1002](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/model/representative/m1002/measurement.jl)
 for an example of how these functions are used.
+
+TODO: document memo construction and note that typically, only the k_periods_ahead_expectations is faster
 
 For details on how we implement a state space system with time-varying information sets,
 see [The `TimeVaryingInformationSetSystem` Type](@ref tvistype). For guidance on how to use this type,
@@ -518,6 +562,8 @@ custom_settings = Dict{Symbol, Setting}(:antshocks => Setting(:antshocks, Dict{S
                 :ant_eq_mapping => Setting(:ant_eq_mapping, Dict{Symbol, Symbol}(:b => :b)))
 m = Model1002("ss10"; custom_settings = custom_settings)
 ```
+
+TODO: add documentation of using the endogenous ZLB code. Update example script
 
 ## [Editing or Extending a Model](@id editing-extending-model)
 

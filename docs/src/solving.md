@@ -59,7 +59,8 @@ or whatever default regime is desired.
 function measurement(m::MyDSGEModel, TTT::AbstractMatrix{T}, RRR::AbstractMatrix{T}, CCC::AbstractVector{T};
                      reg::Int = 1, TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                      CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                     information_set::UnitRange = reg:reg) where {T <: Real}
+                     information_set::UnitRange = reg:reg,
+                     memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: Real}
 ```
 The type assertions for the arrays and keywords are not strictly necessary but are advised. Alternatively,
 the user could simply set
