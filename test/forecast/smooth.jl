@@ -311,7 +311,7 @@ end
     setup_regime_switching_inds!(m; cond_type = :full)
     regime_eqcond_info_shortzlb = Dict()
     for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 1)
-        regime_eqcond_info_shortzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+        regime_eqcond_info_shortzlb[i] = DSGE.EqcondEntry(DSGE.zlb_rule(), [1., 0.])
     end
     regime_eqcond_info_shortzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2019, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     regime_eqcond_info_shortzlb[get_setting(m, :n_regimes)] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
@@ -319,7 +319,7 @@ end
 
     regime_eqcond_info_longzlb = Dict()
     for i in 4:(length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 1)
-        regime_eqcond_info_longzlb[i] = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
+        regime_eqcond_info_longzlb[i] = DSGE.EqcondEntry(DSGE.zlb_rule(), [1., 0.])
     end
     regime_eqcond_info_longzlb[length(DSGE.quarter_range(Date(2017, 3, 31), Date(2020, 12, 31))) + 2] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])
     regime_eqcond_info_longzlb[get_setting(m, :n_regimes)] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), [1., 0.])

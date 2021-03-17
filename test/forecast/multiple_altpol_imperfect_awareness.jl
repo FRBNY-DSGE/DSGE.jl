@@ -120,8 +120,8 @@ m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = :full)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 m <= Setting(:temporary_altpolicy_length, n_zlb_reg)
-m <= Setting(:temporary_altpolicy_names, [:zero_rate])
-m <= Setting(:zero_rate_zlb_value, 0.)
+m <= Setting(:temporary_altpolicy_names, [:zlb_rule])
+m <= Setting(:zlb_rule_value, 0.)
 
 # Now add additional regimes of flexible AIT to allow time-varying credibility
 for i in nreg0:(nreg0 + 15)

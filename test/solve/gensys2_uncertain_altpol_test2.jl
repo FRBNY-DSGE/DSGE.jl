@@ -143,7 +143,7 @@ for j in 1:length(prob_vecs)
     m <= Setting(:gensys2_separate_cond_regimes, true)
     replace_eqcond = Dict{Int, DSGE.EqcondEntry}()     # Which rule to replace with in which periods
     for regind in tempZLB_regimes[j]
-        replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), prob_vecs[j]) # Temp ZLB rule in this regimes
+        replace_eqcond[regind] = DSGE.EqcondEntry(DSGE.zlb_rule(), prob_vecs[j]) # Temp ZLB rule in this regimes
     end
     replace_eqcond[tempZLB_regimes[j][end] + 1] = DSGE.EqcondEntry(DSGE.smooth_ait_gdp_alt(), prob_vecs[j])
     m <= Setting(:regime_eqcond_info, replace_eqcond)
@@ -183,7 +183,7 @@ for j in 1:length(prob_vecs)
     # Only need to fill up the matrices for the forecast regimes for this part
     for fcast_reg in 3:length(TTTs_uzlb)
         Γ0s[fcast_reg], Γ1s[fcast_reg], Cs[fcast_reg], Ψs[fcast_reg], Πs[fcast_reg] =
-            DSGE.zero_rate_eqcond(m, fcast_reg)
+            DSGE.zlb_rule_eqcond(m, fcast_reg)
     end
     TTT_gensys_final, RRR_gensys_final, CCC_gensys_final = solve(m)
     TTT_gensys_final = TTT_gensys_final[1:n_states(m), 1:n_states(m)]

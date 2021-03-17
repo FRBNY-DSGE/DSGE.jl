@@ -103,10 +103,10 @@ m <= Setting(:date_conditional_end, Date(2020, 6, 30))
 m <= Setting(:tvis_information_set, [1:1, 2:2, 3:6, 4:6, 5:6, 6:6])
 m <= Setting(:replace_eqcond, true)
 m <= Setting(:gensys2, true)
-zero_rate_eqcond = DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])
-m <= Setting(:regime_eqcond_info, Dict(3 => deepcopy(zero_rate_eqcond),
-                                             4 => deepcopy(zero_rate_eqcond),
-                                             5 => deepcopy(zero_rate_eqcond),
+zlb_rule_eqcond = DSGE.EqcondEntry(DSGE.zlb_rule(), [1., 0.])
+m <= Setting(:regime_eqcond_info, Dict(3 => deepcopy(zlb_rule_eqcond),
+                                             4 => deepcopy(zlb_rule_eqcond),
+                                             5 => deepcopy(zlb_rule_eqcond),
                                              6 => DSGE.EqcondEntry(DSGE.flexible_ait(), [1., 0.])))
 m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 setup_regime_switching_inds!(m; cond_type = :full)

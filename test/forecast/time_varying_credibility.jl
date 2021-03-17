@@ -99,7 +99,7 @@ m <= Setting(:gensys2, true)
 
 # Set up credibility for ZLB and alternative policy, if applicable
 m <= Setting(:uncertain_temporary_altpolicy, true)
-m <= Setting(:temporary_altpolicy_names, [:zero_rate])
+m <= Setting(:temporary_altpolicy_names, [:zlb_rule])
 m <= Setting(:zlb_rule_value, 0.)
 m <= Setting(:uncertain_altpolicy, true)
 gensys2_first_regime = get_setting(m, :n_regimes) + 1
@@ -114,7 +114,7 @@ for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_re
                           DSGE.quarter_range(reg_dates[gensys2_first_regime],
                                              DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
     reg_dates[regind] = date
-    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zero_rate(), [0., 1.])
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zlb_rule(), [0., 1.])
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = DSGE.iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
 regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(DSGE.flexible_ait(), [0., 1.])
