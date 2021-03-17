@@ -490,11 +490,14 @@ the model's setup:
 
 ```
 m <= Setting(:uncertain_temporary_altpolicy, true)
+m <= Setting(:temporary_altpolicy_names, keys_of_temp_altpols) # e.g. keys_of_temp_altpols = [:zlb_rule] or [:zero_rate]
 m <= Setting(:temporary_altpolicy_length, n_zlb_regs)
 ```
 
 The first line tells that a temporary altpolicy with imperfect awareness should apply.
-The second line indicates the number of regimes for which the temporary altpolicy occurs. If the second line is not specified,
+The second line tells which alternative policies (based on their keys) should be recognized as temporary policies
+and is used to infer on which regimes `gensys2` should be called.
+The third line indicates the number of regimes for which the temporary altpolicy occurs. If the third line is not specified,
 then it is assumed that all regimes in `get_setting(m, :regime_eqcond_info)` except the last one
 are temporary altpolicy regimes. This assumption can be wrong, for example, if credibility changes after the temporary altpolicy ends.
 
@@ -579,7 +582,7 @@ delete!(m.settings, :alternative_policies) # if :alternative_policies already ex
 
 altpol2 = MultiPeriodAltPolicy(:temporary_zlb, get_setting(m, :n_regimes),
                                reg_eqcond_info, gensys2 = true,
-                               temporary_altpolicy_names, [:zlb_rule],
+                               temporary_altpolicy_names = [:zlb_rule],
                                temporary_altpolicy_length = 3,
                                infoset = new_infoset)
 
