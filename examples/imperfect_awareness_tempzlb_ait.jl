@@ -14,6 +14,9 @@ fn = dirname(@__FILE__)
 zlb_altpolicy     = true   # run a forecast
 make_plots        = false  # Make plots
 save_plots        = false  # Save plots to figurespath(m, "forecast")
+endo_zlb          = false  # Run forecast with endogenous zlb
+add_workers       = false  # Run in parallel
+n_workers         = 10
 
 pol_str = "Uncertain ZLB, Uncertain AIT"
 
@@ -116,6 +119,9 @@ output_vars = [:histpseudo, :histobs, :histstdshocks,
                :hist4qpseudo, :hist4qobs, :histutpseudo,
                :forecastpseudo, :forecastobs, :forecastutpseudo,
                :forecast4qpseudo, :forecast4qobs, :forecaststdshocks]
+if endo_zlb
+    append!(output_vars, [:bddforecastobs, :bddforecastpseudo])
+end
 
 if zlb_altpolicy
     Hbar = 4 # number of zlb regimes
@@ -177,7 +183,7 @@ if zlb_altpolicy
     credvec = range(0., stop = 1., length = n_tempZLB_regimes - 2) # Credibility of ZLB increases as time goes on
     replace_eqcond = Dict{Int, EqcondEntry}() # Which eqcond to use in which periods
     for (i, reg) in enumerate(3:n_tempZLB_regimes)
-        replace_eqcond[reg] = EqcondEntry(zero_rate(), [credvec[i], 1. - credvec[i]]) # Temp ZLB rule in these regimes
+        replace_eqcond[reg] = EqcondEntry(zlb_rule(), [credvec[i], 1. - credvec[i]]) # Temp ZLB rule in these regimes
     end
     replace_eqcond[n_tempZLB_regimes + 1] = EqcondEntry(DSGE.smooth_ait_gdp_alt(), [1., 0.]) # switch to AIT in the final regime
     m <= Setting(:regime_eqcond_info, replace_eqcond) # Add mapping of regimes to new eqcond matrices
@@ -204,8 +210,31 @@ if zlb_altpolicy
         df[inds_tempzlb, [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]] .= NaN
     end
 
-    fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
+    # Some settings for the endogenous zlb (if we're using one)
+    if endo_zlb
+        # Set the maximum endogenous zlb length (in the forecast)
+        m <= Setting(:max_temporary_altpolicy_length, get_setting(m, :n_regimes)-1)
+        # Use the existing zlb as the minimum zlb length (in the forecast)
+        m <= Setting(:min_temporary_altpolicy_length, n_temp_zlb_regimes)
+        # If we have zlb in the history, we indicate the length of pre-forecast zlb using
+        # the following setting (not applicable in this example)
+        # m <= Setting(:min_temporary_altpolicy_length, length_prefcast_zlb)
+        # If we have time varying credibility, we specify the length of the credibility
+        # variation as follows:
+        # m <= Setting(:cred_vary_until, tvcred_n_qtrs)
+    end
+
+    # Run forecast
+    if endo_zlb
+        fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
+                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes), zlb_method = :temporary_altpolicy, rerun_smoother = true, bdd_fcast = true,
+                                           set_regime_vals_altpolicy = (x, n) ->
+                                           baseline_covid_set_regime_vals(x, n;
+                                                                          start_regime = 3))
+    else
+        fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
                                            df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+    end
 end
 
 if make_plots
