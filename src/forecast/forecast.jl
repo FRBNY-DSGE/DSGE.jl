@@ -301,8 +301,8 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
     horizon = size(shocks, 2)
 
     # Define our iteration function
-    check_zero_rate = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
-        (:zlb_rule in map(x -> x.alternative_policy.key, collect(values(get_setting(m, :regime_eqcond_info)))))
+    check_has_unant_mp_sh = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
+        (!isempty(intersect([:zlb_rule, :zero_rate], [x.alternative_policy.key for x in values(get_setting(m, :regime_eqcond_info))])))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
@@ -310,7 +310,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
         if enforce_zlb
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
             if interest_rate_forecast < zlb_value
-                continue_enforce = check_zero_rate ? abs.(Z[ind_r, :]' * R[:, ind_r_sh]) > 1e-4 : true
+                continue_enforce = check_has_unant_mp_sh ? abs.(Z[ind_r, :]' * R[:, ind_r_sh]) > 1e-4 : true
 
                 if continue_enforce
                     # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
@@ -602,7 +602,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             if !endo_success && iter == max_zlb_regimes
                 states, obs, pseudo = forecast(m, system, z0; cond_type = cond_type, shocks = shocks,
                                                enforce_zlb = true)
-                #endo_success = true
             end
 
             # Delete extra regimes added to implement the temporary alternative policy, or else updating the parameters
@@ -634,7 +633,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
             ### at reg_post_conditional_end instead of reg_forecast_start.
 
             # If more ZLB necessary
-            #@show iter, low, high, search_start_reg, first_guess, pre_fcast_regimes, max_zlb_regimes
             lookback = haskey(m.settings, :endogenous_zlb_lookback) ? get_setting(m, :endogenous_zlb_lookback) : 2
             lookahead = haskey(m.settings, :endogenous_zlb_lookahead) ? get_setting(m, :endogenous_zlb_lookahead) : 3
             if !endo_success
