@@ -1,6 +1,35 @@
-# DSGE.jl 1.2.2
+# DSGE.jl 1.3.0
+## Version Restrictions
++ OrderedCollections fixed to v1.3.2 and below because of a change in the definition of the type of `OrderedDict`,
+  which would break backward compatibility with older `MeansBands`
+
+## New features and enhancements
++ Settings to accelerate the computation of the reduced form state space system
++ Accelerate compute regime-switching state space systems by refactoring the algorithm
+  to reduce redundant calculations
++ Imperfect awareness with temporary policies for both implemented and alternative policies
+  via `MultiPeriodAltPolicy`
++ Update algorithm for automatic endogenous ZLB enforcement as a temporary policy
+  to apply the temporary policy only to the first connected sequence of periods with negative rates
+  and use unanticipated monetary policy shocks afterward.
++ Speed up algorithm for automatic endogenous ZLB enforcement as a temporary policy
+  by using a binary search algorithm and allowing min/max lengths for a ZLB as a temporary policy.
++ New alternative policy `zlb_rule` as a more flexible `zero_rate`
++ Accelerate calculation of `k_periods_ahead_expected_sum` by exploiting stationarity of
+  the transition matrix rather than repeatedly calling `k_periods_ahead_expected_sums`
++ Add ability to construct a memo object with the products and powers of the
+  transition matrices in a regime-switching state space system to accelerate
+  `k_periods_ahead_expectations` and `k_periods_ahead_expected_sums`
++ Replace `bdd_and_unbdd` kwarg for plotting and reading of the means and bands
+  with `use_bdd`, which allows users to request any combination of unbounded/bounded means and bands.
+
 ## Bug fixes
 + Fix print statements when using `forecast_one` and `verbose = :high`
++ Replace `zero_rate` with `zlb_rule` as the default temporary policy
++ Rename settings related to temporary policies to ensure consistency in nomenclature
++ Do not divide `forecast_zlb_value(m)` by 4 when enforcing the ZLB as a temporary policy
+  since that number is already de-annualized
++ Improve robustness of tests of smoothers with regime-switching state space system and temporary policies
 
 # DSGE.jl 1.2.1
 ## Miscellaneous
