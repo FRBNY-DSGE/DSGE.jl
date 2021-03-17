@@ -75,9 +75,9 @@ function set_regime_vals_fnct(m, n)
     m
 end
 
+# Set up credibility for ZLB and alternative policy
+m <= Setting(:replace_eqcond, true)
 m <= Setting(:gensys2, true)
-
-# Set up credibility for ZLB and alternative policy, if applicable
 m <= Setting(:uncertain_temporary_altpolicy, true)
 m <= Setting(:uncertain_altpolicy, true)
 
@@ -93,15 +93,15 @@ else
     set_regime_vals_fnct(m, gensys2_first_regime + n_zlb_reg)
 end
 
-m <= Setting(:replace_eqcond, true)
+# Set up regime_eqcond_info
 reg_dates = deepcopy(get_setting(m, :regime_dates))
 regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
 weights = [end_tvcred_level, 1. - end_tvcred_level]
-for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_regime), # See comments starting at line 57
+for (regind, date) in zip(gensys2_first_regime:(n_zlb_reg - 1 + gensys2_first_regime), # See comments starting at line 75
                           DSGE.quarter_range(reg_dates[gensys2_first_regime],
                                                 iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg - 1)))
     reg_dates[regind] = date
-    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zlb_rule(), weights)
+    regime_eqcond_info[regind] = DSGE.EqcondEntry(DSGE.zlb_rule(), weights) # weights are justdummy weights for now
 end
 reg_dates[n_zlb_reg + gensys2_first_regime] = iterate_quarters(reg_dates[gensys2_first_regime], n_zlb_reg)
 regime_eqcond_info[n_zlb_reg + gensys2_first_regime] = DSGE.EqcondEntry(flexible_ait(), weights)
@@ -114,42 +114,34 @@ m <= Setting(:temporary_altpolicy_names,  [:zlb_rule])
 # Set up regime indices
 setup_regime_switching_inds!(m; cond_type = cond_type)
 
-# Set up TVIS information set
-m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
-                                         [i:17 for i in gensys2_first_regime:17],
-                                         [i:i for i in 18:get_setting(m, :n_regimes)]))
-#=m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
-                                         [i:get_setting(m, :n_regimes) for i in gensys2_first_regime:get_setting(m, :n_regimes)]))=#
-
+# Set up time-varying credibility
 tvcred_dates = (start_zlb_date, DSGE.iterate_quarters(start_zlb_date, tvcred_n_qtrs))
 n_tvcred_reg = DSGE.subtract_quarters(tvcred_dates[2], tvcred_dates[1]) + 1 # number of regimes for time-varying credibility
 reg_start = DSGE.subtract_quarters(tvcred_dates[1], start_zlb_date) + gensys2_first_regime # first regime for time-varying credibility
 for (regind, date) in zip(reg_start:(reg_start + n_tvcred_reg),
                           DSGE.quarter_range(reg_dates[reg_start], DSGE.iterate_quarters(reg_dates[reg_start], n_tvcred_reg - 1)))
     reg_dates[regind] = date
-    if date > end_zlb_date
-        regime_eqcond_info[regind] = DSGE.EqcondEntry(flexible_ait(), [end_tvcred_level, 1. - end_tvcred_level])
+    if date > end_zlb_date # just use dummy weights here, actual weights done later
+        regime_eqcond_info[regind] = EqcondEntry(flexible_ait(), [end_tvcred_level, 1. - end_tvcred_level])
     end
 end
 m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = cond_type)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
+
+# Set up TVIS information set
 m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
                                          [i:17 for i in gensys2_first_regime:17],
                                          [i:i for i in 18:get_setting(m, :n_regimes)]))
-#=m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
-                                         [i:get_setting(m, :n_regimes) for i in
-                                          gensys2_first_regime:get_setting(m, :n_regimes)]))=#
+
+# Actually populate weights
 credvec = collect(range(start_tvcred_level, stop = end_tvcred_level, length = n_tvcred_reg))
 for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
     if tvcred_dates[1] <= reg_dates[k] <= tvcred_dates[2]
         get_setting(m, :regime_eqcond_info)[k].weights = [credvec[i], 1. - credvec[i]]
     end
 end
-
-# Remove anticipated MP shocks upon entering ZLB
-# m <= Setting(:remove_rm_shocks, gensys2_first_regime)
 
 # Run forecasts
 output_vars = [:histobs, :histpseudo, :forecastpseudo, :forecastobs]
@@ -170,129 +162,7 @@ tworule = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eq
 delete!(DSGE.get_settings(m), :alternative_policies)
 m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule])
 
-# sys1 = compute_system(m; tvis = true)
-using BenchmarkTools
-#=@btime begin
-    sys1 = compute_system(m; tvis = true)
-   nothing
-end=#
-
-m <= Setting(:perfect_credibility_identical_transitions, Dict(i => 19 for i in 19:29))
-tworule_iden_trans = deepcopy(get_setting(m, :perfect_credibility_identical_transitions))
-for i in 12:29
-    tworule_iden_trans[i] = 12
-end
-tworule2 = MultiPeriodAltPolicy(:two_rule, get_setting(m, :n_regimes), tworule_eqcond_info, gensys2 = true,
-                                temporary_altpolicy_names = [:zlb_rule],
-                                temporary_altpolicy_length = 6,
-                                perfect_credibility_identical_transitions = tworule_iden_trans,
-                                infoset = copy(get_setting(m, :tvis_information_set)))
-m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[tworule2])
-sys2 = compute_system(m; tvis = true)
-gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
-#=m <= Setting(:uncertain_altpolicy, false)
-m <= Setting(:uncertain_temporary_altpolicy, false)=#
-#=@btime begin # 50ms
-    TTTs, RRRs, CCCs = solve(m; regime_switching = true,
-                             regimes = collect(1:get_setting(m, :n_regimes)),
-                             gensys_regimes = gensys_regimes,
-                             gensys2_regimes = gensys2_regimes,
-                             verbose = :none)
-    nothing
-end
-
-TTTs, RRRs, CCCs = solve(m; regime_switching = true,
-                         regimes = collect(1:get_setting(m, :n_regimes)),
-                         gensys_regimes = gensys_regimes,
-                         gensys2_regimes = gensys2_regimes,
-                         verbose = :none)
-@btime begin # 700ms
-    RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, get_setting(m, :n_regimes), true)
-    nothing
-end
-
-m <= Setting(:use_forward_expectations_memo, true)
-@btime begin # 700ms
-    RegimeSwitchingSystem(m, TTTs, RRRs, CCCs, get_setting(m, :n_regimes), true)
-    nothing
-end
-
-m <= Setting(:use_forward_expectations_memo, false)
-@btime begin # 30ms
-    reg = 5
-    measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
-                TTTs = TTTs, CCCs = CCCs,
-                information_set = get_setting(m, :tvis_information_set)[reg])
-end
-
-@btime begin # 1ms
-    reg = 20
-    measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
-                TTTs = TTTs, CCCs = CCCs,
-                information_set = get_setting(m, :tvis_information_set)[reg])
-end
-
-@btime begin # 374ms
-    for reg in 1:get_setting(m, :n_regimes)
-        measurement(m, TTTs[reg], RRRs[reg], CCCs[reg], reg = reg,
-                    TTTs = TTTs, CCCs = CCCs,
-                    information_set = get_setting(m, :tvis_information_set)[reg])
-    end
-end=#
-#=m <= Setting(:use_forward_expectations_memo, false)
-@btime begin # 1.5s
-    DSGE.perfect_cred_multiperiod_altpolicy_systems(m, [false], verbose = :none)
-    nothing
-end
-m <= Setting(:use_forward_expectations_memo, true)
-@btime begin # 1.5s
-    DSGE.perfect_cred_multiperiod_altpolicy_systems(m, [false], verbose = :none)
-    nothing
-end
-
-system_perfect_cred_totpolicies = DSGE.perfect_cred_multiperiod_altpolicy_systems(m, [false], verbose = :none)
-gensys_regimes, gensys2_regimes = DSGE.compute_gensys_gensys2_regimes(m)
-
-@btime begin # 50ms
-    TTTs, RRRs, CCCs = DSGE.solve_uncertain_altpolicy(m, system_perfect_cred_totpolicies, [false];
-                                                      gensys_regimes = gensys_regimes, gensys2_regimes = gensys2_regimes,
-                                                      regimes = collect(1:get_setting(m, :n_regimes)), verbose = :none)
-    nothing
-end
-=#
-m <= Setting(:empty_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
-# m <= Setting(:empty_pseudo_measurement_equation, [false, false, false, false, false, false, trues(get_setting(m, :n_regimes) - 6)...])
-m <= Setting(:empty_pseudo_measurement_equation, trues(get_setting(m, :n_regimes)))
-m <= Setting(:identical_eqcond_regimes, Dict(3 => 1, 4 => 1, 6 => 5)) # regime 2 is different from 1, 3, and 4 b/c of the proportional anticipated shocks
-sys1 = compute_system(m; tvis = true)
-#=@btime begin
-    compute_system(m; tvis = true)
-    nothing
-end=#
-
-m <= Setting(:use_forward_expectations_memo, true)
-m <= Setting(:use_forward_expected_sum_memo, true)
-m <= Setting(:memo_permanent_policy_regime, 17)
-sys2 = compute_system(m; tvis = true)
-
-for i in 1:get_setting(m, :n_regimes)
-    @test sys1[i, :TTT] ≈ sys2[i, :TTT]
-    @test sys1[i, :ZZ] ≈ sys2[i, :ZZ]
-end
-
-#=@btime begin
-    compute_system(m; tvis = true)
-    nothing
-end=#
-
-m <= Setting(:use_forward_expected_sum_memo, false)
-#=@btime begin
-    compute_system(m; tvis = true)
-    nothing
-end=#
-
-delete!(m.settings, :empty_measurement_equation)
-delete!(m.settings, :empty_pseudo_measurement_equation)
+# Run forecast
 fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, df,
                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
