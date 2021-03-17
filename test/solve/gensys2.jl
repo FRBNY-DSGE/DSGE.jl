@@ -344,6 +344,7 @@ end
     m <= Setting(:gensys2, true)
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:regime_eqcond_info, Dict(4 => DSGE.EqcondEntry(DSGE.zero_rate(), [1., 0.])))
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
     sys1 = compute_system(m)
     m <= Setting(:regime_dates, Dict(1 => date_presample_start(m), #Start
                                      2 => Date(1990, 3, 31), # Parameter switch in history
