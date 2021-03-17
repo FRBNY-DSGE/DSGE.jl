@@ -553,6 +553,40 @@ rows associated with these observables/pseudo-observables. Otherwise, we
 compute the weighted average of the different measurement matrices. This latter approach
 will always work, but it comes at the cost of unnecessary operations.
 
+### [Imperfect Awareness with Temporary Policies as Alternative Policies]
+The previous documentation generally assumes that the
+alternative policies which people believe may occur are one-regime and permanent
+policies. However, it is possible that agents are imperfectly aware
+over alternative policies that involve temporary policies and thus require the use of `gensys2`.
+The only difference the user needs to do is use a `MultiPeriodAltPolicy` type
+rather than an `AltPolicy` type when populating the `Setting` `alternative_policies`.
+See [Types](@ref altpol-types) for documentation on the fields of a `MultiPeriodAltPolicy`.
+As an example, the code snippet below implements a temporary ZLB as the alternative policy,
+assuming the existence of a regime-switching model instance `m`.
+
+```
+# Alternative Policy 1: default/historical rule
+altpol1 = default_policy()
+
+# Alernative Policy 2: ZLB starting in regime 3 and ending in regime 5, and flexible AIT starting in regime 6
+new_reg_eqcond_info = Dict(3 => EqcondEntry(zlb_rule(), reg3_weights), # reg3_weights specifies whatever weights
+                           4 => EqcondEntry(zlb_rule(), reg4_weights), # the user wants in regime 3, etc.
+                           5 => EqcondEntry(zlb_rule(), reg5_weights),
+                           6 => EqcondEntry(flexible_ait(), reg6_weights))
+new_infoset         = [1:1, 2:2, [i:6 for i in 3:6]..., [i:i for i in 7:get_setting(m, :n_regimes)]...]
+
+delete!(m.settings, :alternative_policies) # if :alternative_policies already exists, then a type error may occur
+
+altpol2 = MultiPeriodAltPolicy(:temporary_zlb, get_setting(m, :n_regimes),
+                               reg_eqcond_info, gensys2 = true,
+                               temporary_altpolicy_names, [:zlb_rule],
+                               temporary_altpolicy_length = 3,
+                               infoset = new_infoset)
+
+# Both AltPolicy and MultiPeriodAltPolicy are subtypes of AbstractAltPolicy
+m <= Setting(:alternative_policies, DSGE.AbstractAltPolicy[altpol1, altpol2])
+```
+
 ## Automatically Generating Anticipated Shocks
 
 We have implemented some functionality for automatically adding anticipated shocks

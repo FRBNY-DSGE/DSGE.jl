@@ -126,6 +126,14 @@ Types defining an alternative policy rule.
 - `gensys2::Bool`: if true, the multi-period alternative policy needs
     to call `gensys2` instead of `gensys` to work.
 
+- `temporary_altpolicy_names::Union{Vector{Symbol}, Nothing}`: specifies
+    the names of temporary policies which may occur, e.g. `[:zero_rate]`
+    if a temporary ZLB is implemented using the `zero_rate` `AltPolicy`.
+
+- `temporary_altpolicy_length::Int64`: the temporary alternative policy's length
+    which is used to determine which regimes need to be solved using `gensys2`
+    instead of `gensys`.
+
 - `infoset::Union{Vector{UnitRange{Int64}}, Nothing}`: either a vector specifying
     the information set used for expectations in the measurement equation or
     `nothing` to indicate myopia in expectations across regimes.

@@ -89,11 +89,14 @@ The user also needs to complete the following steps to apply temporary alternati
 
 - Adding a regime for every period during which the alternative policy applies,
   plus one more regime for the policy which will be permanently in place after the temporary policies end.
+
 - Adding the setting `Setting(:gensys2, true)` to indicate `gensys2` should be used. If this setting is false
   or non-existent, then alternative policies will be treated as if they are permanent. Their equilibrium
   conditions will be solved using `gensys`, which can lead to determinacy and uniqueness problems if
   the alternative policy should be temporary (e.g. a temporary ZLB).
+
 - Adding the setting `Setting(:replace_eqcond, true)` to indicate equilibrium conditions will be replaced.
+
 - Adding the setting `Setting(:regime_eqcond_info, info)`, where `info` should be a
   `Dict{Int, DSGE.EqcondEntry}` mapping regimes to instances of `EqcondEntry`, a type which holds
   any information needed to update equilibrium conditions to implement a given alternative policy.
@@ -108,9 +111,21 @@ To see an example of using temporary alternative policies, see the
 Click on the section header for details on how to add policy uncertainty or
 imperfect credibility to alternative policies (both permanent and temporary).
 
-## Types
+## [`MultiPeriodAltPolicy`](@ref imperfect-awareness-multiperaltpol)
+Click on the section header to see the primary use of the type `MultiPeriodAltPolicy`,
+which extends `AltPolicy` to specify multiple regimes. In particular,
+one of the fields of `MultiPeriodAltPolicy` is `regime_eqcond_info`,
+which stores a dictionary that can be used to update a model's
+`regime_eqcond_info` `Setting`, i.e.
+
+```
+m <= Setting(:regime_eqcond_info, multi_period_altpol.regime_eqcond_info)
+```
+
+## [Types](@id altpol-types)
 
 ```@docs
 DSGE.AltPolicy
 DSGE.EqcondEntry
+DSGE.MultiPeriodAltPolicy
 ```
