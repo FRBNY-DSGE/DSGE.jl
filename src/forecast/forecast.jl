@@ -824,15 +824,24 @@ function auto_temp_altpolicy_info_set(m::AbstractDSGEModel, n_regimes::Int, firs
     m <= Setting(:tvis_information_set, tvis_infoset)
 end
 
-# eqcond_dict should be a dictionary whose historical/conditional horizon regimes
-# should already be set (and won't be affected by this function.
-# The regimes which will be altered are those for which the temporary ZLB will apply
-# (according to `zlb_start_regime` and `liftoff_regime`), and if there is
-# time-varying credibility, forecast regimes past the ZLB.
-#
-# In general, the update_regime_eqcond_info! function should not change the
-# EqcondEntry during historical/conditional horizon regimes, but any other
-# regimes in the forecast horizon should be/can be set.
+"""
+```
+default_update_regime_eqcond_info!(m::AbstractDSGEModel, eqcond_dict::AbstractDict{Int64, EqcondEntry},
+                                   zlb_start_regime::Int64, liftoff_regime::Int64, liftoff_policy::AltPolicy)
+```
+is the default method for updating the setting `regime_eqcond_info` during the automatic
+endogenous ZLB enforcement as a temporary policy.
+
+The input `eqcond_dict` should be a dictionary whose historical/conditional horizon regimes
+should already be set (and won't be affected by this function.
+The regimes which will be altered are those for which the temporary ZLB will apply
+(according to `zlb_start_regime` and `liftoff_regime`), and if there is
+time-varying credibility, forecast regimes past the ZLB.
+
+In general, other implementations of the `update_regime_eqcond_info!` function should not change the
+EqcondEntry during historical/conditional horizon regimes, but any other
+regimes in the forecast horizon should be/can be set.
+"""
 function default_update_regime_eqcond_info!(m::AbstractDSGEModel, eqcond_dict::AbstractDict{Int64, EqcondEntry},
                                             zlb_start_regime::Int64, liftoff_regime::Int64, liftoff_policy::AltPolicy)
 
