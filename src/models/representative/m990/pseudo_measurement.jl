@@ -1,23 +1,24 @@
 """
 ```
 pseudo_measurement(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                   CCC::Vector{T}) where {T<:AbstractFloat}
+                   CCC::Vector{T}; reg::Int = 1,
+                   TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
+                   CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
+                   information_set::UnitRange = reg:reg,
+                   memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
 ```
-
 Assign pseudo-measurement equation (a linear combination of states):
 
 ```
 x_t = ZZ_pseudo*s_t + DD_pseudo
 ```
 """
-function pseudo_measurement(m::Model990{T},
-                            TTT::Matrix{T},
-                            RRR::Matrix{T},
-                            CCC::Vector{T};
-                            reg::Int = 1,
+function pseudo_measurement(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
+                            CCC::Vector{T}; reg::Int = 1,
                             TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
                             CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                            information_set::UnitRange = reg:reg) where {T<:AbstractFloat}
+                            information_set::UnitRange = reg:reg,
+                            memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
 
     endo   = m.endogenous_states
     pseudo = m.pseudo_observables
