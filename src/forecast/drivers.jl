@@ -112,7 +112,9 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
         println("uncertain_altpolicy: " *
                 string(haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false))
         println("uncertain_temporary_altpolicy: " * string(haskey(get_settings(m), :uncertain_temporary_altpolicy) ? get_setting(m, :uncertain_temporary_altpolicy) : false))
-        println("time-varying credibility: " * string(any(v -> !ismissing(v.weights), values(get_setting(m, :regime_eqcond_info)))))
+        if replace_eqcond
+            println("time-varying credibility: " * string(any(v -> !ismissing(v.weights), values(get_setting(m, :regime_eqcond_info)))))
+        end
         if haskey(get_settings(m), :uncertain_altpolicy) ? get_setting(m, :uncertain_altpolicy) : false
             println("Desired policy rule: " *
                     string(haskey(get_settings(m), :regime_eqcond_info) ?
@@ -122,6 +124,7 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             if haskey(get_settings(m), :imperfect_awareness_weights) # does not work currently, need to update
                 println("Credibility weights: ", get_setting(m, :imperfect_awareness_weights))
             else
+                # Only other way to specify imperfect awareness is regime_eqcond_info, so it must exist
                 sorted_eqcond_info_regs = sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
                 println("Credbility weights: ", OrderedDict(reg => get_setting(m, :regime_eqcond_info)[reg].weights for reg in sorted_eqcond_info_regs))
             end
@@ -146,7 +149,22 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
             println("initial ygap = ", get_setting(m, :ygap_value))
         end
 
-        # TODO: print out the forecast_zlb_value used by zero_rate
+        if haskey(get_settings(m), :temporary_altpolicy_names)
+            if :zero_rate in get_setting(m, :temporary_altpolicy_names)
+                println("zero_rate_zlb_value = ", haskey(get_settings(m), :zero_rate_zlb_value) ?
+                        get_setting(m, :zero_rate_zlb_value) : round(.1 / 4., digits = 3))
+            end
+            if :zlb_rule in get_setting(m, :temporary_altpolicy_names)
+                if haskey(get_settings(m), :zlb_rule_value)
+                    println("zlb_rule_value = ", get_setting(m, :zlb_rule_value))
+                elseif haskey(get_settings(m), :zlb_rule_values)
+                    println("zlb_rule_values = ", get_setting(m, :zlb_rule_values))
+                else
+                    println("zlb_rule_value = ", forecast_zlb_value(m))
+                end
+            end
+        end
+
         println("") # add some space
     end
 
