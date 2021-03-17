@@ -30,14 +30,20 @@ if calculate_system
     # 2020:Q3 to 2024:Q4 (one additional year).
     m <= Setting(:replace_eqcond, true) # turn on replace_eqcond and gensys2
     m <= Setting(:gensys2, true)        # to allow temporary alternative policies (namely the ZLB)
+    regime_eqcond_info_shortzlb = Dict{Int, EqcondEntry}()
     replace_eqcond_func_dict_shortzlb = Dict()
     for i in 2:(length(DSGE.quarter_range(Date(2020, 9, 30), Date(2023, 12, 31))) + 1)
-        replace_eqcond_func_dict_shortzlb[i] = DSGE.zero_rate_replace_eq_entries
+        # replace_eqcond_func_dict_shortzlb[i] = DSGE.zero_rate_replace_eq_entries
+        regime_eqcond_info_shortzlb[i] = EqcondEntry(zero_rate())
     end
+    regime_eqcond_info_longzlb = Dict{Int, EqcondEntry}()
     replace_eqcond_func_dict_longzlb = Dict()
     for i in 2:(length(DSGE.quarter_range(Date(2020, 9, 30), Date(2024, 12, 31))) + 1)
-        replace_eqcond_func_dict_longzlb[i] = DSGE.zero_rate_replace_eq_entries
+        # replace_eqcond_func_dict_longzlb[i] = DSGE.zero_rate_replace_eq_entries
+        regime_eqcond_info_longzlb[i] = EqcondEntry(zero_rate())
     end
+    m <= Setting(:zero_rate_zlb_value, 0.)
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 
     # Set up regime-switching dates and indices
     regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
@@ -71,7 +77,8 @@ if calculate_system
                  vcat([1:1],
                       [i:reg_2024Q1 for i in 2:reg_2024Q1],
                       [[i:i] for i in (reg_2024Q1 + 1):get_setting(m, :n_regimes)]...))
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict_shortzlb)
+    # m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict_shortzlb)
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info_shortzlb)
     system_shortzlb = compute_system(m; tvis = true)
 
     # We could use also these settings to generate the same results.
@@ -89,7 +96,8 @@ if calculate_system
 
     # First, we add info about the equilibrium conditions
     reg_2021Q1 = DSGE.subtract_quarters(Date(2021, 3, 31), Date(2020, 9, 30)) + 2
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb, replace_eqcond_func_dict_longzlb])
+    # m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb, replace_eqcond_func_dict_longzlb])
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info_shortzlb, regime_eqcond_info_longzlb])
     m <= Setting(:tvis_select_system, vcat(ones(Int, reg_2021Q1), # Use set 1 of conditions for regimes up to (and incl.) 2021:Q1
                                            fill(2, get_setting(m, :n_regimes) - reg_2021Q1))) # Use set 2 for remaining regimes
 
@@ -124,19 +132,26 @@ if modal_forecast
     if !calculate_system
         m <= Setting(:replace_eqcond, true)
         m <= Setting(:gensys2, true)
+        regime_eqcond_info_shortzlb = Dict{Int, EqcondEntry}()
         replace_eqcond_func_dict_shortzlb = Dict()
         for i in 2:(length(DSGE.quarter_range(Date(2020, 9, 30), Date(2023, 12, 31))) + 1)
-            replace_eqcond_func_dict_shortzlb[i] = DSGE.zero_rate_replace_eq_entries
+            # replace_eqcond_func_dict_shortzlb[i] = DSGE.zero_rate_replace_eq_entries
+            regime_eqcond_info_shortzlb[i] = EqcondEntry(zero_rate())
         end
+        regime_eqcond_info_longzlb = Dict{Int, EqcondEntry}()
         replace_eqcond_func_dict_longzlb = Dict()
         for i in 2:(length(DSGE.quarter_range(Date(2020, 9, 30), Date(2024, 12, 31))) + 1)
-            replace_eqcond_func_dict_longzlb[i] = DSGE.zero_rate_replace_eq_entries
+            # replace_eqcond_func_dict_longzlb[i] = DSGE.zero_rate_replace_eq_entries
+            regime_eqcond_info_longzlb[i] = EqcondEntry(zero_rate())
         end
 
         regime_dates = Dict{Int, Date}(1 => date_presample_start(m))
         for (i, d) in enumerate(DSGE.quarter_range(Date(2020, 9, 30), Date(2025, 3, 31)))
             regime_dates[i + 1] = d
         end
+        m <= Setting(:zero_rate_zlb_value, 0.)
+        m <= Setting(:temporary_altpolicy_names, [:zero_rate])
+
         m <= Setting(:regime_dates, regime_dates)
         m <= Setting(:regime_switching, true)
         setup_regime_switching_inds!(m)
@@ -146,8 +161,10 @@ if modal_forecast
     reg_2024Q1 = get_setting(m, :n_regimes) - 4
     m <= Setting(:tvis_information_set, vcat([1:1], [i:reg_2024Q1 for i in 2:reg_2024Q1],
                                              [[i:i] for i in (reg_2024Q1 + 1):get_setting(m, :n_regimes)]...))
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb])
-    m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict_shortzlb)
+    # m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb])
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info_shortzlb])
+    # m <= Setting(:replace_eqcond_func_dict, replace_eqcond_func_dict_shortzlb)
+    m <= Setting(:regime_eqcond_info, regime_eqcond_info_shortzlb)
 
     usual_model_forecast(m, :mode, :none, [:histobs, :forecastobs, :histpseudo, :forecastpseudo];
                          forecast_string = "short", params = [x.value for x in m.parameters],
@@ -156,7 +173,8 @@ if modal_forecast
     mbpse_short = read_mb(m, :mode, :none, :forecastpseudo; forecast_string = "short")
 
     reg_2021Q1 = DSGE.subtract_quarters(Date(2021, 3, 31), Date(2020, 9, 30)) + 2
-    m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb, replace_eqcond_func_dict_longzlb])
+    # m <= Setting(:tvis_replace_eqcond_func_dict, [replace_eqcond_func_dict_shortzlb, replace_eqcond_func_dict_longzlb])
+    m <= Setting(:tvis_regime_eqcond_info, [regime_eqcond_info_shortzlb, regime_eqcond_info_longzlb])
     m <= Setting(:tvis_select_system, vcat(ones(Int, reg_2021Q1), fill(2, get_setting(m, :n_regimes) - reg_2021Q1)))
     m <= Setting(:tvis_information_set, vcat([1:1], [i:reg_2024Q1 for i in 2:reg_2021Q1],
                                              [i:get_setting(m, :n_regimes) for i in (reg_2021Q1 + 1):get_setting(m, :n_regimes)]))

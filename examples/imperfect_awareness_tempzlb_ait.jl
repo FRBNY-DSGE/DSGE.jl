@@ -14,8 +14,6 @@ fn = dirname(@__FILE__)
 zlb_altpolicy     = true   # run a forecast
 make_plots        = false  # Make plots
 save_plots        = false  # Save plots to figurespath(m, "forecast")
-add_workers       = false  # Run in parallel
-n_workers         = 10
 
 pol_str = "Uncertain ZLB, Uncertain AIT"
 
@@ -183,6 +181,7 @@ if zlb_altpolicy
     end
     replace_eqcond[n_tempZLB_regimes + 1] = EqcondEntry(DSGE.smooth_ait_gdp_alt(), [1., 0.]) # switch to AIT in the final regime
     m <= Setting(:regime_eqcond_info, replace_eqcond) # Add mapping of regimes to new eqcond matrices
+    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 
     # set up information sets
     m <= Setting(:tvis_information_set, vcat([1:1, 2:2],
