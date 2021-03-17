@@ -352,7 +352,27 @@ DSGE.k_periods_ahead_expected_sums
 See the [measurement equation for Model 1002](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/model/representative/m1002/measurement.jl)
 for an example of how these functions are used.
 
-TODO: document memo construction and note that typically, only the k_periods_ahead_expectations is faster
+To accelerate the computation time for these functions, we have also implemented types
+that create memos of the products and powers of the ``\{T_{t + k}\}_{t = 1}^k`` matrices
+which are needed. See
+
+```@docs
+DSGE.ForwardExpectationsMemo
+DSGE.ForwardMultipleExpectationsMemo
+```
+
+The first type is mainly an "under the hood" type for `k_periods_ahead_expectations`.
+The second type is a wrapper type that constructs all the memos needed
+to implement forward expectations of levels and sums in an efficient manner.
+We have automated the construction of memos with the Boolean `Setting`s
+`use_forward_expectations_memo` and `use_forward_expected_sum_memo`. The first `Setting`
+indicates that a memo type will be used for calls to `k_periods_ahead_expectations`
+and the second indicates a memo type will be used for calls to `k_periods_ahead_expected_sums`.
+It is assumed by default that the last matrix in the sequence `TTTs` in
+a `RegimeSwitchingSystem` is the first period in which a `TTT` matrix permanently applies (hence
+we may assume that in all future periods the `TTT` is the same), but
+if this is not the case, then the user needs to specify the correct regime
+with the `Setting` `memo_permanent_policy_regime::Int`.
 
 For details on how we implement a state space system with time-varying information sets,
 see [The `TimeVaryingInformationSetSystem` Type](@ref tvistype). For guidance on how to use this type,
@@ -563,7 +583,86 @@ custom_settings = Dict{Symbol, Setting}(:antshocks => Setting(:antshocks, Dict{S
 m = Model1002("ss10"; custom_settings = custom_settings)
 ```
 
-TODO: add documentation of using the endogenous ZLB code. Update example script
+## [Automatic Endogenous ZLB Enforcement as Temporary Rule](@id auto-endo-zlb)
+The user can enforce the ZLB during the forecast horizon in two ways. The default approach
+uses unanticipated monetary policy shocks. Instead, the user can also use
+the temporary ZLB machinery to enforce the ZLB. This enforcement is endogenous in the sense
+that, conditional on a draw of shocks, we want to figure out the required length of a
+temporary ZLB that will deliver non-negative interest rates throughout the horizon.
+
+The enforcement is automated by trading off two objectives. First, we want the
+length of the ZLB to be minimal so that the ZLB is not unnecessarily accommodative, unless
+it is specifically desired for the ZLB to extend to at least some date.
+Second, we want to maintain a reasonable computational time. Finding a minimal ZLB length
+when there are multiple disconnected periods of negative interest rates would be prohibitively
+expensive because expecting more periods of temporary ZLB in the future affects agents' expectations
+today, and changing the number of periods of temporary ZLB in the past affects
+the future evolution of states.
+
+Instead, we endogenously enforce the ZLB only for
+the first connected sequence of periods with negative interest rates
+and use unanticipated monetary policy shocks for future sequences of periods with negative rates. Our algorithm proceeds as follows.
+
+1. Forecast without any periods of temporary ZLBs (unless a minimum length is specified) and find the first connected
+   sequence of periods with negative interest rates.
+2. Guess a sequence of temporary ZLB regimes that cover this first sequence of periods with negative interest rates.
+3. If the forecast under the temporary policy from 2 successfully enforces the ZLB over that first sequence
+   and does not introduce negative rates after liftoff from the ZLB,
+   then test whether shorter ZLBs will also enforce it. Otherwise, extend the sequence of temporary ZLBs
+   using the same approch as 2.
+4. Once we have successfully found a minimum length that guarantees non-negative rates for the first sequence of periods,
+   re-run the forecast using unanticipated monetary policy shocks to enforce any other sequences of periods with negative rates.
+
+Note that sometimes extending the sequence of temporary ZLB regimes will cause two disjoint sequences of periods with negative rates
+to become contiguous, in which case we treat the two disjoint sequences as one connected sequences therafter.
+
+To use this method, the user runs a forecast as follows
+```
+# (optional) maximum permitted length for temporary ZLB regimes
+m <= Setting(:max_temporary_altpol_length, max_zlb_length)
+
+# (optional) minimum permitted length for temporary ZLB regimes and the
+# ZLB regimes are assumed to start in the first period of the forecast
+# or the first period after the conditional horizon if a conditional forecast is run.
+m <= Setting(:min_temporary_altpol_length, min_zlb_length)
+
+forecast_one(m, input_type, cond_type, output_vars; rerun_smoother = true,
+             zlb_method = :temporary_altpolicy,
+             set_regime_vals_altpolicy = my_set_regime_vals_altpolicy_fnct,
+             set_info_sets_altpolicy = my_set_info_sets_altpolicy_fnct,
+             update_regime_eqcond_info! = my_update_regime_econd_info_fnct!,
+             nan_endozlb_failures = false)
+```
+
+The keyword arguments are briefly described below. For more details,
+see the docstring for `forecast_one`.
+
+- `rerun_smoother::Bool`: needs to be true if the current sequence of temporary ZLB regimes start
+  during the history or conditional horizon because changing the length
+  of the temporary ZLB affects the smoothed estimate of the state at the start of the forecast.
+
+- `zlb_method::Symbol`: set to `:temporary_altpolicy` to enforce the ZLB as a temporary policy.
+  Otherwise, unanticipated monetary policy shocks will be used.
+
+- `set_regime_vals_altpolicy::Function`: if there are regime-switching parameters,
+  this function is needed to figure out what parameters should be assigned
+  to the new model regimes added when extending the temporary ZLB length.
+
+- `set_info_sets_altpolicy::Function`: if the `Setting` `tvis_information_set` is used,
+  then we need to specify how to update `tvis_information_set` as new model regimes are added
+  to extend the temporary ZLB length.
+
+- `update_regime_eqcond_info!::Function`: specifies how to update `regime_eqcond_info`
+  to include more or fewer regimes of temporary ZLB.
+
+- `nan_endozlb_failures::Bool`: sometimes the ZLB cannot be enforced because rates
+  are negative even when the ZLB extends throughout the entire forecast horizon or because
+  the max ZLB length is reached. By default, we enforce the remainder of the forecast horizon
+  with unanticipated monetary policy shocks. If this kwarg is true, we return
+  `NaN`s rather than use unanticipated shocks.
+
+
+TODO: add example script
 
 ## [Editing or Extending a Model](@id editing-extending-model)
 
