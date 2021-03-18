@@ -154,7 +154,7 @@ function ParticleCloud(cloud::Union{SMC.Cloud, DSGE.Cloud}, para_symbols::Vector
     return ParticleCloud([Particle(cloud.particles[k, ind_weight(N)], para_symbols,
                                    cloud.particles[k, 1:ind_para_end(N)],
                                    cloud.particles[k, ind_loglh(N)],
-                                   cloud.particles[k, ind_logpost(N)],
+                                   cloud.particles[k, ind_logpost(N)], # use logpost here b/c column index is typically retrieved via ind_logpost for ParticleCloud
                                    cloud.particles[k, ind_old_loglh(N)],
                                    cloud.particles[k, ind_accept(N)]) for k in 1:length(cloud)],
                          cloud.tempering_schedule, cloud.ESS, cloud.stage_index, cloud.n_Φ,
@@ -167,7 +167,7 @@ Find correct indices for accessing columns of cloud array.
 ind_para_end(N::Int)  = N-5
 ind_loglh(N::Int)     = N-4
 ind_logpost(N::Int)   = N-3
-ind_logprior(N::Int)  = N-3 # TODO: Fix logprior/logpost shenanigans
+ind_logprior(N::Int)  = N-3 # TODO: Fix logprior/logpost shenanigans. Basically, logpost really should be logprior b/c the logprior is what's stored.
 ind_old_loglh(N::Int) = N-2
 ind_accept(N::Int)    = N-1
 ind_weight(N::Int)    = N

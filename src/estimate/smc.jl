@@ -260,7 +260,6 @@ function vector_particles_to_cloud(m::AbstractDSGEModel, particles::Vector{Parti
     for i in 1:size(cloud.particles,1)
         cloud.particles[i, 1:length(m.parameters)] = particles[i].value
         cloud.particles[i, ind_loglh(N)] = particles[i].loglh
-        cloud.particles[i, ind_logpost(N)] = particles[i].logpost
         update!(m, particles[i].value)
         cloud.particles[i, ind_logprior(N)] = prior(m)
         cloud.particles[i, ind_old_loglh(N)] = particles[i].old_loglh
