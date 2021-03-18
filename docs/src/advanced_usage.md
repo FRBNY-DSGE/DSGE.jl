@@ -655,13 +655,16 @@ to become contiguous, in which case we treat the two disjoint sequences as one c
 
 To use this method, the user runs a forecast as follows
 ```
-# (optional) maximum permitted length for temporary ZLB regimes
+# (optional) maximum permitted length for temporary ZLB regimes in the forecast
 m <= Setting(:max_temporary_altpol_length, max_zlb_length)
 
 # (optional) minimum permitted length for temporary ZLB regimes and the
 # ZLB regimes are assumed to start in the first period of the forecast
-# or the first period after the conditional horizon if a conditional forecast is run.
 m <= Setting(:min_temporary_altpol_length, min_zlb_length)
+
+# (optional) length of the contiguous ZLB prior to the first period of the
+# forecast, ending in the regime prior to the start of the forecast
+m <= Setting(:historical_temporary_altpolicy_lengh, hist_zlb_length)
 
 forecast_one(m, input_type, cond_type, output_vars; rerun_smoother = true,
              zlb_method = :temporary_altpolicy,
@@ -699,7 +702,8 @@ see the docstring for `forecast_one`.
   `NaN`s rather than use unanticipated shocks.
 
 
-TODO: add example script
+For further guidance on forecasting with an endogenously enforced ZLB, please see the script
+[imperfect_awareness_tempzlb_ait.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples/imperfect_awareness_tempzlb_ait.jl) with the keyword endozlb set to true.
 
 ## [Editing or Extending a Model](@id editing-extending-model)
 
