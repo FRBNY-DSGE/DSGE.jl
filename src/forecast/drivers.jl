@@ -256,13 +256,14 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
             cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "smcsave" => "smc_cloud"), "cloud")
-            params_unweighted = get_vals(cloud)
+
             # Re-sample SMC draws according to their weights
             W = load(replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2"), "W")
             weights = W[:, end]
             inds = SMC.resample(weights)
 
-            params = Matrix{Float64}(params_unweighted[:, inds]')
+            # Note cloud.particles has dimension n_particles x (n_parameters + 5), where the 5 is for metadata
+            params = cloud.particles[inds, 1:SMC.ind_para_end(size(cloud.particles, 2))]
         else
             error("Invalid :sampling method specification. Change in setting :sampling_method")
         end
