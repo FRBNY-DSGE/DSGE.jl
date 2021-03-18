@@ -1,5 +1,10 @@
 using DSGE, ModelConstructors, Dates, CSV, DataFrames, Plots, Test, HDF5
 include("tvcred_parameterize.jl")
+if VERSION < v"1.5"
+    ver = "111"
+else
+    ver = "150"
+end
 
 regenerate_reference_forecasts = false
 
@@ -43,8 +48,8 @@ flexait_custom = Dict{Symbol, Setting}(:add_initialize_pgap_ygap_pseudoobs => Se
                                        Setting(:proportional_antshocks, [:biidc, :φ, :ziid]),
                                        :n_anticipated_obs_gdp => Setting(:n_anticipated_obs_gdp, 1),
                                        :add_anticipated_obs_gdp => Setting(:add_anticipated_obs_gdp, true),
-                                        :meas_err_anticipated_obs_gdp =>
-                                        Setting(:meas_err_anticipated_obs_gdp, 1.),
+                                       :meas_err_anticipated_obs_gdp =>
+                                       Setting(:meas_err_anticipated_obs_gdp, 1.),
                                        :flexible_ait_policy_change =>
                                        Setting(:flexible_ait_policy_change, false))
 
@@ -56,7 +61,7 @@ get_setting(m, :regime_dates)[5] = Date(2020, 12, 31)
 setup_regime_switching_inds!(m, cond_type = :full)
 
 m10 = Model1002("ss10") # for help initializing parameters of m
-θ10 = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "para")
+θ10 = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast_version=" * ver * ".h5"), "para")
 DSGE.update!(m10, θ10)
 update_vals = zeros(Float64, length(m.parameters))
 for k in map(x-> x.key, m10.parameters)
@@ -136,7 +141,7 @@ output_vars = [:forecastobs, :forecastpseudo]
 modal_params = map(x -> x.value, m.parameters)
 @assert !haskey(m.settings, :temporary_altpolicy_length)
 outp0 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                                     regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 for i in keys(get_setting(m, :regime_eqcond_info))
     get_setting(m, :regime_eqcond_info)[i].weights = [θ[:cred], 1. - θ[:cred]]
 end
@@ -178,7 +183,7 @@ outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, d
     end
 
     if !regenerate_reference_forecasts
-        testfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), VERSION >= v"1.5" ? "forecastobs_1p5" : "forecastobs")
+        testfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast_version=" * ver * ".h5"), "forecastobs")
         inds = vcat(1:9, 12:13, 20:21)  # ignore k-periods ahead observables, reference data generated when a bug existed
         @test maximum(abs.(testfcast[inds, :] -
                            outp33[:forecastobs][inds, :])) < 1.1e-3#5e-4 # some numerical differences b/c fixes to calculations
@@ -211,7 +216,7 @@ for (i, k) in enumerate(sort!(collect(keys(regime_eqcond_info))))
 end
 
 out_perm = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
-                              regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+                                  regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 # Check perfectly credible ZLB match permanent equivalent
 m <= Setting(:uncertain_temporary_altpolicy, false)
@@ -271,8 +276,7 @@ out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
 if !regenerate_reference_forecasts
     inds = vcat(1:9, 12:13)
     @testset "Compare TV Credibility to Reference Forecast" begin
-        tvtestfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"),
-                             VERSION >= v"1.5" ? "tvforecastobs_1p5" : "tvforecastobs")
+        tvtestfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast_version=" * ver * ".h5"), "tvforecastobs")
         @test maximum(abs.(out1[:forecastobs][inds, :] - tvtestfcast[inds, :])) < 1e-3
     end
 end
@@ -280,23 +284,10 @@ end
 
 
 if regenerate_reference_forecasts
-    h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "w") do file
+    h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast_version=" * ver * ".h5"), "w") do file
         write(file, "para", θ10)
-        if VERSION >= v"1.5"
-            #write(file, "tvforecastobs", tvtestfcast)#_othervers)
-            write(file, "forecastobs_1p5", outp33[:forecastobs])
-            write(file, "tvforecastobs_1p5", out1[:forecastobs])
-        else
-            write(file, "tvforecastobs", out1[:forecastobs])
-            write(file, "forecastobs", outp33[:forecastobs])
-        end
-        #=else
-            write(file, "forecastobs_tv0to1", out1[:forecastobs])
-            write(file, "forecastobs_fixed33", outp33[:forecastobs])
-            write(file, "forecastobs_fixed0", outp0[:forecastobs])
-            write(file, "forecastobs_fixed100", out_temp[:forecastobs])
-            write(file, "forecastobs_tv0to1_ZLBcred_1", out_credzlb[:forecastobs])
-        end=#
+        write(file, "forecastobs", outp33[:forecastobs])
+        write(file, "tvforecastobs", out1[:forecastobs])
     end
 end
 

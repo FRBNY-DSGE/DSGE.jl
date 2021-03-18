@@ -108,7 +108,7 @@ m <= Setting(:regime_eqcond_info, Dict(3 => deepcopy(zlb_rule_eqcond),
                                              4 => deepcopy(zlb_rule_eqcond),
                                              5 => deepcopy(zlb_rule_eqcond),
                                              6 => DSGE.EqcondEntry(DSGE.flexible_ait(), [1., 0.])))
-m <= Setting(:temporary_altpolicy_names, [:zero_rate])
+m <= Setting(:temporary_altpolicy_names, [:zlb_rule])
 setup_regime_switching_inds!(m; cond_type = :full)
 df = load(joinpath(path, "..", "reference", "regime_switch_data.jld2"), "regime_switch_df_full")
 sys = compute_system(m; tvis = true)

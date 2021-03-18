@@ -124,7 +124,7 @@ for j in 1:length(prob_vecs)
     end
     replace_eqcond[tempZLB_regimes[j][end]+1] = DSGE.EqcondEntry(AltPolicy(:historical, eqcond, solve), prob_vecs[j]) # Will set the "lift-off" regime directly
     m <= Setting(:regime_eqcond_info, replace_eqcond)
-    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
+    m <= Setting(:temporary_altpolicy_names, [:zlb_rule])
     fcasts[j] = deepcopy(baseline_fcasts)
 
     # Set up matrices for regime-switching. Note that we have
