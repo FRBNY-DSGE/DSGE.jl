@@ -393,7 +393,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                   histshocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                   initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
-
     # Grab "original" settings" so they can be restored later
     altpol = alternative_policy(m)
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
@@ -477,7 +476,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_aware)
 
 
-        endozlb_forecast::Function = (zlb_start, zlb_end; unant_enforce_zlb = false) -> forecast_endozlb_helper(m, zlb_start, zlb_end, z0, states, shocks;
+        endozlb_forecast::Function = (zlb_start, zlb_end; unant_enforce_zlb = false) -> forecast_endozlb_helper(m, zlb_start, zlb_end, z0, states, shocks,
+            orig_regimes, original_eqcond_dict, orig_regime_dates, original_info_set;
             cond_type = cond_type, unant_enforce_zlb = unant_enforce_zlb,
             set_zlb_regime_vals = set_zlb_regime_vals,
             set_info_sets_altpolicy = set_info_sets_altpolicy,
@@ -633,7 +633,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 end
 
 function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, last_endo_zlb::Int64,
-                                 z0::Vector{S}, states::AbstractMatrix{S}, shocks::AbstractMatrix{S};
+                                 z0::Vector{S}, states::AbstractMatrix{S}, shocks::AbstractMatrix{S},
+                                 orig_regimes::Int64, original_eqcond_dict::Dict{Int64, EqcondEntry},
+                                 orig_regime_dates::Dict{Int, Date}, original_info_set::Union{UnitRange{Int64}, Array{UnitRange{Int64}}};
                                  unant_enforce_zlb::Bool = false, cond_type::Symbol = :none, set_zlb_regime_vals::Function = identity,
                                  set_info_sets_altpolicy::Function = auto_temp_altpolicy_info_set,
                                  update_regime_eqcond_info!::Function =
@@ -649,9 +651,6 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
-    original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : UnitRange{Int64}[]
-    original_eqcond_dict = haskey(get_settings(m), :regime_eqcond_info) ? get_setting(m, :regime_eqcond_info) :
-    Dict{Int, EqcondEntry}()
     # Grab some information about the forecast
     n_hist_regimes = haskey(get_settings(m), :n_hist_regimes) ? get_setting(m, :n_hist_regimes) : 1
     has_reg_dates = haskey(get_settings(m), :regime_dates) # calculate dates of first & last regimes we need to add for the alt policy
@@ -666,8 +665,6 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
     end
     altpol_reg_qtrrange   = quarter_range(start_altpol_date, end_altpol_date)
     n_altpol_reg_qtrrange = length(altpol_reg_qtrrange)
-    orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
-    orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
     orig_temp_zlb     = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
 
     # Set up regime dates
