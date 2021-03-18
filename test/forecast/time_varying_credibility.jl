@@ -178,7 +178,7 @@ outp33_tv = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, d
     end
 
     if !regenerate_reference_forecasts
-        testfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_meas_fix_forecast.h5"), "forecastobs")
+        testfcast = h5read(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), VERSION >= v"1.5" ? "forecastobs_1p5" : "forecastobs")
         inds = vcat(1:9, 12:13, 20:21)  # ignore k-periods ahead observables, reference data generated when a bug existed
         @test maximum(abs.(testfcast[inds, :] -
                            outp33[:forecastobs][inds, :])) < 1.1e-3#5e-4 # some numerical differences b/c fixes to calculations
@@ -280,19 +280,23 @@ end
 
 
 if regenerate_reference_forecasts
-    h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_meas_fix_forecast.h5"), "w") do file
+    h5open(joinpath(dirname(@__FILE__), "..", "reference", "tvcred_reference_forecast.h5"), "w") do file
         write(file, "para", θ10)
-        write(file, "forecastobs", outp33[:forecastobs])
         if VERSION >= v"1.5"
-            write(file, "tvforecastobs", tvtestfcast_othervers)
+            #write(file, "tvforecastobs", tvtestfcast)#_othervers)
+            write(file, "forecastobs_1p5", outp33[:forecastobs])
             write(file, "tvforecastobs_1p5", out1[:forecastobs])
         else
+            write(file, "tvforecastobs", out1[:forecastobs])
+            write(file, "forecastobs", outp33[:forecastobs])
+        end
+        #=else
             write(file, "forecastobs_tv0to1", out1[:forecastobs])
             write(file, "forecastobs_fixed33", outp33[:forecastobs])
             write(file, "forecastobs_fixed0", outp0[:forecastobs])
             write(file, "forecastobs_fixed100", out_temp[:forecastobs])
             write(file, "forecastobs_tv0to1_ZLBcred_1", out_credzlb[:forecastobs])
-        end
+        end=#
     end
 end
 
