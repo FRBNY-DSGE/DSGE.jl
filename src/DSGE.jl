@@ -237,6 +237,14 @@ module DSGE
     include("solve/solve.jl")
     include("solve/klein.jl")
 
+    include("estimate/smc/particle.jl") # need to add this first b/c need ParticleCloud
+    #include("estimate/smc/initialization.jl")
+    #include("estimate/smc/helpers.jl")
+    #include("estimate/smc/util.jl")
+    #include("estimate/smc/mutation.jl")
+    #include("estimate/smc/resample.jl")
+    #include("estimate/smc/smc.jl")
+
     include("estimate/util.jl")
     include("estimate/kalman.jl")
     include("estimate/filter.jl")
@@ -255,14 +263,6 @@ module DSGE
     include("estimate/nearest_spd.jl")
 
     include("estimate/metropolis_hastings.jl")
-
-    include("estimate/smc/particle.jl")
-    #include("estimate/smc/initialization.jl")
-    #include("estimate/smc/helpers.jl")
-    #include("estimate/smc/util.jl")
-    #include("estimate/smc/mutation.jl")
-    #include("estimate/smc/resample.jl")
-    #include("estimate/smc/smc.jl")
 
     include("estimate/smc.jl")
     include("estimate/backwards_compatibility.jl")
