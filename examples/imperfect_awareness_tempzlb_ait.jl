@@ -59,7 +59,7 @@ modal_params = map(x -> x.value, m.parameters) # The default parameters will be 
 forecast_string = ""
 
 # Set up regime switching and forecast settings
-m <= Setting(:n_regimes, 2, true, "reg", "")   # How many regimes?
+m <= Setting(:n_regimes, 9, true, "reg", "")   # How many regimes?
 m <= Setting(:regime_switching, true)          # Need to set that the model does have regime-switching
 m <= Setting(:forecast_block_size, 5000)
 m <= Setting(:use_parallel_workers, true)
@@ -81,6 +81,20 @@ if zlb_altpolicy
     m <= Setting(:smooth_ait_gdp_alt_φ_π, 6.)
 end
 
+# Some settings for the endogenous zlb (if we're using one)
+if endo_zlb
+    # Set the maximum endogenous zlb length (in the forecast)
+    m <= Setting(:max_temporary_altpolicy_length, 20)
+    # Use only two regimes of ZLB if nominal rates do not drop below the zlb
+    # (in the forecast)
+    m <= Setting(:min_temporary_altpolicy_length, 2)
+    # If we have zlb in the history, we indicate the length of pre-forecast zlb using
+    # the following setting (not applicable in this example)
+    # m <= Setting(:min_temporary_altpolicy_length, length_prefcast_zlb)
+    # If we have time varying credibility, we specify the length of the credibility
+    # variation as follows:
+    m <= Setting(:cred_vary_until, 9)
+end
 
 for i in 1:2
     adj = (i == 2) ? .9 : 1. # adjustment to the size of the standard deviation
@@ -124,8 +138,8 @@ if endo_zlb
 end
 
 if zlb_altpolicy
-    Hbar = 4 # number of zlb regimes
-    n_tempZLB_regimes = 3 + Hbar - 1 # 2 historical regimes, 4 quarters of zlb, and a switch to uncertain flexible ait in the last regime
+    Hbar = 6 # number of zlb regimes
+    n_tempZLB_regimes = 3 + Hbar - 1 # 2 historical regimes, 6 quarters of zlb, and a switch to uncertain flexible ait in the last regime
     # Add parameter values for additional regimes
     for i in 3:(n_tempZLB_regimes+1)
         set_regime_val!(m[:σ_g], i, m10[:σ_g].value)
@@ -156,7 +170,7 @@ if zlb_altpolicy
     # Set up regime dates
     temp_regime_dates = deepcopy(get_setting(m, :regime_dates))
     temp_regime_dates[1] = date_presample_start(m)
-    end_date = Date(2020, 12, 31) + Dates.Year(1) + Dates.Month(3)
+    end_date = Date(2020, 12, 31) + Dates.Year(1) + Dates.Month(9)
     for (i, date) in zip(3:(n_tempZLB_regimes+1),
                          Date(2020, 12, 31):Dates.Month(3):end_date) # add forecast dates
         temp_regime_dates[i] = date
@@ -177,17 +191,28 @@ if zlb_altpolicy
     # Now set up settings for temp alt policy
     m <= Setting(:gensys2, true) # Temporary alternative policies use a special gensys algorithm
     m <= Setting(:replace_eqcond, true) # The gensys2 algo replaces eqcond matrices, so this step is required
-    m <= Setting(:temporary_altpolicy_length, n_tempZLB_regimes - 2) # specifies number of ZLB regimes; required if there is
-                                                               # further regime-switching after the ZLB ends (aside from
-                                                               # the extra regime for the "lift-off" from ZLB)
+    if endo_zlb
+        m <= Setting(:temporary_altpolicy_length, get_setting(m, :min_temporary_altpolicy_length)) # specifies number of ZLB regimes; required if there is
+    else
+        m <= Setting(:temporary_altpolicy_length, n_tempZLB_regimes - 2) # specifies number of ZLB regimes; required if there is
+    end
+    # further regime-switching after the ZLB ends (aside from
+    # the extra regime for the "lift-off" from ZLB)
     credvec = range(0., stop = 1., length = n_tempZLB_regimes - 2) # Credibility of ZLB increases as time goes on
     replace_eqcond = Dict{Int, EqcondEntry}() # Which eqcond to use in which periods
     for (i, reg) in enumerate(3:n_tempZLB_regimes)
-        replace_eqcond[reg] = EqcondEntry(zlb_rule(), [credvec[i], 1. - credvec[i]]) # Temp ZLB rule in these regimes
+        #if using endozlb, only use zlb_rule in the eqcond for the minimum ZLB
+        # length (in this example, two quarters)
+        if endo_zlb && reg > 3+ get_setting(m, :min_temporary_altpolicy_length)
+            reg_policy = DSGE.smooth_ait_gdp_alt()
+        else
+            reg_policy = DSGE.zlb_rule()
+        end
+        replace_eqcond[reg] = EqcondEntry(reg_policy, [credvec[i], 1. - credvec[i]]) # Temp ZLB rule in these regimes
     end
     replace_eqcond[n_tempZLB_regimes + 1] = EqcondEntry(DSGE.smooth_ait_gdp_alt(), [1., 0.]) # switch to AIT in the final regime
     m <= Setting(:regime_eqcond_info, replace_eqcond) # Add mapping of regimes to new eqcond matrices
-    m <= Setting(:temporary_altpolicy_names, [:zero_rate])
+    m <= Setting(:temporary_altpolicy_names, [:zlb_rule])
 
     # set up information sets
     m <= Setting(:tvis_information_set, vcat([1:1, 2:2],
@@ -210,30 +235,45 @@ if zlb_altpolicy
         df[inds_tempzlb, [Symbol("obs_nominalrate$i") for i in 1:n_mon_anticipated_shocks(m)]] .= NaN
     end
 
-    # Some settings for the endogenous zlb (if we're using one)
-    if endo_zlb
-        # Set the maximum endogenous zlb length (in the forecast)
-        m <= Setting(:max_temporary_altpolicy_length, get_setting(m, :n_regimes)-1)
-        # Use the existing zlb as the minimum zlb length (in the forecast)
-        m <= Setting(:min_temporary_altpolicy_length, n_temp_zlb_regimes)
-        # If we have zlb in the history, we indicate the length of pre-forecast zlb using
-        # the following setting (not applicable in this example)
-        # m <= Setting(:min_temporary_altpolicy_length, length_prefcast_zlb)
-        # If we have time varying credibility, we specify the length of the credibility
-        # variation as follows:
-        # m <= Setting(:cred_vary_until, tvcred_n_qtrs)
-    end
 
     # Run forecast
     if endo_zlb
+        # helper function used to set up parameter values when adjusting the length of the zlb
+        # in the forecast
+        function baseline_set_regime_vals(m::AbstractDSGEModel, n::Int; start_regime::Int = 3)
+            if n >= start_regime
+                for p in m.parameters
+                    if !isempty(p.regimes)
+                        if haskey(p.regimes, :value)
+                            for i in start_regime:n
+                                if !haskey(p.regimes[:value], i)
+                                    ModelConstructors.set_regime_val!(p, i, ModelConstructors.regime_val(p, 1))
+                                end
+                            end
+                        end
+                        if haskey(p.regimes, :prior)
+                            for i in start_regime:n
+                                if !haskey(p.regimes[:prior], i)
+                                    ModelConstructors.set_regime_prior!(p, i, ModelConstructors.regime_prior(p, 1))
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            m
+        end
+
+        # Run the endogenous ZLB forecast
         fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
-                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes), zlb_method = :temporary_altpolicy, rerun_smoother = true, bdd_fcast = true,
-                                           set_regime_vals_altpolicy = (x, n) ->
-                                           baseline_covid_set_regime_vals(x, n;
-                                                                          start_regime = 3))
+                                               df; regime_switching = true, n_regimes = get_setting(m, :n_regimes), zlb_method = :temporary_altpolicy, rerun_smoother = true,
+                                               set_regime_vals_altpolicy = (x, n) ->
+                                               baseline_set_regime_vals(x, n;
+                                                                              start_regime = 3))
     else
         fcast_tempzlb = DSGE.forecast_one_draw(m, :mode, :none, output_vars, modal_params,
-                                           df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
+                                               df; regime_switching = true, n_regimes = get_setting(m, :n_regimes))
     end
 end
 
@@ -305,7 +345,7 @@ if save_plots
     end
 
     for (k, p) in plots_dict
-        Plots.savefig(p, joinpath(figuespath(m, "forecast"), "$(pol_str)_$(string(k)).pdf"))
+        Plots.savefig(p, joinpath(figurespath(m, "forecast"), "$(pol_str)_$(string(k)).pdf"))
     end
 end
 
