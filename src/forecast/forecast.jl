@@ -437,7 +437,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m)
 
     first_endo_zlb     = findfirst(has_neg_rates)
-
     # Information set - start of awareness of ZLB
     first_aware = if haskey(get_settings(m), :tvis_information_set)
         findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
@@ -459,7 +458,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         # zlb forecast
     else
         min_zlb = haskey(m.settings, :min_temporary_altpolicy_length) ? get_setting(m, :min_temporary_altpolicy_length) : 0
-        first_endo_zlb = max(first_endo_zlb, min_zlb)
+        first_endo_zlb = max(first_endo_zlb, min_zlb + 1)
         last_endo_zlb = findfirst(.!has_neg_rates[first_endo_zlb:end])
         first_endo_zlb += pre_fcast_regimes
 
@@ -503,7 +502,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         else
             # Ensure that the Eqcond Dict is correctly cleared for endo zlb
             temp_altpol_length = 0
-            for (reg, v) in original_eqcond_dict
+            for (reg, v) in get_setting(m, :regime_eqcond_info)
                 if v.alternative_policy.key == :zlb_rule || v.alternative_policy.key == :zero_rate
                     if reg >= first_endo_zlb
                         @warn "Regime $reg of regime_eqcond_info used zero rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
@@ -526,7 +525,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                 high = last_endo_zlb
                 low  = first_endo_zlb
                 lookback = haskey(m.settings, :endogenous_zlb_lookback) ? get_setting(m, :endogenous_zlb_lookback)-1 : 2
-                iter = last_endo_zlb - lookback
+                iter = max(last_endo_zlb - lookback, first_endo_zlb)
 
                 while true
                     # Run extended zlb forecast
@@ -646,6 +645,8 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
                                  histshocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                                  histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                                  initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
+
+
 
     altpol = alternative_policy(m)
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
@@ -852,12 +853,13 @@ function default_update_regime_eqcond_info!(m::AbstractDSGEModel, eqcond_dict::A
     # Update eqcond_dict to use the lift-off policy for any regimes between (inclusive)
     # the liftoff regime and the first regime for which credibility stops varying.
     if haskey(get_settings(m), :cred_vary_until) && get_setting(m, :cred_vary_until) >= liftoff_regime
-        for z in liftoff_regime:(get_setting(m, :cred_vary_until) + 1)
+        for z in liftoff_regime:(get_setting(m, :cred_vary_until))
             eqcond_dict[z].alternative_policy = liftoff_policy
         end
     end
 
     m <= Setting(:regime_eqcond_info, eqcond_dict)
+    m <= Setting(:n_regimes, maximum(collect(keys(eqcond_dict))))
 
     return m
 end
