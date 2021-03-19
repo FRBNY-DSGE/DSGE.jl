@@ -70,7 +70,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                   old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                    SMC.Cloud} = DSGE.ParticleCloud(m, 0),
-                  old_vintage::String = "",
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
@@ -81,7 +80,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
-             old_data = old_data, old_cloud = old_cloud, old_vintage = old_vintage,
+             old_data = old_data, old_cloud = old_cloud,
              continue_intermediate = continue_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
              save_intermediate = save_intermediate,
@@ -98,7 +97,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
                   old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                   old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                    SMC.Cloud} = DSGE.ParticleCloud(m, 0),
-                  old_vintage::String = "",
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
@@ -110,7 +108,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
-             old_data = old_data, old_cloud = old_cloud,old_vintage = old_vintage,
+             old_data = old_data, old_cloud = old_cloud,
              continue_intermediate = continue_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
 	         save_intermediate = save_intermediate,
@@ -127,7 +125,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
                   old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                   old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                    SMC.Cloud} = DSGE.ParticleCloud(m, 0),
-                  old_vintage::String = "",
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
@@ -294,7 +291,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
         ### parallel.
         ########################################################################################
         smc2(m, data; verbose = verbose, filestring_addl = filestring_addl,
-             old_data = old_data, old_cloud = old_cloud, old_vintage = old_vintage,
+             old_data = old_data, old_cloud = old_cloud,
              continue_intermediate = continue_intermediate,
              intermediate_stage_start = intermediate_stage_start,
              save_intermediate = save_intermediate,
