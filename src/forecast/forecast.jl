@@ -502,7 +502,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         else
             # Ensure that the Eqcond Dict is correctly cleared for endo zlb
             temp_altpol_length = 0
-            for (reg, v) in get_setting(m, :regime_eqcond_info)
+            for (reg, v) in original_eqcond_dict
                 if v.alternative_policy.key == :zlb_rule || v.alternative_policy.key == :zero_rate
                     if reg >= first_endo_zlb
                         @warn "Regime $reg of regime_eqcond_info used zero rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
