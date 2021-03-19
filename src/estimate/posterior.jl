@@ -100,7 +100,7 @@ likelihood(m::AbstractDSGEModel, data::Matrix{T};
            sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
-Evaluate the DSGE likelihood function. Can handle two-part estimation where the observed
+Evaluate the DSGE log-likelihood function. Can handle two-part estimation where the observed
 sample contains both a normal stretch of time (in which interest rates are positive) and
 a stretch of time in which interest rates reach the zero lower bound. If there is a
 zero-lower-bound period, then we filter over the 2 periods separately. Otherwise, we
