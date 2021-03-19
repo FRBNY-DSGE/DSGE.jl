@@ -220,6 +220,15 @@ that allow the user to specify such information about the state space system.
   and the values specify the regime to which the keys' regimes are identical.
   For example, if the setting was `Dict(2 => 1, 3 => 1)`, then we are saying
   that regimes 2 and 3 have the same transition equations as regime 1.
+  Note that if you are using `gensys2`, then you cannot say that `gensys` regimes
+  have the same transition equations as any regime on which `gensys2` is called,
+  including the terminal period of `gensys2`, even though the transition equations
+  may indeed be the same. The reason is that the `gensys` regimes are computed
+  before the `gensys2` regimes, and to avoid extra calculations, the terminal period
+  is computed during the `gensys2` step. Therefore, trying to copy
+  a `gensys2` regime for a `gensys` regime will cause an error (an attempt to
+  access an undefined reference).
+
 
 - `identical_eqcond_regimes::Dict{Int, Int}`: different regimes
   may have the same equilibrium conditions (see [Solving the Model](@ef solving-dsge-doc)).
