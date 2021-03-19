@@ -8,6 +8,17 @@ Estimate the DSGE parameter posterior distribution.
 ### Arguments:
 - `m::AbstractDSGEModel` or `m::AbstractVARModel`: model object
 
+### Estimation Settings
+Please see the section on 'Estimation Settings' on the 'Advanced Usage'
+page of the online documentation
+or src/defaults.jl for a full description of
+all the estimation settings for both
+the Metropolis-Hastings (MH) and Sequential Monte Carlo (SMC) algorithms.
+For the latter, also see `?DSGE.smc2`. Most of the
+optional and keyword arguments described below are
+not directly related to the behavior of the sampling algorithms
+(e.g. tuning, number of samples).
+
 ### Optional Arguments:
 - `data`: well-formed data as `Matrix` or `DataFrame`. If this is not provided, the `load_data` routine will be executed.
 

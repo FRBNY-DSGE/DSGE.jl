@@ -273,7 +273,15 @@ sampling from the posterior distribution of the parameters.
 - `cc0`: Jump size for initializing Metropolis-Hastings.
 - `cc`: Jump size for the rest of Metropolis-Hastings.
 
-### Optional Arguments
+### Estimation Settings
+Please see the section on 'Metropolis-Hastings Settings' on the
+'Advaned Usage' page of the online documentation or src/defaults.jl
+for a full description of all the estimation settings for MH.
+Most of the settings for MH are stored in the model object.
+The keyword arguments described below are not directly related
+to the behavior of the algorithm (e.g. tuning, number of samples).
+
+### Keyword Arguments
 
 - `verbose`: The desired frequency of function progress messages printed to
   standard out. One of:

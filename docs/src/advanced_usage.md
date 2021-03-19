@@ -110,6 +110,13 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.j
 - `n_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings.
 - `mh_thin::Int`: Metropolis-Hastings thinning step.
 - `parallel::Bool`: Flag for running algorithm in parallel.
+- `mh_adaptive_accpt::Bool`: if true, then the proposal distribution is adapted
+  to achieve a target accept rate. (Note that currently the adaptive proposal distribution is not working).
+- `mh_c::S = 0.5`: Initial scaling factor for covariance of the particles when using
+  an adaptive proposal distribution. Controls size of steps in mutation step.
+- `mh_α::S = 1.0`: The mixture proportion for the mutation step's proposal distribution when
+  using an adaptive proposal distribution. See `?mvnormal_mixture_draw` for details.
+  Note that a value of 0.9 has commonly been used in applications to DSGE models (see citations below).
 
 ##### Sequential Monte Carlo Settings
 - `n_particles::Int`: Number of particles.
