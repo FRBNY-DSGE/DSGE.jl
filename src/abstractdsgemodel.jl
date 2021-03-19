@@ -434,7 +434,7 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function update!(m::AbstractDSGEModel, values::Vector{T}) where {T <: Real}
+function update!(m::AbstractDSGEModel, values::AbstractVector{T}) where {T <: Real}
     ModelConstructors.update!(m.parameters, values)
     steadystate!(m)
 end
