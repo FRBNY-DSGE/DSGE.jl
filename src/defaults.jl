@@ -196,21 +196,20 @@ function default_settings!(m::AbstractDSGEModel)
     # Endogenous ϕ Schedule
     settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true,
         "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
-    settings[:tempering_target] = Setting(:tempering_target, 0.95,
-        "Coefficient of the sample size metric to be targeted when solving for an endogenous ϕ")
     settings[:resampling_threshold] = Setting(:resampling_threshold, 0.5,
         "Threshold s.t. particles will be resampled when the population drops below threshold * N")
-
-    # Temporary setting to save different output files
     settings[:adaptive_tempering_target_smc] = Setting(:adaptive_tempering_target_smc, 0.97, false,
-         "adpt", "Either the adaptive tempering target or 0.0 if using fixed schedule")
+         "adpt", "Coefficient of the sample size to be targeted when solving for an endogenous ϕ " *
+                 "or 0.0 if using a fixed schedule")
+
+    # Generalized Tempering Settings
     settings[:tempered_update_prior_weight] = Setting(:tempered_update_prior_weight, 0.0, false,
          "prior_weight", "When bridging from old estimation, how much weight to put on prior.")
     settings[:smc_iteration] = Setting(:smc_iteration, 1, false, "iter",
         "The iteration index for the number of times smc has been run on the same data vintage. " *
         "Primarily for numerical accuracy/testing purposes.")
     settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint,
-        "The old data vintage to start SMC from when time tempering.")
+        "The old data vintage from which to start SMC when using a tempered update.")
 
     # Alternative policy
     ## TODO: delete this once alternative policies have been completely ported to using regime_eqcond_info

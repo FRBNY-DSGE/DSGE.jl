@@ -110,11 +110,11 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.j
 - `n_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings.
 - `mh_thin::Int`: Metropolis-Hastings thinning step.
 - `parallel::Bool`: Flag for running algorithm in parallel.
-- `n_parts::Int`: Number of particles.
-- `n_blocks::Int`: Number of parameter blocks in mutation step.
-- `n_mh_steps::Int`: Number of Metropolis Hastings steps to attempt during the mutation step.
 
 ##### Sequential Monte Carlo Settings
+- `n_particles::Int`: Number of particles.
+- `n_smc_blocks::Int`: Number of parameter blocks in mutation step.
+- `n_mh_steps_smc::Int`: Number of Metropolis Hastings steps to attempt during the mutation step.
 - `λ::S`: The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ
 - `n_Φ::Int`: Number of stages in the tempering schedule.
 - `resampling_method::Symbol`: Which resampling method to use.
@@ -123,29 +123,19 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.j
     - `:polyalgo`: Samples using a polyalgorithm.
 - `threshold_ratio::S`: Threshold s.t. particles will be resampled when the population
     drops below threshold * N
-- `c::S`: Scaling factor for covariance of the particles. Controls size of steps in mutation step.
-- `α::S`: The mixture proportion for the mutation step's proposal distribution.
-- `target::S`: The initial target acceptance rate for new particles during mutation.
-
-- `use_chand_recursion::Bool`: Flag for using Chandrasekhar Recursions in Kalman filter.
+- `step_size_smc::S`: Scaling factor for covariance of the particles. Controls size of steps in mutation step.
+- `mixture_proportion::S`: The mixture proportion for the mutation step's proposal distribution.
+- `target_accept::S`: The initial target acceptance rate for new particles during mutation.
 - `use_fixed_schedule::Bool`: Flag for whether or not to use a fixed tempering (ϕ) schedule.
-- `tempering_target::S`: Coefficient of the sample size metric to be targeted when solving
-    for an endogenous ϕ.
-- `old_data::Matrix{S}`:
-- `old_cloud::ParticleCloud`:
-- `old_vintage::String`: String for vintage date of old data
+- `adaptive_tempering_target_smc::S`: Coefficient of the sample size metric to be targeted when solving
+    for an endogenous ϕ or 0.0 if using a fixed schedule.
+- `tempered_update_prior_weight::S`: when bridging from old estimation, how much weight to put on prior.
 - `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
      same data vintage. Primarily for numerical accuracy/testing purposes.
+- `previous_data_vintage::String`: the old data vintage from which to start SMC when using a tempered update
 
-- `run_test::Bool`: Flag for when testing accuracy of program
-- `filestring_addl::Vector{String}`: Additional file string extension for loading old cloud.
-- `continue_intermediate::Bool`: Flag to indicate whether one is continuing SMC from an
-    intermediate stage/
-- `intermediate_stage_start::Int`: Intermediate stage at which one wishes to begin the estimation.
-- `save_intermediate::Bool`: Flag for whether one wants to save intermediate Cloud objects
-- `intermediate_stage_increment::Int`: Save Clouds at every increment
-    (1 = each stage, 10 = every 10th stage, etc.)
-
+##### Miscellaneous
+- `use_chand_recursion::Bool`: Flag for using Chandrasekhar Recursions in Kalman filter.
 
 #### Forecasting
 

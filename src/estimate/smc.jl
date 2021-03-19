@@ -9,17 +9,51 @@ smc(m::Union{AbstractDSGEModel,AbstractVARModel},  kwargs...)
 
 These are wrapper functions to ensure simplicity of estimation of DSGE models while
 navigating the DSGE package. Most keywords are passed as settings of the DSGE models
-rather than keyword arguments, as in SMC.jl. For the keyword arguments that remain,
-see below.
+rather than keyword arguments, as in SMC.jl. See `SMC Settings` below.
+There are also some additional
+keyword arguments that are not passed as settings. Please see `Keyword Arguments` below.
 
-### Arguments:
+### Arguments
 
 - `m`: A model object, which stores parameter values, prior dists, bounds, and various
     other settings that will be referenced
 - `data`: A matrix or dataframe containing the time series of the observables used in
     the calculation of the posterior/likelihood
 
-### Keyword Arguments:
+### SMC Settings
+For all of the following settings, unless otherwise noted, the names are the same
+as the keyword argument for `SMC.smc`. The names are sometimes different from the
+keyword argument for `SMC.smc` to distinguish the setting from MH estimation settings.
+
+- `n_particles::Int`: Number of particles.
+- `n_smc_blocks::Int`: Number of parameter blocks in mutation step (corresponds to kwarg `n_blocks` for `SMC.smc`).
+- `n_mh_steps_smc::Int`: Number of Metropolis Hastings steps to attempt during the mutation step (corresponds to kwarg `n_mh_steps` for `SMC.smc`).
+- `λ::S`: The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ
+- `n_Φ::Int`: Number of stages in the tempering schedule.
+- `resampler_smc::Symbol`: Which resampling method to use (corresponds to kwarg `resampling_method` for `SMC.smc`).
+    - `:systematic`: Will use sytematic resampling.
+    - `:multinomial`: Will use multinomial resampling.
+    - `:polyalgo`: Samples using a polyalgorithm.
+- `threshold_ratio::S`: Threshold s.t. particles will be resampled when the population
+    drops below threshold * N
+- `step_size_smc::S`: Initial scaling factor for covariance of the particles. Controls size of steps in mutation step.
+    This value will be adaptively set afterward to reach an accept rate of `target` (see kwarg below).
+    This setting corresponds to the kwarg `c` for `SMC.smc`.
+- `mixture_proportion::S = 1.0`: The mixture proportion for the mutation step's proposal distribution. See `?mvnormal_mixture_draw` for details.
+    Note that a value of 0.9 has commonly been used in applications to DSGE models (see citations below).
+    This setting corresponds to the kwarg `α` for `SMC.smc`.
+- `target_accept::S`: The initial target acceptance rate for new particles during mutation
+    (corresponds to the kwarg `target` for `SMC.smc`).
+- `use_fixed_schedule::Bool`: Flag for whether or not to use a fixed tempering (ϕ) schedule.
+- `adaptive_tempering_target_smc::S`: Coefficient of the sample size metric to be targeted when solving
+    for an endogenous ϕ or 0.0 if using a fixed schedule (corresponds to the kwarg `tempering_target` for `SMC.smc`).
+- `tempered_update_prior_weight::S`: when bridging from old estimation, how much weight to put on prior.
+- `previous_data_vintage::String`: the old data vintage from which to start SMC when using a tempered update
+    (corresponds to the kwarg `old_data_vintage` for `SMC.smc`).
+- `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
+     same data vintage. Primarily for numerical accuracy/testing purposes.
+
+### Keyword Arguments
 - `old_data::Matrix{Float64}` = []: A matrix containing the time series of observables of previous data
     (with `data` being the new data) for the purposes of a time tempered estimation
     (that is, using the posterior draws from a previous estimation as the initial set
