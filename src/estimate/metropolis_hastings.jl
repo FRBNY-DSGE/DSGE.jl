@@ -11,7 +11,8 @@ function metropolis_hastings(propdist::Distribution,
                              n_sim::Int64           = 100,
                              n_burn::Int64          = 0,
                              mhthin::Int64          = 1,
-                             adaptive_accpt::Bool   = false,
+                             adaptive_accept::Bool  = false,
+                             target_accept::T       = 0.25,
                              α::T                   = 1.0,
                              c::T                   = 0.5,
                              verbose::Symbol        = :low,
@@ -35,14 +36,15 @@ distribution of the parameters.
 
 ### Optional Arguments
 
-- `n_blocks::Int = 1`: Number of blocks (for memory-management purposes)
-- `n_param_blocks::Int = 1`: Number of parameter blocks
+- `n_blocks::Int = 1`: Number of blocks of draws (for memory-management purposes)
+- `n_param_blocks::Int = 1`: Number of parameter blocks (this is the "blocking" people normally think about with MH)
 - `n_sim::Int    = 100`: Number of simulations per save block. Note: # saved observations will be
     `n_sim * n_param_blocks * (n_blocks - b_burn)`. The # of total simulations will be
     `n_sim * n_param_blocks * n_blocks * mhthin`.
 - `n_burn::Int   = 0`: Length of burn-in period
 - `mhthin::Int   = 1`: Thinning parameter (for mhthin = d, keep only every dth draw)
-- `adaptive_accpt::Bool = false`: Whether or not to adaptively adjust acceptance prob.
+- `adaptive_accept::Bool = false`: Whether or not to adaptively adjust acceptance prob. after every memory block.
+- `target_accept::T = 0.25`: target accept rate when adaptively adjusting acceptance prob.
 - `α::T = 1.0`: Tuning parameter (step size) for proposal density computation in adaptive case
 - `c::T = 0.5`: Tuning parameter (mixture proportion) for proposal density computation in
     adaptive case
@@ -70,7 +72,8 @@ function metropolis_hastings(proposal_dist::Distribution,
                              n_sim::Int64           = 100,
                              n_burn::Int64          = 0,
                              mhthin::Int64          = 1,
-                             adaptive_accpt::Bool   = false,
+                             adaptive_accept::Bool   = false,
+                             target_accept::T        = 0.25,
                              α::T                   = 1.0,
                              c::T                   = 0.5,
                              verbose::Symbol        = :low,
@@ -137,6 +140,11 @@ function metropolis_hastings(proposal_dist::Distribution,
                                 HDF5.d_create(simfile, "mhparams", datatype(Float64),
                                               dataspace(n_saved_obs, n_params), "chunk", (n_sim * n_param_blocks, n_params))
 
+    # Initialize acceptance rate at the target if adaptively adjusting acceptance prob.
+    if adaptive_accept
+        curr_accept = target_accept
+    end
+
     # Keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0.
 
@@ -144,6 +152,12 @@ function metropolis_hastings(proposal_dist::Distribution,
 
         begin_time = time_ns()
         block_rejections = 0
+
+        if adaptive_accept
+            # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
+            c *= (0.95 + 0.10 * exp(16.0 * (curr_accept - target_accept)) /
+                  (1.0 + exp(16.0 * (curr_accept - target_accept))))
+        end
 
         for j = 1:(n_sim * mhthin)
 
@@ -170,7 +184,7 @@ function metropolis_hastings(proposal_dist::Distribution,
                 para_new          = deepcopy(para_old)
                 para_new[block_a] = para_draw
 
-                q0, q1 = if adaptive_accpt
+                q0, q1 = if adaptive_accept
                     SMC.compute_proposal_densities(para_draw, para_subset, d_subset;
                                                    α = α, c = c)
                 else
@@ -221,6 +235,9 @@ function metropolis_hastings(proposal_dist::Distribution,
 
         all_rejections += block_rejections
         block_rejection_rate = block_rejections / (n_sim * mhthin * n_param_blocks)
+        if adaptive_accept
+            curr_accept = 1. - block_rejection_rate
+        end
 
         ## Once every iblock times, write parameters to a file
 
@@ -246,12 +263,12 @@ function metropolis_hastings(proposal_dist::Distribution,
                 "$total_sampling_time_minutes minutes")
         println(verbose, :low, "Expected time remaining for Metropolis-Hastings: " *
                 "$expected_time_remaining_minutes minutes")
-        println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
+        println(verbose, :low, "Block $block acceptance rate: $(1. - block_rejection_rate) \n")
     end # of loop over blocks
     close(simfile)
 
     rejection_rate = all_rejections / (n_blocks * n_sim * mhthin * n_param_blocks)
-    println(verbose, :low, "Overall rejection rate: $rejection_rate")
+    println(verbose, :low, "Overall acceptance rate: $(1. - rejection_rate)")
 end
 
 """
@@ -311,7 +328,8 @@ function metropolis_hastings(propdist::Distribution,
     mhthin   = mh_thin(m)
 
     n_param_blocks = n_mh_param_blocks(m)
-    adaptive_accpt = get_setting(m, :mh_adaptive_accpt)
+    adaptive_accept = get_setting(m, :mh_adaptive_accept)
+    target_accept   = get_setting(m, :mh_target_accept)
     c              = get_setting(m, :mh_c)
     α              = get_setting(m, :mh_α)
 
@@ -339,7 +357,8 @@ function metropolis_hastings(propdist::Distribution,
 
     return metropolis_hastings(propdist, loglikelihood, get_parameters(m), data, cc0, cc;
                                n_blocks = n_blocks, n_param_blocks = n_param_blocks,
-                               adaptive_accpt = adaptive_accpt, c = c, α = α, n_sim = n_sim,
+                               adaptive_accept = adaptive_accept, target_accept = target_accept,
+                               c = c, α = α, n_sim = n_sim,
                                n_burn = n_burn, mhthin = mhthin, toggle = toggle,
                                regime_switching = regime_switching, verbose = verbose,
                                savepath = savepath, rng = rng, testing = testing)

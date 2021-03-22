@@ -110,8 +110,9 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.j
 - `n_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings.
 - `mh_thin::Int`: Metropolis-Hastings thinning step.
 - `parallel::Bool`: Flag for running algorithm in parallel.
-- `mh_adaptive_accpt::Bool`: if true, then the proposal distribution is adapted
-  to achieve a target accept rate. (Note that currently the adaptive proposal distribution is not working).
+- `mh_adaptive_accept::Bool`: if true, then the proposal distribution is adapted
+  to achieve a target accept rate.
+- `mh_target_accept::Bool`: target accept rate when adaptively adjusting acceptance probability.
 - `mh_c::S = 0.5`: Initial scaling factor for covariance of the particles when using
   an adaptive proposal distribution. Controls size of steps in mutation step.
 - `mh_α::S = 1.0`: The mixture proportion for the mutation step's proposal distribution when
@@ -707,7 +708,6 @@ see the docstring for `forecast_one`.
   with unanticipated monetary policy shocks. If this kwarg is true, we return
   `NaN`s rather than use unanticipated shocks.
 
-
 For further guidance on forecasting with an endogenously enforced ZLB, please see the script
 [imperfect_awareness_tempzlb_ait.jl](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples/imperfect_awareness_tempzlb_ait.jl) with the keyword endozlb set to true.
 
@@ -758,6 +758,11 @@ To create a new model object, we recommend doing the following:
    appropriate list in `init_model_indices`.
 4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions to export,
    and include each of the files in `src/model/mXXX`.
+
+**It is very important that you include the default settings by adding the line `default_settings!(m)`
+inside the function that creates a new instance of your model.** Otherwise, many methods
+in DSGE.jl will fail because they assume many settings have default values that are
+set by `default_settings!`.
 
 ### [Model sub-specifications (`m.subspec`)](@id model-sub-specifications-msubspec)
 

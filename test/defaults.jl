@@ -56,7 +56,8 @@ DSGE.default_settings!(m)
     @test get_setting(m, :n_mh_simulations) == 5000
     @test get_setting(m, :n_mh_blocks) == 22
     @test get_setting(m, :n_mh_param_blocks) == 1
-    @test get_setting(m, :mh_adaptive_accpt) == false
+    @test get_setting(m, :mh_adaptive_accept) == false
+    @test get_setting(m, :mh_target_accept) == .25
     @test get_setting(m, :mh_c) == 0.5
     @test get_setting(m, :mh_α) == 1.0
     @test get_setting(m, :n_mh_burn) == 2

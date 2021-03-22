@@ -26,7 +26,7 @@ m <= Setting(:n_mh_blocks, 1)
 m <= Setting(:n_mh_burn, 0)
 m <= Setting(:n_mh_thin, 1)
 m <= Setting(:mh_cc, 0.0005)
-m <= Setting(:mh_adaptive_accpt, false)
+m <= Setting(:mh_adaptive_accept, false)
 m <= Setting(:hessian_path, joinpath(path, "..", "reference", "hessian_rs2=true_vint=210101.h5"))
 
 sim_filepath = joinpath(path, "..", "reference", "sim_data_regswitch_anschorfheide.h5")
