@@ -1534,6 +1534,7 @@ function ss62!(m::Model1002)
 
         # Turn some shocks to be fixed to avoid issues
         for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
             m[pk].fixed = true
         end
 
@@ -1542,4 +1543,19 @@ function ss62!(m::Model1002)
     end
 
     ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+
+    if haskey(get_settings(m), :estimation_fixed_covid_shocks) && get_setting(m, :estimation_fixed_covid_shocks)
+        if !get_settings(m)[:estimation_fixed_covid_shocks].print
+            # Make sure a print statement will occur
+            @warn "Setting :estimation_fixed_covid_shocks did not have print statements set to true. This will be automatically added"
+            m <= Setting(:estimation_fixed_covid_shocks, true, true, "est_fixed_covid", "")
+        end
+
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc, :σ_biidc1, :σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            para_regs = unique(values(m2p[pk]))
+            for reg in para_regs # Fix all regimes to initial calibration
+                set_regime_fixed!(m[pk], reg, true)
+            end
+        end
+    end
 end
