@@ -298,7 +298,8 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
              intermediate_stage_increment = intermediate_stage_increment,
              run_csminwel = run_csminwel,
              tempered_update_prior_weight = tempered_update_prior_weight,
-             regime_switching = regime_switching)
+             regime_switching = regime_switching,
+             testing_root = haskey(get_settings(m), :testing_root) && get_setting(m, :testing_root))
     end
 
     ########################################################################################
