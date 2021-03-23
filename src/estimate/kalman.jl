@@ -322,16 +322,14 @@ Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
 `Vector{AbstractArray{S}}`s and `Vector{Vector{S}}`s of system matrices for the regimes specified
 by `system`, along with the pre- and post-ZLB regimes spliced into their correct location.
 See `?zlb_regime_matrices` to see how the pre- and post-ZLB matrices are handled.
-
-The keyword `n_regimes` indicates how many regimes to return in the case that fewer
 """
 function zlb_plus_regime_matrices(m::AbstractDSGEModel{S}, system::RegimeSwitchingSystem{S},
                                   n_reg::Int, start_date::Dates.Date = date_presample_start(m);
                                   ind_zlb_start::Int = 0,
                                   splice_zlb_regime::Bool = true) where S<:AbstractFloat
 
-    if n_reg <= 0 || ind_zlb_start <= 0
-        throw(DomainError())
+    if n_reg < 0 || ind_zlb_start < 0
+        throw(DomainError("Arguments n_reg ($(n_reg)) and ind_zlb_start ($(ind_zlb_start)) must be non-negative"))
     end
 
     if start_date < date_presample_start(m)
