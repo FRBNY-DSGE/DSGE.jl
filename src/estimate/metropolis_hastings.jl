@@ -88,6 +88,12 @@ function metropolis_hastings(proposal_dist::Distribution,
         Random.seed!(rng, 654)
     end
 
+    if adaptive_accept
+        # Reset these values to c b/c we will adaptively update
+        cc0 = c
+        cc = c
+    end
+
     propdist = init_deg_mvnormal(proposal_dist.μ, proposal_dist.σ)
 
     # Initialize algorithm by drawing para_old from normal distribution centered at the
@@ -155,8 +161,9 @@ function metropolis_hastings(proposal_dist::Distribution,
 
         if adaptive_accept
             # Calculate adaptive c-step for use as scaling coefficient in mutation MH step
-            c *= (0.95 + 0.10 * exp(16.0 * (curr_accept - target_accept)) /
+            cc *= (0.95 + 0.10 * exp(16.0 * (curr_accept - target_accept)) /
                   (1.0 + exp(16.0 * (curr_accept - target_accept))))
+            @show cc, curr_accept
         end
 
         for j = 1:(n_sim * mhthin)
@@ -185,8 +192,9 @@ function metropolis_hastings(proposal_dist::Distribution,
                 para_new[block_a] = para_draw
 
                 q0, q1 = if adaptive_accept
+                    # NOT DONE YET, we're not actually computing draws from the mixture yet b/c not using mvnormal_mixture_draw
                     SMC.compute_proposal_densities(para_draw, para_subset, d_subset;
-                                                   α = α, c = c)
+                                                   α = α, c = cc, catch_near_zeros = true)
                 else
                     0.0, 0.0
                 end
