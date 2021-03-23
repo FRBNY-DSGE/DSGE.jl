@@ -31,6 +31,9 @@
   since that number is already de-annualized
 + Improve robustness of tests of smoothers with regime-switching state space system and temporary policies
 
+## Continued WIP
++ Adaptive MH was found to be implemented incorrectly and will be fixed for the next release
+
 # DSGE.jl 1.2.1
 ## Miscellaneous
 + Fix docs
