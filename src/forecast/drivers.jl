@@ -238,7 +238,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
 
                     cloud = load(input_file_name, "cloud")
                     params = if typeof(cloud) <: Union{DSGE.Cloud,SMC.Cloud}
-                        SMC.get_likeliest_particle_value(SMC.Cloud(cloud))
+                        SMC.get_highest_posterior_particle_value(SMC.Cloud(cloud))
                     else
                         cloud.particles[argmax(get_logpost(cloud))].value
                     end
