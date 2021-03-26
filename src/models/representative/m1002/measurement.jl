@@ -246,7 +246,7 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]         = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]         = m[:σ_gdi]^2
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63"]
         QQ[exo[:ziid_sh], exo[:ziid_sh]]   = m[:σ_ziid]^2
         QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
         QQ[exo[:φ_sh], exo[:φ_sh]]         = m[:σ_φ]^2

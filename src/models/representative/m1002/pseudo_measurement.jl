@@ -164,7 +164,7 @@ function pseudo_measurement(m::Model1002{T},
 
     ## Pseudo GDP Growth
     if haskey(m.settings, :add_pseudo_gdp)
-        if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+        if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63"]
             ZZ_pseudo[pseudo[:PseudoGDP], endo[:y_t]]          = 1.0
             ZZ_pseudo[pseudo[:PseudoGDP], endo_addl[:y_t1]]     = -1.0
             ZZ_pseudo[pseudo[:PseudoGDP], endo[:z_t]]          = 1.0
@@ -176,7 +176,7 @@ function pseudo_measurement(m::Model1002{T},
 
     ## Pseudo Core PCE # TODO
     if haskey(m.settings, :add_pseudo_corepce)
-        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63"]
             ZZ_pseudo[pseudo[:PseudoCorePCE], endo[:π_t]]              = 1.0
             ZZ_pseudo[pseudo[:PseudoCorePCE], endo_addl[:e_corepce_t]] = 1.0
             DD_pseudo[pseudo[:PseudoCorePCE]]                          = 100. * (m[:π_star] - 1.)
@@ -365,7 +365,7 @@ function pseudo_measurement(m::Model1002{T},
     end
 
     if haskey(m.settings, :add_covid_pseudoobs)
-        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63"]
             ZZ_pseudo[pseudo[:ziid], endo[:ziid_t]] = 1.
             ZZ_pseudo[pseudo[:varphiiid], endo[:φ_t]] = 1.
             ZZ_pseudo[pseudo[:biidc], endo[:biidc_t]] = 1.
