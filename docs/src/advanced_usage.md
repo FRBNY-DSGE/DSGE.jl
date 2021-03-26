@@ -13,7 +13,7 @@ Pages = ["pkg_structure.md"]
 Depth = 5
 ```
 
-## Working with Settings
+## [Working with Settings](@id working-with-settings)
 
 There are many computational settings that affect how the code runs without affecting the
 mathematical definition of the model. While the default settings loaded are
@@ -25,6 +25,11 @@ will generally want to check that these three settings are properly chosen:
 - `data_vintage::String`: Data vintage, formatted `yymmdd`. By default,
   `data_vintage` is set to today's date. It is (currently) the only setting
   printed to output filenames by default.
+- `cond_vintage::String`: Conditional data vintage, formatted `yymmdd`. By default,
+  `cond_vintage` is set to today's date.
+- `data_id::Int64`: ID number to append to a created data set's name and to identify
+  which saved data set to load
+- `cond_id::Int64`: ID number to identify which conditional data set should be loaded
 
 Many functions in DSGE.jl will either require input data or create output data,
 so it is important to check that the saveroot and dataroot are set as the user intends.

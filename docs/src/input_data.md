@@ -166,7 +166,7 @@ for their model.
 
 - the user adjusts data-related settings, such as `data_vintage`, `data_id`,
     `dataroot`, `date_presample_start`, `date_zlb_start`, `date_forecast_start`,
-    and `use_population_forecast`.
+    and `use_population_forecast`. See [Working with Settings](@ref working-with-settings) for details.
 
 Second, DSGE.jl attempts to construct the dataset given this setup through a call to
 `load_data`. See [`load_data`](@ref) for more details.
@@ -175,6 +175,49 @@ Second, DSGE.jl attempts to construct the dataset given this setup through a cal
 - Transformations are applied to the data in levels. See [`transform_data`](@ref) for more details.
 - The data are saved to disk. See [`save_data`](@ref) for more details.
 
+## Conditional data
+The user can easily add conditional data for any observables. By "conditional data",
+we mean that, in reality, some data has not become available yet, but we believe that
+a certain number is a decent guess, so we want to forecast conditional on
+our guessed data. For example, suppose we are in 2019:Q4, in which case we have not
+observed 2019:Q4 GDP growth yet. However, we might have some idea of the number, so
+we want our forecasts to be conditional on that guess.
+
+To load such data, the user needs to include a "cond" folder within the input data folder,
+i.e. this folder `joinpath(get_setting(m, :input_data), "cond")` should exist. Within this folder,
+the user can create a csv file taking the form `cond_cdid=<xx>_cdvt=<yymmdd>.csv`.
+The user should then make sure that the model object being used has the following settings
+
+- `cond_id::Int64`: the conditional data's equivalent of `data_id` and will be inserted
+  after the `cdid`. Note that the ID must be less than 100.
+
+- `cond_vintage::String`: the conditional data's equivalent of `data_vintage` and will
+  be inserted after the `cdvt`.
+
+The contents of `cond_cdid=<xx>_cdvt=<yymmdd>.csv` should have columns for each raw data series
+that is then used to construct a given conditional observable. The first column should be `date`
+for the quarters of the conditional horizon, and the following columns should be for the raw data series.
+For example, to obtain real GDP growth, we need to have a population forecast file with both CNP16OV and CE16OV,
+the forecasted value of nominal GDP (under pnemonic GDP),
+and the forecasted value of the GDP deflator (under pnemonic GDPDEF) since these series are all required to compute `obs_gdp`,
+which is per-capita real GDP growth. For core inflation, we just need the index level for core PCE (under pnemonic PCEPILFE).
+
+*Note that the csv should have only conditional horizon data*. If you have data for any historical quarters, then
+the `DataFrame` with both historical and conditional data will not be created in REPL correctly. For example, if I am forecasting
+2019:Q4 with a conditional forecast of 2019:Q4 values, then the data conditional csv should have only values
+for 2019:Q4 (and onward). No values for 2019:Q3 or before should be in the conditional data csv.
+
+Finally, to specify which variables should have conditional observations, make sure to set
+
+- `cond_full_names::Vector{Symbol}`: variables when running a "full" conditional forecast.
+  For Model 1002, this means averages of the current quarter's daily financial data
+  as well as nowcasts of real GDP growth and core PCE inflation.
+
+- `cond_semi_names::Vector{Symbol}`: variables when running a "semi" conditional forecast.
+  For Model 1002, this means averages of the current quarter's daily financial data.
+
+See the [default](https://github.com/FRBNY-DSGE/DSGE.jl/src/defaults.jl) settings
+for an example of how these `cond_full_names` and `cond_semi_names` are initialized.
 
 ## Common pitfalls
 
@@ -185,11 +228,13 @@ used by `Model1002`](https://github.com/FRBNY-DSGE/DSGE.jl/src/models/representa
 which uses all the features provided by the package for handling data.
 Be certain that any significant differences are intentional. Here are also some common pitfalls to look out for:
 
-- Ensure that the `data_vintage` model setting is as you expect. (Try checking
-    `data_vintage(m)`.)
-- Ensure that the `data_id` model setting is correct for the given model.
+- Ensure that the `data_vintage` and `cond_vintage` model settings are as you expect. (Try checking
+    `data_vintage(m)` and `cond_vintage(m)`.)
+- Ensure that the `data_id` and `cond_id` model settings are correct for the given model.
 - Ensure that the `date_forecast_start` model setting is as you expect, and that is not
     logically incompatible with `data_vintage`.
+- Ensure that the `date_conditional_end` model setting is as you expect, and that is not
+    logically incompatible with `cond_vintage`.
 - Double check the transformations specified in the `data_transforms` field of the model
     object.
 - Ensure that the keys of the `observables` and `data_transforms` fields of the model object
