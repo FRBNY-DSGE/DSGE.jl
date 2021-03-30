@@ -48,10 +48,6 @@ not directly related to the behavior of the sampling algorithms
 - `save_intermediate::Bool`: set to true to save intermediate stages when using SMC
 - `intermediate_stage_increment::Int`: number of stages that must pass before saving
     another intermediate stage.
-- `tempered_update_prior_weight::Float64`: when using a tempered update, the user
-    can create a bridge distribution as a convex combination of the prior and a
-    previously ran estimation. This keyword is the relative weight on the prior
-    in the convex combination.
 -  `run_csminwel::Bool`: by default, csminwel is run after a SMC estimation finishes
     to recover the true mode of the posterior. Set to false to avoid this step
     (csminwel can take hours for medium-scale DSGE models).
@@ -74,7 +70,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
                   save_intermediate::Bool = false,
-                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true,
                   toggle::Bool = true)
     data = df_to_matrix(m, df)
@@ -84,7 +79,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
              continue_intermediate = continue_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
              save_intermediate = save_intermediate,
-             tempered_update_prior_weight = tempered_update_prior_weight,
              run_csminwel = run_csminwel, toggle = toggle)
 end
 
@@ -101,7 +95,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
-                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true,
                   toggle::Bool = true)
     # Load data
@@ -112,7 +105,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
              continue_intermediate = continue_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
 	         save_intermediate = save_intermediate,
-             tempered_update_prior_weight = tempered_update_prior_weight,
              run_csminwel = run_csminwel, toggle = toggle)
 end
 
@@ -129,7 +121,6 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
-                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true,
                   toggle::Bool = true)
 
@@ -297,9 +288,7 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
              save_intermediate = save_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
              run_csminwel = run_csminwel,
-             tempered_update_prior_weight = tempered_update_prior_weight,
-             regime_switching = regime_switching,
-             testing_root = haskey(get_settings(m), :testing_root) && get_setting(m, :testing_root))
+             regime_switching = regime_switching)
     end
 
     ########################################################################################

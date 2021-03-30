@@ -47,7 +47,6 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
 - `use_fixed_schedule::Bool`: Flag for whether or not to use a fixed tempering (ϕ) schedule.
 - `adaptive_tempering_target_smc::S`: Coefficient of the sample size metric to be targeted when solving
     for an endogenous ϕ or 0.0 if using a fixed schedule (corresponds to the kwarg `tempering_target` for `SMC.smc`).
-- `tempered_update_prior_weight::S`: when bridging from old estimation, how much weight to put on prior.
 - `previous_data_vintage::String`: the old data vintage from which to start SMC when using a tempered update
     (corresponds to the kwarg `old_data_vintage` for `SMC.smc`).
 - `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
@@ -74,7 +73,6 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
 - `continue_intermediate::Bool = false`: Flag to indicate whether one is continuing SMC from an
     intermediate stage.
 - `intermediate_stage_start::Int = 0`: Intermediate stage at which one wishes to begin the estimation.
-- `tempered_update_prior_weight::Float64 = 0.0,
 - `run_csminwel::Bool = true`: Set to true to run the csminwel algorithm to identify the true posterior mode
     (which may not exist) after completing an estimation. The mode identified by SMC is just
     the particle with the highest posterior value, but we do not check it is actually a mode (i.e.
@@ -103,9 +101,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               filestring_addl::Vector{String} = Vector{String}(),
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
               save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
-              tempered_update_prior_weight::Float64 = 0.0,
               run_csminwel::Bool = true,
-              testing_root = false,
               regime_switching::Bool = false)
 
     parallel    = get_setting(m, :use_parallel_workers)
@@ -171,7 +167,6 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
 
     # Calls SMC package's generic SMC
     println("Calling SMC.jl's SMC estimation routine...")
-
     SMC.smc(my_likelihood, get_parameters(m), data;
             verbose = verbose,
             testing = m.testing,
@@ -208,7 +203,6 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
             save_intermediate = save_intermediate,
             intermediate_stage_increment = intermediate_stage_increment,
 	        tempered_update_prior_weight = tempered_update_prior_weight,
-            testing_root = testing_root,
             regime_switching = regime_switching)
 
     if run_csminwel
@@ -230,7 +224,6 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
              run_test::Bool = false,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
-             tempered_update_prior_weight::Float64 = 0.0,
              run_csminwel::Bool = true,
              regime_switching::Bool = false)
 
@@ -242,7 +235,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
                 intermediate_stage_increment = intermediate_stage_increment,
                 continue_intermediate = continue_intermediate,
                 intermediate_stage_start = intermediate_stage_start,
-                tempered_update_prior_weight = tempered_update_prior_weight, run_csminwel = run_csminwel,
+                run_csminwel = run_csminwel,
                 regime_switching = regime_switching)
 end
 
@@ -254,7 +247,6 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
              run_test::Bool = false,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
-             tempered_update_prior_weight::Float64 = 0.0,
              run_csminwel::Bool = true,
              regime_switching::Bool = false)
     data = load_data(m)
@@ -266,7 +258,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
                 intermediate_stage_increment = intermediate_stage_increment,
                 continue_intermediate = continue_intermediate,
                 intermediate_stage_start = intermediate_stage_start,
-                tempered_update_prior_weight = tempered_update_prior_weight, run_csminwel = run_csminwel,
+                run_csminwel = run_csminwel,
                 regime_switching = regime_switching)
 end
 
