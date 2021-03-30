@@ -63,6 +63,14 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
     requires both `old_data` and `old_cloud`. If running a bridge estimation and
     no `old_cloud` is provided, then it will be loaded using
     the filepaths in `m`. If no `old_cloud` exists, then the bridge estimation will not run.
+- `old_model::Union{AbstractDSGEModel, AbstractVARModel} = m`: model object from which we can build
+    the old log-likelihood function for a time tempered SMC estimation. It should be possible
+    to evaluate the old log-likelihood given `old_data` and the current draw of parameters.
+    This may be nontrivial if, for example, *new* parameters have been added to `m` since the old
+    estimation. In this case, `old_model` should include the *new* parameters but still return
+    the old log-likelihood as the original estimation if given the same *old* parameters.
+    By default, we assume the log-likelihood function has not changed
+    and therefore coincides with the current one.
 - `filestring_addl::Vector{String} = ""`: additional strings to be appended to the save file
     of estimation output.
 - `save_intermediate::Bool = false`: Flag for whether one wants to save intermediate Cloud objects
@@ -97,6 +105,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
               old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+              old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
               run_test::Bool = false,
               filestring_addl::Vector{String} = Vector{String}(),
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
@@ -146,6 +155,19 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
         end
     end
 
+    my_old_likelihood = if isa(m, AbstractDSGEModel)
+        function _my_old_likelihood_dsge(parameters::ParameterVector, data::Matrix{Float64})::Float64
+            update!(old_model, parameters)
+            likelihood(old_model, data; sampler = false, catch_errors = true,
+                       use_chand_recursion = use_chand_recursion, verbose = verbose)
+        end
+    else isa(m, AbstractVARModel)
+        function _my_old_likelihood_var(parameters::ParameterVector, data::Matrix{Float64})::Float64
+            update!(old_model, parameters)
+            likelihood(old_model, data; sampler = false, catch_errors = true, verbose = verbose)
+        end
+    end
+
     tempered_update = !isempty(old_data)
 
     # This step is purely for backwards compatibility purposes
@@ -168,41 +190,44 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     # Calls SMC package's generic SMC
     println("Calling SMC.jl's SMC estimation routine...")
     SMC.smc(my_likelihood, get_parameters(m), data;
-            verbose = verbose,
-            testing = m.testing,
+            verbose      = verbose,
+            testing      = m.testing,
             data_vintage = data_vintage(m),
 
-            parallel = parallel,
-            n_parts  = n_parts,
-            n_blocks = n_blocks,
+            parallel   = parallel,
+            n_parts    = n_parts,
+            n_blocks   = n_blocks,
             n_mh_steps = n_mh_steps,
 
             λ = λ, n_Φ = n_Φ,
 
             resampling_method = resampling_method,
-            threshold_ratio = threshold_ratio,
+            threshold_ratio   = threshold_ratio,
 
             c = c, α = α, target = target,
 
             use_fixed_schedule = use_fixed_schedule,
-            tempering_target = tempering_target,
+            tempering_target   = tempering_target,
 
-            old_data      = old_data,
-            old_cloud     = old_cloud_conv,
-            old_vintage   = old_vintage,
-            smc_iteration = smc_iteration,
+            old_data          = old_data,
+            old_cloud         = old_cloud_conv,
+            old_loglikelihood = my_old_likelihood,
+            old_vintage       = old_vintage,
+            smc_iteration     = smc_iteration,
 
             run_test = run_test,
-            filestring_addl = filestring_addl,
-            loadpath = loadpath,
-            savepath = savepath,
+
+            filestring_addl     = filestring_addl,
+            loadpath            = loadpath,
+            savepath            = savepath,
             particle_store_path = particle_store_path,
 
-            continue_intermediate = continue_intermediate,
-            intermediate_stage_start = intermediate_stage_start,
-            save_intermediate = save_intermediate,
+            continue_intermediate        = continue_intermediate,
+            intermediate_stage_start     = intermediate_stage_start,
+            save_intermediate            = save_intermediate,
             intermediate_stage_increment = intermediate_stage_increment,
 	        tempered_update_prior_weight = tempered_update_prior_weight,
+
             regime_switching = regime_switching)
 
     if run_csminwel
@@ -220,6 +245,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                               SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+             old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
              filestring_addl::Vector{String} = Vector{String}(undef, 0),
              run_test::Bool = false,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
@@ -230,6 +256,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose = verbose,
                 old_data = old_data, old_cloud = old_cloud,
+                old_model = old_model,
                 filestring_addl = filestring_addl, run_test = run_test,
                 save_intermediate = save_intermediate,
                 intermediate_stage_increment = intermediate_stage_increment,
@@ -243,6 +270,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                               SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+             old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
              filestring_addl::Vector{String} = Vector{String}(undef, 0),
              run_test::Bool = false,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
@@ -253,6 +281,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose = verbose,
                 old_data = old_data, old_cloud = old_cloud,
+                old_model = old_model,
                 filestring_addl = filestring_addl, run_test = run_test,
                 save_intermediate = save_intermediate,
                 intermediate_stage_increment = intermediate_stage_increment,
