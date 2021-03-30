@@ -142,7 +142,10 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.j
 - `use_fixed_schedule::Bool`: Flag for whether or not to use a fixed tempering (ϕ) schedule.
 - `adaptive_tempering_target_smc::S`: Coefficient of the sample size metric to be targeted when solving
     for an endogenous ϕ or 0.0 if using a fixed schedule.
-- `tempered_update_prior_weight::S`: when bridging from old estimation, how much weight to put on prior.
+- `tempered_update_prior_weight::S`: when bridging from old estimation, i.e. a tempered update, the user
+    can create a bridge distribution as a convex combination of the prior and a
+    previously ran estimation. This setting is the relative weight on the prior
+    in the convex combination.
 - `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
      same data vintage. Primarily for numerical accuracy/testing purposes.
 - `previous_data_vintage::String`: the old data vintage from which to start SMC when using a tempered update
