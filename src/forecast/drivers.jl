@@ -211,7 +211,6 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
     if isempty(input_file_name)
         input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
     end
-    println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
     if input_type in [:mean, :mode, :mode_draw_shocks]
@@ -255,10 +254,11 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
-            cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "smcsave" => "smc_cloud"), "cloud")
+            input_file_name = replace(replace(input_file_name, ".h5" => ".jld2"), "smcsave" => "smc_cloud")
+            cloud = load(input_file_name, "cloud")
 
             # Re-sample SMC draws according to their weights
-            W = load(replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2"), "W")
+            W = load(input_file_name, "W")
             weights = W[:, end]
             inds = SMC.resample(weights)
 
@@ -297,6 +297,8 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
         params = convert(Vector{Float64}, tmp)
 
     end
+
+    println(verbose, :low, "Loaded draws from $input_file_name")
 
     return params
 end
