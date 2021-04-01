@@ -621,6 +621,18 @@ buted to steady-state inflation.",
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
     end
 
+    if subspec(m) in ["ss62"] # TODO: add ss63
+        m <= parameter(:damp_standard_shocks, 1., (0., 1e3), (0., 1e3), fixed=false, # will be fixed later in subspec!(m)
+                       description="damp_standard_shocks: Damping factor for standard business cycle shocks during COVID-19.",
+                       tex_label="damp standard shocks")
+        m <= parameter(:amplify_σ_r_m, 1., (0., 1e3), (0., 1e3), fixed=false, # will be fixed later in subspec!(m)
+                       description="amplify_σ_r_m: Amplification factor for monetary policy shock during COVID-19.",
+                       tex_label="amplify \\sigma_{r^m}")
+        m <= parameter(:amplify_inflation_me, 1., (0., 1e3), (0., 1e3), fixed=false, # will be fixed later in subspec!(m)
+                       description="amplify_inflation_me: Amplification factor for inflation measurement error during COVID-19.",
+                       tex_label="amplify inflation measurement error")
+    end
+
     if haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
         get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false
         m <= parameter(:σ_pgap, 0., (0., 1e2), (0., 5.), ModelConstructors.Exponential(),

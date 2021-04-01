@@ -1388,56 +1388,56 @@ function ss62!(m::Model1002)
     if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
         m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
 
-        # Standard business cycle shocks
-        damp_adj = haskey(get_settings(m), :standard_shocks_damping) ? get_setting(m, :standard_shocks_damping) : .25
-        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
-                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
-                   :σ_gdp, :σ_gdi, :σ_z_p]
-            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
-            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
-                m2p[pk][i] = 1
-            end
-
-            # Set value, fixed, and prior
-            if pk == :σ_z_p
-                # Set desired values
-                set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
-                set_regime_val!(m[:σ_z_p], 2, 0.)
-
-                # Fix σ_z_p = 0 in para regime 2
-                set_regime_fixed!(m[:σ_z_p], 1, false)
-                set_regime_fixed!(m[:σ_z_p], 2, true)
-            else
-                set_regime_val!(m[pk], 1, m[pk].value)
-                set_regime_val!(m[pk], 2, damp_adj .* m[pk].value)
-
-                # Re-center priors for parameter regime 2
-                set_regime_prior!(m[pk], 1, get(m[pk].prior))
-                newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-                newprior.τ = damp_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
-                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
-            end
+        # Damp standard business cycle shocks
+        m2p[:damp_standard_shocks] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+        for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+            m2p[:damp_standard_shocks][i] = 1
         end
+        set_regime_val!(m[:damp_standard_shocks], 1, 1.)
+        set_regime_val!(m[:damp_standard_shocks], 2, .25)
 
-        # Adjust inflation measurement error and monetary policy shocks
-        amplify_adj = 10.
-        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
-            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
-            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
-            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
-                m2p[pk][i] = 1
-            end
+        set_regime_fixed!(m[:damp_standard_shocks], 1, true) # calibrated
+        set_regime_fixed!(m[:damp_standard_shocks], 2, true)
 
-            # Set values
-            set_regime_val!(m[pk], 1, m[pk].value)
-            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
-
-            # Re-center priors for parameter regime 2
-            set_regime_prior!(m[pk], 1, get(m[pk].prior))
-            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-            newprior.τ = amplify_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
-            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        # Set σ_z_p
+        m2p[:σ_z_p] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+        for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+            m2p[:σ_z_p][i] = 1
         end
+        set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
+        set_regime_val!(m[:σ_z_p], 2, 0.)
+
+        set_regime_fixed!(m[:σ_z_p], 1, false)
+        set_regime_fixed!(m[:σ_z_p], 2, true) # Fix σ_z_p = 0 in para regime 2
+
+        # Amplify inflation measurement error and monetary policy shocks during COVID
+        m2p[:amplify_σ_r_m] = Dict(1 => 1, 2 => 2, 3 => 2)
+        for i in 4:get_setting(m, :n_regimes)
+            m2p[:amplify_σ_r_m][i] = 1
+        end
+        set_regime_val!(m[:amplify_σ_r_m], 1, 1.)
+        set_regime_val!(m[:amplify_σ_r_m], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_σ_r_m], 1, true)
+        set_regime_fixed!(m[:amplify_σ_r_m], 2, true)
+
+        m2p[:amplify_inflation_me] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2)
+        for i in 5:get_setting(m, :n_regimes)
+            m2p[:amplify_inflation_me][i] = 1
+        end
+        set_regime_val!(m[:amplify_inflation_me], 1, 1.)
+        set_regime_val!(m[:amplify_inflation_me], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_inflation_me], 1, true)
+        set_regime_fixed!(m[:amplify_inflation_me], 2, true)
+
+        # The block of code below is kept as an example of how to
+        # re-center priors if we want to estimate these damping/amplification factors
+        #= # Re-center priors for parameter regime 2
+        set_regime_prior!(m[pk], 1, get(m[pk].prior))
+        newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+        newprior.τ = amplify_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
+        set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))=#
 
         for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
             # standard deviations should be the same across regimes, so do nothing
@@ -1617,6 +1617,29 @@ function ss63!(m::Model1002)
     # Populate model2para_regime if it wasn't passed as a custom_setting
     if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
         m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # TODO: uncomment block below and remove the implementation where σ_r_m, σ_gdpdef, and σ_corepce
+        # are regime-switching in 2nd regime rather than multiplied by an amplification/damping factor
+#=        # Amplify inflation measurement error and monetary policy shocks during COVID
+        m2p[:amplify_σ_r_m] = Dict(1 => 1, 2 => 2, 3 => 2)
+        for i in 4:get_setting(m, :n_regimes)
+            m2p[:amplify_σ_r_m][i] = 1
+        end
+        set_regime_val!(m[:amplify_σ_r_m], 1, 1.)
+        set_regime_val!(m[:amplify_σ_r_m], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_σ_r_m], 1, true)
+        set_regime_fixed!(m[:amplify_σ_r_m], 2, true)
+
+        m2p[:amplify_inflation_me] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2)
+        for i in 5:get_setting(m, :n_regimes)
+            m2p[:amplify_inflation_me][i] = 1
+        end
+        set_regime_val!(m[:amplify_inflation_me], 1, 1.)
+        set_regime_val!(m[:amplify_inflation_me], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_inflation_me], 1, true)
+        set_regime_fixed!(m[:amplify_inflation_me], 2, true)=#
 
         # Inflation measurement errors and monetary policy shocks
         amplify_adj = 10.

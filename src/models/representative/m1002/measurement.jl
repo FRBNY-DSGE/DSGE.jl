@@ -252,6 +252,28 @@ function measurement(m::Model1002{T},
         QQ[exo[:φ_sh], exo[:φ_sh]]         = m[:σ_φ]^2
     end
 
+    if subspec(m) in ["ss62"] # TODO: add ss63
+        ## Set up structural shocks covariance matrix
+        QQ[exo[:g_sh], exo[:g_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:b_sh], exo[:b_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:ztil_sh], exo[:ztil_sh]]       *= m[:damp_standard_shocks]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]           *= m[:amplify_σ_r_m]^2
+        QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:μ_e_sh], exo[:μ_e_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:γ_sh], exo[:γ_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:π_star_sh], exo[:π_star_sh]]   *= m[:damp_standard_shocks]^2
+        QQ[exo[:lr_sh], exo[:lr_sh]]           *= m[:damp_standard_shocks]^2
+        # QQ[exo[:zp_sh], exo[:zp_sh]]           = m[:σ_z_p]^2 # σ_z_p is handled on its own via regime-switching
+        QQ[exo[:tfp_sh], exo[:tfp_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]   *= m[:amplify_inflation_me]^2
+        QQ[exo[:corepce_sh], exo[:corepce_sh]] *= m[:amplify_inflation_me]^2
+        QQ[exo[:gdp_sh], exo[:gdp_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:gdi_sh], exo[:gdi_sh]]         *= m[:damp_standard_shocks]^2
+    end
+
     # ygap and pgap shocks
     if (haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ? get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false)
         QQ[exo[:pgap_sh], exo[:pgap_sh]] = m[:σ_pgap]^2
