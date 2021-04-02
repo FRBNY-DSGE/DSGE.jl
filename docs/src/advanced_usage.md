@@ -149,6 +149,8 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.j
 - `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
      same data vintage. Primarily for numerical accuracy/testing purposes.
 - `previous_data_vintage::String`: the old data vintage from which to start SMC when using a tempered update
+- `debug_assertion::Bool`: print output (if applicable) when encountering an assertion error during
+  SMC to help with debugging.
 
 ##### Miscellaneous
 - `use_chand_recursion::Bool`: Flag for using Chandrasekhar Recursions in Kalman filter.

@@ -130,6 +130,9 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     use_fixed_schedule           = haskey(get_settings(m), :use_fixed_schedule) ?
         get_setting(m, :use_fixed_schedule) : tempering_target == 0.0
 
+    # Print output for debugging?
+    debug_assertion = haskey(get_settings(m), :debug_assertion) && get_setting(m, :debug_assertion)
+
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
     threshold_ratio   = get_setting(m, :resampling_threshold)
@@ -228,7 +231,8 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
             intermediate_stage_increment = intermediate_stage_increment,
 	        tempered_update_prior_weight = tempered_update_prior_weight,
 
-            regime_switching = regime_switching)
+            regime_switching = regime_switching,
+            debug_assertion = debug_assertion)
 
     if run_csminwel
         m <= Setting(:sampling_method, :SMC)
@@ -277,6 +281,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
              run_csminwel::Bool = true,
              regime_switching::Bool = false)
+
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose = verbose,
