@@ -25,6 +25,7 @@
 + New subspecs of Model1002 for estimating the DSGE with COVID-19 shocks
 + Add option to construct the old log-likelihood function for tempered updates with SMC
   by passing a different model object.
++ Integrate changes to SMC.jl v0.1.15
 
 ## Bug fixes
 + Fix print statements when using `forecast_one` and `verbose = :high`
