@@ -1833,6 +1833,10 @@ function ss64!(m::Model1002)
             for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
                 m2p[pk][i] = 1
             end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
             # Set value, fixed, and prior
             if pk == :σ_z_p
                 # Set desired values
@@ -2021,6 +2025,10 @@ function ss65!(m::Model1002)
             for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
                 m2p[pk][i] = 1
             end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
             # Set value, fixed, and prior
             set_regime_val!(m[pk], 1, m[pk].value)
             set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
