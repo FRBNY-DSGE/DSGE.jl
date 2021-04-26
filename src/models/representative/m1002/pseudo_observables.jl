@@ -22,19 +22,19 @@ function init_pseudo_observable_mappings!(m::Model1002)
     end
 
     if haskey(get_settings(m), :add_covid_pseudoobs)
-        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65"]
+        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66"]
             push!(pseudo_names, :ziid, :varphiiid, :biidc)
         end
     end
 
     if haskey(get_settings(m), :add_pseudo_gdp)
-        if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65"]
+        if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66"]
             push!(pseudo_names, :PseudoGDP)
         end
     end
 
     if haskey(get_settings(m), :add_pseudo_corepce)
-        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65"]
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66"]
             push!(pseudo_names, :PseudoCorePCE)
         end
     end
@@ -395,7 +395,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     end
 
     if haskey(get_settings(m), :add_covid_pseudoobs)
-        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65"]
+        if get_setting(m, :add_covid_pseudoobs) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66"]
             pseudo[:ziid].name     = "ziid"
             pseudo[:ziid].longname = "ziid"
             pseudo[:biidc].name     = "biidc"
@@ -406,7 +406,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     end
 
     if haskey(get_settings(m), :add_pseudo_gdp)
-        if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65"]
+        if get_setting(m, :add_pseudo_gdp) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66"]
             pseudo[:PseudoGDP].name     = "GDP Growth Pseudo-observable"
             pseudo[:PseudoGDP].longname = "GDP Growth Pseudo-observable"
             pseudo[:PseudoGDP].rev_transform = loggrowthtopct_annualized_percapita
@@ -414,7 +414,7 @@ function init_pseudo_observable_mappings!(m::Model1002)
     end
 
     if haskey(get_settings(m), :add_pseudo_corepce)
-        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65"]
+        if get_setting(m, :add_pseudo_corepce) && subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66"]
             pseudo[:PseudoCorePCE].name     = "Core PCE Pseudo-observable"
             pseudo[:PseudoCorePCE].longname = "Core PCE Pseudo-observable"
             pseudo[:PseudoCorePCE].rev_transform = loggrowthtopct_annualized
