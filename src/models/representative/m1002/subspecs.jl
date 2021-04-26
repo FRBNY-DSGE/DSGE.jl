@@ -1791,6 +1791,8 @@ function ss63!(m::Model1002)
 end
 
 function ss64!(m::Model1002)
+    ss8!(m) # fix γ_gdi, δ_gdi
+
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
@@ -1988,6 +1990,8 @@ function ss64!(m::Model1002)
 end
 
 function ss65!(m::Model1002)
+    ss8!(m) # fix γ_gdi, δ_gdi
+
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
