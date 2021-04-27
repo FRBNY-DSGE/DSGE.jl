@@ -2247,10 +2247,15 @@ function ss66!(m::Model1002)
             # Re-center priors for parameter regime 2, which are all BetaAlt, hence the parameters are μ, σ
             set_regime_prior!(m[pk], 1, get(m[pk].prior))
             newprior = deepcopy(get(m[pk].prior))
-            newprior_μ = 1. / (newprior.β / newprior.α + 1.)
-            newprior_σ = sqrt((1. - newprior_μ) * newprior_μ^2 / (newprior.α + newprior_μ))
-            newprior_σ *= spread_adj
-            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(ModelConstructors.BetaAlt(newprior_μ, newprior_σ)))
+            if is(newprior, Beta)
+                newprior_μ = 1. / (newprior.β / newprior.α + 1.)
+                newprior_σ = sqrt((1. - newprior_μ) * newprior_μ^2 / (newprior.α + newprior_μ))
+                newprior_σ *= spread_adj
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(ModelConstructors.BetaAlt(newprior_μ, newprior_σ)))
+            else
+                newprior.σ *= spread_adj
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+            end
         end
 
         # Adjust inflation measurement error and monetary policy shocks
