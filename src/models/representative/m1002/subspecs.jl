@@ -2247,7 +2247,7 @@ function ss66!(m::Model1002)
             # Re-center priors for parameter regime 2, which are all BetaAlt, hence the parameters are μ, σ
             set_regime_prior!(m[pk], 1, get(m[pk].prior))
             newprior = deepcopy(get(m[pk].prior))
-            if is(newprior, Beta)
+            if isa(newprior, Beta)
                 newprior_μ = 1. / (newprior.β / newprior.α + 1.)
                 newprior_σ = sqrt((1. - newprior_μ) * newprior_μ^2 / (newprior.α + newprior_μ))
                 newprior_σ *= spread_adj
