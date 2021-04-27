@@ -2234,7 +2234,7 @@ function ss66!(m::Model1002)
 
         for pk in [:ρ_g, :ρ_b, :ρ_μ, :ρ_ztil, :ρ_λ_f, :ρ_λ_w,
                    :ρ_σ_w, :ρ_μ_e, :ρ_γ, :ρ_π_star, :ρ_lr, :ρ_tfp,
-                   :ρ_gdp, :ρ_gdi, :ρ_z_p, :ρ_r_m, :ρ_gdpdef, :ρ_corepce]
+                   :ρ_gdp, :ρ_gdi, :ρ_z_p, :ρ_rm, :ρ_gdpdef, :ρ_corepce]
             m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
             for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
                 m2p[pk][i] = 1
@@ -2253,7 +2253,7 @@ function ss66!(m::Model1002)
                 newprior_σ *= spread_adj
                 set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(ModelConstructors.BetaAlt(newprior_μ, newprior_σ)))
             else
-                newprior.σ *= spread_adj
+                newprior = Normal(newprior.μ, newprior.σ * spread_adj)
                 set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
             end
         end
