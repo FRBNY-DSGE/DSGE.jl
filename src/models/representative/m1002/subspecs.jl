@@ -2209,7 +2209,7 @@ function ss66!(m::Model1002)
         mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
         spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
         for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
-                   :σ_σ_w, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
                    :σ_gdp, :σ_gdi, :σ_z_p]
             m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
             for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
@@ -2233,7 +2233,7 @@ function ss66!(m::Model1002)
         end
 
         for pk in [:ρ_g, :ρ_b, :ρ_μ, :ρ_ztil, :ρ_λ_f, :ρ_λ_w,
-                   :ρ_σ_ω, :ρ_μ_e, :ρ_γ, :ρ_π_star, :ρ_lr, :ρ_tfp,
+                   :ρ_σ_w, :ρ_μ_e, :ρ_γ, :ρ_π_star, :ρ_lr, :ρ_tfp,
                    :ρ_gdp, :ρ_gdi, :ρ_z_p, :ρ_r_m, :ρ_gdpdef, :ρ_corepce]
             m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
             for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
