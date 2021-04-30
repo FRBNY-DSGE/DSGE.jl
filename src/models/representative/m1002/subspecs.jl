@@ -1855,11 +1855,10 @@ function ss64!(m::Model1002)
                 set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
 
                 # Re-center priors for parameter regime 2
-                # Recall x ∼ RootInverseGamma(ν, τ) => x² ∼ InverseGamma(ν/2, ντ²/2), and
-                # variance is (ντ²/2)² / (ν/2-1)² / (ν/2 -2)
                 set_regime_prior!(m[pk], 1, get(m[pk].prior))
                 newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-                newprior.τ = spread_adj * newprior.τ
+                newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+                newprior.τ = mode_adj * newprior.τ # τ is the mode
                 set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
             end
         end
@@ -1880,7 +1879,7 @@ function ss64!(m::Model1002)
             # Re-center priors for parameter regime 2
             set_regime_prior!(m[pk], 1, get(m[pk].prior))
             newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-            newprior.τ = amplify_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
             set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
         end
 
@@ -2040,11 +2039,10 @@ function ss65!(m::Model1002)
             set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
 
             # Re-center priors for parameter regime 2
-            # Recall x ∼ RootInverseGamma(ν, τ) => x² ∼ InverseGamma(ν/2, ντ²/2), and
-            # variance is (ντ²/2)² / (ν/2-1)² / (ν/2 -2)
             set_regime_prior!(m[pk], 1, get(m[pk].prior))
             newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-            newprior.τ = spread_adj * newprior.τ
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
             set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
         end
 
@@ -2064,7 +2062,7 @@ function ss65!(m::Model1002)
             # Re-center priors for parameter regime 2
             set_regime_prior!(m[pk], 1, get(m[pk].prior))
             newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-            newprior.τ = amplify_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
             set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
         end
 
@@ -2224,11 +2222,10 @@ function ss66!(m::Model1002)
             set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
 
             # Re-center priors for parameter regime 2
-            # Recall x ∼ RootInverseGamma(ν, τ) => x² ∼ InverseGamma(ν/2, ντ²/2), and
-            # variance is (ντ²/2)² / (ν/2-1)² / (ν/2 -2)
             set_regime_prior!(m[pk], 1, get(m[pk].prior))
             newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-            newprior.τ = spread_adj * newprior.τ
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
             set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
         end
 
@@ -2274,7 +2271,7 @@ function ss66!(m::Model1002)
             # Re-center priors for parameter regime 2
             set_regime_prior!(m[pk], 1, get(m[pk].prior))
             newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-            newprior.τ = amplify_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
             set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
         end
 
