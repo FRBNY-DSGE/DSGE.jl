@@ -478,7 +478,9 @@ function eqcond(m::Model1002, reg::Int)
         Γ1[eq[:eq_σ_ω_covid], endo[:σ_ω_covid_t]] = m[:ρ_σ_w_covid]
         Ψ[eq[:eq_σ_ω_covid], exo[:σ_ω_covid_sh]]  = 1.
         Γ0[eq[:eq_σ_ω], endo[:σ_ω_covid_t]]       = -1.
+    end
 
+    if subspec(m) in ["ss69", "ss70"]
         Γ0[eq[:eq_zp_covid], endo[:zp_covid_t]] = 1.
         Γ1[eq[:eq_zp_covid], endo[:zp_covid_t]] = m[:ρ_z_p_covid]
         Ψ[eq[:eq_zp_covid], exo[:zp_covid_sh]]  = 1.

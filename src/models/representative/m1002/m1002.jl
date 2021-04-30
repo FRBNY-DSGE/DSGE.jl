@@ -210,7 +210,9 @@ function init_model_indices!(m::Model1002)
         push!(exogenous_shocks, :gdp_covid_sh)
         push!(endogenous_states_augmented, :e_gdi_covid_t)
         push!(exogenous_shocks, :gdi_covid_sh)
+    end
 
+    if subspec(m) in ["ss69", "ss70"]
         push!(endogenous_states, :zp_covid_t)
         push!(equilibrium_conditions, :eq_zp_covid)
         push!(exogenous_shocks, :zp_covid_sh)
