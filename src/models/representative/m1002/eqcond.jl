@@ -455,6 +455,36 @@ function eqcond(m::Model1002, reg::Int)
         Ψ[eq[:eq_φ], exo[:φ_sh]]  = 1.
     end
 
+    # COVID counterparts for standard business cycle shocks
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70"]
+        # TODO: check if there are any expectational terms to which
+        # we need to account for (see Eφ_t)
+        Γ0[eq[:eq_g_covid], endo[:g_covid_t]] = 1.
+        Γ1[eq[:eq_g_covid], endo[:g_covid_t]] = m[:ρ_g_covid]
+        Ψ[eq[:eq_g_covid], exo[:g_covid_sh]]  = 1.
+        Γ0[eq[:eq_g], endo[:g_covid_t]]       = -1.
+
+        Γ0[eq[:eq_μ_covid], endo[:μ_covid_t]] = 1.
+        Γ1[eq[:eq_μ_covid], endo[:μ_covid_t]] = m[:ρ_μ_covid]
+        Ψ[eq[:eq_μ_covid],  exo[:μ_covid_sh]] = 1.
+        Γ0[eq[:eq_μ], endo[:μ_covid_t]]       = -1.
+
+        Γ0[eq[:eq_λ_f_covid], endo[:λ_f_covid_t]] = 1.
+        Γ1[eq[:eq_λ_f_covid], endo[:λ_f_covid_t]] = m[:ρ_λ_f_covid]
+        Ψ[eq[:eq_λ_f_covid], exo[:λ_f_covid_sh]]  = 1.
+        Γ0[eq[:eq_λ_f], endo[:λ_f_covid_t]]       = -1.
+
+        Γ0[eq[:eq_σ_ω_covid], endo[:σ_ω_covid_t]] = 1.
+        Γ1[eq[:eq_σ_ω_covid], endo[:σ_ω_covid_t]] = m[:ρ_σ_w_covid]
+        Ψ[eq[:eq_σ_ω_covid], exo[:σ_ω_covid_sh]]  = 1.
+        Γ0[eq[:eq_σ_ω], endo[:σ_ω_covid_t]]       = -1.
+
+        Γ0[eq[:eq_zp_covid], endo[:zp_covid_t]] = 1.
+        Γ1[eq[:eq_zp_covid], endo[:zp_covid_t]] = m[:ρ_z_p_covid]
+        Ψ[eq[:eq_zp_covid], exo[:zp_covid_sh]]  = 1.
+        Γ0[eq[:eq_zp], endo[:zp_covid_t]]       = -1.
+    end
+
     ### Financial frictions
 
     # Standard deviation of capital shock to entrepreneurs

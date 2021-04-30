@@ -187,6 +187,35 @@ function init_model_indices!(m::Model1002)
         push!(exogenous_shocks, :φ_sh)
     end
 
+    # COVID counterparts for standard business cycle shocks
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70"]
+        push!(endogenous_states, :g_covid_t)
+        push!(equilibrium_conditions, :eq_g_covid)
+        push!(exogenous_shocks, :g_covid_sh)
+        push!(endogenous_states, :μ_covid_t)
+        push!(equilibrium_conditions, :eq_μ_covid)
+        push!(exogenous_shocks, :μ_covid_sh)
+        push!(endogenous_states, :λ_f_covid_t)
+        push!(equilibrium_conditions, :eq_λ_f_covid)
+        push!(exogenous_shocks, :λ_f_covid_sh)
+        push!(endogenous_states, :σ_ω_covid_t)
+        push!(equilibrium_conditions, :eq_σ_ω_covid)
+        push!(exogenous_shocks, :σ_ω_covid_sh)
+
+        push!(endogenous_states_augmented, :e_lr_covid_t)
+        push!(exogenous_shocks, :lr_covid_sh)
+        push!(endogenous_states_augmented, :e_tfp_covid_t)
+        push!(exogenous_shocks, :tfp_covid_sh)
+        push!(endogenous_states_augmented, :e_gdp_covid_t)
+        push!(exogenous_shocks, :gdp_covid_sh)
+        push!(endogenous_states_augmented, :e_gdi_covid_t)
+        push!(exogenous_shocks, :gdi_covid_sh)
+
+        push!(endogenous_states, :zp_covid_t)
+        push!(equilibrium_conditions, :eq_zp_covid)
+        push!(exogenous_shocks, :zp_covid_sh)
+    end
+
     # Add various pseudo-observables
     if get_setting(m, :add_laborproductivity_measurement)
         push!(endogenous_states_augmented, :cum_z_t)
