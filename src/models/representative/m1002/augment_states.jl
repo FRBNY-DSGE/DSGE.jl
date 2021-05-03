@@ -204,7 +204,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_t]]         = m[:ρ_gdp]
     TTT_aug[endo_new[:e_gdi_t], endo_new[:e_gdi_t]]         = m[:ρ_gdi]
 
-    if subspec(m) in ["ss67", "ss68", "ss69", "ss70"]
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74"]
         # COVID counterparts to measurement errors
         TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_covid_t]]   = m[:ρ_lr_covid]
         TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_covid_t]] = m[:ρ_tfp_covid]
@@ -266,7 +266,7 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
 
     RRR_aug[endo_new[:e_gdi_t], exo[:gdi_sh]] = 1.0
 
-    if subspec(m) in ["ss67", "ss68", "ss69", "ss70"]
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74"]
         # COVID counterparts to measurement errors
         RRR_aug[endo_new[:e_lr_t], exo[:lr_covid_sh]]   = 1.0
         RRR_aug[endo_new[:e_tfp_t], exo[:tfp_covid_sh]] = 1.0
