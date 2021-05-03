@@ -1800,7 +1800,7 @@ function ss63!(m::Model1002)
     end
 end
 
-function ss67!(m::Model1002)
+function ss64!(m::Model1002)
     ss8!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
