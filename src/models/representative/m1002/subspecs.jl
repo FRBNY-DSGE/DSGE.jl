@@ -1834,6 +1834,11 @@ function ss64!(m::Model1002)
 
     ## Set up regime-switching parameters
 
+    # Need to allow a zero value for sigma_z_p
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                   tex_label="\\sigma_{z^p}")
+
     # Populate model2para_regime if it wasn't passed as a custom_setting
     if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
         m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
@@ -2036,7 +2041,7 @@ function ss65!(m::Model1002)
     # Populate model2para_regime if it wasn't passed as a custom_setting
     if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
         m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
-
+s
         # Standard business cycle shocks
         mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
         spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
