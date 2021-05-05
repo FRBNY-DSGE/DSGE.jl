@@ -2049,7 +2049,7 @@ function ss65!(m::Model1002)
     # Populate model2para_regime if it wasn't passed as a custom_setting
     if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
         m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
-s
+
         # Standard business cycle shocks
         mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
         spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
