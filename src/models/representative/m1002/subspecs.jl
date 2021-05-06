@@ -1874,24 +1874,27 @@ function ss64!(m::Model1002)
                                                 max(m[pk].transform_parameterization[2],
                                                     m[pk].transform_parameterization[2] * mode_adj * spread_adj))
 
-            # Set value, fixed, and prior
-            set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
-            set_regime_val!(m[:σ_z_p], 2, 0.)
 
-            # Fix σ_z_p = 0 in para regime 2
-            set_regime_fixed!(m[:σ_z_p], 1, false)
-            set_regime_fixed!(m[:σ_z_p], 2, true)
+            if pk == :σ_z_p
+                # Set value, fixed, and prior
+                set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
+                set_regime_val!(m[:σ_z_p], 2, 0.)
+
+                # Fix σ_z_p = 0 in para regime 2
+                set_regime_fixed!(m[:σ_z_p], 1, false)
+                set_regime_fixed!(m[:σ_z_p], 2, true)
+            else
+                set_regime_val!(m[pk], 1, m[pk].value)
+                set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+                # Re-center priors for parameter regime 2
+                set_regime_prior!(m[pk], 1, get(m[pk].prior))
+                newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+                newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+                newprior.τ = mode_adj * newprior.τ # τ is the mode
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+            end
         end
-
-                # set_regime_val!(m[pk], 1, m[pk].value)
-                # set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
-
-                # # Re-center priors for parameter regime 2
-                # set_regime_prior!(m[pk], 1, get(m[pk].prior))
-                # newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-                # newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
-                # newprior.τ = mode_adj * newprior.τ # τ is the mode
-                # set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
 
         # Adjust inflation measurement error and monetary policy shocks
         amplify_adj = 10.
