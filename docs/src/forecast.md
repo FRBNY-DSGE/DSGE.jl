@@ -98,13 +98,18 @@ unstandardized shocks (`:shocks`). The possible forecast products are:
   drawing these from a distribution. Forecasts in which we enforce the zero
   lower bound are denoted as `:bddforecast`.
 
-- Shock decompositions (`:shockdec`): starting from an initial state of zero,
+- Shock decompositions (`:shockdec`): decompose a forecast into the
+  contributions from each individual shock (e.g. TFP or monetary policy) or
+  from groups of shocks by exploiting the linearity of the state space system.
+  Starting from an initial state of zero,
   iterate the state space forward from the first historical period up through
-  the last forecast horizon. Use the smoothed historical shocks for one shock at
-  a time during the historical periods and no shocks during the forecast
-  periods.
+  the last forecast horizon. To infer the contributions of shocks,
+  use the smoothed historical shocks for one shock at a time during the historical
+  periods. If a modal shock decomposition is computed, then we assume no shocks
+  occur during the forecast periods. If a full-distribution shock decomposition
+  is computed, then we allow shocks to occur during the forecast periods.
 
-- Deterministic trends (`:dettrend`): iterate the state space forward from first
+- Deterministic trends (`:dettrend`): iterate the state space forward from the first
   historical state up through the last forecast horizon without any shocks.
 
 - Trends (`:trend`): for each class, just the constant term in that class's
@@ -121,14 +126,37 @@ e.g. `:histstates` for smoothed historical states.
 
 It is not necessary to compute all forecast outputs in one call to
 `forecast_one`. Which steps are run depends on which `output_vars` are passed
-in.
+in. Most users will just want to calculate `:forecastobs`, `:histobs`,
+`:forecastpseudo`, and `:histpseudo`.
 
+
+### [Calculating Shock Decompositions](@id calc-shock-dec)
+The user should note that shock decompositions **are not** the same thing
+as forecast decompositions in DSGE.jl. The former decomposes a forecast
+into the contributions of individual or groups of shocks. The latter
+decomposes the change between two different forecasts into "data revision",
+"news" and "re-estimation" components.
+
+If the user wants to plot shock decompositions to decompose
+a forecast's deviations from trend into the contributions of individual or groups of shocks,
+then the user needs to calculate the `shockdec`, `detttrend`, and `trend` output variables.
+Otherwise, the plotting script `plot_shock_decompositions` will fail.
+
+Finally, note that full-distribution shock decompositions are very memory intensive. For `Model1002`,
+we typically need 30GB-40GB using the default settings. To avoid memory problems,
+the user should decrease the setting `:forecast_block_size` to a smaller number than
+the default 5000. A smaller block size means that fewer draws from the posterior
+are loaded into memory at any one time, hence the size of the matrices
+associated with shock decompositions will also be smaller.
 
 ## Preparing Forecast Inputs
 
 **Adding Required `output_var`s:**
 
-This step is done by `add_requisite_output_vars`:
+The user specifies what output to compute by passing a `Vector{Symbol}` of
+correctly named output variables into `forecast_one`. Underneath the hood,
+we will add any additional output variables that are required
+to complete a forecast using `add_requisite_output_vars`:
 
 - If `:forecast<class>` is in `output_vars`, then `:bddforecast<class>` is also
   added. Hence we always forecast both with and without enforcing the ZLB.
@@ -167,7 +195,10 @@ a saved data set that does not have the conditional observables you want to use.
 **Loading Draws:**
 
 By default, the draws are loaded from the file whose path is given by
-`get_forecast_input_file`. However, you can override the default input file for
+`get_forecast_input_file`. However, you can directly pass a matrix
+of posterior parameter draws or a vector of the modal parameters
+via the keyword argument `params` for `forecast_one`,
+or you can override the default input file for
 a given input type by adding entries to the `Dict{Symbol, ASCIIString}` returned
 from `forecast_input_file_overrides(m)`. For example:
 
@@ -177,8 +208,9 @@ overrides[:mode] = "path/to/input/file.h5"
 ```
 
 Note that `load_draws` expects an HDF5 dataset called either `params` (for
-`input_type in [:mode, :mean]`) or `mhparams` (for `input_type in [:full, :subset]`).
-
+`input_type in [:mode, :mean]`) or `mhparams` (for `input_type in [:full, :subset]`)
+if the sampling method is `:MH`. If the sampling method is `:SMC`, then
+`load_draws` expects a jld2 file which has a variable named `cloud`.
 
 ## Computing Forecast Outputs
 

@@ -13,6 +13,11 @@ by decomposing the differences into three sources:
 (2) News (e.g. new data that has become available since the old forecast),
 (3) Re-estimation (i.e. changes in model parameters).
 
+This function **does not** compute which shocks explain a forecast.
+For example, if you want to know whether TFP or financial shocks
+drive a given forecast, then you want to compute the shock decomposition
+output variable (see `?shock_decompositions`, `forecast_one`, and `compute_meansbands`).
+
 Note that this function currently does not work for a model in which
 there are changes in the degree of "regime-switching"
 in the `TTT`, `RRR`, `CCC`, `ZZ`, and `DD` matrices, e.g.
