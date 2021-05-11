@@ -1820,7 +1820,7 @@ function ss63!(m::Model1002)
 end
 
 function ss64!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -2028,7 +2028,7 @@ function ss64!(m::Model1002)
 end
 
 function ss65!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -2212,7 +2212,7 @@ function ss65!(m::Model1002)
 end
 
 function ss66!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -2421,7 +2421,7 @@ function ss66!(m::Model1002)
 end
 
 function ss67!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -2641,7 +2641,7 @@ function ss67!(m::Model1002)
 end
 
 function ss68!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -2844,7 +2844,7 @@ function ss68!(m::Model1002)
 end
 
 function ss69!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -3066,7 +3066,7 @@ function ss69!(m::Model1002)
 end
 
 function ss70!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -3271,7 +3271,7 @@ function ss70!(m::Model1002)
 end
 
 function ss71!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -3491,7 +3491,7 @@ function ss71!(m::Model1002)
 end
 
 function ss72!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -3694,7 +3694,7 @@ function ss72!(m::Model1002)
 end
 
 function ss73!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -3916,7 +3916,7 @@ function ss73!(m::Model1002)
 end
 
 function ss74!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -4121,7 +4121,7 @@ function ss74!(m::Model1002)
 end
 
 function ss75!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -4365,7 +4365,7 @@ function ss75!(m::Model1002)
 end
 
 function ss76!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -4591,7 +4591,7 @@ function ss76!(m::Model1002)
 end
 
 function ss77!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -4836,7 +4836,7 @@ function ss77!(m::Model1002)
 end
 
 function ss78!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
@@ -5064,7 +5064,7 @@ function ss78!(m::Model1002)
 end
 
 function ss79!(m::Model1002)
-    ss8!(m) # fix γ_gdi, δ_gdi
+    ss9!(m) # fix γ_gdi, δ_gdi
 
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
