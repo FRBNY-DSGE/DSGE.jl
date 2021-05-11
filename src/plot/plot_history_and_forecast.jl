@@ -171,6 +171,7 @@ histforecast
                    bands_style = :fan,
                    label_bands = false,
                    transparent_bands = true,
+                   add_new_model::Bool = false, new_data::Array{Float64,1} = [],
                    tick_size = 2)
 
     # Error checking
@@ -266,9 +267,14 @@ histforecast
         linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :solid
         label      :=  haskey(names, :hist) ? names[:hist] : "History"
 
-        inds = intersect(findall(start_date .<= dates .<= end_date),
-                         findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
-        combined.means[inds, :date], combined.means[inds, var]
+        if add_new_model
+            inds = intersect(findall(start_date .<= dates .<= end_date), 1:length(new_data))
+            combined.means[inds, :date], new_data[inds]
+        else
+            inds = intersect(findall(start_date .<= dates .<= end_date),
+                             findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
+            combined.means[inds, :date], combined.means[inds, var]
+        end
     end
 
     # Mean forecast

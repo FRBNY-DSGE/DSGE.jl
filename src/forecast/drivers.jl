@@ -326,8 +326,13 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
                 if get_setting(m, :sampling_method) == :MH
                     params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
                 elseif get_setting(m, :sampling_method) == :SMC
-
-                    params_unweighted[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                    if input_file_name[end-1:end] == "h5"
+                        params_unweighted[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                    else
+                        dataset = jldopen(input_file_name, "r") do file
+                            params_unweighted[i] = vec(map(Float64, file["cloud"].particles[j,1:end-5]))
+                        end
+                    end
                 else
                     throw("Invalid :sampling_method setting specification.")
                 end
