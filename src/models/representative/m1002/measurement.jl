@@ -246,13 +246,13 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]         = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]         = m[:σ_gdi]^2
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80"]
         QQ[exo[:ziid_sh], exo[:ziid_sh]]   = m[:σ_ziid]^2
         QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
         QQ[exo[:φ_sh], exo[:φ_sh]]         = m[:σ_φ]^2
     end
 
-    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79"]
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80"]
         QQ[exo[:g_covid_sh], exo[:g_covid_sh]]   = m[:σ_g_covid]^2
         QQ[exo[:μ_covid_sh], exo[:μ_covid_sh]]   = m[:σ_μ_covid]^2
         QQ[exo[:λ_f_covid_sh], exo[:λ_f_covid_sh]]   = m[:σ_λ_f_covid]^2
