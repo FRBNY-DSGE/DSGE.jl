@@ -15,18 +15,20 @@ For calculating the log marginal data density for a given posterior sample.
 - `estimation_method::Symbol`: either `:smc` or `:mh`
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
+- `smc_estimate_file::String`: Specify estimation cloud file to use if estimation_method is SMC
 """
 function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
                                data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
-                               parallel::Bool = false)
+                               parallel::Bool = false,
+                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"))
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation MDD with incremental weights if the estimation method is :smc")
     end
 
     if calculation_method == :incremental_weights
-        file        = load(rawpath(m, "estimate", "smc_cloud.jld2"))
+        file        = load(smc_estimate_file)
         cloud, w, W = file["cloud"], file["w"], file["W"]
         n_parts     = sum(W[:, 1])
 
@@ -38,7 +40,7 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
         free_para_inds = findall(x -> x.fixed == false, get_parameters(m))
 
         if estimation_method == :smc
-            cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
+            cloud = load(smc_estimate_file, "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 
