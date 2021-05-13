@@ -153,6 +153,8 @@ User recipe called by `plot_history_and_forecast`.
 - `label_bands::Bool`
 - `transparent_bands::Bool`
 - `tick_size::Int`: x-axis (time) tick size in units of years
+- `add_new_model::Bool`: Adding history from another model?
+- `new_data::Array{Flaot64,1}`: The new history to plot
 
 Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
 are supported as keyword arguments.
