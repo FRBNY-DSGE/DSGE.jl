@@ -5315,7 +5315,7 @@ function ss80!(m::Model1002)
         spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
 
         # Standard business cycle shocks that have a COVID-specific counterpart, plus z_p
-        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi, :σ_b, :σ_ziid, :σ_z_p, :σ_λ_w]
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi, :σ_b, :σ_ztil, :σ_z_p, :σ_λ_w]
             m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
             for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
                 m2p[pk][i] = 1
