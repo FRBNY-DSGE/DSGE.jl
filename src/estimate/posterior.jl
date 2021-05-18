@@ -51,7 +51,6 @@ posterior!(m::Union{AbstractDSGEModel{T},AbstractVARModel{T}},
            sampler::Bool = false, catch_errors::Bool = false,
            ϕ_smc::Float64 = 1., toggle::Bool = true) where {T<:AbstractFloat}
 ```
-
 Evaluates the log posterior density at `parameters`.
 
 ### Arguments
