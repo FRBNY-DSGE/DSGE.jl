@@ -16,25 +16,75 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 - `smc_estimate_file::String`: Specify estimation cloud file to use if estimation_method is SMC
+- `bridge_vec::Vector{String}`: Estimation cloud files for all the bridges up to a scratch estimation.
+    Used for incremental weights calculation of MDD. Scratch is last.
+- `prior_wts::Vector{Float64}`: Weight on the prior for each bridge.
 """
 function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
                                data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
-                               parallel::Bool = false,
-                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"))
+                               parallel::Bool = false, bridge_vec::Vector = [],
+                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"),
+                               prior_wts::Vector{Float64} = zeros(length(bridge_vec)),
+                               prior_parts = 10000)
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation MDD with incremental weights if the estimation method is :smc")
     end
 
     if calculation_method == :incremental_weights
+        #=if length(prior_wts) > 0 && prior_wts[end] != 0.0
+            @warn "Last element of bridges' prior weight assumed to be 0 b/c that's not a bridge estimation."
+            prior_wts[end] = 0.0
+        end=#
+        if length(prior_wts) > 0
+            @assert all(prior_wts .>= 0.0)
+            @assert length(prior_wts) == length(bridge_vec)
+        end
+        # Calculate prior squared integral if necessary
+        prior_squared = 0
+        if length(prior_wts > 0) && sum(prior_wts) > 0
+            prior_sum = 0
+            for i in 1:prior_parts
+                ModelConstructors.update!(m.parameters, rand(m.parameters; regime_switching = true)) # use ModelConstructors to avoid calculating steady state unnecessarily
+                prior_sum += exp(2*prior(m.parameters))
+            end
+            prior_squared = prior_sum / prior_parts
+        end
+
+        log_mdd = 0
+        prob_ytilde = zeros(length(bridge_vec))
+        for bridge in length(bridge_vec):-1:1 ## Assuming that all bridges are SMC and so incremental method works
+            file        = load(bridge_vec[bridge])
+            cloud, w, W = file["cloud"], file["w"], file["W"]
+            n_parts     = sum(W[:, 1])
+
+            w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
+            log_cmdd = sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over param
+            cmdd = exp(log_cmdd) # Need to use non-log version to do below calculation
+
+            if bridge == length(bridge_vec)
+                prob_ytilde[bridge] = cmdd
+            else
+                prob_ytilde[bridge] = cmdd / prob_ytilde[bridge+1] *
+                    (prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1])
+            end
+            log_mdd += log(prob_ytilde[bridge])
+        end
+
         file        = load(smc_estimate_file)
         cloud, w, W = file["cloud"], file["w"], file["W"]
         n_parts     = sum(W[:, 1])
 
         w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
+        log_mdd += sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
 
-        return sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
+        if length(prob_wts) > 0
+            log_mdd += -log(prob_ytilde[1]) +
+                    log(prior_wts[1] * prior_squared + (1.0-prior_wts[1]) * prob_ytilde[1])
+        end
+
+        return log_mdd
 
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, get_parameters(m))
