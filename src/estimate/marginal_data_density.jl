@@ -43,53 +43,103 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
         end
         # Calculate prior squared integral if necessary
         prior_squared = 0
-        if length(prior_wts > 0) && sum(prior_wts) > 0
+        if length(prior_wts) > 0 && sum(prior_wts) > 0
             prior_sum = 0
+            # Get truncated priors
+            params2 = copy(m.parameters)
+            for i in 1:length(m.parameters)
+                @show i
+                if !isnull(params2[i].prior) && !params2[i].fixed
+                    if typeof(get(m.parameters[i].prior)) != RootInverseGamma
+                    params2[i].prior = Nullable(Distributions.truncated(get(m.parameters[i].prior),
+                                                                    m.parameters[i].valuebounds[1],
+                                                                    m.parameters[i].valuebounds[2]))
+                    end
+                end
+
+                if haskey(params2[i].regimes, :prior)
+                    for j in keys(params2[i].regimes[:prior])
+                        if !isnull(params2[i].regimes[:prior][j]) &&
+                            ((!haskey(params2[i].regimes, :fixed) && !params2[i].fixed) ||
+                             (haskey(params2[i].regimes, :fixed) && !params2[i].regimes[:fixed][j])) &&
+                             typeof(get(m.parameters[i].regimes[:prior][1])) != RootInverseGamma
+
+                            if haskey(params2[i].regimes, :valuebounds)
+                                params2[i].regimes[:prior][j] = Nullable(Distributions.truncated(get(m.parameters[i].regimes[:prior][j]),
+                                                                    m.parameters[i].regimes[:valuebounds][j][1],
+                                                                    m.parameters[i].regimes[:valuebounds][j][2]))
+                            else
+                                params2[i].regimes[:prior][j] = Nullable(Distributions.truncated(get(m.parameters[i].regimes[:prior][j]),
+                                                                    m.parameters[i].valuebounds[1],
+                                                                    m.parameters[i].valuebounds[2]))
+                            end
+                        end
+                    end
+                end
+            end
             for i in 1:prior_parts
-                ModelConstructors.update!(m.parameters, rand(m.parameters; regime_switching = true)) # use ModelConstructors to avoid calculating steady state unnecessarily
-                prior_sum += exp(2*prior(m.parameters))
+                ModelConstructors.update!(params2, rand(params2; regime_switching = true)) # use ModelConstructors to avoid calculating steady state unnecessarily
+                prior_sum += exp(prior(params2))
             end
             prior_squared = prior_sum / prior_parts
         end
+        #prior_squared = 1
 
         log_mdd = 0
-        prob_ytilde = zeros(length(bridge_vec))
+        prob_ytilde = zeros(BigFloat, length(bridge_vec))
+        log_prob_ytilde = zeros(length(bridge_vec))
+
         for bridge in length(bridge_vec):-1:1 ## Assuming that all bridges are SMC and so incremental method works
-            file        = load(bridge_vec[bridge])
+            read_h5 = bridge_vec[bridge][end-1:end] == "h5"
+            file        = read_h5 ? h5read(bridge_vec[bridge], "smcparams") : load(bridge_vec[bridge])
+
             cloud, w, W = file["cloud"], file["w"], file["W"]
             n_parts     = sum(W[:, 1])
 
             w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
             log_cmdd = sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over param
-            cmdd = exp(log_cmdd) # Need to use non-log version to do below calculation
+            cmdd = exp(BigFloat(log_cmdd)) # Need to use non-log version to do below calculation
 
+            log_mdd += cmdd
+#=
+            @show log_cmdd, cmdd
             if bridge == length(bridge_vec)
                 prob_ytilde[bridge] = cmdd
+                log_prob_ytilde[bridge] = log_cmdd
+                #log_mdd += log_cmdd
             else
-                prob_ytilde[bridge] = cmdd / prob_ytilde[bridge+1] *
-                    (prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1])
-            end
-            log_mdd += log(prob_ytilde[bridge])
-        end
+                @show log(prob_ytilde[bridge+1]), log(prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1]), prior_squared
 
-        file        = load(smc_estimate_file)
+                prior_adj = prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1]
+                log_ans = log_cmdd + log(prior_adj)
+
+                log_prob_ytilde[bridge] = log_ans
+                prob_ytilde[bridge] = exp(log_ans)#cmdd / prob_ytilde[bridge+1] *
+                    #(prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1])
+                #log_mdd += log_ans#log(prob_ytilde[bridge])
+            end
+            @show log(prob_ytilde[bridge])
+=#        end
+
+        read_h5 = smc_estimate_file[end-1:end] == "h5"
+        file        = read_h5 ? h5read(smc_estimate_file, "smcparams") : load(smc_estimate_file)
         cloud, w, W = file["cloud"], file["w"], file["W"]
         n_parts     = sum(W[:, 1])
 
         w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
         log_mdd += sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
-
-        if length(prob_wts) > 0
-            log_mdd += -log(prob_ytilde[1]) +
-                    log(prior_wts[1] * prior_squared + (1.0-prior_wts[1]) * prob_ytilde[1])
+#=
+        if length(prior_wts) > 0 && prior_wts[1]  > 0 && prob_ytilde[1] < Inf && prob_ytilde[1] > -Inf
+            log_mdd += log(prior_wts[1] * prior_squared + (1.0-prior_wts[1]) * prob_ytilde[1])
         end
-
+=#
         return log_mdd
-
+#end
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, get_parameters(m))
 
         if estimation_method == :smc
+            read_h5 = smc_estimate_file[end-1:end] == "h5"
             cloud = load(smc_estimate_file, "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
