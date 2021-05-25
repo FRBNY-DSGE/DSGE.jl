@@ -456,7 +456,7 @@ function eqcond(m::Model1002, reg::Int)
     end
 
     # COVID counterparts for standard business cycle shocks
-    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83"]
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
         # TODO: check if there are any expectational terms to which
         # we need to account for (see Eφ_t)
         Γ0[eq[:eq_g_covid], endo[:g_covid_t]] = 1.

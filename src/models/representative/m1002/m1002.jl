@@ -188,7 +188,7 @@ function init_model_indices!(m::Model1002)
     end
 
     # COVID counterparts for standard business cycle shocks
-    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83"]
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
         push!(endogenous_states, :g_covid_t)
         push!(equilibrium_conditions, :eq_g_covid)
         push!(exogenous_shocks, :g_covid_sh)
@@ -652,27 +652,27 @@ buted to steady-state inflation.",
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
     end
 
-    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83"]
-        m <= parameter(:ρ_g_covid, 0.9863, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
+        m <= parameter(:ρ_g_covid, 0.9863, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_g: AR(1) coefficient in the government spending process.",
                        tex_label="\\rho_g")
 
-        m <= parameter(:ρ_μ_covid, 0.8735, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+        m <= parameter(:ρ_μ_covid, 0.8735, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_μ: AR(1) coefficient in capital adjustment cost process.",
                        tex_label="\\rho_{\\mu}")
 
-        m <= parameter(:ρ_λ_f_covid, 0.8827, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+        m <= parameter(:ρ_λ_f_covid, 0.8827, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
                        tex_label="\\rho_{\\lambda_f}")
 
-        m <= parameter(:ρ_σ_w_covid, 0.9898, (1e-5, 0.99999), (1e-5, 0.99999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
+        m <= parameter(:ρ_σ_w_covid, 0.9898, (0., 0.99999), (0., 0.99999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
                        description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
                        tex_label="\\rho_{\\sigma_\\omega}")
 
-        m <= parameter(:ρ_lr_covid, 0.6936, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+        m <= parameter(:ρ_lr_covid, 0.6936, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        tex_label="\\rho_{10y}")
 
-        m <= parameter(:ρ_tfp_covid, 0.1953, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+        m <= parameter(:ρ_tfp_covid, 0.1953, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        tex_label="\\rho_{tfp}")
 
         m <= parameter(:ρ_gdp_covid, 0., (-0.999, 0.999), (-0.999, 0.999), ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
@@ -684,7 +684,7 @@ buted to steady-state inflation.",
         m <= parameter(:ρ_gdpvar_covid, 0., (-0.999, 0.999), (-0.999, 0.999), ModelConstructors.SquareRoot(), Normal(0.0, 0.4), fixed=false,
                        tex_label="\\varrho_{gdp}")
 
-        m <= parameter(:σ_g_covid, 2.5230, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+        m <= parameter(:σ_g_covid, 2.5230, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                        description="σ_g: The standard deviation of the government spending process.",
                        tex_label="\\sigma_{g}")
 
@@ -696,7 +696,7 @@ buted to steady-state inflation.",
                        description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                        tex_label="\\sigma_{\\lambda_f}")
 
-        m <= parameter(:σ_σ_ω_covid, 0.0428, (1e-7,100.), (1e-5, 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+        m <= parameter(:σ_σ_ω_covid, 0.0428, (1e-7,100.), (0., 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
                        description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                        tex_label="\\sigma_{\\sigma_\\omega}")
 
@@ -714,7 +714,7 @@ buted to steady-state inflation.",
     end
 
     if subspec(m) in ["ss69", "ss70", "ss73", "ss74", "ss77", "ss78"]
-        m <= parameter(:ρ_z_p_covid, 0.8910, (1e-5, 0.999), (1e-5, 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+        m <= parameter(:ρ_z_p_covid, 0.8910, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                        description="ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.",
                        tex_label="\\rho_{z^p}")
 
