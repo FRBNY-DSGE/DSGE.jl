@@ -127,6 +127,7 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                                    start_date = Date(2019,3,31), end_date = Date(2023,12,31),
                                    add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
                                    new_cond_type::Symbol = :full, outfile_end::String =  "",
+                                   new_forecast_string::String = forecast_string,
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -163,7 +164,7 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
         new_data = []
         if add_new_model
             new_data, tmp = read_forecast_output(new_model, :full, new_cond_type, Symbol(:hist, class), var,
-                                                 forecast_string = forecast_string)
+                                                 forecast_string = new_forecast_string)
             new_data = vec(mean(new_data,dims=1)) .* 4
         end
 
