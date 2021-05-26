@@ -27,7 +27,7 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
                                parallel::Bool = false, bridge_vec::Vector = [],
                                smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"),
                                prior_wts::Vector{Float64} = zeros(length(bridge_vec)),
-                               prior_parts = 10000)
+                               end_date = Date(3000,1,1))
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation MDD with incremental weights if the estimation method is :smc")
     end
@@ -41,49 +41,6 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
             @assert all(prior_wts .>= 0.0)
             @assert length(prior_wts) == length(bridge_vec)
         end
-        # Calculate prior squared integral if necessary
-        prior_squared = 0
-        if length(prior_wts) > 0 && sum(prior_wts) > 0
-            prior_sum = 0
-            # Get truncated priors
-            params2 = copy(m.parameters)
-            for i in 1:length(m.parameters)
-                @show i
-                if !isnull(params2[i].prior) && !params2[i].fixed
-                    if typeof(get(m.parameters[i].prior)) != RootInverseGamma
-                    params2[i].prior = Nullable(Distributions.truncated(get(m.parameters[i].prior),
-                                                                    m.parameters[i].valuebounds[1],
-                                                                    m.parameters[i].valuebounds[2]))
-                    end
-                end
-
-                if haskey(params2[i].regimes, :prior)
-                    for j in keys(params2[i].regimes[:prior])
-                        if !isnull(params2[i].regimes[:prior][j]) &&
-                            ((!haskey(params2[i].regimes, :fixed) && !params2[i].fixed) ||
-                             (haskey(params2[i].regimes, :fixed) && !params2[i].regimes[:fixed][j])) &&
-                             typeof(get(m.parameters[i].regimes[:prior][1])) != RootInverseGamma
-
-                            if haskey(params2[i].regimes, :valuebounds)
-                                params2[i].regimes[:prior][j] = Nullable(Distributions.truncated(get(m.parameters[i].regimes[:prior][j]),
-                                                                    m.parameters[i].regimes[:valuebounds][j][1],
-                                                                    m.parameters[i].regimes[:valuebounds][j][2]))
-                            else
-                                params2[i].regimes[:prior][j] = Nullable(Distributions.truncated(get(m.parameters[i].regimes[:prior][j]),
-                                                                    m.parameters[i].valuebounds[1],
-                                                                    m.parameters[i].valuebounds[2]))
-                            end
-                        end
-                    end
-                end
-            end
-            for i in 1:prior_parts
-                ModelConstructors.update!(params2, rand(params2; regime_switching = true)) # use ModelConstructors to avoid calculating steady state unnecessarily
-                prior_sum += exp(prior(params2))
-            end
-            prior_squared = prior_sum / prior_parts
-        end
-        #prior_squared = 1
 
         log_mdd = 0
         prob_ytilde = zeros(BigFloat, length(bridge_vec))
@@ -100,7 +57,7 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
             log_cmdd = sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over param
             cmdd = exp(BigFloat(log_cmdd)) # Need to use non-log version to do below calculation
 
-            log_mdd += cmdd
+            log_mdd += log_cmdd
 #=
             @show log_cmdd, cmdd
             if bridge == length(bridge_vec)
