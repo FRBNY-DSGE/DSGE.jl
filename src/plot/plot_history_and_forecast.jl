@@ -65,7 +65,7 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
                                    plotroot::String = figurespath(m, "forecast"),
                                    titles::Vector{String} = String[],
                                    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
-                                   verbose::Symbol = :low,
+                                   verbose::Symbol = :low, outfile_end::String = "",
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -105,7 +105,7 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
                                                 Symbol(fcast_prod, "_", detexify(var)),
-                                                forecast_string = forecast_string,
+                                                forecast_string = forecast_string * outfile_end,
                                                 fileformat = plot_extension())
             @show output_file
             DSGE.save_plot(plots[var], output_file, verbose = verbose)

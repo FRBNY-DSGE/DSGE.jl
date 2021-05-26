@@ -3294,7 +3294,7 @@ function ss71!(m::Model1002)
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
                                                 3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
-                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021, 6, 30)))
     m <= Setting(:time_varying_trends, true)
     setup_regime_switching_inds!(m)
 
