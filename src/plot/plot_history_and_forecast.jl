@@ -114,6 +114,80 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
     return plots
 end
 
+function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symbol,
+                                   input_type::Symbol, cond_type::Symbol;
+                                   forecast_string::String = "",
+                                   use_bdd::Symbol = :bdd,
+                                   modal_line::Bool = false, untrans::Bool = false,
+                                   fourquarter::Bool = false,
+                                   plotroot::String = figurespath(ms[1], "forecast"),
+                                   titles::Vector{String} = String[],
+                                   plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
+                                   verbose::Symbol = :low, names = Dict{Symbol, Vector{String}}(),
+                                   start_date = Date(2019,3,31), end_date = Date(2023,12,31),
+                                   add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
+                                   new_cond_type::Symbol = :full, outfile_end::String =  "",
+                                   kwargs...)
+    # Determine output_vars
+    if untrans && fourquarter
+        error("Only one of untrans or fourquarter can be true")
+    elseif untrans
+        hist_prod  = :histut
+        fcast_prod = :forecastut
+    elseif fourquarter
+        hist_prod  = :hist4q
+        fcast_prod = :forecast4q
+    else
+        hist_prod  = :hist
+        fcast_prod = :forecast
+    end
+
+    # Read in MeansBands
+    hist = Vector{MeansBands}(undef, length(ms))
+    fcast = Vector{MeansBands}(undef, length(ms))
+    for i in 1:length(ms)
+        hist[i]  = read_mb(ms[i], input_type, cond_type, Symbol(hist_prod, class), forecast_string = forecast_string)
+        fcast[i] = read_mb(ms[i], input_type, cond_type, Symbol(fcast_prod, class), forecast_string = forecast_string,
+                        use_bdd = use_bdd, modal_line = modal_line)
+    end
+
+    # Get titles if not provided
+    if isempty(titles)
+        detexify_title = typeof(Plots.backend()) == Plots.GRBackend
+        titles = map(var -> describe_series(ms[1], var, class, detexify = detexify_title), vars)
+    end
+
+    # Loop through variables
+    plots = OrderedDict{Symbol, Plots.Plot}()
+    for (var, title, plot_handle) in zip(vars, titles, plot_handles)
+        new_data = []
+        if add_new_model
+            new_data, tmp = read_forecast_output(new_model, :full, new_cond_type, Symbol(:hist, class), var,
+                                                 forecast_string = forecast_string)
+            new_data = vec(mean(new_data,dims=1)) .* 4
+        end
+
+        # Call recipe
+        plots[var] = plot(plot_handle)
+        histforecast_vector!(var, hist, fcast;
+                      ylabel = series_ylabel(ms[1], var, class, untrans = untrans,
+                                             fourquarter = fourquarter),
+                      title = title, names = names, start_date = start_date, end_date = end_date,
+                             add_new_model = add_new_model, new_data = new_data, kwargs...)
+        # Save plot
+        if !isempty(plotroot)
+            output_file = get_forecast_filename(plotroot, filestring_base(ms[1]), input_type, cond_type,
+                                                Symbol(fcast_prod, "_", detexify(var)),
+                                                forecast_string = forecast_string * outfile_end,
+                                                fileformat = plot_extension())
+            @show output_file
+            DSGE.save_plot(plots[var], output_file, verbose = verbose)
+        end
+    end
+    return plots
+end
+
+
 @userplot HistForecast
 
 """
@@ -348,11 +422,16 @@ histforecast_vector
 @recipe function f(hf::HistForecast_vector;
                    start_date = hf.args[2][1].means[1, :date],
                    end_date = hf.args[3][1].means[end, :date],
-                   names = Dict{Symbol, String}(),
+                   names = Dict{Symbol, Vector{String}}(),
                    colors = Dict{Symbol, Any}(),
                    alphas = Dict{Symbol, Float64}(),
                    styles = Dict{Symbol, Symbol}(),
                    add_new_model::Bool = false, new_data::Array{Float64,1} = [],
+                   bands_pcts = union(which_density_bands(hf.args[2][1], uniquify = true),
+                                      which_density_bands(hf.args[3][1], uniquify = true)),
+                   bands_style = :fan,
+                   label_bands = false,
+                   transparent_bands = true,
                    tick_size = 2)
 
     # Error checking
@@ -380,6 +459,65 @@ histforecast_vector
     date_ticks = Base.filter(x -> Dates.year(x) % tick_size == 0, date_ticks)
     xticks --> (map(Dates.value, date_ticks), map(Dates.year, date_ticks))
 
+    # Bands
+    sort!(bands_pcts, rev = true) # s.t. non-transparent bands will be plotted correctly
+#=
+    for hfs_ind in 1:length(hist)
+        combined = cat(hist[hfs_ind], forecast[hfs_ind])
+        inds = findall(start_date .<= combined.bands[var][!, :date] .<= end_date)
+
+        for (i, pct) in enumerate(bands_pcts)
+            seriestype := :line
+
+            x = combined.bands[var][inds, :date]
+            lb = combined.bands[var][inds, Symbol(pct, " LB")]
+            ub = combined.bands[var][inds, Symbol(pct, " UB")]
+
+            #bands_color = haskey(colors, :bands) ? colors[:bands] : :blue
+            bands_alpha = haskey(alphas, :bands) ? alphas[:bands] : 0.1
+            bands_linestyle = haskey(styles, :bands) ? styles[:bands] : :solid
+
+            if bands_style == :fan
+                @series begin
+                    if transparent_bands
+                        #fillcolor := bands_color
+                        fillalpha := bands_alpha
+                    else
+                        #if typeof(bands_color) in [Symbol, String]
+                        #    bands_color = parse(Colorant, bands_color)
+                        #end
+                        #fillcolor := weighted_color_mean(bands_alpha*i, bands_color, colorant"white")
+                        fillalpha := 1
+                    end
+                    linealpha  := 0
+                    fillrange  := ub
+                    label      := label_bands ? "$pct Bands" : ""
+                    x, lb
+                end
+            elseif bands_style == :line
+                # Lower bound
+                @series begin
+                    linewidth --> 2
+                    #linecolor :=  bands_color
+                    linestyle :=  bands_linestyle
+                    label     :=  label_bands ? "$pct LB" : ""
+                    x, lb
+                end
+
+                # Upper bound
+                @series begin
+                    linewidth --> 2
+                    #linecolor :=  bands_color
+                    linestyle :=  bands_linestyle
+                    label     :=  label_bands ? "$pct UB" : ""
+                    x, ub
+                end
+            else
+                error("bands_style must be either :fan or :line. Got $bands_style")
+            end
+        end
+    end
+=#
     # Mean history
     @series begin
         seriestype :=  :line
@@ -407,18 +545,71 @@ histforecast_vector
     for hfs_ind in 1:length(hist)
         combined = cat(hist[hfs_ind], forecast[hfs_ind])
         dates = combined.means[!, :date]
+        inds = findall(start_date .<= combined.bands[var][!, :date] .<= end_date)
+
+        for (i, pct) in enumerate(bands_pcts)
+            seriestype := :line
+
+            x = combined.bands[var][inds, :date]
+            lb = combined.bands[var][inds, Symbol(pct, " LB")]
+            ub = combined.bands[var][inds, Symbol(pct, " UB")]
+
+            bands_color = haskey(colors, :bands) ? colors[:bands] : get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:blue
+            bands_alpha = haskey(alphas, :bands) ? alphas[:bands] : 0.1
+            bands_linestyle = haskey(styles, :bands) ? styles[:bands] : :solid
+
+            if bands_style == :fan
+                @series begin
+                    if transparent_bands
+                        fillcolor := bands_color
+                        fillalpha := bands_alpha
+                    else
+                        if typeof(bands_color) in [Symbol, String]
+                            bands_color = parse(Colorant, bands_color)
+                        end
+                        fillcolor := weighted_color_mean(bands_alpha*i, bands_color, colorant"white")
+                        fillalpha := 1
+                    end
+                    linealpha  := 0
+                    fillrange  := ub
+                    label      := label_bands ? "$pct Bands" : ""
+                    x, lb
+                end
+            elseif bands_style == :line
+                # Lower bound
+                @series begin
+                    linewidth --> 2
+                    linecolor :=  bands_color
+                    linestyle :=  bands_linestyle
+                    label     :=  label_bands ? "$pct LB" : ""
+                    x, lb
+                end
+
+                # Upper bound
+                @series begin
+                    linewidth --> 2
+                    linecolor :=  bands_color
+                    linestyle :=  bands_linestyle
+                    label     :=  label_bands ? "$pct UB" : ""
+                    x, ub
+                end
+            else
+                error("bands_style must be either :fan or :line. Got $bands_style")
+            end
+        end
+
 
         @series begin
         seriestype :=  :line
         linewidth  --> 2
-        #linecolor  :=  #haskey(colors, :forecast) ? colors[:forecast] : :red
+        linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:red
         if VERSION >= v"1.3"
             seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
         else
             alpha       := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
         end
         linestyle  :=  haskey(styles, :forecast) ? styles[:forecast] : :solid
-        label      :=  haskey(names, :forecast) ? names[:forecast] : "Forecast"
+        label      :=  haskey(names, :forecast) ? names[:forecast][hfs_ind] : "Forecast"
 
         inds = intersect(findall(start_date .<= dates .<= end_date),
                          findall(hist[hfs_ind].means[end, :date] .<= dates .<= forecast[hfs_ind].means[end, :date]))
