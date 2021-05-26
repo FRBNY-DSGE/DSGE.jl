@@ -1156,8 +1156,17 @@ function parameter_groupings(m::Model1002)
         get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false
         push!(excl_params_sym, :σ_pgap, :σ_ygap)
     end
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        push!(excl_params_sym, :σ_condgdp, :ρ_condgdp)
+    end
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        push!(excl_params_sym, :σ_condcorepce, :ρ_condcorepce)
+    end
     excl_params = [m[θ] for θ in excl_params_sym]
 
+    @show setdiff(m.parameters, vcat(incl_params, excl_params))
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings
