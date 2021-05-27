@@ -107,7 +107,7 @@ function save_plot(output_file::String = ""; verbose::Symbol = :low)
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
 
-        println(verbose, :low, "Saved $output_file")
+        println(verbose, :low, "Saved $(abspath(output_file))")
     end
 end
 
@@ -117,7 +117,7 @@ function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :l
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(p, output_file)
 
-        println(verbose, :low, "Saved $output_file")
+        println(verbose, :low, "Saved $(abspath(output_file))")
     end
 end
 
