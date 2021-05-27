@@ -55,7 +55,7 @@ m = Model990(custom_settings = custom_settings)
 estimate(m)
 
 # produce LaTeX tables of parameter moments
-compute_moments(m)
+moment_tables(m)
 
 # forecast and compute means and bands using 10 processes
 my_procs = addprocs(10)

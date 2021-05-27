@@ -98,7 +98,7 @@ module DSGE
         filter, filter_shocks, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
-        compute_moments, find_density_bands, mutation, resample, smc,
+        find_density_bands, mutation, resample, smc,
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
         initial_draw!, ParticleCloud, Particle, estimate_bma,
 
