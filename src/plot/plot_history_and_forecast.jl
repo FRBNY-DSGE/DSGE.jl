@@ -95,6 +95,7 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title, plot_handle) in zip(vars, titles, plot_handles)
+
         # Call recipe
         plots[var] = plot(plot_handle)
         histforecast!(var, hist, fcast;
@@ -107,8 +108,8 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
                                                 Symbol(fcast_prod, "_", detexify(var)),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
-            @show output_file
-            DSGE.save_plot(plots[var], output_file, verbose = verbose)
+
+            save_plot(plots[var], output_file, verbose = verbose)
         end
     end
     return plots
