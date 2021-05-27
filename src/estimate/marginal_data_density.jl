@@ -18,33 +18,19 @@ For calculating the log marginal data density for a given posterior sample.
 - `smc_estimate_file::String`: Specify estimation cloud file to use if estimation_method is SMC
 - `bridge_vec::Vector{String}`: Estimation cloud files for all the bridges up to a scratch estimation.
     Used for incremental weights calculation of MDD. Scratch is last.
-- `prior_wts::Vector{Float64}`: Weight on the prior for each bridge.
 """
 function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
                                data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
                                parallel::Bool = false, bridge_vec::Vector = [],
-                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"),
-                               prior_wts::Vector{Float64} = zeros(length(bridge_vec)),
-                               end_date = Date(3000,1,1))
+                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"))
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation MDD with incremental weights if the estimation method is :smc")
     end
 
     if calculation_method == :incremental_weights
-        #=if length(prior_wts) > 0 && prior_wts[end] != 0.0
-            @warn "Last element of bridges' prior weight assumed to be 0 b/c that's not a bridge estimation."
-            prior_wts[end] = 0.0
-        end=#
-        if length(prior_wts) > 0
-            @assert all(prior_wts .>= 0.0)
-            @assert length(prior_wts) == length(bridge_vec)
-        end
-
         log_mdd = 0
-        prob_ytilde = zeros(BigFloat, length(bridge_vec))
-        log_prob_ytilde = zeros(length(bridge_vec))
 
         for bridge in length(bridge_vec):-1:1 ## Assuming that all bridges are SMC and so incremental method works
             read_h5 = bridge_vec[bridge][end-1:end] == "h5"
@@ -54,29 +40,8 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
             n_parts     = sum(W[:, 1])
 
             w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
-            log_cmdd = sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over param
-            cmdd = exp(BigFloat(log_cmdd)) # Need to use non-log version to do below calculation
-
-            log_mdd += log_cmdd
-#=
-            @show log_cmdd, cmdd
-            if bridge == length(bridge_vec)
-                prob_ytilde[bridge] = cmdd
-                log_prob_ytilde[bridge] = log_cmdd
-                #log_mdd += log_cmdd
-            else
-                @show log(prob_ytilde[bridge+1]), log(prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1]), prior_squared
-
-                prior_adj = prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1]
-                log_ans = log_cmdd + log(prior_adj)
-
-                log_prob_ytilde[bridge] = log_ans
-                prob_ytilde[bridge] = exp(log_ans)#cmdd / prob_ytilde[bridge+1] *
-                    #(prior_wts[bridge+1] * prior_squared + (1.0-prior_wts[bridge+1]) * prob_ytilde[bridge+1])
-                #log_mdd += log_ans#log(prob_ytilde[bridge])
-            end
-            @show log(prob_ytilde[bridge])
-=#        end
+            log_mdd += sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over param
+        end
 
         read_h5 = smc_estimate_file[end-1:end] == "h5"
         file        = read_h5 ? h5read(smc_estimate_file, "smcparams") : load(smc_estimate_file)
@@ -85,13 +50,9 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
 
         w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
         log_mdd += sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
-#=
-        if length(prior_wts) > 0 && prior_wts[1]  > 0 && prob_ytilde[1] < Inf && prob_ytilde[1] > -Inf
-            log_mdd += log(prior_wts[1] * prior_squared + (1.0-prior_wts[1]) * prob_ytilde[1])
-        end
-=#
+
         return log_mdd
-#end
+
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, get_parameters(m))
 
