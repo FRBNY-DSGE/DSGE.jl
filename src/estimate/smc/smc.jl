@@ -23,6 +23,8 @@ smc(m::AbstractDSGEModel)
 	- `:high`: Status updates for every iteration of SMC is output, which includes
     the mean and standard deviation of each parameter draw after each iteration,
     as well as calculated acceptance rate, ESS, and number of times resampled.
+- `log_prob_oldy::Float64 = 0.0`: Log p(\tilde y) which is the log marginal data density
+    of the bridge estimation.
 
 ### Outputs
 

@@ -74,6 +74,8 @@ not directly related to the behavior of the sampling algorithms
     written to toggle to regime 1 when done, then regime-switching estimation
     will not work properly. Set to `false` to reduce computation time if the
     user is certain that the likelihood is written properly.
+- `log_prob_oldy::Float64 = 0.0`:Log p(\tilde y) which is the log marginal data density
+    of the bridge estimation.
 """
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   verbose::Symbol = :low,
@@ -335,6 +337,8 @@ parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 
 ### Arguments
 * `m::Union{AbstractDSGEModel,AbstractVARModel}`: the model object
+- `filestring_addl::Vector{String} = []`: Additional strings to add to the file name
+    of estimation output as a way to distinguish output from each other.
 """
 function compute_parameter_covariance(m::Union{AbstractDSGEModel,AbstractVARModel};
                                       filestring_addl::Vector{String} = Vector{String}(undef, 0))

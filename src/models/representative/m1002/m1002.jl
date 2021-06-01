@@ -1166,7 +1166,6 @@ function parameter_groupings(m::Model1002)
     end
     excl_params = [m[θ] for θ in excl_params_sym]
 
-    @show setdiff(m.parameters, vcat(incl_params, excl_params))
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings

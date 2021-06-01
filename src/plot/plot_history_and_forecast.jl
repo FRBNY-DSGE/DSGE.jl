@@ -402,12 +402,18 @@ end
 """
 ```
 histforecast_vector(var, hist, forecast;
-    start_date = hist.means[1, :date], end_date = forecast.means[end, :date],
-    names = Dict{Symbol, String}(), colors = Dict{Symbol, Any}(),
-    alphas = Dict{Symbol, Float64}(), styles = Dict{Symbol, Symbol}(),
-    bands_pcts = union(which_density_bands(hist, uniquify = true),
-                       which_density_bands(forecast, uniquify = true)),
-    bands_style = :fan, label_bands = false, transparent_bands = true,
+    start_date::Date = hf.args[2][1].means[1, :date],
+    end_date::Date = hf.args[3][1].means[end, :date],
+    names = Dict{Symbol, Vector{String}}(),
+    colors = Dict{Symbol, Any}(),
+    alphas = Dict{Symbol, Float64}(),
+    styles = Dict{Symbol, Symbol}(),
+    add_new_model::Bool = false, new_data::Array{Float64,1} = [],
+    bands_pcts = union(which_density_bands(hf.args[2][1], uniquify = true),
+        which_density_bands(hf.args[3][1], uniquify = true)),
+    bands_style = :fan,
+    label_bands = false,
+    transparent_bands = true,
     tick_size = 2)
 ```
 
