@@ -24,7 +24,8 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
                                parallel::Bool = false, bridge_vec::Vector = [],
-                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"))
+                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"),
+                               new_prior::Bool = false, new_params = Matrix(0,0))
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation MDD with incremental weights if the estimation method is :smc")
     end
@@ -56,7 +57,7 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, get_parameters(m))
 
-        if estimation_method == :smc
+        if estimation_method == :smc && !new_prior
             read_h5 = smc_estimate_file[end-1:end] == "h5"
             cloud = load(smc_estimate_file, "cloud")
             params  = get_vals(cloud)
@@ -64,14 +65,18 @@ function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
 
             return marginal_data_density(params, logpost, free_para_inds)
 
-        elseif estimation_method == :mh
+        elseif estimation_method == :mh || new_prior
             if isempty(data)
                 throw("For calculating the MDD with a :mh sample, one must provide the data as the
                       second positional argument to this function")
             end
-            all_params = h5read(rawpath(m, "estimate", "mhsave.h5"), "mhparams")
-            all_params = map(Float64, all_params)
-            params = Matrix(thin_mh_draws(m, all_params; jstep = 5)')
+            if new_prior
+                params = new_params
+            else
+                all_params = h5read(rawpath(m, "estimate", "mhsave.h5"), "mhparams")
+                all_params = map(Float64, all_params)
+                params = Matrix(thin_mh_draws(m, all_params; jstep = 5)')
+            end
 
             n_para = n_parameters(m)
             n_draws = size(params, 2)
