@@ -8,6 +8,22 @@ plot_history_and_forecast(m, vars, class, input_type, cond_type;
     plotroot = figurespath(m, \"forecast\"), titles = [],
     plot_handles = fill(plot(), length(vars)), verbose = :low,
     kwargs...)
+
+plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symbol,
+    input_type::Symbol, cond_type::Symbol;
+    forecast_string::String = "",
+    use_bdd::Symbol = :bdd,
+    modal_line::Bool = false, untrans::Bool = false,
+    fourquarter::Bool = false,
+    plotroot::String = figurespath(ms[1], "forecast"),
+    titles::Vector{String} = String[],
+    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
+    verbose::Symbol = :low, names = Dict{Symbol, Vector{String}}(),
+    start_date::Date = Date(2019,3,31), end_date::Date = Date(2023,12,31),
+    add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
+    new_cond_type::Symbol = :full, outfile_end::String =  "",
+    new_forecast_string::String = forecast_string,
+    kwargs...)
 ```
 
 Plot history and forecast for `var` or `vars`. If these correspond to a
@@ -37,8 +53,16 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 - `plot_handle::Plot` or `plot_handles::Vector{Plot}`: existing plot(s) on which
   to overlay new forecast plot(s)
 - `verbose::Symbol = :low`
+- `names::Dict{Symbol, Vector{String}}`: Legend names for lines
+- `start_date::Date` = Date(2019,3,31): Date plot should start at
+- `end_date::Date` = Date(2023,12,31): Date plot should end at
+- `add_new_model::Bool` = false: Whether history should be plotted using a new model
+- `new_model::AbstractDSGEModel` = Model1002(): The new model to use to plot history
+- `new_cond_type::Symbol` = :full: Cond_type of new model
+- `outfile_end::String = ""`: String to append to the end of file name of plot
+- `new_forecast_string::String = forecast_string`: Forecast string for new model
 
-See `?histforecast` for additional keyword arguments, all of which can be passed
+See `?histforecast` or `?histforecast_vector' for additional keyword arguments, all of which can be passed
 into `plot_history_and_forecast`.
 
 ### Output
@@ -124,9 +148,9 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                                    titles::Vector{String} = String[],
                                    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
                                    verbose::Symbol = :low, names = Dict{Symbol, Vector{String}}(),
-                                   start_date = Date(2019,3,31), end_date = Date(2023,12,31),
+                                   start_date::Date = Date(2019,3,31), end_date::Date = Date(2023,12,31),
                                    add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
-                                   new_cond_type::Symbol = :full, outfile_end::String =  "",
+                                   new_cond_type::Symbol = :full, outfile_end::String = "",
                                    new_forecast_string::String = forecast_string,
                                    kwargs...)
     # Determine output_vars
@@ -237,8 +261,8 @@ are supported as keyword arguments.
 histforecast
 
 @recipe function f(hf::HistForecast;
-                   start_date = hf.args[2].means[1, :date],
-                   end_date = hf.args[3].means[end, :date],
+                   start_date::Date = hf.args[2].means[1, :date],
+                   end_date::Date = hf.args[3].means[end, :date],
                    names = Dict{Symbol, String}(),
                    colors = Dict{Symbol, Any}(),
                    alphas = Dict{Symbol, Float64}(),
@@ -421,8 +445,8 @@ are supported as keyword arguments.
 histforecast_vector
 
 @recipe function f(hf::HistForecast_vector;
-                   start_date = hf.args[2][1].means[1, :date],
-                   end_date = hf.args[3][1].means[end, :date],
+                   start_date::Date = hf.args[2][1].means[1, :date],
+                   end_date::Date = hf.args[3][1].means[end, :date],
                    names = Dict{Symbol, Vector{String}}(),
                    colors = Dict{Symbol, Any}(),
                    alphas = Dict{Symbol, Float64}(),
