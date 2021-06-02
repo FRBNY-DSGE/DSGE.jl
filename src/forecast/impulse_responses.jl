@@ -25,18 +25,23 @@ where `S<:AbstractFloat`
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
   pseudo-observable impulse response functions
 """
-function impulse_responses(m::AbstractRepModel,
-                           system::Union{System{S}, RegimeSwitchingSystem{S}};
+@inline function impulse_responses(m::AbstractRepModel,
+                           system::RegimeSwitchingSystem{S};
                            flip_shocks::Bool = false) where {S<:AbstractFloat}
-    horizon = impulse_response_horizons(m)
-    if typeof(system) == RegimeSwitchingSystem{S}
-        last_reg = get_setting(m, :n_regimes)
-        states, obs, pseudo = impulse_responses(system[last_reg], horizon, flip_shocks = flip_shocks)
-    else
-        states, obs, pseudo = impulse_responses(system, horizon, flip_shocks = flip_shocks)
-    end
 
-    return states, obs, pseudo
+    horizon = impulse_response_horizons(m)
+    irf_reg = haskey(get_settings(m), :impulse_response_regime) ?
+        get_setting(m, :impulse_response_regime) : get_setting(m, :n_regimes)
+
+    return impulse_responses(system[irf_reg], horizon, flip_shocks = flip_shocks) # returns state, obs, pseudo
+end
+
+@inline function impulse_responses(m::AbstractRepModel,
+                           system::System{S};
+                           flip_shocks::Bool = false) where {S<:AbstractFloat}
+
+    horizon = impulse_response_horizons(m)
+    return impulse_responses(system, horizon, flip_shocks = flip_shocks)
 end
 
 function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, system::System{S};
