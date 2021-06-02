@@ -218,8 +218,9 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
             params = convert(Vector{Float64}, h5read(input_file_name, "params"))
         elseif get_setting(m, :sampling_method) == :SMC
             if input_type in [:mode, :mode_draw_shocks]
-                # If mode is in forecast overrides, want to use the file specified
-                if :mode in collect(keys(forecast_input_file_overrides(m)))
+                # If mode is in forecast overrides and is an extension, want to use the file specified
+                if :mode in collect(keys(forecast_input_file_overrides(m))) &&
+                    occursin(".h5", input_file_name)
                     params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                     # If not, load it from the cloud
                 elseif (occursin("smc_paramsmode", input_file_name) &&
