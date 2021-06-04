@@ -424,14 +424,14 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     # Determine the number of regimes before the start of the forecast (used to adjust
     # indexing)
     pre_fcast_regimes = n_hist_regimes
-    if cond_type != :none
-        if is_regime_switch
-            pre_fcast_regimes += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
-        else
-            pre_fcast_regimes += subtract_quarters(get_setting(m, :date_conditional_end),
-                                                   get_setting(m, :date_forecast_start)) + 1
-        end
-    end
+    #if cond_type != :none
+    #    if is_regime_switch
+    #        pre_fcast_regimes += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
+    #    else
+    #        pre_fcast_regimes += subtract_quarters(get_setting(m, :date_conditional_end),
+    #                                               get_setting(m, :date_forecast_start)) + 1
+    #    end
+    #end
 
     # Determine which quarters in the forecast have sub-zlb nominal rates
     has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m)
@@ -717,6 +717,7 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
     if set_zlb_regime_vals != identity
         set_zlb_regime_vals(m, last_endo_zlb)
     end
+
 
     # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
     first_aware = if haskey(get_settings(m), :tvis_information_set)
