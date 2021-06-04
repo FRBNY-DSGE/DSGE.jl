@@ -6,7 +6,7 @@
             tex_label::String
             dist_id::String
             mean::Float64
-            sd::String
+            sd::Float64
         end
 
 
@@ -16,7 +16,7 @@
             fixed::Bool
             tex_label::String
             mean::Float64
-            bands::Vector{Int64}
+            bands::Vector{Float64}
         end
 
 """
@@ -238,15 +238,14 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
       end
       post_bands = permutedims(find_density_bands(params, percent; minimize = true))
 
-      # Sort out indexing (@ future me, fix this monstrosity please)
-      para_regime_indices = Dict()
+      # map parameters to indices in regimes 2+
+      para_regime_indices = Dict{Int64, Vector{Int64}}()
       if length(post_means) > length(m.parameters)
           i = length(m.parameters)
           for para in m.parameters
               if haskey(para.regimes, :value)
                   for key in keys(para.regimes[:value])
                       if key == 1
-                          # yes, this is hideous, bite me
                           para_regime_indices[m.keys[para.key]] = [m.keys[para.key]]
                       else
                           i += 1
@@ -256,7 +255,6 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
               end
           end
       end
-
 
       ### 3. Produce TeX tables
 
@@ -312,6 +310,21 @@ function moments(θ::Parameter)
         end
     end
 end
+
+
+function moments(θ::Parameter, reg::Int64)
+    if haskey(θ.regimes, :fixed) ? θ.regimes[:fixed][reg] : θ.fixed
+        return θ.regimes[:value][reg], 0.0
+    else
+        prior = get(θ.regimes[:prior][reg])
+        if isa(prior, RootInverseGamma)
+            return prior.τ, prior.ν
+        else
+            return mean(prior), std(prior)
+        end
+    end
+end
+
 
 """
 ```
@@ -403,13 +416,16 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
         for para_i = 1:n_params
             para = params[para_i]
             (prior_mean, prior_sd) = moments(para)
-            append!(entries, [PriorTableEntry(para.key, 1, para.fixed, para.tex_label, para.fixed ? "-" : distid(get(para.prior)), prior_mean, prior_sd)])
+
+            dist_id = para.fixed ? "-" : distid(get(para.prior))
+
+            append!(entries, [PriorTableEntry(para.key, 1, para.fixed, para.tex_label, dist_id, prior_mean, prior_sd)])
 
             if haskey(para.regimes, :prior)
                 for reg in keys(para.regimes[:prior])
                     if reg > 1
                         (prior_mean, prior_sd) = moments(para, reg)
-                        fixed = para.regimes[:fixed][reg]
+                        fixed = haskey(para.regimes, :fixed) ? para.regimes[:fixed][reg] : para.fixed
                         tex_label = para.tex_label * ", reg $reg"
                         append!(entries, [PriorTableEntry(para.key, reg, fixed, tex_label, fixed ? "-" : distid(get(para.regimes[:prior][reg])), prior_mean, prior_sd)])
                     end
@@ -418,7 +434,7 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
         end
 
         n_entries = length(entries)
-        n_rows = ceiling(n_entries/2)
+        n_rows = convert(Int, ceil(n_entries/2))
 
         for i = 1:n_rows
             # Write left column
@@ -426,11 +442,11 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
 
             @printf fid "\$%s\$ &" entry.tex_label
             @printf fid " %s &" entry.dist_id
-            @printf fid " %0.2f &" entry.prior_mean
+            @printf fid " %0.2f &" entry.mean
             if entry.fixed
                 @printf fid " \\scriptsize{fixed} &"
             else
-                @printf fid " %0.2f &" entry.prior_std
+                @printf fid " %0.2f &" entry.sd
             end
             anticipated_shock_footnote(entry.key)
 
@@ -439,11 +455,11 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
                 entry = entries[n_rows + i]
                 @printf fid " \$%s\$ &" entry.tex_label
                 @printf fid " %s &" entry.dist_id
-                @printf fid " %0.2f &" entry.prior_mean
+                @printf fid " %0.2f &" entry.mean
                 if entry.fixed
                     @printf fid " \\scriptsize{fixed}"
                 else
-                    @printf fid " %0.2f" prior_std
+                    @printf fid " %0.2f" entry.sd
                 end
                 anticipated_shock_footnote(entry.key)
             else
@@ -517,6 +533,8 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
     @printf fid "\\hline \\\\\n"
     @printf fid "\\endfoot\n"
 
+
+
     # Write posteriors
     for group_desc in keys(groupings)
         params = groupings[group_desc]
@@ -525,24 +543,22 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
 
 
         entries = Vector{PosteriorTableEntry}()
-        for para_i = 1:n_params
-            para = params[para_i]
+        for para in params
+            para_i = m.keys[para.key]
             append!(entries, [PosteriorTableEntry(para.key, 1, para.fixed, para.tex_label, post_means[para_i], post_bands[para_i, :])])
-
-            if haskey(para.regimes, :values)
-                for reg in keys(para.regimes[:values])
+            if haskey(para.regimes, :value)
+                for reg in keys(para.regimes[:value])
                     if reg > 1
-                        fixed = para.regimes[:fixed][reg]
+                        fixed = haskey(para.regimes, :fixed) ? para.regimes[:fixed][reg] : para.fixed
                         tex_label = para.tex_label * ", reg $reg"
-                        append!(entries, [PosteriorTableEntry(para.key, reg, fixed, tex_label, post_means[para_regime_indices[para.key][reg]],
-                                                              post_bands[para_regime_indices[para.key][reg]])])
+                        append!(entries, [PosteriorTableEntry(para.key, reg, fixed, tex_label, post_means[para_regime_indices[para_i][reg]], post_bands[para_regime_indices[para_i][reg], :])])
                     end
                 end
             end
         end
 
         n_entries = length(entries)
-        n_rows = ceiling(n_entries/2)
+        n_rows = convert(Int, ceil(n_entries/2))
         # Write grouping description if not empty
         if !isempty(group_desc)
             @printf fid "\\multicolumn{6}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
@@ -554,7 +570,7 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
             j = m.keys[entry.key]
             @printf fid "\$%s\$ &" entry.tex_label
             @printf fid " %0.2f &" entry.mean
-            if θ.fixed
+            if entry.fixed
                 @printf fid " \\scriptsize{fixed} &"
             else
                 @printf fid " (%0.2f, %0.2f) &" entry.bands...
@@ -566,7 +582,7 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
                 j = m.keys[entry.key]
                 @printf fid " \$%s\$ &" entry.tex_label
                 @printf fid " %0.2f &" entry.mean
-                if θ.fixed
+                if entry.fixed
                     @printf fid " \\scriptsize{fixed}"
                 else
                     @printf fid " (%0.2f, %0.2f)" entry.bands...
