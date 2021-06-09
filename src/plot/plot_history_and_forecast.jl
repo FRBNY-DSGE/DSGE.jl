@@ -174,8 +174,8 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
     hist = Vector{MeansBands}(undef, length(ms))
     fcast = Vector{MeansBands}(undef, length(ms))
     for i in 1:length(ms)
-        hist[i]  = read_mb(ms[i], input_type, cond_type, Symbol(hist_prod, class), forecast_string = forecast_string)
-        fcast[i] = read_mb(ms[i], input_type, cond_type, Symbol(fcast_prod, class), forecast_string = forecast_string,
+        hist[i]  = read_mb(ms[i], input_type, cond_type, Symbol(hist_prod, class), forecast_string = forecast_strings[i])
+        fcast[i] = read_mb(ms[i], input_type, cond_type, Symbol(fcast_prod, class), forecast_string = forecast_strings[i],
                         use_bdd = use_bdd, modal_line = modal_line)
     end
 
@@ -201,12 +201,13 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                       ylabel = series_ylabel(ms[1], var, class, untrans = untrans,
                                              fourquarter = fourquarter),
                       title = title, names = names, start_date = start_date, end_date = end_date,
-                             add_new_model = add_new_model, new_data = new_data, kwargs...)
+                             add_new_model = add_new_model, new_data = new_data,
+                             add_trendline = add_trendline, trend_vals = trend_vals, kwargs...)
         # Save plot
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(ms[1]), input_type, cond_type,
                                                 Symbol(fcast_prod, "_", detexify(var)),
-                                                forecast_string = forecast_string * outfile_end,
+                                                forecast_string = forecast_strings[1] * outfile_end,
                                                 fileformat = plot_extension())
             @show output_file
             DSGE.save_plot(plots[var], output_file, verbose = verbose)
