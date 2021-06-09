@@ -90,6 +90,7 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
                                    titles::Vector{String} = String[],
                                    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
                                    verbose::Symbol = :low, outfile_end::String = "",
+                                   add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -124,7 +125,7 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
         histforecast!(var, hist, fcast;
                       ylabel = series_ylabel(m, var, class, untrans = untrans,
                                              fourquarter = fourquarter),
-                      title = title, kwargs...)
+                      title = title, add_trendline = add_trendline, trend_vals = trend_vals, kwargs...)
         # Save plot
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
@@ -152,6 +153,8 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                                    add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
                                    new_cond_type::Symbol = :full, outfile_end::String = "",
                                    new_forecast_string::String = forecast_string,
+                                   add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
+                                   forecast_strings::Vector{String} = repeat([forecast_string], length(ms)),
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -273,6 +276,7 @@ histforecast
                    label_bands = false,
                    transparent_bands = true,
                    add_new_model::Bool = false, new_data::Array{Float64,1} = [],
+                   add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
                    tick_size = 2)
 
     # Error checking
@@ -395,6 +399,24 @@ histforecast
                          findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
         combined.means[inds, :date], combined.means[inds, var]
     end
+
+    # Add trendline
+    if add_trendline
+        @series begin
+            seriestype :=  :line
+            linewidth  --> 2
+            #linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
+            if VERSION >= v"1.3"
+                seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+            else
+                alpha       := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+            end
+            linestyle  :=  :dash#haskey(styles, :forecast) ? styles[:forecast] : :solid
+            label      :=  "Trend"
+
+            dates[inds], hist.means[end, var] .+ trend_vals[1:length(inds)]
+        end
+    end
 end
 
 # HistForecast but for vector without bands
@@ -463,6 +485,7 @@ histforecast_vector
                    bands_style = :fan,
                    label_bands = false,
                    transparent_bands = true,
+                   add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
                    tick_size = 2)
 
     # Error checking
@@ -492,6 +515,8 @@ histforecast_vector
 
     # Bands
     sort!(bands_pcts, rev = true) # s.t. non-transparent bands will be plotted correctly
+    inds = findall(start_date .<= combined.bands[var][!, :date] .<= end_date)
+
 #=
     for hfs_ind in 1:length(hist)
         combined = cat(hist[hfs_ind], forecast[hfs_ind])
@@ -645,6 +670,24 @@ histforecast_vector
         inds = intersect(findall(start_date .<= dates .<= end_date),
                          findall(hist[hfs_ind].means[end, :date] .<= dates .<= forecast[hfs_ind].means[end, :date]))
         combined.means[inds, :date], combined.means[inds, var]
+        end
+    end
+
+    # Add trendline
+    if add_trendline
+        @series begin
+            seriestype :=  :line
+            linewidth  --> 2
+            #linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
+            if VERSION >= v"1.3"
+                seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+            else
+                alpha       := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+            end
+            linestyle  :=  :dash#haskey(styles, :forecast) ? styles[:forecast] : :solid
+            label      :=  "Trend"
+
+            dates[inds], hist[1].means[end, var] .+ trend_vals[1:length(inds)]
         end
     end
 end
