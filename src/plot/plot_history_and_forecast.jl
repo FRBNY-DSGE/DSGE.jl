@@ -7,6 +7,7 @@ plot_history_and_forecast(m, vars, class, input_type, cond_type;
     forecast_string = "", use_bdd = :unbdd,
     plotroot = figurespath(m, \"forecast\"), titles = [],
     plot_handles = fill(plot(), length(vars)), verbose = :low,
+    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
     kwargs...)
 
 plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symbol,
@@ -23,6 +24,8 @@ plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symbol,
     add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
     new_cond_type::Symbol = :full, outfile_end::String =  "",
     new_forecast_string::String = forecast_string,
+    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
+    forecast_strings::Vector{String} = repeat([forecast_string], length(ms)),
     kwargs...)
 ```
 
@@ -61,6 +64,10 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 - `new_cond_type::Symbol` = :full: Cond_type of new model
 - `outfile_end::String = ""`: String to append to the end of file name of plot
 - `new_forecast_string::String = forecast_string`: Forecast string for new model
+- `add_trendline::Bool`: Whether add a trendline or not
+- `trend_vals::Vector{Float64}`: The values to multiply last historical value by
+    for the trendline (should start with 0.0 to keep last historical value the same)
+- `forecast_strings::Vector{String}`: Forecast string to use for each give model.
 
 See `?histforecast` or `?histforecast_vector' for additional keyword arguments, all of which can be passed
 into `plot_history_and_forecast`.
@@ -437,6 +444,7 @@ histforecast_vector(var, hist, forecast;
     bands_style = :fan,
     label_bands = false,
     transparent_bands = true,
+    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
     tick_size = 2)
 ```
 
@@ -466,7 +474,10 @@ User recipe called by `plot_history_and_forecast`.
 - `transparent_bands::Bool`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `add_new_model::Bool`: Adding history from another model?
-- `new_data::Array{Flaot64,1}`: The new history to plot
+- `new_data::Array{Float64,1}`: The new history to plot
+- `add_trendline::Bool`: Whether add a trendline or not
+- `trend_vals::Vector{Float64}`: The values to multiply last historical value by
+    for the trendline (should start with 0.0 to keep last historical value the same)
 
 Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
 are supported as keyword arguments.
