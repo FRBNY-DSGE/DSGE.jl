@@ -380,22 +380,14 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
         end
 
         if length(altpols) == 1
-            if altpols[1].key == :taylor_rule
-                Talt, _, Calt = altpols[1].solve(m)
-                Talt = Talt[1:n_endo,1:n_endo]
-                Calt = Calt[1:n_endo]
-            else
-                Talt, Ralt, Calt = altpols[1].solve(m, regimes=gensys2_regimes)
-                for i in gensys2_regimes
-                    Talt[i] = Talt[i][1:n_endo, 1:n_endo]
-                    Calt[i] = Calt[i][1:n_endo]
-                end
-            end
+            Talt, _, Calt = altpols[1].solve(m)
+            Talt = Talt[1:n_endo,1:n_endo]
+            Calt = Calt[1:n_endo]
         else
             Talt = Vector{Matrix{Float64}}(undef, length(altpols))
             Calt = Vector{Vector{Float64}}(undef, length(altpols))
 
-            for i in 1:gensys2_regimes
+            for i in 1:length(altpols)
                 Talt[i], _, Calt[i] = altpols[i].solve(m)
                 Talt[i] = Talt[i][1:n_endo,1:n_endo]
                 Calt[i] = Calt[i][1:n_endo]
@@ -425,9 +417,8 @@ function solve_gensys2!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}}, Γ1s::Vec
 
         # Use Tcal, Rcal, & Ccal from 2 as inputs b/c use t + 1 matrix, not t
         # Then, if nzlb = 1, Tcal should have length 2, and you only need the lift-off matrix
-        @show size(Talt)
         Tcal[1:(1 + nzlb)], Rcal[1:(1 + nzlb)], Ccal[1:(1 + nzlb)] =
-        gensys_uncertain_zlb_VARY(weights, Talt[gensys2_regimes[2]:gensys2_regimes[end]-1], Calt[gensys2_regimes[2]:gensys2_regimes[end]-1],
+            gensys_uncertain_zlb(weights, Talt, Calt,
                                  Tcal[2:(1 + nzlb)], Rcal[2:(1 + nzlb)], Ccal[2:(1 + nzlb)],
                                  Γ0_til, Γ1_til, Γ2_til, C_til, Ψ_til)
 

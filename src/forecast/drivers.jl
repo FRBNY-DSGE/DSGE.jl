@@ -480,7 +480,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       verbose::Symbol = :low, testing_carter_kohn::Bool = false)
 
     ### Common Setup
-verbose = :none
+
     # Add necessary output_vars and load data
     output_vars, df = prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
                                                df = df, verbose = verbose, bdd_fcast = bdd_fcast,

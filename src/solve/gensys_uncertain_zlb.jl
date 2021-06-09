@@ -83,36 +83,7 @@ function gensys_uncertain_zlb(prob_vec::Vector{Vector{S}}, Th::AbstractMatrix{S}
 
     return Tout, Rout, Cout
 end
-# hack, TODO fix
-function gensys_uncertain_zlb_VARY(prob_vec::Vector{Vector{S}}, Th::Vector{Matrix{S}}, Ch::Vector{Vector{S}},
-                              Tzlbs::Vector{Matrix{S}}, Rzlbs::Vector{Matrix{S}}, Czlbs::Vector{Vector{S}},
-                              Γ0_til::AbstractMatrix{S}, Γ1_til::AbstractMatrix{S}, Γ2_til::AbstractMatrix{S},
-                              C_til::AbstractVector{S}, Ψ_til::AbstractMatrix{S}) where {S <: Real}
 
-    Tbars = Vector{Matrix{S}}(undef, length(Tzlbs) + 1)
-    Cbars = Vector{Vector{S}}(undef, length(Tzlbs) + 1)
-    Tout  = Vector{Matrix{S}}(undef, length(Tzlbs) + 1)
-    Rout  = Vector{Matrix{S}}(undef, length(Tzlbs) + 1)
-    Cout  = Vector{Vector{S}}(undef, length(Tzlbs) + 1)
-
-    @show size(Tzlbs[1]), size(Th[1])
-    # Calculate "uncertain" ZLB matrices and back out the transition equation
-    for i in 1:length(Tzlbs)
-        Tbars[i] = prob_vec[i][1] * Tzlbs[i] + (1.0-prob_vec[i][1]) * Th[i] # it is assumed Tzlbs is a vector of the T_{t + 1}^{(zlb)} matrices
-        Cbars[i] = prob_vec[i][1] * Czlbs[i] + (1.0-prob_vec[i][1]) * Ch[i]
-
-        Tout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Γ1_til
-        Rout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ Ψ_til
-        Cout[i]  = (Γ2_til * Tbars[i] + Γ0_til) \ (C_til  - Γ2_til * Cbars[i])
-    end
-
-    # Add terminal condition
-    Tout[end] = Tzlbs[end]
-    Rout[end] = Rzlbs[end]
-    Cout[end] = Czlbs[end]
-
-    return Tout, Rout, Cout
-end
 # Same 2 functions as above but where Th and Ch are vectors of matrices/vectors.
 
 function gensys_uncertain_zlb(prob_vec::AbstractVector{S},
