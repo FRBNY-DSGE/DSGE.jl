@@ -1,0 +1,51 @@
+{
+    "project_one_line": {
+        "start_header": null,
+        "end_header": null,
+        "source": "https://github.com/PSLmodels/DSGE.jl",
+        "type": "html",
+        "data": "<p>New York Fed DSGE Model</p>"
+    },
+    "project_overview": {
+        "start_header": "New York Fed DSGE Model (Version 1002)",
+        "end_header": "Disclaimer",
+        "source": "README.md",
+        "type": "github_file",
+        "data": null
+    },
+    "user_documentation": {
+        "start_header": null,
+        "end_header": null,
+        "source": "https://frbny-dsge.github.io/DSGE.jl/stable/",
+        "type": "html",
+        "data": "<a href=\"https://frbny-dsge.github.io/DSGE.jl/stable/\">User documentation</a>"
+    },
+    "user_changelog_recent": {
+        "start_header": null,
+        "end_header": null,
+        "source": null,
+        "type": null,
+        "data": null
+    },
+    "contributor_overview": {
+        "start_header": null,
+        "end_header": null,
+        "source": "https://github.com/PSLmodels/DSGE.jl#installation",
+        "type": "html",
+        "data": "<p>If you want to report a <b>bug</b>, create a new issue <a href=\"https://github.com/PSLmodels/DSGE.jl/issues\">here</a> providing details on what you think is wrong with DSGE.jl.</p><p>If you want to request <b>an enhancement</b>, create a new issue <a href=\"https://github.com/PSLmodels/DSGE.jl/issues\">here</a> providing details on what you think should be added to DSGE.jl. </p>"
+    },
+    "link_to_webapp": {
+        "source": null,
+        "type": null,
+        "start_header": null,
+        "end_header": null,
+        "data": null
+    },
+    "core_maintainers": {
+        "start_header": null,
+        "end_header": null,
+        "source": null,
+        "type": "html",
+        "data": "<ul><li>Marco Del Negro</li><li>William Chen</li><li>Shlok Goyal</li><li>Alissa Johnson</li><li>Aidan Gleich</li></ul>"
+    }
+}
