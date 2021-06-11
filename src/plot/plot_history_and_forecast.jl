@@ -485,6 +485,8 @@ User recipe called by `plot_history_and_forecast`.
 - `add_trendline::Bool`: Whether add a trendline or not
 - `trend_vals::Vector{Float64}`: The values to multiply last historical value by
     for the trendline (should start with 0.0 to keep last historical value the same)
+- `plot_all_histories::Bool`: Whether to plot histories for each model (generally used
+    for pseudo observables like Natural Rate.
 
 Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
 are supported as keyword arguments.
