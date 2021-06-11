@@ -505,7 +505,8 @@ histforecast_vector
                    label_bands = false,
                    transparent_bands = true,
                    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
-                   trend_start_date::Date = start_date, tick_size = 2)
+                   trend_start_date::Date = start_date, plot_all_histories::Bool = false,
+                   tick_size = 2)
 
     # Error checking
     if length(hf.args) != 3 || typeof(hf.args[1]) != Symbol ||
@@ -597,25 +598,32 @@ histforecast_vector
     end
 =#
     # Mean history
-    @series begin
-        seriestype :=  :line
-        linewidth  --> 2
-        linecolor  :=  haskey(colors, :hist) ? colors[:hist] : :black
-        if VERSION >= v"1.3"
-            seriesalpha := haskey(alphas, :hist) ? alphas[:hist] : 1.0
-        else
-            alpha       := haskey(alphas, :hist) ? alphas[:hist] : 1.0
-        end
-        linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :solid
-        label      :=  haskey(names, :hist) ? names[:hist] : "History"
+    end_ind = plot_all_histories && !add_new_model ? length(hist) : 1
+    for i in 1:end_ind
+        combined = cat(hist[i], forecast[i])
+        dates = combined.means[!, :date]
+        inds = findall(start_date .<= combined.bands[var][!, :date] .<= end_date)
 
-        if add_new_model
+        @series begin
+            seriestype :=  :line
+            linewidth  --> 2
+            linecolor  :=  i != 1 ? palette(:default)[i] : (haskey(colors, :hist) ? colors[:hist] : :black)
+            if VERSION >= v"1.3"
+                seriesalpha := haskey(alphas, :hist) ? alphas[:hist] : 1.0
+            else
+                alpha       := haskey(alphas, :hist) ? alphas[:hist] : 1.0
+            end
+            linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :solid
+            label      :=  haskey(names, :hist) ? names[:hist][i] : "History"
+
+            if add_new_model
             inds = intersect(findall(start_date .<= dates .<= end_date), 1:length(new_data))
-            combined.means[inds, :date], new_data[inds]
-        else
-            inds = intersect(findall(start_date .<= dates .<= end_date),
-                             findall(hist[1].means[1, :date] .<= dates .<= hist[1].means[end, :date]))
-            combined.means[inds, :date], combined.means[inds, var]
+                combined.means[inds, :date], new_data[inds]
+            else
+                inds = intersect(findall(start_date .<= dates .<= end_date),
+                                 findall(hist[i].means[1, :date] .<= dates .<= hist[i].means[end, :date]))
+                combined.means[inds, :date], combined.means[inds, var]
+            end
         end
     end
 
