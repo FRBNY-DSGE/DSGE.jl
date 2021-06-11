@@ -98,6 +98,7 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
                                    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
                                    verbose::Symbol = :low, outfile_end::String = "",
                                    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
+                                   trend_start_date::Date = Date(2019,12,31),
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -132,7 +133,8 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
         histforecast!(var, hist, fcast;
                       ylabel = series_ylabel(m, var, class, untrans = untrans,
                                              fourquarter = fourquarter),
-                      title = title, add_trendline = add_trendline, trend_vals = trend_vals, kwargs...)
+                      title = title, add_trendline = add_trendline, trend_vals = trend_vals,
+                      trend_start_date = trend_start_date, kwargs...)
         # Save plot
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
@@ -162,6 +164,7 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                                    new_forecast_string::String = forecast_string,
                                    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
                                    forecast_strings::Vector{String} = repeat([forecast_string], length(ms)),
+                                   trend_start_date::Date = start_date,
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -209,7 +212,8 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                                              fourquarter = fourquarter),
                       title = title, names = names, start_date = start_date, end_date = end_date,
                              add_new_model = add_new_model, new_data = new_data,
-                             add_trendline = add_trendline, trend_vals = trend_vals, kwargs...)
+                             add_trendline = add_trendline, trend_vals = trend_vals,
+                             trend_start_date = trend_start_date, kwargs...)
         # Save plot
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(ms[1]), input_type, cond_type,
@@ -285,7 +289,7 @@ histforecast
                    transparent_bands = true,
                    add_new_model::Bool = false, new_data::Array{Float64,1} = [],
                    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
-                   tick_size = 2)
+                   trend_start_date::Date = start_date, tick_size = 2)
 
     # Error checking
     if length(hf.args) != 3 || typeof(hf.args[1]) != Symbol ||
@@ -305,6 +309,9 @@ histforecast
     var, hist, forecast = hf.args
     combined = cat(hist, forecast)
     dates = combined.means[!, :date]
+    start_trend_ind = findfirst(dates .== trend_start_date)
+    start_trend_val = combined.means[start_trend_ind, var]
+    end_ind = findfirst(dates .== end_date)
 
     # Assign date ticks
     date_ticks = Base.filter(x -> start_date <= x <= end_date,    dates)
@@ -422,7 +429,7 @@ histforecast
             linestyle  :=  :dash#haskey(styles, :forecast) ? styles[:forecast] : :solid
             label      :=  "Trend"
 
-            dates[inds], hist.means[end, var] .+ trend_vals[1:length(inds)]
+            dates[start_trend_ind:end_ind], start_trend_val .+ trend_vals[1:(end_ind-start_trend_ind+1)]
         end
     end
 end
@@ -498,7 +505,7 @@ histforecast_vector
                    label_bands = false,
                    transparent_bands = true,
                    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
-                   tick_size = 2)
+                   trend_start_date::Date = start_date, tick_size = 2)
 
     # Error checking
     if length(hf.args) != 3 || typeof(hf.args[1]) != Symbol ||
@@ -518,6 +525,9 @@ histforecast_vector
     var, hist, forecast = hf.args
     combined = cat(hist[1], forecast[1])
     dates = combined.means[!, :date]
+    start_trend_ind = findfirst(dates .== trend_start_date)
+    start_trend_val = combined.means[start_trend_ind, var]
+    end_ind = findfirst(dates .== end_date)
 
     # Assign date ticks
     date_ticks = Base.filter(x -> start_date <= x <= end_date,    dates)
@@ -622,7 +632,7 @@ histforecast_vector
             lb = combined.bands[var][inds, Symbol(pct, " LB")]
             ub = combined.bands[var][inds, Symbol(pct, " UB")]
 
-            bands_color = haskey(colors, :bands) ? colors[:bands] : get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:blue
+            bands_color = haskey(colors, :bands) ? colors[:bands] : palette(:default)[hfs_ind]#get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:blue
             bands_alpha = haskey(alphas, :bands) ? alphas[:bands] : 0.1
             bands_linestyle = haskey(styles, :bands) ? styles[:bands] : :solid
 
@@ -670,7 +680,7 @@ histforecast_vector
         @series begin
         seriestype :=  :line
         linewidth  --> 2
-        linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:red
+        linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : palette(:default)[hfs_ind]#get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:red
         if VERSION >= v"1.3"
             seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
         else
@@ -699,7 +709,7 @@ histforecast_vector
             linestyle  :=  :dash#haskey(styles, :forecast) ? styles[:forecast] : :solid
             label      :=  "Trend"
 
-            dates[inds], hist[1].means[end, var] .+ trend_vals[1:length(inds)]
+            dates[start_trend_ind:end_ind], start_trend_val .+ trend_vals[1:(end_ind-start_trend_ind+1)]
         end
     end
 end
