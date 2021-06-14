@@ -609,13 +609,13 @@ histforecast_vector
         @series begin
             seriestype :=  :line
             linewidth  --> 2
-            linecolor  :=  i != 1 ? palette(:default)[i] : (haskey(colors, :hist) ? colors[:hist] : :black)
+            linecolor  :=  haskey(colors, :hist) ? colors[:hist][i] : palette(:default)[i]
             if VERSION >= v"1.3"
                 seriesalpha := haskey(alphas, :hist) ? alphas[:hist] : 1.0
             else
                 alpha       := haskey(alphas, :hist) ? alphas[:hist] : 1.0
             end
-            linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :solid
+            linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :dash
             label      :=  haskey(names, :hist) ? names[:hist][i] : "History"
 
             if add_new_model
