@@ -600,17 +600,14 @@ function read_forecast_series(filepath::String, product::Symbol, var_ind::Int)
 end
 
 function read_forecast_series(filepath::String, var_ind::Int, shock_ind::Int)
-
     dataset = FileIO.load(filepath, "arr")
     ndims = length(size(dataset))
 
     if ndims == 3 # one draw
-        whole = FileIO.load(filepath, "arr")
-        arr = whole[var_ind, :, shock_ind]
+        arr = dataset[var_ind, :, shock_ind]
         arr = reshape(arr, 1, length(arr))
     elseif ndims == 4 # many draws
-        whole = FileIO.load(filepath, "arr")
-        arr = whole[:, var_ind, :, shock_ind]
+        arr = dataset[:, var_ind, :, shock_ind]
     end
 
     return arr
