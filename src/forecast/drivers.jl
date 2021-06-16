@@ -41,7 +41,8 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
 
     if only_filter
         smooth_vars = [:histstates, :histpseudo, :histshocks, :histstdshocks, :forecastshocks, :forecaststdshocks,
-                       :shockdecstates, :shockdecpseudo, :shockdecobs, :dettrendstates, :dettrendpseudo, :dettrendobs]
+                       :shockdecstates, :shockdecpseudo, :shockdecobs, :dettrendstates, :dettrendpseudo, :dettrendobs,
+                       :shockdecseqstates, :shockdecseqpseudo, :shockseqdecobs]
         @assert isempty(intersect(output_vars, smooth_vars)) "Some output variables requested cannot be use with keyword only_filter"
     end
 
@@ -515,7 +516,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       show_failed_percent::Bool = false, only_filter::Bool = false,
                       verbose::Symbol = :low, testing_carter_kohn::Bool = false,
                       trend_nostates_obs = Array{(0,0)}, trend_nostates_pseudo = Array{(0,0)},
-                      full_shock_decomp::Bool = true)
+                      full_shock_decomp::Bool = true, n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[])
 
     ### Common Setup
 
@@ -565,7 +566,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 rerun_smoother = rerun_smoother, nan_endozlb_failures = nan_endozlb_failures,
                                                 catch_smoother_lapack = catch_smoother_lapack,
                                                 testing_carter_kohn = testing_carter_kohn, trend_nostates_obs = trend_nostates_obs,
-                                                trend_nostates_pseudo = trend_nostates_pseudo, full_shock_decomp = full_shock_decomp)
+                                                trend_nostates_pseudo = trend_nostates_pseudo, full_shock_decomp = full_shock_decomp,
+                                                n_back = n_back, back_shocks = back_shocks)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -661,7 +663,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  rerun_smoother = rerun_smoother,
                                                                  nan_endozlb_failures = nan_endozlb_failures,
                                                                  catch_smoother_lapack = catch_smoother_lapack,
-                                                                 testing_carter_kohn = testing_carter_kohn),
+                                                                 testing_carter_kohn = testing_carter_kohn,
+                                                                 n_back = n_back, back_shocks = back_shocks),
                                       params_for_map)
 
             # Assemble outputs from this block and write to file
@@ -777,7 +780,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            nan_endozlb_failures::Bool = false,
                            catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false,
                            return_loglh::Bool = false, trend_nostates_obs = Array{(0,0)},
-                           trend_nostates_pseudo = Array{(0,0)}, full_shock_decomp::Bool = false)
+                           trend_nostates_pseudo = Array{(0,0)}, full_shock_decomp::Bool = false,
+                           n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[])
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -818,8 +822,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     # Must run smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks, :histstdshocks]
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
+    shockdecseq_vars = [:shockdecseqstates, :shockdecseqpseudo, :shockdecseqobs]
     dettrend_vars = [:dettrendstates, :dettrendpseudo, :dettrendobs]
-    smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
+    smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars, shockdecseq_vars)
     hists_to_compute = intersect(output_vars, smooth_vars)
 
     run_smoother = (!isempty(hists_to_compute) ||
@@ -1324,6 +1329,44 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:irfstates] = irfstates
         forecast_output[:irfobs] = irfobs
         forecast_output[:irfpseudo] = irfpseudo
+    end
+
+    # 7. Shockdec Sequence
+    shockdecseqs_to_compute = intersect(output_vars, shockdecseq_vars)
+
+    if !isempty(shockdecseqs_to_compute)
+        histshocks_shockdecseq = if use_filtered_shocks_in_shockdec
+            filter_shocks(m, df, system, cond_type = cond_type)
+        else
+            histshocks
+        end
+
+        start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
+        end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
+            max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+        else
+            prev_quarter(date_forecast_start(m)) # this is the end date of history period
+        end
+
+        if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+            # Must be using TV cred system
+            old_system = 0
+            for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zlb_rule
+                    old_system = regime_indices(m, start_date, end_date)[i][1]
+                    break
+                end
+            end
+            shockdecseqstates, shockdecseqobs, shockdecseqpseudo = shock_decompositions_sequence(m, system, old_system, histshocks_shockdecseq, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp, n_back = n_back, back_shocks = back_shocks)
+        else
+            shockdecseqstates, shockdecseqobs, shockdecseqpseudo = isa(system, RegimeSwitchingSystem) ?
+                shock_decompositions_sequence(m, system, histshocks_shockdecseq, start_date, end_date, cond_type, n_back = n_back, back_shocks = back_shocks) :
+                shock_decompositions_sequence(m, system, histshocks_shockdecseq, n_back = n_back, back_shocks = back_shocks)
+        end
+
+        forecast_output[:shockdecseqstates] = shockdecseqstates
+        forecast_output[:shockdecseqobs]    = shockdecseqobs
+        forecast_output[:shockdecseqpseudo] = shockdecseqpseudo
     end
 
     ### Return only desired output_vars

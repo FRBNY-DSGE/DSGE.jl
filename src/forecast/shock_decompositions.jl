@@ -743,3 +743,354 @@ function trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
         return state_trends[:, start_index:end], obs_trends[:, start_index:end], pseudo_trends[:, start_index:end]
     end
 end
+
+# Sequence of Shock Decompositions (Effect of time t shock on obs/pseudo/states at each time for all t)
+"""
+```
+shock_decompositions_sequence(m, system, histshocks, n_back, back_shocks)
+
+shock_decompositions_sequence(system, forecast_horizons, histshocks, start_index,
+    end_index, n_back, back_shocks)
+
+shock_decompositions_sequence(m, system, histshocks, start_date, end_date, n_back, back_shocks)
+
+shock_decompositions_sequence(m, system, forecast_horizons, histshocks, start_index,
+    end_index, regime_inds, cond_type, n_back, back_shocks)
+
+shock_decompositions_sequence(m, system::RegimeSwitchingSystem{S}, old_system,
+                              histshocks, start_date, end_date,
+                              cond_type; full_shock_decomp, n_back, back_shocks)
+
+shock_decompositions_sequence(m, system::RegimeSwitchingSystem{S},
+                              old_system,
+                              forecast_horizons, histshocks,
+                              start_index, end_index,
+                              regime_inds, cond_type; full_shock_decomp, n_back, back_shocks)
+```
+
+### Inputs
+
+- `system::System{S}` or `RegimeSwitchingSystem{S}`: state-space system matrices
+- `forecast_horizons::Int`: number of periods ahead to forecast
+- `histshocks::Matrix{S}`: matrix of size `nshocks` x `hist_periods` of
+  historical smoothed shocks
+- `start_index::Int`: first index from which to return computed shock
+  decompositions
+- `end_index::Int`: last index for which to return computed shock decompositions
+- `start_date::Date`: initial date for deterministic trends
+- `end_date::Date`: final date for deterministic trends
+- `regime_inds::Vector{UnitRange}`: indices of the data corresponding to each regime.
+- `old_system::Int`: Period index i such that for all periods >= i, we use the first
+    system's matrices.
+- `full_shock_decomp::Bool`: If true for old_system case, return difference in shockdecs
+    between all shocks for the new and old systems. Else, return old system's shocks
+    with 1 cumulative AIT shock added on.
+
+where `S<:AbstractFloat`.
+
+### Outputs
+
+- `states::Array{S, 4}`: matrix of size `nhistperiods` x `nstates` x `nperiods` x `nshocks` of
+  state shock decompositions
+- `obs::Array{S, 4}`: matrix of size `nhistperiods` x `nobs` x `nperiods` x `nshocks` of
+  observable shock decompositions
+- `pseudo::Array{S, 4}`: matrix of size `nhistperiods` x `npseudo` x `nperiods` x `nshocks` of
+  pseudo-observable shock decompositions
+
+where `nperiods = `end_index - start_index + 1`
+and `nhistperiods` = `size(histshocks,2)`
+"""
+function shock_decompositions_sequence(m::AbstractDSGEModel,
+    system::System{S}, histshocks::Matrix{S};
+    n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[]) where {S<:AbstractFloat}
+
+    horizon   = forecast_horizons(m)
+    start_ind = index_shockdec_start(m)
+    end_ind   = index_shockdec_end(m)
+
+    shock_decompositions_sequence(system, horizon, histshocks, start_ind, end_ind, n_back = n_back, back_shocks = back_shocks)
+end
+
+function shock_decompositions_sequence(system::System{S},
+    forecast_horizons::Int, histshocks::Matrix{S},
+    start_index::Int, end_index::Int;
+    n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[]) where {S<:AbstractFloat}
+
+    # Setup
+    nshocks      = size(system[:RRR], 2)
+    nstates      = size(system[:TTT], 2)
+    nobs         = size(system[:ZZ], 1)
+    npseudo      = size(system[:ZZ_pseudo], 1)
+    histperiods  = size(histshocks, 2)
+    allperiods   = histperiods + forecast_horizons
+
+    dim3_len = min(end_index-start_index+1, allperiods)
+    states = zeros(S, histperiods, nstates, dim3_len, nshocks)
+    obs    = zeros(S, histperiods, nobs, dim3_len, nshocks)
+    pseudo = zeros(S, histperiods, npseudo, dim3_len, nshocks)
+
+    for t in 1:histperiods
+        histshocks_t = copy(histshocks)
+        histshocks_t[:,vcat(1:t-1,t+1:histperiods)] .= 0.0
+
+        states[t,:,:,:], obs[t,:,:,:], pseudo[t,:,:,:] = shock_decompositions(system, forecast_horizons,
+                                                                                  histshocks_t, start_index, end_index)
+    end
+
+    # Get the matrices back to 3 dimensions by having bars for contemporaneous shocks and shocks each of n_back time periods back.
+    ## n_back is given by user and shocks for which we don't just have contemporaneous shocks is given by user.
+    states3 = zeros(size(states,2), size(states,3), size(states,4) + (n_back+1)*length(back_shocks))
+    obs3 = zeros(size(obs,2), size(obs,3), size(obs,4) + (n_back+1)*length(back_shocks))
+    pseudo3 = zeros(size(pseudo,2), size(pseudo,3), size(pseudo,4) + (n_back+1)*length(back_shocks))
+
+    ## Get indices for vector of shocks
+    shock_inds = [m.exogenous_shocks[shock_ind] for shock_ind in back_shocks]
+    shock_len = length(back_shocks)
+
+    ## Actually do the conversion
+    for i in 1:size(states,3)
+        st_ind = min(start_index+i-1, size(states,1))
+        states3[:,i,1:size(states,4)] = states[st_ind,:,i,:]
+        obs3[:,i,1:size(states,4)] = obs[st_ind,:,i,:]
+        pseudo3[:,i,1:size(states,4)] = pseudo[st_ind,:,i,:]
+
+        for k in 1:n_back
+            st_ind2 = min(start_index+i-1-k, size(states,1)-k)
+            for j in 1:length(back_shocks)
+                states3[:,i,size(states,4)+(k-1)*shock_len+j] = states[st_ind2,:,i,shock_inds[j]]
+                obs3[:,i,size(obs,4)+(k-1)*shock_len+j] = obs[st_ind2,:,i,shock_inds[j]]
+                pseudo3[:,i,size(pseudo,4)+(k-1)*shock_len+j] = pseudo[st_ind2,:,i,shock_inds[j]]
+
+                # Add this "lagged shock" to the list of exogenous shocks
+                if !haskey(m.exogenous_shocks, Symbol(back_shocks[j], :_, k))
+                    m.exogenous_shocks[Symbol(back_shocks[j], :_, k)] = length(m.exogenous_shocks)+1
+                end
+            end
+        end
+        ## Add in a bar that sums up shocks before n_back periods back.
+        st_ind3 = min(start_index+i-2-n_back, size(states,1)-n_back-1)
+        for j in 1:length(back_shocks)
+            states3[:,i,size(states,4)+n_back*shock_len+j] = sum(states[1:st_ind3,:,i,shock_inds[j]],dims=1)
+            obs3[:,i,size(obs,4)+n_back*shock_len+j] = sum(obs[1:st_ind3,:,i,shock_inds[j]],dims=1)
+            pseudo3[:,i,size(pseudo,4)+n_back*shock_len+j] = sum(pseudo[1:st_ind3,:,i,shock_inds[j]],dims=1)
+
+            # Add this "lagged shock" to the list of exogenous shocks
+            if !haskey(m.exogenous_shocks, Symbol(back_shocks[j], :_History))
+                m.exogenous_shocks[Symbol(back_shocks[j], :_History)] = length(m.exogenous_shocks)+1
+            end
+        end
+    end
+
+    return states3, obs3, pseudo3
+end
+
+
+function shock_decompositions_sequence(m::AbstractDSGEModel{S},
+                              system::RegimeSwitchingSystem{S}, histshocks::Matrix{S},
+                              start_date::Dates.Date = date_presample_start(m),
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
+                              cond_type::Symbol = :none;
+                              n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[]) where {S<:AbstractFloat}
+    # Set up dates
+    horizon     = forecast_horizons(m; cond_type = cond_type)
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
+
+    # Set up regime indices. Note that we do not need to account
+    # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
+    # in the pre-ZLB periods.
+    regime_inds = regime_indices(m, start_date, end_date)
+    if regime_inds[1][1] < 1 # remove periods occuring before desired start date
+        regime_inds[1] = 1:regime_inds[1][end]
+    end
+
+    shock_decompositions_sequence(m, system, horizon, histshocks, start_index, end_index,
+                                  regime_inds, cond_type, n_back = n_back, back_shocks = back_shocks)
+end
+
+function shock_decompositions_sequence(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
+                              forecast_horizons::Int, histshocks::Matrix{S},
+                              start_index::Int, end_index::Int,
+                              regime_inds::Vector{UnitRange{Int}},
+                              cond_type::Symbol;
+                              n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[]) where {S<:AbstractFloat}
+
+    # Setup
+    nshocks     = size(system[1, :RRR], 2)
+    nstates     = size(system[1, :TTT], 2)
+    nobs        = size(system[1, :ZZ], 1)
+    npseudo     = size(system[1, :ZZ_pseudo], 1)
+    histperiods = size(histshocks, 2)
+    allperiods  = histperiods + forecast_horizons
+
+    states = zeros(S, nstates, allperiods, nshocks)
+    obs    = zeros(S, nobs,    allperiods, nshocks)
+    pseudo = zeros(S, npseudo, allperiods, nshocks)
+    shocks = zeros(S, nshocks, histperiods)
+
+    dim3_len = min(end_index-start_index+1, allperiods)
+    states = zeros(S, histperiods, nstates, dim3_len, nshocks)
+    obs    = zeros(S, histperiods, nobs, dim3_len, nshocks)
+    pseudo = zeros(S, histperiods, npseudo, dim3_len, nshocks)
+
+    for t in 1:histperiods
+        histshocks_t = copy(histshocks)
+        histshocks_t[:,vcat(1:t-1,t+1:histperiods)] .= 0.0
+
+        states[t,:,:,:], obs[t,:,:,:], pseudo[t,:,:,:] = shock_decompositions(m, system, forecast_horizons,
+                                                                              histshocks_t, start_index, end_index,
+                                                                              regime_inds, cond_type)
+    end
+
+    # Get the matrices back to 3 dimensions by having bars for contemporaneous shocks and shocks each of n_back time periods back.
+    ## n_back is given by user and shocks for which we don't just have contemporaneous shocks is given by user.
+    states3 = zeros(size(states,2), size(states,3), size(states,4) + (n_back+1)*length(back_shocks))
+    obs3 = zeros(size(obs,2), size(obs,3), size(obs,4) + (n_back+1)*length(back_shocks))
+    pseudo3 = zeros(size(pseudo,2), size(pseudo,3), size(pseudo,4) + (n_back+1)*length(back_shocks))
+
+    ## Get indices for vector of shocks
+    shock_inds = [m.exogenous_shocks[shock_ind] for shock_ind in back_shocks]
+    shock_len = length(back_shocks)
+
+    ## Actually do the conversion
+    for i in 1:size(states,3)
+        st_ind = min(start_index+i-1, size(states,1))
+        states3[:,i,1:size(states,4)] = states[st_ind,:,i,:]
+        obs3[:,i,1:size(states,4)] = obs[st_ind,:,i,:]
+        pseudo3[:,i,1:size(states,4)] = pseudo[st_ind,:,i,:]
+
+        for k in 1:n_back
+            st_ind2 = min(start_index+i-1-k, size(states,1)-k)
+            for j in 1:length(back_shocks)
+                states3[:,i,size(states,4)+(k-1)*shock_len+j] = states[st_ind2,:,i,shock_inds[j]]
+                obs3[:,i,size(obs,4)+(k-1)*shock_len+j] = obs[st_ind2,:,i,shock_inds[j]]
+                pseudo3[:,i,size(pseudo,4)+(k-1)*shock_len+j] = pseudo[st_ind2,:,i,shock_inds[j]]
+
+                # Add this "lagged shock" to the list of exogenous shocks
+                if !haskey(m.exogenous_shocks, Symbol(back_shocks[j], :_, k))
+                    m.exogenous_shocks[Symbol(back_shocks[j], :_, k)] = length(m.exogenous_shocks)+1
+                end
+            end
+        end
+        ## Add in a bar that sums up shocks before n_back periods back.
+        st_ind3 = min(start_index+i-2-n_back, size(states,1)-n_back-1)
+        for j in 1:length(back_shocks)
+            states3[:,i,size(states,4)+n_back*shock_len+j] = sum(states[1:st_ind3,:,i,shock_inds[j]],dims=1)
+            obs3[:,i,size(obs,4)+n_back*shock_len+j] = sum(obs[1:st_ind3,:,i,shock_inds[j]],dims=1)
+            pseudo3[:,i,size(pseudo,4)+n_back*shock_len+j] = sum(pseudo[1:st_ind3,:,i,shock_inds[j]],dims=1)
+
+            # Add this "lagged shock" to the list of exogenous shocks
+            if !haskey(m.exogenous_shocks, Symbol(back_shocks[j], :_History))
+                m.exogenous_shocks[Symbol(back_shocks[j], :_History)] = length(m.exogenous_shocks)+1
+            end
+        end
+    end
+
+    return states3, obs3, pseudo3
+end
+
+# Get Shock Decompositions with an old system and a bar that gives
+## effect of using new system compared to old.
+function shock_decompositions_sequence(m::AbstractDSGEModel{S},
+                              system::RegimeSwitchingSystem{S}, old_system::Int,
+                              histshocks::Matrix{S},
+                              start_date::Dates.Date = date_presample_start(m),
+                              end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
+                              cond_type::Symbol = :none; full_shock_decomp = true,
+                              n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[]) where {S<:AbstractFloat}
+    # Set up dates
+    horizon     = forecast_horizons(m; cond_type = cond_type)
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
+
+    # Set up regime indices. Note that we do not need to account
+    # for ZLB split b/c `histshocks` should have zeros for anticipated shocks
+    # in the pre-ZLB periods.
+    regime_inds = regime_indices(m, start_date, end_date)
+    if regime_inds[1][1] < 1 # remove periods occuring before desired start date
+        regime_inds[1] = 1:regime_inds[1][end]
+    end
+
+    shock_decompositions_sequence(m, system, old_system, horizon, histshocks, start_index, end_index,
+                                  regime_inds, cond_type, full_shock_decomp = full_shock_decomp,
+                                  n_back = n_back, back_shocks = back_shocks)
+end
+
+function shock_decompositions_sequence(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
+                                       old_system::Int,
+                                       forecast_horizons::Int, histshocks::Matrix{S},
+                                       start_index::Int, end_index::Int,
+                                       regime_inds::Vector{UnitRange{Int}},
+                                       cond_type::Symbol; full_shock_decomp = true,
+                                       n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[]) where {S<:AbstractFloat}
+
+    # Setup
+    nshocks     = size(system[1, :RRR], 2)
+    nstates     = size(system[1, :TTT], 2)
+    nobs        = size(system[1, :ZZ], 1)
+    npseudo     = size(system[1, :ZZ_pseudo], 1)
+    histperiods = size(histshocks, 2)
+    allperiods  = histperiods + forecast_horizons
+
+    dim3_len = min(end_index-start_index+1, allperiods)
+    states = zeros(S, histperiods, nstates, dim3_len, nshocks)
+    obs    = zeros(S, histperiods, nobs, dim3_len, nshocks)
+    pseudo = zeros(S, histperiods, npseudo, dim3_len, nshocks)
+
+    for t in max(1,start_index - back_effect):histperiods
+        histshocks_t = copy(histshocks)
+        histshocks_t[:,vcat(1:t-1,t+1:histperiods)] .= 0.0
+
+        states[t,:,:,:], obs[t,:,:,:], pseudo[t,:,:,:] = shock_decompositions(m, system, old_system,
+                                                                              forecast_horizons,
+                                                                              histshocks_t, start_index, end_index,
+                                                                              regime_inds, cond_type,
+                                                                              full_shock_decomp = full_shock_decomp)
+    end
+
+    # Get the matrices back to 3 dimensions by having bars for contemporaneous shocks and shocks each of n_back time periods back.
+    ## n_back is given by user and shocks for which we don't just have contemporaneous shocks is given by user.
+    states3 = zeros(size(states,2), size(states,3), size(states,4) + (n_back+1)*length(back_shocks))
+    obs3 = zeros(size(obs,2), size(obs,3), size(obs,4) + (n_back+1)*length(back_shocks))
+    pseudo3 = zeros(size(pseudo,2), size(pseudo,3), size(pseudo,4) + (n_back+1)*length(back_shocks))
+
+    ## Get indices for vector of shocks
+    shock_inds = [m.exogenous_shocks[shock_ind] for shock_ind in back_shocks]
+    shock_len = length(back_shocks)
+
+    ## Actually do the conversion
+    for i in 1:size(states,3)
+        st_ind = min(start_index+i-1, size(states,1))
+        states3[:,i,1:size(states,4)] = states[st_ind,:,i,:]
+        obs3[:,i,1:size(states,4)] = obs[st_ind,:,i,:]
+        pseudo3[:,i,1:size(states,4)] = pseudo[st_ind,:,i,:]
+
+        for k in 1:n_back
+            st_ind2 = min(start_index+i-1-k, size(states,1)-k)
+            for j in 1:length(back_shocks)
+                states3[:,i,size(states,4)+(k-1)*shock_len+j] = states[st_ind2,:,i,shock_inds[j]]
+                obs3[:,i,size(obs,4)+(k-1)*shock_len+j] = obs[st_ind2,:,i,shock_inds[j]]
+                pseudo3[:,i,size(pseudo,4)+(k-1)*shock_len+j] = pseudo[st_ind2,:,i,shock_inds[j]]
+
+                # Add this "lagged shock" to the list of exogenous shocks
+                if !haskey(m.exogenous_shocks, Symbol(back_shocks[j], :_, k))
+                    m.exogenous_shocks[Symbol(back_shocks[j], :_, k)] = length(m.exogenous_shocks)+1
+                end
+            end
+        end
+        ## Add in a bar that sums up shocks before n_back periods back.
+        st_ind3 = min(start_index+i-2-n_back, size(states,1)-n_back-1)
+        for j in 1:length(back_shocks)
+            states3[:,i,size(states,4)+n_back*shock_len+j] = sum(states[1:st_ind3,:,i,shock_inds[j]],dims=1)
+            obs3[:,i,size(obs,4)+n_back*shock_len+j] = sum(obs[1:st_ind3,:,i,shock_inds[j]],dims=1)
+            pseudo3[:,i,size(pseudo,4)+n_back*shock_len+j] = sum(pseudo[1:st_ind3,:,i,shock_inds[j]],dims=1)
+
+            # Add this "lagged shock" to the list of exogenous shocks
+            if !haskey(m.exogenous_shocks, Symbol(back_shocks[j], :_History))
+                m.exogenous_shocks[Symbol(back_shocks[j], :_History)] = length(m.exogenous_shocks)+1
+            end
+        end
+    end
+
+    return states3, obs3, pseudo3
+end

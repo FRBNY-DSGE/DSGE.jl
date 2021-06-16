@@ -427,9 +427,10 @@ function write_means_tables_shockdec(m::AbstractDSGEModel, input_type::Symbol,
                                      forecast_string::String = "",
                                      read_dirname::String = workpath(m, "forecast"),
                                      write_dirname::String = tablespath(m, "forecast"),
+                                     use_shockdecseq::Bool = false,
                                      kwargs...)
     # Read in necessary MeansBands
-    products = [:shockdec, :trend, :dettrend, :hist, :forecast]
+    products = use_shockdecseq ? [:shockdecseq, :trend, :dettrend, :hist, :forecast] : [:shockdec, :trend, :dettrend, :hist, :forecast]
     output_vars = [Symbol(product, class) for product in products]
     mbs = OrderedDict{Symbol, MeansBands}()
     for output_var in output_vars
@@ -562,7 +563,7 @@ function write_meansbands_tables_all(m::AbstractDSGEModel, input_type::Symbol, c
                                               forecast_string = forecast_string,
                                               write_dirname = write_dirname)
 
-        elseif prod == :shockdec
+        elseif prod == :shockdec || prod == :shockdecseq
             write_means_tables_shockdec(m, input_type, cond_type, class,
                                         tablevars = vars, columnvars = shocks,
                                         forecast_string = forecast_string,
@@ -584,10 +585,10 @@ function add_requisite_output_vars_meansbands(output_vars::Vector{Symbol})
 
     all_output_vars = add_requisite_output_vars(output_vars)
 
-    if :shockdecpseudo in all_output_vars
+    if :shockdecpseudo in all_output_vars || :shockdecseqpseudo in all_output_vars
         push!(all_output_vars, :histforecastpseudo)
     end
-    if :shockdecobs in all_output_vars
+    if :shockdecobs in all_output_vars || :shockdecseqpseudo in all_output_vars
         push!(all_output_vars, :histforecastobs)
     end
 
