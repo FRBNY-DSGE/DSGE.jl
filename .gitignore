@@ -10,6 +10,9 @@
 
 Manifest.toml
 
+# Working files
+*.orig
+
 # Data
 *.mat
 *core.[0-9]*
