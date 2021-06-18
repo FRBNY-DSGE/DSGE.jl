@@ -1,11 +1,7 @@
 """
 ```
 measurement(m::AnSchorfheide{T}, TTT::Matrix{T},
-            RRR::Matrix{T}, CCC::Vector{T}; reg::Int = 1,
-            TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
-            CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-            information_set::UnitRange = reg:reg,
-            memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
+            RRR::Matrix{T}, CCC::Vector{T}) where {T <: AbstractFloat}
 ```
 
 Assign measurement equation
@@ -22,14 +18,8 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement(m::AnSchorfheide{T},
-                     TTT::Matrix{T},
-                     RRR::Matrix{T},
-                     CCC::Vector{T}; reg::Int = 1,
-                     TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
-                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                     information_set::UnitRange = reg:reg,
-                     memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
+function measurement(m::AnSchorfheide{T}, TTT::Matrix{T},
+                     RRR::Matrix{T}, CCC::Vector{T}) where {T <: AbstractFloat}
 
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
@@ -70,4 +60,16 @@ function measurement(m::AnSchorfheide{T},
     QQ[exo[:rm_sh],exo[:rm_sh]] = (m[:σ_R])^2
 
     return Measurement(ZZ, DD, QQ, EE)
+end
+
+# To make regime-switching work
+function measurement(m::AnSchorfheide{T},
+                     TTT::Matrix{T},
+                     RRR::Matrix{T},
+                     CCC::Vector{T}; reg::Int = 1,
+                     TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
+                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
+                     information_set::UnitRange = reg:reg,
+                     memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
+    return measurement(m, TTT, RRR, CCC)
 end

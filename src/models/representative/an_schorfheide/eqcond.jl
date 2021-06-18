@@ -32,8 +32,8 @@ function eqcond(m::AnSchorfheide, reg::Int)
     Π  = zeros(n_states(m), n_shocks_expectational(m))
 
     # Regime-switching parameters
-    for para in m.parameters
-        if !isempty(para.regimes)
+    for para in m.parameters      # if you're new to DSGE.jl or don't need regime-switching,
+        if !isempty(para.regimes) # then you can ignore this block of code
             if (haskey(get_settings(m), :model2para_regime) ? haskey(get_setting(m, :model2para_regime), para.key) : false)
                 toggle_regime!(para, reg, get_setting(m, :model2para_regime)[para.key])
             else
@@ -99,8 +99,8 @@ function eqcond(m::AnSchorfheide, reg::Int)
     Π[eq[:eq_Eπ], ex[:Eπ_sh]] = 1
 
     # Ensure parameter regimes are in 1 at the end
-    for para in m.parameters
-        if !isempty(para.regimes)
+    for para in m.parameters      # if you're new to DSGE.jl or don't need regime-switching,
+        if !isempty(para.regimes) # then you can ignore this block of code
             toggle_regime!(para, 1)
         end
     end

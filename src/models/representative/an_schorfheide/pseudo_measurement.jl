@@ -1,11 +1,7 @@
 """
 ```
 pseudo_measurement(m::AnSchorfheide{T}, TTT::Matrix{T},
-                   RRR::Matrix{T}, CCC::Vector{T}; reg::Int = 1,
-                   TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
-                   CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                   information_set::UnitRange = reg:reg,
-                   memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
+                   RRR::Matrix{T}, CCC::Vector{T}) where {T <: AbstractFloat}
 ```
 
 Assign pseudo-measurement equation (a linear combination of states):
@@ -14,14 +10,8 @@ Assign pseudo-measurement equation (a linear combination of states):
 x_t = ZZ_pseudo*s_t + DD_pseudo
 ```
 """
-function pseudo_measurement(m::AnSchorfheide{T},
-                            TTT::Matrix{T},
-                            RRR::Matrix{T},
-                            CCC::Vector{T}; reg::Int = 1,
-                            TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
-                            CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                            information_set::UnitRange = reg:reg,
-                            memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
+function pseudo_measurement(m::AnSchorfheide{T}, TTT::Matrix{T},
+                            RRR::Matrix{T}, CCC::Vector{T}) where {T <: AbstractFloat}
 
     endo   = m.endogenous_states
     pseudo = m.pseudo_observables
@@ -57,4 +47,16 @@ function pseudo_measurement(m::AnSchorfheide{T},
     DD_pseudo[pseudo[:RealFFR]] = m[:π_star] + m[:rA] + 4.0*m[:γ_Q] - 4.0*(100. * (m[:π_star] - 1.))
 
     return PseudoMeasurement(ZZ_pseudo, DD_pseudo)
+end
+
+# To make regime-switching work
+function pseudo_measurement(m::AnSchorfheide{T},
+                            TTT::Matrix{T},
+                            RRR::Matrix{T},
+                            CCC::Vector{T}; reg::Int = 1,
+                            TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
+                            CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
+                            information_set::UnitRange = reg:reg,
+                            memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
+    return pseudo_measurement(m, TTT, RRR, CCC)
 end
