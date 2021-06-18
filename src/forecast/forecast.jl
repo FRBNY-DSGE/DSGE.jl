@@ -631,7 +631,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     end
 end
 
-function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, last_endo_zlb::Int64,
+function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, liftoff_reg::Int64,
                                  z0::Vector{S}, states::AbstractMatrix{S}, shocks::AbstractMatrix{S},
                                  orig_regimes::Int64, original_eqcond_dict::Dict{Int64, EqcondEntry},
                                  orig_regime_dates::Dict{Int, Date}, original_info_set::Union{UnitRange{Int64}, Array{UnitRange{Int64}}};
@@ -676,7 +676,7 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
         end
     end
 
-    altpol_reg_range = start_altpol_reg:last_endo_zlb
+    altpol_reg_range = start_altpol_reg:liftoff_reg
     for (regind, date) in zip(altpol_reg_range, altpol_reg_qtrrange)
         altpol_regime_dates[regind] = date
     end
@@ -705,17 +705,17 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
     # function. In the default DSGE policy, the regimes after the ZLB ends
     # are updated only if there is time-varying credibility
     # (specified by the Setting :cred_vary_until).
-    update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_endo_zlb, last_endo_zlb)
+    update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_endo_zlb, liftoff_reg)
     min_zlb = haskey(m.settings, :min_temporary_altpolicy_length) ? get_setting(m, :min_temporary_altpolicy_length) : 0
     min_zlb += haskey(m.settings, :historical_temporary_altpolicy_length) ? get_setting(m, :historical_temporary_altpolicy_length) : 0
-    m <= Setting(:temporary_altpolicy_length, min_zlb + last_endo_zlb-first_endo_zlb)
+    m <= Setting(:temporary_altpolicy_length, min_zlb + liftoff_reg-first_endo_zlb)
     # Set up parameters if there are switching parameter values.
     #
     # User needs to provide a function which takes in the model object `m`
     # and the total number of regimes (after adding the required temporary regimes),
     # and sets up regime-switching parameters for these new additional regimes.
     if set_zlb_regime_vals != identity
-        set_zlb_regime_vals(m, last_endo_zlb)
+        set_zlb_regime_vals(m, liftoff_reg)
     end
 
 
@@ -734,6 +734,31 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
 
     # TODO: maybe delete tvis, since tvis should always be on given the fact we always run set_info_sets
     # tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
+
+    # Adjust the identical perfect credibility transitions for the new zlb
+    # Note: the following assumes that there are no more policy changes after the switch to flexible ait at
+    # the end of the zlb, and that all zlb regimes enforced with eqcond are consecutive.
+    # If either of these are no longer true, this will break!
+    if haskey(m.settings, :perfect_credibility_identical_transitions)
+        for reg in first_endo_zlb:get_setting(m, :n_regimes)
+            delete!(get_setting(m, :perfect_credibility_identical_transitions), reg)
+        end
+        for reg in liftoff_reg+2:get_setting(m, :n_regimes)
+            get_setting(m, :perfect_credibility_identical_transitions)[reg] = liftoff_reg+1
+        end
+    end
+    if haskey(m.settings, :identical_eqcond_regimes)
+        for reg in first_endo_zlb:get_setting(m, :n_regimes)
+            delete!(get_setting(m, :identical_eqcond_regimes), reg)
+        end
+        first_zlb_reg = minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
+        for reg in first_zlb_reg+1:liftoff_reg-1
+            get_setting(m, :identical_eqcond_regimes)[reg] = first_zlb_reg
+        end
+        for reg in liftoff_reg+2:get_setting(m, :n_regimes)
+            get_setting(m, :identical_eqcond_regimes)[reg] = liftoff_reg+1
+        end
+    end
 
     # Recompute to account for new regimes
     system = compute_system(m; tvis = true)
