@@ -1,4 +1,4 @@
-# Impulse Responses
+# [Impulse Responses](@id irf-doc)
 
 ```@meta
 CurrentModule = DSGE

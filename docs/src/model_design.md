@@ -11,12 +11,12 @@ The following objects define a model:
 
 - **Parameters**: Have values, bounds, fixed-or-not status, priors. An
   instance of the `AbstractParameter` type houses all information about a given
-  parameter in a single data structure. See  [The `AbstractParameter` Type](https://frbny-dsge.github.io/ModelConstructors.jl/latest/implementation_details/#The-AbstractParameter-Type-1) in the documentation for ModelConstructors.jl.
+  parameter in a single data structure. See  [The `AbstractParameter` Type](https://frbny-dsge.github.io/ModelConstructors.jl/stable/implementation_details/#The-AbstractParameter-Type-1) in the documentation for ModelConstructors.jl.
 - **Model Indices**: Mappings of state, shock, observable, and pseudo-observable
   names to indices (e.g. `y_t` -> 1). See [Defining Indices](@ref).
 - **Observables and PseudoObservables**: Mapping of names to indices, as well as
   information necessary for transformations. See
-  [The `Observable` and `PseudoObservable` Types](https://frbny-dsge.github.io/ModelConstructors.jl/latest/implementation_details/#The-Observable-and-PseudoObservable-Types-1) in the documentation for ModelConstructors.jl.
+  [The `Observable` and `PseudoObservable` Types](https://frbny-dsge.github.io/ModelConstructors.jl/stable/implementation_details/#The-Observable-and-PseudoObservable-Types-1) in the documentation for ModelConstructors.jl.
 - **Equilibrium Conditions**: A function that takes parameters and model
   indices, then returns `Γ0`, `Γ1`, `C`, `Ψ`, and `Π` (which fully describe the
   model in canonical form).
