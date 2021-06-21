@@ -303,7 +303,6 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     old_obs = cat(old_obs, zeros(size(old_obs[:,:,1])), dims = 3)
     old_pseudo = cat(old_pseudo, zeros(size(old_pseudo[:,:,1])), dims = 3)=#
 
-    @show size(old_states), size(states), size(old_obs), size(obs), size(old_pseudo), size(pseudo)
     for i in 1:size(states,1)
         for j in 1:size(states,2)
             old_states[i,j,end] = sum([states[i,j,k] for k in 1:(size(states,3)-1)]) - sum([old_states[i,j,k] for k in 1:(size(states,3)-1)])
@@ -1037,7 +1036,7 @@ function shock_decompositions_sequence(m::AbstractDSGEModel, system::RegimeSwitc
     obs    = zeros(S, histperiods, nobs, dim3_len, nshocks)
     pseudo = zeros(S, histperiods, npseudo, dim3_len, nshocks)
 
-    for t in max(1,start_index - back_effect):histperiods
+    for t in 1:histperiods
         histshocks_t = copy(histshocks)
         histshocks_t[:,vcat(1:t-1,t+1:histperiods)] .= 0.0
 
