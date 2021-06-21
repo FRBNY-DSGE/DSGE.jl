@@ -264,8 +264,16 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
             weights = W[:, end]
             inds = SMC.resample(weights)
 
-            # Note cloud.particles has dimension n_particles x (n_parameters + 5), where the 5 is for metadata
-            params = cloud.particles[inds, 1:SMC.ind_para_end(size(cloud.particles, 2))]
+            params = if isa(cloud, ParticleCloud)
+                # get_vals gets the particle values into n_parameters x n_particles,
+                # we select the draws we want using inds, and finally
+                # we transpose to get something with dimension n_particles x n_parameters
+                Matrix{Float64}(get_vals(cloud)[:, inds]')
+            else
+                # Note cloud.particles has dimension n_particles x (n_parameters + 5), where the 5 is for metadata
+                # when cloud is a `SMC.Cloud`
+                cloud.particles[inds, 1:SMC.ind_para_end(size(cloud.particles, 2))]
+            end
         else
             error("Invalid :sampling method specification. Change in setting :sampling_method")
         end
