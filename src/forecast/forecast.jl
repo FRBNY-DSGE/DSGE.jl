@@ -476,7 +476,6 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         end
         set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_aware)
 
-
         endozlb_forecast::Function = (zlb_start, zlb_end; unant_enforce_zlb = false) -> forecast_endozlb_helper(m, zlb_start, zlb_end, z0, states, shocks,
             orig_regimes, original_eqcond_dict, orig_regime_dates, original_info_set;
             cond_type = cond_type, unant_enforce_zlb = unant_enforce_zlb,
