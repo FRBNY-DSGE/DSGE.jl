@@ -43,7 +43,7 @@ test_w      = test_file["w"]
 test_W      = test_file["W"]
 
 if writing_output
-    jldopen(joinpath(path, "reference/smc_cloud_fix=true_version=" * ver * ".jld2"), 
+    jldopen(joinpath(path, "reference/smc_cloud_fix=true_version=" * ver * ".jld2"),
             true, true, true, IOStream) do file
         write(file, "cloud", test_cloud)
         write(file, "w", test_w)
@@ -77,7 +77,6 @@ N = length(test_particle)
 @testset "Individual Particle Fields Post-SMC: AnSchorf" begin
     @test test_particle[1:SMC.ind_para_end(N)] ≈ saved_particle[1:SMC.ind_para_end(N)]
     @test test_particle[SMC.ind_loglh(N)]      ≈ saved_particle[SMC.ind_loglh(N)]
-    @test test_particle[SMC.ind_logpost(N)]    ≈ saved_particle[SMC.ind_logpost(N)]
     @test test_particle[SMC.ind_logprior(N)]   ≈ saved_particle[SMC.ind_logprior(N)]
     @test test_particle[SMC.ind_old_loglh(N)] == saved_particle[SMC.ind_old_loglh(N)]
     @test test_particle[SMC.ind_accept(N)]    == saved_particle[SMC.ind_accept(N)]

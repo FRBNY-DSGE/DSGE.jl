@@ -93,7 +93,7 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
 	- `:high`: Status updates for every iteration of SMC is output, which includes
     the mean and standard deviation of each parameter draw after each iteration,
     as well as calculated acceptance rate, ESS, and number of times resampled.
-- `log_prob_oldy::Float64 = 0.0`: Log p(\tilde y) which is the log marginal data density
+- `log_prob_old_data::Float64 = 0.0`: Log p(\tilde y) which is the log marginal data density
     of the bridge estimation.
 
 ### Outputs
@@ -113,7 +113,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
               save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
               run_csminwel::Bool = true,
-              regime_switching::Bool = false, log_prob_oldy::Float64 = 0.0)
+              regime_switching::Bool = false, log_prob_old_data::Float64 = 0.0)
 
     parallel    = get_setting(m, :use_parallel_workers)
     n_parts     = get_setting(m, :n_particles)
@@ -234,7 +234,7 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
 	        tempered_update_prior_weight = tempered_update_prior_weight,
 
             regime_switching = regime_switching,
-            debug_assertion = debug_assertion, log_prob_oldy = log_prob_oldy)
+            debug_assertion = debug_assertion, log_prob_old_data = log_prob_old_data)
 
     if run_csminwel
         m <= Setting(:sampling_method, :SMC)
@@ -257,7 +257,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
              run_csminwel::Bool = true,
-             regime_switching::Bool = false, log_prob_oldy::Float64 = 0.0)
+             regime_switching::Bool = false, log_prob_old_data::Float64 = 0.0)
 
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose = verbose,
@@ -269,7 +269,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
                 continue_intermediate = continue_intermediate,
                 intermediate_stage_start = intermediate_stage_start,
                 run_csminwel = run_csminwel,
-                regime_switching = regime_switching, log_prob_oldy = log_prob_oldy)
+                regime_switching = regime_switching, log_prob_old_data = log_prob_old_data)
 end
 
 function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :low,
@@ -282,7 +282,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
              run_csminwel::Bool = true,
-             regime_switching::Bool = false, log_prob_oldy::Float64 = 0.0)
+             regime_switching::Bool = false, log_prob_old_data::Float64 = 0.0)
 
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
@@ -295,7 +295,7 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :lo
                 continue_intermediate = continue_intermediate,
                 intermediate_stage_start = intermediate_stage_start,
                 run_csminwel = run_csminwel,
-                regime_switching = regime_switching, log_prob_oldy = log_prob_oldy)
+                regime_switching = regime_switching, log_prob_old_data = log_prob_old_data)
 end
 
 function isempty(c::ParticleCloud)
