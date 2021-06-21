@@ -164,7 +164,7 @@ end
 
         @test sys[i, :QQ][exo[:ziid_shl1], exo[:ziid_shl1]] == 0.
         @test sys[i, :QQ][exo[:φ_shl1], exo[:φ_shl1]] == 0.
-        if 2 <= i <= 3 || i == 6
+        if 2 <= i <= 3 || i >= 6
             @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 0.
         else
             @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 16.
@@ -223,7 +223,7 @@ end
 
         @test sys[i, :QQ][exo[:ziid_shl1], exo[:ziid_shl1]] == 0.
         @test sys[i, :QQ][exo[:φ_shl1], exo[:φ_shl1]] == 0.
-        if 2 <= i <= 3 || i == 6
+        if 2 <= i <= 3 || i >= 6
             @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 0.
         else
             @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 16.
