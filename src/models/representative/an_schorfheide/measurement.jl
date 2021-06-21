@@ -18,8 +18,13 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement(m::AnSchorfheide{T}, TTT::Matrix{T}, # do not edit inputs
-                     RRR::Matrix{T}, CCC::Vector{T}) where {T <: AbstractFloat}
+function measurement(m::AnSchorfheide{T}, TTT::Matrix{T}, # do not edit input arguments
+                     RRR::Matrix{T}, CCC::Vector{T};
+                     reg::Int = 1, # these keyword arguments are only used to make regime-switching work.
+                     TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[], # you can delete these keyword arguments if
+                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[], # you don't need regime-switching.
+                     information_set::UnitRange = reg:reg,
+                     memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
 
     endo     = m.endogenous_states           # make references to model indices
     endo_new = m.endogenous_states_augmented # for convenience. You can rename thse if you want
@@ -62,16 +67,4 @@ function measurement(m::AnSchorfheide{T}, TTT::Matrix{T}, # do not edit inputs
     QQ[exo[:rm_sh],exo[:rm_sh]] = (m[:σ_R])^2
 
     return Measurement(ZZ, DD, QQ, EE) # do not edit this return
-end
-
-# To make regime-switching work (you can delete this if you don't need regime-switching)
-function measurement(m::AnSchorfheide{T}, # do not edit inputs if you keep this code though
-                     TTT::Matrix{T},
-                     RRR::Matrix{T},
-                     CCC::Vector{T}; reg::Int = 1,
-                     TTTs::Vector{<: AbstractMatrix{T}} = Matrix{T}[],
-                     CCCs::Vector{<: AbstractVector{T}} = Vector{T}[],
-                     information_set::UnitRange = reg:reg,
-                     memo::Union{ForwardMultipleExpectationsMemo, Nothing} = nothing) where {T <: AbstractFloat}
-    return measurement(m, TTT, RRR, CCC)
 end
