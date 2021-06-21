@@ -39,6 +39,13 @@ Because `Model1002` continues to undergo development by the FRBNY DSGE team, it 
 numerous features that require deep knowledge of the package and is generally *not* suitable for
 learning to build a new model.
 
+To help users, the source code for `AnSchorfheide` should have additional comments indicating which
+functions and lines should be edited when a user wants to build a new model.
+For this reason, we recommend that the user copies the source code for the model into a new folder
+and edit that source code to develop their new model. Substantial portions of the code
+for the model objects in DSGE.jl can be recycled for most DSGE models. Copy and paste
+will minimize errors and also reduce the time it takes to get a new model implemented.
+
 For more advanced programmers and for users familiar with the implementation of `AnSchorfheide`,
 `SmetsWouters` or `SmetsWoutersOrig` are suitable examples for building medium-scale DSGEs.
 The former uses our preferred parameterization of the Smets and Wouters model, and the latter

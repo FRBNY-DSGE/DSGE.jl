@@ -10,18 +10,20 @@ Assign pseudo-measurement equation (a linear combination of states):
 x_t = ZZ_pseudo*s_t + DD_pseudo
 ```
 """
-function pseudo_measurement(m::AnSchorfheide{T}, TTT::Matrix{T},
+function pseudo_measurement(m::AnSchorfheide{T}, TTT::Matrix{T}, # do not edit inputs
                             RRR::Matrix{T}, CCC::Vector{T}) where {T <: AbstractFloat}
 
-    endo   = m.endogenous_states
+    endo   = m.endogenous_states # optional abbreviations for convenience
     pseudo = m.pseudo_observables
 
-    _n_states = n_states_augmented(m)
+    _n_states = n_states_augmented(m) # do not edit
     _n_pseudo = n_pseudo_observables(m)
 
     # Initialize pseudo ZZ and DD matrices
-    ZZ_pseudo = zeros(_n_pseudo, _n_states)
+    ZZ_pseudo = zeros(_n_pseudo, _n_states) # do not edit
     DD_pseudo = zeros(_n_pseudo)
+
+    # Starting here, you may want to edit
 
     ##########################################################
     ## PSEUDO-OBSERVABLE EQUATIONS
@@ -46,7 +48,7 @@ function pseudo_measurement(m::AnSchorfheide{T}, TTT::Matrix{T},
     ZZ_pseudo[pseudo[:RealFFR], endo[:π_t]] = -4.
     DD_pseudo[pseudo[:RealFFR]] = m[:π_star] + m[:rA] + 4.0*m[:γ_Q] - 4.0*(100. * (m[:π_star] - 1.))
 
-    return PseudoMeasurement(ZZ_pseudo, DD_pseudo)
+    return PseudoMeasurement(ZZ_pseudo, DD_pseudo) # do not edit this return
 end
 
 # To make regime-switching work

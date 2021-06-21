@@ -42,6 +42,8 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
 
 """
 function augment_states(m::AnSchorfheide, TTT::Matrix{T}, RRR::Matrix{T},
-                        CCC::Vector{T}; reg = 1) where {T<:AbstractFloat}
+                        CCC::Vector{T}; reg = 1) where {T<:AbstractFloat} # do not edit inputs
+# this function needs to exist, but you probably don't need to edit it
+# and can just leave it effectively an empty function (by immediately returning TTT, RRR, CCC)
     return TTT, RRR, CCC
 end
