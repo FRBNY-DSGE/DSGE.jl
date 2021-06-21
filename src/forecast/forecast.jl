@@ -302,7 +302,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 
     # Define our iteration function
     check_has_unant_mp_sh = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
-        (!isempty(intersect([:zlb_rule, :zero_rate], [x.alternative_policy.key for x in values(get_setting(m, :regime_eqcond_info))])))
+    (!isempty(intersect([:zlb_rule, :zero_rate], [x.alternative_policy.key for x in values(get_setting(m, :regime_eqcond_info))])))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
@@ -404,6 +404,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
     orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
     orig_temp_zlb     = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
+    orig_identical_eqcond_regimes = haskey(get_settings(m), :identical_eqcond_regimes) ? deepcopy(get_setting(m, :identical_eqcond_regimes)) : nothing
+    orig_perf_cred_identical_transitions = haskey(get_settings(m), :perfect_credibility_identical_transitions) ? deepcopy(get_setting(m, :perfect_credibility_identical_transitions)) : nothing
 
 
     # Grab some information about the forecast
@@ -623,6 +625,16 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         else
             m <= Setting(:temporary_altpolicy_length, orig_temp_zlb)
         end
+        if isnothing(orig_identical_eqcond_regimes)
+            delete!(get_settings(m), :identical_eqcond_regimes)
+        else
+            m <= Setting(:identical_eqcond_regimes, orig_identical_eqcond_regimes)
+        end
+        if isnothing(orig_perf_cred_identical_transitions)
+            delete!(get_settings(m), :perfect_credibility_identical_transitions)
+        else
+            m <= Setting(:perfect_credibility_identical_transitions, orig_perf_cred_identical_transitions)
+        end
         if rerun_smoother
             return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
         else
@@ -717,7 +729,20 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, li
     if set_zlb_regime_vals != identity
         set_zlb_regime_vals(m, liftoff_reg)
     end
-
+    # if we have a mapping between model regimes and parameter regimes, make sure to
+    # extend that mapping if we've added regimes in the process of running the endo zlb
+    if haskey(m.settings, :model2para_regime)
+        for para in m.parameters
+            model2para_dict = get_setting(m, :model2para_regime)
+            if haskey(model2para_dict, para.key)
+                for i in first_endo_zlb:liftoff_reg
+                    if !haskey(model2para_dict[para.key], i)
+                        model2para_dic[para.key][i] = model2para_dict[para.key][i-1]
+                    end
+                end
+            end
+        end
+    end
 
     # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
     first_aware = if haskey(get_settings(m), :tvis_information_set)
