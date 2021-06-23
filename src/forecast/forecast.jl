@@ -715,6 +715,16 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, li
     if haskey(get_settings(m), :cred_vary_until) ? (isempty(altpol_reg_range) ? true : get_setting(m, :cred_vary_until) >= maximum(altpol_reg_range)) : false
         m <= Setting(:regime_switching, true)
     else
+        # NOTE: the following will truncate regime_eqcond_info after liftoff regime unless cred_vary_until
+        # is set. At present, this DOES NOT HANDLE cases where there are more policy changes after the
+        # liftoff regime. If this is the case, use cred_vary_until up to the end of those changes.
+        if haskey(get_settings(m), :regime_eqcond_info)
+            for i in keys(get_setting(m, :regime_eqcond_info))
+                if i > liftoff_reg
+                    delete!(get_setting(m, :regime_eqcond_info), i)
+                end
+            end
+        end
         m <= Setting(:regime_dates, altpol_regime_dates)
         m <= Setting(:regime_switching, true)
         setup_regime_switching_inds!(m; cond_type = cond_type)

@@ -106,7 +106,7 @@ else
 
             # measurement eqns for forward looking variables e.g. :obs_longrate are still being updated.
             if k == :bddforecastobs
-                @test_broken @test_matrix_approx_eq refdata[string(k)][:, # this test seems to work but perhaps due to changes in the way the automatic ZLB is
+                @test_matrix_approx_eq refdata[string(k)][:, # this test seems to work but perhaps due to changes in the way the automatic ZLB is
                                                                 vcat(1:9, 12:13), :] load(v, "arr")[:, vcat(1:9, 12:13), :] # inferred, it no longer matches reference output. Leaving this test as "broken" for now.
                 @test all(refdata[string(k)][:, m.observables[:obs_nominalrate], :] .> -1e-14)
             else
