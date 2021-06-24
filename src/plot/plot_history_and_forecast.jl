@@ -20,7 +20,7 @@ plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symbol,
     titles::Vector{String} = String[],
     plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
     verbose::Symbol = :low, names = Dict{Symbol, Vector{String}}(),
-    start_date::Date = Date(2019,3,31), end_date::Date = Date(2023,12,31),
+    start_date::Date = Date(2019,3,31), end_date::Date = iterate_quarters(date_forecast_start(m), 12),
     add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
     new_cond_type::Symbol = :full, outfile_end::String =  "",
     new_forecast_string::String = forecast_string,
@@ -57,8 +57,8 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
   to overlay new forecast plot(s)
 - `verbose::Symbol = :low`
 - `names::Dict{Symbol, Vector{String}}`: Legend names for lines
-- `start_date::Date` = Date(2019,3,31): Date plot should start at
-- `end_date::Date` = Date(2023,12,31): Date plot should end at
+- `start_date::Date` = Date(2019,3,31)`: Date plot should start at
+- `end_date::Date` = iterate_quarters(date_forecast_start(m), 12)`: Date plot should end at
 - `add_new_model::Bool` = false: Whether history should be plotted using a new model
 - `new_model::AbstractDSGEModel` = Model1002(): The new model to use to plot history
 - `new_cond_type::Symbol` = :full: Cond_type of new model
@@ -158,7 +158,7 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                                    titles::Vector{String} = String[],
                                    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
                                    verbose::Symbol = :low, names = Dict{Symbol, Vector{String}}(),
-                                   start_date::Date = Date(2019,3,31), end_date::Date = Date(2023,12,31),
+                                   start_date::Date = Date(2019,3,31), end_date::Date = iterate_quarters(date_forecast_start(m), 12),
                                    add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
                                    new_cond_type::Symbol = :full, outfile_end::String = "",
                                    new_forecast_string::String = forecast_string,
@@ -541,7 +541,6 @@ histforecast_vector
     # Bands
     sort!(bands_pcts, rev = true) # s.t. non-transparent bands will be plotted correctly
     inds = findall(start_date .<= combined.bands[var][!, :date] .<= end_date)
-
 #=
     for hfs_ind in 1:length(hist)
         combined = cat(hist[hfs_ind], forecast[hfs_ind])
