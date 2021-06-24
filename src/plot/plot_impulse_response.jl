@@ -179,6 +179,68 @@ function plot_impulse_response(m1::AbstractDSGEModel, m2::AbstractDSGEModel,
     return plots
 end
 
+# Generalize to plot many IRFs on the same plot, with which_model indicating which
+# model to use for things like where to save these plots and which model to use
+# to grab descriptions of series.
+function plot_impulse_response(m::Vector,
+                               shock::Symbol, vars::Vector{Symbol}, class::Symbol,
+                               input_type::Vector{Symbol}, cond_type::Vector{Symbol};
+                               forecast_string::Vector{String} = repeat([""],length(m)),
+                               bands_color::Vector{Symbol} = repeat([:blue, :red, :purple, :green], round(Int64, length(m)/3+0.25)),
+                               bands_alpha::Vector{Float64} = repeat([0.1],length(m)),
+                               bands_pcts::Vector{String} = Vector{String}(undef,0),
+                               which_model::Int = 1,
+                               plotroot::String =
+                               figurespath(m[which_model], "forecast"),
+                               titles::Vector{String} = String[],
+                               addl_text::String = "",
+                               verbose::Symbol = :low,
+                               kwargs...)
+    # Read in MeansBands
+    mbs = Vector{MeansBands}(undef,length(m))
+    for i in 1:length(mbs)
+        mbs[i] = read_mb(m[i], input_type[i], cond_type[i], Symbol(:irf, class), forecast_string = forecast_string[i])
+    end
+
+    # Get titles if not provided
+    if isempty(titles)
+        detexify_title = typeof(Plots.backend()) == Plots.GRBackend
+        titles = map(var -> describe_series(m[which_model], var, class, detexify = detexify_title), vars)
+    end
+
+    # Loop through variables
+    plots = OrderedDict{Symbol, Plots.Plot}()
+    for (var, title) in zip(vars, titles)
+        # Call recipe
+        if isempty(bands_pcts)
+            bands_pcts = which_density_bands(mbs[which_model], uniquify = true)
+        end
+        plots[var] = irf(shock, var, mbs[1], MeansBands();
+                         title = title, input_type = input_type[1], input_type2 = Symbol(),
+                         bands_color = bands_color[1], bands_alpha = bands_alpha[1],
+                         bands_pcts = bands_pcts, mean_color = bands_color[1], kwargs...)
+        for i in 2:length(mbs)
+            irf!(shock, var, mbs[i], MeansBands();
+                 title = title, input_type = input_type[i], input_type2 = Symbol(),
+                 bands_color = bands_color[i], bands_alpha = bands_alpha[i],
+                 bands_pcts = bands_pcts, mean_color = bands_color[i], kwargs...)
+        end
+
+        # Save plot
+        if !isempty(plotroot)
+            output_file = get_forecast_filename(plotroot, filestring_base(mbs[which_model]),
+                                                input_type[which_model],
+                                                cond_type[which_model],
+                                                Symbol("irf_", detexify(shock), "_", detexify(var), addl_text),
+                                                forecast_string = forecast_string[which_model],
+                                                fileformat = plot_extension())
+            save_plot(plots[var], output_file, verbose = verbose)
+        end
+    end
+    return plots
+end
+
+
 @userplot Irf
 
 """
