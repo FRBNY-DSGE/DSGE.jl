@@ -95,6 +95,8 @@ function init_subspec!(m::Model1002)
         return ss84!(m)
     elseif subspec(m) == "ss85"
         return ss85!(m)
+    elseif subspec(m) == "ss86"
+        return ss86!(m)
     else
         error("This subspec is not defined.")
     end
@@ -6541,4 +6543,34 @@ function ss85!(m::Model1002)
     end
 
     ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss86!(m)
+    ss64!(m)
+
+    m <= parameter(:σ_λ_f_ziid, 0.0, (0., 100.), (0., 100.), ModelConstructors.Exponential(), RootInverseGamma(10.0, sqrt(25.1)),
+                   fixed=true,
+                   description="σ_λ_f_ziid: The standard deviation of the shock to the price markup.",
+                   tex_label="\\sigma_{\\lambda_f, ziid}")
+
+    get_setting(m, :model2para_regime)[:σ_λ_f_ziid] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+    for i in 6:get_setting(m, :n_regimes)
+        get_setting(m, :model2para_regime)[:σ_λ_f_ziid][i] = 1
+    end
+
+    # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+    set_regime_val!(m[:σ_λ_f_ziid], 1, 0.)
+    set_regime_val!(m[:σ_λ_f_ziid], 2, 5.0)
+    set_regime_val!(m[:σ_λ_f_ziid], 3, 0.05)
+
+    # Fix shocks to 0 in para regime 1
+    set_regime_fixed!(m[:σ_λ_f_ziid], 1, true)
+    set_regime_fixed!(m[:σ_λ_f_ziid], 2, false)
+    set_regime_fixed!(m[:σ_λ_f_ziid], 3, false)
+
+    # Regime-switching priors for regime 3
+    for i in 1:2
+        set_regime_prior!(m[:σ_λ_f_ziid], i, m[:σ_λ_f_ziid].prior)
+    end
+    set_regime_prior!(m[:σ_λ_f_ziid], 3, RootInverseGamma(10.0, 0.0501))
 end

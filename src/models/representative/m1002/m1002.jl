@@ -173,7 +173,7 @@ function init_model_indices!(m::Model1002)
     end
 
     # COVID-19 states, shocks, and equations
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         push!(endogenous_states, :ziid_t)
         push!(equilibrium_conditions, :eq_ziid)
         push!(exogenous_shocks, :ziid_sh)
@@ -185,6 +185,9 @@ function init_model_indices!(m::Model1002)
         push!(equilibrium_conditions, :eq_φ)
         push!(equilibrium_conditions, :eq_Eφ)
         push!(exogenous_shocks, :φ_sh)
+    end
+    if subspec(m) in ["ss86"]
+        push!(exogenous_shocks, :λ_f_iid_sh)
     end
 
     # COVID counterparts for standard business cycle shocks
@@ -628,7 +631,7 @@ buted to steady-state inflation.",
     m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= parameter(:ρ_ziid, 0., (0., 0.999), (0., 0.999), ModelConstructors.Untransformed(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_ziid: AR(1) coefficient in the iid component of the technology process.",
                        tex_label="\\rho_{z, iid}")
@@ -848,7 +851,7 @@ buted to steady-state inflation.",
     m <= SteadyStateParameter(:ystar, NaN, tex_label="\\y_*")
     m <= SteadyStateParameter(:cstar, NaN, tex_label="\\c_*")
     m <= SteadyStateParameter(:wl_c, NaN, tex_label="\\wl_c")
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= SteadyStateParameter(:φstar, NaN, tex_label="\\varphi_*")
     end
     m <= SteadyStateParameter(:nstar, NaN, tex_label="\\n_*")
@@ -887,7 +890,7 @@ function steadystate!(m::Model1002)
     m[:cstar]    = (1-m[:g_star])*m[:ystar] - m[:istar]
     m[:wl_c]     = (m[:wstar]*m[:Lstar])/(m[:cstar]*m[:λ_w])
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m[:φstar] = 0. # log(1) in steady state
     end
 
@@ -1048,13 +1051,13 @@ function model_settings!(m::Model1002)
                  "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
 
     # COVID-19 settings
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= Setting(:antshocks, Dict{Symbol, Int}(:biidc => 1, :φ => 1, :ziid => 1))
         m <= Setting(:ant_eq_mapping, Dict{Symbol, Symbol}(:biidc => :biidc, :φ => :φ, :ziid => :ziid))
         m <= Setting(:ant_eq_E_mapping, Dict{Symbol, Symbol}(:φ => :Eφ))
         m <= Setting(:proportional_antshocks, Symbol[:biidc, :φ, :ziid])
     end
-    if subspec(m) in ["ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= Setting(:add_pseudo_gdp, true),
         m <= Setting(:add_pseudo_corepce, true)
         m <= Setting(:add_anticipated_obs_gdp, true)
@@ -1073,7 +1076,7 @@ function model_settings!(m::Model1002)
                      "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, true)
         m <= Setting(:add_ygap, true)
-    elseif subspec(m) in ["ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    elseif subspec(m) in ["ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= Setting(:flexible_ait_policy_change, false,
                      "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, true)
@@ -1128,7 +1131,7 @@ function parameter_groupings(m::Model1002)
                     "Financial Frictions Parameters", "Exogenous Process Parameters",
                     "Measurement Error Parameters"]
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         covid = [:σ_ziid, :σ_biidc, :σ_φ]
         for (sh, ant_num) in get_setting(m, :antshocks)
             for i in 1:ant_num
@@ -1149,7 +1152,7 @@ function parameter_groupings(m::Model1002)
     incl_params    = vcat(collect(values(groupings))...)
     excl_params_sym = vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
                            [Symbol("σ_r_m$i") for i=n_mon_anticipated_shocks(m)+1:n_mon_anticipated_shocks_padding(m)])
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         push!(excl_params_sym, :ρ_ziid, :ρ_biidc, :ρ_φ)
     end
     if haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
@@ -1182,7 +1185,7 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 function shock_groupings(m::Model1002)
     if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69",
                       "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80",
-                      "ss81", "ss82", "ss83", "ss84", "ss85"]
+                      "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
         bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
         fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo

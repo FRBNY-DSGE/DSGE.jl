@@ -57,7 +57,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_euler], endo[:EL_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ1[eq[:eq_euler], endo[:c_t]]  = (m[:h]*exp(-m[:z_star]))/(1 + m[:h]*exp(-m[:z_star]))
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         Γ0[eq[:eq_euler], endo[:φ_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
         Γ0[eq[:eq_euler], endo[:Eφ_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     end
@@ -73,7 +73,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_euler_f], endo[:EL_f_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     Γ1[eq[:eq_euler_f], endo[:c_f_t]]  = (m[:h]*exp(-m[:z_star]))/(1 + m[:h]*exp(-m[:z_star]))
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         Γ0[eq[:eq_euler_f], endo[:φ_t]]  = -(m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
         Γ0[eq[:eq_euler_f], endo[:Eφ_t]] = (m[:σ_c] - 1)*m[:wl_c]/(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))
     end
@@ -266,7 +266,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_msub], endo[:z_t]]   = m[:h]*exp(-m[:z_star]) /(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_msub], endo[:w_t]]   = -1.
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         Γ0[eq[:eq_msub], endo[:φ_t]] = m[:ν_l]
     end
 
@@ -277,7 +277,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ1[eq[:eq_msub_f], endo[:c_f_t]] = m[:h]*exp(-m[:z_star])/(1 - m[:h]*exp(-m[:z_star]))
     Γ0[eq[:eq_msub_f], endo[:z_t]]   = m[:h]*exp(-m[:z_star])/(1 - m[:h]*exp(-m[:z_star]))
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         Γ0[eq[:eq_msub_f], endo[:φ_t]] = m[:ν_l]
     end
 
@@ -356,7 +356,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_Ez], endo[:zp_t]]   = -m[:ρ_z_p]
 
     # Eφ_t
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         Γ0[eq[:eq_Eφ], endo[:Eφ_t]] = 1.
         Γ0[eq[:eq_Eφ], endo[:φ_t]]  = -m[:ρ_φ]
     end
@@ -373,7 +373,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ1[eq[:eq_ztil], endo[:ztil_t]] = m[:ρ_ztil]
     Ψ[eq[:eq_ztil], exo[:ztil_sh]]     = 1.
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         # Ez_t
         Γ0[eq[:eq_Ez], endo[:ziid_t]] = -(m[:ρ_ziid]-1)/(1-m[:α])
 
@@ -403,7 +403,7 @@ function eqcond(m::Model1002, reg::Int)
     Γ1[eq[:eq_b], endo[:b_t]] = m[:ρ_b]
     Ψ[eq[:eq_b], exo[:b_sh]]  = 1.
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         # iid shock to Euler equation
         Γ0[eq[:eq_biidc], endo[:biidc_t]] = 1.
         Γ1[eq[:eq_biidc], endo[:biidc_t]] = m[:ρ_biidc] # c b/c will only affect consumption
@@ -427,6 +427,10 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_λ_f1], endo[:λ_f_t1]] = 1.
     Ψ[eq[:eq_λ_f1], exo[:λ_f_sh]]   = 1.
 
+    if subspec(m) in ["ss86"]
+        Ψ[eq[:eq_λ_f], exo[:λ_f_iid_sh]] = 1.0
+    end
+
     # Wage mark-up shock
     Γ0[eq[:eq_λ_w], endo[:λ_w_t]]  = 1.
     Γ1[eq[:eq_λ_w], endo[:λ_w_t]]  = m[:ρ_λ_w]
@@ -445,7 +449,7 @@ function eqcond(m::Model1002, reg::Int)
     Ψ[eq[:eq_rm], exo[:rm_sh]]  = noant
 
     # Labor preference shock
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         # Eφ_t
         Γ0[eq[:eq_Eφ], endo[:φ_t]] = -m[:ρ_φ]
 
