@@ -6,25 +6,58 @@ plot_impulse_response(m, shock, var, class, input_type, cond_type;
 plot_impulse_response(m, shock, vars, class, input_type, cond_type;
     forecast_string = "", plotroot = figurespath(m, \"forecast\"),
     titles = [], kwargs...)
+
+plot_impulse_response(m1, m2,
+    shock, vars, class,
+    input_type1, input_type2,
+    cond_type1, cond_type2;
+    forecast_string1 = "",
+    forecast_string2 = "",
+    bands_color1 = :blue,
+    bands_color2 = :red,
+    bands_alpha1 = 0.1,
+    bands_alpha2 = 0.1,
+    bands_pcts::Vector{String} = Vector{String}(undef,0),
+    which_model = 1,
+    plotroot = figurespath((which_model == 1) ? m1 : m2, "forecast"),
+    titles = String[],
+    addl_text = "",
+    verbose = :low,
+    kwargs...)
+
+plot_impulse_response(m::Vector,
+    shock, vars, class,
+    input_type, cond_type;
+    forecast_string = repeat([""],length(m)),
+    bands_color = repeat([:blue, :red, :purple, :green], round(Int64, length(m)/4+0.3)),
+    bands_alpha = repeat([0.1],length(m)),
+    bands_pcts = Vector{String}(undef,0),
+    which_model = 1,
+    plotroot = figurespath(m[which_model], "forecast"),
+    titles = String[],
+    addl_text = "",
+    verbose = :low,
+    kwargs...)
 ```
 
 Plot the responses of `var` to `shock`. By default, only 90% bands are plotted.
 
 ### Inputs
 
-- `m::AbstractDSGEModel`
+- `m::AbstractDSGEModel` or `m::Vector`: Vector of Models
 - `shock::Symbol`: e.g. `:g_sh`
 - `var::Symbol` or `vars::Vector{Symbol}`: response variable(s), e.g. `:obs_gdp`
 - `class::Symbol`
-- `input_type::Symbol`
-- `cond_type::Symbol`
+- `input_type::Symbol` or `input_type:Vector{Symbol}`: e.g. `:full` or `:mode`
+- `cond_type::Symbol` or `cond_type:Vector{Symbol}`
 
 ### Keyword Arguments
 
-- `forecast_string::String`
+- `forecast_string::String` or `forecast_string:Vector{String}`
 - `plotroot::String`: if nonempty, plots will be saved in that directory
 - `title::String` or `titles::Vector{String}`
 - `verbose::Symbol`
+- `which_model::Int64`
 
 See `?irf` for additional keyword arguments, all of which can be passed
 into `plot_history_and_forecast`.
