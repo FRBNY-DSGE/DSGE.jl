@@ -12,7 +12,14 @@ This Julia-language implementation mirrors the MATLAB code included in the
 Liberty Street Economics blog post
 [The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
 
-Documentation for the *code* can be accessed by clicking on the `docs|dev` button above. For documentation about the most recent *model version*, read this [pdf](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/docs/DSGE_Model_Documentation_1002.pdf).
+Documentation for the *code* can be accessed by clicking on the `docs` button above (`stable` for the most recent release,
+`dev` for the most recent updates).
+For documentation about the most recent *model version*, read this
+[pdf](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/docs/DSGE_Model_Documentation_1002.pdf).
+We recommend new users take a look at our
+[example scripts](https://github.com/FRBNY-DSGE/DSGE.jl/tree/main/examples)
+as they read the documentation because the examples will make it easier to comprehend the documentation.
+For details on the example scripts, see [Running Existing Models](https://frbny-dsge.github.io/DSGE.jl/stable/running_existing_model/).
 
 The New York Fed DSGE team is currently extending the code to solve and estimate heterogeneous agent models. Filtering and smoothing algorithms are available in the registered package [StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl).
 An implementation of Sequential Monte Carlo (SMC) sampling, used for the estimation of DSGE models, can be found in the registered package [SMC.jl](https://github.com/FRBNY-DSGE/SMC.jl). The foundational `AbstractModel` type, from which the `AbstractDSGEModel` type derives, is defined in the registered package [ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).

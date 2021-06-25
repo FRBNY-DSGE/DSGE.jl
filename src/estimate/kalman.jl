@@ -127,7 +127,7 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
     T = size(data, 2)
     if !isempty(data)
         # Calculate the number of periods since start date for each regime
-        if haskey(m.settings, :n_hist_regimes)
+        if haskey(get_settings(m), :n_hist_regimes)
             n_regime_periods = Vector{Int}(undef, get_setting(m, :n_hist_regimes) + get_setting(m, :n_cond_regimes))
             for k in 1:(get_setting(m, :n_hist_regimes)  + get_setting(m, :n_cond_regimes))
                 n_regime_periods[k] = subtract_quarters(get_setting(m, :regime_dates)[k], start_date)
@@ -221,8 +221,18 @@ function zlb_plus_regime_indices(m::AbstractDSGEModel{S}, data::AbstractArray,
         i_zlb_start = 0
         splice_zlb_regime = false
     end
+
     # Remove regimes that only are for the forecast period (i.e. bigger than number of rows in dataframe)
-    filter!(x -> last(x) <= T, regime_inds)
+    first_exceeding_reg = findfirst(x -> last(x) > T, regime_inds) # first regime with final period exceeding end of data
+    if isnothing(first_exceeding_reg)
+        # Do nothing! All regimes' last period are within the range of data
+    elseif first(regime_inds[first_exceeding_reg]) > T # Then all the periods in this regime are beyond the final period
+        regime_inds = regime_inds[1:(first_exceeding_reg - 1)]
+    else # Only some periods in first_exceeding_regime are beyond the final period!
+        regime_inds = regime_inds[1:first_exceeding_reg]
+        regime_inds[end] = first(regime_inds[end]):T
+    end
+
     return regime_inds, i_zlb_start, splice_zlb_regime
 end
 

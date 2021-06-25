@@ -41,7 +41,8 @@ function prepare_forecast_inputs!(m::AbstractDSGEModel{S},
 
     if only_filter
         smooth_vars = [:histstates, :histpseudo, :histshocks, :histstdshocks, :forecastshocks, :forecaststdshocks,
-                       :shockdecstates, :shockdecpseudo, :shockdecobs, :dettrendstates, :dettrendpseudo, :dettrendobs]
+                       :shockdecstates, :shockdecpseudo, :shockdecobs, :dettrendstates, :dettrendpseudo, :dettrendobs,
+                       :shockdecseqstates, :shockdecseqpseudo, :shockseqdecobs]
         @assert isempty(intersect(output_vars, smooth_vars)) "Some output variables requested cannot be use with keyword only_filter"
     end
 
@@ -211,7 +212,6 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
     if isempty(input_file_name)
         input_file_name = get_forecast_input_file(m, input_type, filestring_addl = filestring_addl)
     end
-    println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
     if input_type in [:mean, :mode, :mode_draw_shocks]
@@ -219,8 +219,9 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
             params = convert(Vector{Float64}, h5read(input_file_name, "params"))
         elseif get_setting(m, :sampling_method) == :SMC
             if input_type in [:mode, :mode_draw_shocks]
-                # If mode is in forecast overrides, want to use the file specified
-                if :mode in collect(keys(forecast_input_file_overrides(m)))
+                # If mode is in forecast overrides and is an extension, want to use the file specified
+                if :mode in collect(keys(forecast_input_file_overrides(m))) &&
+                    occursin(".h5", input_file_name)
                     params = convert(Vector{Float64}, h5read(input_file_name, "params"))
                     # If not, load it from the cloud
                 elseif (occursin("smc_paramsmode", input_file_name) &&
@@ -238,7 +239,7 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
 
                     cloud = load(input_file_name, "cloud")
                     params = if typeof(cloud) <: Union{DSGE.Cloud,SMC.Cloud}
-                        SMC.get_likeliest_particle_value(SMC.Cloud(cloud))
+                        SMC.get_highest_posterior_particle_value(SMC.Cloud(cloud))
                     else
                         cloud.particles[argmax(get_logpost(cloud))].value
                     end
@@ -255,15 +256,24 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
-            cloud = load(replace(replace(input_file_name, ".h5" => ".jld2"), "smcsave" => "smc_cloud"), "cloud")
+            input_file_name = replace(replace(input_file_name, ".h5" => ".jld2"), "smcsave" => "smc_cloud")
+            cloud = load(input_file_name, "cloud")
 
             # Re-sample SMC draws according to their weights
-            W = load(replace(replace(input_file_name, "smcsave" => "smc_cloud"), "h5" => "jld2"), "W")
+            W = load(input_file_name, "W")
             weights = W[:, end]
             inds = SMC.resample(weights)
 
-            # Note cloud.particles has dimension n_particles x (n_parameters + 5), where the 5 is for metadata
-            params = cloud.particles[inds, 1:SMC.ind_para_end(size(cloud.particles, 2))]
+            params = if isa(cloud, ParticleCloud)
+                # get_vals gets the particle values into n_parameters x n_particles,
+                # we select the draws we want using inds, and finally
+                # we transpose to get something with dimension n_particles x n_parameters
+                Matrix{Float64}(get_vals(cloud)[:, inds]')
+            else
+                # Note cloud.particles has dimension n_particles x (n_parameters + 5), where the 5 is for metadata
+                # when cloud is a `SMC.Cloud`
+                cloud.particles[inds, 1:SMC.ind_para_end(size(cloud.particles, 2))]
+            end
         else
             error("Invalid :sampling method specification. Change in setting :sampling_method")
         end
@@ -298,6 +308,8 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol;
 
     end
 
+    println(verbose, :low, "Loaded draws from $input_file_name")
+
     return params
 end
 
@@ -324,8 +336,13 @@ function load_draws(m::AbstractDSGEModel, input_type::Symbol, block_inds::Abstra
                 if get_setting(m, :sampling_method) == :MH
                     params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
                 elseif get_setting(m, :sampling_method) == :SMC
-
-                    params_unweighted[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                    if input_file_name[end-1:end] == "h5"
+                        params_unweighted[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                    else
+                        dataset = jldopen(input_file_name, "r") do file
+                            params_unweighted[i] = vec(map(Float64, file["cloud"].particles[j,1:end-5]))
+                        end
+                    end
                 else
                     throw("Invalid :sampling_method setting specification.")
                 end
@@ -507,7 +524,7 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                       show_failed_percent::Bool = false, only_filter::Bool = false,
                       verbose::Symbol = :low, testing_carter_kohn::Bool = false,
                       trend_nostates_obs = Array{(0,0)}, trend_nostates_pseudo = Array{(0,0)},
-                      full_shock_decomp::Bool = true)
+                      full_shock_decomp::Bool = true, n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[])
 
     ### Common Setup
 
@@ -557,7 +574,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                 rerun_smoother = rerun_smoother, nan_endozlb_failures = nan_endozlb_failures,
                                                 catch_smoother_lapack = catch_smoother_lapack,
                                                 testing_carter_kohn = testing_carter_kohn, trend_nostates_obs = trend_nostates_obs,
-                                                trend_nostates_pseudo = trend_nostates_pseudo, full_shock_decomp = full_shock_decomp)
+                                                trend_nostates_pseudo = trend_nostates_pseudo, full_shock_decomp = full_shock_decomp,
+                                                n_back = n_back, back_shocks = back_shocks)
 
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable{Int64}(),
@@ -653,7 +671,8 @@ function forecast_one(m::AbstractDSGEModel{Float64},
                                                                  rerun_smoother = rerun_smoother,
                                                                  nan_endozlb_failures = nan_endozlb_failures,
                                                                  catch_smoother_lapack = catch_smoother_lapack,
-                                                                 testing_carter_kohn = testing_carter_kohn),
+                                                                 testing_carter_kohn = testing_carter_kohn,
+                                                                 n_back = n_back, back_shocks = back_shocks),
                                       params_for_map)
 
             # Assemble outputs from this block and write to file
@@ -769,7 +788,8 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                            nan_endozlb_failures::Bool = false,
                            catch_smoother_lapack::Bool = false, testing_carter_kohn::Bool = false,
                            return_loglh::Bool = false, trend_nostates_obs = Array{(0,0)},
-                           trend_nostates_pseudo = Array{(0,0)}, full_shock_decomp::Bool = false)
+                           trend_nostates_pseudo = Array{(0,0)}, full_shock_decomp::Bool = false,
+                           n_back::Int64 = 0, back_shocks::Vector{Symbol} = Symbol[])
     ### Setup
 
     # Re-initialize model indices if forecasting under an alternative policy
@@ -810,8 +830,9 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     # Must run smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks, :histstdshocks]
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
+    shockdecseq_vars = [:shockdecseqstates, :shockdecseqpseudo, :shockdecseqobs]
     dettrend_vars = [:dettrendstates, :dettrendpseudo, :dettrendobs]
-    smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
+    smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars, shockdecseq_vars)
     hists_to_compute = intersect(output_vars, smooth_vars)
 
     run_smoother = (!isempty(hists_to_compute) ||
@@ -1316,6 +1337,44 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         forecast_output[:irfstates] = irfstates
         forecast_output[:irfobs] = irfobs
         forecast_output[:irfpseudo] = irfpseudo
+    end
+
+    # 7. Shockdec Sequence
+    shockdecseqs_to_compute = intersect(output_vars, shockdecseq_vars)
+
+    if !isempty(shockdecseqs_to_compute)
+        histshocks_shockdecseq = if use_filtered_shocks_in_shockdec
+            filter_shocks(m, df, system, cond_type = cond_type)
+        else
+            histshocks
+        end
+
+        start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
+        end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
+            max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
+        else
+            prev_quarter(date_forecast_start(m)) # this is the end date of history period
+        end
+
+        if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+            # Must be using TV cred system
+            old_system = 0
+            for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
+                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zlb_rule
+                    old_system = regime_indices(m, start_date, end_date)[i][1]
+                    break
+                end
+            end
+            shockdecseqstates, shockdecseqobs, shockdecseqpseudo = shock_decompositions_sequence(m, system, old_system, histshocks_shockdecseq, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp, n_back = n_back, back_shocks = back_shocks)
+        else
+            shockdecseqstates, shockdecseqobs, shockdecseqpseudo = isa(system, RegimeSwitchingSystem) ?
+                shock_decompositions_sequence(m, system, histshocks_shockdecseq, start_date, end_date, cond_type, n_back = n_back, back_shocks = back_shocks) :
+                shock_decompositions_sequence(m, system, histshocks_shockdecseq, n_back = n_back, back_shocks = back_shocks)
+        end
+
+        forecast_output[:shockdecseqstates] = shockdecseqstates
+        forecast_output[:shockdecseqobs]    = shockdecseqobs
+        forecast_output[:shockdecseqpseudo] = shockdecseqpseudo
     end
 
     ### Return only desired output_vars

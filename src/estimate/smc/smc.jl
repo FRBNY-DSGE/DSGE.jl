@@ -23,6 +23,8 @@ smc(m::AbstractDSGEModel)
 	- `:high`: Status updates for every iteration of SMC is output, which includes
     the mean and standard deviation of each parameter draw after each iteration,
     as well as calculated acceptance rate, ESS, and number of times resampled.
+- `log_prob_old_data::Float64 = 0.0`: Log p(\tilde y) which is the log marginal data density
+    of the bridge estimation.
 
 ### Outputs
 
@@ -58,7 +60,8 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
              run_test::Bool = false,
              filestring_addl::Vector{String} = Vector{String}(),
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
-             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10)
+             save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
+             log_prob_old_data::Float64 = 0.0)
 
     ########################################################################################
     ### Setting Parameters
@@ -225,8 +228,16 @@ function smc(m::AbstractDSGEModel, data::Matrix{Float64};
         ### Step 1: Correction
         #############################################################################
         # Calculate incremental weights (if no old data, get_old_loglh(cloud) = 0)
-        incremental_weights = exp.((ϕ_n1 - ϕ_n) * get_old_loglh(cloud) +
-                                   (ϕ_n - ϕ_n1) * get_loglh(cloud))
+        if tempered_update_prior_weight == 0.0
+            incremental_weights = exp.((ϕ_n1 - ϕ_n) * get_old_loglh(cloud) +
+                                       (ϕ_n - ϕ_n1) * get_loglh(cloud))
+        elseif tempered_update_prior_weight == 1.0
+            incremental_weights = exp.((ϕ_n - ϕ_n1) * get_loglh(cloud))
+        else
+            incremental_weights = exp.((ϕ_n1 - ϕ_n) * log.((exp.(get_old_loglh(cloud) .- log_prob_old_data .+
+                                                       log(1-tempered_update_prior_weight)) .+ tempered_update_prior_weight)) +
+                                       (ϕ_n - ϕ_n1) * get_loglh(cloud))
+        end
 
         # Update weights
         update_weights!(cloud, incremental_weights)
@@ -350,17 +361,17 @@ end
 
 function smc(m::AbstractDSGEModel, data::DataFrame; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
-             filestring_addl::Vector{String} = Vector{String}(undef, 0))
+             filestring_addl::Vector{String} = Vector{String}(undef, 0), log_prob_old_data::Float64 = 0.0)
     data_mat = df_to_matrix(m, data)
     return smc(m, data_mat, verbose = verbose, save_intermediate = save_intermediate,
-               filestring_addl = filestring_addl)
+               filestring_addl = filestring_addl, log_prob_old_data = log_prob_old_data)
 end
 
 function smc(m::AbstractDSGEModel; verbose::Symbol = :low,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
-             filestring_addl::Vector{String} = Vector{String}(undef, 0))
+             filestring_addl::Vector{String} = Vector{String}(undef, 0), log_prob_old_data::Float64 = 0.0)
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
     return smc(m, data_mat, verbose=verbose, save_intermediate = save_intermediate,
-               filestring_addl = filestring_addl)
+               filestring_addl = filestring_addl, log_prob_old_data = log_prob_old_data)
 end

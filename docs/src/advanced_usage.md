@@ -13,7 +13,7 @@ Pages = ["pkg_structure.md"]
 Depth = 5
 ```
 
-## Working with Settings
+## [Working with Settings](@id working-with-settings)
 
 There are many computational settings that affect how the code runs without affecting the
 mathematical definition of the model. While the default settings loaded are
@@ -25,6 +25,11 @@ will generally want to check that these three settings are properly chosen:
 - `data_vintage::String`: Data vintage, formatted `yymmdd`. By default,
   `data_vintage` is set to today's date. It is (currently) the only setting
   printed to output filenames by default.
+- `cond_vintage::String`: Conditional data vintage, formatted `yymmdd`. By default,
+  `cond_vintage` is set to today's date.
+- `data_id::Int64`: ID number to append to a created data set's name and to identify
+  which saved data set to load
+- `cond_id::Int64`: ID number to identify which conditional data set should be loaded
 
 Many functions in DSGE.jl will either require input data or create output data,
 so it is important to check that the saveroot and dataroot are set as the user intends.
@@ -137,10 +142,15 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/defaults.j
 - `use_fixed_schedule::Bool`: Flag for whether or not to use a fixed tempering (ϕ) schedule.
 - `adaptive_tempering_target_smc::S`: Coefficient of the sample size metric to be targeted when solving
     for an endogenous ϕ or 0.0 if using a fixed schedule.
-- `tempered_update_prior_weight::S`: when bridging from old estimation, how much weight to put on prior.
+- `tempered_update_prior_weight::S`: when bridging from old estimation, i.e. a tempered update, the user
+    can create a bridge distribution as a convex combination of the prior and a
+    previously ran estimation. This setting is the relative weight on the prior
+    in the convex combination.
 - `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
      same data vintage. Primarily for numerical accuracy/testing purposes.
 - `previous_data_vintage::String`: the old data vintage from which to start SMC when using a tempered update
+- `debug_assertion::Bool`: print output (if applicable) when encountering an assertion error during
+  SMC to help with debugging.
 
 ##### Miscellaneous
 - `use_chand_recursion::Bool`: Flag for using Chandrasekhar Recursions in Kalman filter.

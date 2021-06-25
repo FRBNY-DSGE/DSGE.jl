@@ -204,6 +204,14 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_t]]         = m[:ρ_gdp]
     TTT_aug[endo_new[:e_gdi_t], endo_new[:e_gdi_t]]         = m[:ρ_gdi]
 
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
+        # COVID counterparts to measurement errors
+        TTT_aug[endo_new[:e_lr_t], endo_new[:e_lr_covid_t]]   = m[:ρ_lr_covid]
+        TTT_aug[endo_new[:e_tfp_t], endo_new[:e_tfp_covid_t]] = m[:ρ_tfp_covid]
+        TTT_aug[endo_new[:e_gdp_t], endo_new[:e_gdp_covid_t]] = m[:ρ_gdp_covid]
+        TTT_aug[endo_new[:e_gdi_t], endo_new[:e_gdi_covid_t]] = m[:ρ_gdi_covid]
+    end
+
     if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
         TTT_aug[endo_new[:e_condgdp_t], endo_new[:e_condgdp_t]] = m[:ρ_condgdp]
@@ -257,6 +265,17 @@ function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vecto
     RRR_aug[endo_new[:e_gdp_t], exo[:gdi_sh]] = m[:ρ_gdpvar] * m[:σ_gdp] ^ 2
 
     RRR_aug[endo_new[:e_gdi_t], exo[:gdi_sh]] = 1.0
+
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
+        # COVID counterparts to measurement errors
+        RRR_aug[endo_new[:e_lr_t], exo[:lr_covid_sh]]   = 1.0
+        RRR_aug[endo_new[:e_tfp_t], exo[:tfp_covid_sh]] = 1.0
+
+        RRR_aug[endo_new[:e_gdp_t], exo[:gdp_covid_sh]] = 1.0
+        RRR_aug[endo_new[:e_gdp_t], exo[:gdi_covid_sh]] = m[:ρ_gdpvar_covid] * m[:σ_gdp_covid] ^ 2
+
+        RRR_aug[endo_new[:e_gdi_t], exo[:gdi_covid_sh]] = 1.0
+    end
 
     if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
         get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false

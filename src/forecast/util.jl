@@ -27,15 +27,22 @@ function n_forecast_draws(m::AbstractDSGEModel, input_type::Symbol)
         return 1
     elseif input_type in [:full, :subset]
         input_file = get_forecast_input_file(m, input_type)
-        draws = h5open(input_file, "r") do file
-            if get_setting(m, :sampling_method) == :MH
-                dataset = isdefined(HDF5, :open_object) ? HDF5.open_object(file, "mhparams") : HDF5.o_open(file, "mhparams")
-            elseif get_setting(m, :sampling_method) == :SMC
-                dataset = isdefined(HDF5, :open_object) ? HDF5.open_object(file, "smcparams") : HDF5.o_open(file, "smcparams")
-            else
-                throw("Invalid :sampling_method setting specification.")
+        if input_file[end-1:end] == "h5"
+            draws = h5open(input_file, "r") do file
+                if get_setting(m, :sampling_method) == :MH
+                    dataset = isdefined(HDF5, :open_object) ? HDF5.open_object(file, "mhparams") : HDF5.o_open(file, "mhparams")
+                elseif get_setting(m, :sampling_method) == :SMC
+                    dataset = isdefined(HDF5, :open_object) ? HDF5.open_object(file, "smcparams") : HDF5.o_open(file, "smcparams")
+                else
+                    throw("Invalid :sampling_method setting specification.")
+                end
+                size(dataset)[1]
             end
-            size(dataset)[1]
+        elseif input_file[end-3:end] == "jld2"
+            draws = jldopen(input_file, "r") do file
+                dataset = file["cloud"].particles
+                size(dataset)[1]
+            end
         end
         return draws
     elseif input_type == :prior || input_type == :mode_draw_shocks

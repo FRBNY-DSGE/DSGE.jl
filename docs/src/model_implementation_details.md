@@ -1,4 +1,4 @@
-# Implementation Details
+# Model Implementation Details
 
 ```@meta
 CurrentModule = DSGE

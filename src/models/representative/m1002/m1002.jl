@@ -173,7 +173,7 @@ function init_model_indices!(m::Model1002)
     end
 
     # COVID-19 states, shocks, and equations
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         push!(endogenous_states, :ziid_t)
         push!(equilibrium_conditions, :eq_ziid)
         push!(exogenous_shocks, :ziid_sh)
@@ -185,6 +185,40 @@ function init_model_indices!(m::Model1002)
         push!(equilibrium_conditions, :eq_φ)
         push!(equilibrium_conditions, :eq_Eφ)
         push!(exogenous_shocks, :φ_sh)
+    end
+    if subspec(m) in ["ss86"]
+        push!(exogenous_shocks, :λ_f_iid_sh)
+    end
+
+    # COVID counterparts for standard business cycle shocks
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
+        push!(endogenous_states, :g_covid_t)
+        push!(equilibrium_conditions, :eq_g_covid)
+        push!(exogenous_shocks, :g_covid_sh)
+        push!(endogenous_states, :μ_covid_t)
+        push!(equilibrium_conditions, :eq_μ_covid)
+        push!(exogenous_shocks, :μ_covid_sh)
+        push!(endogenous_states, :λ_f_covid_t)
+        push!(equilibrium_conditions, :eq_λ_f_covid)
+        push!(exogenous_shocks, :λ_f_covid_sh)
+        push!(endogenous_states, :σ_ω_covid_t)
+        push!(equilibrium_conditions, :eq_σ_ω_covid)
+        push!(exogenous_shocks, :σ_ω_covid_sh)
+
+        push!(endogenous_states_augmented, :e_lr_covid_t)
+        push!(exogenous_shocks, :lr_covid_sh)
+        push!(endogenous_states_augmented, :e_tfp_covid_t)
+        push!(exogenous_shocks, :tfp_covid_sh)
+        push!(endogenous_states_augmented, :e_gdp_covid_t)
+        push!(exogenous_shocks, :gdp_covid_sh)
+        push!(endogenous_states_augmented, :e_gdi_covid_t)
+        push!(exogenous_shocks, :gdi_covid_sh)
+    end
+
+    if subspec(m) in ["ss69", "ss70", "ss73", "ss74", "ss77", "ss78"]
+        push!(endogenous_states, :zp_covid_t)
+        push!(equilibrium_conditions, :eq_zp_covid)
+        push!(exogenous_shocks, :zp_covid_sh)
     end
 
     # Add various pseudo-observables
@@ -486,7 +520,7 @@ buted to steady-state inflation.",
                    description="ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label="\\rho_{r^m}")
 
-    m <= parameter(:ρ_σ_w, 0.9898, (1e-5, 0.99999), (1e-5, 0.99), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
+    m <= parameter(:ρ_σ_w, 0.9898, (1e-5, 0.99999), (1e-5, 0.99999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
                    tex_label="\\rho_{\\sigma_\\omega}")
 
@@ -597,7 +631,7 @@ buted to steady-state inflation.",
     m <= parameter(:σ_gdi, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{gdi}")
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= parameter(:ρ_ziid, 0., (0., 0.999), (0., 0.999), ModelConstructors.Untransformed(), BetaAlt(0.5, 0.2), fixed=true,
                        description="ρ_ziid: AR(1) coefficient in the iid component of the technology process.",
                        tex_label="\\rho_{z, iid}")
@@ -619,6 +653,89 @@ buted to steady-state inflation.",
                        RootInverseGamma(2 * (400.0)^2 ./ (400. * 10), sqrt(1. + (400.0)^2)), fixed=false,
                        description="σ_φ: The standard deviation of the process describing the labor supply preference.",
                        tex_label="\\sigma_{\\varphi}") # If σ_φ ∼ RootInverseGamma(ν, τ), then σ_φ² ∼ InverseGamma(ν/2, ντ²/2)
+    end
+
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
+        m <= parameter(:ρ_g_covid, 0.9863, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       description="ρ_g: AR(1) coefficient in the government spending process.",
+                       tex_label="\\rho_g")
+
+        m <= parameter(:ρ_μ_covid, 0.8735, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       description="ρ_μ: AR(1) coefficient in capital adjustment cost process.",
+                       tex_label="\\rho_{\\mu}")
+
+        m <= parameter(:ρ_λ_f_covid, 0.8827, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       description="ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
+                       tex_label="\\rho_{\\lambda_f}")
+
+        m <= parameter(:ρ_σ_w_covid, 0.9898, (0., 0.99999), (0., 0.99999), ModelConstructors.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
+                       description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
+                       tex_label="\\rho_{\\sigma_\\omega}")
+
+        m <= parameter(:ρ_lr_covid, 0.6936, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       tex_label="\\rho_{10y}")
+
+        m <= parameter(:ρ_tfp_covid, 0.1953, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       tex_label="\\rho_{tfp}")
+
+        m <= parameter(:ρ_gdp_covid, 0., (-0.999, 0.999), (-0.999, 0.999), ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{gdp}")
+
+        m <= parameter(:ρ_gdi_covid, 0., (-0.999, 0.999), (-0.999, 0.999), ModelConstructors.SquareRoot(), Normal(0.0, 0.2), fixed=false,
+                       tex_label="\\rho_{gdi}")
+
+        m <= parameter(:ρ_gdpvar_covid, 0., (-0.999, 0.999), (-0.999, 0.999), ModelConstructors.SquareRoot(), Normal(0.0, 0.4), fixed=false,
+                       tex_label="\\varrho_{gdp}")
+
+        m <= parameter(:σ_g_covid, 2.5230, (0., 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_g: The standard deviation of the government spending process.",
+                       tex_label="\\sigma_{g}")
+
+        m <= parameter(:σ_μ_covid, 0.4559, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                       tex_label="\\sigma_{\\mu}")
+
+        m <= parameter(:σ_λ_f_covid, 0.1314, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                       tex_label="\\sigma_{\\lambda_f}")
+
+        m <= parameter(:σ_σ_ω_covid, 0.0428, (1e-7,100.), (0., 0.), ModelConstructors.Exponential(), RootInverseGamma(4, 0.05), fixed=false,
+                       description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
+                       tex_label="\\sigma_{\\sigma_\\omega}")
+
+        m <= parameter(:σ_lr_covid, 0.1766, (1e-8,10.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.75), fixed=false,
+                       tex_label="\\sigma_{10y}")
+
+        m <= parameter(:σ_tfp_covid, 0.9391, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{tfp}")
+
+        m <= parameter(:σ_gdp_covid, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{gdp}")
+
+        m <= parameter(:σ_gdi_covid, 0.1, (1e-8, 5.),(1e-8, 5.),ModelConstructors.Exponential(),RootInverseGamma(2, 0.10), fixed=false,
+                       tex_label="\\sigma_{gdi}")
+    end
+
+    if subspec(m) in ["ss69", "ss70", "ss73", "ss74", "ss77", "ss78"]
+        m <= parameter(:ρ_z_p_covid, 0.8910, (0., 0.999), (0., 0.999), ModelConstructors.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+                       description="ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.",
+                       tex_label="\\rho_{z^p}")
+
+        m <= parameter(:σ_z_p_covid, 0.1662, (1e-8, 5.), (1e-8, 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                       description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                       tex_label="\\sigma_{z^p}")
+    end
+
+    if subspec(m) in ["ss62"] # TODO: add new specs
+        m <= parameter(:damp_standard_shocks, 1., (0., 1e3), (0., 1e3), fixed=false, # will be fixed later in subspec!(m)
+                       description="damp_standard_shocks: Damping factor for standard business cycle shocks during COVID-19.",
+                       tex_label="damp standard shocks")
+        m <= parameter(:amplify_σ_r_m, 1., (0., 1e3), (0., 1e3), fixed=false, # will be fixed later in subspec!(m)
+                       description="amplify_σ_r_m: Amplification factor for monetary policy shock during COVID-19.",
+                       tex_label="amplify \\sigma_{r^m}")
+        m <= parameter(:amplify_inflation_me, 1., (0., 1e3), (0., 1e3), fixed=false, # will be fixed later in subspec!(m)
+                       description="amplify_inflation_me: Amplification factor for inflation measurement error during COVID-19.",
+                       tex_label="amplify inflation measurement error")
     end
 
     if haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
@@ -734,7 +851,7 @@ buted to steady-state inflation.",
     m <= SteadyStateParameter(:ystar, NaN, tex_label="\\y_*")
     m <= SteadyStateParameter(:cstar, NaN, tex_label="\\c_*")
     m <= SteadyStateParameter(:wl_c, NaN, tex_label="\\wl_c")
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= SteadyStateParameter(:φstar, NaN, tex_label="\\varphi_*")
     end
     m <= SteadyStateParameter(:nstar, NaN, tex_label="\\n_*")
@@ -773,7 +890,7 @@ function steadystate!(m::Model1002)
     m[:cstar]    = (1-m[:g_star])*m[:ystar] - m[:istar]
     m[:wl_c]     = (m[:wstar]*m[:Lstar])/(m[:cstar]*m[:λ_w])
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m[:φstar] = 0. # log(1) in steady state
     end
 
@@ -934,13 +1051,13 @@ function model_settings!(m::Model1002)
                  "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
 
     # COVID-19 settings
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= Setting(:antshocks, Dict{Symbol, Int}(:biidc => 1, :φ => 1, :ziid => 1))
         m <= Setting(:ant_eq_mapping, Dict{Symbol, Symbol}(:biidc => :biidc, :φ => :φ, :ziid => :ziid))
         m <= Setting(:ant_eq_E_mapping, Dict{Symbol, Symbol}(:φ => :Eφ))
         m <= Setting(:proportional_antshocks, Symbol[:biidc, :φ, :ziid])
     end
-    if subspec(m) in ["ss62"]
+    if subspec(m) in ["ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= Setting(:add_pseudo_gdp, true),
         m <= Setting(:add_pseudo_corepce, true)
         m <= Setting(:add_anticipated_obs_gdp, true)
@@ -959,7 +1076,7 @@ function model_settings!(m::Model1002)
                      "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, true)
         m <= Setting(:add_ygap, true)
-    elseif subspec(m) in ["ss62"]
+    elseif subspec(m) in ["ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         m <= Setting(:flexible_ait_policy_change, false,
                      "Indicator for whether 2020-Q3 switch in monetary policy rule to AIT is on")
         m <= Setting(:add_pgap, true)
@@ -1014,7 +1131,7 @@ function parameter_groupings(m::Model1002)
                     "Financial Frictions Parameters", "Exogenous Process Parameters",
                     "Measurement Error Parameters"]
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         covid = [:σ_ziid, :σ_biidc, :σ_φ]
         for (sh, ant_num) in get_setting(m, :antshocks)
             for i in 1:ant_num
@@ -1035,12 +1152,20 @@ function parameter_groupings(m::Model1002)
     incl_params    = vcat(collect(values(groupings))...)
     excl_params_sym = vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
                            [Symbol("σ_r_m$i") for i=n_mon_anticipated_shocks(m)+1:n_mon_anticipated_shocks_padding(m)])
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         push!(excl_params_sym, :ρ_ziid, :ρ_biidc, :ρ_φ)
     end
     if haskey(get_settings(m), :add_initialize_pgap_ygap_pseudoobs) ?
         get_setting(m, :add_initialize_pgap_ygap_pseudoobs) : false
         push!(excl_params_sym, :σ_pgap, :σ_ygap)
+    end
+    if haskey(get_settings(m), :add_iid_cond_obs_gdp_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_gdp_meas_err) : false
+        push!(excl_params_sym, :σ_condgdp, :ρ_condgdp)
+    end
+    if haskey(get_settings(m), :add_iid_cond_obs_corepce_meas_err) ?
+        get_setting(m, :add_iid_cond_obs_corepce_meas_err) : false
+        push!(excl_params_sym, :σ_condcorepce, :ρ_condcorepce)
     end
     excl_params = [m[θ] for θ in excl_params_sym]
 
@@ -1058,7 +1183,9 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 `plot_shock_decomposition`. See `?ShockGroup` for details.
 """
 function shock_groupings(m::Model1002)
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69",
+                      "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80",
+                      "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
         bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
         fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo

@@ -113,52 +113,120 @@ end
     @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp[1:21, :] # Test files had been generated w/extra pseudo-obs
 end
 
-# Check ss62 works
-m = Model1002("ss62")
-for (i, d) in enumerate([date_presample_start(m), Date(2020, 3, 31), Date(2020, 6, 30), Date(2020, 9, 30),
-                         Date(2020, 12, 31), Date(2021, 3, 31)])
-    @test get_setting(m, :regime_dates)[i] == d
+@testset "Check ss62 is properly implemented" begin
+    m = Model1002("ss62")
+    for (i, d) in enumerate([date_presample_start(m), Date(2020, 3, 31), Date(2020, 6, 30), Date(2020, 9, 30),
+                             Date(2020, 12, 31), Date(2021, 3, 31)])
+        @test get_setting(m, :regime_dates)[i] == d
+    end
+    sys = compute_system(m)
+    exo = m.exogenous_shocks
+    inds1 = 1:24 # standard shock indices
+    inds2 = vcat(1:14, 17:24) # standard shock indices excluding measurement error
+    inds3 = 25:30 # covid shock indices
+    for k in [:σ_biidc, :σ_φ, :σ_ziid]
+        @test haskey(m[k].regimes, :prior)
+        @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 2)).ν
+        @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 3)).ν
+        @test get(regime_prior(m[k], 1)).τ == get(regime_prior(m[k], 2)).τ
+        @test get(regime_prior(m[k], 1)).τ != get(regime_prior(m[k], 3)).τ
+    end
+
+    for i in 2:get_setting(m, :n_regimes)
+        @test sys[1, :TTT] ≈ sys[i, :TTT]
+        @test sys[1, :CCC] ≈ sys[i, :CCC]
+        @test sys[1, :ZZ]  ≈ sys[i, :ZZ]
+        @test sys[1, :DD]  ≈ sys[i, :DD]
+
+        if i >= 5
+            @test sys[1, :QQ][inds1, inds1] ≈ sys[i, :QQ][inds1, inds1]
+        end
+        if i >= 4
+            @test sys[1, :QQ][inds2, inds2] ≈ sys[i, :QQ][inds2, inds2]
+        end
+        if 2 <= i <= 4
+            @test sys[i, :QQ][exo[:biidc_sh], exo[:biidc_sh]] == 16
+            @test sys[i, :QQ][exo[:ziid_sh], exo[:ziid_sh]] == 25.
+            @test sys[i, :QQ][exo[:φ_sh], exo[:φ_sh]] == 160000.
+            @test (sys[1, :QQ][exo[:corepce_sh], exo[:corepce_sh]] * 10^2) == sys[i, :QQ][exo[:corepce_sh], exo[:corepce_sh]]
+            @test (sys[1, :QQ][exo[:gdpdef_sh], exo[:gdpdef_sh]] * 10^2) == sys[i, :QQ][exo[:gdpdef_sh], exo[:gdpdef_sh]]
+        elseif i == 5
+            @test sys[i, :QQ][exo[:biidc_sh], exo[:biidc_sh]] == .04^2
+            @test sys[i, :QQ][exo[:ziid_sh], exo[:ziid_sh]] == .05^2
+            @test sys[i, :QQ][exo[:φ_sh], exo[:φ_sh]] == 16.
+        end
+
+        if 2 <= i <= 3
+            @test (sys[1, :QQ][exo[:rm_sh], exo[:rm_sh]] * 10^2) == sys[i, :QQ][exo[:rm_sh], exo[:rm_sh]]
+            @test (sys[1, :QQ][exo[:b_sh], exo[:b_sh]] * .25^2) == sys[i, :QQ][exo[:b_sh], exo[:b_sh]]
+            @test (sys[1, :QQ][exo[:g_sh], exo[:g_sh]] * .25^2) == sys[i, :QQ][exo[:g_sh], exo[:g_sh]]
+        end
+
+        @test sys[i, :QQ][exo[:ziid_shl1], exo[:ziid_shl1]] == 0.
+        @test sys[i, :QQ][exo[:φ_shl1], exo[:φ_shl1]] == 0.
+        if 2 <= i <= 3 || i >= 6
+            @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 0.
+        else
+            @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 16.
+        end
+    end
 end
-sys = compute_system(m)
-exo = m.exogenous_shocks
-inds1 = 1:24 # standard shock indices
-inds2 = vcat(1:14, 17:24) # standard shock indices excluding measurement error
-inds3 = 25:30 # covid shock indices
-for k in [:σ_biidc, :σ_φ, :σ_ziid]
-    @test haskey(m[k].regimes, :prior)
-    @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 2)).ν
-    @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 3)).ν
-    @test get(regime_prior(m[k], 1)).τ == get(regime_prior(m[k], 2)).τ
-    @test get(regime_prior(m[k], 1)).τ != get(regime_prior(m[k], 3)).τ
-end
 
-for i in 2:get_setting(m, :n_regimes)
-    @test sys[1, :TTT] ≈ sys[i, :TTT]
-    @test sys[1, :CCC] ≈ sys[i, :CCC]
-    @test sys[1, :ZZ]  ≈ sys[i, :ZZ]
-    @test sys[1, :DD]  ≈ sys[i, :DD]
-
-    if i >= 5
-        @test sys[1, :QQ][inds1, inds1] ≈ sys[i, :QQ][inds1, inds1]
+@testset "Check ss63 is properly implemented" begin
+    m = Model1002("ss63")
+    for (i, d) in enumerate([date_presample_start(m), Date(2020, 3, 31), Date(2020, 6, 30), Date(2020, 9, 30),
+                             Date(2020, 12, 31), Date(2021, 3, 31)])
+        @test get_setting(m, :regime_dates)[i] == d
     end
-    if i >= 4
-        @test sys[1, :QQ][inds2, inds2] ≈ sys[i, :QQ][inds2, inds2]
-    end
-    if 2 <= i <= 4
-        @test sys[i, :QQ][exo[:biidc_sh], exo[:biidc_sh]] == 16
-        @test sys[i, :QQ][exo[:ziid_sh], exo[:ziid_sh]] == 25.
-        @test sys[i, :QQ][exo[:φ_sh], exo[:φ_sh]] == 160000.
-    elseif i == 5
-        @test sys[i, :QQ][exo[:biidc_sh], exo[:biidc_sh]] == .04^2
-        @test sys[i, :QQ][exo[:ziid_sh], exo[:ziid_sh]] == .05^2
-        @test sys[i, :QQ][exo[:φ_sh], exo[:φ_sh]] == 16.
+    sys = compute_system(m)
+    exo = m.exogenous_shocks
+    inds1 = 1:24 # standard shock indices
+    inds2 = vcat(1:14, 17:24) # standard shock indices excluding measurement error
+    inds3 = 25:30 # covid shock indices
+    for k in [:σ_biidc, :σ_φ, :σ_ziid]
+        @test haskey(m[k].regimes, :prior)
+        @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 2)).ν
+        @test get(regime_prior(m[k], 1)).ν == get(regime_prior(m[k], 3)).ν
+        @test get(regime_prior(m[k], 1)).τ == get(regime_prior(m[k], 2)).τ
+        @test get(regime_prior(m[k], 1)).τ != get(regime_prior(m[k], 3)).τ
     end
 
-    @test sys[i, :QQ][exo[:ziid_shl1], exo[:ziid_shl1]] == 0.
-    @test sys[i, :QQ][exo[:φ_shl1], exo[:φ_shl1]] == 0.
-    if 2 <= i <= 3 || i == 6
-        @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 0.
-    else
-        @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 16.
+    for i in 2:get_setting(m, :n_regimes)
+        @test sys[1, :TTT] ≈ sys[i, :TTT]
+        @test sys[1, :CCC] ≈ sys[i, :CCC]
+        @test sys[1, :ZZ]  ≈ sys[i, :ZZ]
+        @test sys[1, :DD]  ≈ sys[i, :DD]
+
+        if i >= 5
+            @test sys[1, :QQ][inds1, inds1] ≈ sys[i, :QQ][inds1, inds1]
+        end
+        if i >= 4
+            @test sys[1, :QQ][inds2, inds2] ≈ sys[i, :QQ][inds2, inds2]
+        end
+        if 2 <= i <= 4
+            @test sys[i, :QQ][exo[:biidc_sh], exo[:biidc_sh]] == 16
+            @test sys[i, :QQ][exo[:ziid_sh], exo[:ziid_sh]] == 25.
+            @test sys[i, :QQ][exo[:φ_sh], exo[:φ_sh]] == 160000.
+            @test sys[1, :QQ][exo[:corepce_sh], exo[:corepce_sh]] * 10^2 ≈ sys[i, :QQ][exo[:corepce_sh], exo[:corepce_sh]]
+            @test sys[1, :QQ][exo[:gdpdef_sh], exo[:gdpdef_sh]] * 10^2 ≈ sys[i, :QQ][exo[:gdpdef_sh], exo[:gdpdef_sh]]
+        elseif i == 5
+            @test sys[i, :QQ][exo[:biidc_sh], exo[:biidc_sh]] == .04^2
+            @test sys[i, :QQ][exo[:ziid_sh], exo[:ziid_sh]] == .05^2
+            @test sys[i, :QQ][exo[:φ_sh], exo[:φ_sh]] == 16.
+        end
+
+        if 2 <= i <= 3
+            @test sys[1, :QQ][exo[:rm_sh], exo[:rm_sh]] * 10^2 == sys[i, :QQ][exo[:rm_sh], exo[:rm_sh]]
+            @test sys[1, :QQ][exo[:g_sh], exo[:g_sh]] == sys[i, :QQ][exo[:g_sh], exo[:g_sh]]
+            @test sys[1, :QQ][exo[:b_sh], exo[:b_sh]] == sys[i, :QQ][exo[:b_sh], exo[:b_sh]]
+        end
+
+        @test sys[i, :QQ][exo[:ziid_shl1], exo[:ziid_shl1]] == 0.
+        @test sys[i, :QQ][exo[:φ_shl1], exo[:φ_shl1]] == 0.
+        if 2 <= i <= 3 || i >= 6
+            @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 0.
+        else
+            @test sys[i, :QQ][exo[:biidc_shl1], exo[:biidc_shl1]] == 16.
+        end
     end
 end

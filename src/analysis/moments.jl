@@ -1,3 +1,24 @@
+
+        struct PriorTableEntry
+            key::Symbol
+            reg::Int64
+            fixed::Bool
+            tex_label::String
+            dist_id::String
+            mean::Float64
+            sd::Float64
+        end
+
+
+        struct PosteriorTableEntry
+            key::Symbol
+            reg::Int64
+            fixed::Bool
+            tex_label::String
+            mean::Float64
+            bands::Vector{Float64}
+        end
+
 """
 ```
 function load_posterior_moments(m; load_bands = true, include_fixed = false)
@@ -42,7 +63,7 @@ function load_posterior_moments(m::AbstractDSGEModel;
     else
         params = get_vals(cloud)
         weights = get_weights(cloud)
-   end
+    end
 
     # Index out the fixed parameters
     if include_fixed
@@ -178,77 +199,96 @@ if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 - `outdir::String`: where to save output tables
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
-"""
-function moment_tables(m::AbstractDSGEModel; percent::AbstractFloat = 0.90,
-                       subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
-                       groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                       tables = [:prior_posterior_means, :moments, :prior, :posterior],
-                       caption = true, outdir = "",
-                       verbose::Symbol = :low, use_mode::Bool = false)
+  """
+  function moment_tables(m::AbstractDSGEModel; percent::AbstractFloat = 0.90,
+                         subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
+                         groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                         tables = [:prior_posterior_means, :moments, :prior, :posterior],
+                         caption = true, outdir = "",
+                         verbose::Symbol = :low, use_mode::Bool = false)
 
-    ### 1. Load parameter draws from Metropolis-Hastings
+      ### 1. Load parameter draws from Metropolis-Hastings
 
-    params = if !isempty(subset_inds)
-        # Use subset of draws
-        if isempty(subset_string)
-            error("Must supply a nonempty subset_string if subset_inds is nonempty")
-        end
-        load_draws(m, :subset; subset_inds = subset_inds, verbose = verbose)
-    else
-        # Use all draws
-        load_draws(m, :full; verbose = verbose)
-    end
+      params = if !isempty(subset_inds)
+          # Use subset of draws
+          if isempty(subset_string)
+              error("Must supply a nonempty subset_string if subset_inds is nonempty")
+          end
+          load_draws(m, :subset; subset_inds = subset_inds, verbose = verbose)
+      else
+          # Use all draws
+          load_draws(m, :full; verbose = verbose)
+      end
 
-    ### 2. Compute posterior moments
+      ### 2. Compute posterior moments
 
-    if use_mode
-        post_mode = h5read(get_forecast_input_file(m, :mode), "params")
-    end
-    post_means = vec(mean(params, dims = 1))
+      if use_mode
+          post_mode = h5read(get_forecast_input_file(m, :mode), "params")
+      end
+      post_means = vec(mean(params, dims = 1))
 
-    # Save posterior means
-    basename = "paramsmean"
-    if !isempty(subset_string)
-        basename *= "_sub=$(subset_string)"
-    end
-    filename = workpath(m, "estimate", "$basename.h5")
-    h5open(filename, "w") do file
-        write(file, "post_means", post_means)
-    end
-    post_bands = permutedims(find_density_bands(params, percent; minimize = true))
+      # Save posterior means
+      basename = "paramsmean"
+      if !isempty(subset_string)
+          basename *= "_sub=$(subset_string)"
+      end
+      filename = workpath(m, "estimate", "$basename.h5")
+      h5open(filename, "w") do file
+          write(file, "post_means", post_means)
+      end
+      post_bands = permutedims(find_density_bands(params, percent; minimize = true))
 
-    ### 3. Produce TeX tables
+      # map parameters to indices in regimes 2+
+      para_regime_indices = Dict{Int64, Vector{Int64}}()
+      if length(post_means) > length(m.parameters)
+          i = length(m.parameters)
+          for para in m.parameters
+              if haskey(para.regimes, :value)
+                  for key in keys(para.regimes[:value])
+                      if key == 1
+                          para_regime_indices[m.keys[para.key]] = [m.keys[para.key]]
+                      else
+                          i += 1
+                          append!(para_regime_indices[m.keys[para.key]], [i])
+                      end
+                  end
+              end
+          end
+      end
 
-    if :prior_posterior_means in tables
-        prior_posterior_table(m, use_mode ? post_mode : post_means;
-                              subset_string = subset_string, groupings = groupings,
-                              use_mode = use_mode, caption = caption, outdir = outdir)
-    end
+      ### 3. Produce TeX tables
 
-    if :moments in tables
-        prior_posterior_moments_table(m, post_means, post_bands; percent = percent,
-                                      subset_string = subset_string, groupings = groupings,
-                                      caption = caption, outdir = outdir)
-    end
-
-    if :prior in tables
-        prior_table(m, groupings = groupings, caption = caption, outdir = outdir)
-    end
-
-    if :posterior in tables
-        posterior_table(m, post_means, post_bands, percent = percent,
-                        subset_string = subset_string, groupings = groupings,
-                        caption = caption, outdir = outdir)
-    end
-    #=
-    if :mean_mode_moments in tables
-        mean_mode_moments_table(m, post_means, post_bands; percent = percent,
+      if :prior_posterior_means in tables
+          prior_posterior_table(m, use_mode ? post_mode : post_means;
                                 subset_string = subset_string, groupings = groupings,
-                                caption = caption, outdir = outdir)
-    end
-    =#
-    println(verbose, :low, "Tables are saved as " * tablespath(m, "estimate", "*.tex"))
-end
+                                use_mode = use_mode, caption = caption, outdir = outdir, para_regime_indices = para_regime_indices)
+      end
+
+      if :moments in tables
+          prior_posterior_moments_table(m, post_means, post_bands; percent = percent,
+                                        subset_string = subset_string, groupings = groupings,
+                                        caption = caption, outdir = outdir, para_regime_indices = para_regime_indices)
+      end
+
+      if :prior in tables
+          prior_table(m, groupings = groupings, caption = caption, outdir = outdir, para_regime_indices = para_regime_indices)
+      end
+
+      if :posterior in tables
+          posterior_table(m, post_means, post_bands, percent = percent,
+                          subset_string = subset_string, groupings = groupings,
+                          caption = caption, outdir = outdir,
+                          para_regime_indices = para_regime_indices)
+      end
+      #=
+      if :mean_mode_moments in tables
+      mean_mode_moments_table(m, post_means, post_bands; percent = percent,
+      subset_string = subset_string, groupings = groupings,
+      caption = caption, outdir = outdir)
+      end
+      =#
+      println(verbose, :low, "Tables are saved as " * tablespath(m, "estimate", "*.tex"))
+  end
 
 """
 ```
@@ -271,6 +311,21 @@ function moments(θ::Parameter)
     end
 end
 
+
+function moments(θ::Parameter, reg::Int64)
+    if haskey(θ.regimes, :fixed) ? θ.regimes[:fixed][reg] : θ.fixed
+        return θ.regimes[:value][reg], 0.0
+    else
+        prior = get(θ.regimes[:prior][reg])
+        if isa(prior, RootInverseGamma)
+            return prior.τ, prior.ν
+        else
+            return mean(prior), std(prior)
+        end
+    end
+end
+
+
 """
 ```
 prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}(),
@@ -279,7 +334,8 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
 """
 function prior_table(m::AbstractDSGEModel; subset_string::String = "",
                      caption = true, outdir = "",
-             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+                     groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                     para_regime_indices::Dict{Int64, Vector{Int64}} = Dict{Int64, Vector{Int64}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -341,8 +397,8 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
         end
 
         # Write footnote about standard deviations of anticipated policy shocks
-        function anticipated_shock_footnote(θ::Parameter)
-            if n_mon_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
+        function anticipated_shock_footnote(key)
+            if n_mon_anticipated_shocks(m) > 0 && key == :σ_r_m1
                 nantpad          = n_mon_anticipated_shocks_padding(m)
                 all_sigmas       = [m[Symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
                 nonzero_sigmas   = Base.filter(θ -> !(θ.fixed && θ.value == 0), all_sigmas)
@@ -355,33 +411,57 @@ function prior_table(m::AbstractDSGEModel; subset_string::String = "",
             end
         end
 
+
+        entries = Vector{PriorTableEntry}()
+        for para_i = 1:n_params
+            para = params[para_i]
+            (prior_mean, prior_sd) = moments(para)
+
+            dist_id = para.fixed ? "-" : distid(get(para.prior))
+
+            append!(entries, [PriorTableEntry(para.key, 1, para.fixed, para.tex_label, dist_id, prior_mean, prior_sd)])
+
+            if haskey(para.regimes, :prior)
+                for reg in keys(para.regimes[:prior])
+                    if reg > 1
+                        (prior_mean, prior_sd) = moments(para, reg)
+                        fixed = haskey(para.regimes, :fixed) ? para.regimes[:fixed][reg] : para.fixed
+                        tex_label = para.tex_label * ", reg $reg"
+                        append!(entries, [PriorTableEntry(para.key, reg, fixed, tex_label, fixed ? "-" : distid(get(para.regimes[:prior][reg])), prior_mean, prior_sd)])
+                    end
+                end
+            end
+        end
+
+        n_entries = length(entries)
+        n_rows = convert(Int, ceil(n_entries/2))
+
         for i = 1:n_rows
             # Write left column
-            θ = params[i]
-            (prior_mean, prior_std) = moments(θ)
-            @printf fid "\$%s\$ &" θ.tex_label
-            @printf fid " %s &" (θ.fixed ? "-" : distid(get(θ.prior)))
-            @printf fid " %0.2f &" prior_mean
-            if θ.fixed
+            entry = entries[i]
+
+            @printf fid "\$%s\$ &" entry.tex_label
+            @printf fid " %s &" entry.dist_id
+            @printf fid " %0.2f &" entry.mean
+            if entry.fixed
                 @printf fid " \\scriptsize{fixed} &"
             else
-                @printf fid " %0.2f &" prior_std
+                @printf fid " %0.2f &" entry.sd
             end
-            anticipated_shock_footnote(θ)
+            anticipated_shock_footnote(entry.key)
 
             # Write right column if it exists
-            if n_rows + i <= n_params
-                θ = params[n_rows + i]
-                (prior_mean, prior_std) = moments(θ)
-                @printf fid " \$%s\$ &" θ.tex_label
-                @printf fid " %s &" (θ.fixed ? "-" : distid(get(θ.prior)))
-                @printf fid " %0.2f &" prior_mean
-                if θ.fixed
+            if n_rows + i <= n_entries
+                entry = entries[n_rows + i]
+                @printf fid " \$%s\$ &" entry.tex_label
+                @printf fid " %s &" entry.dist_id
+                @printf fid " %0.2f &" entry.mean
+                if entry.fixed
                     @printf fid " \\scriptsize{fixed}"
                 else
-                    @printf fid " %0.2f" prior_std
+                    @printf fid " %0.2f" entry.sd
                 end
-                anticipated_shock_footnote(θ)
+                anticipated_shock_footnote(entry.key)
             else
                 @printf fid  "& & &"
             end
@@ -413,7 +493,8 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
                          subset_string::String = "",
                          groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                          caption::Bool = true,
-                         outdir::String = "")
+                         outdir::String = "",
+                         para_regime_indices::Dict{Int64, Vector{Int64}} = Dict{Int64, Vector{Int64}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -452,12 +533,32 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
     @printf fid "\\hline \\\\\n"
     @printf fid "\\endfoot\n"
 
-    # Write priors
+
+
+    # Write posteriors
     for group_desc in keys(groupings)
         params = groupings[group_desc]
         n_params = length(params)
         n_rows = convert(Int, ceil(n_params/2))
 
+
+        entries = Vector{PosteriorTableEntry}()
+        for para in params
+            para_i = m.keys[para.key]
+            append!(entries, [PosteriorTableEntry(para.key, 1, para.fixed, para.tex_label, post_means[para_i], post_bands[para_i, :])])
+            if haskey(para.regimes, :value)
+                for reg in keys(para.regimes[:value])
+                    if reg > 1
+                        fixed = haskey(para.regimes, :fixed) ? para.regimes[:fixed][reg] : para.fixed
+                        tex_label = para.tex_label * ", reg $reg"
+                        append!(entries, [PosteriorTableEntry(para.key, reg, fixed, tex_label, post_means[para_regime_indices[para_i][reg]], post_bands[para_regime_indices[para_i][reg], :])])
+                    end
+                end
+            end
+        end
+
+        n_entries = length(entries)
+        n_rows = convert(Int, ceil(n_entries/2))
         # Write grouping description if not empty
         if !isempty(group_desc)
             @printf fid "\\multicolumn{6}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
@@ -465,27 +566,26 @@ function posterior_table(m::AbstractDSGEModel, post_means::Vector, post_bands::M
 
         for i = 1:n_rows
             # Write left column
-            θ = params[i]
-            j = m.keys[θ.key]
-            @printf fid "\$%s\$ &" θ.tex_label
-            @printf fid " %0.2f &" post_means[j]
-            if θ.fixed
+            entry = entries[i]
+            j = m.keys[entry.key]
+            @printf fid "\$%s\$ &" entry.tex_label
+            @printf fid " %0.2f &" entry.mean
+            if entry.fixed
                 @printf fid " \\scriptsize{fixed} &"
             else
-                @printf fid " (%0.2f, %0.2f) &" post_bands[j, :]...
+                @printf fid " (%0.2f, %0.2f) &" entry.bands...
             end
 
             # Write right column if it exists
-            if n_rows + i <= n_params
-                θ = params[n_rows + i]
-                j = m.keys[θ.key]
-                (prior_mean, prior_std) = moments(θ)
-                @printf fid " \$%s\$ &" θ.tex_label
-                @printf fid " %0.2f &" post_means[j]
-                if θ.fixed
+            if n_rows + i <= n_entries
+                entry = entries[n_rows + i]
+                j = m.keys[entry.key]
+                @printf fid " \$%s\$ &" entry.tex_label
+                @printf fid " %0.2f &" entry.mean
+                if entry.fixed
                     @printf fid " \\scriptsize{fixed}"
                 else
-                    @printf fid " (%0.2f, %0.2f)" post_bands[j, :]...
+                    @printf fid " (%0.2f, %0.2f)" entry.bands...
                 end
             else
                 @printf fid " & &"
@@ -522,7 +622,8 @@ function prior_posterior_moments_table(m::AbstractDSGEModel,
                                        percent::AbstractFloat = 0.9,
                                        subset_string::String = "",
                                        caption = true, outdir = "",
-                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+                                       groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                                       para_regime_indices::Dict{Int64, Vector{Int64}} = Dict{Int64, Vector{Int64}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -625,7 +726,8 @@ function prior_posterior_table(m::AbstractDSGEModel, post_values::Vector;
                                subset_string::String = "",
                                groupings::AbstractDict{String,Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                                caption = true, outdir = "",
-                               use_mode::Bool = false)
+                               use_mode::Bool = false,
+                               para_regime_indices::Dict{Int64, Vector{Int64}} = Dict{Int64, Vector{Int64}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -712,71 +814,71 @@ is above `bands[1,i]` and below `bands[2,i]`.
 
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
-"""
-function find_density_bands(draws::AbstractArray, percent::T;
-                            minimize::Bool = true) where {T<:AbstractFloat}
-    if !(0 <= percent <= 1)
-        error("percent must be between 0 and 1")
-    end
+  """
+  function find_density_bands(draws::AbstractArray, percent::T;
+                              minimize::Bool = true) where {T<:AbstractFloat}
+      if !(0 <= percent <= 1)
+          error("percent must be between 0 and 1")
+      end
 
-    ndraws, nperiods = size(draws)
+      ndraws, nperiods = size(draws)
 
-    if ndraws == 1
-        band = repeat(draws, outer=(2, 1))
-        return band
-    end
+      if ndraws == 1
+          band = repeat(draws, outer=(2, 1))
+          return band
+      end
 
-    band = zeros(2, nperiods)
-    n_in_band  = round(Int, percent * ndraws)  # number of draws in the band
+      band = zeros(2, nperiods)
+      n_in_band  = round(Int, percent * ndraws)  # number of draws in the band
 
-    for i in 1:nperiods
+      for i in 1:nperiods
 
-        # Sort response for parameter i such that 1st element is largest
-        draw_variable_i = draws[:,i]
-        sort!(draw_variable_i, rev=true)
+          # Sort response for parameter i such that 1st element is largest
+          draw_variable_i = draws[:,i]
+          sort!(draw_variable_i, rev=true)
 
-        # Search to find the shortest interval containing `percent` of
-        # the mass `low` is the index of the largest draw in the band
-        # (but the first index to take in `draw_variable_i`, `high` is
-        # the smallest (but the highest index to take)
+          # Search to find the shortest interval containing `percent` of
+          # the mass `low` is the index of the largest draw in the band
+          # (but the first index to take in `draw_variable_i`, `high` is
+          # the smallest (but the highest index to take)
 
-        low = if minimize
+          low = if minimize
 
-            low         = 1
-            done        = 0
-            j           = 2
-            minwidth = draw_variable_i[1] - draw_variable_i[n_in_band]
+              low         = 1
+              done        = 0
+              j           = 2
+              minwidth = draw_variable_i[1] - draw_variable_i[n_in_band]
 
-            while j <= (ndraws - n_in_band + 1)
+              while j <= (ndraws - n_in_band + 1)
 
-                newwidth = draw_variable_i[j] - draw_variable_i[j + n_in_band - 1]
+                  newwidth = draw_variable_i[j] - draw_variable_i[j + n_in_band - 1]
 
-                if newwidth < minwidth
-                    low = j
-                    minwidth = newwidth
-                end
+                  if newwidth < minwidth
+                      low = j
+                      minwidth = newwidth
+                  end
 
-                j += 1
-            end
+                  j += 1
+              end
 
-            low
-        else
-            # Chop off lowest and highest percent/2
-            ndraws - n_in_band - round(Int, floor(.5*(ndraws-n_in_band)))
-        end
+              low
+          else
+              # Chop off lowest and highest percent/2
+              ndraws - n_in_band - round(Int, floor(.5*(ndraws-n_in_band)))
+          end
 
-        high = low + n_in_band - 1
+          high = low + n_in_band - 1
 
-        if any(ismissing.(draw_variable_i)) || isnan(draw_variable_i[low]) || isnan(draw_variable_i[high])
-            band[2,i] = NaN
-            band[1,i] = NaN
-        else
-            band[2,i] = draw_variable_i[low]
-            band[1,i] = draw_variable_i[high]
-        end
-    end
-    return band
-end
+          if any(ismissing.(draw_variable_i)) || isnan(draw_variable_i[low]) || isnan(draw_variable_i[high])
+              band[2,i] = NaN
+              band[1,i] = NaN
+          else
+              band[2,i] = draw_variable_i[low]
+              band[1,i] = draw_variable_i[high]
+          end
+      end
+      return band
+  end
 
 """
 ```
@@ -795,52 +897,52 @@ is above `bands[1,i]` and below `bands[2,i]`.
 
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
-"""
-function find_density_bands(draws::AbstractArray, percents::Vector{T};
-                            minimize::Bool = true) where {T<:AbstractFloat}
-    bands = DataFrame()
+  """
+  function find_density_bands(draws::AbstractArray, percents::Vector{T};
+                              minimize::Bool = true) where {T<:AbstractFloat}
+      bands = DataFrame()
 
-    for p in percents
-        out = find_density_bands(draws, p, minimize = minimize)
-        bands[!, Symbol("$(100*p)% UB")] = vec(out[2,:])
-        bands[!, Symbol("$(100*p)% LB")] = vec(out[1,:])
-    end
-    bands
-end
+      for p in percents
+          out = find_density_bands(draws, p, minimize = minimize)
+          bands[!, Symbol("$(100*p)% UB")] = vec(out[2,:])
+          bands[!, Symbol("$(100*p)% LB")] = vec(out[1,:])
+      end
+      bands
+  end
 
-function write_table_preamble(fid::IOStream)
-    @printf fid "\\documentclass[12pt]{article}\n"
-    @printf fid "\\usepackage{booktabs}\n"
-    @printf fid "\\usepackage[justification=centering]{caption}\n"
-    @printf fid "\\usepackage[margin=1in]{geometry}\n"
-    @printf fid "\\usepackage{longtable}\n"
-    @printf fid "\\usepackage{graphicx}\n"
-    @printf fid "\\usepackage{cellspace}\n"
-    @printf fid "\\setlength\\cellspacetoplimit{7pt}\n"
-    @printf fid "\\setlength\\cellspacebottomlimit{7pt}\n"
-    @printf fid "\\begin{document}\n"
-    @printf fid "\\pagestyle{empty}\n"
-end
+  function write_table_preamble(fid::IOStream)
+      @printf fid "\\documentclass[12pt]{article}\n"
+      @printf fid "\\usepackage{booktabs}\n"
+      @printf fid "\\usepackage[justification=centering]{caption}\n"
+      @printf fid "\\usepackage[margin=1in]{geometry}\n"
+      @printf fid "\\usepackage{longtable}\n"
+      @printf fid "\\usepackage{graphicx}\n"
+      @printf fid "\\usepackage{cellspace}\n"
+      @printf fid "\\setlength\\cellspacetoplimit{7pt}\n"
+      @printf fid "\\setlength\\cellspacebottomlimit{7pt}\n"
+      @printf fid "\\begin{document}\n"
+      @printf fid "\\pagestyle{empty}\n"
+  end
 
-# `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
-# the table is enclosed by "\small{}")
-function write_table_postamble(fid::IOStream; small::Bool=false, tabular::Bool=false)
-    if small
-        if tabular
-            @printf fid "\\end{tabular}}\n"
-        else
-            @printf fid "\\end{longtable}}\n"
-        end
-    else
-        if tabular
-            @printf fid "\\end{tabular}\n"
-        else
-            @printf fid "\\end{longtable}\n"
-        end
-    end
+  # `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
+  # the table is enclosed by "\small{}")
+  function write_table_postamble(fid::IOStream; small::Bool=false, tabular::Bool=false)
+      if small
+          if tabular
+              @printf fid "\\end{tabular}}\n"
+          else
+              @printf fid "\\end{longtable}}\n"
+          end
+      else
+          if tabular
+              @printf fid "\\end{tabular}\n"
+          else
+              @printf fid "\\end{longtable}\n"
+          end
+      end
 
-    @printf fid "\\end{document}"
-end
+      @printf fid "\\end{document}"
+  end
 
 """
 ```
@@ -884,7 +986,7 @@ function sample_λ(m::PoolModel{S}, pred_dens::Matrix{S}, θs::Matrix{S}, T::Int
 
     # Initialize necessary objects
     if T <= 0
-         error("T must be positive") # No period provided or is invalid
+        error("T must be positive") # No period provided or is invalid
     end
     tuning = isempty(tuning0) ? deepcopy(get_setting(m, :tuning)) : deepcopy(tuning0)
     tuning[:get_t_particle_dist] = true
@@ -941,7 +1043,7 @@ function sample_λ(m::PoolModel{S}, pred_dens::Matrix{S}, T::Int64 = -1;
 
     # Initialize necessary objects
     if T <= 0
-         error("T must be positive") # No period provided or is invalid
+        error("T must be positive") # No period provided or is invalid
     end
     tuning = isempty(tuning0) ? deepcopy(get_setting(m, :tuning)) : deepcopy(tuning0)
     tuning[:get_t_particle_dist] = true

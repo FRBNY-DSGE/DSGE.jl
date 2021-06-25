@@ -49,6 +49,54 @@ function init_subspec!(m::Model1002)
         return ss61!(m)
     elseif subspec(m) == "ss62"
         return ss62!(m)
+    elseif subspec(m) == "ss63"
+        return ss63!(m)
+    elseif subspec(m) == "ss64"
+        return ss64!(m)
+    elseif subspec(m) == "ss65"
+        return ss65!(m)
+    elseif subspec(m) == "ss66"
+        return ss66!(m)
+    elseif subspec(m) == "ss67"
+        return ss67!(m)
+    elseif subspec(m) == "ss68"
+        return ss68!(m)
+    elseif subspec(m) == "ss69"
+        return ss69!(m)
+    elseif subspec(m) == "ss70"
+        return ss70!(m)
+    elseif subspec(m) == "ss71"
+        return ss71!(m)
+    elseif subspec(m) == "ss72"
+        return ss72!(m)
+    elseif subspec(m) == "ss73"
+        return ss73!(m)
+    elseif subspec(m) == "ss74"
+        return ss74!(m)
+    elseif subspec(m) == "ss75"
+        return ss75!(m)
+    elseif subspec(m) == "ss76"
+        return ss76!(m)
+    elseif subspec(m) == "ss77"
+        return ss77!(m)
+    elseif subspec(m) == "ss78"
+        return ss78!(m)
+    elseif subspec(m) == "ss79"
+        return ss79!(m)
+    elseif subspec(m) == "ss80"
+        return ss80!(m)
+    elseif subspec(m) == "ss81"
+        return ss81!(m)
+    elseif subspec(m) == "ss82"
+        return ss82!(m)
+    elseif subspec(m) == "ss83"
+        return ss83!(m)
+    elseif subspec(m) == "ss84"
+        return ss84!(m)
+    elseif subspec(m) == "ss85"
+        return ss85!(m)
+    elseif subspec(m) == "ss86"
+        return ss86!(m)
     else
         error("This subspec is not defined.")
     end
@@ -1353,6 +1401,8 @@ models the COVID-19 pandemic by using the following features:
 Confer with the official documentation about the COVID-19 shocks on the GitHub page.
 """
 function ss62!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
     ## Set up model regime-switching
     m <= Setting(:regime_switching, true)
     m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
@@ -1386,37 +1436,263 @@ function ss62!(m::Model1002)
     if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
         m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
 
-        # Standard business cycle shocks
-        damp_adj = .25
-        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
-                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
-                   :σ_gdp, :σ_gdi, :σ_z_p]
-            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
-            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+        # Damp standard business cycle shocks
+        m2p[:damp_standard_shocks] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+        for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+            m2p[:damp_standard_shocks][i] = 1
+        end
+        set_regime_val!(m[:damp_standard_shocks], 1, 1.)
+        set_regime_val!(m[:damp_standard_shocks], 2, .25)
+
+        set_regime_fixed!(m[:damp_standard_shocks], 1, true) # calibrated
+        set_regime_fixed!(m[:damp_standard_shocks], 2, true)
+
+        # Set σ_z_p
+        m2p[:σ_z_p] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+        for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+            m2p[:σ_z_p][i] = 1
+        end
+        set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
+        set_regime_val!(m[:σ_z_p], 2, 0.)
+
+        set_regime_fixed!(m[:σ_z_p], 1, false)
+        set_regime_fixed!(m[:σ_z_p], 2, true) # Fix σ_z_p = 0 in para regime 2
+
+        # Amplify inflation measurement error and monetary policy shocks during COVID
+        m2p[:amplify_σ_r_m] = Dict(1 => 1, 2 => 2, 3 => 2)
+        for i in 4:get_setting(m, :n_regimes)
+            m2p[:amplify_σ_r_m][i] = 1
+        end
+        set_regime_val!(m[:amplify_σ_r_m], 1, 1.)
+        set_regime_val!(m[:amplify_σ_r_m], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_σ_r_m], 1, true)
+        set_regime_fixed!(m[:amplify_σ_r_m], 2, true)
+
+        m2p[:amplify_inflation_me] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2)
+        for i in 5:get_setting(m, :n_regimes)
+            m2p[:amplify_inflation_me][i] = 1
+        end
+        set_regime_val!(m[:amplify_inflation_me], 1, 1.)
+        set_regime_val!(m[:amplify_inflation_me], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_inflation_me], 1, true)
+        set_regime_fixed!(m[:amplify_inflation_me], 2, true)
+
+        # The block of code below is kept as an example of how to
+        # re-center priors if we want to estimate these damping/amplification factors
+        #= # Re-center priors for parameter regime 2
+        set_regime_prior!(m[pk], 1, get(m[pk].prior))
+        newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+        newprior.τ = amplify_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
+        set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))=#
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
                 m2p[pk][i] = 1
             end
 
-            # Set value, fixed, and prior
-            if pk == :σ_z_p
-                # Set desired values
-                set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
-                set_regime_val!(m[:σ_z_p], 2, 0.)
-
-                # Fix σ_z_p = 0 in para regime 2
-                set_regime_fixed!(m[:σ_z_p], 1, false)
-                set_regime_fixed!(m[:σ_z_p], 2, true)
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
             else
-                set_regime_val!(m[pk], 1, m[pk].value)
-                set_regime_val!(m[pk], 2, damp_adj .* m[pk].value)
-
-                # Re-center priors for parameter regime 2
-                set_regime_prior!(m[pk], 1, get(m[pk].prior))
-                newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
-                newprior.τ = damp_adj * newprior.τ         # To recenter w/roughly same mean and proportionally smaller SD, we can just adjust τ
-                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
             end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
         end
 
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+
+    if haskey(get_settings(m), :estimation_fixed_covid_shocks) && get_setting(m, :estimation_fixed_covid_shocks)
+        if !get_settings(m)[:estimation_fixed_covid_shocks].print
+            # Make sure a print statement will occur
+            @warn "Setting :estimation_fixed_covid_shocks did not have print statements set to true. This will be automatically added"
+            m <= Setting(:estimation_fixed_covid_shocks, true, true, "est_fixed_covid", "")
+        end
+
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc, :σ_biidc1, :σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            para_regs = unique(values(m2p[pk]))
+            for reg in para_regs # Fix all regimes to initial calibration
+                set_regime_fixed!(m[pk], reg, true)
+            end
+        end
+    end
+end
+
+"""
+```
+ss63!(m::Model1002)
+```
+
+models the COVID-19 pandemic by using the following features:
+
+1. biidc, φ, and ziid shocks alive in 2020:Q1-Q4.
+2. One-period ahead anticipated shocks for the iid shocks alive in 2020:Q1 and expected to hit in 2020:Q2.
+     These shocks are assumed to be twice the size of the unanticipated shocks which are realized in 2020:Q1.
+3. The standard deviation of monetary policy shocks in 2020:Q1-Q2 are centered around values which are
+    10 times the prior in the time period before and after 2020:Q1-Q2. However, the prior on the standard deviation
+    for anticipated monetary policy shocks is the same before, during, and after 2020:Q1-Q2.
+4. There are, in 2020:Q3-Q4, one-period ahead anticipated biidc shocks (drawn from their own distribution rather than
+    specified as proportional to contemporaneous unanticipated shocks).
+5. The standard deviation of Core PCE and GDP Deflator measurement error shocks in 2020:Q1-Q3
+    are centered around values which are 10 times the prior in the time period
+    before and after in 2020:Q1-Q3.
+6. The Federal Reserve's commitment to a ZLB followed by a policy switch to
+    Flexible Average Inflation Targeting is modeled as a temporary switch to a ZLB policy
+    followed by a permanent switch to a monetary policy rule that targets average price
+    and output gaps over time (but still includes monetary policy shocks).
+7. The "parameter regimes" for the COVID shocks are treated separately from "model regimes".
+
+Confer with the official documentation about the COVID-19 shocks on the GitHub page.
+"""
+function ss63!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # TODO: uncomment block below and remove the implementation where σ_r_m, σ_gdpdef, and σ_corepce
+        # are regime-switching in 2nd regime rather than multiplied by an amplification/damping factor
+#=        # Amplify inflation measurement error and monetary policy shocks during COVID
+        m2p[:amplify_σ_r_m] = Dict(1 => 1, 2 => 2, 3 => 2)
+        for i in 4:get_setting(m, :n_regimes)
+            m2p[:amplify_σ_r_m][i] = 1
+        end
+        set_regime_val!(m[:amplify_σ_r_m], 1, 1.)
+        set_regime_val!(m[:amplify_σ_r_m], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_σ_r_m], 1, true)
+        set_regime_fixed!(m[:amplify_σ_r_m], 2, true)
+
+        m2p[:amplify_inflation_me] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2)
+        for i in 5:get_setting(m, :n_regimes)
+            m2p[:amplify_inflation_me][i] = 1
+        end
+        set_regime_val!(m[:amplify_inflation_me], 1, 1.)
+        set_regime_val!(m[:amplify_inflation_me], 2, 10.)
+
+        set_regime_fixed!(m[:amplify_inflation_me], 1, true)
+        set_regime_fixed!(m[:amplify_inflation_me], 2, true)=#
+
+        # Inflation measurement errors and monetary policy shocks
         amplify_adj = 10.
         for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
             m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
@@ -1551,6 +1827,7 @@ function ss62!(m::Model1002)
             m <= Setting(:estimation_fixed_covid_shocks, true, true, "est_fixed_covid", "")
         end
 
+        # COVID-19 shocks
         for pk in [:σ_φ, :σ_ziid, :σ_biidc, :σ_biidc1, :σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
             para_regs = unique(values(m2p[pk]))
             for reg in para_regs # Fix all regimes to initial calibration
@@ -1558,4 +1835,4742 @@ function ss62!(m::Model1002)
             end
         end
     end
+end
+
+function ss64!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Need to allow a zero value for sigma_z_p
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                   tex_label="\\sigma_{z^p}")
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Standard business cycle shocks
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_gdp, :σ_gdi, :σ_z_p]
+
+            # Allow zero for value bounds
+            m[pk].valuebounds                = (0., m[pk].valuebounds[2])
+            m[pk].transform_parameterization = (0., m[pk].transform_parameterization[2])
+
+            # Set up m2p
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+            m[pk].transform_parameterization = (m[pk].transform_parameterization[1],
+                                                max(m[pk].transform_parameterization[2],
+                                                    m[pk].transform_parameterization[2] * mode_adj * spread_adj))
+
+
+            if pk == :σ_z_p
+                # Set value, fixed, and prior
+                set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
+                set_regime_val!(m[:σ_z_p], 2, 0.)
+
+                # Fix σ_z_p = 0 in para regime 2
+                set_regime_fixed!(m[:σ_z_p], 1, false)
+                set_regime_fixed!(m[:σ_z_p], 2, true)
+            else
+                set_regime_val!(m[pk], 1, m[pk].value)
+                set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+                # Re-center priors for parameter regime 2
+                set_regime_prior!(m[pk], 1, get(m[pk].prior))
+                newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+                newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+                newprior.τ = mode_adj * newprior.τ # τ is the mode
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+            end
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss65!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Standard business cycle shocks
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_gdp, :σ_gdi, :σ_z_p]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss66!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Standard business cycle shocks
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_gdp, :σ_gdi, :σ_z_p]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g, :ρ_b, :ρ_μ, :ρ_ztil, :ρ_λ_f, :ρ_λ_w,
+                   :ρ_σ_w, :ρ_μ_e, :ρ_γ, :ρ_π_star, :ρ_lr, :ρ_tfp,
+                   :ρ_gdp, :ρ_gdi, :ρ_z_p, :ρ_rm, :ρ_gdpdef, :ρ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, m[pk].value)
+
+            # Re-center priors for parameter regime 2, which are all BetaAlt, hence the parameters are μ, σ
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior))
+            if isa(newprior, Beta)
+                newprior_μ = 1. / (newprior.β / newprior.α + 1.)
+                newprior_σ = sqrt((1. - newprior_μ) * newprior_μ^2 / (newprior.α + newprior_μ))
+                newprior_σ *= spread_adj
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(ModelConstructors.BetaAlt(newprior_μ, newprior_σ)))
+            else
+                newprior = Normal(newprior.μ, newprior.σ * spread_adj)
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+            end
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss67!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021,6,30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # Standard business cycle shocks that have a COVID-specific counterpart
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Allow zero in the valuebounds
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, false)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss68!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss69!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # Standard business cycle shocks that have a COVID-specific counterpart
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi, :σ_z_p]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Allow zero in the valuebounds
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, false)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid,
+                   :σ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid,
+                   :ρ_gdpvar_covid, :ρ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss70!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid,
+                   :σ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid,
+                   :ρ_gdpvar_covid, :ρ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss71!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # Standard business cycle shocks that have a COVID-specific counterpart
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Allow zero in the valuebounds
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, false)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss72!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021,6,30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss73!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # Standard business cycle shocks that have a COVID-specific counterpart
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi, :σ_z_p]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Allow zero in the valuebounds
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, false)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid,
+                   :σ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid,
+                   :ρ_gdpvar_covid, :ρ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss74!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid,
+                   :σ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid,
+                   :ρ_gdpvar_covid, :ρ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss75!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # Standard business cycle shocks that have a COVID-specific counterpart
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Allow zero in the valuebounds
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, false)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Allow persistence in COVID-19 shocks
+        for pk in [:ρ_φ, :ρ_ziid, :ρ_biidc]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Unfix persistence
+            m[pk].fixed = false
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., 0.999)
+            m[pk].transform_parameterization = (0., 0.999)
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, .1) # center at 0.1
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            m[pk].prior = ModelConstructors.NullablePriorUnivariate(BetaAlt(0.1, 0.2))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss76!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021,6,30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Allow persistence in COVID-19 shocks
+        for pk in [:ρ_φ, :ρ_ziid, :ρ_biidc]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Unfix persistence
+            m[pk].fixed = false
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., 0.999)
+            m[pk].transform_parameterization = (0., 0.999)
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, .1) # center at 0.1
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            m[pk].prior = ModelConstructors.NullablePriorUnivariate(BetaAlt(0.1, 0.2))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss77!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # Standard business cycle shocks that have a COVID-specific counterpart
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi, :σ_z_p]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Allow zero in the valuebounds
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, false)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid,
+                   :σ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid,
+                   :ρ_gdpvar_covid, :ρ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Allow persistence in COVID-19 shocks
+        for pk in [:ρ_φ, :ρ_ziid, :ρ_biidc]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Unfix persistence
+            m[pk].fixed = false
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., 0.999)
+            m[pk].transform_parameterization = (0., 0.999)
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, .1) # center at 0.1
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            m[pk].prior = ModelConstructors.NullablePriorUnivariate(BetaAlt(0.1, 0.2))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss78!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid,
+                   :σ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid,
+                   :ρ_gdpvar_covid, :ρ_z_p_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Allow persistence in COVID-19 shocks
+        for pk in [:ρ_φ, :ρ_ziid, :ρ_biidc]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Unfix persistence
+            m[pk].fixed = false
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., 0.999)
+            m[pk].transform_parameterization = (0., 0.999)
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, .1) # center at 0.1
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            m[pk].prior = ModelConstructors.NullablePriorUnivariate(BetaAlt(0.1, 0.2))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss79!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Need to allow a zero value for sigma_z_p
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                   tex_label="\\sigma_{z^p}")
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Standard business cycle shocks
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_gdp, :σ_gdi, :σ_z_p]
+
+            # Allow zero for value bounds
+            m[pk].valuebounds                = (0., m[pk].valuebounds[2])
+            m[pk].transform_parameterization = (0., m[pk].transform_parameterization[2])
+
+            # Set up m2p
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+            m[pk].transform_parameterization = (m[pk].transform_parameterization[1],
+                                                max(m[pk].transform_parameterization[2],
+                                                    m[pk].transform_parameterization[2] * mode_adj * spread_adj))
+
+
+            if pk == :σ_z_p
+                # Set value, fixed, and prior
+                set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
+                set_regime_val!(m[:σ_z_p], 2, 0.)
+
+                # Fix σ_z_p = 0 in para regime 2
+                set_regime_fixed!(m[:σ_z_p], 1, false)
+                set_regime_fixed!(m[:σ_z_p], 2, true)
+            else
+                set_regime_val!(m[pk], 1, m[pk].value)
+                set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+                # Re-center priors for parameter regime 2
+                set_regime_prior!(m[pk], 1, get(m[pk].prior))
+                newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+                newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+                newprior.τ = mode_adj * newprior.τ # τ is the mode
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+            end
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2, 2020:Q3-Q4 to para regime 3
+            # OTHERWISE, ss79 is identical to ss64
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 3, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+# ss67 but also kills b, ziid, z_p, and λ_w during the second regime
+function ss80!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31), 7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # Standard business cycle shocks that have a COVID-specific counterpart, plus z_p
+        for pk in [:σ_g, :σ_μ, :σ_λ_f, :σ_σ_ω, :σ_lr, :σ_tfp, :σ_gdp, :σ_gdi, :σ_b, :σ_ztil, :σ_z_p, :σ_λ_w]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Allow zero in the valuebounds
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, false)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 0.)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss81!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Standard business cycle shocks
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_gdp, :σ_gdi, :σ_z_p]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2, 2020:Q3-Q4 to para regime 3
+            # OTHERWISE, ss81 is identical to ss65
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 3, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss82!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2, 2020:Q3-Q4 to para regime 3
+            # OTHERWISE, ss82 is identical to ss72
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 3, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss83!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Adjustment factors for priors
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+
+        # COVID counterpart for standard business cycle shocks
+        for pk in [:σ_g_covid, :σ_μ_covid, :σ_λ_f_covid, :σ_σ_ω_covid,
+                   :σ_lr_covid, :σ_tfp_covid, :σ_gdp_covid, :σ_gdi_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj and to allow a zero value
+            m[pk].valuebounds = (0., max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+            newprior.τ = mode_adj * newprior.τ # τ is the mode
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [:ρ_g_covid, :ρ_μ_covid, :ρ_λ_f_covid, :ρ_σ_w_covid,
+                   :ρ_lr_covid, :ρ_tfp_covid, :ρ_gdp_covid, :ρ_gdi_covid, :ρ_gdpvar_covid]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., m[pk].valuebounds[2])
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, m[pk].value)
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2, 2020:Q3-Q4 to para regime 3
+            # OTHERWISE, ss83 is identical to ss76
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 3, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, m[:σ_φ].prior)
+                set_regime_prior!(m[:σ_biidc], i, m[:σ_biidc].prior)
+                set_regime_prior!(m[:σ_ziid], i, m[:σ_ziid].prior)
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2 * (40.)^2 / 40., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(8.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(10.0, 0.0501))
+        end
+
+        # Allow persistence in COVID-19 shocks
+        for pk in [:ρ_φ, :ρ_ziid, :ρ_biidc]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Unfix persistence
+            m[pk].fixed = false
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (0., 0.999)
+            m[pk].transform_parameterization = (0., 0.999)
+
+            # Set value, fixed, and prior
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, .1) # center at 0.1
+            set_regime_fixed!(m[pk], 1, true) # these shocks don't apply outside of COVID times
+            set_regime_fixed!(m[pk], 2, false)
+
+            m[pk].prior = ModelConstructors.NullablePriorUnivariate(BetaAlt(0.1, 0.2))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss84!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Need to allow a zero value for sigma_z_p
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                   tex_label="\\sigma_{z^p}")
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Standard business cycle shocks
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_gdp, :σ_gdi, :σ_z_p]
+
+            # Allow zero for value bounds
+            m[pk].valuebounds                = (0., m[pk].valuebounds[2])
+            m[pk].transform_parameterization = (0., m[pk].transform_parameterization[2])
+
+            # Set up m2p
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+            m[pk].transform_parameterization = (m[pk].transform_parameterization[1],
+                                                max(m[pk].transform_parameterization[2],
+                                                    m[pk].transform_parameterization[2] * mode_adj * spread_adj))
+
+
+            if pk == :σ_z_p
+                # Set value, fixed, and prior
+                set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
+                set_regime_val!(m[:σ_z_p], 2, 0.)
+
+                # Fix σ_z_p = 0 in para regime 2
+                set_regime_fixed!(m[:σ_z_p], 1, false)
+                set_regime_fixed!(m[:σ_z_p], 2, true)
+            else
+                set_regime_val!(m[pk], 1, m[pk].value)
+                set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+                # Re-center priors for parameter regime 2
+                set_regime_prior!(m[pk], 1, get(m[pk].prior))
+                newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+                newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+                newprior.τ = mode_adj * newprior.τ # τ is the mode
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+            end
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, RootInverseGamma(2., get(m[:σ_φ].prior).τ))
+                set_regime_prior!(m[:σ_biidc], i, RootInverseGamma(2., get(m[:σ_biidc].prior).τ))
+                set_regime_prior!(m[:σ_ziid], i, RootInverseGamma(2., get(m[:σ_ziid].prior).τ))
+            end
+            set_regime_prior!(m[:σ_φ], 3, RootInverseGamma(2., sqrt(4.)^2))
+            set_regime_prior!(m[:σ_biidc], 3, RootInverseGamma(2.0, 0.0401248))
+            set_regime_prior!(m[:σ_ziid], 3, RootInverseGamma(2.0, 0.0501))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss85!(m::Model1002)
+    ss9!(m) # fix γ_gdi, δ_gdi; also add Iskander's changes and change bounds on rhos
+
+    ## Set up model regime-switching
+    m <= Setting(:regime_switching, true)
+    m <= Setting(:regime_dates, Dict{Int, Date}(1 => date_presample_start(m), 2 => Date(2020, 3, 31),
+                                                3 => Date(2020, 6, 30), 4 => Date(2020, 9, 30),
+                                                5 => Date(2020, 12, 31), 6 => Date(2021, 3, 31),
+                                                7 => Date(2021, 6, 30)))
+    m <= Setting(:time_varying_trends, true)
+    setup_regime_switching_inds!(m)
+
+    ## Default settings for flexible AIT rule
+    m <= Setting(:pgap_type, :flexible_ait)
+    m <= Setting(:pgap_value, 0.)
+    m <= Setting(:ygap_type, :flexible_ait)
+    m <= Setting(:ygap_value, 12.)
+
+    m <= Setting(:ait_Thalf, 10.)
+    m <= Setting(:gdp_Thalf, 10.)
+    m <= Setting(:flexible_ait_ρ_smooth, 0.)
+    m <= Setting(:flexible_ait_φ_π, 6.)
+    m <= Setting(:flexible_ait_φ_y, 6.)
+    # TODO: Set up with temporary ZLB + flexible AIT rule and imperfect awareness
+
+    ## Set up regime-switching parameters
+
+    # Need to allow a zero value for sigma_z_p
+    m <= parameter(:σ_z_p, 0.1662, (0., 5.), (0., 5.), ModelConstructors.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
+                   description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
+                   tex_label="\\sigma_{z^p}")
+
+    # Populate model2para_regime if it wasn't passed as a custom_setting
+    if !haskey(get_settings(m), :model2para_regime) # check if it was set by custom_settings already
+        m2p = Dict{Symbol, Dict{Int, Int}}() # initialize model2para_regime dict
+
+        # Standard business cycle shocks
+        mode_adj = haskey(get_settings(m), :standard_shocks_mode_adjust) ? get_setting(m, :standard_shocks_mode_adjust) : 1.
+        spread_adj = haskey(get_settings(m), :standard_shocks_spread_adjust) ? get_setting(m, :standard_shocks_spread_adjust) : 1.
+        for pk in [:σ_g, :σ_b, :σ_μ, :σ_ztil, :σ_λ_f, :σ_λ_w,
+                   :σ_σ_ω, :σ_μ_e, :σ_γ, :σ_π_star, :σ_lr, :σ_tfp,
+                   :σ_gdp, :σ_gdi, :σ_z_p]
+
+            # Allow zero for value bounds
+            m[pk].valuebounds                = (0., m[pk].valuebounds[2])
+            m[pk].transform_parameterization = (0., m[pk].transform_parameterization[2])
+
+            # Set up m2p
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Update valuebounds based on the mode_adj, spread_adj
+            m[pk].valuebounds = (m[pk].valuebounds[1], max(m[pk].valuebounds[end], m[pk].valuebounds[end] * mode_adj * spread_adj))
+            m[pk].transform_parameterization = (m[pk].transform_parameterization[1],
+                                                max(m[pk].transform_parameterization[2],
+                                                    m[pk].transform_parameterization[2] * mode_adj * spread_adj))
+
+
+            if pk == :σ_z_p
+                # Set value, fixed, and prior
+                set_regime_val!(m[:σ_z_p], 1, m[:σ_z_p].value)
+                set_regime_val!(m[:σ_z_p], 2, 0.)
+
+                # Fix σ_z_p = 0 in para regime 2
+                set_regime_fixed!(m[:σ_z_p], 1, false)
+                set_regime_fixed!(m[:σ_z_p], 2, true)
+            else
+                set_regime_val!(m[pk], 1, m[pk].value)
+                set_regime_val!(m[pk], 2, mode_adj .* m[pk].value)
+
+                # Re-center priors for parameter regime 2
+                set_regime_prior!(m[pk], 1, get(m[pk].prior))
+                newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+                newprior.ν = newprior.ν / spread_adj # smaller ν implies larger spread
+                newprior.τ = mode_adj * newprior.τ # τ is the mode
+                set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+            end
+        end
+
+        # Adjust inflation measurement error and monetary policy shocks
+        amplify_adj = 10.
+        for pk in [:σ_r_m, :σ_gdpdef, :σ_corepce]
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q2 to para regime 2
+            m2p[pk][4] = pk == :σ_r_m ? 1 : 2      # inflation measurement error is still high in 2020:Q3
+            for i in 5:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1 TODO: check if we want regime 1 or 3
+                m2p[pk][i] = 1
+            end
+
+            # Set values
+            set_regime_val!(m[pk], 1, m[pk].value)
+            set_regime_val!(m[pk], 2, amplify_adj .* m[pk].value)
+
+            # Re-center priors for parameter regime 2
+            set_regime_prior!(m[pk], 1, get(m[pk].prior))
+            newprior = deepcopy(get(m[pk].prior)) # all σ's have RootInverseGamma priors where τ is mode and ν dof.
+            newprior.τ = newprior.τ * amplify_adj # To recenter, we just need to adjust mode τ
+            set_regime_prior!(m[pk], 2, ModelConstructors.NullablePriorUnivariate(newprior))
+        end
+
+        for pk in [Symbol("σ_r_m$i") for i in 1:n_mon_anticipated_shocks(m)]
+            # standard deviations should be the same across regimes, so do nothing
+        end
+
+        # Contemporaneous COVID-19 shocks
+        for pk in [:σ_φ, :σ_ziid, :σ_biidc]
+            # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1-Q3 to para regime 2, 2020:Q4 to para regime 3
+            m2p[pk] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            if pk == :σ_φ
+                set_regime_val!(m[pk], 2, 400.)
+                set_regime_val!(m[pk], 3, 4.)
+            elseif pk == :σ_ziid
+                set_regime_val!(m[pk], 2, 5.)
+                set_regime_val!(m[pk], 3, .05)
+            else
+                set_regime_val!(m[pk], 2, 4.)
+                set_regime_val!(m[pk], 3, .04)
+            end
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+            set_regime_fixed!(m[pk], 3, false)
+            # Regime-switching priors for regime 3
+            for i in 1:2
+                set_regime_prior!(m[:σ_φ], i, Uniform(0., 600.))
+                set_regime_prior!(m[:σ_biidc], i, Uniform(0., 10.))
+                set_regime_prior!(m[:σ_ziid], i, Uniform(0., 10.))
+            end
+            set_regime_prior!(m[:σ_φ], 3, Uniform(0., 6.))
+            set_regime_prior!(m[:σ_biidc], 3, Uniform(0., 1.))
+            set_regime_prior!(m[:σ_ziid], 3, Uniform(0., 1.))
+        end
+
+        # Anticipated shocks proportional to today's contemporaneous shock
+        for pk in [:σ_φ_prop, :σ_ziid_prop, :σ_biidc_prop]
+            m2p[pk] = Dict(1 => 1, 2 => 2) # map 1959:Q3-2019:Q4 to parameter regime 1, 2020:Q1 to para regime 2
+            for i in 3:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 2.)
+
+            # Fix both shocks
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Anticipated contemporaneous shock
+        for pk in [:σ_biidc1]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 1, 4 => 2, 5 => 2) # map 1959:Q3-2020:Q2 to parameter regime 1, 2020:Q3-Q4 to para regime 2
+            for i in 6:get_setting(m, :n_regimes)  # map 2021:Q1 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 4.)
+
+            # Fix shocks to 0 in para regime 1
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, false)
+
+            # Update valuebounds
+            set_regime_valuebounds!(m[pk], 2, (0., 1e2))
+            m[pk].transform_parameterization = (0., 1e2)
+
+            # Set prior
+            m[pk].prior = regime_prior(m[:σ_biidc], 1)
+        end
+        # pgap and ygap initialization shocks
+        for pk in [:σ_pgap, :σ_ygap]
+            m2p[pk] = Dict(1 => 1, 2 => 1, 3 => 2) # map 1959:Q3-2020:Q1 to parameter regime 1, 2020:Q2 to para regime 2
+            for i in 4:get_setting(m, :n_regimes)  # map 2020:Q3 onward to para regime 1
+                m2p[pk][i] = 1
+            end
+
+            # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+            set_regime_val!(m[pk], 1, 0.)
+            set_regime_val!(m[pk], 2, 20.)
+
+            # Fix shocks to their calibrated values
+            set_regime_fixed!(m[pk], 1, true)
+            set_regime_fixed!(m[pk], 2, true)
+        end
+
+        # Turn some shocks to be fixed to avoid issues
+        for pk in [:σ_φ1, :σ_ziid1]
+            m[pk].value = 0.
+            m[pk].fixed = true
+        end
+
+        # Flexible AIT shocks (to initialize the pgap and ygap values)
+        m <= Setting(:model2para_regime, m2p)
+    end
+
+    ModelConstructors.toggle_regime!(m.parameters, 1) # ensure that regimes are toggled to regime 1
+end
+
+function ss86!(m)
+    ss64!(m)
+
+    m <= parameter(:σ_λ_f_ziid, 0.0, (0., 100.), (0., 100.), ModelConstructors.Exponential(), RootInverseGamma(10.0, sqrt(25.1)),
+                   fixed=true,
+                   description="σ_λ_f_ziid: The standard deviation of the shock to the price markup.",
+                   tex_label="\\sigma_{\\lambda_f, ziid}")
+
+    get_setting(m, :model2para_regime)[:σ_λ_f_ziid] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+    for i in 6:get_setting(m, :n_regimes)
+        get_setting(m, :model2para_regime)[:σ_λ_f_ziid][i] = 1
+    end
+
+    # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
+    set_regime_val!(m[:σ_λ_f_ziid], 1, 0.)
+    set_regime_val!(m[:σ_λ_f_ziid], 2, 5.0)
+    set_regime_val!(m[:σ_λ_f_ziid], 3, 0.05)
+
+    # Fix shocks to 0 in para regime 1
+    set_regime_fixed!(m[:σ_λ_f_ziid], 1, true)
+    set_regime_fixed!(m[:σ_λ_f_ziid], 2, false)
+    set_regime_fixed!(m[:σ_λ_f_ziid], 3, false)
+
+    # Regime-switching priors for regime 3
+    for i in 1:2
+        set_regime_prior!(m[:σ_λ_f_ziid], i, m[:σ_λ_f_ziid].prior)
+    end
+    set_regime_prior!(m[:σ_λ_f_ziid], 3, RootInverseGamma(10.0, 0.0501))
 end

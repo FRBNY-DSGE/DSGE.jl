@@ -22,6 +22,10 @@
   `k_periods_ahead_expectations` and `k_periods_ahead_expected_sums`
 + Replace `bdd_and_unbdd` kwarg for plotting and reading of the means and bands
   with `use_bdd`, which allows users to request any combination of unbounded/bounded means and bands.
++ New subspecs of Model1002 for estimating the DSGE with COVID-19 shocks
++ Add option to construct the old log-likelihood function for tempered updates with SMC
+  by passing a different model object.
++ Integrate changes to SMC.jl v0.1.15
 
 ## Bug fixes
 + Fix print statements when using `forecast_one` and `verbose = :high`
@@ -30,6 +34,9 @@
 + Do not divide `forecast_zlb_value(m)` by 4 when enforcing the ZLB as a temporary policy
   since that number is already de-annualized
 + Improve robustness of tests of smoothers with regime-switching state space system and temporary policies
++ Fix incorrect indexing when calculating regime indices for Kalman filter so that only unnecessary
+  periods are removed, not entire regimes (which is fine only when the first and last periods of a regime
+  extend past the data's horizon).
 
 ## Continued WIP
 + Adaptive MH was found to be implemented incorrectly and will be fixed for the next release

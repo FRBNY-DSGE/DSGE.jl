@@ -95,11 +95,10 @@ DSGE.default_settings!(m)
 
     # Adaptive ϕ Schedule
     @test get_setting(m, :use_fixed_schedule) == true
-    @test get_setting(m, :tempering_target) == 0.95
+    @test get_setting(m, :adaptive_tempering_target_smc) == 0.97
     @test get_setting(m, :resampling_threshold) == 0.5
 
     # Temporary setting to save different output files
-    @test get_setting(m, :adaptive_tempering_target_smc) == 0.97
     @test get_setting(m, :smc_iteration) == 1
     @test get_setting(m, :previous_data_vintage) == Dates.format(now(), DSGE.DSGE_DATE_FORMAT)
 

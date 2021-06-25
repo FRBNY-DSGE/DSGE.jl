@@ -1,6 +1,6 @@
 """
 ```
-estimate(m, data; verbose=:low, proposal_covariance=Matrix(), method=:SMC)
+estimate(m, data; verbose=:low, proposal_covariance=Matrix())
 ```
 
 Estimate the DSGE parameter posterior distribution.
@@ -25,41 +25,57 @@ not directly related to the behavior of the sampling algorithms
 ### Keyword Arguments:
 - `verbose::Symbol`: The desired frequency of function progress messages printed to standard out.
    - `:none`: No status updates will be reported.
-   - `:low`: Status updates will be provided in csminwel and at each block in
-     Metropolis-Hastings.
+   - `:low` (default): Status updates will be provided in csminwel and at each block in
+     Metropolis-Hastings. For SMC's verbosity settings, see `?smc2`.
    - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
-- `proposal_covariance::Matrix`: Used to test the metropolis_hastings algorithm with a precomputed
+- `proposal_covariance::Matrix = []`: Used to test the metropolis_hastings algorithm with a precomputed
   covariance matrix for the proposal distribution. When the Hessian is singular,
   eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
   decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
   the rest of the routine has not broken.
 - `method::Symbol`: The method to use when sampling from the posterior distribution. Can
     be either `:MH` for standard Metropolis Hastings Markov Chain Monte Carlo, or `:SMC`
-    for Sequential Monte Carlo.
-- `mle`: Set to true if parameters should be estimated by maximum likelihood directly.
+    for Sequential Monte Carlo. This should be specified by the setting `sampling_method` in `m`.
+- `mle = false`: Set to true if parameters should be estimated by maximum likelihood directly.
     If this is set to true, this function will return after estimating parameters.
-- `sampling`: Set to false to disable sampling from the posterior.
-- `filestring_addl::Vector{String}`: Additional strings to add to the file name
+- `sampling = true`: Set to false to disable sampling from the posterior.
+- `old_data::Matrix{Float64}` = []: A matrix containing the time series of observables of previous data
+    (with `data` being the new data) for the purposes of a time tempered estimation
+    (that is, using the posterior draws from a previous estimation as the initial set
+    of draws for an estimation with new data). Running a bridge estimation
+    requires both `old_data` and `old_cloud`.
+- `old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud, SMC.Cloud} = DSGE.Cloud(m, 0)`: old Cloud object
+    used to describe particles from a previous estimation with old data. Running a bridge estimation
+    requires both `old_data` and `old_cloud`. If running a bridge estimation and
+    no `old_cloud` is provided, then it will be loaded using
+    the filepaths in `m`. If no `old_cloud` exists, then the bridge estimation will not run.
+- `old_model::Union{AbstractDSGEModel, AbstractVARModel} = m`: model object from which we can build
+    the old log-likelihood function for a time tempered SMC estimation. It should be possible
+    to evaluate the old log-likelihood given `old_data` and the current draw of parameters.
+    This may be nontrivial if, for example, *new* parameters have been added to `m` since the old
+    estimation. In this case, `old_model` should include the *new* parameters but still return
+    the old log-likelihood as the original estimation if given the same *old* parameters.
+    By default, we assume the log-likelihood function has not changed
+    and therefore coincides with the current one.
+- `filestring_addl::Vector{String} = []`: Additional strings to add to the file name
     of estimation output as a way to distinguish output from each other.
-- `continue_intermediate::Bool`: set to true if the estimation is starting
+- `continue_intermediate::Bool = false`: set to true if the estimation is starting
     from an intermediate stage that has been previously saved.
-- `intermediate_stage_start::Int`: number of the stage from which the user wants
+- `intermediate_stage_start::Int = 0`: number of the stage from which the user wants
     to continue the estimation (see `continue_intermediate`)
-- `save_intermediate::Bool`: set to true to save intermediate stages when using SMC
-- `intermediate_stage_increment::Int`: number of stages that must pass before saving
+- `save_intermediate::Bool = true`: set to true to save intermediate stages when using SMC
+- `intermediate_stage_increment::Int = 10`: number of stages that must pass before saving
     another intermediate stage.
-- `tempered_update_prior_weight::Float64`: when using a tempered update, the user
-    can create a bridge distribution as a convex combination of the prior and a
-    previously ran estimation. This keyword is the relative weight on the prior
-    in the convex combination.
--  `run_csminwel::Bool`: by default, csminwel is run after a SMC estimation finishes
+-  `run_csminwel::Bool = true`: by default, csminwel is run after a SMC estimation finishes
     to recover the true mode of the posterior. Set to false to avoid this step
     (csminwel can take hours for medium-scale DSGE models).
--  `toggle::Bool`: when regime-switching, several functions assume regimes
+-  `toggle::Bool = true`: when regime-switching, several functions assume regimes
     are toggled to regime 1. If the likelihood function is not
     written to toggle to regime 1 when done, then regime-switching estimation
     will not work properly. Set to `false` to reduce computation time if the
     user is certain that the likelihood is written properly.
+- `log_prob_old_data::Float64 = 0.0`:Log p(\tilde y) which is the log marginal data density
+    of the bridge estimation.
 """
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   verbose::Symbol = :low,
@@ -70,22 +86,23 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, df::DataFrame;
                   old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                   old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                    SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+                  old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
                   save_intermediate::Bool = false,
-                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true,
-                  toggle::Bool = true)
+                  toggle::Bool = true,
+                  log_prob_old_data::Float64 = 0.0)
     data = df_to_matrix(m, df)
     estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              old_data = old_data, old_cloud = old_cloud,
+             old_model = old_model,
              continue_intermediate = continue_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
              save_intermediate = save_intermediate,
-             tempered_update_prior_weight = tempered_update_prior_weight,
-             run_csminwel = run_csminwel, toggle = toggle)
+             run_csminwel = run_csminwel, toggle = toggle, log_prob_old_data = log_prob_old_data)
 end
 
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
@@ -97,23 +114,23 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel};
                   old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                   old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                    SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+                  old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
-                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true,
-                  toggle::Bool = true)
+                  toggle::Bool = true, log_prob_old_data::Float64 = 0.0)
     # Load data
     df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling,
              old_data = old_data, old_cloud = old_cloud,
+             old_model = old_model,
              continue_intermediate = continue_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
 	         save_intermediate = save_intermediate,
-             tempered_update_prior_weight = tempered_update_prior_weight,
-             run_csminwel = run_csminwel, toggle = toggle)
+             run_csminwel = run_csminwel, toggle = toggle, log_prob_old_data = log_prob_old_data)
 end
 
 function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractArray;
@@ -125,13 +142,13 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
                   old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
                   old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                    SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+                  old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
                   continue_intermediate::Bool = false,
                   intermediate_stage_start::Int = 0,
                   intermediate_stage_increment::Int = 10,
 		          save_intermediate::Bool = false,
-                  tempered_update_prior_weight::Float64 = 0.,
                   run_csminwel::Bool = true,
-                  toggle::Bool = true)
+                  toggle::Bool = true, log_prob_old_data::Float64 = 0.0)
 
     if !(get_setting(m, :sampling_method) in [:SMC, :MH])
         error("method must be :SMC or :MH")
@@ -292,14 +309,13 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
         ########################################################################################
         smc2(m, data; verbose = verbose, filestring_addl = filestring_addl,
              old_data = old_data, old_cloud = old_cloud,
+             old_model = old_model,
              continue_intermediate = continue_intermediate,
              intermediate_stage_start = intermediate_stage_start,
              save_intermediate = save_intermediate,
              intermediate_stage_increment = intermediate_stage_increment,
              run_csminwel = run_csminwel,
-             tempered_update_prior_weight = tempered_update_prior_weight,
-             regime_switching = regime_switching,
-             testing_root = haskey(get_settings(m), :testing_root) && get_setting(m, :testing_root))
+             regime_switching = regime_switching, log_prob_old_data = log_prob_old_data)
     end
 
     ########################################################################################
@@ -321,6 +337,8 @@ parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 
 ### Arguments
 * `m::Union{AbstractDSGEModel,AbstractVARModel}`: the model object
+- `filestring_addl::Vector{String} = []`: Additional strings to add to the file name
+    of estimation output as a way to distinguish output from each other.
 """
 function compute_parameter_covariance(m::Union{AbstractDSGEModel,AbstractVARModel};
                                       filestring_addl::Vector{String} = Vector{String}(undef, 0))

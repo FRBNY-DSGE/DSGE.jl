@@ -1,4 +1,4 @@
-# Plotting
+# [Plotting](@id plotting-doc)
 
 ``` @meta
 CurrentModule = DSGE

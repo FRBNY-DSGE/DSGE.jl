@@ -5,7 +5,7 @@ CurrentModule = DSGE
 ```
 
 In addition to the `AbstractDSGEModel` type, DSGE.jl has several special types that implement
-models which are designed to interface with DSGEs.
+models which are designed to interface with DSGEs. New users should skip this section and return later.
 
 ## The `PoolModel` Type
 Unlike the other models contained in DSGE, the `PoolModel` type is not a proper DSGE model.

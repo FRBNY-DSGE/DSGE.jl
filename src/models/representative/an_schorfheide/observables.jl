@@ -1,7 +1,10 @@
-function init_observable_mappings!(m::AnSchorfheide)
+function init_observable_mappings!(m::AnSchorfheide) # do not edit inputs
+    # The goal of this function is to populate the m.observable_mappings field
+    # with an OrderedDict mapping name (Symbol) to an Observable instance.
+    # You should probably edit almost the entirety of this function
 
-    observables = OrderedDict{Symbol,Observable}()
-    population_mnemonic = get(get_setting(m, :population_mnemonic))
+    observables = OrderedDict{Symbol,Observable}() # do not edit this line
+    population_mnemonic = get(get_setting(m, :population_mnemonic)) # up to you whether you want to keep this line
 
     ############################################################################
     ## 1. Real GDP Growth
@@ -58,5 +61,5 @@ function init_observable_mappings!(m::AnSchorfheide)
                                                "Nominal FFR",
                                                "Nominal Effective Fed Funds Rate")
 
-    m.observable_mappings = observables
+    m.observable_mappings = observables # do not edit this line
 end

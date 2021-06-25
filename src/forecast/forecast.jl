@@ -302,7 +302,7 @@ function forecast(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, z0::Ve
 
     # Define our iteration function
     check_has_unant_mp_sh = (haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false) &&
-        (!isempty(intersect([:zlb_rule, :zero_rate], [x.alternative_policy.key for x in values(get_setting(m, :regime_eqcond_info))])))
+    (!isempty(intersect([:zlb_rule, :zero_rate], [x.alternative_policy.key for x in values(get_setting(m, :regime_eqcond_info))])))
     function iterate(z_t1, ϵ_t, T, R, C, Q, Z, D)
         z_t = C + T*z_t1 + R*ϵ_t
 
@@ -398,12 +398,17 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     is_regime_switch = haskey(get_settings(m), :regime_switching) ? get_setting(m, :regime_switching) : false
     is_replace_eqcond = haskey(get_settings(m), :replace_eqcond) ? get_setting(m, :replace_eqcond) : false
     is_gensys2 = haskey(get_settings(m), :gensys2) ? get_setting(m, :gensys2) : false
-    original_info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : UnitRange{Int64}[]
-    original_eqcond_dict = haskey(get_settings(m), :regime_eqcond_info) ? get_setting(m, :regime_eqcond_info) :
-    Dict{Int, EqcondEntry}()
+    info_set = haskey(get_settings(m), :tvis_information_set) ? get_setting(m, :tvis_information_set) : UnitRange{Int64}[]
+    original_info_set = deepcopy(info_set)
+    eqcond_dict = haskey(get_settings(m), :regime_eqcond_info) ? get_setting(m, :regime_eqcond_info) : Dict{Int, EqcondEntry}()
+    original_eqcond_dict = deepcopy(eqcond_dict)
     orig_regimes      = haskey(get_settings(m), :n_regimes) ? get_setting(m, :n_regimes) : 1
-    orig_regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
+    regime_dates = haskey(get_settings(m), :regime_dates) ? get_setting(m, :regime_dates) : Dict{Int, Date}()
+    orig_regime_dates = deepcopy(regime_dates)
     orig_temp_zlb     = haskey(get_settings(m), :temporary_altpolicy_length) ? get_setting(m, :temporary_altpolicy_length) : nothing
+    orig_identical_eqcond_regimes = haskey(get_settings(m), :identical_eqcond_regimes) ? deepcopy(get_setting(m, :identical_eqcond_regimes)) : nothing
+    orig_perf_cred_identical_transitions = haskey(get_settings(m), :perfect_credibility_identical_transitions) ? deepcopy(get_setting(m, :perfect_credibility_identical_transitions)) : nothing
+    orig_model2para_regime = haskey(get_settings(m), :model2para_regime) ? deepcopy(get_setting(m, :model2para_regime)) : nothing
 
 
     # Grab some information about the forecast
@@ -423,7 +428,9 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
 
     # Determine the number of regimes before the start of the forecast (used to adjust
     # indexing)
+
     pre_fcast_regimes = n_hist_regimes
+    #=
     if cond_type != :none
         if is_regime_switch
             pre_fcast_regimes += get_setting(m, :reg_post_conditional_end) - get_setting(m, :reg_forecast_start)
@@ -432,6 +439,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
                                                    get_setting(m, :date_forecast_start)) + 1
         end
     end
+    =#
 
     # Determine which quarters in the forecast have sub-zlb nominal rates
     has_neg_rates = view(obs, get_observables(m)[:obs_nominalrate], :) .<= forecast_zlb_value(m)
@@ -439,12 +447,13 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     first_endo_zlb     = findfirst(has_neg_rates)
     # Information set - start of awareness of ZLB
     first_aware = if haskey(get_settings(m), :tvis_information_set)
-        findfirst([maximum(original_info_set[i]) == get_setting(m, :n_regimes) for i in keys(original_info_set)])
+        findfirst([maximum(info_set[i]) == get_setting(m, :n_regimes) for i in keys(info_set)])
     elseif haskey(get_settings(m), :regime_eqcond_info)
-        findfirst([original_info_set[i].key == :zlb_rule for i in keys(original_info_set)])
+        findfirst([info_set[i].key == :zlb_rule for i in keys(info_set)])
     else
         first_endo_zlb
     end
+
 
     ## 1. Determine if we need to do anything (are there any further negative nominal rates)
     # If not, return the forecast as is
@@ -474,9 +483,8 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         end
         set_info_sets_altpolicy(m, get_setting(m, :n_regimes), first_aware)
 
-
         endozlb_forecast::Function = (zlb_start, zlb_end; unant_enforce_zlb = false) -> forecast_endozlb_helper(m, zlb_start, zlb_end, z0, states, shocks,
-            orig_regimes, original_eqcond_dict, orig_regime_dates, original_info_set;
+            orig_regimes, eqcond_dict, regime_dates, info_set;
             cond_type = cond_type, unant_enforce_zlb = unant_enforce_zlb,
             set_zlb_regime_vals = set_zlb_regime_vals,
             set_info_sets_altpolicy = set_info_sets_altpolicy,
@@ -502,13 +510,15 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         else
             # Ensure that the Eqcond Dict is correctly cleared for endo zlb
             temp_altpol_length = 0
-            for (reg, v) in original_eqcond_dict
-                if v.alternative_policy.key == :zlb_rule || v.alternative_policy.key == :zero_rate
-                    if reg >= first_endo_zlb
-                        @warn "Regime $reg of regime_eqcond_info used zero rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
-                        v.alternative_policy = altpol
-                    else
-                        temp_altpol_length += 1
+            if haskey(m.settings, :regime_eqcond_info)
+                for (reg, v) in get_setting(m, :regime_eqcond_info)
+                    if v.alternative_policy.key == :zlb_rule || v.alternative_policy.key == :zero_rate
+                        if reg >= first_endo_zlb
+                            @warn "Regime $reg of regime_eqcond_info used zero rate--to avoid gensys errors in computing the endogenous zlb, this regime is now being set to use $(altpol.key)."
+                            v.alternative_policy = altpol
+                        else
+                            temp_altpol_length += 1
+                        end
                     end
                 end
             end
@@ -623,6 +633,21 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
         else
             m <= Setting(:temporary_altpolicy_length, orig_temp_zlb)
         end
+        if isnothing(orig_identical_eqcond_regimes)
+            delete!(get_settings(m), :identical_eqcond_regimes)
+        else
+            m <= Setting(:identical_eqcond_regimes, orig_identical_eqcond_regimes)
+        end
+        if isnothing(orig_perf_cred_identical_transitions)
+            delete!(get_settings(m), :perfect_credibility_identical_transitions)
+        else
+            m <= Setting(:perfect_credibility_identical_transitions, orig_perf_cred_identical_transitions)
+        end
+        if isnothing(orig_model2para_regime)
+            delete!(get_settings(m), :model2para_regime)
+        else
+            m <= Setting(:model2para_regime, orig_model2para_regime)
+        end
         if rerun_smoother
             return states, obs, pseudo, histstates, histshocks, histpseudo, initial_states
         else
@@ -631,7 +656,7 @@ function forecast(m::AbstractDSGEModel, z0::Vector{S}, states::AbstractMatrix{S}
     end
 end
 
-function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, last_endo_zlb::Int64,
+function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, liftoff_reg::Int64,
                                  z0::Vector{S}, states::AbstractMatrix{S}, shocks::AbstractMatrix{S},
                                  orig_regimes::Int64, original_eqcond_dict::Dict{Int64, EqcondEntry},
                                  orig_regime_dates::Dict{Int, Date}, original_info_set::Union{UnitRange{Int64}, Array{UnitRange{Int64}}};
@@ -645,7 +670,6 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
                                  histshocks::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                                  histpseudo::AbstractMatrix{S} = Matrix{S}(undef, 0, 0),
                                  initial_states::AbstractVector{S} = Vector{S}(undef, 0)) where {S <: Real}
-
 
 
     altpol = alternative_policy(m)
@@ -676,14 +700,31 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
         end
     end
 
-    altpol_reg_range = start_altpol_reg:last_endo_zlb
+    altpol_reg_range = start_altpol_reg:liftoff_reg
     for (regind, date) in zip(altpol_reg_range, altpol_reg_qtrrange)
         altpol_regime_dates[regind] = date
+    end
+
+    # in the case where we're shortening the zlb, this is necessary to stop the
+    # setup_regime_switching_inds! call from truncating on a zlb reg and throwing
+    # a gensys error
+    if haskey(get_settings(m), :regime_eqcond_info) ? haskey(get_setting(m, :regime_eqcond_info), liftoff_reg) : false
+        get_setting(m, :regime_eqcond_info)[liftoff_reg].alternative_policy = alternative_policy(m)
     end
 
     if haskey(get_settings(m), :cred_vary_until) ? (isempty(altpol_reg_range) ? true : get_setting(m, :cred_vary_until) >= maximum(altpol_reg_range)) : false
         m <= Setting(:regime_switching, true)
     else
+        # NOTE: the following will truncate regime_eqcond_info after liftoff regime unless cred_vary_until
+        # is set. At present, this DOES NOT HANDLE cases where there are more policy changes after the
+        # liftoff regime. If this is the case, use cred_vary_until up to the end of those changes.
+        if haskey(get_settings(m), :regime_eqcond_info)
+            for i in keys(get_setting(m, :regime_eqcond_info))
+                if i > liftoff_reg
+                    delete!(get_setting(m, :regime_eqcond_info), i)
+                end
+            end
+        end
         m <= Setting(:regime_dates, altpol_regime_dates)
         m <= Setting(:regime_switching, true)
         setup_regime_switching_inds!(m; cond_type = cond_type)
@@ -705,17 +746,32 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
     # function. In the default DSGE policy, the regimes after the ZLB ends
     # are updated only if there is time-varying credibility
     # (specified by the Setting :cred_vary_until).
-    update_regime_eqcond_info!(m, deepcopy(original_eqcond_dict), first_endo_zlb, last_endo_zlb)
+    update_regime_eqcond_info!(m, original_eqcond_dict, first_endo_zlb, liftoff_reg)
     min_zlb = haskey(m.settings, :min_temporary_altpolicy_length) ? get_setting(m, :min_temporary_altpolicy_length) : 0
     min_zlb += haskey(m.settings, :historical_temporary_altpolicy_length) ? get_setting(m, :historical_temporary_altpolicy_length) : 0
-    m <= Setting(:temporary_altpolicy_length, min_zlb + last_endo_zlb-first_endo_zlb)
+    m <= Setting(:temporary_altpolicy_length, min_zlb + liftoff_reg-first_endo_zlb)
+
     # Set up parameters if there are switching parameter values.
     #
     # User needs to provide a function which takes in the model object `m`
     # and the total number of regimes (after adding the required temporary regimes),
     # and sets up regime-switching parameters for these new additional regimes.
     if set_zlb_regime_vals != identity
-        set_zlb_regime_vals(m, last_endo_zlb)
+        set_zlb_regime_vals(m, liftoff_reg)
+    end
+    # if we have a mapping between model regimes and parameter regimes, make sure to
+    # extend that mapping if we've added regimes in the process of running the endo zlb
+    if haskey(m.settings, :model2para_regime)
+        for para in m.parameters
+            model2para_dict = get_setting(m, :model2para_regime)
+            if haskey(model2para_dict, para.key)
+                for i in first_endo_zlb:liftoff_reg
+                    if !haskey(model2para_dict[para.key], i)
+                        model2para_dic[para.key][i] = model2para_dict[para.key][i-1]
+                    end
+                end
+            end
+        end
     end
 
     # set up the information sets TODO: add checkfor whether or not we even need to update the tvis_info_set
@@ -733,6 +789,31 @@ function forecast_endozlb_helper(m::AbstractDSGEModel, first_endo_zlb::Int64, la
 
     # TODO: maybe delete tvis, since tvis should always be on given the fact we always run set_info_sets
     # tvis = haskey(get_settings(m), :tvis_information_set) && !isempty(get_setting(m, :tvis_information_set))
+
+    # Adjust the identical perfect credibility transitions for the new zlb
+    # Note: the following assumes that there are no more policy changes after the switch to flexible ait at
+    # the end of the zlb, and that all zlb regimes enforced with eqcond are consecutive.
+    # If either of these are no longer true, this will break!
+    if haskey(m.settings, :perfect_credibility_identical_transitions)
+        for reg in first_endo_zlb:get_setting(m, :n_regimes)
+            delete!(get_setting(m, :perfect_credibility_identical_transitions), reg)
+        end
+        for reg in liftoff_reg+2:get_setting(m, :n_regimes)
+            get_setting(m, :perfect_credibility_identical_transitions)[reg] = liftoff_reg+1
+        end
+    end
+    if haskey(m.settings, :identical_eqcond_regimes)
+        for reg in first_endo_zlb:get_setting(m, :n_regimes)
+            delete!(get_setting(m, :identical_eqcond_regimes), reg)
+        end
+        first_zlb_reg = minimum(collect(keys(get_setting(m, :regime_eqcond_info))))
+        for reg in first_zlb_reg+1:liftoff_reg-1
+            get_setting(m, :identical_eqcond_regimes)[reg] = first_zlb_reg
+        end
+        for reg in liftoff_reg+2:get_setting(m, :n_regimes)
+            get_setting(m, :identical_eqcond_regimes)[reg] = liftoff_reg+1
+        end
+    end
 
     # Recompute to account for new regimes
     system = compute_system(m; tvis = true)

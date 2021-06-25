@@ -246,10 +246,49 @@ function measurement(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]         = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]         = m[:σ_gdi]^2
 
-    if subspec(m) in ["ss59", "ss60", "ss61", "ss62"]
+    if subspec(m) in ["ss59", "ss60", "ss61", "ss62", "ss63", "ss64", "ss65", "ss66", "ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss79", "ss80", "ss81", "ss82", "ss83", "ss84", "ss85", "ss86"]
         QQ[exo[:ziid_sh], exo[:ziid_sh]]   = m[:σ_ziid]^2
         QQ[exo[:biidc_sh], exo[:biidc_sh]] = m[:σ_biidc]^2
         QQ[exo[:φ_sh], exo[:φ_sh]]         = m[:σ_φ]^2
+    end
+    if subspec(m) in ["ss86"]
+        QQ[exo[:λ_f_iid_sh], exo[:λ_f_iid_sh]] = m[:σ_λ_f_iid]^2
+    end
+
+    if subspec(m) in ["ss67", "ss68", "ss69", "ss70", "ss71", "ss72", "ss73", "ss74", "ss75", "ss76", "ss77", "ss78", "ss80", "ss82", "ss83"]
+        QQ[exo[:g_covid_sh], exo[:g_covid_sh]]   = m[:σ_g_covid]^2
+        QQ[exo[:μ_covid_sh], exo[:μ_covid_sh]]   = m[:σ_μ_covid]^2
+        QQ[exo[:λ_f_covid_sh], exo[:λ_f_covid_sh]]   = m[:σ_λ_f_covid]^2
+        QQ[exo[:σ_ω_covid_sh], exo[:σ_ω_covid_sh]]   = m[:σ_σ_ω_covid]^2
+        QQ[exo[:lr_covid_sh], exo[:lr_covid_sh]]   = m[:σ_lr_covid]^2
+        QQ[exo[:tfp_covid_sh], exo[:tfp_covid_sh]]   = m[:σ_tfp_covid]^2
+        QQ[exo[:gdp_covid_sh], exo[:gdp_covid_sh]]   = m[:σ_gdp_covid]^2
+        QQ[exo[:gdi_covid_sh], exo[:gdi_covid_sh]]   = m[:σ_gdi_covid]^2
+    end
+    if subspec(m) in ["ss69", "ss70", "ss73", "ss74", "ss77", "ss78"]
+        QQ[exo[:zp_covid_sh], exo[:zp_covid_sh]]   = m[:σ_z_p_covid]^2
+    end
+
+    if subspec(m) in ["ss62"] # TODO: add ss63
+        ## Set up structural shocks covariance matrix
+        QQ[exo[:g_sh], exo[:g_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:b_sh], exo[:b_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:μ_sh], exo[:μ_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:ztil_sh], exo[:ztil_sh]]       *= m[:damp_standard_shocks]^2
+        QQ[exo[:λ_f_sh], exo[:λ_f_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:λ_w_sh], exo[:λ_w_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:rm_sh], exo[:rm_sh]]           *= m[:amplify_σ_r_m]^2
+        QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:μ_e_sh], exo[:μ_e_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:γ_sh], exo[:γ_sh]]             *= m[:damp_standard_shocks]^2
+        QQ[exo[:π_star_sh], exo[:π_star_sh]]   *= m[:damp_standard_shocks]^2
+        QQ[exo[:lr_sh], exo[:lr_sh]]           *= m[:damp_standard_shocks]^2
+        # QQ[exo[:zp_sh], exo[:zp_sh]]           = m[:σ_z_p]^2 # σ_z_p is handled on its own via regime-switching
+        QQ[exo[:tfp_sh], exo[:tfp_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]   *= m[:amplify_inflation_me]^2
+        QQ[exo[:corepce_sh], exo[:corepce_sh]] *= m[:amplify_inflation_me]^2
+        QQ[exo[:gdp_sh], exo[:gdp_sh]]         *= m[:damp_standard_shocks]^2
+        QQ[exo[:gdi_sh], exo[:gdi_sh]]         *= m[:damp_standard_shocks]^2
     end
 
     # ygap and pgap shocks

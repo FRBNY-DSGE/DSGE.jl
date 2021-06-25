@@ -469,7 +469,7 @@ end
         df[end, :obs_hours] = NaN
         df[end, :obs_wages] = NaN
         df[end, :obs_consumption] = NaN
-        df[end - 3:end, :obs_nominalrate] = NaN
+        df[end - 3:end, :obs_nominalrate] .= NaN
         df[!, :obs_gdp1] .= NaN
 
         data = df_to_matrix(m, df; cond_type = :full)

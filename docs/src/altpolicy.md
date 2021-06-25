@@ -1,4 +1,4 @@
-# Alternative Policies
+# [Alternative Policies](@id altpol-doc)
 
 ``` @meta
 CurrentModule = DSGE

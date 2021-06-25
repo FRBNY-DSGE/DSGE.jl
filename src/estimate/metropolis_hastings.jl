@@ -103,6 +103,11 @@ function metropolis_hastings(proposal_dist::Distribution,
 
     initialized = false
     while !initialized
+        # This version of posterior! is not in the DSGE.jl package (which has the method signature
+        # posterior!(m::Union{AbstractDSGEModel,AbstractVARModel},
+        #            parameters::Vector, data::Matrix; ...)
+        # This version of posterior!(loglikelihood::Function, ...)
+        # can be found in ModelConstructors.jl
         post_old = posterior!(loglikelihood, parameters, para_old, data; sampler = true)
         if post_old > -Inf
             propdist.μ = para_old
@@ -201,6 +206,11 @@ function metropolis_hastings(proposal_dist::Distribution,
 
                 # Solve the model (checking that parameters are within bounds and
                 # gensys returns a meaningful system) and evaluate the posterior
+                # This version of posterior! is not in the DSGE.jl package (which has the method signature
+                # posterior!(m::Union{AbstractDSGEModel,AbstractVARModel},
+                #            parameters::Vector, data::Matrix; ...)
+                # This version of posterior!(loglikelihood::Function, ...)
+                # can be found in ModelConstructors.jl.
                 post_new = posterior!(loglikelihood, parameters, para_new, data;
                                       sampler = true)
 

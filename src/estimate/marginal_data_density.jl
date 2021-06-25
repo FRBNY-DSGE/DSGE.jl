@@ -15,43 +15,68 @@ For calculating the log marginal data density for a given posterior sample.
 - `estimation_method::Symbol`: either `:smc` or `:mh`
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
+- `bridge_vec::Vector{String}`: Estimation cloud files for all the bridges up to a scratch estimation.
+    Used for incremental weights calculation of MDD. Scratch is last.
+- `smc_estimate_file::String`: Specify estimation cloud file to use if estimation_method is SMC
 """
 function marginal_data_density(m::Union{AbstractDSGEModel,AbstractVARModel},
                                data::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                                estimation_method::Symbol = :smc,
                                calculation_method::Symbol = :incremental_weights,
-                               parallel::Bool = false)
+                               parallel::Bool = false, bridge_vec::Vector = [],
+                               smc_estimate_file::String = rawpath(m, "estimate", "smc_cloud.jld2"),
+                               new_prior::Bool = false, new_params = Matrix(0,0))
     if estimation_method == :mh && calculation_method == :incremental_weights
         throw("Can only calculation MDD with incremental weights if the estimation method is :smc")
     end
 
     if calculation_method == :incremental_weights
-        file        = load(rawpath(m, "estimate", "smc_cloud.jld2"))
+        log_mdd = 0
+
+        for bridge in length(bridge_vec):-1:1 ## Assuming that all bridges are SMC and so incremental method works
+            read_h5 = bridge_vec[bridge][end-1:end] == "h5"
+            file        = read_h5 ? h5read(bridge_vec[bridge], "smcparams") : load(bridge_vec[bridge])
+
+            cloud, w, W = file["cloud"], file["w"], file["W"]
+            n_parts     = sum(W[:, 1])
+
+            w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
+            log_mdd += sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over param
+        end
+
+        read_h5 = smc_estimate_file[end-1:end] == "h5"
+        file        = read_h5 ? h5read(smc_estimate_file, "smcparams") : load(smc_estimate_file)
         cloud, w, W = file["cloud"], file["w"], file["W"]
         n_parts     = sum(W[:, 1])
 
         w_W = w[:, 2:end] .* W[:, 1:end-1] ./ n_parts
+        log_mdd += sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
 
-        return sum(log.(sum(w_W, dims = 1))) # sum over particles, take log, sum over params
+        return log_mdd
 
     elseif calculation_method == :harmonic_mean
         free_para_inds = findall(x -> x.fixed == false, get_parameters(m))
 
-        if estimation_method == :smc
-            cloud = load(rawpath(m, "estimate", "smc_cloud.jld2"), "cloud")
+        if estimation_method == :smc && !new_prior
+            read_h5 = smc_estimate_file[end-1:end] == "h5"
+            cloud = load(smc_estimate_file, "cloud")
             params  = get_vals(cloud)
             logpost = get_logpost(cloud)
 
             return marginal_data_density(params, logpost, free_para_inds)
 
-        elseif estimation_method == :mh
+        elseif estimation_method == :mh || new_prior
             if isempty(data)
                 throw("For calculating the MDD with a :mh sample, one must provide the data as the
                       second positional argument to this function")
             end
-            all_params = h5read(rawpath(m, "estimate", "mhsave.h5"), "mhparams")
-            all_params = map(Float64, all_params)
-            params = Matrix(thin_mh_draws(m, all_params; jstep = 5)')
+            if new_prior
+                params = new_params
+            else
+                all_params = h5read(rawpath(m, "estimate", "mhsave.h5"), "mhparams")
+                all_params = map(Float64, all_params)
+                params = Matrix(thin_mh_draws(m, all_params; jstep = 5)')
+            end
 
             n_para = n_parameters(m)
             n_draws = size(params, 2)

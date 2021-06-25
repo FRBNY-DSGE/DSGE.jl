@@ -21,12 +21,13 @@ in the future at the discretion of the New York Fed.
 
 ```@contents
 Pages = [
+  "learning_how_to_use_dsgejl.md",
   "model_design.md",
   "special_model_types.md",
+  "model_implementation_details.md",
   "running_existing_model.md",
   "input_data.md",
   "frbny_data.md",
-  "implementation_details.md",
   "solving.md",
   "estimation.md",
   "forecast.md",

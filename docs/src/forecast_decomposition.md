@@ -4,7 +4,10 @@
 CurrentModule = DSGE
 ```
 
-Separate from the standard [Forecasting](@ref forecast-step) routines, we have also implemented a function `decompose_forecast` for explaining why a forecast changes as new data becomes available and new estimations are run.
+Separate from the standard [Forecasting](@ref forecast-step) routines, we have also implemented a function `decompose_forecast` for explaining why a forecast changes as new data becomes available and new estimations are run. Please note that
+this function **does not** decompose a forecast into the shocks that produce it. For example, if you want
+to understand whether TFP or financial shocks are driving a forecast, then you should
+be calculating the shock decomposition output variable (see [Calculating Shock Decompositions](@ref calc-shock-dec)).
 
 ```@docs
 DSGE.decompose_forecast

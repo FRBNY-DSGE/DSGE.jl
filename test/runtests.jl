@@ -52,11 +52,11 @@ my_tests = [
             "estimate/regime_switching_mh",
             "estimate/smc/helpers",
             "estimate/smc/initialization",
-            "estimate/smc/mutation",
-            "estimate/smc/resample",
+            "estimate/smc/mutation", # needs to be regenerated
+            "estimate/smc/resample", # needs to be regenerated
             "estimate/smc/particle",
-            "estimate/smc/smc",
-            "estimate/smc/regime_switching_smc",
+            "estimate/smc/smc", # needs to be regenerated
+            "estimate/smc/regime_switching_smc", # needs to be regenerated
 
             "forecast/drivers",
             "forecast/smooth",
@@ -64,19 +64,19 @@ my_tests = [
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
             "forecast/io",
-            "forecast/forecast_one",
+            "forecast/forecast_one", # regenerate this on 1.6
             "forecast/automatic_tempalt_zlb",
-            "forecast/forecast_regime_switching",
+            "forecast/forecast_regime_switching", # regenerate this on 1.6
             "forecast/time_varying_credibility",
-            "forecast/multiple_altpol_imperfect_awareness",
-            "forecast/m1002_ss62_forecast_test",
+            "forecast/multiple_altpol_imperfect_awareness", # regenerate this on 1.6
+            "forecast/m1002_ss62_forecast_test", # regenerate this on 1.6
             "forecast/util",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",
             "forecast/var/dsgevecm/impulse_responses",
 
             "analysis/compute_meansbands",
-            "analysis/df_to_table",
+            "analysis/df_to_table", # regenerate this on 1.6
             "analysis/io",
             "analysis/meansbands",
             "analysis/moments",

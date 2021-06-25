@@ -47,7 +47,6 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
 - `use_fixed_schedule::Bool`: Flag for whether or not to use a fixed tempering (ϕ) schedule.
 - `adaptive_tempering_target_smc::S`: Coefficient of the sample size metric to be targeted when solving
     for an endogenous ϕ or 0.0 if using a fixed schedule (corresponds to the kwarg `tempering_target` for `SMC.smc`).
-- `tempered_update_prior_weight::S`: when bridging from old estimation, how much weight to put on prior.
 - `previous_data_vintage::String`: the old data vintage from which to start SMC when using a tempered update
     (corresponds to the kwarg `old_data_vintage` for `SMC.smc`).
 - `smc_iteration::Int`: The iteration index for the number of times SMC has been run on the
@@ -64,6 +63,14 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
     requires both `old_data` and `old_cloud`. If running a bridge estimation and
     no `old_cloud` is provided, then it will be loaded using
     the filepaths in `m`. If no `old_cloud` exists, then the bridge estimation will not run.
+- `old_model::Union{AbstractDSGEModel, AbstractVARModel} = m`: model object from which we can build
+    the old log-likelihood function for a time tempered SMC estimation. It should be possible
+    to evaluate the old log-likelihood given `old_data` and the current draw of parameters.
+    This may be nontrivial if, for example, *new* parameters have been added to `m` since the old
+    estimation. In this case, `old_model` should include the *new* parameters but still return
+    the old log-likelihood as the original estimation if given the same *old* parameters.
+    By default, we assume the log-likelihood function has not changed
+    and therefore coincides with the current one.
 - `filestring_addl::Vector{String} = ""`: additional strings to be appended to the save file
     of estimation output.
 - `save_intermediate::Bool = false`: Flag for whether one wants to save intermediate Cloud objects
@@ -74,7 +81,6 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
 - `continue_intermediate::Bool = false`: Flag to indicate whether one is continuing SMC from an
     intermediate stage.
 - `intermediate_stage_start::Int = 0`: Intermediate stage at which one wishes to begin the estimation.
-- `tempered_update_prior_weight::Float64 = 0.0,
 - `run_csminwel::Bool = true`: Set to true to run the csminwel algorithm to identify the true posterior mode
     (which may not exist) after completing an estimation. The mode identified by SMC is just
     the particle with the highest posterior value, but we do not check it is actually a mode (i.e.
@@ -87,6 +93,8 @@ keyword argument for `SMC.smc` to distinguish the setting from MH estimation set
 	- `:high`: Status updates for every iteration of SMC is output, which includes
     the mean and standard deviation of each parameter draw after each iteration,
     as well as calculated acceptance rate, ESS, and number of times resampled.
+- `log_prob_old_data::Float64 = 0.0`: Log p(\tilde y) which is the log marginal data density
+    of the bridge estimation.
 
 ### Outputs
 
@@ -99,14 +107,13 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
               old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
               old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                                SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+              old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
               run_test::Bool = false,
               filestring_addl::Vector{String} = Vector{String}(),
               continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
               save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
-              tempered_update_prior_weight::Float64 = 0.0,
               run_csminwel::Bool = true,
-              testing_root = false,
-              regime_switching::Bool = false)
+              regime_switching::Bool = false, log_prob_old_data::Float64 = 0.0)
 
     parallel    = get_setting(m, :use_parallel_workers)
     n_parts     = get_setting(m, :n_particles)
@@ -124,6 +131,9 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
     tempering_target             = get_setting(m, :adaptive_tempering_target_smc)
     use_fixed_schedule           = haskey(get_settings(m), :use_fixed_schedule) ?
         get_setting(m, :use_fixed_schedule) : tempering_target == 0.0
+
+    # Print output for debugging?
+    debug_assertion = haskey(get_settings(m), :debug_assertion) && get_setting(m, :debug_assertion)
 
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
@@ -150,6 +160,19 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
         end
     end
 
+    my_old_likelihood = if isa(m, AbstractDSGEModel)
+        function _my_old_likelihood_dsge(parameters::ParameterVector, data::Matrix{Float64})::Float64
+            update!(old_model, parameters)
+            likelihood(old_model, data; sampler = false, catch_errors = true,
+                       use_chand_recursion = use_chand_recursion, verbose = verbose)
+        end
+    else isa(m, AbstractVARModel)
+        function _my_old_likelihood_var(parameters::ParameterVector, data::Matrix{Float64})::Float64
+            update!(old_model, parameters)
+            likelihood(old_model, data; sampler = false, catch_errors = true, verbose = verbose)
+        end
+    end
+
     tempered_update = !isempty(old_data)
 
     # This step is purely for backwards compatibility purposes
@@ -171,45 +194,47 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
 
     # Calls SMC package's generic SMC
     println("Calling SMC.jl's SMC estimation routine...")
-
     SMC.smc(my_likelihood, get_parameters(m), data;
-            verbose = verbose,
-            testing = m.testing,
+            verbose      = verbose,
+            testing      = m.testing,
             data_vintage = data_vintage(m),
 
-            parallel = parallel,
-            n_parts  = n_parts,
-            n_blocks = n_blocks,
+            parallel   = parallel,
+            n_parts    = n_parts,
+            n_blocks   = n_blocks,
             n_mh_steps = n_mh_steps,
 
             λ = λ, n_Φ = n_Φ,
 
             resampling_method = resampling_method,
-            threshold_ratio = threshold_ratio,
+            threshold_ratio   = threshold_ratio,
 
             c = c, α = α, target = target,
 
             use_fixed_schedule = use_fixed_schedule,
-            tempering_target = tempering_target,
+            tempering_target   = tempering_target,
 
-            old_data      = old_data,
-            old_cloud     = old_cloud_conv,
-            old_vintage   = old_vintage,
-            smc_iteration = smc_iteration,
+            old_data          = old_data,
+            old_cloud         = old_cloud_conv,
+            old_loglikelihood = my_old_likelihood,
+            old_vintage       = old_vintage,
+            smc_iteration     = smc_iteration,
 
             run_test = run_test,
-            filestring_addl = filestring_addl,
-            loadpath = loadpath,
-            savepath = savepath,
+
+            filestring_addl     = filestring_addl,
+            loadpath            = loadpath,
+            savepath            = savepath,
             particle_store_path = particle_store_path,
 
-            continue_intermediate = continue_intermediate,
-            intermediate_stage_start = intermediate_stage_start,
-            save_intermediate = save_intermediate,
+            continue_intermediate        = continue_intermediate,
+            intermediate_stage_start     = intermediate_stage_start,
+            save_intermediate            = save_intermediate,
             intermediate_stage_increment = intermediate_stage_increment,
 	        tempered_update_prior_weight = tempered_update_prior_weight,
-            testing_root = testing_root,
-            regime_switching = regime_switching)
+
+            regime_switching = regime_switching,
+            debug_assertion = debug_assertion, log_prob_old_data = log_prob_old_data)
 
     if run_csminwel
         m <= Setting(:sampling_method, :SMC)
@@ -226,48 +251,51 @@ function smc(m::Union{AbstractDSGEModel,AbstractVARModel}, data::DataFrame; verb
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                               SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+             old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
              filestring_addl::Vector{String} = Vector{String}(undef, 0),
              run_test::Bool = false,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
-             tempered_update_prior_weight::Float64 = 0.0,
              run_csminwel::Bool = true,
-             regime_switching::Bool = false)
+             regime_switching::Bool = false, log_prob_old_data::Float64 = 0.0)
 
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose = verbose,
                 old_data = old_data, old_cloud = old_cloud,
+                old_model = old_model,
                 filestring_addl = filestring_addl, run_test = run_test,
                 save_intermediate = save_intermediate,
                 intermediate_stage_increment = intermediate_stage_increment,
                 continue_intermediate = continue_intermediate,
                 intermediate_stage_start = intermediate_stage_start,
-                tempered_update_prior_weight = tempered_update_prior_weight, run_csminwel = run_csminwel,
-                regime_switching = regime_switching)
+                run_csminwel = run_csminwel,
+                regime_switching = regime_switching, log_prob_old_data = log_prob_old_data)
 end
 
 function smc(m::Union{AbstractDSGEModel,AbstractVARModel}; verbose::Symbol = :low,
              old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0),
              old_cloud::Union{DSGE.ParticleCloud, DSGE.Cloud,
                               SMC.Cloud} = DSGE.ParticleCloud(m, 0),
+             old_model::Union{AbstractDSGEModel, AbstractVARModel} = m,
              filestring_addl::Vector{String} = Vector{String}(undef, 0),
              run_test::Bool = false,
              save_intermediate::Bool = false, intermediate_stage_increment::Int = 10,
              continue_intermediate::Bool = false, intermediate_stage_start::Int = 0,
-             tempered_update_prior_weight::Float64 = 0.0,
              run_csminwel::Bool = true,
-             regime_switching::Bool = false)
+             regime_switching::Bool = false, log_prob_old_data::Float64 = 0.0)
+
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
     return smc2(m, data_mat, verbose = verbose,
                 old_data = old_data, old_cloud = old_cloud,
+                old_model = old_model,
                 filestring_addl = filestring_addl, run_test = run_test,
                 save_intermediate = save_intermediate,
                 intermediate_stage_increment = intermediate_stage_increment,
                 continue_intermediate = continue_intermediate,
                 intermediate_stage_start = intermediate_stage_start,
-                tempered_update_prior_weight = tempered_update_prior_weight, run_csminwel = run_csminwel,
-                regime_switching = regime_switching)
+                run_csminwel = run_csminwel,
+                regime_switching = regime_switching, log_prob_old_data = log_prob_old_data)
 end
 
 function isempty(c::ParticleCloud)

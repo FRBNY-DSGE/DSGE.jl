@@ -478,9 +478,10 @@ Initializes utility, adjustment cost, and deposit functions.
 @inline function construct_problem_functions(γ::T, χ0::R, χ1::R, χ2::R,
                                              a_lb::R) where {T<:Number,R<:Number}
 
-    @inline util(c::S) where {S<:Number} = 1.0 / (1.0 - γ) * (c ^ (1-γ) - 1.0)
-    if γ == 1.0
-        @inline util(c::S) where {S<:Number} = log(c)
+    util = if γ == 1.0
+        @inline util1(c::S) where {S<:Number} = log(c)
+    else
+        @inline util2(c::S) where {S<:Number} = 1.0 / (1.0 - γ) * (c ^ (1-γ) - 1.0)
     end
 
     @inline function deposit(Va, Vb, a)
