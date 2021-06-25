@@ -98,7 +98,7 @@ function plot_history_and_forecast(m::AbstractDSGEModel, vars::Vector{Symbol}, c
                                    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
                                    verbose::Symbol = :low, outfile_end::String = "",
                                    add_trendline::Bool = false, trend_vals::Vector{Float64} = [1.0],
-                                   trend_start_date::Date = Date(2019,12,31),
+                                   trend_start_date::Date = date_forecast_start(m),
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -158,7 +158,7 @@ function plot_history_and_forecast(ms::Vector, vars::Vector{Symbol}, class::Symb
                                    titles::Vector{String} = String[],
                                    plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
                                    verbose::Symbol = :low, names = Dict{Symbol, Vector{String}}(),
-                                   start_date::Date = Date(2019,3,31), end_date::Date = iterate_quarters(date_forecast_start(m), 12),
+                                   start_date::Date = date_forecast_start(m), end_date::Date = iterate_quarters(date_forecast_start(m), 12),
                                    add_new_model::Bool = false, new_model::AbstractDSGEModel = Model1002(),
                                    new_cond_type::Symbol = :full, outfile_end::String = "",
                                    new_forecast_string::String = forecast_string,
@@ -309,7 +309,13 @@ histforecast
     var, hist, forecast = hf.args
     combined = cat(hist, forecast)
     dates = combined.means[!, :date]
-    start_trend_ind = findfirst(dates .== trend_start_date)
+    start_trend_ind = findfirst(x -> x == trend_start_date, dates)
+    if isnothing(start_trend_ind)
+        @warn "trend_start_date ($(trend_start_date))is not located in the history or forecast, " *
+            "so we are plotting the trend from the start_date ($(start_date))"
+        trend_start_date = start_date
+        start_trend_ind = findfirst(x -> x == trend_start_date, dates)
+    end
     start_trend_val = combined.means[start_trend_ind, var]
     end_ind = findfirst(dates .== end_date)
 
@@ -420,13 +426,13 @@ histforecast
         @series begin
             seriestype :=  :line
             linewidth  --> 2
-            #linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
+            # linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
             if VERSION >= v"1.3"
                 seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
             else
                 alpha       := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
             end
-            linestyle  :=  :dash#haskey(styles, :forecast) ? styles[:forecast] : :solid
+            linestyle  :=  :dash # haskey(styles, :forecast) ? styles[:forecast] : :solid
             label      :=  "Trend"
 
             dates[start_trend_ind:end_ind], start_trend_val .+ trend_vals[1:(end_ind-start_trend_ind+1)]
@@ -529,6 +535,12 @@ histforecast_vector
     combined = cat(hist[1], forecast[1])
     dates = combined.means[!, :date]
     start_trend_ind = findfirst(dates .== trend_start_date)
+    if isnothing(start_trend_ind)
+        @warn "trend_start_date ($(trend_start_date))is not located in the history or forecast, " *
+            "so we are plotting the trend from the start_date ($(start_date))"
+        trend_start_date = start_date
+        start_trend_ind = findfirst(x -> x == trend_start_date, dates)
+    end
     start_trend_val = combined.means[start_trend_ind, var]
     end_ind = findfirst(dates .== end_date)
 
@@ -641,7 +653,8 @@ histforecast_vector
             lb = combined.bands[var][inds, Symbol(pct, " LB")]
             ub = combined.bands[var][inds, Symbol(pct, " UB")]
 
-            bands_color = haskey(colors, :bands) ? colors[:bands] : palette(:default)[hfs_ind]#get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:blue
+            bands_color = haskey(colors, :bands) ? colors[:bands] : palette(:default)[hfs_ind]
+            # get_color_palette(:auto, plot_color(:white), 17)[hfs_ind] # :blue
             bands_alpha = haskey(alphas, :bands) ? alphas[:bands] : 0.1
             bands_linestyle = haskey(styles, :bands) ? styles[:bands] : :solid
 
@@ -689,7 +702,8 @@ histforecast_vector
         @series begin
         seriestype :=  :line
         linewidth  --> 2
-        linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : palette(:default)[hfs_ind]#get_color_palette(:auto, plot_color(:white), 17)[hfs_ind]#:red
+        linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : palette(:default)[hfs_ind]
+            # get_color_palette(:auto, plot_color(:white), 17)[hfs_ind] # :red
         if VERSION >= v"1.3"
             seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
         else
@@ -709,13 +723,13 @@ histforecast_vector
         @series begin
             seriestype :=  :line
             linewidth  --> 2
-            #linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
+            # linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
             if VERSION >= v"1.3"
                 seriesalpha := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
             else
                 alpha       := haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
             end
-            linestyle  :=  :dash#haskey(styles, :forecast) ? styles[:forecast] : :solid
+            linestyle  :=  :dash # haskey(styles, :forecast) ? styles[:forecast] : :solid
             label      :=  "Trend"
 
             dates[start_trend_ind:end_ind], start_trend_val .+ trend_vals[1:(end_ind-start_trend_ind+1)]
