@@ -146,6 +146,7 @@ function eqcond(m::Model1002, reg::Int)
 
     # Flexible prices and wages
     Γ0[eq[:eq_nevol_f], endo[:n_f_t]]      = 1.
+    Γ0[eq[:eq_nevol_f], endo[:γ_t]]      = -1.
     Γ0[eq[:eq_nevol_f], endo[:z_t]]      = m[:γ_star]*m[:vstar]/m[:nstar]
     Γ0[eq[:eq_nevol_f], endo[:Rktil_f_t]] = -m[:ζ_nRk]
     Γ1[eq[:eq_nevol_f], endo[:σ_ω_t]]    = -m[:ζ_nσ_ω]/m[:ζ_spσ_ω]
@@ -288,9 +289,10 @@ function eqcond(m::Model1002, reg::Int)
     Γ0[eq[:eq_wage], endo[:μ_ω_t]] = (1 - m[:ζ_w]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
         (1 - m[:ζ_w])/(m[:ζ_w]*((m[:λ_w] - 1)*m[:ϵ_w] + 1))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ0[eq[:eq_wage], endo[:π_t]]   = (1 + m[:ι_w]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+    Γ0[eq[:eq_wage], endo[:z_t]]   = (1 + m[:ι_w]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star])) # BUG FIXED -- TERM CORRECTED ON 9/15/16
     Γ1[eq[:eq_wage], endo[:w_t]]   = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
-    Γ0[eq[:eq_wage], endo[:z_t]]   = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ1[eq[:eq_wage], endo[:π_t]]   = m[:ι_w]/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+    Γ1[eq[:eq_wage], endo[:z_t]]   = m[:ι_w]/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star])) # BUG FIXED -- TERM ADDED ON 9/15/16
     Γ0[eq[:eq_wage], endo[:Ew_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ0[eq[:eq_wage], endo[:Ez_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ0[eq[:eq_wage], endo[:Eπ_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
