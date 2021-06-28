@@ -404,12 +404,42 @@ There are three cases involving regime switching that are implemented in DSGE.jl
 - Time-varying information sets
 
 To implement regime-switching parameters or use temporary alternative policies, see this
-[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/regime_switching.jl) for regime-switching forecasts.
+[example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/regime_switching.jl) on regime-switching forecasts.
 This [documentation on temporary alternative policies](@ref tempaltpol-procedure) will also be helpful.
 For further details on regime-switching parameters, see
 the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 To implement time-varying information sets, see
 this [example script](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/examples/tvis_system.jl).
+
+If the user wants to combine exogenous regime switching in both parameters and policies,
+then the user may find it useful to distinguish between *model* and *parameter* regimes.
+For example, when implementing a temporary alternative policy, we typically treat each period
+of the temporary policy as a distinct regime, but the parameters of the model may remain
+constant across these regimes of the temporary policy. To distinguish the two,
+we implement in ModelConstructors.jl a second interface for changing parameter regimes. Aside from
+```
+toggle_regime!(p::Parameter, regime::Int)
+```
+for example, we also have the syntax
+```
+toggle_regime!(p::Parameter, model_regime::Int, d::AbstractDict{Int, Int})
+```
+The latter syntax uses a dictionary to map a model regime to the correct parameter regime.
+As an example, suppose across 2020:Q1-Q4, I implement a temporary ZLB, and I assume
+that some parameters also regime switching during this period. Then I may want to write
+
+```
+d = Dict(1 => 1, # First model and parameter regime coincide (history until 2019:Q4).
+         2 => 2, # Regimes 2-5 represent 2020:Q1-Q4 andmap to the second regime
+         3 => 2,
+         4 => 2,
+         5 => 2,
+         6 => 1) # Starting in regime 6 (2021:Q1), the parameters switch back to the same values from before 2020.
+```
+
+For more details, see the regime toggling in
+[Model 1002's `eqcond`](https://github.com/FRBNY-DSGE/DSGE.jl/blob/main/src/models/representative/m1002/eqcond.jl)
+and the [documentation for ModelConstructors.jl](https://github.com/FRBNY-DSGE/ModelConstructors.jl).
 
 Once the regime-switching settings are properly created, the syntax for running a forecast
 is the same as when there is no regime-switching. See [Forecasting](@ref).
