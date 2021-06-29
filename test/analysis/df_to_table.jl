@@ -42,7 +42,7 @@ hist_4q, fore_4q = construct_fcast_and_hist_dfs(m, :none, [:obs_gdp, :obs_cpi, :
 
 
 if save_output
-    fn = VERSION >= v"1.5" ? "$path/../reference/df_to_table_out_v1p5.jld2" : "$path/../reference/df_to_table_out.jld2"
+    fn = VERSION >= v"1.6" ? "$path/../reference/df_to_table_out_v1p6.jld2" : VERSION >= v"1.5" ? "$path/../reference/df_to_table_out_v1p5.jld2" : "$path/../reference/df_to_table_out.jld2"
     jldopen(fn, true, true, true, IOStream) do file
         file["hist"] = hist
         file["hist_noT"] = hist_noT
@@ -54,7 +54,7 @@ if save_output
 end
 
 
-fn = VERSION >= v"1.5" ? "$path/../reference/df_to_table_out_v1p5.jld2" : "$path/../reference/df_to_table_out.jld2"
+fn = VERSION >= v"1.6" ? "$path/../reference/df_to_table_out_v1p6.jld2" : VERSION >= v"1.5" ? "$path/../reference/df_to_table_out_v1p5.jld2" : "$path/../reference/df_to_table_out.jld2"
 saved_hist = load(fn, "hist")
 saved_hist_noT = load(fn, "hist_noT")
 saved_hist_4q = load(fn, "hist_4q")
