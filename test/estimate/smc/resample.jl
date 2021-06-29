@@ -1,8 +1,10 @@
 writing_output = false
 if VERSION < v"1.5"
     ver = "111"
-else 
+elseif VERSION < v"1.6"
     ver = "150"
+else
+    ver = "160"
 end
 
 @everywhere Random.seed!(42)
@@ -14,8 +16,8 @@ test_sys_resample    = SMC.resample(weights, method = :systematic)
 test_multi_resample  = SMC.resample(weights, method = :multinomial)
 test_poly_resample   = SMC.resample(weights, method = :polyalgo)
 
-if writing_output 
-    jldopen("reference/resample_version=" * ver * ".jld2", 
+if writing_output
+    jldopen("reference/resample_version=" * ver * ".jld2",
             true, true, true, IOStream) do file
         write(file, "sys", test_sys_resample)
         write(file, "multi", test_multi_resample)
