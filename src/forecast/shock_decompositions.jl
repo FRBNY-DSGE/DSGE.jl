@@ -193,7 +193,7 @@ end
 # Get Shock Decompositions with an old system and a bar that gives
 ## effect of using new system compared to old.
 function shock_decompositions(m::AbstractDSGEModel{S},
-                              system::RegimeSwitchingSystem{S}, old_system::Int,
+                              system::RegimeSwitchingSystem{S}, old_system,#::Int,
                               histshocks::Matrix{S},
                               start_date::Dates.Date = date_presample_start(m),
                               end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
@@ -216,7 +216,7 @@ function shock_decompositions(m::AbstractDSGEModel{S},
 end
 
 function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
-                              old_system::Int,
+                              old_system,#::Int,
                               forecast_horizons::Int, histshocks::Matrix{S},
                               start_index::Int, end_index::Int,
                               regime_inds::Vector{UnitRange{Int}},
@@ -271,15 +271,16 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
                 forecast(system[reg_num], init_state, shocks[:, reg_ind])
 
             # Old System Values
-            if reg_ind[end] < old_system
+            #=if reg_ind[end] < old_system
                 old_system2 = system[reg_num]
                 counts = reg_num
             else
                 old_system2 = system[1]#system[counts]
-            end
+            end=#
+            old_system2 = old_system
             init_state_old = (reg_num == 1) ? zeros(S, nstates) : old_states[:, reg_ind[1] - 1, i]
             old_states[:, reg_ind, i], old_obs[:, reg_ind, i], old_pseudo[:, reg_ind, i], _ =
-                forecast(old_system2, init_state_old, shocks[:,reg_ind])
+                forecast(old_system2[reg_num], init_state_old, shocks[:,reg_ind])
         end
 
         # Run forecast using regime-switching forecast
@@ -289,9 +290,10 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
                 forecast(m, system, states[:, histperiods, i], fcast_shocks, cond_type = cond_type)
 
             # Old System Values
-            old_system2 = system[1]#system[counts]
+            old_system2 = old_system#system[1]#system[counts]
             old_states[:, fcast_inds, i], old_obs[:, fcast_inds, i], old_pseudo[:, fcast_inds, i], _ =
-                forecast(old_system2, old_states[:, histperiods, i], fcast_shocks)
+                forecast(m, old_system2, old_states[:, histperiods, i], fcast_shocks, cond_type = cond_type)
+                #forecast(old_system2, old_states[:, histperiods, i], fcast_shocks)
         end
 
         # zero out shocks b/c want effects of single shocks
@@ -490,7 +492,8 @@ end
 
 # Get Deterministic Trends with an old system
 function deterministic_trends(m::AbstractDSGEModel{S},
-                              system::RegimeSwitchingSystem{S}, old_system::Int, z0::Vector{S},
+                              system::RegimeSwitchingSystem{S}, old_system,#::Int,
+                              z0::Vector{S},
                               start_date::Dates.Date = date_presample_start(m),
                               end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
                               cond_type::Symbol = :none) where {S<:AbstractFloat}
@@ -519,7 +522,8 @@ function deterministic_trends(m::AbstractDSGEModel{S},
 end
 
 
-function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, old_system::Int, z0::Vector{S}, nperiods::Int,
+function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, old_system,#::Int,
+                              z0::Vector{S}, nperiods::Int,
                               start_index::Int, end_index::Int, regime_inds::Vector{UnitRange{Int}},
                               cond_type::Symbol) where {S<:AbstractFloat}
 
@@ -550,7 +554,7 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
         states[:, reg_ind], obs[:, reg_ind], pseudo[:, reg_ind], _ = forecast(system[reg_num], init_state, shocks)
 
         # Do for old system too
-        old_system2 = reg_ind[end] >= old_system ? system[1] : system[reg_num]
+        old_system2 = old_system[reg_num]#reg_ind[end] >= old_system ? system[1] : system[reg_num]
         init_state_old = (reg_num == 1) ? z0 : states_old[:, reg_ind[1] - 1] # update initial state
         states_old[:, reg_ind], obs_old[:, reg_ind], pseudo_old[:, reg_ind], _ = forecast(old_system2, init_state, shocks)
     end
@@ -570,7 +574,8 @@ function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSyste
         ## Taylor in all forecast regimes, but generalize based on regime_inds[end][end]
         ## and old_system values
         states_old[:, fcast_inds], obs_old[:, fcast_inds], pseudo_old[:, fcast_inds], _ =
-            forecast(system[1], states_old[:, regime_inds[end][end]], fcast_shocks)
+            forecast(m, old_system, states_old[:, regime_inds[end][end]], fcast_shocks, cond_type = cond_type)
+        #forecast(old_system, states_old[:, regime_inds[end][end]], fcast_shocks)
     end
 
     # Old System Update
@@ -991,7 +996,7 @@ end
 # Get Shock Decompositions with an old system and a bar that gives
 ## effect of using new system compared to old.
 function shock_decompositions_sequence(m::AbstractDSGEModel{S},
-                              system::RegimeSwitchingSystem{S}, old_system::Int,
+                              system::RegimeSwitchingSystem{S}, old_system,#::Int,
                               histshocks::Matrix{S},
                               start_date::Dates.Date = date_presample_start(m),
                               end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
@@ -1016,7 +1021,7 @@ function shock_decompositions_sequence(m::AbstractDSGEModel{S},
 end
 
 function shock_decompositions_sequence(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
-                                       old_system::Int,
+                                       old_system,#::Int,
                                        forecast_horizons::Int, histshocks::Matrix{S},
                                        start_index::Int, end_index::Int,
                                        regime_inds::Vector{UnitRange{Int}},

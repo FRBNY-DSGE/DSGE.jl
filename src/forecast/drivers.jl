@@ -1227,11 +1227,14 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
         if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
             # Must be using TV cred system
-            old_system = 0
+            old_system = copy(system)
             for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zlb_rule
-                    old_system = regime_indices(m, start_date, end_date)[i][1]
-                    break
+                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key != :zlb_rule
+                    old_system[i].transition = system[1].transition
+                    old_system[i].measurement = system[1].measurement
+                    old_system[i].pseudo_measurement = system[1].pseudo_measurement
+                    #regime_indices(m, start_date, end_date)[i+1][1]
+                    #break
                 end
             end
             shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, old_system, histshocks_shockdec, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp)
@@ -1296,12 +1299,15 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
             if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs) && full_shock_decomp
                 # Must be using TV cred system
-                old_system = 0
+                old_system = copy(system)#0
                 for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
                     # TODO: Generalize beyond zero_rate to any temporary or permant alternative policy
-                    if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zlb_rule
-                        old_system = regime_indices(m, start_date, end_date)[i][1]
-                        break
+                    if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key != :zlb_rule
+                        old_system[i].transition = system[1].transition
+                        old_system[i].measurement = system[1].measurement
+                        old_system[i].pseudo_measurement = system[1].pseudo_measurement
+                        #regime_indices(m, start_date, end_date)[i][1]
+                        #break
                     end
                 end
                 dettrendstates, dettrendobs, dettrendpseudo =
@@ -1358,13 +1364,17 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
 
         if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
             # Must be using TV cred system
-            old_system = 0
+            old_system = get_setting(m, :alternative_policies)
+            #=old_system = copy(system) ## CAN'T FORECAST WITHOUT CHANGING KEY FOR OLD SYSTEM
             for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key == :zlb_rule
-                    old_system = regime_indices(m, start_date, end_date)[i][1]
-                    break
+                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key != :zlb_rule
+                    old_system[i].transition = system[1].transition
+                    old_system[i].measurement = system[1].measurement
+                    old_system[i].pseudo_measurement = system[1].pseudo_measurement
+                    #regime_indices(m, start_date, end_date)[i][1]
+                    #break
                 end
-            end
+            end=#
             shockdecseqstates, shockdecseqobs, shockdecseqpseudo = shock_decompositions_sequence(m, system, old_system, histshocks_shockdecseq, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp, n_back = n_back, back_shocks = back_shocks)
         else
             shockdecseqstates, shockdecseqobs, shockdecseqpseudo = isa(system, RegimeSwitchingSystem) ?
