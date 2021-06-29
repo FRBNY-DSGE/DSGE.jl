@@ -6547,30 +6547,30 @@ end
 
 function ss86!(m)
     ss64!(m)
-
-    m <= parameter(:σ_λ_f_ziid, 0.0, (0., 100.), (0., 100.), ModelConstructors.Exponential(), RootInverseGamma(10.0, sqrt(25.1)),
-                   fixed=true,
-                   description="σ_λ_f_ziid: The standard deviation of the shock to the price markup.",
-                   tex_label="\\sigma_{\\lambda_f, ziid}")
-
-    get_setting(m, :model2para_regime)[:σ_λ_f_ziid] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
+#=
+    m <= parameter(:σ_λ_f_iid, 0.0, (0., 100.), (0., 100.), ModelConstructors.Exponential(), RootInverseGamma(10.0, sqrt(25.1)),
+                   fixed=false,
+                   description="σ_λ_f_iid: The standard deviation of the shock to the price markup.",
+                   tex_label="\\sigma_{\\lambda_f, iid}")
+=#
+    get_setting(m, :model2para_regime)[:σ_λ_f_iid] = Dict(1 => 1, 2 => 2, 3 => 2, 4 => 2, 5 => 3)
     for i in 6:get_setting(m, :n_regimes)
-        get_setting(m, :model2para_regime)[:σ_λ_f_ziid][i] = 1
+        get_setting(m, :model2para_regime)[:σ_λ_f_iid][i] = 1
     end
 
     # Set values (priors are set already unless regime-switching is desired in 2020:Q4)
-    set_regime_val!(m[:σ_λ_f_ziid], 1, 0.)
-    set_regime_val!(m[:σ_λ_f_ziid], 2, 5.0)
-    set_regime_val!(m[:σ_λ_f_ziid], 3, 0.05)
+    set_regime_val!(m[:σ_λ_f_iid], 1, 0.)
+    set_regime_val!(m[:σ_λ_f_iid], 2, 5.0)
+    set_regime_val!(m[:σ_λ_f_iid], 3, 0.05)
 
     # Fix shocks to 0 in para regime 1
-    set_regime_fixed!(m[:σ_λ_f_ziid], 1, true)
-    set_regime_fixed!(m[:σ_λ_f_ziid], 2, false)
-    set_regime_fixed!(m[:σ_λ_f_ziid], 3, false)
+    set_regime_fixed!(m[:σ_λ_f_iid], 1, true)
+    set_regime_fixed!(m[:σ_λ_f_iid], 2, false)
+    set_regime_fixed!(m[:σ_λ_f_iid], 3, false)
 
     # Regime-switching priors for regime 3
     for i in 1:2
-        set_regime_prior!(m[:σ_λ_f_ziid], i, m[:σ_λ_f_ziid].prior)
+        set_regime_prior!(m[:σ_λ_f_iid], i, m[:σ_λ_f_iid].prior)
     end
-    set_regime_prior!(m[:σ_λ_f_ziid], 3, RootInverseGamma(10.0, 0.0501))
+    set_regime_prior!(m[:σ_λ_f_iid], 3, RootInverseGamma(10.0, 0.0501))
 end

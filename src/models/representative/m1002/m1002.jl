@@ -838,6 +838,13 @@ buted to steady-state inflation.",
     m <= parameter(:δ_gdi, 0., (-10., 10.), (-10., -10.), ModelConstructors.Untransformed(), Normal(0.00, 2.), fixed=false,
                    tex_label="\\delta_{gdi}")
 
+    if subspec(m) in ["ss86"]
+        m <= parameter(:σ_λ_f_iid, 0.0, (0., 100.), (0., 100.), ModelConstructors.Exponential(), RootInverseGamma(10.0, sqrt(25.1)),
+                       fixed=false,
+                       description="σ_λ_f_iid: The standard deviation of the shock to the price markup.",
+                       tex_label="\\sigma_{\\lambda_f, ziid}")
+    end
+
     # steady states
     m <= SteadyStateParameter(:z_star, NaN, tex_label="\\z_*")
     m <= SteadyStateParameter(:rstar, NaN, tex_label="\\r_*")
