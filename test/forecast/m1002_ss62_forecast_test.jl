@@ -2,6 +2,14 @@ using DSGE, ModelConstructors, JLD2, CSV, DataFrames, Dates, Test
 
 regenerate_reference_output = false
 
+if VERSION < v"1.5"
+    ver = "111"
+elseif VERSION < v"1.6"
+    ver = "150"
+else
+    ver = "160"
+end
+
 # Data vintages and settings
 fcast_date      = DSGE.quartertodate("2021-Q1")
 date_fcast_end  = iterate_quarters(fcast_date, 40)
@@ -169,7 +177,7 @@ fcast = DSGE.forecast_one_draw(m, :mode, cond_type, output_vars, modal_params, d
                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 if regenerate_reference_output
-    JLD2.jldopen(joinpath(dirname(@__FILE__), "..", "reference", "ss62_modal_forecast_output.jld2"), true, true, true, IOStream) do file
+    JLD2.jldopen(joinpath(dirname(@__FILE__), "..", "reference", "ss62_modal_forecast_output_version=$(ver).jld2"), true, true, true, IOStream) do file
         write(file, "forecastobs", fcast[:forecastobs])
         write(file, "forecastpseudo", fcast[:forecastpseudo])
         write(file, "histpseudo", fcast[:histpseudo])
@@ -177,7 +185,7 @@ if regenerate_reference_output
 end
 
 @testset "Compare Modal Forecast for Model 1002 ss62 against reference" begin
-    ref_out = JLD2.jldopen(joinpath(dirname(@__FILE__), "..", "reference", "ss62_modal_forecast_output.jld2"), "r")
+    ref_out = JLD2.jldopen(joinpath(dirname(@__FILE__), "..", "reference", "ss62_modal_forecast_output_version=$(ver).jld2"), "r")
     @test fcast[:forecastobs] ≈ ref_out["forecastobs"]
     @test fcast[:forecastpseudo] ≈ ref_out["forecastpseudo"]
     @test fcast[:histpseudo] ≈ ref_out["histpseudo"]
