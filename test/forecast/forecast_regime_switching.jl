@@ -5,8 +5,10 @@ generate_time_varying_system_for_SSR = false
 
 if VERSION < v"1.5"
     ver = "111"
-else
+elseif VERSION < v"1.6"
     ver = "150"
+else
+    ver = "160"
 end
 
 Random.seed!(1793)
@@ -537,7 +539,7 @@ end
         @test histstates[:durbin_koopman] ≈ histstates[:koopman]
         @test histstates[:carter_kohn] ≈ histstates[:hamilton]
         for k in [:carter_kohn, :hamilton]
-            @test maximum(abs.(histobs[:durbin_koopman] - histobs[k])) < 1e-3 # should the approximately the same
+            @test maximum(abs.(histobs[:durbin_koopman] - histobs[k])) < 1.5e-3 # should the approximately the same
             @test maximum(abs.(histstates[:durbin_koopman] - histstates[k])) < 1e-2
         end
 
