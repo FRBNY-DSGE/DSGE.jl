@@ -6,7 +6,7 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
-            "abstractdsgemodel",
+#=            "abstractdsgemodel",
             "abstractvarmodel",
             "defaults",
             "parameters",
@@ -52,11 +52,11 @@ my_tests = [
             "estimate/regime_switching_mh",
             "estimate/smc/helpers",
             "estimate/smc/initialization",
-            "estimate/smc/mutation", # needs to be regenerated
-            "estimate/smc/resample", # needs to be regenerated
+            "estimate/smc/mutation",
+            "estimate/smc/resample",
             "estimate/smc/particle",
-            "estimate/smc/smc", # needs to be regenerated
-            "estimate/smc/regime_switching_smc", # needs to be regenerated
+            "estimate/smc/smc",
+            "estimate/smc/regime_switching_smc",
 
             "forecast/drivers",
             "forecast/smooth",
@@ -64,11 +64,11 @@ my_tests = [
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
             "forecast/io",
-            "forecast/forecast_one", # regenerate this on 1.6
+            "forecast/forecast_one",
             "forecast/automatic_tempalt_zlb",
-            "forecast/forecast_regime_switching", # regenerate this on 1.6
+            "forecast/forecast_regime_switching",
             "forecast/time_varying_credibility",
-            "forecast/multiple_altpol_imperfect_awareness", # regenerate this on 1.6
+            "forecast/multiple_altpol_imperfect_awareness",=#
             "forecast/m1002_ss62_forecast_test", # regenerate this on 1.6
             "forecast/util",
             "forecast/var/impulse_responses",
