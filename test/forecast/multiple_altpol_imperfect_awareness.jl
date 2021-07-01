@@ -3,6 +3,12 @@ include("tvcred_parameterize.jl")
 
 regenerate_reference_forecasts = false
 
+if VERSION < v"1.6"
+    ver = "150"
+else
+    ver = "160"
+end
+
 # Forecast settings
 fcast_date = DSGE.quartertodate("2020-Q4")
 date_fcast_end  = iterate_quarters(fcast_date, 60)
@@ -214,7 +220,7 @@ out_temp_flexible_ait = DSGE.forecast_one_draw(m, :mode, :full, output_vars, mod
                                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 if regenerate_reference_forecasts
-    h5open(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output.h5"), "w") do file
+    h5open(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output_version=$(ver).h5"), "w") do file
         write(file, "forecastobs", out_temp_flexible_ait[:forecastobs])
         write(file, "forecastpseudo", out_temp_flexible_ait[:forecastpseudo])
     end
@@ -228,7 +234,7 @@ end
         @test out_default_temp_default[k] ≈ out1[k]
         @test out_flexait_zlb_temp_flexait_zlb[k] ≈ out1[k]
         @test out_temp_flexible_ait[k] ≈
-            h5read(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output.h5"), string(k))
+            h5read(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output_version=$(ver).h5"), string(k))
     end
 
 end
