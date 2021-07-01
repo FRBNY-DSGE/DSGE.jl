@@ -5,8 +5,10 @@ generate_regime_switch_tests = false # Set to true if you want to regenerate the
 
 if VERSION < v"1.5"
     ver = "111"
-else
+elseif VERSION < v"1.6"
     ver = "150"
+else
+    ver = "160"
 end
 
 # Initialize model object
@@ -404,15 +406,6 @@ end
         end
         @test m_rs3[:α].value == m[:α].value # check the regimes match after toggling
 
-        # Read expected output
-        if k == 1
-            exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs2_version=" * ver * ".jld2", "r") do file
-                read(file, "exp_out_regime_switch"), read(file, "exp_out_true_regime_switch")
-            end
-        else
-            exp_out      = exp_out_dict[k][:out]
-            exp_out_true = exp_out_dict[k][:out_rs3]
-        end
 
         if generate_regime_switch_tests
             if k == 1
@@ -423,6 +416,15 @@ end
                 exp_out_dict_new[k][:out_rs3] = out_rs3
             end
         else
+            # Read expected output
+            if k == 1
+                exp_out, exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs2_version=" * ver * ".jld2", "r") do file
+                    read(file, "exp_out_regime_switch"), read(file, "exp_out_true_regime_switch")
+                end
+            else
+                exp_out      = exp_out_dict[k][:out]
+                exp_out_true = exp_out_dict[k][:out_rs3]
+            end
             for cond_type in [:none]#, :semi, :full]
                 # Histories
                 @test @test_matrix_approx_eq exp_out[cond_type][:histpseudo]          out[cond_type][:histpseudo]
@@ -516,13 +518,6 @@ end
             out_rs2 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
             out_rs3 = Dict{Symbol, Dict{Symbol, Dict{Symbol, Array{Float64}}}}()
 
-            exp_out = JLD2.jldopen("$path/../reference/forecast_one_out_rs2_version=" * ver * ".jld2", "r") do file
-                read(file, "exp_out_regime_switch_full")
-            end
-            exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs3_version=" * ver * ".jld2", "r") do file
-                read(file, "exp_out_true_regime_switch_full")
-            end
-
             for cond_type in [:none, :semi, :full]
                 # out[cond_type] = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
                 out_rs1[cond_type] = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
@@ -595,6 +590,13 @@ end
                     write(file, "exp_out_true_regime_switch_full", exp_out_true_regime_switch_full_new)
                 end
             else
+                exp_out = JLD2.jldopen("$path/../reference/forecast_one_out_rs2_version=" * ver * ".jld2", "r") do file
+                    read(file, "exp_out_regime_switch_full")
+                end
+                exp_out_true = JLD2.jldopen("$path/../reference/forecast_one_out_rs3_version=" * ver * ".jld2", "r") do file
+                    read(file, "exp_out_true_regime_switch_full")
+                end
+
                 for cond_type in [:none, :semi, :full]
                     for fcast_type in [:full, :subset, :init_draw_shocks, :mode_draw_shocks] # TODO: ADD PRIOR
                         # Histories
