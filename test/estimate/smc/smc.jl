@@ -4,8 +4,10 @@ path = dirname(@__FILE__)
 writing_output = false
 if VERSION < v"1.5"
     ver = "111"
-else
+elseif VERSION < v"1.6"
     ver = "150"
+else
+    ver = "160"
 end
 
 m = AnSchorfheide()
