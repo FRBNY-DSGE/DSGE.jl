@@ -858,7 +858,7 @@ function get_fcast_regime_inds(m::AbstractDSGEModel, horizon::Int, cond_type::Sy
     last_ind = 1
 
     # Construct vector of time periods for each regime in the forecast periods after the conditional forecast
-    start_reg   = (cond_type == :none) ? get_setting(m, :reg_forecast_start) :
+    start_reg   = (cond_type == :none) ? get_setting(m, :reg_forecast_start)+1 :
     max(get_setting(m, :reg_forecast_start), get_setting(m, :reg_post_conditional_end))
     regime_inds = Vector{UnitRange{Int}}(undef, get_setting(m, :n_regimes) - start_reg + 1)
     for (rgi, i) in enumerate(start_reg:(get_setting(m, :n_regimes) - 1)) # Last regime handled separately
