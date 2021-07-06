@@ -3,7 +3,9 @@ include("tvcred_parameterize.jl")
 
 regenerate_reference_forecasts = false
 
-if VERSION < v"1.6"
+if VERSION < v"1.5"
+    ver = "111"
+elseif VERSION < v"1.6"
     ver = "150"
 else
     ver = "160"

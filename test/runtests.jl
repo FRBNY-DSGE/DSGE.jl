@@ -6,7 +6,7 @@ import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
 
 my_tests = [
-#=            "abstractdsgemodel",
+            "abstractdsgemodel",
             "abstractvarmodel",
             "defaults",
             "parameters",
@@ -68,15 +68,15 @@ my_tests = [
             "forecast/automatic_tempalt_zlb",
             "forecast/forecast_regime_switching",
             "forecast/time_varying_credibility",
-            "forecast/multiple_altpol_imperfect_awareness",=#
-            "forecast/m1002_ss62_forecast_test", # regenerate this on 1.6
+            "forecast/multiple_altpol_imperfect_awareness",
+            "forecast/m1002_ss62_forecast_test",
             "forecast/util",
             "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",
             "forecast/var/dsgevecm/impulse_responses",
 
             "analysis/compute_meansbands",
-            "analysis/df_to_table", # regenerate this on 1.6
+            "analysis/df_to_table",
             "analysis/io",
             "analysis/meansbands",
             "analysis/moments",
