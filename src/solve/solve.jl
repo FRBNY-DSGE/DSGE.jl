@@ -323,7 +323,7 @@ function solve_non_gensys2_regimes!(m::AbstractDSGEModel, Γ0s::Vector{Matrix{S}
             RRRs[reg] = RRRs[perf_cred_same_reg[reg]]
             CCCs[reg] = CCCs[perf_cred_same_reg[reg]]
 
-            continue # if so, skip the remaidner of this loop
+            continue # if so, skip the remainder of this loop
         end
 
         TTT_gensys, CCC_gensys, RRR_gensys, eu =

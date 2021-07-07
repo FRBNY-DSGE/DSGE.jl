@@ -10,13 +10,12 @@ shock_decompositions(m, system, histshocks, start_date, end_date)
 shock_decompositions(m, system, forecast_horizons, histshocks, start_index,
     end_index, regime_inds, cond_type)
 
-shock_decompositions(m, system::RegimeSwitchingSystem{S}, old_system,
-                              histshocks, start_date, end_date,
+shock_decompositions(m, system, old_system,
+                              histshocks, old_histshocks, start_date, end_date,
                               cond_type; full_shock_decomp)
 
-shock_decompositions(m, system::RegimeSwitchingSystem{S},
-                              old_system,
-                              forecast_horizons, histshocks,
+shock_decompositions(m, system, old_system,
+                              forecast_horizons, histshocks, old_histshocks,
                               start_index, end_index,
                               regime_inds, cond_type; full_shock_decomp)
 ```
@@ -33,8 +32,9 @@ shock_decompositions(m, system::RegimeSwitchingSystem{S},
 - `start_date::Date`: initial date for deterministic trends
 - `end_date::Date`: final date for deterministic trends
 - `regime_inds::Vector{UnitRange}`: indices of the data corresponding to each regime.
-- `old_system::Int`: Period index i such that for all periods >= i, we use the first
-    system's matrices.
+- `old_system::RegimeSwitchingSystem{S}`: state-space system matrices for the old model
+- `old_histshocks::Matrix{S}`: matrix of size `nshocks` x `hist_periods` of
+  historical smoothed shocks using the old system
 - `full_shock_decomp::Bool`: If true for old_system case, return difference in shockdecs
     between all shocks for the new and old systems. Else, return old system's shocks
     with 1 cumulative AIT shock added on.
@@ -193,8 +193,8 @@ end
 # Get Shock Decompositions with an old system and a bar that gives
 ## effect of using new system compared to old.
 function shock_decompositions(m::AbstractDSGEModel{S},
-                              system::RegimeSwitchingSystem{S}, old_system,#::Int,
-                              histshocks::Matrix{S},
+                              system::RegimeSwitchingSystem{S}, old_system::RegimeSwitchingSystem{S},
+                              histshocks::Matrix{S}, old_histshocks::Matrix{S},
                               start_date::Dates.Date = date_presample_start(m),
                               end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
                               cond_type::Symbol = :none; full_shock_decomp = true) where {S<:AbstractFloat}
@@ -211,13 +211,14 @@ function shock_decompositions(m::AbstractDSGEModel{S},
         regime_inds[1] = 1:regime_inds[1][end]
     end
 
-    shock_decompositions(m, system, old_system, horizon, histshocks, start_index, end_index,
+    shock_decompositions(m, system, old_system, horizon, histshocks, old_histshocks, start_index, end_index,
                          regime_inds, cond_type, full_shock_decomp = full_shock_decomp)
 end
 
 function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
-                              old_system,#::Int,
-                              forecast_horizons::Int, histshocks::Matrix{S},
+                              old_system::RegimeSwitchingSystem{S},
+                              forecast_horizons::Int,
+                              histshocks::Matrix{S}, old_histshocks::Matrix{S},
                               start_index::Int, end_index::Int,
                               regime_inds::Vector{UnitRange{Int}},
                               cond_type::Symbol; full_shock_decomp = true) where {S<:AbstractFloat}
@@ -234,6 +235,7 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
     obs    = zeros(S, nobs,    allperiods, nshocks)
     pseudo = zeros(S, npseudo, allperiods, nshocks)
     shocks = zeros(S, nshocks, histperiods)
+    old_shocks = zeros(S, nshocks, histperiods)
 
     # Old System Values
     old_states = zeros(S, nstates, allperiods, nshocks)
@@ -247,12 +249,14 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
 
     # Set constant system matrices to 0 and start at stationary steady state
     system = zero_system_constants(system)
+    old_system = zero_system_constants(old_system)
     z0     = zeros(S, nstates)
 
     fcast_shocks = zeros(S, nshocks, forecast_horizons) # these are always zero
     for i = 1:nshocks
         # Isolate single shock
         shocks[i, :] = histshocks[i, :]
+        old_shocks[i, :] = old_histshocks[i, :]
 
         # Old System Values
         # init_state_old = zeros(S, nstates)
@@ -280,7 +284,7 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
             old_system2 = old_system
             init_state_old = (reg_num == 1) ? zeros(S, nstates) : old_states[:, reg_ind[1] - 1, i]
             old_states[:, reg_ind, i], old_obs[:, reg_ind, i], old_pseudo[:, reg_ind, i], _ =
-                forecast(old_system2[reg_num], init_state_old, shocks[:,reg_ind])
+                forecast(old_system2[reg_num], init_state_old, old_shocks[:,reg_ind])
         end
 
         # Run forecast using regime-switching forecast
@@ -298,6 +302,7 @@ function shock_decompositions(m::AbstractDSGEModel, system::RegimeSwitchingSyste
 
         # zero out shocks b/c want effects of single shocks
         shocks[i, :] .= 0.
+        old_shocks[i, :] .= 0.
     end
 
     # Add new system as shock to old system
@@ -346,6 +351,11 @@ deterministic_trends(m, system, z0, start_date, end_date)
 
 deterministic_trends(m, system, z0, nperiods, start_index, end_index,
     regime_inds, regimes, cond_type)
+
+deterministic_trends(m, system, old_system, z0, start_date, end_date)
+
+deterministic_trends(m, system, old_system, z0, nperiods, start_index, end_index,
+    regime_inds, regimes, cond_type)
 ```
 
 Compute deterministic trend values of states, observables, and
@@ -364,6 +374,7 @@ presample period.
 - `regime_inds::Vector{UnitRange}`: indices of the data corresponding to each regime.
 - `regimes::UnitRange`: which regimes are involved in the date range for which
     we want to compute the deterministic trends
+- `old_system::`RegimeSwitchingSystem`: state-space system matrices for old model
 
 where `S<:AbstractFloat`.
 
@@ -492,7 +503,7 @@ end
 
 # Get Deterministic Trends with an old system
 function deterministic_trends(m::AbstractDSGEModel{S},
-                              system::RegimeSwitchingSystem{S}, old_system,#::Int,
+                              system::RegimeSwitchingSystem{S}, old_system::RegimeSwitchingSystem{S},
                               z0::Vector{S},
                               start_date::Dates.Date = date_presample_start(m),
                               end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
@@ -522,13 +533,14 @@ function deterministic_trends(m::AbstractDSGEModel{S},
 end
 
 
-function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, old_system,#::Int,
+function deterministic_trends(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S}, old_system::RegimeSwitchingSystem{S},
                               z0::Vector{S}, nperiods::Int,
                               start_index::Int, end_index::Int, regime_inds::Vector{UnitRange{Int}},
                               cond_type::Symbol) where {S<:AbstractFloat}
 
     # Set constant system matrices to 0
     system = zero_system_constants(system)
+    old_system = zero_system_constants(old_system)
 
     # Initialize storage matrices
     nshocks = size(system[1, :RRR], 2) # this is used in the forecasting loops to create shock matrices
@@ -761,13 +773,12 @@ shock_decompositions_sequence(m, system, histshocks, start_date, end_date, n_bac
 shock_decompositions_sequence(m, system, forecast_horizons, histshocks, start_index,
     end_index, regime_inds, cond_type, n_back, back_shocks)
 
-shock_decompositions_sequence(m, system::RegimeSwitchingSystem{S}, old_system,
-                              histshocks, start_date, end_date,
+shock_decompositions_sequence(m, system, old_system,
+                              histshocks, old_histshocks, start_date, end_date,
                               cond_type; full_shock_decomp, n_back, back_shocks)
 
-shock_decompositions_sequence(m, system::RegimeSwitchingSystem{S},
-                              old_system,
-                              forecast_horizons, histshocks,
+shock_decompositions_sequence(m, system, old_system,
+                              forecast_horizons, histshocks, old_histshocks,
                               start_index, end_index,
                               regime_inds, cond_type; full_shock_decomp, n_back, back_shocks)
 ```
@@ -784,8 +795,9 @@ shock_decompositions_sequence(m, system::RegimeSwitchingSystem{S},
 - `start_date::Date`: initial date for deterministic trends
 - `end_date::Date`: final date for deterministic trends
 - `regime_inds::Vector{UnitRange}`: indices of the data corresponding to each regime.
-- `old_system::Int`: Period index i such that for all periods >= i, we use the first
-    system's matrices.
+- `old_system::RegimeSwitchingSystem{S}`: state-space system matrices for the old model
+- `old_histshocks::Matrix{S}`: matrix of size `nshocks` x `hist_periods` of
+  historical smoothed shocks using the old system
 - `full_shock_decomp::Bool`: If true for old_system case, return difference in shockdecs
     between all shocks for the new and old systems. Else, return old system's shocks
     with 1 cumulative AIT shock added on.
@@ -996,8 +1008,8 @@ end
 # Get Shock Decompositions with an old system and a bar that gives
 ## effect of using new system compared to old.
 function shock_decompositions_sequence(m::AbstractDSGEModel{S},
-                              system::RegimeSwitchingSystem{S}, old_system,#::Int,
-                              histshocks::Matrix{S},
+                              system::RegimeSwitchingSystem{S}, old_system::RegimeSwitchingSystem{S},
+                              histshocks::Matrix{S}, old_histshocks::Matrix{S},
                               start_date::Dates.Date = date_presample_start(m),
                               end_date::Dates.Date = prev_quarter(date_forecast_start(m)),
                               cond_type::Symbol = :none; full_shock_decomp = true,
@@ -1015,14 +1027,14 @@ function shock_decompositions_sequence(m::AbstractDSGEModel{S},
         regime_inds[1] = 1:regime_inds[1][end]
     end
 
-    shock_decompositions_sequence(m, system, old_system, horizon, histshocks, start_index, end_index,
+    shock_decompositions_sequence(m, system, old_system, horizon, histshocks, old_histshocks, start_index, end_index,
                                   regime_inds, cond_type, full_shock_decomp = full_shock_decomp,
                                   n_back = n_back, back_shocks = back_shocks)
 end
 
 function shock_decompositions_sequence(m::AbstractDSGEModel, system::RegimeSwitchingSystem{S},
-                                       old_system,#::Int,
-                                       forecast_horizons::Int, histshocks::Matrix{S},
+                                       old_system::RegimeSwitchingSystem{S}, forecast_horizons::Int,
+                                       histshocks::Matrix{S}, old_histshocks::Matrix{S},
                                        start_index::Int, end_index::Int,
                                        regime_inds::Vector{UnitRange{Int}},
                                        cond_type::Symbol; full_shock_decomp = true,
@@ -1045,9 +1057,13 @@ function shock_decompositions_sequence(m::AbstractDSGEModel, system::RegimeSwitc
         histshocks_t = copy(histshocks)
         histshocks_t[:,vcat(1:t-1,t+1:histperiods)] .= 0.0
 
+        old_histshocks_t = copy(old_histshocks)
+        old_histshocks_t[:,vcat(1:t-1,t+1:histperiods)] .= 0.0
+
         states[t,:,:,:], obs[t,:,:,:], pseudo[t,:,:,:] = shock_decompositions(m, system, old_system,
                                                                               forecast_horizons,
-                                                                              histshocks_t, start_index, end_index,
+                                                                              histshocks_t, old_histshocks_t,
+                                                                              start_index, end_index,
                                                                               regime_inds, cond_type,
                                                                               full_shock_decomp = full_shock_decomp)
     end
