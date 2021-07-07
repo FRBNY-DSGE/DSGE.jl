@@ -809,6 +809,22 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
     update!(m, params) # Note that params is a Vector{Float64}, not a ParameterVector. This `update!` infers if the forecast is regime-switching if length(params) > length(m.parameters)
 
     system = compute_system(m; tvis = tvis)
+    if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+        # Must be using TV cred system
+        m2 = deepcopy(m)
+        m2 <= Setting(:regime_eqcond_info, get_setting(m2, :alternative_policies)[1].regime_eqcond_info)
+        m2 <= Setting(:tvis_information_set, get_setting(m2, :alternative_policies)[1].infoset)
+        m2 <= Setting(:identical_eqcond_regimes, get_setting(m2, :alternative_policies)[1].identical_eqcond_regimes)
+        m2 <= Setting(:perfect_credibility_identical_transitions, get_setting(m2, :alternative_policies)[1].perfect_credibility_identical_transitions)
+        m2 <= Setting(:n_regimes, get_setting(m2, :alternative_policies)[1].n_regimes)
+        m2 <= Setting(:gensys2, get_setting(m2, :alternative_policies)[1].gensys2)
+        delete!(m2.settings, :perfect_credibility_identical_transitions)
+        for i in collect(keys(get_setting(m2, :regime_eqcond_info)))
+            get_setting(m2, :regime_eqcond_info)[i].weights = [1.0, 0.0]
+        end
+
+        old_system = compute_system(m2; tvis=tvis)
+    end
 
     # Initialize output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -846,10 +862,23 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
                        s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt],
                        catch_smoother_lapack = catch_smoother_lapack)
 
+            if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+                old_kal = filter(m2, df, old_system; cond_type = cond_type)
+                old_histstates, old_histshocks, old_histpseudo, old_initial_states =
+                    smooth(m2, df, old_system; cond_type = cond_type, draw_states = uncertainty,
+                           s_pred = kal[:s_pred], P_pred = kal[:P_pred], s_filt = kal[:s_filt], P_filt = kal[:P_filt],
+                           catch_smoother_lapack = catch_smoother_lapack)
+            end
         else
             histstates, histshocks, histpseudo, initial_states =
                 smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty,
                        catch_smoother_lapack = catch_smoother_lapack)
+
+            if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+                old_histstates, old_histshocks, old_histpseudo, old_initial_states =
+                smooth(m2, df, old_system; cond_type = cond_type, draw_states = uncertainty,
+                       catch_smoother_lapack = catch_smoother_lapack)
+            end
         end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -1218,6 +1247,14 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             histshocks
         end
 
+        if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+            old_histshocks_shockdec = if use_filtered_shocks_in_shockdec
+                filter_shocks(m, df, old_system, cond_type = cond_type)
+            else
+                old_histshocks
+            end
+        end
+
         start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
         end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
             max(date_conditional_end(m), prev_quarter(date_forecast_start(m)))
@@ -1226,18 +1263,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         end
 
         if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
-            # Must be using TV cred system
-            old_system = copy(system)
-            for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key != :zlb_rule
-                    old_system[i].transition = system[1].transition
-                    old_system[i].measurement = system[1].measurement
-                    old_system[i].pseudo_measurement = system[1].pseudo_measurement
-                    #regime_indices(m, start_date, end_date)[i+1][1]
-                    #break
-                end
-            end
-            shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, old_system, histshocks_shockdec, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp)
+            shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, old_system, histshocks_shockdec, old_histshocks_shockdec, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp)
         else
             shockdecstates, shockdecobs, shockdecpseudo = isa(system, RegimeSwitchingSystem) ?
                 shock_decompositions(m, system, histshocks_shockdec, start_date, end_date, cond_type) :
@@ -1298,18 +1324,6 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
             end
 
             if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs) && full_shock_decomp
-                # Must be using TV cred system
-                old_system = copy(system)#0
-                for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-                    # TODO: Generalize beyond zero_rate to any temporary or permant alternative policy
-                    if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key != :zlb_rule
-                        old_system[i].transition = system[1].transition
-                        old_system[i].measurement = system[1].measurement
-                        old_system[i].pseudo_measurement = system[1].pseudo_measurement
-                        #regime_indices(m, start_date, end_date)[i][1]
-                        #break
-                    end
-                end
                 dettrendstates, dettrendobs, dettrendpseudo =
                     deterministic_trends(m, system, old_system, initial_states, start_date, end_date, cond_type)
             else
@@ -1354,6 +1368,13 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         else
             histshocks
         end
+        if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
+            old_histshocks_shockdecseq = if use_filtered_shocks_in_shockdec
+                filter_shocks(m2, df, old_system, cond_type = cond_type)
+            else
+                old_histshocks
+            end
+        end
 
         start_date = max(date_mainsample_start(m), df[1, :date]) # smooth doesn't return presample
         end_date   = if cond_type in [:semi, :full] # end date of histshocks includes conditional periods
@@ -1363,19 +1384,7 @@ function forecast_one_draw(m::AbstractDSGEModel{Float64}, input_type::Symbol, co
         end
 
         if haskey(m.settings, :old_shock_decs) && get_setting(m, :old_shock_decs)
-            # Must be using TV cred system
-            old_system = get_setting(m, :alternative_policies)
-            #=old_system = copy(system) ## CAN'T FORECAST WITHOUT CHANGING KEY FOR OLD SYSTEM
-            for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
-                if get_setting(m, :regime_eqcond_info)[i].alternative_policy.key != :zlb_rule
-                    old_system[i].transition = system[1].transition
-                    old_system[i].measurement = system[1].measurement
-                    old_system[i].pseudo_measurement = system[1].pseudo_measurement
-                    #regime_indices(m, start_date, end_date)[i][1]
-                    #break
-                end
-            end=#
-            shockdecseqstates, shockdecseqobs, shockdecseqpseudo = shock_decompositions_sequence(m, system, old_system, histshocks_shockdecseq, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp, n_back = n_back, back_shocks = back_shocks)
+            shockdecseqstates, shockdecseqobs, shockdecseqpseudo = shock_decompositions_sequence(m, system, old_system, histshocks_shockdecseq, old_histshocks_shockdecseq, start_date, end_date, cond_type, full_shock_decomp = full_shock_decomp, n_back = n_back, back_shocks = back_shocks)
         else
             shockdecseqstates, shockdecseqobs, shockdecseqpseudo = isa(system, RegimeSwitchingSystem) ?
                 shock_decompositions_sequence(m, system, histshocks_shockdecseq, start_date, end_date, cond_type, n_back = n_back, back_shocks = back_shocks) :
