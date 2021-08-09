@@ -41,6 +41,10 @@
 ## Continued WIP
 + Adaptive MH was found to be implemented incorrectly and will be fixed for the next release
 
+# DSGE.jl 1.2.2
+## Bug fixes
++ Fix print statements when using `forecast_one` and `verbose = :high`
+
 # DSGE.jl 1.2.1
 ## Miscellaneous
 + Fix docs
