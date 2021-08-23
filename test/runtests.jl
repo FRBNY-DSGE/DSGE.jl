@@ -2,10 +2,8 @@ using ModelConstructors, Nullables, SMC, Test, Distributed, Distributions
 using Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, SparseArrays
 using StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT, Plots
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
-@everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC, Pkg
+@everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
 HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
-
-Pkg.instantiate()
 
 my_tests = [
             "abstractdsgemodel",
