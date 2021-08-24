@@ -9,12 +9,19 @@ jobs:
       fail-fast: false
       matrix:
         version:
-            - '1.1'
-            - '1'
+            - '1.1.1'
+            - '1.5.0'
+            - '1.6.0'
         arch:
             - x64
+            - x86
         os:
             - ubuntu-latest
+            - windows-latest
+            - macOS-latest
+        exclude:
+            - os: macOS-latest
+              arch: x86
 
     steps:
       - uses: actions/checkout@v2
@@ -22,6 +29,7 @@ jobs:
         uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
