@@ -1,7 +1,7 @@
 writing_output = false
 if VERSION < v"1.5"
     ver = "111"
-else
+else 
     ver = "150"
 end
 @everywhere Random.seed!(42)
@@ -35,7 +35,7 @@ if writing_output
     end
 end
 
-file = JLD2.jldopen(joinpath(dirname(@__FILE__), "reference/helpers_output_version="
+file = JLD2.jldopen(joinpath(dirname(@__FILE__), "reference/helpers_output_version=" 
                              * ver * ".jld2"), "r")
 saved_ϕ_n = read(file, "phi_n")
 saved_resampled_last_period = read(file, "resampled_last_period")
@@ -75,7 +75,7 @@ close(file)
 
 ####################################################################
 @testset "MvNormal Mixture Draw" begin
-    @test @test_matrix_approx_eq test_θ_new saved_θ_new
+    @test test_θ_new == saved_θ_new
 end
 
 
@@ -139,7 +139,7 @@ close(file)
 test_ESS = SMC.compute_ESS(loglh, current_weights, ϕ_n, ϕ_n1)
 
 if writing_output
-    file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/smc_sw_cloud_fix=true_blocks=3.jld2"), "r")
+    file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/smc_sw_cloud_fix=true_blocks=3.jld2"), "r") 
     saved_cloud = read(file, "cloud")
     current_weights = read(file, "w")[:,3]
     close(file)
