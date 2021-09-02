@@ -3,14 +3,6 @@ include("tvcred_parameterize.jl")
 
 regenerate_reference_forecasts = false
 
-if VERSION < v"1.5"
-    ver = "111"
-elseif VERSION < v"1.6"
-    ver = "150"
-else
-    ver = "160"
-end
-
 # Forecast settings
 fcast_date = DSGE.quartertodate("2020-Q4")
 date_fcast_end  = iterate_quarters(fcast_date, 60)
@@ -104,13 +96,16 @@ m <= Setting(:skip_altpolicy_state_init, true)
 
 ## Set up temporary ZLB
 m <= Setting(:gensys2, true)
-m <= Setting(:uncertain_temp_altpol, true)
+m <= Setting(:uncertain_temporary_altpolicy, true)
 m <= Setting(:uncertain_altpolicy, true)
+m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 
 # Set regime_dates and regime_eqcond_info for temp ZLB to flexible AIT
 gensys2_first_regime = get_setting(m, :n_regimes) + 1
 get_setting(m, :regime_dates)[gensys2_first_regime] = start_zlb_date
 n_zlb_reg = DSGE.subtract_quarters(end_zlb_date, start_zlb_date) + 1
+
+# Set up regime_eqcond_info
 m <= Setting(:replace_eqcond, true)
 reg_dates = deepcopy(get_setting(m, :regime_dates))
 regime_eqcond_info = Dict{Int, DSGE.EqcondEntry}()
@@ -128,9 +123,7 @@ m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = :full)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
 m <= Setting(:temporary_altpolicy_length, n_zlb_reg)
-m <= Setting(:temporary_altpolicy_names, [:zero_rate])
 m <= Setting(:zero_rate_zlb_value, 0.)
-
 # Now add additional regimes of flexible AIT to allow time-varying credibility
 for i in nreg0:(nreg0 + 15)
     reg_dates[i] = DSGE.iterate_quarters(reg_dates[nreg0], i - nreg0)
@@ -140,7 +133,6 @@ m <= Setting(:regime_dates,             reg_dates)
 m <= Setting(:regime_eqcond_info, regime_eqcond_info)
 setup_regime_switching_inds!(m; cond_type = :full)
 set_regime_vals_fnct(m, get_setting(m, :n_regimes))
-
 # Set up TVIS information set
 m <= Setting(:tvis_information_set, vcat([i:i for i in 1:(gensys2_first_regime - 1)],
                                          [i:get_setting(m, :n_regimes) for i in
@@ -152,7 +144,6 @@ modal_params = map(x -> x.value, m.parameters)
 # sys_2pol = compute_system(m; tvis = true)
 out1 = DSGE.forecast_one_draw(m, :mode, :full, output_vars, modal_params, df,
                               regime_switching = true, n_regimes = get_setting(m, :n_regimes))
-
 # Test multiple alternative policies with multi-period altpolicies and temporary policies
 
 ## First start with fake temporary policy
@@ -222,7 +213,7 @@ out_temp_flexible_ait = DSGE.forecast_one_draw(m, :mode, :full, output_vars, mod
                                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 if regenerate_reference_forecasts
-    h5open(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output_version=$(ver).h5"), "w") do file
+    h5open(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output.h5"), "w") do file
         write(file, "forecastobs", out_temp_flexible_ait[:forecastobs])
         write(file, "forecastpseudo", out_temp_flexible_ait[:forecastpseudo])
     end
@@ -230,14 +221,12 @@ end
 
 
 @testset "Multiple alternative policies, incl. MultiPeriodAltPolicy, with imperfect awareness" begin
-
     for k in keys(out_taylor_temp_taylor) # check implementations that should yield same results as a forecast
         @test out_taylor_temp_taylor[k] ≈ out1[k] # with 2 alternative policies and imperfect awareness
         @test out_default_temp_default[k] ≈ out1[k]
         @test out_flexait_zlb_temp_flexait_zlb[k] ≈ out1[k]
-        @test out_temp_flexible_ait[k] ≈
-            h5read(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output_version=$(ver).h5"), string(k))
+        @test maximum(abs.(out_temp_flexible_ait[k] -
+                          h5read(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output.h5"), string(k)))) < 1e-3
     end
-
 end
 nothing
