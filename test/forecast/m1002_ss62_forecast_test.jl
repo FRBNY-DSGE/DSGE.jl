@@ -186,9 +186,9 @@ end
 
 @testset "Compare Modal Forecast for Model 1002 ss62 against reference" begin
     ref_out = JLD2.jldopen(joinpath(dirname(@__FILE__), "..", "reference", "ss62_modal_forecast_output_version=$(ver).jld2"), "r")
-    @test fcast[:forecastobs] ≈ ref_out["forecastobs"]
-    @test fcast[:forecastpseudo] ≈ ref_out["forecastpseudo"]
-    @test fcast[:histpseudo] ≈ ref_out["histpseudo"]
+    @test maximum(abs.(fcast[:forecastobs] - ref_out["forecastobs"])) < 1e-3
+    @test maximum(abs.(fcast[:forecastpseudo] - ref_out["forecastpseudo"])) < 1e-3
+    @test maximum(abs.(fcast[:histpseudo] - ref_out["histpseudo"])) < 1e-3
 end
 
 nothing
