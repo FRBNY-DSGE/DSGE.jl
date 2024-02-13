@@ -159,7 +159,7 @@ function na2nan!(df::DataFrame)
         if typeof(df[!,col])==Vector{Date}
             nothing
         else
-            df[ismissing.(df[!,col]), col] = NaN
+            df[ismissing.(df[!,col]), col] .= NaN
         end
     end
 end
