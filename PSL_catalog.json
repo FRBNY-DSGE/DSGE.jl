@@ -32,7 +32,7 @@
             "name": "Aidan Gleich",
             "image": "https://scholars.duke.edu/profile-images/thumbnail500/1298006?nocache=1710715179084",
             "link": "https://scholars.duke.edu/person/aidan.gleich"
-        },
+        }
     ],
     "links": {
       "code_repository": "https://github.com/FRBNY-DSGE/DSGE.jl",
