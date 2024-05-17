@@ -1,6 +1,6 @@
 {
     "name": "DSGE.jl",
-    "img": "https://avatars.githubusercontent.com/u/5823069?s=48&v=4",
+    "img": "https://frbny-dsge.github.io/DSGE.jl/latest/assets/logo.png",
     "banner_title": "DSGE.jl",
     "banner_subtitle": "Solve and estimate Dynamic Stochastic General Equilibrium models ",
     "detailed_description": "The DSGE.jl package implements the New York Fed dynamic stochastic general equilibrium (DSGE) model and provides general code to estimate many user-specified DSGE models. The package is introduced in the Liberty Street Economics blog post The FRBNY DSGE Model Meets Julia.",
@@ -14,24 +14,14 @@
             "link": "https://github.com/MarcoDelNegro"
         },
         {
-            "name": "William Chen",
-            "image": "https://avatars.githubusercontent.com/u/20440083?v=4",
-            "link": "https://github.com/chenwilliam77"
+            "name": "Pranay Gundam",
+            "image": "https://avatars.githubusercontent.com/u/49418351?v=4",
+            "link": "https://github.com/pranay-gundam"
         },
         {
-            "name": "Shlok Goyal",
-            "image": "https://avatars.githubusercontent.com/u/30206828?v=4",
-            "link": "https://github.com/ShlokG"
-        },
-        {
-            "name": "Alissa Johnson",
-            "image": "https://avatars.githubusercontent.com/u/46977391?v=4",
-            "link": "https://github.com/alissarjohnson"
-        },
-        {
-            "name": "Aidan Gleich",
-            "image": "https://scholars.duke.edu/profile-images/thumbnail500/1298006?nocache=1710715179084",
-            "link": "https://scholars.duke.edu/person/aidan.gleich"
+            "name": "Brian Pacula",
+            "image": "https://avatars.githubusercontent.com/u/98560146?v=4",
+            "link": "https://github.com/Brian-Pacula"
         }
     ],
     "links": {
