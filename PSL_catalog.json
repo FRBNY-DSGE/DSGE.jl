@@ -1,51 +1,34 @@
 {
-    "project_one_line": {
-        "start_header": null,
-        "end_header": null,
-        "source": "https://github.com/PSLmodels/DSGE.jl",
-        "type": "html",
-        "data": "<p>New York Fed DSGE Model</p>"
-    },
-    "project_overview": {
-        "start_header": "New York Fed DSGE Model (Version 1002)",
-        "end_header": "Disclaimer",
-        "source": "README.md",
-        "type": "github_file",
-        "data": null
-    },
-    "user_documentation": {
-        "start_header": null,
-        "end_header": null,
-        "source": "https://frbny-dsge.github.io/DSGE.jl/stable/",
-        "type": "html",
-        "data": "<a href=\"https://frbny-dsge.github.io/DSGE.jl/stable/\">User documentation</a>"
-    },
-    "user_changelog_recent": {
-        "start_header": null,
-        "end_header": null,
-        "source": null,
-        "type": null,
-        "data": null
-    },
-    "contributor_overview": {
-        "start_header": null,
-        "end_header": null,
-        "source": "https://github.com/PSLmodels/DSGE.jl#installation",
-        "type": "html",
-        "data": "<p>If you want to report a <b>bug</b>, create a new issue <a href=\"https://github.com/PSLmodels/DSGE.jl/issues\">here</a> providing details on what you think is wrong with DSGE.jl.</p><p>If you want to request <b>an enhancement</b>, create a new issue <a href=\"https://github.com/PSLmodels/DSGE.jl/issues\">here</a> providing details on what you think should be added to DSGE.jl. </p>"
-    },
-    "link_to_webapp": {
-        "source": null,
-        "type": null,
-        "start_header": null,
-        "end_header": null,
-        "data": null
-    },
-    "core_maintainers": {
-        "start_header": null,
-        "end_header": null,
-        "source": null,
-        "type": "html",
-        "data": "<ul><li>Marco Del Negro</li><li>William Chen</li><li>Shlok Goyal</li><li>Alissa Johnson</li><li>Aidan Gleich</li></ul>"
+    "name": "DSGE.jl",
+    "img": "https://frbny-dsge.github.io/DSGE.jl/latest/assets/logo.png",
+    "banner_title": "DSGE.jl",
+    "banner_subtitle": "Solve and estimate Dynamic Stochastic General Equilibrium models ",
+    "detailed_description": "The DSGE.jl package implements the New York Fed dynamic stochastic general equilibrium (DSGE) model and provides general code to estimate many user-specified DSGE models. The package is introduced in the Liberty Street Economics blog post The FRBNY DSGE Model Meets Julia.",
+    "policy_area": "Macroeconomics, Economic Fluctuations, Monetary Policy, Fiscal Policy",
+    "geography": "Adaptable to any country",
+    "language": "Julia",
+    "maintainers": [
+        {
+            "name": "Marco Del Negro",
+            "image": "https://avatars.githubusercontent.com/u/13486114?v=4",
+            "link": "https://github.com/MarcoDelNegro"
+        },
+        {
+            "name": "Pranay Gundam",
+            "image": "https://media.licdn.com/dms/image/C5603AQFkxWoWV7IHhQ/profile-displayphoto-shrink_200_200/0/1658672086266?e=1721260800&v=beta&t=yUzAj6hQo0q83YlxpYJ5UYAXeSUjWOEfLm48xsgiNmE",
+            "link": "https://github.com/pranay-gundam"
+        },
+        {
+            "name": "Brian Pacula",
+            "image": "https://avatars.githubusercontent.com/u/98560146?v=4",
+            "link": "https://github.com/Brian-Pacula"
+        }
+    ],
+    "links": {
+      "code_repository": "https://github.com/FRBNY-DSGE/DSGE.jl",
+      "user_documentation": "https://frbny-dsge.github.io/DSGE.jl/latest/",
+      "contributor_documentation": "https://frbny-dsge.github.io/DSGE.jl/latest/contributing/",
+      "webapp": "",
+      "recent_changes": "https://github.com/FRBNY-DSGE/DSGE.jl/releases"
     }
 }
