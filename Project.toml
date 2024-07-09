@@ -1,6 +1,6 @@
 name = "DSGE"
 uuid = "6cf23378-2c47-544c-b0c3-6efefe57ca11"
-authors = ["William Chen <william.chen@ny.frb.org>", "Shlok Goyal <shlok.goyal@ny.frb.org>", "Alissa Johnson <alissa.johnson@ny.frb.org>"]
+authors = ["Pranay Gundam <Pranay.Gundam@ny.frb.org>", "Brian Pacula <Brian.Pacula@ny.frb.org>", "Ibrahima Diagne <ibrahima.diagne@ny.frb.org>"]
 version = "1.3.0"
 
 [deps]
