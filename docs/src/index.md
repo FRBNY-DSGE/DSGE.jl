@@ -55,10 +55,12 @@ Developers of this package at the
 * [William Chen](https://github.com/chenwilliam77)
 * [Shlok Goyal](https://github.com/ShlokG)
 * [Abhi Gupta](https://github.com/abhig94)
+* [Pranay Gundam](https://github.com/pranay-gundam)
 * [Alissa Johnson](https://github.com/alissarjohnson)
 * [Pearl Li](https://github.com/pearlzli)
 * [Ethan Matlin](https://github.com/ethanmatlin)
 * [Erica Moszkowski](https://github.com/emoszkowski)
+* [Brian Pacula](https://github.com/Brian-Pacula)
 * [Reca Sarfati](https://github.com/rsarfati)
 * [Micah Smith](https://github.com/micahjsmith)
 
