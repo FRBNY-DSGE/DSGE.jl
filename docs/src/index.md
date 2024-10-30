@@ -53,6 +53,7 @@ Developers of this package at the
 
 * [Michael Cai](https://github.com/caimichael)
 * [William Chen](https://github.com/chenwilliam77)
+* [Ibrahima Diagne](https://github.com/abediagne)
 * [Shlok Goyal](https://github.com/ShlokG)
 * [Pranay Gundam](https://github.com/pranay-gundam)
 * [Abhi Gupta](https://github.com/abhig94)
