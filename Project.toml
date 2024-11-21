@@ -52,7 +52,7 @@ TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
 
 [compat]
 BasisMatrices = "0.6, 0.7"
-BenchmarkTools = "^0.4.3, 0.5"
+BenchmarkTools = "^0.4.3, 0.5, 1.4"
 CSV = "0.8"
 Calculus = "0.4, 0.5"
 ClusterManagers = "0.3.2, 0.4.0"
