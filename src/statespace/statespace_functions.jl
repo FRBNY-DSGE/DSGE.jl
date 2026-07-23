@@ -213,7 +213,12 @@ function compute_system_helper(m::AbstractDSGEModel{T}; tvis::Bool = false, verb
                 TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
                 # Measurement (needs the additional TTT_jump argument)
                 measurement_equation = measurement(m, TTT, TTT_jump, RRR, CCC, GDPeqn)
-            elseif m.spec == "het_dsge" || m.spec == "rep_dsge"
+            elseif m.spec == "het_dsge"
+                _, dF2_dRZ, dF2_dWH, dF2_dTT = jacobian(m)
+                C_eqn = construct_consumption_eqn(m, TTT_jump, dF2_dRZ, dF2_dWH, dF2_dTT)
+                TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, C_eqn)
+                measurement_equation = measurement(m, TTT, RRR, CCC, C_eqn)
+            elseif m.spec == "rep_dsge"
                 TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
                 measurement_equation = measurement(m, TTT, RRR, CCC)
             else
@@ -499,6 +504,19 @@ function compute_uncertain_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis
         end
 
         if has_pseudo && !empty_pseudo_meas_eqn[reg]
+            # Blend all pseudo-observable rows first. This handles any pseudo-observable
+            # that is policy-dependent but not listed in :forward_looking_pseudo_observables
+            # (e.g. variables depending on TTT^k which is non-linear in TTT).
+            system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
+                sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ_pseudo] :
+                                   system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:ZZ_pseudo])
+                     for i in 1:length(new_wt)])
+            system_main.pseudo_measurements[reg][:DD_pseudo] .=
+                    sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD_pseudo] :
+                                       system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:DD_pseudo])
+                         for i in 1:length(new_wt)])
+            # Additionally apply targeted per-row blending for explicitly listed
+            # forward-looking pseudo-observables (e.g. expected long-rate terms).
             if has_fwd_looking_pseudo
                 for k in get_setting(m, :forward_looking_pseudo_observables)
                     system_main.pseudo_measurements[reg][:ZZ_pseudo][m.pseudo_observables[k], :] =
@@ -510,15 +528,6 @@ function compute_uncertain_altpolicy_system_helper(m::AbstractDSGEModel{T}; tvis
                                            system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:DD_pseudo][m.pseudo_observables[k]])
                              for i in 1:length(new_wt)])
                 end
-            else
-                system_main.pseudo_measurements[reg][:ZZ_pseudo] .=
-                    sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:ZZ_pseudo] :
-                                       system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:ZZ_pseudo])
-                         for i in 1:length(new_wt)])
-                system_main.pseudo_measurements[reg][:DD_pseudo] .=
-                        sum([new_wt[i] .* (which_is_system[i] ? system_perfect_cred_totpolicies[i][:DD_pseudo] :
-                                           system_perfect_cred_totpolicies[i].pseudo_measurements[min(length(system_perfect_cred_totpolicies[i].pseudo_measurements), reg)][:DD_pseudo])
-                             for i in 1:length(new_wt)])
             end
         end
     end

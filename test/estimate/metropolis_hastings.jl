@@ -7,8 +7,10 @@ writing_output = false
 
 if VERSION < v"1.5"
     ver = "111"
-else
+elseif VERSION < v"1.7"
     ver = "150"
+else
+    ver = "1126"
 end
 
 # Set up model for testing

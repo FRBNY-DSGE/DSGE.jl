@@ -43,7 +43,7 @@ function transform_transition_matrices(m::AbstractDSGEModel, TT::Matrix{T},
     if track_lag
         for i = 1:freq+1
             if i == 1
-                TTT[1:size(TT,1), 1 + size(TT,2) * freq:end] = eye(TT) # track last lag
+                TTT[1:size(TT,1), 1 + size(TT,2) * freq:end] = Matrix{T}(I, size(TT, 1), size(TT, 2)) # track last lag
             else
                 TTT[1 + size(TT,1)*(i-1):size(TT,1)*i, 1 + size(TT,2)*freq:end] = TT_powers[i-1]
             end
@@ -71,7 +71,7 @@ function transform_transition_matrices(m::AbstractDSGEModel, TT::Matrix{T},
                 RRR[1+size(R,1)*(i-1):size(R,1)*i, 1+size(R,2)*j:size(R,2)*(j+1)] = TR_powers[i-j-2]
             end
         end
-        CCC = vcat(zeros(C), repeat(C, freq))
+        CCC = vcat(zero(C), repeat(C, freq))
     else
         RRR[1:size(R, 1), 1:size(R,2)] = TR_powers[0]
         for i in 2:freq

@@ -1,3 +1,5 @@
+using Statistics, StateSpaceRoutines, BenchmarkTools
+
 # Note that this test assumes TPF properly works
 pm = PoolModel("ss1")
 pm <= Setting(:data_vintage, "190822")
@@ -95,5 +97,52 @@ end
     @test_throws ErrorException DSGE.filter(pm, data)
 end
 
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. Data is local, no FRED API. NOTE: the
+# dynamic path runs a 1000-particle tempered particle filter, so it is much
+# slower than the other estimate benchmarks.
+#
+# Build self-contained objects here: the module-level pm/data/tuning above have
+# all been rebound (and `tuning` mutated to n_particles=10) by the testsets.
+run_benchmarks = false
+
+if run_benchmarks
+    bench_path = dirname(@__FILE__)
+
+    bench_tuning = Dict(:r_star => 2., :c_init => 0.3, :target_accept_rate => 0.4,
+                        :resampling_method => :systematic, :n_mh_steps => 1,
+                        :n_particles => 1000, :n_presample_periods => 0,
+                        :allout => true)
+    pm_dyn = PoolModel("ss1")
+    pm_dyn <= Setting(:data_vintage, "190822")
+    pm_dyn <= Setting(:dataroot, "$(bench_path)/../reference/")
+    pm_dyn <= Setting(:tuning, bench_tuning, "tuning parameters for TPF")
+    data_dyn = df_to_matrix(pm_dyn, load_data(pm_dyn))
+
+    # Equal- and static-weight pools: closed-form scores (cheap).
+    pm_eq = PoolModel("ss1", weight_type = :equal)
+    pm_eq <= Setting(:data_vintage, "190822")
+    pm_eq <= Setting(:dataroot, "$(bench_path)/../reference/")
+    data_eq = df_to_matrix(pm_eq, load_data(pm_eq))
+
+    pm_static = PoolModel("ss1", weight_type = :static)
+    pm_static <= Setting(:data_vintage, "190822")
+    pm_static <= Setting(:dataroot, "$(bench_path)/../reference/")
+    data_static = df_to_matrix(pm_static, load_data(pm_static))
+
+    b_tpf    = @benchmark DSGE.filter($pm_dyn, $data_dyn; tuning = get_setting($pm_dyn, :tuning))
+    b_equal  = @benchmark DSGE.filter($pm_eq, $data_eq)
+    b_static = @benchmark DSGE.filter($pm_static, $data_static, [0.5, 0.5])
+
+    println("\n===== estimate/filter_poolmodel benchmark results =====")
+    for (name, b) in [("filter dynamic (TPF) ", b_tpf),
+                      ("filter equal-weight  ", b_equal),
+                      ("filter static-weight ", b_static)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
+end
 
 nothing

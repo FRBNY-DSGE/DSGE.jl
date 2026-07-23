@@ -168,7 +168,7 @@ end
 
 
 function OneAssetHANK(subspec::String="ss0";
-                       custom_settings::Array{Setting} = Array{Setting{Bool}}(undef, 0),
+                       custom_settings::Array{<:Setting} = Array{Setting{Bool}}(undef, 0),
                        testing = false)
 
     # Model-specific specifications

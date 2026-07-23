@@ -15,8 +15,8 @@ m <= Setting(:hessian_path, "")
 end
 
 @testset "Test setting access functions for AbstractDSGEModel objects" begin
-    n_mon_anticipated_shocks(m) == get_setting(m, :n_mon_anticipated_shocks)
-    n_mon_anticipated_shocks_padding(m) == get_setting(m, :n_mon_anticipated_shocks_padding)
+    @test DSGE.n_mon_anticipated_shocks(m) == get_setting(m, :n_mon_anticipated_shocks)
+    @test DSGE.n_mon_anticipated_shocks_padding(m) == get_setting(m, :n_mon_anticipated_shocks_padding)
 
     @test DSGE.date_presample_start(m) == get_setting(m, :date_presample_start)
     @test DSGE.date_mainsample_start(m) == get_setting(m, :date_mainsample_start)
@@ -229,11 +229,11 @@ end
     @test_throws AssertionError load_parameters_from_file(m, "$path/reference/load_params_float32.h5")
 
     m.parameters[1].value = 1.
-    specify_mode!(m, "reference/load_params.h5")
+    specify_mode!(m, "$path/reference/load_params.h5")
     out_params = map(x -> x.value, m.parameters)
     @test @test_matrix_approx_eq out_params load_parameters_from_file(m, "$path/reference/load_params.h5")
 
-    specify_hessian!(m, "reference/hessian.h5")
+    specify_hessian!(m, "$path/reference/hessian.h5")
     @test get_setting(m, :calculate_hessian) == false
     @test get_setting(m, :hessian_path) == joinpath(dirname("$path"), "test", "reference", "hessian.h5")
 
@@ -242,6 +242,92 @@ end
     DSGE.update!(m, para)
     @test m.parameters[1].value != 1.
     @test @test_matrix_approx_eq map(x->x.value,m.parameters) para
+end
+
+@testset "Type hierarchy and model_type" begin
+    # Abstract type tree
+    @test DSGE.AbstractCTModel  <: DSGE.AbstractDSGEModel
+    @test DSGE.AbstractHetModel <: DSGE.AbstractDSGEModel
+    @test DSGE.AbstractRepModel <: DSGE.AbstractDSGEModel
+    @test DSGE.AbstractDSGEModel <: ModelConstructors.AbstractModel
+
+    # Concrete representative model lands in the representative branch
+    @test AnSchorfheide <: DSGE.AbstractRepModel
+    @test isa(m, DSGE.AbstractDSGEModel)
+
+    # model_type returns the parametric element type
+    @test DSGE.model_type(m) == Float64
+end
+
+@testset "Anticipated shock count accessors" begin
+    @test DSGE.n_anticipated_shocks(m)         == get_setting(m, :n_mon_anticipated_shocks)
+    @test DSGE.n_anticipated_shocks_padding(m) == get_setting(m, :n_mon_anticipated_shocks_padding)
+    @test DSGE.n_mon_anticipated_shocks(m)         == get_setting(m, :n_mon_anticipated_shocks)
+    @test DSGE.n_mon_anticipated_shocks_padding(m) == get_setting(m, :n_mon_anticipated_shocks_padding)
+
+    if haskey(DSGE.get_settings(m), :n_z_anticipated_shocks)
+        @test DSGE.n_z_anticipated_shocks(m) == get_setting(m, :n_z_anticipated_shocks)
+    end
+    if haskey(DSGE.get_settings(m), :n_z_anticipated_shocks_padding)
+        @test DSGE.n_z_anticipated_shocks_padding(m) == get_setting(m, :n_z_anticipated_shocks_padding)
+    end
+    if haskey(DSGE.get_settings(m), :expected_ffr)
+        @test DSGE.expected_ffr(m) == get_setting(m, :expected_ffr)
+    end
+
+    # Defaults to false when the setting is absent...
+    delete!(DSGE.get_settings(m), :mon_anticipated_ait_shocks)
+    @test DSGE.mon_anticipated_ait_shocks(m) == false
+    # ...and reads the setting when present
+    m <= Setting(:mon_anticipated_ait_shocks, true)
+    @test DSGE.mon_anticipated_ait_shocks(m) == true
+    delete!(DSGE.get_settings(m), :mon_anticipated_ait_shocks)
+end
+
+@testset "get_dict and get_key" begin
+    @test DSGE.get_dict(m, :states)    === m.endogenous_states
+    @test DSGE.get_dict(m, :obs)       === m.observables
+    @test DSGE.get_dict(m, :pseudo)    === m.pseudo_observables
+    @test DSGE.get_dict(m, :shocks)    === m.exogenous_shocks
+    @test DSGE.get_dict(m, :stdshocks) === m.exogenous_shocks
+    @test_throws ArgumentError DSGE.get_dict(m, :not_a_class)
+
+    # Round-trip: index -> key -> index
+    for cls in (:states, :obs, :shocks)
+        d = DSGE.get_dict(m, cls)
+        k = first(keys(d))
+        @test DSGE.get_key(m, cls, d[k]) == k
+    end
+    # An index that maps to no key errors
+    @test_throws ErrorException DSGE.get_key(m, :states, 10_000)
+end
+
+@testset "inds_states_no_integ_series" begin
+    # With no :integrated_series setting, all augmented states are kept
+    if !haskey(DSGE.get_settings(m), :integrated_series)
+        @test DSGE.inds_states_no_integ_series(m) == collect(1:DSGE.n_states_augmented(m))
+    end
+end
+
+# NOTE: keep this block LAST — it injects synthetic het-agent settings onto `m`
+@testset "Heterogeneous-agent state/jump count accessors" begin
+    m <= Setting(:n_backward_looking_states, 7)
+    m <= Setting(:n_jumps, 4)
+    m <= Setting(:n_model_states, 11)
+    m <= Setting(:jumps_normalization_factor, 1)
+    m <= Setting(:backward_looking_states_normalization_factor, 2)
+    m <= Setting(:n_model_states_original, 13)
+
+    @test DSGE.n_backward_looking_states(m) == 7
+    @test DSGE.n_jumps(m)                   == 4
+    @test DSGE.n_model_states(m)            == 11
+    @test DSGE.n_model_states_original(m)   == 13
+
+    # Unnormalized counts add back the normalization factors
+    @test DSGE.n_jumps_unnormalized(m)                   == 4 + 1
+    @test DSGE.n_backward_looking_states_unnormalized(m) == 7 + 2
+    @test DSGE.n_model_states_unnormalized(m) ==
+        DSGE.n_jumps_unnormalized(m) + DSGE.n_backward_looking_states_unnormalized(m)
 end
 
 nothing

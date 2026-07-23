@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, Dates, Test
+using DSGE, ModelConstructors, Dates, Test, BenchmarkTools
 
 @testset "Calculating indicies and matrices for pre- and post-ZLB regimes" begin
     m  = Model1002("ss10")
@@ -210,5 +210,31 @@ end
         @test @test_matrix_approx_eq out[j][2] postzlb1[x]
         @test @test_matrix_approx_eq out[j][3] postzlb2[x]
         @test @test_matrix_approx_eq out[j][4] postzlb3[x]
+    end
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. 
+run_benchmarks = false
+
+if run_benchmarks
+    m_bench = Model1002("ss10")
+    m_bench <= Setting(:regime_switching, false)
+    m_bench <= Setting(:date_presample_start, Date(1959, 9, 30))
+    T_bench = subtract_quarters(Date(2015, 9, 30), Date(1959, 9, 30)) + 1
+    data_bench = zeros(n_observables(m_bench), T_bench)  # dims only, not real data
+    m_bench <= Setting(:n_mon_anticipated_shocks, 6)
+    system_bench = compute_system(m_bench)
+
+    b_indices  = @benchmark DSGE.zlb_regime_indices($m_bench, $data_bench)
+    b_matrices = @benchmark DSGE.zlb_regime_matrices($m_bench, $system_bench)
+
+    println("\n===== estimate/kalman benchmark results =====")
+    for (name, b) in [("zlb_regime_indices ", b_indices),
+                      ("zlb_regime_matrices", b_matrices)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
     end
 end

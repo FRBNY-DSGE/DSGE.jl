@@ -1,4 +1,4 @@
-# using DSGE, ModelConstructors, Dates, CSV, FileIO, Random, JLD2, Test, Nullables
+using DSGE, ModelConstructors, Dates, CSV, FileIO, Random, JLD2, Test, Nullables, BenchmarkTools
 # Load data to use for tests and prep model objet
 path = dirname(@__FILE__)
 data = JLD2.jldopen("$path/../reference/load_data_out.jld2", "r") do file
@@ -113,6 +113,33 @@ end
     @test sum(isnan.(DSGE.logleveltopct_4q_approx([.1, .2, .3, .4]))) == 4
     @test @test_matrix_approx_eq DSGE.logleveltopct_4q_approx([.1, .2, .3, .4], [.1, .1, .1, .1]) [0., .1, .2, .3]
     @test_throws AssertionError DSGE.logleveltopct_4q_approx([.1, .2], [.1, .2])
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. Series are local CSV, no FRED API.
+# Model-free forms are used so the testsets' mutations to m don't matter.
+run_benchmarks = false
+
+if run_benchmarks
+    pop  = Float64.(fred[!,:CNP16OV])      # real-sized quarterly series
+    gdp  = Float64.(fred[!,:GDP])
+    grw  = difflog(gdp)                    # log-growth input for the 4q transform
+
+    b_hpfilter    = @benchmark hpfilter($pop, 1600.)
+    b_nominalreal = @benchmark nominal_to_real(:GDP, $fred, deflator_mnemonic = :GDPDEF)
+    b_percapita   = @benchmark percapita(:GDP, $fred, :CNP16OV)
+    b_loggrowth4q = @benchmark DSGE.loggrowthtopct_4q($grw)
+
+    println("\n===== data/transformations benchmark results =====")
+    for (name, b) in [("hpfilter           ", b_hpfilter),
+                      ("nominal_to_real    ", b_nominalreal),
+                      ("percapita          ", b_percapita),
+                      ("loggrowthtopct_4q  ", b_loggrowth4q)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
 end
 
 nothing

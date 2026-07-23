@@ -109,4 +109,48 @@ end
     @test @test_matrix_approx_eq pseudo_meas[:DD_pseudo] D_pseudo_exp
 end
 
+### Observable mappings
+
+@testset "Checking observable mappings" begin
+    obs = model.observable_mappings
+
+    @test obs[:obs_gdp].key == :obs_gdp
+    @test obs[:obs_gdp].name == "Real GDP Growth"
+
+    @test obs[:obs_cpi].key == :obs_cpi
+    @test obs[:obs_cpi].input_series == [:CPIAUCSL__FRED]
+    @test obs[:obs_cpi].name == "CPI Inflation"
+    @test obs[:obs_cpi].rev_transform == DSGE.loggrowthtopct_annualized
+
+    @test obs[:obs_nominalrate].key == :obs_nominalrate
+    @test obs[:obs_nominalrate].input_series == [:DFF__FRED]
+    @test obs[:obs_nominalrate].name == "Nominal FFR"
+    @test obs[:obs_nominalrate].rev_transform == identity
+end
+
+### Pseudo-observable mappings
+
+@testset "Checking pseudo-observable mappings" begin
+    pseudo_obs = model.pseudo_observable_mappings
+
+    @test length(pseudo_obs) == 5
+    @test collect(keys(pseudo_obs)) == [:y_t, :π_t, :z_t, :NominalFFR, :RealFFR]
+
+    @test pseudo_obs[:y_t].name == "Output Growth"
+    @test pseudo_obs[:π_t].name == "Inflation"
+    @test pseudo_obs[:π_t].rev_transform == DSGE.quartertoannual
+    @test pseudo_obs[:z_t].name == "z_t"
+    @test pseudo_obs[:NominalFFR].name == "Nominal FFR"
+    @test pseudo_obs[:RealFFR].name == "Real FFR"
+end
+
+### Subspecs
+
+@testset "Checking subspec handling" begin
+    m_ss0 = AnSchorfheide("ss0")
+    @test subspec(m_ss0) == "ss0"
+
+    @test_throws ErrorException AnSchorfheide("ss1")
+end
+
 nothing

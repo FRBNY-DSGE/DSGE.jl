@@ -1,3 +1,5 @@
+using BenchmarkTools
+
 # Load data to use for tests
 path = dirname(@__FILE__)
 fred = CSV.read("$path/../reference/fred_160812.csv", DataFrame)
@@ -56,6 +58,35 @@ end
     @test @test_matrix_approx_eq q4revobs2 exp_q4revobs
     @test @test_matrix_approx_eq q4revpseudo1 exp_q4revpseudo
     @test @test_matrix_approx_eq q4revpseudo2 exp_q4revpseudo
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. None hit the FRED API.
+run_benchmarks = false
+
+if run_benchmarks
+    obs_keys    = collect(keys(m.observables))
+    pseudo_keys = collect(keys(m.pseudo_observables))
+
+    # Matrix- and DataFrame-input variants (obs + pseudo), plus four-quarter.
+    b_obs_mat = @benchmark reverse_transform($m, $(mb_means[:histobs]), $start_date,
+                                             $obs_keys, :obs, verbose = :none)
+    b_obs_df  = @benchmark reverse_transform($m, $histobs_df, :obs, verbose = :none)
+    b_pseudo_mat = @benchmark reverse_transform($m, $(mb_means[:histpseudo]), $start_date,
+                                                $pseudo_keys, :pseudo, verbose = :none)
+    b_q4_obs  = @benchmark reverse_transform($m, $histobs_df, :obs, verbose = :none,
+                                             fourquarter = true)
+
+    println("\n===== data/reverse_transform benchmark results =====")
+    for (name, b) in [("reverse_transform obs    (matrix)", b_obs_mat),
+                      ("reverse_transform obs    (df)    ", b_obs_df),
+                      ("reverse_transform pseudo (matrix)", b_pseudo_mat),
+                      ("reverse_transform obs    (4q)    ", b_q4_obs)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
 end
 
 nothing

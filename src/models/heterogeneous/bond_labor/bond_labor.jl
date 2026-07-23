@@ -67,7 +67,7 @@ equilibrium conditions.
   user. See `load_data` and `Observable` for further details.
 
 """
-mutable struct BondLabor{T} <: AbstractModel{T}
+mutable struct BondLabor{T} <: AbstractDSGEModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
 
@@ -155,6 +155,10 @@ function init_model_indices!(m::BondLabor)
     m.endogenous_states = deepcopy(endo)
     m.state_variables = m.endogenous_states.keys[get_setting(m, :state_indices)]
     m.jump_variables = m.endogenous_states.keys[get_setting(m, :jump_indices)]
+
+    # Register the state/jump symbol vectors expected by normalize_model_state_indices!
+    m <= Setting(:states, m.state_variables)
+    m <= Setting(:jumps,  m.jump_variables)
 
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end

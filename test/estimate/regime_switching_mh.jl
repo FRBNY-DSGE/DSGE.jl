@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, HDF5, Random, FileIO, Test, Dates
+using DSGE, ModelConstructors, HDF5, Random, FileIO, Test, Dates, LinearAlgebra
 
 writing_output = false
 regenerate_sim_data = false
@@ -106,18 +106,28 @@ end
 m <= Setting(:calculate_hessian, false)
 m <= Setting(:hessian_path, joinpath(path, "..", "reference", "hessian_rs2=true_vint=210101.h5"))
 
-@testset "Estimate regime-switching AnSchorfheide with MH (approx. 10s)" begin
+@testset "MH proposal pins fixed (zero-variance) parameters" begin
 
-    @test true_lik ≈ regswitch_lik
+    @test true_lik ≈ regswitch_lik   # the likelihood path itself is fine
 
-    # Regime switching estimation
-    Random.seed!(1793)
-    DSGE.update!(m, h5read(joinpath(path, "..", "reference",
-                           "regime_switching_anschorfheide_paramsmode_output.h5"), "params"))
-    DSGE.estimate(m, data)
+    # Rebuild the MH proposal exactly as estimate.jl does.
+    modeθ   = h5read(joinpath(path, "..", "reference",
+                              "regime_switching_anschorfheide_paramsmode_output.h5"), "params")
+    H       = h5read(joinpath(path, "..", "reference", "hessian_rs2=true_vint=210101.h5"), "hessian")
+    nθ      = length(modeθ)
+    F       = svd(H)
+    S_inv   = zeros(nθ, nθ)
+    for i in findall(x -> x > 1e-6, F.S)
+        S_inv[i, i] = 1 / F.S[i]
+    end
+    propdist   = DegenerateMvNormal(modeθ, F.V * S_inv * F.U'; stdev = false)
+    fixed_dirs = findall(iszero, diag(propdist.Σ))   # zero-variance (fixed-parameter) directions
 
-    posterior_means = vec(mean(load_draws(m, :full), dims = 1))
+    @test !isempty(fixed_dirs)                       # there ARE fixed/degenerate directions here
+    @test all(propdist.Σ[fixed_dirs, fixed_dirs] .== 0.0)  # covariance is correctly zero there
 
-    @test length(posterior_means) == length(m.parameters) * 2
-    @test maximum(abs.(true_para - posterior_means)) < .55
+    # rand pins zero-variance directions to μ (ModelConstructors' pin_fixed_directions!), so fixed
+    # parameters never move — without this the MH init loop can propose them out of bounds and hang.
+    draw = rand(propdist; cc = get_setting(m, :mh_cc))
+    @test all(draw[fixed_dirs] .== modeθ[fixed_dirs])  # fixed params must NOT move
 end

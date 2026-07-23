@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, Dates, CSV, DataFrames, Plots, Test, HDF5
+using DSGE, ModelConstructors, Dates, CSV, DataFrames, Plots, Test, HDF5, BenchmarkTools
 include("tvcred_parameterize.jl")
 
 regenerate_reference_forecasts = false
@@ -205,7 +205,7 @@ out_temp_flexible_ait = DSGE.forecast_one_draw(m, :mode, :full, output_vars, mod
                                                regime_switching = true, n_regimes = get_setting(m, :n_regimes))
 
 if regenerate_reference_forecasts
-    h5open(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output.h5"), "w") do file
+    h5open(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output_version=$(ver).h5"), "w") do file
         write(file, "forecastobs", out_temp_flexible_ait[:forecastobs])
         write(file, "forecastpseudo", out_temp_flexible_ait[:forecastpseudo])
     end
@@ -221,4 +221,19 @@ end
         h5read(joinpath(dirname(@__FILE__), "../reference/multiple_altpol_imperfect_awareness_output_version=$(ver).h5"), string(k))
     end
 end
+
+run_benchmarks = false
+
+if run_benchmarks
+    # Benchmark the primary computation these tests exercise: a full regime-switching
+    # imperfect-awareness forecast draw. Expensive, so a single sample/eval.
+    b_fcast = @benchmark DSGE.forecast_one_draw($m, :mode, :full, $output_vars, $modal_params, $df,
+                                                regime_switching = true,
+                                                n_regimes = get_setting($m, :n_regimes)) samples=1 evals=1
+    println("\n===== forecast_one_draw (imperfect awareness) benchmark results =====")
+    println(rpad("forecast_one_draw", 22), " time: ",
+            rpad(BenchmarkTools.prettytime(median(b_fcast).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_fcast).memory))
+end
+
 nothing

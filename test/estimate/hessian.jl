@@ -1,3 +1,5 @@
+using BenchmarkTools
+
 path = dirname(@__FILE__)
 
 # # Test hessian! in context of model
@@ -28,7 +30,27 @@ expect = hessian_expected[1:max_free_ind, 1:max_free_ind]
 actual = hessian[1:max_free_ind, 1:max_free_ind]
 
 @testset "Check Hessian calculation" begin
-    @test @test_matrix_approx_eq_eps expect actual 0.1 3.0
+    @test @test_matrix_approx_eq_eps(expect, actual, 0.1, 3.0)
+end
+
+################
+# Benchmarking #
+################
+run_benchmarks = false
+
+if run_benchmarks
+    # Subset: testing mode caps n_hessian_test_params at 3 — what the test checks.
+    b_subset = @benchmark hessian!($m, $mode, $data; verbose = :none)
+
+    m <= Setting(:n_hessian_test_params, typemax(Int))
+    b_full = @benchmark hessian!($m, $mode, $data; verbose = :none)
+
+    println("\n===== estimate/hessian benchmark results =====")
+    for (name, b) in [("hessian! (subset, n=3)", b_subset),
+                      ("hessian! (full)       ", b_full)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
 end
 
 m.testing = false

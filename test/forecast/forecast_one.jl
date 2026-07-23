@@ -1,4 +1,4 @@
-using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates, HDF5
+using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates, HDF5, BenchmarkTools
 path = dirname(@__FILE__)
 
 generate_regime_switch_tests = false # Set to true if you want to regenerate the jld2 files for testing
@@ -55,6 +55,16 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs, :histstdshocks,
 end
 
 # Run modal forecasts
+run_benchmarks = false
+
+if run_benchmarks
+    b_forecast_one = @benchmark forecast_one($m, :mode, :none, $output_vars, verbose = :none)
+
+    println("\n===== forecast_one benchmark results =====")
+    println(rpad("forecast_one", 18), " time: ", rpad(BenchmarkTools.prettytime(median(b_forecast_one).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_forecast_one).memory))
+end
+
 out = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
 for cond_type in [:none, :semi, :full]
     forecast_one(m, :mode, cond_type, output_vars, verbose = :none)
@@ -189,10 +199,11 @@ end
 
 m = Model1002("ss10", custom_settings = custom_settings, testing = true)
 m <= Setting(:rate_expectations_source, :ois)
+isdefined(@__MODULE__, :as_dataframe) || include(joinpath(@__DIR__, "..", "jld2_compat.jl"))
 dfs = Dict()
-dfs[:none] = load("$path/../reference/regime_switch_data.jld2", "none")
-dfs[:semi] = load("$path/../reference/regime_switch_data.jld2", "semi")
-dfs[:full] = load("$path/../reference/regime_switch_data.jld2", "full")
+dfs[:none] = as_dataframe(load("$path/../reference/regime_switch_data.jld2", "none"))
+dfs[:semi] = as_dataframe(load("$path/../reference/regime_switch_data.jld2", "semi"))
+dfs[:full] = as_dataframe(load("$path/../reference/regime_switch_data.jld2", "full"))
 
 if generate_regime_switch_tests
     exp_out_dict_new = exp_out_dict # We won't be testing, but we want to have the same structure as the existing one dict

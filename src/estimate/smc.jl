@@ -240,8 +240,9 @@ function smc2(m::Union{AbstractDSGEModel,AbstractVARModel}, data::Matrix{Float64
 	        tempered_update_prior_weight = tempered_update_prior_weight,
 
             regime_switching = regime_switching,
-            debug_assertion = debug_assertion, log_prob_old_data = log_prob_old_data,
-            add_zlb_duration = add_zlb_duration)
+            debug_assertion = debug_assertion, log_prob_old_data = log_prob_old_data)
+            # add_zlb_duration is applied inside the my_likelihood closure (it captures it),
+            # not forwarded here — the migrated SMC.smc has no add_zlb_duration kwarg.
 
     if run_csminwel
         m <= Setting(:sampling_method, :SMC)

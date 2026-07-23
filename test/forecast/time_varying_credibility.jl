@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, Dates, CSV, DataFrames, Plots, Test, HDF5
+using DSGE, ModelConstructors, Dates, CSV, DataFrames, Plots, Test, HDF5, BenchmarkTools
 include("tvcred_parameterize.jl")
 
 regenerate_reference_forecasts = false
@@ -287,6 +287,16 @@ if regenerate_reference_forecasts
             write(file, "forecastobs_tv0to1_ZLBcred_1", out_credzlb[:forecastobs])
         end
     end
+end
+
+run_benchmarks = false
+if run_benchmarks
+    bench_nreg = get_setting(m, :n_regimes)
+    b = @benchmark DSGE.forecast_one_draw($m, :mode, :full, $output_vars, $modal_params, $df,
+                                          regime_switching = true, n_regimes = $bench_nreg) samples=1 evals=1
+    println("\n===== forecast_one_draw (time-varying credibility) benchmark results =====")
+    println(rpad("forecast_one_draw", 22), " time: ", rpad(BenchmarkTools.prettytime(median(b).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b).memory))
 end
 
 nothing

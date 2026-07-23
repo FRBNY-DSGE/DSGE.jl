@@ -1,5 +1,8 @@
 name: 'build'
-on: [push, pull_request]
+# Disabled as an automatic check: ci.yml now runs the test suite (via test/ci_tester.jl).
+# This legacy workflow runs the full Pkg.test() / runtests.jl suite and is kept for manual,
+# on-demand runs only (Actions tab -> "build" -> "Run workflow").
+on: workflow_dispatch
 
 jobs:
   test:

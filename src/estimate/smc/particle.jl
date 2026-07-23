@@ -199,7 +199,7 @@ function get_vals(c::Cloud)
 Returns Matrix{Float64}(n_params, n_parts) of parameter values in particle cloud.
 """
 function get_vals(c::ParticleCloud)
-    return hcat(map(p -> p.value, c.particles)...)
+    return reduce(hcat, map(p -> p.value, c.particles))
 end
 @inline function get_vals(c::Matrix{Float64}; transpose::Bool = true)
     return transpose ? Matrix{Float64}(c[:, 1:ind_para_end(size(c, 2))]') :

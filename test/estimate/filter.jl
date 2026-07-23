@@ -1,15 +1,19 @@
 using DSGE, DataFrames, JLD2
-using Dates, Test
+using Dates, Test, BenchmarkTools
 
 path = dirname(@__FILE__)
+isdefined(@__MODULE__, :as_dataframe) || include(joinpath(@__DIR__, "..", "jld2_compat.jl"))
 
 # Set up arguments
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
+isdefined(@__MODULE__, :as_dataframe) || include(joinpath(@__DIR__, "..", "jld2_compat.jl"))
+
 df, system, z0, P0 = JLD2.jldopen("$path/../reference/forecast_args.jld2", "r") do file
-    read(file, "df"), read(file, "system"), read(file, "z0"), read(file, "P0")
+    as_dataframe(read(file, "df")), read(file, "system"), read(file, "z0"), read(file, "P0")
 end
+df = as_dataframe(df)
 
 # Read expected output
 exp_kal = JLD2.jldopen("$path/../reference/filter_out.jld2", "r") do file
@@ -51,5 +55,22 @@ end
     end
 end
 
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default.
+run_benchmarks = false
+
+if run_benchmarks
+    b_default = @benchmark DSGE.filter($m, $df, $system)
+    b_init    = @benchmark DSGE.filter($m, $df, $system, $z0, $P0)
+
+    println("\n===== estimate/filter benchmark results =====")
+    for (name, b) in [("filter (default init)", b_default),
+                      ("filter (z0/P0 init)  ", b_init)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
+end
 
 nothing

@@ -26,8 +26,8 @@ KalmanFilter(T, R, C, Q, Z, D, E, [s_0, P_0])
 Outer constructor for the `KalmanFilter` type.
 """
 function CTBlockKalmanFilter(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, Q::Matrix{S},
-                             Z::Matrix{S}, D::Vector{S}, E::Matrix{S}, s_0::Vector{S} = Vector{S}(0),
-                             P_0::Matrix{S} = Matrix{S}(0, 0),
+                             Z::Matrix{S}, D::Vector{S}, E::Matrix{S}, s_0::Vector{S} = Vector{S}(undef, 0),
+                             P_0::Matrix{S} = Matrix{S}(undef, 0, 0),
                              n_simulate_states::Int64=1) where {S<:AbstractFloat}
     if isempty(s_0) || isempty(P_0)
         s_0, P_0 = init_stationary_states(T, R, C, Q)
@@ -44,10 +44,11 @@ function CTBlockKalmanFilter(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, Q::Matrix
     end
 
     # Create RQR' dictionary
+    RQRp = Dict{Tuple{Int64, Int64}, Matrix{S}}()
     RQRp[(1,1)] = R_blocks[0] * Q * R_blocks[0]' # initialize first row as base case
     if n_simulate_states > 1
         for i = 2:n_simulate_states
-            RQRp[(1,i)] = R-blocks[0] * Q * R_blocks[i - 1]'
+            RQRp[(1,i)] = R_blocks[0] * Q * R_blocks[i - 1]'
         end
 
         # Recursive construction of rest of RQR' dictionary
@@ -163,18 +164,18 @@ function ct_block_kalman_filter(y::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Vec
     return_filt  = :filt  in outputs
 
     # Initialize inputs and outputs
-    k = CTBlockKalmanFilter(T, R, C, Q, Z, D, E, s_0, P_0; n_simulate_states)
+    k = CTBlockKalmanFilter(T, R, C, Q, Z, D, E, s_0, P_0, n_simulate_states)
 
     # Dimensions
     Ns = size(T, 1) * n_simulate_states # number of states
     Nt = size(y, 2)                     # number of periods of data
 
     mynan = convert(S, NaN)
-    loglh  = return_loglh ? fill(mynan, Nt)         : Vector{S}(0)
-    s_pred = return_pred  ? fill(mynan, Ns, Nt)     : Matrix{S}(0, 0)
-    P_pred = return_pred  ? fill(mynan, Ns, Ns, Nt) : Array{S, 3}(0, 0, 0)
-    s_filt = return_filt  ? fill(mynan, Ns, Nt)     : Matrix{S}(0, 0)
-    P_filt = return_filt  ? fill(mynan, Ns, Ns, Nt) : Array{S, 3}(0, 0, 0)
+    loglh  = return_loglh ? fill(mynan, Nt)         : Vector{S}(undef, 0)
+    s_pred = return_pred  ? fill(mynan, Ns, Nt)     : Matrix{S}(undef, 0, 0)
+    P_pred = return_pred  ? fill(mynan, Ns, Ns, Nt) : Array{S, 3}(undef, 0, 0, 0)
+    s_filt = return_filt  ? fill(mynan, Ns, Nt)     : Matrix{S}(undef, 0, 0)
+    P_filt = return_filt  ? fill(mynan, Ns, Ns, Nt) : Array{S, 3}(undef, 0, 0, 0)
 
     # Populate initial states
     s_0 = k.s_t
@@ -232,9 +233,9 @@ function ct_block_kalman_filter(y::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Vec
     s_T = k.s_t
     P_T = k.P_t
 
-    # Remove presample periods
-    loglh, s_pred, P_pred, s_filt, P_filt =
-        remove_presample!(Nt0, loglh, s_pred, P_pred, s_filt, P_filt; outputs = outputs)
+    # Remove presample periods (remove_presample! is commented out below; Nt0 defaults to 0)
+    # loglh, s_pred, P_pred, s_filt, P_filt =
+    #     remove_presample!(Nt0, loglh, s_pred, P_pred, s_filt, P_filt; outputs = outputs)
 
     return loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T
 end
@@ -244,13 +245,13 @@ end
 function forecast!(k::CTBlockKalmanFilter{Float64})
     T_powers, C, RQRp = k.T_powers, k.C, k.RQRp
     orig_dim = size(T_powers[1], 1)
-    s_filt_prev = copy(k.s_t[end - orig_dim:orig_dim]) # don't need all of s_filt
+    s_filt_prev = copy(k.s_t[end - orig_dim + 1:end]) # last block: previous filtered state
     P_filt = k.P_t
 
     for i = 1:k.n_simulate_states
         k.s_t[1 + (i - 1) * orig_dim:orig_dim * i] = T_powers[i] * s_filt_prev + C
         for j = i:k.n_simulate_states
-            k.P_t[(i,j)] = T_powers[i] * P_filt[(n_simulate_states, n_simulate_states)] * T_powers[j]' + RQRp[(i,j)]
+            k.P_t[(i,j)] = T_powers[i] * P_filt[(k.n_simulate_states, k.n_simulate_states)] * T_powers[j]' + RQRp[(i,j)]
         end
     end
 
@@ -266,18 +267,32 @@ function update!(k::CTBlockKalmanFilter{Float64}, y_obs::Vector{Float64}; return
     E = k.E[nonnan, nonnan]
     Ny = length(y_obs)
     s_pred = k.s_t
-    P_pred = k.P_t
-    T_size = size(k.T_powers[1], 1)
 
-    y_pred = Z * s_pred  + D
+    # k.P_t holds the upper-triangular blocks of the predicted covariance; assemble the full
+    # matrix for the (monolithic) Kalman update, then write the result back blockwise.
+    n      = k.n_simulate_states
+    T_size = size(k.T_powers[1], 1)
+    Ns     = n * T_size
+    P_pred = zeros(Ns, Ns)
+    for i = 1:n, j = 1:n
+        block = i <= j ? k.P_t[(i, j)] : k.P_t[(j, i)]'
+        P_pred[1 + T_size*(i-1):T_size*i, 1 + T_size*(j-1):T_size*j] = block
+    end
+
+    y_pred = Z * s_pred + D
     V_pred = Z * P_pred * Z' + E
     V_pred = (V_pred + V_pred')/2
     V_pred_inv = inv(V_pred)
     dy = y_obs - y_pred
     PZV = P_pred' * Z' * V_pred_inv
 
-    k.s_t = s_pred * PZV * dy
-    k.P_t = P_pred - PZV * Z * P_pred
+    s_t = s_pred + PZV * dy            # Kalman update (was erroneously `s_pred * PZV * dy`)
+    P_t = P_pred - PZV * Z * P_pred
+
+    k.s_t = s_t
+    for i = 1:n, j = i:n
+        k.P_t[(i, j)] = P_t[1 + T_size*(i-1):T_size*i, 1 + T_size*(j-1):T_size*j]
+    end
 
     if return_loglh
         k.loglh_t = -(Ny * log(2*π) + log(det(V_pred)) + dy'*V_pred_inv*dy)/2

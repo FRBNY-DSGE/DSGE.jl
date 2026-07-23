@@ -1065,7 +1065,7 @@ function sample_λ(m::PoolModel{S}, pred_dens::Matrix{S}, T::Int64 = -1;
 
     # Compute posterior from a static pool
     data = (T == 1) ? reshape(pred_dens[:,1], 2, 1) : pred_dens[:,1:T] # make sure it is matrix
-    estimate(m, data; filestring_addl = filestring_addl, proposal_covariance = ones(1,1))
+    estimate(m, data; filestring_addl = filestring_addl)
     m <= Setting(:sampling_method, orig_samp_method)
 
     return h5read(rawpath(m, "estimate", "mhsave.h5", filestring_addl), "mhparams")
@@ -1175,8 +1175,15 @@ function propagate_λ(λ::T, h::Int64, m::PoolModel,
         update!(m, θvec)
     end
     Φ, ~, ~ = solve(m)
+    # PoolModel is a 1-state model: the AR state x lives in normal space and
+    # λ = Φ_cdf(x). Map λ -> x, propagate the scalar state deterministically
+    # (ε = 0), then map back x -> λ. (The old `Φ([λ; 1 - λ], [0.])[1]` fed a
+    # raw-λ 2-vector left over from the 2-state model, which decayed λ toward 0
+    # instead of mean-reverting through the CDF.)
+    N = Normal(0.0, 1.0)
+    x = quantile(N, λ)
     for j in 1:h
-        λ = Φ([λ; 1 - λ], [0.])[1]
+        x = Φ(x, 0.0)
     end
-    return λ
+    return cdf(N, x)
 end

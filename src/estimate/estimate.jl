@@ -287,6 +287,12 @@ function estimate(m::Union{AbstractDSGEModel,AbstractVARModel}, data::AbstractAr
             DegenerateMvNormal(params, proposal_covariance; stdev = false)
         end
 
+        degen_inds = findall(iszero, diag(propdist.Σ))
+         if !isempty(degen_inds)
+            propdist.σ[degen_inds, :] .= 0.0
+            propdist.σ[:, degen_inds] .= 0.0
+        end
+
         if rank(propdist) != n_parameters_free(m)
             println("problem –    shutting down dimensions")
         end

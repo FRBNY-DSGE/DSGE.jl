@@ -1,15 +1,15 @@
 using DSGE, OrderedCollections, CSV, DataFrames
 using ClusterManagers, HDF5
 # import DSGE: usual_settings!, usual_forecast!
-using ModelConstructors, Dates, JLD, JLD2, SMC, StateSpaceRoutines, Nullables
+using ModelConstructors, Dates, JLD2, SMC, StateSpaceRoutines, Nullables
 
-include("../../../src/estimate/param_regimes.jl")
+# include("../../../src/estimate/param_regimes.jl")
 include("util_brookings.jl")
 
 switch_all = false
 switch_policy = false
 switch_kappa = true
-run_stored = true # Only set to true when on the Brookings_PC branch of DSGE.
+run_stored = false # Only set to true when on the Brookings_PC branch of DSGE.
 ## When using regime-switching parameters, set to false.
 
 # Kalman Filter when run_stored is true
@@ -375,8 +375,8 @@ if switch_all
 if run_stored
     m, df = model_init(run_stored = run_stored)
 
-    cloud10_reg1 = JLD.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r1_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
-    cloud10_reg2 = JLD.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r2_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
+    cloud10_reg1 = JLD2.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r1_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
+    cloud10_reg2 = JLD2.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r2_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
 
     inds = argmax(SMC.get_loglh(cloud10_reg1))
     para1 = cloud10_reg1[inds, 1:SMC.ind_para_end(size(cloud10_reg1, 2))]
@@ -424,8 +424,8 @@ param_mat = repeat([1 2], length(m.parameters))
 setup_param_regimes!(m, param_mat = param_mat)
 
 # Set parameter values equal to Brookings cloud
-cloud10_reg1 = JLD.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r1_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
-cloud10_reg2 = JLD.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r2_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
+cloud10_reg1 = JLD2.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r1_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
+cloud10_reg2 = JLD2.load("m1002/ss10/estimate/raw/smc_cloud_npart=15000_period=r2_preZLB=false_reg2start=900331_vint=191118.jld2", "cloud").particles
 
 inds = argmax(SMC.get_loglh(cloud10_reg1))
 para1 = cloud10_reg1[inds, 1:SMC.ind_para_end(size(cloud10_reg1, 2))]
@@ -473,7 +473,7 @@ if switch_policy
 # Only policy rule param change #
 #################################
 # Set parameter values equal to Brookings cloud
-cloud24_reg = JLD.load("m1002/ss24/estimate/raw/smc_cloud_friday=true_npart=20000_period=full_incZLB_reg2start=900331_reg=2_vint=191118.jld2", "cloud").particles
+cloud24_reg = JLD2.load("m1002/ss24/estimate/raw/smc_cloud_friday=true_npart=20000_period=full_incZLB_reg2start=900331_reg=2_vint=191118.jld2", "cloud").particles
 
 inds = argmax(SMC.get_loglh(cloud24_reg))
 para1 = cloud24_reg[inds, 1:SMC.ind_para_end(size(cloud24_reg, 2))]
@@ -586,7 +586,7 @@ if switch_kappa
 ### Only kappa_p param change ###
 #################################
 # Set parameter values equal to Brookings cloud
-cloud2_reg = JLD.load("m1002/ss22/estimate/raw/smc_cloud_friday=true_npart=20000_period=full_incZLB_reg2start=900331_reg=2_vint=191118.jld2", "cloud").particles
+cloud2_reg = JLD2.load("m1002/ss22/estimate/raw/smc_cloud_friday=true_npart=20000_period=full_incZLB_reg2start=900331_reg=2_vint=191118.jld2", "cloud").particles
 
 inds = argmax(SMC.get_loglh(cloud2_reg))
 para1 = cloud2_reg[inds, 1:SMC.ind_para_end(size(cloud2_reg, 2))]

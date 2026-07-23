@@ -3,132 +3,168 @@ using Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgeb
 using StatsBase, Random, CSV, StateSpaceRoutines, HDF5, JLD2, MAT, Plots
 import ModelConstructors: @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra, ModelConstructors, SMC
-HETDSGEGOVDEBT = "../src/models/heterogeneous/het_dsge_gov_debt/reference"
+HETDSGEGOVDEBT = normpath(joinpath(@__DIR__, "..", "src", "models", "heterogeneous",
+                                   "het_dsge_gov_debt", "reference"))
 
+# Shared JLD2-proxy converter: reference MvNormals serialized under older PDMats/Distributions come
+# back as JLD2-reconstructed proxies on the current stack; rebuild a real MvNormal from μ/Σ. Defined
+# here (not per-test) so it's available no matter which test files run. Mirrors _jld2_to_df in
+# test/data/transform_data.jl.
+_jld2_to_mvnormal(x::Distribution) = x
+_jld2_to_mvnormal(x) = MvNormal(collect(Float64, x.μ),
+                                Matrix{Float64}(x.Σ isa AbstractMatrix ? x.Σ : x.Σ.mat))
+
+# MAXIMAL list: every *.jl under test/ except the three runner scripts
+# (runtests.jl, run_all_tests.jl, ci_tester.jl). Prune from here.
+# NOTE — a handful of these are include()d by other test files, so they will
+# run twice and/or may assume the includer's context (candidates to prune):
+#   jld2_compat, forecast/tvcred_parameterize,
+#   estimate/smc/Brookings_test/util_brookings,
+#   and the *util files pulled in by estimate/smc/util
+#   (util, data/util, analysis/util, forecast/util, plot/util, models/var/util, estimate/util).
 my_tests = [
-            #="abstractdsgemodel",
+            "abstractdsgemodel",
             "abstractvarmodel",
-            "defaults",
-            "parameters",
-            "util",
-            "statespace/statespace",
-
+            "altpolicy/ait",
+            "altpolicy/alt_inflation",
+            "altpolicy/altpolicy",
+            "altpolicy/default_policy",
+            "altpolicy/flexible_ait",
+            "altpolicy/ngdp_target",
+            "altpolicy/rw",
+            "altpolicy/rw_zero_rate",
+            "altpolicy/smooth_ait_gdp",
+            "altpolicy/smooth_ait_gdp_alt",
+            "altpolicy/taylor93",
+            "altpolicy/taylor99",
+            "altpolicy/taylor_rule",
+            "altpolicy/zero_rate",
+            "altpolicy/zlb_rule",
+            "analysis/compute_meansbands",
+            "analysis/create_q4q4_mb",
+            "analysis/df_to_table",
+            "analysis/io",
+            "analysis/meansbands",
+            "analysis/meansbands_to_matrix",
+            "analysis/moments",
+            "analysis/util",
             "data/fred_data",
-            "data/load_data",
+         #  "data/load_data", these tests should pass, but causes FRED API spamming when run in sequence with the other file
             "data/load_data_poolmodel",
+            "data/manual_data_adjustments",
             "data/misc",
             "data/reverse_transform",
             "data/simulate_data",
             "data/transformations",
             "data/transform_data",
             "data/util",
-
-            "solve/gensys",
-            "solve/gensys2",
-            "solve/solve",
-            "solve/gensys_uncertain_altpol",
-            "solve/gensys2_uncertain_altpol_test1",
-            "solve/gensys2_uncertain_altpol_test2",
-            "solve/solve_poolmodel",
-            #"solve/solve_ct",
-            #"solve/gensys_ct",
-            #"solve/reduction",
-=#
-
-#=            "estimate/filter",
+            "decomp/decompose_forecast",
+            "decomp/decomposition_periods",
+            "decomp/io",
+            "defaults",
+            "estimate/backwards_compatibility",
             "estimate/cat",
-            "estimate/posterior",
-            "estimate/poolmodel_tpf",
-            "estimate/filter_poolmodel",
-            "estimate/posterior_poolmodel",
-            "estimate/estimate_bma",
-            "estimate/hessian",
-            "estimate/util",
+            "estimate/combined_optimizer",
             "estimate/csminwel",
+            "estimate/ct_filters/block_kalman_filter",
+            "estimate/ct_filters/ct_block_kalman_filter",
+            "estimate/ct_filters/ct_kalman_filter",
+            "estimate/ct_filters/ct_kalman_simple",
+            "estimate/estimate",
+            "estimate/estimate_bma",
+            "estimate/filter",
+            "estimate/filter_hank",
+            "estimate/filter_poolmodel",
+            "estimate/hessian",
+            "estimate/hessizero",
+            "estimate/kalman",
+            "estimate/lbfgs",
+            "estimate/marginal_data_density",
+            "estimate/metropolis_hastings",
+            "estimate/nearest_spd",
+            "estimate/nelder_mead",
             "estimate/optimize",
-            "estimate/var/dsgevar_likelihood",
-            "estimate/var/dsgevecm_likelihood",=#
-
-            "estimate/metropolis_hastings", # Tests failing
-            # "estimate/regime_switching_mh", # Tests failing
-            ## "estimate/smc/helpers", # Tests failing (by design)
+            "estimate/poolmodel_tpf",
+            "estimate/posterior",
+            "estimate/posterior_poolmodel",
+            "estimate/regime_switching_mh",
+            "estimate/resample",
+            "estimate/simulated_annealing",
+            "estimate/smc/helpers",
             "estimate/smc/initialization",
             "estimate/smc/mutation",
-            "estimate/smc/resample",
+            "estimate/smc/online",
             "estimate/smc/particle",
-            "estimate/smc/smc",
             "estimate/smc/regime_switching_smc",
-
+            "estimate/smc/resample",
+            "estimate/smc/smc",
+            "estimate/smc/util",
+            "estimate/transform_transition_matrices",
+            "estimate/util",
+            "estimate/var/dsgevar_likelihood",
+            "estimate/var/dsgevecm_likelihood",
+            "forecast/automatic_tempalt_zlb",
             "forecast/drivers",
-            "forecast/smooth",
             "forecast/forecast",
-            "forecast/shock_decompositions",
+            "forecast/forecast_one",
+            "forecast/forecast_regime_switching",
             "forecast/impulse_responses",
             "forecast/io",
-            "forecast/forecast_one",
-            "forecast/automatic_tempalt_zlb",
-            "forecast/forecast_regime_switching",
-            "forecast/time_varying_credibility",
-            "forecast/multiple_altpol_imperfect_awareness",
             "forecast/m1002_ss62_forecast_test",
+            "forecast/multiple_altpol_imperfect_awareness",
+            "forecast/shock_decompositions",
+            "forecast/smooth",
+            "forecast/time_varying_credibility",
+            "forecast/tvcred_parameterize",
             "forecast/util",
-            "forecast/var/impulse_responses",
             "forecast/var/dsgevar/impulse_responses",
             "forecast/var/dsgevecm/impulse_responses",
-
-            "analysis/compute_meansbands",
-            "analysis/df_to_table",
-            "analysis/io",
-            "analysis/meansbands",
-            "analysis/moments",  # Fix this test!
-            "analysis/util",
-
-            "altpolicy/altpolicy",
-
-            "scenarios/scenario",
-            "scenarios/forecast",
-            "scenarios/switching",
-            "scenarios/drivers",
-
-            "decomp/decompose_forecast",
-
-            "plot/util",
-
-            "models/representative/smets_wouters/smets_wouters",
-            "models/representative/smets_wouters_orig/smets_wouters_orig",
-            "models/representative/m990/m990",
+            "forecast/var/impulse_responses",
+            "forecast/wrappers_impulse_responses/dsgevar_lambda_impulse_responses",
+            "forecast/wrappers_impulse_responses/observables_identified_dsge_impulse_responses",
+            "forecast/wrappers_impulse_responses/var_approx_dsge_impulse_responses",
+            "grids",
+            "jld2_compat",
+            "models/financial_frictions",
+            "models/heterogeneous/bond_labor/bond_labor",
+            "models/poolmodel/poolmodel",
+            "models/representative/an_schorfheide/an_schorfheide",
             "models/representative/m1002/m1002",
             "models/representative/m1010/m1010",
-            "models/representative/m904/m904",
             "models/representative/m805/m805",
-            "models/poolmodel/poolmodel",
+            "models/representative/m904/m904",
+            "models/representative/m990/m990",
+            "models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
+            "models/representative/smets_wouters/augment_states",
+            "models/representative/smets_wouters/observables",
+            "models/representative/smets_wouters_orig/smets_wouters_orig",
+            "models/representative/smets_wouters/smets_wouters",
+            "models/representative/smets_wouters/subspecs",
             "models/var/dsgevar/dsgevar",
+            "models/var/dsgevar/measurement_error",
+            "models/var/dsgevar/subspecs",
             "models/var/dsgevecm/dsgevecm",
+            "models/var/dsgevecm/measurement_error",
+            "models/var/dsgevecm/subspecs",
             "models/var/util",
-            "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt_reduce_ell"
-            # "models/heterogeneous/het_dsge_gov_debt/het_dsge_gov_debt"
-            # "models/representative/rep_dsge_gov_debt/rep_dsge_gov_debt",
-            # "models/heterogeneous/het_dsge_simple_taylor/het_dsge_simple_taylor",
-            # "models/heterogeneous/het_dsge/het_dsge",
-            # "models/heterogeneous/het_dsge_lag/het_dsge_lag",
-            # "models/heterogeneous/het_dsge/het_dsge",
-
-            # "models/heterogeneous/krusell_smith/krusell_smith",
-            # "models/heterogeneous/bond_labor/bond_labor",
-            # "models/heterogeneous/real_bond/real_bond",
-            # "models/heterogeneous/real_bond_mkup/real_bond_mkup",
-            # "models/heterogeneous/krusell_smith_ct/krusell_smith_ct",
-            # "models/heterogeneous/one_asset_hank/one_asset_hank",
-            # "models/heterogeneous/one_asset_hank/interns",
+            "packet/packet",
+            "parameters",
+            "plot/plot",
+            "plot/util",
+            "scenarios/drivers",
+            "scenarios/forecast",
+            "scenarios/scenario",
+            "scenarios/switching",
+            "solve/gensys",
+            "solve/gensys2_uncertain_altpol_test1",
+            "solve/gensys2_uncertain_altpol_test2",
+            "solve/gensys_uncertain_altpol",
+            "solve/klein",
+            "solve/solve",
+            "solve/solve_poolmodel",
+            "statespace/statespace",
+            "util",
             ]
-
-if VERSION >= v"1.3"
-    my_tests = vcat([
-                     #"packet/packet", # These two tests generate segmentation fault errors
-                     #"plot/plot",     # in lower versions of Julia (at least w/1.0 and 1.1)
-                    ],
-                    my_tests)
-end
 
 for test in my_tests
     test_file = string("$test.jl")

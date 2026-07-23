@@ -1,5 +1,6 @@
 using DSGE
 using HDF5
+using BenchmarkTools
 path = dirname(@__FILE__)
 writing_output = false
 
@@ -45,6 +46,20 @@ end
     @test @test_matrix_approx_eq minimizer out.minimizer
     @test minimum ≈ out.minimum atol=1e-6
     @test @test_matrix_approx_eq H_expected H
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default.
+run_benchmarks = false
+
+if run_benchmarks
+    b_opt = @benchmark optimize!($m, $data; iterations = n_iterations) setup=(DSGE.update!($m, $x0)) evals=1
+
+    println("\n===== estimate/optimize benchmark results =====")
+    println("optimize! [csminwel]  time:   ", BenchmarkTools.prettytime(median(b_opt).time),
+            "   memory: ", BenchmarkTools.prettymemory(median(b_opt).memory))
 end
 
 # TODO: fix non-csminwel tests!

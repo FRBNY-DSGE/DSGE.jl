@@ -1,5 +1,6 @@
-using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates
+using DSGE, FileIO, JLD2, ModelConstructors, Test, Random, Dates, BenchmarkTools
 path = dirname(@__FILE__)
+isdefined(@__MODULE__, :as_dataframe) || include(joinpath(@__DIR__, "..", "jld2_compat.jl"))
 
 # Set up arguments
 m = AnSchorfheide(testing = true)
@@ -18,6 +19,16 @@ exp_states, exp_obs, exp_pseudo =
 
 # With shockdec_startdate not null
 states, obs, pseudo = shock_decompositions(m, system, histshocks)
+
+run_benchmarks = false
+
+if run_benchmarks
+    b_shockdec = @benchmark shock_decompositions($m, $system, $histshocks)
+
+    println("\n===== shock_decompositions benchmark results =====")
+    println(rpad("shock_decompositions", 22), " time: ", rpad(BenchmarkTools.prettytime(median(b_shockdec).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_shockdec).memory))
+end
 
 @testset "Test shockdec with non-null startdate" begin
     @test @test_matrix_approx_eq exp_states[:startdate] states
@@ -110,7 +121,7 @@ m <= Setting(:regime_eqcond_info, Dict(3 => deepcopy(zlb_rule_eqcond),
                                              6 => DSGE.EqcondEntry(DSGE.flexible_ait(), [1., 0.])))
 m <= Setting(:temporary_altpolicy_names, [:zlb_rule])
 setup_regime_switching_inds!(m; cond_type = :full)
-df = load(joinpath(path, "..", "reference", "regime_switch_data.jld2"), "regime_switch_df_full")
+df = as_dataframe(load(joinpath(path, "..", "reference", "regime_switch_data.jld2"), "regime_switch_df_full"))
 sys = compute_system(m; tvis = true)
 _, histshocks, _, init_states = smooth(m, df, sys; cond_type = :full)
 output = DSGE.forecast_one_draw(m, :mode, :full, [:forecastobs, :histpseudo, :forecastpseudo,

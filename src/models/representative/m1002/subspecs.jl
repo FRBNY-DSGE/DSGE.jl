@@ -7017,14 +7017,6 @@ function ss104!(m)
 
 
 
-    #= Is this something to include?
-    get_setting(m, :model2para_regime)[:σ_meas_π][7] = 3
-    get_setting(m, :model2para_regime)[:σ_meas_π][9] = 3
-    get_setting(m, :model2para_regime)[:σ_meas_π][10] = 3
-    get_setting(m, :model2para_regime)[:σ_meas_π][11] = 3
-    get_setting(m, :model2para_regime)[:σ_meas_π][6] = 3
-    get_setting(m, :model2para_regime)[:σ_meas_π][8] = 3
-    =#
 
 end
 

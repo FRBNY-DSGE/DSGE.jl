@@ -152,7 +152,7 @@ end
 Forecast functions
 """
 function forecast!(k::StateSpaceRoutines.KalmanFilter, tspan::Float64; method = Tsit5(),
-                   reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
+                   reltol::Float64 = 1e-8, abstol::Float64 = 1e-8)
     T, R, Q = k.T, k.R, k.Q
     s0, P0 = k.s_t, k.P_t
     f(u,p,t) = T*u
@@ -173,7 +173,7 @@ end
 # same predicted states regardless, so I'm not sure if this will improve the
 # measurement equation or accuracy.
 function forecast!(k::StateSpaceRoutines.KalmanFilter, tspan::Float64, n_subinterval::Int64; method = Tsit5(),
-                   reltol::Float64 = 1e-8, abstol::Float64 = 1e-8) where {S<:AbstractFloat}
+                   reltol::Float64 = 1e-8, abstol::Float64 = 1e-8)
     T, R, Q = k.T, k.R, k.Q
     s_filt, P0 = k.s_t, k.P_t
     indiv_dim = size(T, 1)

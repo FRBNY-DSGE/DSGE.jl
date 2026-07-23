@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, JLD2, CSV, DataFrames, Dates, Test
+using DSGE, ModelConstructors, JLD2, CSV, DataFrames, Dates, Test, BenchmarkTools
 
 regenerate_reference_output = false
 
@@ -186,6 +186,20 @@ end
     @test maximum(abs.(fcast[:forecastobs] - ref_out["forecastobs"])) < 5e-3
     @test maximum(abs.(fcast[:forecastpseudo] - ref_out["forecastpseudo"])) < 5e-3
     @test maximum(abs.(fcast[:histpseudo] - ref_out["histpseudo"])) < 5e-3
+end
+
+################
+# Benchmarking #
+################
+# The forecast is heavy (Model1002 ss62 regime switching), so samples are capped.
+run_benchmarks = false
+if run_benchmarks
+    b = @benchmark DSGE.forecast_one_draw($m, :mode, :full, $output_vars, $modal_params, $df,
+                                          regime_switching = true,
+                                          n_regimes = get_setting($m, :n_regimes)) samples = 3 evals = 1 seconds = 300
+    println("\nforecast_one_draw (ss62 modal, regime switching)  time: ",
+            BenchmarkTools.prettytime(median(b).time),
+            "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
 end
 
 nothing

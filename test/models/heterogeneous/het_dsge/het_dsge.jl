@@ -1,25 +1,26 @@
 using DSGE
 using Test, BenchmarkTools
 using JLD2
-
 import DSGE: klein_transition_matrices, n_model_states, n_backward_looking_states
+using DSGEModels
 
 # What do you want to do?
 check_steady_state = true
 check_jacobian = true
 check_solution = true
 check_irfs = true
+check_measurement = true
 
 path = dirname(@__FILE__)
 
-m = HetDSGE()
+m = DSGEModels.HetDSGE()
 
 # Steady-state computation
 if check_steady_state
     steadystate!(m)
     # @btime steadystate!(m)
 
-    file = jldopen("$path/reference/steady_state.jld2", "r")
+    file = JLD2.jldopen("$path/reference/steady_state.jld2", "r")
     saved_Rk   = read(file, "Rk")
     saved_ω    = read(file, "omega")
     saved_kl   = read(file, "kl")
@@ -54,7 +55,7 @@ if check_jacobian
     JJ, _, _, _ = DSGE.jacobian(m)
     # @btime JJ = DSGE.jacobian(m)
 
-    file = jldopen("$path/reference/jacobian.jld2", "r")
+    file = JLD2.jldopen("$path/reference/jacobian.jld2", "r")
     saved_JJ  = read(file, "JJ")
     KFP = read(file, "KFP")
     KKP = read(file, "KKP")
@@ -176,7 +177,7 @@ if check_jacobian
             @test HHP   == first(endo[:L′_t])
             @test PIP   == first(endo[:π′_t])
             @test PIWP  == first(endo[:π_w′_t])
-            @test LAMP  == first(endo[:mu′_t])
+            @test LAMP  == first(endo[:margutil′_t])
             @test YP    == first(endo[:y′_t])
             @test XP    == first(endo[:I′_t])
             @test MCP   == first(endo[:mc′_t])
@@ -204,7 +205,7 @@ if check_jacobian
             @test HH == first(endo[:L_t])
             @test PI == first(endo[:π_t])
             @test PIW == first(endo[:π_w_t])
-            @test LAM == first(endo[:mu_t])
+            @test LAM == first(endo[:margutil_t])
             @test Y == first(endo[:y_t])
             @test X == first(endo[:I_t])
             @test MC == first(endo[:mc_t])
@@ -423,12 +424,12 @@ if check_jacobian
 end
 
 if check_solution
-    nx_save = get_setting(m, :nx)
+    nx_save = DSGE.get_setting(m, :nx)
     m.testing = false
-    m <= Setting(:nx, nx_save)
+    m <= DSGE.Setting(:nx, nx_save)
     gx, hx, _ = klein(m)
 
-    file = jldopen("$path/reference/solve.jld2", "r")
+    file = JLD2.jldopen("$path/reference/solve.jld2", "r")
     saved_gx   = read(file, "gx")
     saved_hx   = read(file, "hx")
     close(file)
@@ -441,7 +442,7 @@ end
 
 if check_irfs
 
-    file = jldopen("$path/reference/irfs.jld2", "r")
+    file = JLD2.jldopen("$path/reference/irfs.jld2", "r")
 
     IRFkf = read(file, "IRFkf")
     IRFZ = read(file, "IRFZ")
@@ -489,7 +490,127 @@ if check_irfs
         @test IRFH ≈ vec(states[endo[:L′_t], 1:20, 3])
         #@test IRFC ≈ vec(obs[m.observables[:obs_consumption], 1:20, 3])
         @test IRFMC ≈ vec(states[endo[:mc′_t], 1:20, 3])
-        @test IRFLAM ≈ vec(states[endo[:mu′_t], 1:20, 3])
+        @test IRFLAM ≈ vec(states[endo[:margutil′_t], 1:20, 3])
         #@test IRFm ≈ vec(states[endo[:mu′_t], 1:20, 3])
+    end
+end
+
+if check_measurement
+    # Test the observable mappings (observables.jl) and measurement equation
+    # (measurement.jl) directly, independent of the consumption-IRF dynamics.
+    sys = compute_system(m)
+    ZZ = sys[:ZZ]
+    DD = sys[:DD]
+    EE = sys[:EE]
+    QQ = sys[:QQ]
+
+    obs      = m.observables
+    endo     = m.endogenous_states
+    endo_new = m.endogenous_states_augmented
+    exo      = m.exogenous_shocks
+
+    @testset "Check observables and measurement equation" begin
+        @testset "expected observables exist" begin
+            for k in [:obs_gdp, :obs_hours, :obs_wages, :obs_gdpdeflator,
+                      :obs_nominalrate, :obs_consumption, :obs_investment]
+                @test haskey(obs, k)
+            end
+        end
+
+        @testset "measurement matrix dimensions" begin
+            n_obs = length(obs)
+            @test size(ZZ, 1) == n_obs
+            @test size(ZZ, 2) == DSGE.get_setting(m, :n_model_states_augmented)
+            @test length(DD)  == n_obs
+            @test size(EE)    == (n_obs, n_obs)
+            @test size(QQ)    == (n_shocks_exogenous(m), n_shocks_exogenous(m))
+        end
+
+        @testset "ZZ / DD loadings" begin
+            # Output growth
+            @test ZZ[obs[:obs_gdp], first(endo[:y′_t])]  == 1.0
+            @test ZZ[obs[:obs_gdp], first(endo[:y′_t1])] == -1.0
+            @test ZZ[obs[:obs_gdp], first(endo[:z′_t])]  == 1.0
+            @test DD[obs[:obs_gdp]] ≈ 100*(exp(m[:γ])-1)
+
+            # Hours growth
+            @test ZZ[obs[:obs_hours], first(endo[:L′_t])] == 1.0
+            @test DD[obs[:obs_hours]] ≈ m[:Lmean].value
+
+            # Real wage growth
+            @test ZZ[obs[:obs_wages], first(endo[:w′_t])]  == 1.0
+            @test ZZ[obs[:obs_wages], first(endo[:w′_t1])] == -1.0
+            @test ZZ[obs[:obs_wages], first(endo[:z′_t])]  == 1.0
+            @test DD[obs[:obs_wages]] ≈ 100*(exp(m[:γ])-1)
+
+            # Inflation (GDP deflator)
+            @test ZZ[obs[:obs_gdpdeflator], first(endo[:π′_t])] == 1.0
+            @test DD[obs[:obs_gdpdeflator]] ≈ 100*(m[:π_star]-1)
+
+            # Nominal interest rate
+            @test ZZ[obs[:obs_nominalrate], first(endo[:R′_t])] == 1.0
+            @test DD[obs[:obs_nominalrate]] ≈ 1 + m[:r]
+
+            # Consumption growth (via augmented c_t states)
+            @test ZZ[obs[:obs_consumption], endo_new[:c_t]]      == 1.0
+            @test ZZ[obs[:obs_consumption], endo_new[:c_t1]]     == -1.0
+            @test ZZ[obs[:obs_consumption], first(endo[:z′_t])]  == 1.0
+            @test DD[obs[:obs_consumption]] ≈ 100*(exp(m[:γ])-1)
+
+            # Investment growth
+            @test ZZ[obs[:obs_investment], first(endo[:i′_t])] == 1.0
+            @test ZZ[obs[:obs_investment], endo_new[:i_t1]]    == -1.0
+            @test ZZ[obs[:obs_investment], first(endo[:z′_t])] == 1.0
+            @test DD[obs[:obs_investment]] ≈ 100*(exp(m[:γ])-1)
+        end
+
+        @testset "measurement error variances (EE)" begin
+            @test EE[obs[:obs_gdp],1]         ≈ m[:e_y]^2
+            @test EE[obs[:obs_hours],2]       ≈ m[:e_L]^2
+            @test EE[obs[:obs_wages],3]       ≈ m[:e_w]^2
+            @test EE[obs[:obs_gdpdeflator],4] ≈ m[:e_π]^2
+            @test EE[obs[:obs_nominalrate],5] ≈ m[:e_R]^2
+            @test EE[obs[:obs_consumption],6] ≈ m[:e_c]^2
+            @test EE[obs[:obs_investment],7]  ≈ m[:e_i]^2
+        end
+
+        @testset "shock variances (QQ)" begin
+            @test QQ[exo[:g_sh], exo[:g_sh]]     ≈ m[:σ_g]^2
+            @test QQ[exo[:b_sh], exo[:b_sh]]     ≈ m[:σ_b]^2
+            @test QQ[exo[:μ_sh], exo[:μ_sh]]     ≈ m[:σ_μ]^2
+            @test QQ[exo[:z_sh], exo[:z_sh]]     ≈ m[:σ_z]^2
+            @test QQ[exo[:λ_f_sh], exo[:λ_f_sh]] ≈ m[:σ_λ_f]^2
+            @test QQ[exo[:λ_w_sh], exo[:λ_w_sh]] ≈ m[:σ_λ_w]^2
+            @test QQ[exo[:rm_sh], exo[:rm_sh]]   ≈ m[:σ_rm]^2
+        end
+    end
+end
+
+################
+# Benchmarking #
+################
+run_benchmarks = false
+
+if run_benchmarks
+    mb = DSGEModels.HetDSGE()
+    mb.testing = false
+    sys_bench = compute_system(mb)
+
+    b_construct   = @benchmark DSGEModels.HetDSGE()
+    b_steadystate = @benchmark steadystate!($mb)
+    b_jacobian    = @benchmark DSGE.jacobian($mb)
+    b_klein       = @benchmark klein($mb)
+    b_system      = @benchmark compute_system($mb)
+    b_irf         = @benchmark impulse_responses($mb, $sys_bench)
+
+    println("\n===== HetDSGE benchmark results =====")
+    for (name, b) in [("construct",         b_construct),
+                      ("steadystate!",      b_steadystate),
+                      ("jacobian",          b_jacobian),
+                      ("klein",             b_klein),
+                      ("compute_system",    b_system),
+                      ("impulse_responses", b_irf)]
+        println(rpad(name, 18), " time: ", rpad(BenchmarkTools.prettytime(median(b).time), 12),
+                "memory: ", BenchmarkTools.prettymemory(median(b).memory))
     end
 end

@@ -2,6 +2,7 @@ using DSGE
 using Test
 using DataFrames: DataFrame
 using Dates
+using BenchmarkTools
 
 @testset "Miscellaneous data handling functions" begin
     # Previous and next quarter arithmetic
@@ -46,6 +47,35 @@ yfn, ytn = hpfilter(yn, 1600)
     @test isequal(missingfront, ytn[1:length(missingfront)])
     @test isequal(missingback, yfn[(end-length(missingback)+1):end])
     @test isequal(missingback, ytn[(end-length(missingback)+1):end])
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. None hit the FRED API.
+run_benchmarks = false
+
+if run_benchmarks
+    bench_y     = Float64[sin(i / 4) for i in 1:280]   # ~70yr quarterly series
+    bench_start = Dates.Date(2000, 01, 01)             # ~10yr span
+    bench_end   = Dates.Date(2010, 01, 01)
+    bench_dates_df = DataFrame(date = ["1913-12-23", "1992-11-14",
+                                       "2002-01-01", "2014-12-19"])
+
+    b_hpfilter    = @benchmark hpfilter($bench_y, 1600)
+    b_quarterends = @benchmark DSGE.get_quarter_ends($bench_start, $bench_end)
+    b_quartertodate = @benchmark quartertodate("1997q4")
+    # evals=1: format_dates! mutates in place, so rebuild a fresh df per eval.
+    b_formatdates = @benchmark DSGE.format_dates!(:date, df) setup=(df = copy($bench_dates_df)) evals=1
+
+    println("\n===== data/misc benchmark results =====")
+    for (name, b) in [("hpfilter (n=280)", b_hpfilter),
+                      ("get_quarter_ends", b_quarterends),
+                      ("quartertodate   ", b_quartertodate),
+                      ("format_dates!   ", b_formatdates)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
 end
 
 nothing

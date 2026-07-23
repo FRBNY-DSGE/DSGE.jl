@@ -1,3 +1,5 @@
+using BenchmarkTools
+
 path = dirname(@__FILE__)
 
 # Set up
@@ -19,6 +21,20 @@ end
     for arg in fieldnames(typeof(kal1))
         @test exp_kal12[arg] ≈ kal12[arg]
     end
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. Inputs are local JLD2, no FRED API.
+run_benchmarks = false
+
+if run_benchmarks
+    b_cat = @benchmark cat($m, $kal1, $kal2)
+
+    println("\n===== estimate/cat benchmark results =====")
+    println("cat (Kalman)  time:   ", BenchmarkTools.prettytime(median(b_cat).time),
+            "   memory: ", BenchmarkTools.prettymemory(median(b_cat).memory))
 end
 
 nothing

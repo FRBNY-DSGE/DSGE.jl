@@ -52,8 +52,8 @@ Outer constructor for the `KalmanFilter` type.
 """
 function BlockKalmanFilter(Ttild::Matrix{S}, Rtild::Matrix{S}, Ctild::Vector{S}, Qtild::Matrix{S},
                       Ztild::Matrix{S}, Dtild::Vector{S}, Etild::Matrix{S}, M::Matrix{S}, Mtild::Matrix{S},
-                           block_dims::Vector{Int64}, s_0tild::Vector{S} = Vector{S}(0),
-                           P_0tild::Matrix{S} = Matrix{S}(0, 0); block_num::Int64 = 2, true_block::Bool = false) where {S<:AbstractFloat}
+                           block_dims::Vector{Int64}, s_0tild::Vector{S} = Vector{S}(undef, 0),
+                           P_0tild::Matrix{S} = Matrix{S}(undef, 0, 0); block_num::Int64 = 2, true_block::Bool = false) where {S<:AbstractFloat}
     if isempty(s_0tild) || isempty(P_0tild)
         s_0tild, P_0tild = init_stationary_states(Ttild, Rtild, Ctild, Qtild)
     end
@@ -65,16 +65,16 @@ function BlockKalmanFilter(Ttild::Matrix{S}, Rtild::Matrix{S}, Ctild::Vector{S},
     # D and E are left as is
     s_0 = M * s_0tild
     P_0 = M' * P_0tild * M
-    if block_dims[2] == 0 & block_dims[3] == 0
+    if block_dims[2] == 0 && block_dims[3] == 0
         # 2-block case
         dim1 = block_dims[1]; dim2 = block_dims[4]
         A1 = T[1:dim1, 1:dim1]
         B1 = R[dim1 + 1:end, 1:dim1]
         Cblock = T[dim1 + 1:end, dim1 + 1:end]
-        Z1 = Matrix{S}(0, 0)
+        Z1 = Matrix{S}(undef, 0, 0)
         Z2 = Z[:, dim1 + 1:end]
-        Rup = Matrix{S}(0, 0)
-        Rlo = Matrix{S}(0, 0)
+        Rup = Matrix{S}(undef, 0, 0)
+        Rlo = Matrix{S}(undef, 0, 0)
 
         # Check if dim1 is equal to number of exogenous shocks; if not, need to track more matrices
         if dim1 != size(R, 2)
@@ -83,7 +83,7 @@ function BlockKalmanFilter(Ttild::Matrix{S}, Rtild::Matrix{S}, Ctild::Vector{S},
             Rlo = R[dim1 + 1:end, dim1 + 1:end]
         end
         # Check Z is in true block form; if not (e.g. unit root), need to track more matrices
-        if Z[:, 1:dim1] != zeros(Z[:, 1:dim1])
+        if Z[:, 1:dim1] != zero(Z[:, 1:dim1])
             true_block = false
             Z1 = Z[:, 1:dim1]
         end
@@ -93,12 +93,12 @@ function BlockKalmanFilter(Ttild::Matrix{S}, Rtild::Matrix{S}, Ctild::Vector{S},
         P12_0 = P_0[1:dim1, dim1 + 1:end]
         P22_0 = P_0[dim1 + 1:end, dim1 + 1:end]
 
-        return BlockKalmanFilter(A1, Matrix{S}(0, 0), Matrix{S}(0, 0), B1, Matrix{S}(0, 0), Matrix{S}(0, 0),
-                          Cblock, Rup, Rlo, C, Q, Z1, Z2, Matrix{S}(0, 0),
-                          Matrix{S}(0, 0), D, E, s1_0, s2_0, Vector{S}(0), Vector{S}(0),
-                          P11_0, P12_0, Matrix{S}(0, 0), Matrix{S}(0, 0), P22_0,
-                          Matrix{S}(0, 0), Matrix{S}(0, 0), Matrix{S}(0, 0), Matrix{S}(0, 0),
-                          Matrix{S}(0, 0), M, Mtild, block_dims, block_num, true_block, NaN)
+        return BlockKalmanFilter(A1, Matrix{S}(undef, 0, 0), Matrix{S}(undef, 0, 0), B1, Matrix{S}(undef, 0, 0), Matrix{S}(undef, 0, 0),
+                          Cblock, Rup, Rlo, C, Q, Z1, Z2, Matrix{S}(undef, 0, 0),
+                          Matrix{S}(undef, 0, 0), Dtild, Etild, s1_0, s2_0, Vector{S}(undef, 0), Vector{S}(undef, 0),
+                          P11_0, P12_0, Matrix{S}(undef, 0, 0), Matrix{S}(undef, 0, 0), P22_0,
+                          Matrix{S}(undef, 0, 0), Matrix{S}(undef, 0, 0), Matrix{S}(undef, 0, 0), Matrix{S}(undef, 0, 0),
+                          Matrix{S}(undef, 0, 0), M, Mtild, block_dims, block_num, true_block, NaN)
     end
 end
 
@@ -192,8 +192,8 @@ function block_kalman_filter(y::Matrix{Float64}, Ttild::Matrix{Float64}, Rtild::
                              Ctild::Vector{Float64}, Qtild::Matrix{Float64}, Ztild::Matrix{Float64},
                              Dtild::Vector{Float64}, Etild::Matrix{Float64},
                              M::Matrix{Float64}, Mtild::Matrix{Float64}, block_dims::Vector{Int64},
-                             s_0tild::Vector{Float64} = Vector{Float64}(0),
-                             P_0tild::Matrix{Float64} = Matrix{Float64}(0,0);
+                             s_0tild::Vector{Float64} = Vector{Float64}(undef, 0),
+                             P_0tild::Matrix{Float64} = Matrix{Float64}(undef, 0, 0);
                              outputs::Vector{Symbol} = [:loglh, :pred, :filt],
                              Nt0::Int = 0, block_num::Int64 = 2, true_block::Bool = false)
 
@@ -203,21 +203,26 @@ function block_kalman_filter(y::Matrix{Float64}, Ttild::Matrix{Float64}, Rtild::
     return_filt  = :filt in outputs
 
     # Dimensions
-    Ns = size(T,1) # number of states
+    Ns = size(Ttild,1) # number of states
     Nt = size(y,2) # number of periods of data
 
-    # Initialize Inputs and outputs, populate initial states
+    # Initialize Inputs and outputs, populate initial states. When s_0tild/P_0tild are
+    # omitted (empty), fall back to the stationary distribution — same as the constructor
+    # does — before mapping into block coordinates, so `M * s_0tild` is well-defined.
+    if isempty(s_0tild) || isempty(P_0tild)
+        s_0tild, P_0tild = init_stationary_states(Ttild, Rtild, Ctild, Qtild)
+    end
     s_0 = M * s_0tild
     P_0 = M' * P_0tild * M
     k = BlockKalmanFilter(Ttild, Rtild, Ctild, Qtild, Ztild, Dtild, Etild, M, Mtild,
                           block_dims, s_0tild, P_0tild; block_num = block_num, true_block = true_block)
 
     mynan  = convert(Float64, NaN)
-    loglh  = return_loglh ? fill(mynan, Nt)         : Vector{Float64}(0)
-    s_pred = return_pred  ? fill(mynan, Ns, Nt)     : Matrix{Float64}(0, 0)
-    P_pred = return_pred  ? fill(mynan, Ns, Ns, Nt) : Array{Float64, 3}(0, 0, 0)
-    s_filt = return_filt  ? fill(mynan, Ns, Nt)     : Matrix{Float64}(0, 0)
-    P_filt = return_filt  ? fill(mynan, Ns, Ns, Nt) : Array{Float64, 3}(0, 0, 0)
+    loglh  = return_loglh ? fill(mynan, Nt)         : Vector{Float64}(undef, 0)
+    s_pred = return_pred  ? fill(mynan, Ns, Nt)     : Matrix{Float64}(undef, 0, 0)
+    P_pred = return_pred  ? fill(mynan, Ns, Ns, Nt) : Array{Float64, 3}(undef, 0, 0, 0)
+    s_filt = return_filt  ? fill(mynan, Ns, Nt)     : Matrix{Float64}(undef, 0, 0)
+    P_filt = return_filt  ? fill(mynan, Ns, Ns, Nt) : Array{Float64, 3}(undef, 0, 0, 0)
 
     # Loop through periods t
     for t = 1:Nt

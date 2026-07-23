@@ -105,3 +105,26 @@ end
     end
     @test out_err[1]
 end
+
+####################
+# Benchmarks
+####################
+run_benchmarks = false
+if run_benchmarks
+    bm = AnSchorfheide()
+    bm <= Setting(:sampling_method, :SMC)
+    bm_overrides = forecast_input_file_overrides(bm)
+    bm_overrides[:mode] = "$path/../reference/paramsmode_.h5"
+    bm_overrides[:full] = "$path/../reference/smcsave_.h5"
+
+    b_init = @benchmark load_draws($bm, :init, verbose = :none)
+    b_mode = @benchmark load_draws($bm, :mode, verbose = :none, use_highest_posterior_value = true)
+    b_full = @benchmark load_draws($bm, :full, verbose = :none)
+
+    println("\n===== load_draws benchmark results =====")
+    for (label, b) in (("load_draws :init", b_init), ("load_draws :mode", b_mode),
+                       ("load_draws :full", b_full))
+        println(rpad(label, 18), " time: ", rpad(BenchmarkTools.prettytime(median(b).time), 12),
+                "memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
+end

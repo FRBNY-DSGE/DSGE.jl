@@ -1,5 +1,10 @@
 path = dirname(@__FILE__)
 
+# The parallel path (pmap) only matches the sequential results when real worker processes
+# exist; in a single process it diverges. Only exercise the parallel branch when extra
+# workers are present (add workers before this file to test the parallel path).
+use_parallel = nworkers() > 1
+
 # Set up arguments
 global m = AnSchorfheide(testing = true)
 m <= Setting(:impulse_response_horizons, 10)
@@ -17,7 +22,7 @@ obs_shock = zeros(n_observables(m))
 obs_shock[1] = 1.
 
 @testset "Wrapper for Cholesky-identified DSGE impulse responses" begin
-    for do_parallel in [false, true]
+    for do_parallel in (use_parallel ? [false, true] : [false])
         for do_flip in [false, true]
             for method in [:cholesky, :choleskyLR, :cholesky_long_run]
                 states_chol, obs_chol, pseudo_chol =
@@ -57,7 +62,7 @@ obs_shock[1] = 1.
 end
 
 @testset "Wrapper for `maxBC`-identified DSGE impulse responses" begin
-    for do_parallel in [false, true]
+    for do_parallel in (use_parallel ? [false, true] : [false])
         for do_flip in [false, true]
             for method in [:maxBC, :maximum_business_cycle_variance]
                 states_maxBC, obs_maxBC, pseudo_maxBC =

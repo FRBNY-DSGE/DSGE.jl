@@ -319,24 +319,39 @@ function csminwel(fcn::Function,
 
         @csminwelltrace
     end
-    try
-        # Optim v1.x adds an additional field to the MultivariateOptimizationResults type
-        return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
-                                               iteration, iteration==iterations, x_converged, xtol, xtol, x_resid, x_resid,
-                                               f_converged, ftol, ftol, f_resid, f_resid,
-                                               gr_converged, grtol, gr_resid, false, tr, f_calls, g_calls, 0,
-                                               false, NaN, NaN, nothing), H  # also return H
-    catch e
-        if isa(e, MethodError) # Then likely using an older version of Optim
-            return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
-                                                   iteration, iteration==iterations, x_converged, xtol, xtol, x_resid, x_resid,
-                                                   f_converged, ftol, ftol, f_resid, f_resid,
-                                                   gr_converged, grtol, gr_resid, false, tr, f_calls, g_calls, 0,
-                                                   false, NaN, NaN), H  # also return H
-        else
-            rethrow(e)
-        end
+    # Modern Optim (v1.x) replaced the inline convergence Bools in
+    # MultivariateOptimizationResults with a `stopped_by` NamedTuple (whose keys the
+    # converged()/iteration_limit_reached()/f_increased()/show accessors read) plus a
+    # `termination_code` enum. Build both from the flags csminwel already computed.
+    stopped_by = (x_converged     = x_converged,
+                  f_converged     = f_converged,
+                  g_converged     = gr_converged,
+                  f_limit_reached = false,
+                  g_limit_reached = false,
+                  h_limit_reached = false,
+                  time_limit      = false,
+                  callback        = false,
+                  f_increased     = false,
+                  ls_failed       = false,
+                  iterations      = iteration == iterations)
+    termination_code = if gr_converged
+        Optim.TerminationCode.GradientNorm
+    elseif x_converged
+        Optim.TerminationCode.SmallXChange
+    elseif f_converged
+        Optim.TerminationCode.SmallObjectiveChange
+    elseif iteration == iterations
+        Optim.TerminationCode.Iterations
+    else
+        Optim.TerminationCode.NotImplemented
     end
+    return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
+                                           iteration, xtol, xtol, x_resid, x_resid,
+                                           ftol, ftol, f_resid, f_resid, grtol, gr_resid,
+                                           # Optim 2 MultivariateOptimizationResults added jvp_calls & hvp_calls;
+                                           # csminwel is gradient-only: f_calls, g_calls, jvp=0, h_calls=0, hvp=0, time_limit, time_run
+                                           tr, f_calls, g_calls, 0, 0, 0, NaN, NaN,
+                                           stopped_by, termination_code), H  # also return H
 
 # the NaNs are for time and timelimit--apparently if they're NaN, there is no time limit
 # the last false if ls_success=false...not quite sure?
@@ -599,7 +614,8 @@ function assess_convergence(x::Array,
                             grtol::Real)
     x_converged, f_converged, gr_converged = false, false, false
 
-    if Optim.maxdiff(x, x_previous) < xtol
+    # Optim 2 removed Optim.maxdiff; inline max_i |x_i - x_previous_i|
+    if maximum(abs.(x .- x_previous)) < xtol
         x_converged = true
     end
 

@@ -25,7 +25,7 @@ end
 # A pre-populated version of that rule that only accepts 3 arguments:
 # Lower bound, upper bound, and number of points
 function uniform_quadrature(lower_bound::T, upper_bound::T, n_points::Int;
-                            scale::T = 1) where {T<:Real}
+                            scale::T = one(T)) where {T<:Real}
     grid = collect(range(lower_bound, stop = upper_bound, length = n_points))
     weights = fill(scale/n_points, n_points)
     return grid, weights

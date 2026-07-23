@@ -1,13 +1,30 @@
 using DSGE, ModelConstructors, HDF5, Random, JLD2, FileIO, SMC, Test
+using Distributed
 
 path = dirname(@__FILE__)
+
+# To exercise the parallel mutation path, launch Julia with worker processes ALREADY on the
+# node — this FRBNY cluster blocks in-script addprocs (see startup.jl); use the launcher's
+# cpu/worker request or `julia -p N`. When workers are present we load the packages on them so
+# they can run the mutation closure; with none (nprocs()==1, e.g. the test suite) this is a
+# no-op and the run is sequential. With real workers the per-particle draws use the workers'
+# own RNGs, so the cloud will NOT match the seeded sequential reference (expected, not a bug) —
+# a parallel run's purpose here is just to confirm it completes without a worker-path error.
+if nprocs() > 1
+    @everywhere using DSGE, ModelConstructors, SMC
+end
 writing_output = false
+# RNG-dependent references (full SMC cloud): Julia 1.7+ switched the default RNG to a
+# per-Task Xoshiro256++, so the seeded SMC run differs from the "150"/"160" data —
+# regenerate with writing_output on under the target Julia.
 if VERSION < v"1.5"
     ver = "111"
 elseif VERSION < v"1.6"
     ver = "150"
-else
+elseif VERSION < v"1.7"
     ver = "160"
+else
+    ver = "1126"
 end
 
 m = AnSchorfheide()
@@ -33,13 +50,15 @@ m <= Setting(:resampling_threshold, .5)
 m <= Setting(:smc_iteration, 0)
 m <= Setting(:use_chand_recursion, true)
 
-@everywhere Random.seed!(42)
+# Plain seed (not @everywhere): in a single process @everywhere doesn't pin the task-local
+# RNG the seeded SMC draws use, leaving the RNG references unreproducible.
+Random.seed!(42)
 
 println("Estimating AnSchorfheide Model... (approx. 2 minutes)")
-DSGE.smc2(m, data, verbose = :none, run_csminwel = false) # Uncomment once new DSGE version comes out: run_csminwel = false, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
+DSGE.smc2(m, data, verbose = :none, run_csminwel = false)
 println("Estimation done!")
 
-test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
+test_file   = load(rawpath(m, "estimate", "smc_cloud.jld2"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]

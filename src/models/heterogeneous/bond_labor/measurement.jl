@@ -62,8 +62,8 @@ function measurement(m::BondLabor{T}, TTT::Matrix{T},
     weights_total = m.grids[:weights_total]
 
     aborrow = abar/R
-    chipW = (1+ν)./(ν./(aborrow + χss - xgrid_total) + γ./χss)
-    chipR = (1/(R*R))*(ν*abar./(aborrow + χss - xgrid_total))./(ν./(aborrow + χss - xgrid_total) + γ./χss)
+    chipW = (1+ν)./(ν./(aborrow .+ χss - xgrid_total) + γ./χss)
+    chipR = (1/(R*R))*(ν*abar./(aborrow .+ χss - xgrid_total))./(ν./(aborrow .+ χss - xgrid_total) + γ./χss)
 
     GDP  = 0.0
     GDPZ = 0.0
@@ -81,9 +81,9 @@ function measurement(m::BondLabor{T}, TTT::Matrix{T},
 
     # Output in log levels
     GDPfn[1, endo[:μ′_t]] = η'.*sgrid_total'.*weights_total'
-    GDPfn[1, endo[:z′_t]] = GDPZ + GDP
+    GDPfn[1, endo[:z′_t]] .= GDPZ + GDP
     GDPfn[1, endo[:l′_t]] = (1/γ)*μ'.*(sgrid_total'*(γ/ν).*(η./c)').*weights_total'.*( l.^(-1-1/γ) )'.*((l.^(-1/γ)).<=χss)'
-    GDPfn[1, endo[:R′_t]] = GDPR
+    GDPfn[1, endo[:R′_t]] .= GDPR
 
     Qx, Qy, _, _ = compose_normalization_matrices(m)
     gx2  = Qy'*TTT_jump*Qx
@@ -91,7 +91,7 @@ function measurement(m::BondLabor{T}, TTT::Matrix{T},
     # now we need to create GDP as a function of the normalized states
     ZZ_states = (1/GDP)*GDPfn*[eye(nx*ns+1); gx2]*Qx' # this is for log GDP
                                                       # to use the level of gdp, remove (1/GDP)
-    ZZ = Matrix{Float64}(_n_observables, _n_model_states)
+    ZZ = Matrix{Float64}(undef, _n_observables, _n_model_states)
     ZZ[1:_n_states] = ZZ_states
     ZZ[_n_states+1:end] = zeros(_n_jumps)
 

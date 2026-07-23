@@ -121,7 +121,7 @@ function likelihood(m::AbstractDSGEModel, data::AbstractMatrix;
                     catch_errors::Bool = false,
                     use_chand_recursion::Bool = false,
                     tol::Float64 = 0.0, add_zlb_duration::Tuple{Bool, Int} = (false, 1),
-                    verbose::Symbol = :high) where {T<:AbstractFloat}
+                    verbose::Symbol = :high)
 
     catch_errors = catch_errors | sampler
     use_penalty  = try get_setting(m, :use_likelihood_penalty) catch; false end
@@ -229,7 +229,7 @@ Evaluate a VAR likelihood function.
 function likelihood(m::AbstractVARModel, data::AbstractMatrix;
                     sampler::Bool = false,
                     catch_errors::Bool = false,
-                    verbose::Symbol = :high) where {T<:AbstractFloat}
+                    verbose::Symbol = :high)
 
     catch_errors = catch_errors | sampler
     use_penalty  = try get_setting(m, :use_likelihood_penalty) catch; false end

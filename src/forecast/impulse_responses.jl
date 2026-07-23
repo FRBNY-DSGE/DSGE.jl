@@ -62,13 +62,15 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
     TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
     CCC      = zeros(n_model_states(m))
 
-    TTT, RRR, CCC = #if typeof(m) != RepDSGEGovDebt{Float64}
-        augment_states(m, TTT, RRR, CCC)
-   #= else
-        TTT, RRR, CCC
-    end=#
-
-    measurement_equation = measurement(m, TTT, RRR, CCC)
+    if m.spec == "het_dsge"
+        _, dF2_dRZ, dF2_dWH, dF2_dTT = jacobian(m)
+        C_eqn = construct_consumption_eqn(m, TTT_jump, dF2_dRZ, dF2_dWH, dF2_dTT)
+        TTT, RRR, CCC = augment_states(m, TTT, TTT_jump, RRR, CCC, C_eqn)
+        measurement_equation = measurement(m, TTT, RRR, CCC, C_eqn)
+    else
+        TTT, RRR, CCC = augment_states(m, TTT, RRR, CCC)
+        measurement_equation = measurement(m, TTT, RRR, CCC)
+    end
     transition_equation = Transition(TTT, RRR, CCC)
     system = System(transition_equation, measurement_equation)
 
@@ -78,11 +80,17 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
         return states, obs, pseudo
     end
 
-    state_indices_orig = stack_indices(m.endogenous_states_original, get_setting(m, :states))
-    jump_indices_orig  = stack_indices(m.endogenous_states_original, get_setting(m, :jumps))
+    if m.spec == "het_dsge"
+        endo_orig = m.endogenous_states_unnormalized
+        Qx, Qy, _, _ = compose_normalization_matrices(m)
+    else
+        endo_orig = m.endogenous_states_original
+        Qx = get_setting(m, :Qx)
+        Qy = get_setting(m, :Qy)
+    end
 
-    Qx = get_setting(m, :Qx)
-    Qy = get_setting(m, :Qy)
+    state_indices_orig = stack_indices(endo_orig, get_setting(m, :states))
+    jump_indices_orig  = stack_indices(endo_orig, get_setting(m, :jumps))
 
     # In this case, the length of state_indices and jump_indices seems to give the number of
     # UNNORMALIZED states/jumps however I'm not sure if this will always be the case/if this is
@@ -108,7 +116,7 @@ function impulse_responses_augmented(m::Union{AbstractHetModel,RepDSGEGovDebt}, 
     end
 
     if use_alternate_consumption
-        endo = m.endogenous_states_original
+        endo = endo_orig
         c_implied = (m[:ystar]/m[:g]) - m[:xstar]
         IRFC_implied = m[:ystar]/(c_implied*m[:g])*(model_states_unnormalized[endo[:y′_t], :, :] -
                                                     model_states_unnormalized[endo[:g′_t], :, :])-
@@ -569,13 +577,23 @@ function impulse_responses(system::System{S}, horizon::Int, permute_mat::Abstrac
     end
 
     obs_cov = obs_std * obs_std'
+    # obs_cov is a Gram matrix (positive semidefinite by construction), but on some
+    # BLAS/LAPACK builds roundoff can leave it slightly asymmetric or with a tiny negative
+    # eigenvalue, so Cholesky throws PosDefException. Symmetrize first; if it is still not
+    # positive definite, add a minimal diagonal ridge so the factorization succeeds. The
+    # ridge only activates on the path that would otherwise error — matrices that already
+    # factor cleanly take the first branch and are unaffected.
     cholmat = try
         cholesky(obs_cov).L
     catch e
-        if isa(e, PosDefException)
-            cholesky((obs_cov + obs_cov') ./ 2).L
-        else
-            rethrow(e)
+        isa(e, PosDefException) || rethrow(e)
+        sym = (obs_cov + obs_cov') ./ 2
+        try
+            cholesky(sym).L
+        catch e2
+            isa(e2, PosDefException) || rethrow(e2)
+            ridge = eps(real(S)) * max(maximum(abs, diag(sym)), one(real(S)))
+            cholesky(sym + ridge * I).L
         end
     end
     structural_shock = obs_std \ (cholmat * shocks)

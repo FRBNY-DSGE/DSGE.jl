@@ -1,10 +1,16 @@
 using DSGE, ModelConstructors, Dates, Test, LinearAlgebra, FileIO, Random, JLD2
+isdefined(@__MODULE__, :as_dataframe) || include(joinpath(@__DIR__, "..", "jld2_compat.jl"))
 
 writing_output = false # Write output for tests which use random values
 if VERSION < v"1.5"
     ver = "111"
-else
+elseif VERSION < v"1.7"
     ver = "150"
+else
+    # Julia 1.7 switched the default RNG from a single process-wide
+    # MersenneTwister to a per-Task Xoshiro256++ (TaskLocalRNG), so seeded
+    # draws no longer match the "150" reference data.
+    ver = "1126"
 end
 
 m = AnSchorfheide()
@@ -217,7 +223,7 @@ end
         end
     end
 
-    file = jldopen(joinpath(dirname(@__FILE__), "../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2"), "r")
+    file = JLD2.jldopen(joinpath(dirname(@__FILE__), "../reference/test_dsgevar_lambda_irfs_statespace_output_version=" * ver * ".jld2"), "r")
     saved_β = read(file, "exp_data_beta")
     saved_Σ = read(file, "exp_data_sigma")
     close(file)
@@ -435,7 +441,7 @@ end
     m <= Setting(:forecast_horizons, 12)
 
     fp = dirname(@__FILE__)
-    df = load(joinpath(fp, "../reference", "regime_switch_data.jld2"), "regime_switch_df_none")
+    df = as_dataframe(load(joinpath(fp, "../reference", "regime_switch_data.jld2"), "regime_switch_df_none"))
 
     m <= Setting(:replace_eqcond, true)
     m <= Setting(:regime_eqcond_info, Dict{Int, DSGE.EqcondEntry}(
@@ -971,15 +977,25 @@ end
     m <= Setting(:uncertain_altpolicy, true)
     sys_unczlb_uncalt = compute_system(m)
 
+    # :Econometricians10YearRateGap is, by design, the rate gap "from the perspective of the
+    # econometrician who has no forward looking uncertainty" (see pseudo_observables.jl). It is
+    # intentionally computed under a permanent-policy assumption and is therefore NOT part of the
+    # imperfect-credibility weighting, so it is excluded from the weighted-average checks of the
+    # pseudo-measurement equation below.
+    pseudo_inds = setdiff(1:DSGE.n_pseudo_observables(m),
+                          [m.pseudo_observables[:Econometricians10YearRateGap]])
+
     for i in sort!(collect(keys(get_setting(m, :regime_eqcond_info))))
         @test sys_unczlb_uncalt[i, :ZZ] ≈ imperfect_cred_new * sys_perfcred[i, :ZZ] +
             imperfect_cred_old * sys_taylor[:ZZ]
-        @test sys_unczlb_uncalt[i, :ZZ_pseudo] ≈ imperfect_cred_new * sys_perfcred[i, :ZZ_pseudo] +
-            imperfect_cred_old * sys_taylor[:ZZ_pseudo]
+        @test sys_unczlb_uncalt[i, :ZZ_pseudo][pseudo_inds, :] ≈
+            imperfect_cred_new * sys_perfcred[i, :ZZ_pseudo][pseudo_inds, :] +
+            imperfect_cred_old * sys_taylor[:ZZ_pseudo][pseudo_inds, :]
         @test sys_unczlb_uncalt[i, :DD] ≈ imperfect_cred_new * sys_perfcred[i, :DD] +
             imperfect_cred_old * sys_taylor[:DD]
-        @test sys_unczlb_uncalt[i, :DD_pseudo] ≈ imperfect_cred_new * sys_perfcred[i, :DD_pseudo] +
-            imperfect_cred_old * sys_taylor[:DD_pseudo]
+        @test sys_unczlb_uncalt[i, :DD_pseudo][pseudo_inds] ≈
+            imperfect_cred_new * sys_perfcred[i, :DD_pseudo][pseudo_inds] +
+            imperfect_cred_old * sys_taylor[:DD_pseudo][pseudo_inds]
     end
 end
 

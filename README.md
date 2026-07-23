@@ -1,3 +1,5 @@
+> **Note (July 23rd, 2026):** The `main` branch has moved over to Julia v1.12. If any bugs come up, please contact michael dot pham at ny dot frb dot org, elena dot elbarmi at ny dot frb dot org, or elizabeth dot wright at ny dot frb dot org. A Julia v1.5 version is available on the `julia1.5-stable-release` branch.
+
 # New York Fed DSGE Model (Version 1002)
 ![Build Status](https://github.com/FRBNY-DSGE/DSGE.jl/workflows/build/badge.svg?branch=main)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://frbny-dsge.github.io/DSGE.jl/stable)
@@ -44,7 +46,7 @@ you need to enable [long paths](https://docs.microsoft.com/en-us/windows/win32/f
 
 ## Versioning
 
-`DSGE.jl` is currently compatible with Julia `v1.0` through `v1.5.x`.
+`DSGE.jl` is currently compatible with Julia `v1.x` (as of `v1.1.6`).
 
 To use `DSGE.jl` with Julia `v0.7`, please check out tag `0.8.1`. To do this, click on the drop-down menu that reads `branch:main` on the left-hand side of the page. Select `tags`, then `v0.8.1`.  If you've already cloned the repo, you can simply run `git checkout v0.8.1`.
 

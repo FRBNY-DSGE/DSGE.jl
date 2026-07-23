@@ -264,14 +264,14 @@ function marginal_data_density_weighted(params::Matrix{Float64},
         # If outright inverting Σ_bar
         # lnfpara = -log.(p) - .5 * n_free_para * log(2*pi) - .5 * log(det(Σ_bar)) - .5 * res' * Σ_bar_inv * res
         # If not outright inverting Σ_bar
-        lnfpara = -log.(p) - .5 * n_free_para * log(2*pi) - .5 * parasiglndet - .5 * res' * Σ_bar_inv * res
+        lnfpara = -log.(p) .- .5 * n_free_para * log(2*pi) .- .5 * parasiglndet .- .5 * res' * Σ_bar_inv * res
         indpara = (res' * Σ_bar_inv * res) .< pcrit
-        invlike = exp.(lnfpara - post + densfac) .* indpara
+        invlike = exp.(lnfpara .- post .+ densfac) .* indpara
 
         ####################################
         # TEMPORARY
         ####################################
-        all_exp_terms[:, i] = lnfpara - post + densfac
+        all_exp_terms[:, i] = lnfpara .- post .+ densfac
 
         all_lnfpara[:, i] = lnfpara
         all_indpara[:, i] = indpara
@@ -283,7 +283,7 @@ function marginal_data_density_weighted(params::Matrix{Float64},
     mean_invlike = mean(all_invlike, dims = 2)
     mean_invlike = Base.filter(x -> isfinite(x), mean_invlike)
 
-    return mean(densfac - log.(mean_invlike))
+    return mean(densfac .- log.(mean_invlike))
 end
 
 

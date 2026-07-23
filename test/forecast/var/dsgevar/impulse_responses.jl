@@ -1,8 +1,13 @@
+using BenchmarkTools
 writing_output = false
 if VERSION < v"1.5"
     ver = "111"
-else
+elseif VERSION < v"1.6"
     ver = "150"
+elseif VERSION < v"1.12"
+    ver = "160"
+else
+    ver = "1120"
 end
 
 fp = dirname(@__FILE__)
@@ -93,8 +98,9 @@ if VERSION < v"1.5"
         @test ŷ1 ≈ ŷ2
         @test ŷ1 ≈ ŷ3
     end
+end
 
-    @testset "Impulse responses of a VAR using a DSGE as a prior" begin
+@testset "Impulse responses of a VAR using a DSGE as a prior" begin
         jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs.jld2"))
         m = Model1002("ss10", custom_settings = [Setting(:add_laborshare_measurement, true),
                                                  Setting(:add_NominalWageGrowth, true)])
@@ -131,6 +137,7 @@ if VERSION < v"1.5"
                                         horizon = impulse_response_horizons(dsgevar))
 
         if writing_output
+            println("Writing impulse response output to reference file for version $ver")
             jldopen(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs_output_version=" * ver * ".jld2"),
                     true, true, true, IOStream) do file
             write(file, "exp_modal_cholesky_irf", out)
@@ -286,5 +293,21 @@ end
     @test @test_matrix_approx_eq jlddata["exp_maxBC_int"][:, :, 1] -out14
 end
 
+run_benchmarks = false
+if run_benchmarks
+    bench_jlddata = load(joinpath(fp, "../../../reference/test_dsgevar_lambda_irfs.jld2"))
+    bench_m = Model1002("ss10", custom_settings = [Setting(:add_laborshare_measurement, true),
+                                                   Setting(:add_NominalWageGrowth, true)])
+    bench_m <= Setting(:impulse_response_horizons, 10)
+    bench_dsgevar = DSGEVAR(bench_m, collect(keys(bench_m.exogenous_shocks)), "ss11")
+    DSGE.update!(bench_dsgevar, λ = 1.)
+    DSGE.update!(bench_dsgevar, bench_jlddata["modal_param"])
+    bench_data = bench_jlddata["data"]
+
+    b_irf = @benchmark impulse_responses($bench_dsgevar, $bench_data, :cholesky, 1)
+    println("\n===== dsgevar impulse_responses benchmark results =====")
+    println(rpad("impulse_responses(:cholesky)", 30), " time: ",
+            rpad(BenchmarkTools.prettytime(median(b_irf).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_irf).memory))
 end
 nothing

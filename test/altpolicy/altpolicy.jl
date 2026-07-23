@@ -1,4 +1,4 @@
-using DSGE, Test, ModelConstructors
+using DSGE, Test, ModelConstructors, BenchmarkTools
 
 # Initialize model object
 m = Model990()
@@ -226,4 +226,33 @@ m <= Setting(:ρ_rw, 0.63)
     @test get_setting(m, :rw_φ_π) == 0.83
     @test get_setting(m, :rw_φ_y) == 0.94
     @test get_setting(m, :ρ_rw) == 0.63
+end
+
+################
+# Benchmarking #
+################
+# Set this flag to true to run the altpolicy benchmarks. Off by default so
+# the test suite stays fast.
+run_benchmarks = false
+
+if run_benchmarks
+    # (model, policy constructor) for each altpolicy rule
+    altpols = [(m990, DSGE.taylor93),
+               (m990, DSGE.taylor99),
+               (m,    DSGE.alt_inflation),
+               (m,    DSGE.zero_rate),
+               (my,   DSGE.smooth_ait_gdp),
+               (my,   DSGE.flexible_ait),
+               (my,   DSGE.ait),
+               (my,   DSGE.rw),
+               (my,   DSGE.rw_zero_rate)]
+
+    # Benchmark setting up all altpolicy rules and report one summary
+    b = @benchmark for (model, policy) in $altpols
+        setup_permanent_altpol!(model, policy())
+    end
+
+    println("\n===== AltPolicy benchmark results =====")
+    println("time:   ", BenchmarkTools.prettytime(median(b).time))
+    println("memory: ", BenchmarkTools.prettymemory(median(b).memory))
 end

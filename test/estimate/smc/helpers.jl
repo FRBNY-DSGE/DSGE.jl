@@ -1,10 +1,16 @@
+using SMC
+using BenchmarkTools
+
 writing_output = false
-if VERSION < v"1.5"
-    ver = "111"
-else
-    ver = "150"
-end
-@everywhere Random.seed!(42)
+# RNG-dependent references (mvnormal_mixture_draw, block generation) tier by Julia version:
+# 1.7+ switched the default RNG to Xoshiro256++, so seeded draws differ from the "150" data.
+# Deterministic references (solve_adaptive_ϕ, proposal densities, ESS) don't touch the RNG,
+# so they stay version-independent on `dver`.
+ver  = VERSION < v"1.5" ? "111" : (VERSION < v"1.7" ? "150" : "1126")
+dver = VERSION < v"1.5" ? "111" : "150"
+# Plain seed (not @everywhere): in a single process @everywhere doesn't pin the task-local
+# RNG the seeded draws use, leaving the RNG references unreproducible.
+Random.seed!(42)
 
 ####################################################################
 # Testing Adaptive Φ Solution
@@ -26,7 +32,7 @@ test_ϕ_n, test_resampled_last_period, test_j, test_ϕ_prop = SMC.solve_adaptive
                                                                 tempering_target,
                                                                 resampled_last_period)
 if writing_output
-    jldopen(joinpath(dirname(@__FILE__), "reference/helpers_output_version=" * ver * ".jld2"),
+    jldopen(joinpath(dirname(@__FILE__), "reference/helpers_output_version=" * dver * ".jld2"),
             true, true, true, IOStream) do file
         write(file, "phi_n", test_ϕ_n)
         write(file, "resampled_last_period", test_resampled_last_period)
@@ -36,7 +42,7 @@ if writing_output
 end
 
 file = JLD2.jldopen(joinpath(dirname(@__FILE__), "reference/helpers_output_version="
-                             * ver * ".jld2"), "r")
+                             * dver * ".jld2"), "r")
 saved_ϕ_n = read(file, "phi_n")
 saved_resampled_last_period = read(file, "resampled_last_period")
 saved_j = read(file, "j")
@@ -54,9 +60,11 @@ end
 ####################################################################
 # Testing MvNormal Mixture Draw Function
 ####################################################################
+# d_subset / `d` below are proxy MvNormals on the current stack — _jld2_to_mvnormal (runtests.jl)
+# rebuilds a real MvNormal from μ/Σ so SMC's methods dispatch.
 file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/mvnormal_inputs.jld2"))
     para_subset = read(file, "para_subset")
-    d_subset    = read(file, "d_subset")
+    d_subset    = _jld2_to_mvnormal(read(file, "d_subset"))
     α           = read(file, "α")
     c           = read(file, "c")
 close(file)
@@ -83,7 +91,7 @@ end
 # Test: get_cov()
 ####################################################################
 d = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/mutation_inputs.jld2"), "r") do file
-    file["d"]
+    _jld2_to_mvnormal(file["d"])
 end
 d_deg = DegenerateMvNormal(d.μ, d.Σ.mat)
 
@@ -100,7 +108,7 @@ end
 file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/proposal_densities_in.jld2"))
     para_draw   = read(file, "para_draw")
     para_subset = read(file, "para_subset")
-    d_subset    = read(file, "d_subset")
+    d_subset    = _jld2_to_mvnormal(read(file, "d_subset"))
     α           = read(file, "α")
     c           = read(file, "c")
 close(file)
@@ -108,13 +116,13 @@ close(file)
 q0, q1 = SMC.compute_proposal_densities(para_draw, para_subset, d_subset; α = α,
                                         c = c)
 if writing_output
-    JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/proposal_densities_output_version=" * ver * ".jld2"), true, true, true, IOStream) do file
+    JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/proposal_densities_output_version=" * dver * ".jld2"), true, true, true, IOStream) do file
         file["q0"] = q0
         file["q1"] = q1
     end
 end
 
-file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/proposal_densities_output_version=" * ver * ".jld2"))
+file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/proposal_densities_output_version=" * dver * ".jld2"))
     saved_q0 = read(file, "q0")
     saved_q1 = read(file, "q1")
 close(file)
@@ -159,12 +167,12 @@ if writing_output
         write(file, "old_loglh", old_loglh)
     end
 
-    JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/ess_output_version=" * ver * ".jld2"), true, true, true, IOStream) do file
+    JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/ess_output_version=" * dver * ".jld2"), true, true, true, IOStream) do file
         write(file, "ess", test_ESS)
     end
 end
 
-file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/ess_output_version=" * ver * ".jld2"))
+file = JLD2.jldopen(joinpath(dirname(@__FILE__),"reference/ess_output_version=" * dver * ".jld2"))
     saved_ESS = read(file, "ess")
 close(file)
 
@@ -203,4 +211,46 @@ saved_blocks      = load(joinpath(dirname(@__FILE__),"reference/helpers_blocking
     @test test_blocks_free == saved_blocks_free
     @test test_blocks_all  == saved_blocks_all
     @test test_blocks      == saved_blocks
+end
+
+####################################################################
+# Benchmarking
+####################################################################
+# Flip to true to run; off by default. 
+run_benchmarks = false
+
+if run_benchmarks
+    refdir = joinpath(dirname(@__FILE__), "reference")
+    sa  = load(joinpath(refdir, "solve_adaptive_phi.jld2"))
+    mv  = load(joinpath(refdir, "mvnormal_inputs.jld2"))
+    pd  = load(joinpath(refdir, "proposal_densities_in.jld2"))
+    es  = load(joinpath(refdir, "ess_inputs.jld2"))
+    mut = load(joinpath(refdir, "mutation_inputs.jld2"))
+
+    d_full = mut["d"]
+    d_deg  = DegenerateMvNormal(d_full.μ, d_full.Σ.mat)
+
+    b_solve = @benchmark SMC.solve_adaptive_ϕ($(sa["cloud"]), $(sa["proposed_fixed_schedule"]),
+                                              $(sa["i"]), $(sa["j"]), $(sa["phi_prop"]),
+                                              $(sa["phi_n1"]), $(sa["tempering_target"]),
+                                              $(sa["resampled_last_period"]))
+    b_mvdraw = @benchmark SMC.mvnormal_mixture_draw($(mv["para_subset"]), $(mv["d_subset"]);
+                                                   c = $(mv["c"]), α = $(mv["α"]))
+    b_getcov = @benchmark SMC.get_cov($d_full)
+    b_propd  = @benchmark SMC.compute_proposal_densities($(pd["para_draw"]), $(pd["para_subset"]),
+                                                        $(pd["d_subset"]); α = $(pd["α"]), c = $(pd["c"]))
+    b_ess    = @benchmark SMC.compute_ESS($(es["loglh"]), $(es["current_weights"]),
+                                         $(es["ϕ_n"]), $(es["ϕ_n1"]))
+    b_blocks = @benchmark SMC.generate_free_blocks($n_free_para, $n_blocks)
+
+    println("\n===== estimate/smc/helpers benchmark results =====")
+    for (name, b) in [("solve_adaptive_ϕ        ", b_solve),
+                      ("mvnormal_mixture_draw   ", b_mvdraw),
+                      ("get_cov                 ", b_getcov),
+                      ("compute_proposal_densities", b_propd),
+                      ("compute_ESS             ", b_ess),
+                      ("generate_free_blocks    ", b_blocks)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
 end

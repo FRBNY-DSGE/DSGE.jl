@@ -1,3 +1,4 @@
+using BenchmarkTools
 fp = dirname(@__FILE__)
 
 @testset "Impulse responses to structural shocks identified by a DSGE-VECM" begin
@@ -160,5 +161,24 @@ fp = dirname(@__FILE__)
     end
 end
 
+
+####################
+# Benchmark
+####################
+run_benchmarks = false
+if run_benchmarks
+    matdata = load(joinpath(fp, "../../../reference/dsgevecm_lambda_irfs.jld2"))
+    b_dsgevecm_irf = @benchmark DSGE.impulse_responses($(matdata["TTT"]), $(matdata["RRR"]), $(matdata["ZZ"]),
+                                                       $(vec(matdata["DD"])), $(matdata["MM"]),
+                                                       $(matdata["QQ"]), $(Int(matdata["k"])), $(Int(matdata["nvar"])),
+                                                       $(Int(matdata["coint"])), $(matdata["cct_sim"]), $(matdata["sig_sim"]),
+                                                       $(matdata["cointvec"]), $(Int(matdata["qahead"])),
+                                                       $(vec(matdata["XXpred"]));
+                                                       test_shocks = $(matdata["Shocks"]))
+    println("\n===== DSGE-VECM impulse_responses benchmark results =====")
+    println(rpad("dsgevecm impulse_responses", 28), " time: ",
+            rpad(BenchmarkTools.prettytime(median(b_dsgevecm_irf).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_dsgevecm_irf).memory))
+end
 
 nothing

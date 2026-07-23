@@ -1,3 +1,4 @@
+using BenchmarkTools
 fp = dirname(@__FILE__)
 
 @testset "VAR impulse responses" begin
@@ -73,6 +74,22 @@ end
     @test @test_matrix_approx_eq expout -out2
     @test @test_matrix_approx_eq expout out3
     @test @test_matrix_approx_eq expout -out4
+end
+
+run_benchmarks = false
+if run_benchmarks
+    # Minimal top-level setup (testset-local vars are not visible here): reload the same
+    # reference inputs and benchmark the primary VAR impulse_responses call (Cholesky).
+    bench_data = load(joinpath(fp, "../../reference/var_irf_out.jld2"))
+    bench_β = bench_data["bhat_full"]
+    bench_Σ = bench_data["sigmahat_full"]
+
+    b_var_irf = @benchmark impulse_responses($bench_β, $bench_Σ, 1, 20;
+                                             method = :cholesky, flip_shocks = true)
+    println("\n===== VAR impulse_responses benchmark results =====")
+    println(rpad("impulse_responses (VAR, :cholesky)", 36), " time: ",
+            rpad(BenchmarkTools.prettytime(median(b_var_irf).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_var_irf).memory))
 end
 
 nothing

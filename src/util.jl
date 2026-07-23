@@ -1,3 +1,5 @@
+import Base: <
+
 """
 ```
 sendto(p::Int; args...)
@@ -204,7 +206,7 @@ end
 
 Test two matrices of floating point numbers `a` and `b` for approximate equality.
 """
-macro test_matrix_approx_eq(a,b)
+macro test_matrix_approx_eq2(a,b)
     :(test_matrix_eq2($(esc(a)),$(esc(b)),$(string(a)),$(string(b))))
 end
 

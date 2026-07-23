@@ -265,7 +265,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                                iterations = iterations,
                                store_trace = store_trace, show_trace = show_trace,
                                extended_trace = extended_trace, verbose = verbose, rng = rng)
-        converged = opt_result.iteration_converged
+        converged = Optim.converged(opt_result)
         out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
                                   opt_result.iterations)
 
@@ -276,7 +276,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                                    store_trace = store_trace, show_trace = show_trace,
                                    extended_trace = extended_trace,
                                    verbose = verbose, rng = rng)
-        converged = opt_result.g_converged || opt_result.f_converged #|| opt_result.x_converged
+        converged = Optim.g_converged(opt_result) || Optim.f_converged(opt_result) #|| Optim.x_converged(opt_result)
         out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
                                   opt_result.iterations)
 
@@ -286,7 +286,7 @@ function optimize!(m::Union{AbstractDSGEModel,AbstractVARModel},
                                store_trace = store_trace, show_trace = show_trace,
                                extended_trace = extended_trace,
                                verbose = verbose, rng = rng)
-        converged = opt_result.g_converged || opt_result.f_converged #|| opt_result.x_converged
+        converged = Optim.g_converged(opt_result) || Optim.f_converged(opt_result) #|| Optim.x_converged(opt_result)
         out = optimization_result(opt_result.minimizer, opt_result.minimum, converged,
                                   opt_result.iterations)
 

@@ -1,5 +1,6 @@
 using DSGE
 using HDF5
+using BenchmarkTools
 
 path = dirname(@__FILE__)
 
@@ -29,6 +30,24 @@ x_expected = [a, a^2.0]
     @test x_expected ≈ res_real_grad.minimizer
     res_numeric_grad,  = csminwel(rosenbrock_csminwel, x_init)
     @test x_expected ≈ res_numeric_grad.minimizer atol=1.0e-8
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. Pure optimization, no FRED API.
+run_benchmarks = false
+
+if run_benchmarks
+    b_analytic = @benchmark csminwel(rosenbrock_csminwel, rosenbrock_grad, $x_init)
+    b_numeric  = @benchmark csminwel(rosenbrock_csminwel, $x_init)
+
+    println("\n===== estimate/csminwel benchmark results =====")
+    for (name, b) in [("analytic gradient", b_analytic),
+                      ("numeric gradient ", b_numeric)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
 end
 
 nothing

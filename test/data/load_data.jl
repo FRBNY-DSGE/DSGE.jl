@@ -1,5 +1,5 @@
 using DSGE
-using Test, DataFrames, HDF5, JLD2
+using Test, DataFrames, HDF5, JLD2, BenchmarkTools
 
 path = dirname(@__FILE__)
 

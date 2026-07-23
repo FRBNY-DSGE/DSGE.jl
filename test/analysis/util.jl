@@ -1,4 +1,4 @@
-using DSGE, Test, ModelConstructors
+using DSGE, Test, ModelConstructors, SparseArrays, BenchmarkTools
 
 m = AnSchorfheide()
 homedirpath = Sys.iswindows() ? joinpath(homedir(),".freddatarc") : joinpath(ENV["HOME"],".freddatarc")
@@ -70,4 +70,23 @@ end
     dens = find_density_bands(ones(100, 100), [.8, .9])
     @test propertynames(dens) == [Symbol("80.0% UB"), Symbol("80.0% LB"), Symbol("90.0% UB"), Symbol("90.0% LB")]
     @test Matrix(dens) == ones(100,4)
+end
+
+################
+# Benchmarking #
+################
+# Set this flag to true to run the analysis/util benchmarks. Off by default so
+# the test suite stays fast.
+run_benchmarks = false
+
+if run_benchmarks
+    draws = randn(1000, 100)  # draws x periods, representative of a density-band call
+    b_single = @benchmark find_density_bands($draws, 0.95)
+    b_multi  = @benchmark find_density_bands($draws, [0.8, 0.9])
+
+    println("\n===== analysis/util benchmark results =====")
+    println("find_density_bands (single)  time:   ", BenchmarkTools.prettytime(median(b_single).time),
+            "   memory: ", BenchmarkTools.prettymemory(median(b_single).memory))
+    println("find_density_bands (multi)   time:   ", BenchmarkTools.prettytime(median(b_multi).time),
+            "   memory: ", BenchmarkTools.prettymemory(median(b_multi).memory))
 end

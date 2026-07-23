@@ -131,8 +131,7 @@ priorpost
         if param.fixed
             [minimum(posterior_draws), maximum(posterior_draws)], [1, 1]
         elseif !param.fixed && !isnull(param.prior)
-            prior = get(param.prior)
-            typeof(prior), prior
+            get(param.prior)
         else
             error("Parameter must either be fixed or have a non-null prior")
         end

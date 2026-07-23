@@ -4,13 +4,15 @@ using JLD2
 
 path = dirname(@__FILE__)
 
+run_benchmarks = false
+
 m = BondLabor()
 
 # Steady-state computation
 steadystate!(m)
-@btime steadystate!(m)
+run_benchmarks && @btime steadystate!(m)
 
-file = jldopen("$path/reference/steady_state.jld2", "r")
+file = JLD2.jldopen("$path/reference/steady_state.jld2", "r")
 saved_ell  = read(file, "ell")
 saved_c    = read(file, "c")
 saved_η    = read(file, "eta")
@@ -31,14 +33,14 @@ end
 # Jacobian computation
 m.testing = true        # So that it will test against the unnormalized Jacobian
 JJ = DSGE.jacobian(m)
-@btime JJ = DSGE.jacobian(m)
+run_benchmarks && @btime JJ = DSGE.jacobian(m)
 
-file = jldopen("$path/reference/jacobian.jld2", "r")
+file = JLD2.jldopen("$path/reference/jacobian.jld2", "r")
 saved_JJ  = read(file, "JJ")
 close(file)
 
-nx = get_setting(m, :nx)
-ns = get_setting(m, :ns)
+nx = DSGE.get_setting(m, :nx)
+ns = DSGE.get_setting(m, :ns)
 
 # we will always order things XP YP X Y
 # convention is that capital letters generally refer to indices
@@ -92,11 +94,53 @@ end
 # Solve
 m.testing = false      # So the Jacobian will be normalized within the klein solution
 gx, hx = klein(m)
-@btime klein(m)
+run_benchmarks && @btime klein(m)
 
-@load "$path/reference/solve.jld2" saved_gx saved_hx
+@JLD2.load "$path/reference/solve.jld2" saved_gx saved_hx
 
 @testset "Check solve outputs" begin
     @test saved_gx  ≈ gx
     @test saved_hx  ≈ hx
+end
+
+# State-space transition matrices (klein returns TTT_jump, TTT_state = gx, hx)
+TTT, RRR = DSGE.klein_transition_matrices(m, hx, gx)
+run_benchmarks && @btime DSGE.klein_transition_matrices(m, hx, gx)
+
+CCC = zeros(DSGE.n_model_states(m))
+
+# Shock loading
+RRR_shock = DSGE.shock_loading(m, gx)
+run_benchmarks && @btime DSGE.shock_loading(m, gx)
+
+@testset "Check shock loading" begin
+    nb   = DSGE.n_backward_looking_states(m)
+    exo  = m.exogenous_shocks
+    endo = m.endogenous_states
+    # Technology shock loads unity onto the z′ state...
+    @test RRR_shock[endo[:z′_t], exo[:z_sh]] ≈ ones(1)
+    # ...and the jump block is the jump policy applied to the state loading
+    @test RRR_shock[nb+1:end, :] ≈ gx * RRR_shock[1:nb, :]
+    # klein_transition_matrices must reuse the same shock loading
+    @test RRR ≈ RRR_shock
+end
+
+# Measurement equation
+meas = DSGE.measurement(m, TTT, gx, RRR, CCC)
+run_benchmarks && @btime DSGE.measurement(m, TTT, gx, RRR, CCC)
+
+@testset "Check measurement equation" begin
+    obs = m.observables
+    exo = m.exogenous_shocks
+    nb  = DSGE.n_backward_looking_states(m)
+    # Dimensions
+    @test size(meas.ZZ) == (DSGE.n_observables(m), DSGE.n_model_states(m))
+    @test length(meas.DD) == DSGE.n_observables(m)
+    # Innovation variance and measurement error are set by construction
+    @test meas.QQ[exo[:z_sh], exo[:z_sh]] ≈ m[:σ_z].value^2
+    @test meas.EE[obs[:obs_gdp], obs[:obs_gdp]] ≈ m[:e_y].value
+    # CCC = 0 ⟹ no intercept adjustment
+    @test all(meas.DD .== 0)
+    # GDP loads only on states, so the jump columns of ZZ vanish
+    @test all(meas.ZZ[:, nb+1:end] .== 0)
 end

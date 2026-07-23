@@ -1,3 +1,5 @@
+import Base: max, <
+
 # Some utility functions to keep code clean in statespace_functions.jl
 
 function compute_gensys_gensys2_regimes(m::AbstractDSGEModel)

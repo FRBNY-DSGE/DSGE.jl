@@ -671,7 +671,7 @@ funops = 1:2 # which operators output a function
     m.endogenous_states = deepcopy(endo)
 end
 
-function init_states_and_jumps!(m::AbstractModel, states::Vector{Symbol}, jumps::Vector{Symbol})
+function init_states_and_jumps!(m::HetDSGE, states::Vector{Symbol}, jumps::Vector{Symbol})
     endo = m.endogenous_states_unnormalized
 
     m <= Setting(:states, states)

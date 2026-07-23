@@ -24,18 +24,26 @@ if haskey(ENV, "FRED_API_KEY")
     @testset "Ensure writing forecast centric packet runs without deprecation" begin
         write_forecast_centric_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf])
         write_standard_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf])
-        @test_broken plot_standard_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf])
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastobs)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :bddforecastobs)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecaststates)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs)
+        # These plotting calls were @test_broken in 2020 because they errored then;
+        # under Julia 1.12 the individual forecast/pseudo/state plots now run and
+        # return an OrderedDict of plots, so those are smoke tests that they execute
+        # without error. Calls that depend on output this run doesn't produce stay
+        # @test_broken: plot_standard_model_packet (its :forecast section plots shock
+        # decompositions, whose mbshockdec*.jld2 is never generated here) and the
+        # bare :shockdecobs plots. Guarded with `; false` so a non-Boolean return, if
+        # the behavior ever changes, can't crash the testset.
+        @test_broken (plot_standard_model_packet(m, :mode, :none, sections = [:estimation, :forecast, :irf]); false)
+        @test (DSGE.make_forecast_plots(m, :mode, :none, :forecastobs); true)
+        @test (DSGE.make_forecast_plots(m, :mode, :none, :bddforecastobs); true)
+        @test (DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo); true)
+        @test (DSGE.make_forecast_plots(m, :mode, :none, :forecaststates); true)
+        @test_broken (DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs); false)
         m <= Setting(:date_forecast_end, DSGE.quartertodate("2020-Q1"))
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastobs)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :bddforecastpseudo)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :forecaststates)
-        @test_broken DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs)
+        @test (DSGE.make_forecast_plots(m, :mode, :none, :forecastobs); true)
+        @test (DSGE.make_forecast_plots(m, :mode, :none, :forecastpseudo); true)
+        @test_broken (DSGE.make_forecast_plots(m, :mode, :none, :bddforecastpseudo); false)
+        @test (DSGE.make_forecast_plots(m, :mode, :none, :forecaststates); true)
+        @test_broken (DSGE.make_forecast_plots(m, :mode, :none, :shockdecobs); false)
         @test_throws ErrorException DSGE.make_forecast_plots(m, :mode, :none, :y_t)
 
         DSGE.plot_irf_section(m, :mode, :none, [:hist_obs])

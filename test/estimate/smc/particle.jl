@@ -1,3 +1,5 @@
+using BenchmarkTools
+
 file = joinpath(dirname(@__FILE__), "reference/smc_cloud_fix=true.jld2")
 cloud = load(file, "cloud")
 split_cloud(file, 2)
@@ -18,3 +20,24 @@ rejoined_cloud = join_cloud(file, 2)
     @test cloud.resamples           == rejoined_cloud.resamples
     @test cloud.tempering_schedule  == rejoined_cloud.tempering_schedule
 end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. Inputs are local JLD2, no FRED API.
+# split_cloud/join_cloud are disk I/O; each writes/reads "_part*.jld2" next to `file`.
+run_benchmarks = false
+
+if run_benchmarks
+    b_split = @benchmark split_cloud($file, 2)
+    b_join  = @benchmark join_cloud($file, 2)
+
+    println("\n===== estimate/smc/particle benchmark results =====")
+    for (name, b) in [("split_cloud (n_pieces=2)", b_split),
+                      ("join_cloud  (n_pieces=2)", b_join)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
+end
+
+nothing

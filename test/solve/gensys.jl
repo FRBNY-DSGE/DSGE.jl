@@ -1,6 +1,7 @@
 using Test
 using HDF5
 using DSGE
+using BenchmarkTools
 
 path = dirname(@__FILE__)
 
@@ -9,6 +10,16 @@ m = AnSchorfheide()
 stake = 1 + 1e-6
 #G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, stake)
 G1, C, impact, eu = gensys(Γ0, Γ1, C, Ψ, Π, stake)
+
+run_benchmarks = false
+
+if run_benchmarks
+    b_gensys = @benchmark gensys($Γ0, $Γ1, $C, $Ψ, $Π, $stake)
+
+    println("\n===== gensys benchmark results =====")
+    println(rpad("gensys", 18), " time: ", rpad(BenchmarkTools.prettytime(median(b_gensys).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_gensys).memory))
+end
 
 file = "$path/../reference/gensys.h5"
 G1_exp = h5read(file, "G1_gensys")

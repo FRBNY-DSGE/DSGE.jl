@@ -2,7 +2,7 @@ using DSGE, JLD2, DataStructures
 import Test: @test, @testset
 import DSGE: @test_matrix_approx_eq
 
-m = KrusellSmith()
+m = DSGE.KrusellSmith()
 
 # Load pre-reduced canonical form matrices
 g1 = load("../../test_outputs/solve/canonical.jld2", "g1")

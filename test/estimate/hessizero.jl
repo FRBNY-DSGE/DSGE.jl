@@ -1,5 +1,6 @@
 using DSGE
 using Test
+using BenchmarkTools
 
 # Test `hessizero` in context of Rosenbrock function
 function rosenbrock(x::Vector)
@@ -40,5 +41,24 @@ x1 = Vector[[0.5, 1.5], [-1.0, -1.0]]
         local hessian_expected = rosenbrock_hessian(x)
         local hessian, = DSGE.hessizero(rosenbrock, x)
         @test @test_matrix_approx_eq hessian_expected hessian
+    end
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. Pure numerics, no FRED API.
+run_benchmarks = false
+
+if run_benchmarks
+    # At the minimum (with the negative-diagonal check) and at an off-mode point.
+    b_atmin  = @benchmark DSGE.hessizero(rosenbrock, $x0; check_neg_diag = true)
+    b_offmin = @benchmark DSGE.hessizero(rosenbrock, $([0.5, 1.5]))
+
+    println("\n===== estimate/hessizero benchmark results =====")
+    for (name, b) in [("hessizero (at min) ", b_atmin),
+                      ("hessizero (off min)", b_offmin)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
     end
 end

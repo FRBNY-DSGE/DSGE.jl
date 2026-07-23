@@ -49,7 +49,10 @@ function hessizero(fcn::Function,
     end
 
     # Iterate over off diag elements
-    if distr
+    # (n_off_diag_els == 0 for a scalar parameter vector; skip the distributed
+    #  path in that case, since @distributed (hcat) over an empty range errors
+    #  with "reducing over an empty collection is not allowed".)
+    if distr && n_off_diag_els > 0
         off_diag_out = @sync @distributed (hcat) for (i,j) in off_diag_inds
             σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
             hess_offdiag_element(fcn, x, i, j, σ_xσ_y; verbose=verbose)

@@ -1,4 +1,4 @@
-using DSGE, ModelConstructors, Dates, OrderedCollections, Test, CSV, DataFrames, Random, FileIO
+using DSGE, ModelConstructors, Dates, OrderedCollections, Test, CSV, DataFrames, Random, FileIO, BenchmarkTools
 
 regenerate_output = false
 
@@ -24,6 +24,13 @@ m <= Setting(:forecast_ndraws, 5)
 m <= Setting(:forecast_block_size, get_setting(m, :forecast_ndraws))
 m <= Setting(:forecast_jstep, 1)
 m <= Setting(:use_parallel_workers, false)
+
+
+m <= Setting(:regime_eqcond_info,
+             Dict{Int, DSGE.EqcondEntry}(
+                 3 => DSGE.EqcondEntry(DSGE.zlb_rule(),    [1., 0.]),   # forecast-start regime: ZLB
+                 4 => DSGE.EqcondEntry(DSGE.taylor_rule(), [1., 0.])))  # liftoff regime: default rule
+
 setup_regime_switching_inds!(m; cond_type = :full)
 
 # For parameters, use modal ones, but also draw from prior for the COVID-19 shocks
@@ -76,6 +83,7 @@ output_vars = [:forecastobs, :bddforecastobs]
 forecast_one(m, :full, :full, output_vars, verbose = :none, params = mparas, df = df_full,
              zlb_method = :temporary_altpolicy, set_regime_vals_altpolicy = covid_set_regime_vals)
 
+
 # Either test against saved output or re-generate output
 output_files = get_forecast_output_files(m, :full, :full, output_vars)
 if regenerate_output
@@ -117,4 +125,20 @@ else
     for v in values(output_files)
     rm(v)
 end
+end
+
+################
+# Benchmarking #
+################
+# NOTE: this only runs once forecast_one above succeeds (currently it crashes with
+# KeyError: :regime_eqcond_info — see the missing-setting issue). The forecast is heavy and
+# writes output files, so samples are capped.
+run_benchmarks = false
+if run_benchmarks
+    b = @benchmark forecast_one($m, :full, :full, $output_vars; verbose = :none, params = $mparas,
+                                df = $df_full, zlb_method = :temporary_altpolicy,
+                                set_regime_vals_altpolicy = $covid_set_regime_vals) samples = 3 evals = 1 seconds = 300
+    println("\nforecast_one (temporary_altpolicy ZLB, full-dist)  time: ",
+            BenchmarkTools.prettytime(median(b).time),
+            "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
 end

@@ -62,7 +62,7 @@ function steadystate!(m::BondLabor;
 
     # guess for the W function W(w) = β R E u'(c_{t+1})
     βguess = 0.8
-    l_in_const = βguess*R*sum((qfunction.(abar - xgrid_total).*χss.^(-γ)).*(kron((swts.*ggrid),xwts)))
+    l_in_const = βguess*R*sum((qfunction.(abar .- xgrid_total).*χss.^(-γ)).*(kron((swts.*ggrid),xwts)))
     l_in = l_in_const*ones(nx*ns)
 
     while abs(excess) > tol && count < maxit # clearing markets
@@ -83,11 +83,12 @@ function steadystate!(m::BondLabor;
 
         # find eigenvalue closest to 1
         (Dee, Vee) = eigen(LPMKF)
-        if abs(Dee[1]-1)>2e-1 # that's the tolerance we are allowing
-            @warn "your eigenvalue is ", Dee[1], " which is too far from 1, something is wrong"
+        idx = argmin(abs.(Dee .- 1)) # eigen does not guarantee ordering; pick the eigenvalue nearest 1
+        if abs(Dee[idx]-1)>2e-1 # that's the tolerance we are allowing
+            @warn "your eigenvalue is $(Dee[idx]) which is too far from 1, something is wrong"
         end
 
-        μ = real(Vee[:,1]) # Pick the eigen vector associated with the largest
+        μ = real(Vee[:,idx]) # Pick the eigen vector associated with the largest
                            # eigenvalue and move it back to values
                            # mdχ: the μ chosen is the eigenvector associated to the largest
                            # eigenvalue of the KF because that means, we have induced the

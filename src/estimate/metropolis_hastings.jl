@@ -83,9 +83,14 @@ function metropolis_hastings(proposal_dist::Distribution,
                              toggle::Bool           = true,
                              testing::Bool          = false) where {S<:Number, T<:AbstractFloat}
 
-    # If testing, set the random seeds at fixed numbers
+    # If testing, set the random seeds at fixed numbers. Seed BOTH the local `rng` (used by
+    # rand(propdist, rng) for para_old) AND the global default RNG: the migrated SMC's mutation
+    # helpers — mvnormal_mixture_draw's rand(d_mix_old) and generate_free_blocks' shuffle — draw
+    # from the global RNG, not `rng`, so without this the mutation draws are non-reproducible
+    # across runs and the reference-draw test fails.
     if testing
         Random.seed!(rng, 654)
+        Random.seed!(654)
     end
 
     if adaptive_accept
@@ -157,12 +162,13 @@ function metropolis_hastings(proposal_dist::Distribution,
     end
 
     state_tracker = Vector{Float64}[] #New
-    push!(sample_mean_tracker, para_old) #New
+    #push!(sample_mean_tracker, para_old) #New
 
 
     # Keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0.
 
+    try
     for block = 1:n_blocks
 
         begin_time = time_ns()
@@ -188,7 +194,7 @@ function metropolis_hastings(proposal_dist::Distribution,
             for (k, block_a) in enumerate(blocks_free)
                 # Draw para_new from the proposal distribution
                 para_subset = para_old[block_a]
-                "d_subset    = DegenerateMvNormal(propdist.μ[block_a],
+                d_subset    = DegenerateMvNormal(propdist.μ[block_a],
                                        (propdist.σ[block_a, block_a] +
                                        propdist.σ[block_a, block_a]') / 2.,
                                        inv((propdist.σ[block_a, block_a] +
@@ -198,7 +204,6 @@ function metropolis_hastings(proposal_dist::Distribution,
                 para_draw         = mvnormal_mixture_draw(para_subset, d_subset;
                                                           α = α, c = cc)
                 para_new          = deepcopy(para_old)
-                "para_new[block_a] = para_draw" #Get rid of this
                 para_new[block_a] = para_draw #New
 
                 q0, q1 = if adaptive_accept
@@ -290,7 +295,9 @@ function metropolis_hastings(proposal_dist::Distribution,
                 "$expected_time_remaining_minutes minutes")
         println(verbose, :low, "Block $block acceptance rate: $(1. - block_rejection_rate) \n")
     end # of loop over blocks
-    close(simfile)
+    finally
+        close(simfile)
+    end
 
     rejection_rate = all_rejections / (n_blocks * n_sim * mhthin * n_param_blocks)
     println(verbose, :low, "Overall acceptance rate: $(1. - rejection_rate)")

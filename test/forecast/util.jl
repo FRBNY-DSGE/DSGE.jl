@@ -1,6 +1,16 @@
-using DSGE, FileIO, Random, Test, ModelConstructors
+using DSGE, FileIO, Random, Test, ModelConstructors, BenchmarkTools
 m = AnSchorfheide()
 sys = compute_system(m)
+
+run_benchmarks = false
+
+if run_benchmarks
+    b_system = @benchmark compute_system($m)
+
+    println("\n===== compute_system benchmark results =====")
+    println(rpad("compute_system", 18), " time: ", rpad(BenchmarkTools.prettytime(median(b_system).time), 12),
+            "memory: ", BenchmarkTools.prettymemory(median(b_system).memory))
+end
 path = dirname(@__FILE__)
 
 @testset "Testing get_jstep " begin

@@ -68,7 +68,7 @@ function jacobian(m::HetDSGE)
     unc = 1 ./ ell .<= repeat(xgrid,ns) .+ η
 
     dF1_dELL, dF1_dRZ, dF1_dELLP, dF1_dWHP, dF1_dTTP, ee =
-        euler_equation_hetdsge_lag(nx, ns, qp, qfunction_hetdsge, xgrid, sgrid, fgrid, unc, xswts,
+        euler_equation_hetdsge(nx, ns, qp, qfunction_hetdsge, xgrid, sgrid, fgrid, unc, xswts,
                                R, γ, β, η, ell, T, ω, H)
 
     # KF Equation

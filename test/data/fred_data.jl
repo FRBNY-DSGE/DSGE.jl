@@ -1,3 +1,4 @@
+using BenchmarkTools
 path = dirname(@__FILE__)
 fred = CSV.read("$path/../reference/fred_160812.csv", DataFrame)
 custom_settings = [Setting(:data_vintage, "160812"),

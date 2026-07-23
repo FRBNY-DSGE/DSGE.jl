@@ -1,3 +1,5 @@
+using BenchmarkTools
+
 test_date = Date("2000-03-31", "yyyy-mm-dd")
 test_date_plus2qtr = Date("2000-09-30", "yyyy-mm-dd")
 df_date = DataFrame()
@@ -57,6 +59,33 @@ m <= Setting(:rate_expectations_source, :ois)
     @test get_data_filename(m, :semi) == joinpath("data","data_cdid=00_cdvt=160812_dsid=02_vint=160812.csv")
     @test get_data_filename(m, :full) == joinpath("data","data_cdid=00_cdvt=160812_dsid=02_vint=160812.csv")
     @test get_data_filename(m, :none) == joinpath("data","data_dsid=02_vint=160812.csv")
+end
+
+################
+# Benchmarking #
+################
+# Flip to true to run; off by default. Only the key-free utilities are here;
+# the load_data calls above hit the FRED API and are excluded.
+run_benchmarks = false
+
+if run_benchmarks
+    bench_nan_df = DataFrame(:a => vcat(1., NaN))
+
+    b_reconcile = @benchmark DSGE.reconcile_column_names(DataFrame(a = [1, 2]),
+                                                         DataFrame(b = [2, 3]))
+    # evals=1: nan2missing! isn't idempotent (a 2nd pass hits isnan(missing)).
+    b_nan2miss  = @benchmark DSGE.nan2missing!(df) setup=(df = copy($bench_nan_df)) evals=1
+    b_vinttodate = @benchmark DSGE.vinttodate("010331")
+    b_filename  = @benchmark get_data_filename($m, :full)
+
+    println("\n===== data/util benchmark results =====")
+    for (name, b) in [("reconcile_column_names", b_reconcile),
+                      ("nan2missing!          ", b_nan2miss),
+                      ("vinttodate            ", b_vinttodate),
+                      ("get_data_filename     ", b_filename)]
+        println(name, "  time:   ", BenchmarkTools.prettytime(median(b).time),
+                "   memory: ", BenchmarkTools.prettymemory(median(b).memory))
+    end
 end
 
 nothing

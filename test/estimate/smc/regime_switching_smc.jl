@@ -1,12 +1,24 @@
 using DSGE, ModelConstructors, HDF5, Random, JLD2, FileIO, SMC, Test, Distributions, StateSpaceRoutines, Dates
+using Distributed
 
 path = dirname(@__FILE__)
-writing_output = false
+
+n_workers = 0
+myprocs   = Int[]
+if n_workers > 0
+    ENV["frbnyjuliamemory"] = "6G"
+    myprocs = addprocs_frbny(n_workers)
+end
+if nprocs() > 1
+    @everywhere using DSGE, ModelConstructors, SMC, OrderedCollections
+end
 
 if VERSION < v"1.5"
     ver = "111"
-else
+elseif VERSION < v"1.7"
     ver = "150"
+else
+    ver = "1126"
 end
 
 regenerate_sim_data = false
@@ -22,9 +34,9 @@ m <= Setting(:data_vintage, "210101")
 m <= Setting(:cond_vintage, "210101")
 m <= Setting(:n_Φ, 100)
 m <= Setting(:λ, 3.0)
-m <= Setting(:n_particles, 500)
+m <= Setting(:n_particles, 1000)
 m <= Setting(:n_smc_blocks, 1)
-m <= Setting(:use_parallel_workers, false)
+m <= Setting(:use_parallel_workers, nprocs() > 1)
 m <= Setting(:step_size_smc, 0.5)
 m <= Setting(:n_mh_steps_smc, 1)
 m <= Setting(:resampler_smc, :polyalgo)
@@ -74,7 +86,7 @@ regswitch_lik = DSGE.likelihood(m, data)
     # Regime switching estimation
     true_para = ModelConstructors.get_values(m.parameters)
     Random.seed!(1793)
-    DSGE.smc2(m, data, regime_switching = true, run_csminwel = false,
+    DSGE.smc2(m, data; regime_switching = true, run_csminwel = false,
               verbose = :none)
 
     posterior_means = vec(mean(load_draws(m, :full), dims = 1))
@@ -83,5 +95,10 @@ regswitch_lik = DSGE.likelihood(m, data)
     inds = vcat(1:4, 7:16, 18:20, 24:27, 29:length(posterior_means))
     @test maximum(abs.(true_para[inds] - posterior_means[inds])) < .6
     inds2 = [5, 17, 21, 23]
-    @test maximum(abs.(true_para[inds] - posterior_means[inds])) < 1.4
+    @test maximum(abs.(true_para[inds2] - posterior_means[inds2])) < 1.4
+end
+
+# Tear down only the workers this script self-spawned (leave any launched via `julia -p N`).
+if !isempty(myprocs)
+    rmprocs(myprocs)
 end

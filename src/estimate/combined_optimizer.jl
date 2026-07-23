@@ -53,10 +53,11 @@ function combined_optimizer(fcn::Function,
 
         # first, run LBFGS
         println(verbose, :low, "Running L-BFGS...")
-        out_lbfgs = Optim.optimize(fcn, x_opt, lbfgs(),
-                   Optim.Options(autodiff=autodiff, g_tol = grtol, f_tol = ftol, x_tol = xtol,
+        out_lbfgs = Optim.optimize(fcn, x_opt, LBFGS(),
+                   Optim.Options(g_abstol = grtol, f_reltol = ftol, x_abstol = xtol,
                    iterations = iterations, store_trace = store_trace, show_trace = show_trace,
-                   extended_trace = extended_trace))
+                   extended_trace = extended_trace);
+                   autodiff = autodiff ? AutoForwardDiff() : AutoFiniteDiff())
 
         # store relevant information from the optimizer
         minimum_lbfgs   = out_lbfgs.minimum
@@ -68,11 +69,9 @@ function combined_optimizer(fcn::Function,
         # simulated annealing gets more iterations, no trace printout
         sa_iterations = min(iterations * 10, 250)
         out_sa = Optim.optimize(fcn, x_opt,
-                                method = SimulatedAnnealing(neighbor!   = neighbor!,
-                                                            temperature = temperature),
-                                iterations = sa_iterations, store_trace = store_trace,
-                                show_trace = false,
-                                extended_trace = extended_trace)
+                                SimulatedAnnealing(neighbor = neighbor!, temperature = temperature),
+                                Optim.Options(iterations = sa_iterations, store_trace = store_trace,
+                                              show_trace = false, extended_trace = extended_trace))
 
         minimum_sa   = out_sa.minimum
         minimizer_sa = out_sa.minimizer
@@ -88,7 +87,7 @@ function combined_optimizer(fcn::Function,
         cycle    += 1
 
         println(verbose, :low, "cycle: $cycle")
-        println(verbose, :low, "relative function difference: $(round(rel_diff,5))")
+        println(verbose, :low, "relative function difference: $(round(rel_diff, digits=5))")
 
         f_opt = cycle_best
     end
